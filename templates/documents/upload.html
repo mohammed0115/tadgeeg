@@ -1,0 +1,540 @@
+{% extends "base.html" %}
+{% block title %}رفع المستندات{% endblock %}
+{% block page_title %}رفع المستندات{% endblock %}
+{% block nav_documents %}active{% endblock %}
+{% block nav_doc_upload %}active{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-5" x-data="docUploader()" x-init="init()">
+  <div class="rounded-2xl border border-blue-200 bg-blue-50 px-6 py-5 text-right text-blue-700">
+    <p class="text-lg font-semibold leading-8">
+      <span class="font-bold">ملاحظة:</span>
+      النص المستخرج من المستندات يُستخدم كدليل تدقيق فقط وليس كمصدر للحقيقة المحاسبية، ويتم تخزين بصمة رقمية لكل ملف.
+    </p>
+  </div>
+
+  <div class="overflow-hidden rounded-[22px] border border-slate-200 bg-white">
+    <div class="grid grid-cols-2 border-b border-slate-200 lg:grid-cols-4">
+      <template x-for="mode in uploadModes" :key="mode.id">
+        <button
+          type="button"
+          @click="setMode(mode.id)"
+          class="flex flex-col items-center justify-center gap-3 px-4 py-7 text-center transition-all duration-150"
+          :class="selectedMode === mode.id ? 'border-b-4 border-slate-800 bg-white text-slate-900' : 'border-b-4 border-transparent bg-slate-50/30 text-slate-500 hover:bg-slate-50 hover:text-slate-700'"
+        >
+          <i :data-lucide="mode.icon" class="h-7 w-7"></i>
+          <div>
+            <p class="text-[15px] font-semibold" x-text="mode.label"></p>
+            <p class="mt-1 text-xs text-slate-400" x-text="mode.subtext"></p>
+          </div>
+        </button>
+      </template>
+    </div>
+
+    <div class="space-y-6 p-6 lg:p-8">
+      <div
+        @dragover.prevent="dragging = true"
+        @dragleave.prevent="dragging = false"
+        @drop.prevent="onDrop($event)"
+        @click="$refs.fileInput.click()"
+        class="rounded-[20px] border-2 border-dashed px-6 py-10 text-center transition-all duration-150"
+        :class="dragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50/50'"
+      >
+        <input
+          x-ref="fileInput"
+          type="file"
+          class="hidden"
+          :multiple="allowsMultiple"
+          :accept="currentAccept"
+          @change="addFiles($event.target.files); $event.target.value = ''"
+        >
+
+        <div class="mx-auto flex max-w-3xl flex-col items-center gap-4">
+          <div class="flex h-20 w-20 items-center justify-center rounded-3xl bg-slate-100 text-slate-400">
+            <i :data-lucide="dropzoneIcon" class="h-10 w-10"></i>
+          </div>
+
+          <div class="space-y-2">
+            <h2 class="text-2xl font-semibold text-slate-800" x-text="dropzoneTitle"></h2>
+            <p class="text-lg text-slate-500" x-text="dropzoneSubtitle"></p>
+            <p class="text-sm text-slate-400" x-text="supportedFilesText"></p>
+          </div>
+
+          <template x-if="selectedMode === 'csvjson'">
+            <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
+              استيراد ملفات CSV / JSON سيُضاف لاحقًا. استخدم حاليًا ملفًا واحدًا أو ملفات متعددة أو دفعة ZIP.
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <template x-if="files.length">
+        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+          <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <div>
+              <h3 class="text-base font-bold text-slate-800">الملفات المحددة</h3>
+              <p class="text-sm text-slate-500" x-text="files.length + ' ملف جاهز للرفع'"></p>
+            </div>
+            <button type="button" @click="files = []" class="text-sm font-semibold text-slate-500 transition-colors hover:text-red-600">
+              مسح الكل
+            </button>
+          </div>
+
+          <div class="divide-y divide-slate-100">
+            <template x-for="(file, index) in files" :key="file.name + '-' + file.size + '-' + index">
+              <div class="flex items-center gap-4 px-5 py-4">
+                <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl" :class="fileIconClass(file.name)">
+                  <i :data-lucide="fileIcon(file.name)" class="h-5 w-5"></i>
+                </div>
+                <div class="min-w-0 flex-1 text-right">
+                  <p class="truncate text-sm font-semibold text-slate-800" x-text="file.name"></p>
+                  <p class="mt-1 text-xs text-slate-400" x-text="fmtSize(file.size)"></p>
+                </div>
+                <button type="button" @click="removeFile(index)" class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-red-600">
+                  <i data-lucide="x" class="h-4 w-4"></i>
+                </button>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+        <div class="space-y-2">
+          <label class="block text-lg font-semibold text-slate-800">نوع المستند</label>
+          <select x-model="selectedType" class="h-14 w-full rounded-xl border border-slate-300 bg-white px-4 text-lg text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+            <option value="">اختر نوع المستند</option>
+            <template x-for="type in docTypes" :key="type.id">
+              <option :value="type.id" x-text="type.label"></option>
+            </template>
+          </select>
+          <p class="text-sm text-slate-400" x-text="currentType.hint || 'اختر نوع المستند المطلوب لتحليل القواعد المناسبة.'"></p>
+        </div>
+
+        <div class="space-y-2">
+          <label class="block text-lg font-semibold text-slate-800">اللغة</label>
+          <select x-model="language" class="h-14 w-full rounded-xl border border-slate-300 bg-white px-4 text-lg text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+            <template x-for="lang in languageOptions" :key="lang.id">
+              <option :value="lang.id" x-text="lang.label"></option>
+            </template>
+          </select>
+        </div>
+
+        <label class="flex h-14 min-w-[140px] items-center justify-center gap-3 rounded-xl border border-slate-300 bg-slate-50 px-4 text-lg font-medium text-slate-700">
+          <input x-model="isHandwritten" type="checkbox" class="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+          <span>خط يدوي</span>
+        </label>
+      </div>
+
+      <button
+        type="button"
+        @click="upload()"
+        :disabled="uploadDisabled"
+        class="flex h-16 w-full items-center justify-center gap-3 rounded-xl bg-slate-800 px-6 text-xl font-bold text-white transition hover:bg-slate-900 disabled:cursor-not-allowed disabled:bg-slate-300"
+      >
+        <i x-show="uploading" data-lucide="loader-2" class="h-5 w-5 animate-spin"></i>
+        <i x-show="!uploading && selectedType === 'invoice' && selectedMode !== 'csvjson'" data-lucide="arrow-left"></i>
+        <i x-show="!uploading && !(selectedType === 'invoice' && selectedMode !== 'csvjson')" data-lucide="upload-cloud"></i>
+        <span x-text="submitLabel"></span>
+      </button>
+    </div>
+  </div>
+
+  <template x-if="summary">
+    <div class="space-y-4 rounded-[22px] border border-slate-200 bg-white p-6">
+      <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h3 class="text-xl font-bold text-slate-800">نتائج المعالجة</h3>
+          <p class="text-sm text-slate-500" x-text="'تمت معالجة ' + summary.processed + ' من أصل ' + summary.total + ' ملف'"></p>
+        </div>
+        <a :href="listUrl()" class="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+          <i data-lucide="list"></i>
+          عرض القائمة الكاملة
+        </a>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">الإجمالي</p>
+          <p class="mt-2 font-mono text-2xl font-bold text-slate-800" x-text="summary.total"></p>
+        </div>
+        <div class="rounded-2xl border border-green-200 bg-green-50 p-4">
+          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-green-700">نجح</p>
+          <p class="mt-2 font-mono text-2xl font-bold text-green-700" x-text="summary.processed"></p>
+        </div>
+        <div class="rounded-2xl border border-red-200 bg-red-50 p-4">
+          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-red-700">فشل</p>
+          <p class="mt-2 font-mono text-2xl font-bold text-red-700" x-text="summary.failed"></p>
+        </div>
+        <div class="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">النوع</p>
+          <p class="mt-2 text-lg font-bold text-blue-700" x-text="summary.documentType"></p>
+        </div>
+      </div>
+
+      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <div class="divide-y divide-slate-100">
+          <template x-for="(result, index) in results" :key="(result.document_id || result.filename || 'result') + '-' + index">
+            <div class="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center">
+              <div class="flex min-w-0 flex-1 items-start gap-4">
+                <div class="mt-0.5 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl"
+                     :class="result.success === false ? 'bg-red-50 text-red-600' : scoreBadgeClass(result.validation_score)">
+                  <i :data-lucide="result.success === false ? 'triangle-alert' : 'file-check-2'" class="h-5 w-5"></i>
+                </div>
+
+                <div class="min-w-0 flex-1 text-right">
+                  <div class="flex flex-wrap items-center justify-end gap-2">
+                    <p class="truncate text-sm font-bold text-slate-800" x-text="result.filename"></p>
+                    <span x-show="result.success === false" class="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">فشل</span>
+                    <span x-show="result.success !== false" class="rounded-lg border px-2.5 py-1 text-xs font-semibold"
+                          :class="riskBadge(result.risk_level)" x-text="riskLabel(result.risk_level)"></span>
+                  </div>
+
+                  <template x-if="result.success === false">
+                    <p class="mt-2 text-sm text-red-600" x-text="result.error"></p>
+                  </template>
+
+                  <template x-if="result.success !== false">
+                    <div class="mt-2 space-y-2">
+                      <div class="flex flex-wrap items-center justify-end gap-2 text-xs text-slate-500">
+                        <span x-text="'الحالة: ' + statusLabel(result.status)"></span>
+                        <span>•</span>
+                        <span x-text="'الوقت: ' + (result.processing_ms || 0) + ' ms'"></span>
+                        <span>•</span>
+                        <span class="font-mono text-slate-700" x-text="Math.round(result.validation_score || 0) + '%'"></span>
+                      </div>
+
+                      <template x-if="result.rules_failed && result.rules_failed.length">
+                        <div class="flex flex-wrap justify-end gap-2">
+                          <template x-for="ruleCode in result.rules_failed.slice(0, 6)" :key="ruleCode">
+                            <span class="rounded-lg border border-red-200 bg-red-50 px-2 py-1 font-mono text-[11px] font-semibold text-red-700" x-text="ruleCode"></span>
+                          </template>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between gap-3 lg:w-[240px] lg:flex-col lg:items-end">
+                <template x-if="result.success !== false">
+                  <div class="w-full lg:max-w-[180px]">
+                    <div class="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                      <div class="h-full rounded-full transition-all duration-500" :class="progressBarClass(result.validation_score)" :style="'width:' + Math.max(0, Math.min(100, result.validation_score || 0)) + '%' "></div>
+                    </div>
+                  </div>
+                </template>
+
+                <template x-if="result.success !== false && result.document_id">
+                  <a :href="detailUrl(result.document_id)" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
+                    <i data-lucide="eye" class="h-4 w-4"></i>
+                    عرض التفاصيل
+                  </a>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function docUploader() {
+  return {
+    selectedMode: 'single',
+    selectedType: '',
+    language: 'mixed',
+    isHandwritten: false,
+    files: [],
+    dragging: false,
+    uploading: false,
+    results: [],
+    summary: null,
+    maxSizeMb: 50,
+
+    uploadModes: [
+      { id: 'single', label: 'ملف واحد', icon: 'file-text', subtext: 'PDF أو صورة' },
+      { id: 'multiple', label: 'ملفات متعددة', icon: 'folder-open', subtext: 'رفع دفعة ملفات' },
+      { id: 'zip', label: 'دفعة ZIP', icon: 'archive', subtext: 'ملف مضغوط واحد' },
+      { id: 'csvjson', label: 'CSV / JSON', icon: 'file-json', subtext: 'قريبًا' },
+    ],
+
+    languageOptions: [
+      { id: 'mixed', label: 'عربي وإنجليزي' },
+      { id: 'ar', label: 'عربي' },
+      { id: 'en', label: 'English' },
+    ],
+
+    docTypes: [
+      { id: 'purchase_order', label: 'أوامر الشراء', hint: 'تحليل أوامر الشراء وربطها بالموردين والبنود.', listUrl: '/documents/purchase-orders/', detailBase: '/documents/purchase-orders/' },
+      { id: 'bank_statement', label: 'كشف حساب بنكي', hint: 'مطابقة الحركات والرصيد وكشف الشذوذات البنكية.', listUrl: '/documents/bank-statements/', detailBase: '/documents/bank-statements/' },
+      { id: 'payroll', label: 'كشف الرواتب', hint: 'فحص الرواتب والاستقطاعات والموظفين الوهميين.', listUrl: '/documents/payroll/', detailBase: '/documents/payroll/' },
+      { id: 'expense_report', label: 'تقرير مصروفات', hint: 'مراجعة المطالبات والبدلات والمرفقات.', listUrl: '/documents/expense-reports/', detailBase: '/documents/expense-reports/' },
+      { id: 'vat_return', label: 'إقرار ضريبي', hint: 'فحص إقرارات ضريبة القيمة المضافة ومتطلبات ZATCA.', listUrl: '/documents/vat-returns/', detailBase: '/documents/vat-returns/' },
+      { id: 'fixed_asset', label: 'أصل ثابت', hint: 'مراجعة سجلات الأصول والإهلاك والحركة.', listUrl: '/documents/fixed-assets/', detailBase: '/documents/fixed-assets/' },
+      { id: 'sales_receipt', label: 'إيصال بيع', hint: 'تحقق من بيانات الإيصال والضريبة والامتثال.', listUrl: '/documents/sales-receipts/', detailBase: '/documents/sales-receipts/' },
+      { id: 'invoice', label: 'فاتورة', hint: 'سيتم تحويلك إلى شاشة رفع الفواتير المخصصة.', listUrl: '/invoices/', detailBase: '/invoices/' },
+    ],
+
+    init() {
+      const initialType = '{{ selected_type|default:""|escapejs }}';
+      if (this.docTypes.some((type) => type.id === initialType)) {
+        this.selectedType = initialType;
+      }
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    get currentType() {
+      return this.docTypes.find((type) => type.id === this.selectedType) || {};
+    },
+
+    get allowsMultiple() {
+      return this.selectedMode === 'multiple';
+    },
+
+    get currentAccept() {
+      return {
+        single: '.pdf,.jpg,.jpeg,.png,.tif,.tiff',
+        multiple: '.pdf,.jpg,.jpeg,.png,.tif,.tiff',
+        zip: '.zip',
+        csvjson: '.csv,.json',
+      }[this.selectedMode] || '.pdf,.jpg,.jpeg,.png,.tif,.tiff';
+    },
+
+    get supportedFilesText() {
+      return {
+        single: 'PDF، JPG، PNG، TIFF، TIF — الحد الأقصى 50MB لكل ملف',
+        multiple: 'PDF، JPG، PNG، TIFF، TIF — حتى 50MB لكل ملف',
+        zip: 'ملف ZIP واحد يحتوي على مستندات PDF أو صور — حتى 50MB',
+        csvjson: 'CSV أو JSON — دعم الواجهة جاهز وسيتم ربط المعالجة لاحقًا',
+      }[this.selectedMode];
+    },
+
+    get dropzoneTitle() {
+      return {
+        single: 'اضغط لاختيار ملف أو اسحب الملف هنا',
+        multiple: 'اسحب عدة ملفات هنا أو اضغط للاختيار',
+        zip: 'اسحب ملف ZIP هنا أو اضغط للاختيار',
+        csvjson: 'اختر ملف CSV أو JSON',
+      }[this.selectedMode];
+    },
+
+    get dropzoneSubtitle() {
+      return {
+        single: 'مناسب لرفع مستند واحد ومعالجته مباشرة',
+        multiple: 'لرفع مجموعة مستندات من نفس النوع مرة واحدة',
+        zip: 'لمعالجة دفعة كاملة داخل ملف مضغوط',
+        csvjson: 'هذا الخيار ظاهريًا جاهز وسيتم تفعيل الربط الخلفي لاحقًا',
+      }[this.selectedMode];
+    },
+
+    get dropzoneIcon() {
+      return {
+        single: 'file-text',
+        multiple: 'folder-open',
+        zip: 'archive',
+        csvjson: 'file-json',
+      }[this.selectedMode];
+    },
+
+    get uploadDisabled() {
+      return this.uploading || !this.files.length || !this.selectedType || this.selectedMode === 'csvjson';
+    },
+
+    get submitLabel() {
+      if (this.uploading) return 'جاري رفع ومعالجة المستندات...';
+      if (this.selectedMode === 'csvjson') return 'استيراد CSV / JSON قريبًا';
+      if (this.selectedType === 'invoice') return 'الانتقال إلى رفع الفواتير';
+      return 'رفع ومعالجة المستند';
+    },
+
+    setMode(modeId) {
+      this.selectedMode = modeId;
+      this.files = [];
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    addFiles(fileList) {
+      const acceptedFiles = [];
+      const maxBytes = this.maxSizeMb * 1024 * 1024;
+      const allowed = this.currentAccept.split(',').map((item) => item.trim().toLowerCase()).filter(Boolean);
+
+      for (const file of Array.from(fileList || [])) {
+        const extension = '.' + (file.name.split('.').pop() || '').toLowerCase();
+        if (!allowed.includes(extension)) {
+          notify('نوع الملف غير مدعوم في هذا النمط: ' + file.name, 'warning');
+          continue;
+        }
+        if (file.size > maxBytes) {
+          notify('الملف أكبر من 50MB: ' + file.name, 'warning');
+          continue;
+        }
+        acceptedFiles.push(file);
+      }
+
+      if (!acceptedFiles.length) return;
+
+      if (this.selectedMode === 'multiple') {
+        this.files = [...this.files, ...acceptedFiles];
+      } else {
+        this.files = [acceptedFiles[0]];
+      }
+
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    onDrop(event) {
+      this.dragging = false;
+      this.addFiles(event.dataTransfer.files);
+    },
+
+    removeFile(index) {
+      this.files.splice(index, 1);
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    fileIcon(fileName) {
+      const extension = (fileName.split('.').pop() || '').toLowerCase();
+      if (extension === 'pdf') return 'file-type-pdf';
+      if (['jpg', 'jpeg', 'png', 'tif', 'tiff'].includes(extension)) return 'image';
+      if (extension === 'zip') return 'archive';
+      if (extension === 'csv' || extension === 'json') return 'file-json';
+      return 'file';
+    },
+
+    fileIconClass(fileName) {
+      const extension = (fileName.split('.').pop() || '').toLowerCase();
+      if (extension === 'pdf') return 'bg-red-50 text-red-600';
+      if (['jpg', 'jpeg', 'png', 'tif', 'tiff'].includes(extension)) return 'bg-blue-50 text-blue-600';
+      if (extension === 'zip') return 'bg-amber-50 text-amber-600';
+      if (extension === 'csv' || extension === 'json') return 'bg-violet-50 text-violet-600';
+      return 'bg-slate-100 text-slate-500';
+    },
+
+    fmtSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    },
+
+    riskLabel(level) {
+      return {
+        critical: 'حرج',
+        high: 'عالي',
+        medium: 'متوسط',
+        low: 'منخفض',
+      }[level] || 'غير محدد';
+    },
+
+    riskBadge(level) {
+      return {
+        critical: 'border-red-200 bg-red-50 text-red-700',
+        high: 'border-amber-200 bg-amber-50 text-amber-700',
+        medium: 'border-amber-200 bg-amber-50 text-amber-700',
+        low: 'border-green-200 bg-green-50 text-green-700',
+      }[level] || 'border-slate-200 bg-slate-50 text-slate-600';
+    },
+
+    statusLabel(status) {
+      return {
+        pending: 'قيد الانتظار',
+        validated: 'تم التحقق',
+        flagged: 'مُعلّق',
+        approved: 'معتمد',
+        rejected: 'مرفوض',
+      }[status] || status || 'غير معروف';
+    },
+
+    progressBarClass(score) {
+      const value = Number(score || 0);
+      if (value >= 85) return 'bg-blue-600';
+      if (value >= 70) return 'bg-green-600';
+      if (value >= 50) return 'bg-amber-500';
+      return 'bg-red-500';
+    },
+
+    scoreBadgeClass(score) {
+      const value = Number(score || 0);
+      if (value >= 85) return 'bg-blue-50 text-blue-600';
+      if (value >= 70) return 'bg-green-50 text-green-600';
+      if (value >= 50) return 'bg-amber-50 text-amber-600';
+      return 'bg-red-50 text-red-600';
+    },
+
+    listUrl() {
+      return this.currentType.listUrl || '/documents/';
+    },
+
+    detailUrl(documentId) {
+      if (!this.currentType.detailBase) return this.listUrl();
+      return this.currentType.detailBase + documentId + '/';
+    },
+
+    async upload() {
+      if (this.selectedMode === 'csvjson') {
+        notify('استيراد CSV / JSON غير مفعّل بعد.', 'warning');
+        return;
+      }
+
+      if (!this.selectedType) {
+        notify('اختر نوع المستند أولاً.', 'warning');
+        return;
+      }
+
+      if (!this.files.length) {
+        notify('اختر ملفًا واحدًا على الأقل.', 'warning');
+        return;
+      }
+
+      if (this.selectedType === 'invoice') {
+        window.location.href = '/invoices/upload/';
+        return;
+      }
+
+      this.uploading = true;
+      const formData = new FormData();
+      formData.append('document_type', this.selectedType);
+      formData.append('language_preference', this.language);
+      formData.append('is_handwritten', this.isHandwritten ? 'true' : 'false');
+      formData.append('upload_mode', this.selectedMode);
+      for (const file of this.files) {
+        formData.append('files', file);
+      }
+
+      try {
+        const data = await apiFetch('/documents/upload/typed/', {
+          method: 'POST',
+          body: formData,
+        });
+
+        this.summary = {
+          total: data.total || 0,
+          processed: data.processed || 0,
+          failed: data.failed || 0,
+          documentType: data.document_type_ar || this.currentType.label || this.selectedType,
+        };
+        this.results = [
+          ...(data.results || []),
+          ...((data.errors || []).map((errorItem) => ({ ...errorItem, success: false }))),
+        ];
+        this.files = [];
+        notify(
+          (data.failed ? 'اكتملت المعالجة مع بعض الملاحظات. ' : 'تم رفع المستندات بنجاح. ') +
+          'عدد الملفات المعالجة: ' + (data.processed || 0),
+          data.failed ? 'warning' : 'success'
+        );
+      } catch (error) {
+        notify('فشل رفع المستندات: ' + error.message, 'error');
+      } finally {
+        this.uploading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+  }
+}
+</script>
+{% endblock %}

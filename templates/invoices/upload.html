@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}رفع الفواتير{% endblock %}
+{% block page_title %}رفع الفواتير{% endblock %}
+{% block nav_upload %}active{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-5" x-data="uploader()">
+
+  <!-- Upload Card -->
+  <div class="card p-6">
+    <h2 class="font-bold text-slate-800 dark:text-white text-lg mb-1">رفع ملفات الفواتير</h2>
+    <p class="text-slate-400 text-sm mb-6">يدعم النظام ملفات PDF والصور وملفات ZIP المضغوطة</p>
+
+    <!-- Drop Zone -->
+    <div @dragover.prevent="dragging=true"
+         @dragleave.prevent="dragging=false"
+         @drop.prevent="onDrop($event)"
+         @click="$refs.fileInput.click()"
+         :class="dragging ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/10 scale-[1.01]' : 'border-slate-300 dark:border-slate-600 hover:border-primary-400'"
+         class="border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-200 cursor-pointer">
+      <input x-ref="fileInput" type="file" multiple class="hidden"
+             accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff,.zip"
+             @change="addFiles($event.target.files)">
+      <div class="flex flex-col items-center gap-3">
+        <div class="w-16 h-16 rounded-2xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
+          <i data-lucide="upload-cloud" class="w-8 h-8 text-primary-500"></i>
+        </div>
+        <div>
+          <p class="font-semibold text-slate-700 dark:text-slate-200 text-base">اسحب الملفات وأفلتها هنا</p>
+          <p class="text-slate-400 text-sm mt-1">أو <span class="text-primary-500 font-semibold">انقر لاختيار الملفات</span></p>
+        </div>
+        <p class="text-xs text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-3 py-1.5 rounded-lg">
+          PDF · JPG · PNG · TIFF · ZIP — حجم أقصى 50 ميجابايت
+        </p>
+      </div>
+    </div>
+
+    <!-- Batch Name -->
+    <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">اسم الدفعة (اختياري)</label>
+        <input x-model="batchName" type="text" class="input" placeholder="مثال: فواتير يناير 2025">
+      </div>
+    </div>
+
+    <!-- File List -->
+    <div x-show="files.length" x-transition class="mt-5">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">
+          الملفات المحددة: <span class="text-primary-500" x-text="files.length"></span>
+        </p>
+        <button @click="files=[]" class="text-xs text-red-500 hover:text-red-400 font-medium">مسح الكل</button>
+      </div>
+      <div class="space-y-2 max-h-56 overflow-y-auto">
+        <template x-for="(f,i) in files" :key="i">
+          <div class="flex items-center gap-3 bg-slate-50 dark:bg-slate-700/40 rounded-xl px-4 py-3">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                 :class="f.name.endsWith('.pdf') ? 'bg-red-100 dark:bg-red-900/30' :
+                         f.name.endsWith('.zip') ? 'bg-amber-100 dark:bg-amber-900/30' :
+                                                   'bg-blue-100 dark:bg-blue-900/30'">
+              <i :data-lucide="f.name.endsWith('.pdf') ? 'file-text' : f.name.endsWith('.zip') ? 'archive' : 'image'"
+                 class="w-4 h-4"
+                 :class="f.name.endsWith('.pdf') ? 'text-red-500' : f.name.endsWith('.zip') ? 'text-amber-500' : 'text-blue-500'"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate" x-text="f.name"></p>
+              <p class="text-xs text-slate-400" x-text="fmtSize(f.size)"></p>
+            </div>
+            <div x-show="uploading" class="w-20">
+              <div class="progress-track">
+                <div class="progress-fill bg-primary-500 animate-pulse" style="width:60%"></div>
+              </div>
+            </div>
+            <button x-show="!uploading" @click="files.splice(i,1)"
+                    class="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0">
+              <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Submit -->
+    <button @click="upload()" :disabled="!files.length || uploading"
+            class="btn-blue w-full mt-6 py-3 justify-center text-base">
+      <span x-show="!uploading" class="flex items-center gap-2">
+        <i data-lucide="cpu" class="w-5 h-5"></i>
+        رفع وتشغيل البنود الـ 30 تلقائياً
+      </span>
+      <span x-show="uploading" class="flex items-center gap-2">
+        <svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
+          <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="opacity-75"/>
+        </svg>
+        جارٍ التحليل بالذكاء الاصطناعي...
+      </span>
+    </button>
+  </div>
+
+  <!-- Results -->
+  <div x-show="result" x-transition class="space-y-4">
+
+    <!-- Summary -->
+    <div class="card p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-slate-800 dark:text-white">📊 نتائج الرفع والتدقيق</h3>
+        <a :href="'/invoices/batches/' + (result?.batch_id||'') + '/'"
+           class="text-xs text-primary-500 hover:text-primary-400 font-semibold">عرض الدفعة الكاملة ←</a>
+      </div>
+      <div class="grid grid-cols-4 gap-3 text-center">
+        <div class="bg-slate-50 dark:bg-slate-700/40 rounded-xl py-4">
+          <div class="text-2xl font-bold font-mono text-slate-800 dark:text-white" x-text="result?.total_files||0"></div>
+          <div class="text-xs text-slate-400 mt-1">إجمالي الملفات</div>
+        </div>
+        <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl py-4">
+          <div class="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400" x-text="result?.processed||0"></div>
+          <div class="text-xs text-slate-400 mt-1">تمت معالجتها</div>
+        </div>
+        <div class="bg-red-50 dark:bg-red-900/20 rounded-xl py-4">
+          <div class="text-2xl font-bold font-mono text-red-600 dark:text-red-400" x-text="result?.failed||0"></div>
+          <div class="text-xs text-slate-400 mt-1">فشلت</div>
+        </div>
+        <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl py-4">
+          <div class="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400"
+               x-text="(result?.results||[]).filter(r=>['high','critical'].includes(r.risk_level)).length"></div>
+          <div class="text-xs text-slate-400 mt-1">تحتاج مراجعة</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Per-file results -->
+    <div class="card overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
+        <h3 class="font-semibold text-slate-800 dark:text-white">نتائج التدقيق لكل ملف</h3>
+      </div>
+      <div class="divide-y divide-slate-100 dark:divide-slate-700/20">
+        <template x-for="r in (result?.results||[])" :key="r.invoice_id">
+          <div class="flex items-center gap-4 px-5 py-4">
+            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                 :class="['high','critical'].includes(r.risk_level) ? 'bg-red-100 dark:bg-red-900/30' : 'bg-emerald-100 dark:bg-emerald-900/30'">
+              <i :data-lucide="['high','critical'].includes(r.risk_level) ? 'alert-triangle' : 'check-circle'"
+                 class="w-4 h-4"
+                 :class="['high','critical'].includes(r.risk_level) ? 'text-red-500' : 'text-emerald-500'"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate" x-text="r.filename"></p>
+              <p class="text-xs text-slate-400 mt-0.5">
+                فشل <span class="text-red-500 font-bold" x-text="(r.rules_failed||[]).length"></span> من أصل 30 بنداً
+                <span x-show="(r.rules_failed||[]).length" x-text="' — ' + (r.rules_failed||[]).slice(0,3).join(', ')"></span>
+              </p>
+            </div>
+            <!-- Score -->
+            <div class="text-center flex-shrink-0 w-16">
+              <div class="text-lg font-bold font-mono"
+                   :class="(r.validation_score||0)>=80 ? 'text-emerald-500' : (r.validation_score||0)>=60 ? 'text-amber-500' : 'text-red-500'"
+                   x-text="(r.validation_score||0).toFixed(0)+'%'"></div>
+              <div class="text-[10px] text-slate-400">نقاط التدقيق</div>
+            </div>
+            <span class="flex-shrink-0 text-xs font-semibold px-2.5 py-1 rounded-lg"
+                  :class="'badge-'+r.risk_level"
+                  x-text="{'critical':'حرج','high':'عالي','medium':'متوسط','low':'منخفض'}[r.risk_level]||r.risk_level"></span>
+            <a :href="'/invoices/'+r.invoice_id+'/'"
+               class="flex-shrink-0 text-primary-500 hover:text-primary-400 text-xs font-semibold">التفاصيل →</a>
+          </div>
+        </template>
+        <template x-for="e in (result?.errors||[])" :key="e.filename">
+          <div class="flex items-center gap-4 px-5 py-4 bg-red-50/50 dark:bg-red-900/10">
+            <i data-lucide="x-circle" class="w-5 h-5 text-red-500 flex-shrink-0"></i>
+            <div>
+              <p class="text-sm font-medium text-slate-700 dark:text-slate-200" x-text="e.filename"></p>
+              <p class="text-xs text-red-500 mt-0.5" x-text="e.error"></p>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function uploader() {
+  return {
+    files: [], batchName: '', dragging: false,
+    uploading: false, result: null,
+
+    onDrop(e) {
+      this.dragging = false;
+      this.addFiles(e.dataTransfer.files);
+    },
+    addFiles(list) {
+      for (const f of list) this.files.push(f);
+      this.$nextTick(() => lucide.createIcons());
+    },
+    fmtSize(b) {
+      return b > 1048576 ? (b/1048576).toFixed(1)+' MB' : (b/1024).toFixed(0)+' KB';
+    },
+    async upload() {
+      if (!this.files.length) return;
+      this.uploading = true; this.result = null;
+      const fd = new FormData();
+      for (const f of this.files) fd.append('files', f);
+      if (this.batchName) fd.append('batch_name', this.batchName);
+      try {
+        const r = await fetch('/api/v1/invoices/upload/', {
+          method: 'POST',
+          body: fd,
+          headers: { 'Authorization': 'Bearer ' + TOKEN(), 'X-CSRFToken': CSRF() },
+        });
+        this.result = await r.json();
+        notify(`تمت معالجة ${this.result.processed||0} فاتورة`,
+               this.result.failed ? 'warning' : 'success');
+        this.files = [];
+      } catch(e) {
+        notify('فشل الرفع: ' + e.message, 'error');
+      } finally {
+        this.uploading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    }
+  }
+}
+</script>
+{% endblock %}

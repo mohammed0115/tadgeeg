@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}الفواتير{% endblock %}
+{% block page_title %}إدارة الفواتير{% endblock %}
+{% block nav_invoices %}active{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'frontend:upload' %}" class="btn-ghost text-xs py-2">
+  <i data-lucide="upload" class="w-3.5 h-3.5"></i> رفع
+</a>
+{% endblock %}
+
+{% block content %}
+<div x-data="invoiceList()" x-init="init()" class="space-y-4 max-w-screen-2xl">
+
+  <!-- Quick-stat strips -->
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+    <div class="card px-4 py-3 text-center cursor-pointer hover:border-slate-300 dark:hover:border-slate-500 transition-colors"
+         @click="setFilter('status','')">
+      <div class="text-xl font-bold font-mono text-slate-800 dark:text-white" x-text="quickStats.total||'—'"></div>
+      <div class="text-xs text-slate-400 mt-0.5">الكل</div>
+    </div>
+    <div class="card px-4 py-3 text-center cursor-pointer hover:border-red-300 dark:hover:border-red-700 transition-colors"
+         @click="setFilter('status','flagged')">
+      <div class="text-xl font-bold font-mono text-red-600 dark:text-red-400" x-text="quickStats.flagged||'0'"></div>
+      <div class="text-xs text-slate-400 mt-0.5">مُبلَّغة</div>
+    </div>
+    <div class="card px-4 py-3 text-center cursor-pointer hover:border-amber-300 dark:hover:border-amber-700 transition-colors"
+         @click="setFilter('is_duplicate','true')">
+      <div class="text-xl font-bold font-mono text-amber-600 dark:text-amber-400" x-text="quickStats.duplicates||'0'"></div>
+      <div class="text-xs text-slate-400 mt-0.5">مكررة</div>
+    </div>
+    <div class="card px-4 py-3 text-center cursor-pointer hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors"
+         @click="setFilter('status','approved')">
+      <div class="text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400" x-text="quickStats.approved||'0'"></div>
+      <div class="text-xs text-slate-400 mt-0.5">مُعتمدة</div>
+    </div>
+    <div class="card px-4 py-3 text-center cursor-pointer hover:border-violet-300 dark:hover:border-violet-700 transition-colors"
+         @click="setFilter('status','pending')">
+      <div class="text-xl font-bold font-mono text-violet-600 dark:text-violet-400" x-text="quickStats.pending||'0'"></div>
+      <div class="text-xs text-slate-400 mt-0.5">انتظار</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card p-4">
+    <div class="flex flex-wrap gap-3 items-center">
+      <!-- Search -->
+      <div class="relative min-w-56 flex-1">
+        <i data-lucide="search" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"></i>
+        <input x-model="filters.search" @input.debounce.400ms="page=1;fetch()"
+               type="text" placeholder="بحث بالمورد أو رقم الفاتورة..."
+               class="input pr-9 py-2">
+      </div>
+      <!-- Status -->
+      <select x-model="filters.status" @change="page=1;fetch()" class="select py-2">
+        <option value="">كل الحالات</option>
+        <option value="pending">انتظار</option>
+        <option value="processing">معالجة</option>
+        <option value="validated">مُدقَّقة</option>
+        <option value="flagged">مُبلَّغة</option>
+        <option value="approved">مُعتمدة</option>
+        <option value="rejected">مرفوضة</option>
+      </select>
+      <!-- Risk -->
+      <select x-model="filters.risk_level" @change="page=1;fetch()" class="select py-2">
+        <option value="">كل المخاطر</option>
+        <option value="critical">حرج</option>
+        <option value="high">عالي</option>
+        <option value="medium">متوسط</option>
+        <option value="low">منخفض</option>
+      </select>
+      <!-- Duplicate -->
+      <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer select-none">
+        <input x-model="filters.is_duplicate" @change="page=1;fetch()" type="checkbox"
+               class="rounded border-slate-300 text-primary-600 focus:ring-primary-500">
+        مكررة فقط
+      </label>
+      <!-- Date From -->
+      <input x-model="filters.date_from" @change="page=1;fetch()" type="date"
+             class="select py-2 text-slate-600 dark:text-slate-300">
+      <input x-model="filters.date_to"   @change="page=1;fetch()" type="date"
+             class="select py-2 text-slate-600 dark:text-slate-300">
+      <!-- Reset -->
+      <button @click="resetFilters()" class="btn-ghost text-xs py-2">
+        <i data-lucide="x" class="w-3.5 h-3.5"></i> مسح الفلاتر
+      </button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card overflow-hidden">
+    <!-- Loading -->
+    <div x-show="loading" class="flex items-center justify-center py-20">
+      <div class="flex items-center gap-3 text-slate-400">
+        <svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
+          <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="opacity-75"/>
+        </svg>
+        <span class="text-sm">جارٍ التحميل...</span>
+      </div>
+    </div>
+
+    <div x-show="!loading">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>رقم الفاتورة</th>
+            <th>المورد</th>
+            <th>التاريخ</th>
+            <th class="text-left">الإجمالي</th>
+            <th>ضريبة القيمة</th>
+            <th>الحالة</th>
+            <th>مستوى الخطر</th>
+            <th>نقاط التدقيق</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="inv in invoices" :key="inv.id">
+            <tr>
+              <td>
+                <div class="flex items-center gap-2">
+                  <span x-show="inv.is_duplicate" class="w-2 h-2 rounded-full bg-amber-400 flex-shrink-0" title="مكررة"></span>
+                  <span x-show="inv.has_qr_code" class="text-emerald-500 text-xs" title="QR موجود">⬛</span>
+                  <span class="font-mono text-xs" x-text="inv.invoice_number||'—'"></span>
+                </div>
+              </td>
+              <td>
+                <div class="font-medium text-slate-800 dark:text-white truncate max-w-[180px]" x-text="inv.vendor_name||'غير محدد'"></div>
+                <div class="text-xs text-slate-400 truncate font-mono" x-text="inv.vendor_vat_number||''"></div>
+              </td>
+              <td class="whitespace-nowrap text-xs" x-text="inv.invoice_date||'—'"></td>
+              <td class="text-left">
+                <div class="font-mono font-bold text-slate-800 dark:text-white" x-text="Number(inv.total_amount||0).toLocaleString('ar-SA',{minimumFractionDigits:2,maximumFractionDigits:2})"></div>
+                <div class="text-xs text-slate-400" x-text="inv.currency||'SAR'"></div>
+              </td>
+              <td class="font-mono text-xs" x-text="Number(inv.vat_amount||0).toLocaleString('ar-SA',{minimumFractionDigits:2,maximumFractionDigits:2})"></td>
+              <td>
+                <span :class="'status-' + inv.status"
+                      x-text="{'pending':'انتظار','processing':'معالجة','validated':'مُدقَّقة','flagged':'مُبلَّغة','approved':'مُعتمدة','rejected':'مرفوضة'}[inv.status]||inv.status">
+                </span>
+              </td>
+              <td>
+                <span :class="'badge-' + inv.risk_level"
+                      x-text="{'critical':'حرج','high':'عالي','medium':'متوسط','low':'منخفض'}[inv.risk_level]||inv.risk_level">
+                </span>
+              </td>
+              <td>
+                <div class="flex items-center gap-2 min-w-[80px]">
+                  <div class="flex-1 progress-track">
+                    <div class="progress-fill"
+                         :style="'width:'+(inv.ocr_confidence||0)+'%; background:'+(inv.ocr_confidence>=80?'#22c55e':inv.ocr_confidence>=60?'#f59e0b':'#ef4444')">
+                    </div>
+                  </div>
+                  <span class="text-xs font-mono" x-text="(inv.ocr_confidence||0).toFixed(0)+'%'"></span>
+                </div>
+              </td>
+              <td>
+                <div class="flex items-center gap-1">
+                  <a :href="'/invoices/'+inv.id+'/'"
+                     class="p-1.5 rounded-lg text-slate-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors" title="عرض">
+                    <i data-lucide="eye" class="w-4 h-4"></i>
+                  </a>
+                  <button x-show="inv.status!=='approved' && inv.status!=='rejected'"
+                          @click="quickApprove(inv.id)"
+                          class="p-1.5 rounded-lg text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors" title="اعتماد سريع">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="!loading && !invoices.length">
+            <td colspan="9" class="text-center py-16 text-slate-400">
+              <i data-lucide="file-x" class="w-8 h-8 mx-auto mb-2"></i>
+              <p class="text-sm">لا توجد فواتير مطابقة للفلاتر</p>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div x-show="total > pageSize"
+         class="flex items-center justify-between px-5 py-3.5 border-t border-slate-100 dark:border-slate-700/30">
+      <span class="text-sm text-slate-500"
+            x-text="`عرض ${((page-1)*pageSize)+1}–${Math.min(page*pageSize,total)} من ${total} فاتورة`"></span>
+      <div class="flex items-center gap-2">
+        <button @click="page--;fetch()" :disabled="page<=1" class="btn-ghost text-xs py-1.5 px-3">← السابق</button>
+        <span class="text-sm text-slate-500 px-2" x-text="`${page} / ${Math.ceil(total/pageSize)}`"></span>
+        <button @click="page++;fetch()" :disabled="page*pageSize>=total" class="btn-ghost text-xs py-1.5 px-3">التالي →</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function invoiceList() {
+  return {
+    invoices: [], loading: true, total: 0, page: 1, pageSize: 25,
+    quickStats: { total:0, flagged:0, duplicates:0, approved:0, pending:0 },
+    filters: { search:'', status:'', risk_level:'', is_duplicate:false, date_from:'', date_to:'' },
+
+    init() {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get('status'))       this.filters.status       = p.get('status');
+      if (p.get('risk_level'))   this.filters.risk_level   = p.get('risk_level');
+      if (p.get('is_duplicate')) this.filters.is_duplicate = true;
+      this.fetch();
+    },
+
+    buildURL() {
+      const p = new URLSearchParams();
+      p.set('page', this.page); p.set('page_size', this.pageSize);
+      if (this.filters.search)      p.set('search',       this.filters.search);
+      if (this.filters.status)      p.set('status',       this.filters.status);
+      if (this.filters.risk_level)  p.set('risk_level',   this.filters.risk_level);
+      if (this.filters.is_duplicate) p.set('is_duplicate','true');
+      if (this.filters.date_from)   p.set('date_from',    this.filters.date_from);
+      if (this.filters.date_to)     p.set('date_to',      this.filters.date_to);
+      return p.toString();
+    },
+
+    async fetch() {
+      this.loading = true;
+      try {
+        const d = await apiFetch('/invoices/?' + this.buildURL());
+        this.invoices = d.results || d || [];
+        this.total = d.count || this.invoices.length;
+        // Quick stats from first unrestricted call
+        if (!this.filters.status && !this.filters.search && !this.filters.risk_level && !this.filters.is_duplicate) {
+          this.quickStats.total     = this.total;
+          this.quickStats.flagged   = this.invoices.filter(i=>i.status==='flagged').length;
+          this.quickStats.duplicates= this.invoices.filter(i=>i.is_duplicate).length;
+          this.quickStats.approved  = this.invoices.filter(i=>i.status==='approved').length;
+          this.quickStats.pending   = this.invoices.filter(i=>i.status==='pending').length;
+        }
+      } catch(e) { notify('فشل تحميل الفواتير: '+e.message,'error'); }
+      finally { this.loading = false; this.$nextTick(()=>lucide.createIcons()); }
+    },
+
+    setFilter(key, val) {
+      this.filters = { search:'', status:'', risk_level:'', is_duplicate:false, date_from:'', date_to:'' };
+      this.filters[key] = val; this.page=1; this.fetch();
+    },
+    resetFilters() { this.setFilter('status',''); },
+
+    async quickApprove(id) {
+      try {
+        await apiFetch('/invoices/'+id+'/approve/', {
+          method:'POST', body: JSON.stringify({action:'approve'})
+        });
+        notify('تم اعتماد الفاتورة', 'success');
+        this.fetch();
+      } catch(e) { notify('فشل الاعتماد: '+e.message,'error'); }
+    }
+  }
+}
+</script>
+{% endblock %}

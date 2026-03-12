@@ -1,0 +1,780 @@
+{% extends "base.html" %}
+{% block title %}لوحة التحكم{% endblock %}
+{% block page_title %}لوحة التحكم{% endblock %}
+{% block nav_dashboard %}active{% endblock %}
+
+{% block header_actions %}{% endblock %}
+
+{% block header_primary_action %}{% endblock %}
+
+{% block content %}
+<style type="text/tailwindcss">
+  .dashboard-page .dashboard-surface {
+    @apply rounded-[2rem] border border-slate-200/80 bg-white/90 shadow-[0_20px_55px_-30px_rgba(15,23,42,0.3)];
+  }
+
+  .dashboard-page .dashboard-gradient-card {
+    border-radius: 28px;
+    color: #ffffff;
+    padding: 24px;
+    min-height: 196px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 24px 60px -24px rgba(15, 23, 42, 0.45);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .dashboard-page .dashboard-gradient-blue {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  }
+
+  .dashboard-page .dashboard-gradient-violet {
+    background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+  }
+
+  .dashboard-page .dashboard-gradient-orange {
+    background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+  }
+
+  .dashboard-page .dashboard-gradient-green {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  }
+
+  .dashboard-page .dashboard-soft-button {
+    @apply flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-semibold text-slate-800 shadow-sm transition;
+  }
+
+  .dashboard-page .dashboard-soft-button:hover {
+    @apply border-slate-300 bg-slate-50;
+  }
+
+  .dashboard-page .dashboard-soft-button-primary {
+    border-color: transparent;
+    background: linear-gradient(135deg, #2563eb 0%, #9333ea 100%);
+    color: #ffffff;
+    box-shadow: 0 14px 30px rgba(99, 102, 241, 0.25);
+  }
+
+  .dashboard-page .dashboard-alert-item {
+    @apply rounded-2xl border px-4 py-4;
+  }
+
+  .dashboard-page .dashboard-mini-stat {
+    @apply rounded-3xl border border-slate-200 bg-slate-50/80 p-4;
+  }
+</style>
+
+<div x-data="dashboard()" x-init="init()" class="dashboard-page -m-6 min-h-full bg-gradient-to-b from-slate-50 via-white to-slate-100/80 px-4 py-6 sm:px-6 lg:px-8">
+  <div class="mx-auto max-w-7xl space-y-6">
+    <section class="relative overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white/90 p-6 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.35)] backdrop-blur xl:p-8">
+      <div class="absolute -top-24 left-10 h-48 w-48 rounded-full bg-primary-500/10 blur-3xl"></div>
+      <div class="absolute bottom-0 right-0 h-44 w-44 rounded-full bg-violet-500/10 blur-3xl"></div>
+
+      <div class="relative flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
+        <div class="max-w-3xl space-y-5">
+          <div class="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-primary-50/80 px-3 py-1 text-xs font-semibold text-primary-700">
+            <i data-lucide="layout-dashboard" class="h-3.5 w-3.5"></i>
+            FinAI Executive Dashboard
+          </div>
+
+          <div class="space-y-3 text-right">
+            <p class="text-sm font-semibold text-primary-600" x-text="organizationName"></p>
+            <h1 class="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl xl:text-[2.6rem]">القيادة المالية والامتثال في شاشة واحدة</h1>
+            <p class="max-w-2xl text-sm leading-8 text-slate-600 sm:text-base">
+              راقب الفواتير، المخاطر، التدفق المالي، ومؤشرات الامتثال من واجهة تنفيذية مصممة لتسريع القرار داخل فرق المالية والمراجعة.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold" :class="dashboardStatusMeta().badgeClass">
+              <span class="h-2 w-2 rounded-full" :class="dashboardStatusMeta().dotClass"></span>
+              <span x-text="dashboardStatusMeta().label"></span>
+            </span>
+
+            <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3.5 py-1.5 text-xs text-slate-500 shadow-sm">
+              <i data-lucide="calendar-days" class="h-3.5 w-3.5"></i>
+              <span x-text="todayLabel"></span>
+            </span>
+
+            <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50/80 px-3.5 py-1.5 text-xs text-slate-500">
+              <i data-lucide="badge-check" class="h-3.5 w-3.5"></i>
+              <span x-text="complianceDescription"></span>
+            </span>
+          </div>
+        </div>
+
+        <div class="flex flex-col items-stretch gap-3 sm:flex-row xl:justify-end">
+          <a href="{% url 'frontend:invoices' %}?status=flagged" class="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50">
+            <i data-lucide="triangle-alert" class="h-4 w-4"></i>
+            قائمة المراجعة
+          </a>
+          <a href="{% url 'frontend:upload' %}" class="inline-flex h-12 min-w-[12rem] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-6 text-sm font-bold text-white shadow-[0_18px_40px_-18px_rgba(15,23,42,0.95)] transition hover:-translate-y-0.5 hover:bg-slate-800">
+            <i data-lucide="file-plus-2" class="h-4 w-4"></i>
+            رفع فواتير جديدة
+          </a>
+        </div>
+      </div>
+
+      <div class="relative mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
+        <div class="dashboard-gradient-card dashboard-gradient-blue">
+          <div class="absolute inset-x-0 top-0 h-px bg-white/30"></div>
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-lg font-bold">إجمالي الفواتير</p>
+              <p class="mt-2 text-sm text-white/80">نمو مستمر في حجم المعالجة</p>
+            </div>
+            <i data-lucide="file-text" class="h-6 w-6 text-white/90"></i>
+          </div>
+          <div>
+            <p class="font-mono text-5xl font-extrabold" x-text="formatInteger(stats.total_invoices)"></p>
+            <p class="mt-3 text-base text-white/90" x-text="growthDescription"></p>
+          </div>
+        </div>
+
+        <div class="dashboard-gradient-card dashboard-gradient-violet">
+          <div class="absolute inset-x-0 top-0 h-px bg-white/30"></div>
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-lg font-bold">القيمة الإجمالية</p>
+              <p class="mt-2 text-sm text-white/80">لجميع الفواتير المعالجة</p>
+            </div>
+            <i data-lucide="badge-dollar-sign" class="h-6 w-6 text-white/90"></i>
+          </div>
+          <div>
+            <p class="font-mono text-[2.35rem] font-extrabold leading-tight" x-text="formatSar(stats.total_amount)"></p>
+            <p class="mt-3 text-base text-white/90">إجمالي القيمة المتداولة خلال الفترة</p>
+          </div>
+        </div>
+
+        <div class="dashboard-gradient-card dashboard-gradient-orange">
+          <div class="absolute inset-x-0 top-0 h-px bg-white/30"></div>
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-lg font-bold">تحتاج مراجعة</p>
+              <p class="mt-2 text-sm text-white/80">فواتير عالية المخاطر والملاحظات</p>
+            </div>
+            <i data-lucide="triangle-alert" class="h-6 w-6 text-white/90"></i>
+          </div>
+          <div>
+            <p class="font-mono text-5xl font-extrabold" x-text="formatInteger(stats.flagged)"></p>
+            <p class="mt-3 text-base text-white/90" x-text="reviewDescription"></p>
+          </div>
+        </div>
+
+        <div class="dashboard-gradient-card dashboard-gradient-green">
+          <div class="absolute inset-x-0 top-0 h-px bg-white/30"></div>
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-lg font-bold">معدل الامتثال</p>
+              <p class="mt-2 text-sm text-white/80">جودة الالتزام الضريبي والتدقيقي</p>
+            </div>
+            <i data-lucide="badge-check" class="h-6 w-6 text-white/90"></i>
+          </div>
+          <div>
+            <p class="font-mono text-5xl font-extrabold" x-text="formatPercent(stats.compliance_rate)"></p>
+            <p class="mt-3 text-base text-white/90" x-text="complianceDescription"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
+    <div class="space-y-6 xl:col-span-3">
+      <div class="dashboard-surface p-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-2xl font-bold text-slate-900">إجراءات سريعة</h2>
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">تشغيل مباشر</span>
+        </div>
+
+        <div class="mt-5 space-y-3">
+          <a href="{% url 'frontend:upload' %}" class="dashboard-soft-button dashboard-soft-button-primary">
+            <i data-lucide="file-plus-2" class="h-5 w-5"></i>
+            <span class="flex-1 text-right">رفع فواتير جديدة</span>
+          </a>
+          <a href="{% url 'frontend:invoices' %}?status=flagged" class="dashboard-soft-button">
+            <i data-lucide="triangle-alert" class="h-5 w-5 text-orange-500"></i>
+            <span class="flex-1 text-right">مراجعة الفواتير المعلقة</span>
+          </a>
+          <a href="{% url 'frontend:compliance' %}" class="dashboard-soft-button">
+            <i data-lucide="shield-check" class="h-5 w-5 text-green-500"></i>
+            <span class="flex-1 text-right">تقرير الامتثال الضريبي</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="dashboard-surface p-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-2xl font-bold text-slate-900">التنبيهات الحديثة</h2>
+          <span class="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-600" x-text="formatInteger(alerts.length)"></span>
+        </div>
+
+        <div class="mt-5 space-y-3">
+          <template x-for="(alert, index) in alerts" :key="alert.title + '-' + index">
+            <div class="dashboard-alert-item" :class="alertClass(alert.type)">
+              <div class="flex items-start gap-3">
+                <div class="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl" :class="alertIconWrapClass(alert.type)">
+                  <i :data-lucide="alertIcon(alert.type)" class="h-4 w-4"></i>
+                </div>
+                <div class="min-w-0 flex-1 text-right">
+                  <p class="text-sm font-bold" x-text="alert.title"></p>
+                  <p class="mt-1 text-xs leading-6 opacity-90" x-text="alert.subtitle"></p>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <div class="space-y-6 xl:col-span-9">
+      <div class="dashboard-surface p-6 lg:p-7">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div class="text-right">
+            <h2 class="text-3xl font-bold text-slate-900">التدفق المالي الشهري</h2>
+            <p class="mt-2 text-sm text-slate-500">منحنى الفواتير والقيمة الإجمالية خلال الأشهر الأخيرة</p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3 self-start">
+            <span class="rounded-full px-4 py-2 text-sm font-bold" :class="growthPillClass" x-text="growthPillText"></span>
+            <select x-model.number="chartPeriod" @change="buildCashFlowChart()" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
+              <option :value="12">آخر 12 شهرًا</option>
+              <option :value="6">آخر 6 أشهر</option>
+              <option :value="3">آخر 3 أشهر</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="relative mt-6 h-[360px] lg:h-[420px]">
+          <canvas id="cashFlowChart"></canvas>
+          <div x-show="loadingChart" class="absolute inset-0 flex items-center justify-center rounded-3xl bg-white/70 backdrop-blur-sm">
+            <svg class="h-8 w-8 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-20"></circle><path fill="currentColor" d="M12 2a10 10 0 0 1 10 10h-4a6 6 0 0 0-6-6V2z"></path></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 gap-6 2xl:grid-cols-12">
+        <div class="dashboard-surface p-6 2xl:col-span-8">
+          <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div class="text-right">
+              <h2 class="text-2xl font-bold text-slate-900">قائمة المراجعة</h2>
+              <p class="mt-1 text-sm text-slate-500">الفواتير التي تحتاج تدقيقًا يدويًا أو متابعة فورية</p>
+            </div>
+            <a href="{% url 'frontend:invoices' %}?status=flagged" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+              <i data-lucide="arrow-left" class="h-4 w-4"></i>
+              عرض الكل
+            </a>
+          </div>
+
+          <div class="mt-6 space-y-3">
+            <template x-if="loadingFlagged">
+              <div class="flex items-center justify-center py-12 text-slate-400">
+                <svg class="h-6 w-6 animate-spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-20"></circle><path fill="currentColor" d="M12 2a10 10 0 0 1 10 10h-4a6 6 0 0 0-6-6V2z"></path></svg>
+              </div>
+            </template>
+
+            <template x-if="!loadingFlagged && !flaggedInvoices.length">
+              <div class="rounded-2xl border border-dashed border-green-200 bg-green-50 px-5 py-10 text-center text-green-700">
+                <i data-lucide="badge-check" class="mx-auto h-8 w-8"></i>
+                <p class="mt-3 text-sm font-semibold">لا توجد فواتير حرجة في قائمة المراجعة</p>
+              </div>
+            </template>
+
+            <template x-for="invoice in flaggedInvoices" :key="invoice.id">
+              <a :href="'/invoices/' + invoice.id + '/'" class="block rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 transition hover:border-slate-300 hover:bg-white">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div class="flex items-start gap-4">
+                    <div class="flex h-11 w-11 items-center justify-center rounded-2xl" :class="invoice.risk_level === 'critical' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'">
+                      <i data-lucide="file-warning" class="h-5 w-5"></i>
+                    </div>
+                    <div class="text-right">
+                      <p class="text-sm font-bold text-slate-900" x-text="invoice.vendor_name || 'مورد غير محدد'"></p>
+                      <p class="mt-1 text-xs text-slate-500" x-text="invoice.invoice_number || 'بدون رقم فاتورة'"></p>
+                    </div>
+                  </div>
+
+                  <div class="flex flex-wrap items-center gap-3 lg:justify-end">
+                    <span class="rounded-full px-3 py-1 text-xs font-bold" :class="riskBadge(invoice.risk_level)" x-text="riskLabel(invoice.risk_level)"></span>
+                    <span class="font-mono text-sm font-bold text-slate-700" x-text="formatAmount(invoice.total_amount, invoice.currency || 'SAR')"></span>
+                    <span class="text-xs text-slate-400" x-text="invoice.invoice_date || '—'"></span>
+                  </div>
+                </div>
+              </a>
+            </template>
+          </div>
+        </div>
+
+        <div class="space-y-6 2xl:col-span-4">
+          <div class="dashboard-surface p-6">
+            <div class="flex items-center justify-between">
+              <h2 class="text-2xl font-bold text-slate-900">مؤشرات المخاطر</h2>
+              <i data-lucide="shield-alert" class="h-5 w-5 text-slate-400"></i>
+            </div>
+
+            <div class="mt-5 grid grid-cols-2 gap-3">
+              <div class="dashboard-mini-stat">
+                <p class="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">المكررة</p>
+                <p class="mt-2 font-mono text-2xl font-bold text-amber-600" x-text="formatInteger(stats.duplicates)"></p>
+              </div>
+              <div class="dashboard-mini-stat">
+                <p class="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">عالية المخاطر</p>
+                <p class="mt-2 font-mono text-2xl font-bold text-red-600" x-text="formatInteger(stats.high_risk)"></p>
+              </div>
+            </div>
+
+            <div class="mt-5 space-y-4">
+              <template x-for="item in riskDist" :key="item.key">
+                <div>
+                  <div class="mb-2 flex items-center justify-between text-sm">
+                    <span class="font-semibold text-slate-700" x-text="item.label"></span>
+                    <span class="font-mono font-bold text-slate-500" x-text="item.count"></span>
+                  </div>
+                  <div class="h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div class="h-full rounded-full transition-all duration-500" :style="'width:' + item.pct + '%; background:' + item.color"></div>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+
+          <div class="dashboard-surface p-6">
+            <div class="flex items-center justify-between">
+              <h2 class="text-2xl font-bold text-slate-900">أكبر الموردين</h2>
+              <a href="{% url 'frontend:vendors' %}" class="text-sm font-semibold text-blue-600">عرض الكل</a>
+            </div>
+
+            <div class="mt-5 space-y-4">
+              <template x-if="!topVendors.length">
+                <p class="text-sm text-slate-400">لا توجد بيانات كافية لعرض الموردين.</p>
+              </template>
+
+              <template x-for="(vendor, index) in topVendors" :key="vendor.vendor_name + '-' + index">
+                <div>
+                  <div class="mb-2 flex items-center justify-between gap-3 text-sm">
+                    <span class="truncate font-semibold text-slate-700" x-text="vendor.vendor_name || 'غير مصنف'"></span>
+                    <span class="font-mono font-bold text-slate-900" x-text="formatSar(vendor.total_amount)"></span>
+                  </div>
+                  <div class="h-2 overflow-hidden rounded-full bg-slate-100">
+                    <div class="h-full rounded-full transition-all duration-500" :style="'width:' + vendor.pct + '%; background:' + vendor.color"></div>
+                  </div>
+                  <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
+                    <span x-text="vendor.invoice_count + ' فاتورة'"></span>
+                    <span x-text="vendor.pct + '% من الإجمالي'"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-surface p-6">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div class="text-right">
+            <h2 class="text-2xl font-bold text-slate-900">جودة بنود التدقيق</h2>
+            <p class="mt-1 text-sm text-slate-500">معدل اجتياز مجموعات القواعد الرئيسية عبر دورة المراجعة</p>
+          </div>
+          <span class="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-500">30 قاعدة تدقيق</span>
+        </div>
+
+        <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          <template x-for="group in ruleGroups" :key="group.code">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div class="flex items-center justify-between">
+                <div class="text-right">
+                  <p class="text-sm font-bold text-slate-800" x-text="group.label"></p>
+                  <p class="mt-1 font-mono text-xs text-slate-400" x-text="group.code"></p>
+                </div>
+                <span class="font-mono text-lg font-bold" :style="'color:' + group.color" x-text="group.pct + '%'"></span>
+              </div>
+              <div class="mt-4 h-2 overflow-hidden rounded-full bg-white">
+                <div class="h-full rounded-full transition-all duration-500" :style="'width:' + group.pct + '%; background:' + group.color"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function dashboard() {
+  return {
+    chartPeriod: 6,
+    loadingChart: true,
+    loadingFlagged: true,
+    spendChartInst: null,
+    growthOverride: Number('{{ monthly_growth|default:"0"|escapejs }}'),
+    monthlyGrowth: Number('{{ monthly_growth|default:"0"|escapejs }}'),
+    organizationName: '{{ request.user.organization.name|default:"FinAI"|escapejs }}',
+    stats: {
+      total_invoices: 0,
+      total_amount: 0,
+      flagged: 0,
+      duplicates: 0,
+      compliance_rate: 100,
+      high_risk: 0,
+    },
+    cashTrend: [],
+    flaggedInvoices: [],
+    topVendors: [],
+    riskDist: [],
+    alerts: [],
+    ruleGroups: [],
+
+    get todayLabel() {
+      return new Intl.DateTimeFormat('ar-SA', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }).format(new Date());
+    },
+
+    get growthPillText() {
+      const value = Number(this.monthlyGrowth || 0);
+      return `${value >= 0 ? '+' : ''}${value.toFixed(1)}% ↗`;
+    },
+
+    get growthPillClass() {
+      return Number(this.monthlyGrowth || 0) >= 0
+        ? 'bg-emerald-50 text-emerald-600'
+        : 'bg-red-50 text-red-600';
+    },
+
+    get growthDescription() {
+      return `${this.growthPillText} هذا الشهر`;
+    },
+
+    get reviewDescription() {
+      if (!this.stats.flagged) return 'لا توجد عناصر عاجلة للمراجعة';
+      return `${this.formatInteger(this.stats.high_risk || this.stats.flagged)} عالية المخاطر`;
+    },
+
+    get complianceDescription() {
+      return Number(this.stats.compliance_rate || 0) >= 90 ? 'متوافق مع ZATCA' : 'يتطلب متابعة وتحسين';
+    },
+
+    dashboardStatusMeta() {
+      if (Number(this.stats.high_risk || 0) > 0) {
+        return {
+          label: 'مخاطر عالية قيد المتابعة',
+          badgeClass: 'border-amber-200 bg-amber-50 text-amber-800',
+          dotClass: 'bg-amber-500',
+        };
+      }
+
+      if (Number(this.stats.flagged || 0) > 0) {
+        return {
+          label: 'قائمة مراجعة نشطة',
+          badgeClass: 'border-blue-200 bg-blue-50 text-blue-700',
+          dotClass: 'bg-blue-500',
+        };
+      }
+
+      return {
+        label: 'المشهد المالي مستقر',
+        badgeClass: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        dotClass: 'bg-emerald-500',
+      };
+    },
+
+    formatInteger(value) {
+      return Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+    },
+
+    formatPercent(value) {
+      return `${Number(value || 0).toFixed(1)}%`;
+    },
+
+    formatSar(value) {
+      return `SAR ${Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 1 })}`;
+    },
+
+    formatAmount(value, currency) {
+      return `${currency || 'SAR'} ${Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+    },
+
+    riskLabel(level) {
+      return {
+        critical: 'حرج',
+        high: 'عالي',
+        medium: 'متوسط',
+        low: 'منخفض',
+      }[level] || 'غير محدد';
+    },
+
+    riskBadge(level) {
+      return {
+        critical: 'bg-red-50 text-red-700',
+        high: 'bg-orange-50 text-orange-700',
+        medium: 'bg-amber-50 text-amber-700',
+        low: 'bg-green-50 text-green-700',
+      }[level] || 'bg-slate-100 text-slate-600';
+    },
+
+    alertIcon(type) {
+      return {
+        critical: 'triangle-alert',
+        warning: 'alert-circle',
+        info: 'shield-alert',
+        success: 'badge-check',
+      }[type] || 'bell-ring';
+    },
+
+    alertClass(type) {
+      return {
+        critical: 'border-red-200 bg-red-50 text-red-700',
+        warning: 'border-amber-200 bg-amber-50 text-amber-700',
+        info: 'border-blue-200 bg-blue-50 text-blue-700',
+        success: 'border-green-200 bg-green-50 text-green-700',
+      }[type] || 'border-slate-200 bg-slate-50 text-slate-600';
+    },
+
+    alertIconWrapClass(type) {
+      return {
+        critical: 'bg-white/80 text-red-600',
+        warning: 'bg-white/80 text-amber-600',
+        info: 'bg-white/80 text-blue-600',
+        success: 'bg-white/80 text-green-600',
+      }[type] || 'bg-white/80 text-slate-600';
+    },
+
+    initRuleGroups() {
+      this.ruleGroups = [
+        { code: 'INV', label: 'رأس الفاتورة', pct: 88, color: '#2563eb' },
+        { code: 'DUP', label: 'التكرار', pct: 94, color: '#f59e0b' },
+        { code: 'VAT', label: 'ضريبة القيمة', pct: 79, color: '#7c3aed' },
+        { code: 'ANO', label: 'الشذوذ', pct: 65, color: '#ef4444' },
+        { code: 'CTL', label: 'الرقابة', pct: 82, color: '#06b6d4' },
+        { code: 'DOC', label: 'المستند', pct: 91, color: '#16a34a' },
+      ];
+    },
+
+    init() {
+      this.initRuleGroups();
+      Promise.all([this.loadSpendReport(), this.loadReviewQueues()])
+        .finally(() => this.$nextTick(() => lucide.createIcons()));
+    },
+
+    updateDerivedMetrics() {
+      const total = Number(this.stats.total_invoices || 0);
+      const flagged = Number(this.stats.flagged || 0);
+      this.stats.compliance_rate = total ? Math.max(0, ((total - flagged) / total) * 100) : 100;
+      this.buildAlerts();
+    },
+
+    async loadSpendReport() {
+      this.loadingChart = true;
+      try {
+        const report = await apiFetch('/invoices/reports/spend/');
+        const overall = report.overall || {};
+
+        this.stats.total_invoices = overall.total_invoices || 0;
+        this.stats.total_amount = overall.grand_total || 0;
+
+        const trend = (report.monthly_trend || []).map((item) => ({
+          month: item.month,
+          total: Number(item.total || 0),
+          count: Number(item.count || 0),
+          flagged: Number(item.flagged || 0),
+        }));
+        this.cashTrend = trend;
+        this.monthlyGrowth = this.computeMonthlyGrowth(trend);
+
+        const grandTotal = Number(overall.grand_total || 0) || 1;
+        const palette = ['#2563eb', '#7c3aed', '#f97316', '#10b981', '#eab308'];
+        this.topVendors = (report.by_vendor || []).slice(0, 5).map((vendor, index) => ({
+          vendor_name: vendor.vendor_name || 'غير مصنف',
+          total_amount: Number(vendor.total || 0),
+          invoice_count: Number(vendor.count || 0),
+          pct: Math.max(4, Math.min(100, Number(((vendor.total || 0) / grandTotal) * 100).toFixed(1))),
+          color: palette[index % palette.length],
+        }));
+
+        this.updateDerivedMetrics();
+        this.$nextTick(() => this.buildCashFlowChart());
+      } catch (error) {
+        console.warn('dashboard spend report', error);
+        this.cashTrend = [];
+      } finally {
+        this.loadingChart = false;
+      }
+    },
+
+    async loadReviewQueues() {
+      this.loadingFlagged = true;
+      try {
+        const [flagged, duplicates, low, medium, high, critical] = await Promise.all([
+          apiFetch('/invoices/?status=flagged&page_size=5'),
+          apiFetch('/invoices/?is_duplicate=true&page_size=1'),
+          apiFetch('/invoices/?risk_level=low&page_size=1'),
+          apiFetch('/invoices/?risk_level=medium&page_size=1'),
+          apiFetch('/invoices/?risk_level=high&page_size=1'),
+          apiFetch('/invoices/?risk_level=critical&page_size=1'),
+        ]);
+
+        this.flaggedInvoices = flagged.results || [];
+        this.stats.flagged = Number(flagged.count || 0);
+        this.stats.duplicates = Number(duplicates.count || 0);
+
+        const counts = {
+          low: Number(low.count || 0),
+          medium: Number(medium.count || 0),
+          high: Number(high.count || 0),
+          critical: Number(critical.count || 0),
+        };
+
+        this.stats.high_risk = counts.high + counts.critical;
+
+        const total = Object.values(counts).reduce((sum, value) => sum + value, 0) || Number(this.stats.total_invoices || 0) || 1;
+        this.riskDist = [
+          { key: 'critical', label: 'حرج', count: counts.critical, pct: Number((counts.critical / total) * 100).toFixed(1), color: '#ef4444' },
+          { key: 'high', label: 'عالي', count: counts.high, pct: Number((counts.high / total) * 100).toFixed(1), color: '#f97316' },
+          { key: 'medium', label: 'متوسط', count: counts.medium, pct: Number((counts.medium / total) * 100).toFixed(1), color: '#eab308' },
+          { key: 'low', label: 'منخفض', count: counts.low, pct: Number((counts.low / total) * 100).toFixed(1), color: '#22c55e' },
+        ];
+
+        this.updateDerivedMetrics();
+      } catch (error) {
+        console.warn('dashboard queues', error);
+      } finally {
+        this.loadingFlagged = false;
+      }
+    },
+
+    computeMonthlyGrowth(trend) {
+      if (trend.length >= 2) {
+        const previous = Number(trend[trend.length - 2].total || 0);
+        const current = Number(trend[trend.length - 1].total || 0);
+        if (previous > 0) {
+          return ((current - previous) / previous) * 100;
+        }
+      }
+      return Number(this.growthOverride || 0);
+    },
+
+    buildAlerts() {
+      const items = [];
+
+      if (this.stats.duplicates > 0) {
+        items.push({
+          type: 'warning',
+          title: 'فواتير مكررة',
+          subtitle: `${this.formatInteger(this.stats.duplicates)} فاتورة تحتاج إلى تحقق من التكرار`,
+        });
+      }
+
+      this.flaggedInvoices.slice(0, 3).forEach((invoice) => {
+        items.push({
+          type: invoice.risk_level === 'critical' ? 'critical' : 'info',
+          title: invoice.invoice_number || 'فاتورة بدون رقم',
+          subtitle: `${invoice.vendor_name || 'مورد غير محدد'} — ${this.formatAmount(invoice.total_amount, invoice.currency || 'SAR')}`,
+        });
+      });
+
+      if (!items.length) {
+        items.push({
+          type: 'success',
+          title: 'لا توجد تنبيهات حرجة',
+          subtitle: 'تسير دورة التدقيق والامتثال بشكل مستقر حالياً.',
+        });
+      }
+
+      this.alerts = items.slice(0, 4);
+    },
+
+    buildCashFlowChart() {
+      const canvas = document.getElementById('cashFlowChart');
+      if (!canvas) return;
+
+      const series = [...this.cashTrend];
+      const filtered = series.length > this.chartPeriod ? series.slice(-this.chartPeriod) : series;
+      const labels = filtered.length
+        ? filtered.map((item) => this.formatMonth(item.month))
+        : ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'];
+      const values = filtered.length
+        ? filtered.map((item) => Number(item.total || 0))
+        : [320000, 380000, 420000, 390000, 470000, 530000];
+
+      if (this.spendChartInst) {
+        this.spendChartInst.destroy();
+      }
+
+      const context = canvas.getContext('2d');
+      const gradient = context.createLinearGradient(0, 0, 0, canvas.height || 420);
+      gradient.addColorStop(0, 'rgba(37, 99, 235, 0.28)');
+      gradient.addColorStop(1, 'rgba(37, 99, 235, 0.02)');
+
+      this.spendChartInst = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'إجمالي التدفق',
+            data: values,
+            borderColor: '#2563eb',
+            backgroundColor: gradient,
+            fill: true,
+            borderWidth: 3,
+            tension: 0.42,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            pointBackgroundColor: '#2563eb',
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { intersect: false, mode: 'index' },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              rtl: true,
+              displayColors: false,
+              callbacks: {
+                label: (context) => ` ${this.formatSar(context.parsed.y)}`,
+              },
+            },
+          },
+          scales: {
+            x: {
+              grid: {
+                color: 'rgba(148, 163, 184, 0.18)',
+                borderDash: [4, 4],
+              },
+              ticks: {
+                color: '#64748b',
+                font: { size: 11, family: 'IBM Plex Sans Arabic' },
+              },
+            },
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(148, 163, 184, 0.18)',
+                borderDash: [4, 4],
+              },
+              ticks: {
+                color: '#64748b',
+                font: { size: 11, family: 'JetBrains Mono' },
+                callback: (value) => Number(value).toLocaleString('en-US'),
+              },
+            },
+          },
+        },
+      });
+    },
+
+    formatMonth(value) {
+      if (!value) return '—';
+      const date = new Date(`${value}-01T00:00:00`);
+      return new Intl.DateTimeFormat('ar', { month: 'long' }).format(date);
+    },
+  };
+}
+</script>
+{% endblock %}

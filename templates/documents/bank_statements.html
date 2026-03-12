@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+{% block title %}كشوف الحساب البنكي{% endblock %}
+{% block page_title %}كشوف الحساب البنكي{% endblock %}
+
+{% block content %}
+<div x-data="bankList()" x-init="load()">
+
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="card p-4">
+      <p class="text-xs text-slate-400 mb-1">إجمالي الكشوف</p>
+      <p class="text-2xl font-bold text-slate-800 dark:text-white font-mono" x-text="stats.total ?? '—'"></p>
+    </div>
+    <div class="card p-4">
+      <p class="text-xs text-slate-400 mb-1">مُعلَّقة (تحتاج مراجعة)</p>
+      <p class="text-2xl font-bold text-amber-600 font-mono" x-text="stats.flagged ?? '—'"></p>
+    </div>
+    <div class="card p-4">
+      <p class="text-xs text-slate-400 mb-1">أرصدة متطابقة</p>
+      <p class="text-2xl font-bold text-green-600 font-mono" x-text="stats.validated ?? '—'"></p>
+    </div>
+    <div class="card p-4">
+      <p class="text-xs text-slate-400 mb-1">مُعتمَدة</p>
+      <p class="text-2xl font-bold text-primary-600 font-mono" x-text="stats.approved ?? '—'"></p>
+    </div>
+  </div>
+
+  <div class="card p-4 mb-4 flex flex-wrap items-center gap-3">
+    <div class="flex-1 relative min-w-48">
+      <i data-lucide="search" class="absolute right-3 top-2.5 w-4 h-4 text-slate-400"></i>
+      <input x-model="q" @input.debounce.400ms="load()" placeholder="بحث بالبنك أو رقم الحساب..."
+             class="input-field pr-9 w-full text-sm"/>
+    </div>
+    <select x-model="filterStatus" @change="load()" class="input-field text-sm w-36">
+      <option value="">كل الحالات</option>
+      <option value="validated">تم التحقق</option>
+      <option value="flagged">مُعلَّق</option>
+      <option value="approved">مُعتمَد</option>
+    </select>
+    <a href="/documents/upload/?type=bank_statement" class="btn-primary text-sm flex items-center gap-2 px-4 h-9 rounded-lg">
+      <i data-lucide="plus" class="w-4 h-4"></i> رفع كشف حساب
+    </a>
+  </div>
+
+  <div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-200 dark:border-slate-700 text-xs text-slate-500 uppercase">
+            <th class="text-right px-4 py-3 font-semibold">البنك</th>
+            <th class="text-right px-4 py-3 font-semibold">رقم الحساب / IBAN</th>
+            <th class="text-right px-4 py-3 font-semibold">الفترة</th>
+            <th class="text-right px-4 py-3 font-semibold">رصيد الختام</th>
+            <th class="text-right px-4 py-3 font-semibold">تطابق الرصيد</th>
+            <th class="text-right px-4 py-3 font-semibold">نقاط التحقق</th>
+            <th class="text-right px-4 py-3 font-semibold">الخطر</th>
+            <th class="px-4 py-3"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-if="loading">
+            <tr><td colspan="8" class="text-center py-12 text-slate-400">
+              <i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i>
+            </td></tr>
+          </template>
+          <template x-if="!loading && rows.length === 0">
+            <tr><td colspan="8" class="text-center py-12 text-slate-400">
+              <i data-lucide="landmark" class="w-8 h-8 mx-auto mb-2 opacity-30"></i>
+              <p class="text-sm">لا توجد كشوف حساب</p>
+            </td></tr>
+          </template>
+          <template x-for="r in rows" :key="r.id">
+            <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-3 font-medium text-slate-700 dark:text-slate-200" x-text="r.bank_name || '—'"></td>
+              <td class="px-4 py-3 font-mono text-xs text-slate-500">
+                <div x-text="r.account_number || '—'"></div>
+                <div class="text-xs text-slate-400" x-text="r.iban"></div>
+              </td>
+              <td class="px-4 py-3 text-xs text-slate-500">
+                <span x-text="r.statement_period_from"></span> — <span x-text="r.statement_period_to"></span>
+              </td>
+              <td class="px-4 py-3 font-mono text-xs" x-text="fmtCurrency(r.closing_balance, r.currency)"></td>
+              <td class="px-4 py-3">
+                <span :class="r.balance_matches ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'"
+                      class="text-xs font-semibold px-2.5 py-1 rounded-lg border"
+                      x-text="r.balance_matches ? 'متطابق' : 'غير متطابق'"></span>
+              </td>
+              <td class="px-4 py-3">
+                <div class="flex items-center gap-2">
+                  <div class="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 w-20">
+                    <div class="h-1.5 rounded-full" :class="scoreColor(r.validation_score)"
+                         :style="'width:' + (r.validation_score||0) + '%'"></div>
+                  </div>
+                  <span class="text-xs font-mono text-slate-500" x-text="(r.validation_score||0).toFixed(0)+'%'"></span>
+                </div>
+              </td>
+              <td class="px-4 py-3"><span :class="riskBadge(r.risk_level)" class="text-xs font-semibold px-2.5 py-1 rounded-lg border" x-text="riskLabel(r.risk_level)"></span></td>
+              <td class="px-4 py-3">
+                <a :href="'/documents/bank-statements/' + r.id + '/'" class="text-primary-500 hover:text-primary-700 transition-colors">
+                  <i data-lucide="eye" class="w-4 h-4"></i>
+                </a>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function bankList() {
+  return {
+    rows: [], stats: {}, loading: true, q: '', filterStatus: '',
+    async load() {
+      this.loading = true;
+      const p = new URLSearchParams();
+      if (this.q) p.set('search', this.q);
+      if (this.filterStatus) p.set('status', this.filterStatus);
+      try {
+        const [r1, r2] = await Promise.all([
+          apiFetch('/documents/bank-statements/?' + p).then(r => r.json()),
+          apiFetch('/documents/stats/').then(r => r.json()),
+        ]);
+        this.rows  = r1.results ?? r1;
+        this.stats = r2.bank_statements ?? {};
+      } catch(e) { notify('خطأ في تحميل البيانات', 'error'); }
+      finally { this.loading = false; this.$nextTick(() => lucide.createIcons()); }
+    },
+    fmtCurrency(v, c='SAR') { return v ? Number(v).toLocaleString('ar-SA', {maximumFractionDigits:2}) + ' ' + c : '—'; },
+    scoreColor(s) { return s>=85?'bg-green-500':s>=70?'bg-amber-400':s>=50?'bg-orange-500':'bg-red-500'; },
+    riskLabel(l) { return {'critical':'حرج','high':'عالي','medium':'متوسط','low':'منخفض'}[l]??l; },
+    riskBadge(l) {
+      return {'critical':'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
+              'high':'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800',
+              'medium':'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800',
+              'low':'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'}[l]??'';
+    },
+  }
+}
+</script>
+{% endblock %}

@@ -9,7 +9,7 @@ celery>=5.3
 redis>=5.0
 openai>=1.35
 pytesseract>=0.3.10
-pillow==10.3.0
+pillow==12.1.1
 qrcode==7.4.2
 google-auth==2.29.0
 requests>=2.31

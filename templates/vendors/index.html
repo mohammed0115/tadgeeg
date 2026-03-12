@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% block title %}الموردون{% endblock %}
+{% block page_title %}تحليل الموردين{% endblock %}
+{% block nav_vendors %}active{% endblock %}
+
+{% block content %}
+<div x-data="vendorsPage()" x-init="init()" class="space-y-5 max-w-screen-2xl">
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="card p-5">
+      <div class="text-2xl font-bold font-mono text-slate-800 dark:text-white" x-text="stats.total">—</div>
+      <div class="text-sm text-slate-400 mt-1">إجمالي الموردين</div>
+    </div>
+    <div class="card p-5 border-r-4 border-r-red-500">
+      <div class="text-2xl font-bold font-mono text-red-600 dark:text-red-400" x-text="stats.high_risk">—</div>
+      <div class="text-sm text-slate-400 mt-1">خطر عالي</div>
+    </div>
+    <div class="card p-5 border-r-4 border-r-blue-500">
+      <div class="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400" x-text="stats.new_vendors">—</div>
+      <div class="text-sm text-slate-400 mt-1">موردون جدد</div>
+    </div>
+    <div class="card p-5 border-r-4 border-r-amber-400">
+      <div class="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400" x-text="stats.with_duplicates">—</div>
+      <div class="text-sm text-slate-400 mt-1">لديهم مكررات</div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
+      <h3 class="font-semibold text-slate-800 dark:text-white">قائمة الموردين</h3>
+      <div class="flex gap-3 items-center">
+        <div class="relative">
+          <i data-lucide="search" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"></i>
+          <input x-model="search" type="text" placeholder="بحث بالاسم..." class="input pr-9 py-2 w-52">
+        </div>
+        <select x-model="riskFilter" class="select py-2">
+          <option value="">كل المستويات</option>
+          <option value="high">عالي</option>
+          <option value="medium">متوسط</option>
+          <option value="low">منخفض</option>
+          <option value="blocked">محظور</option>
+        </select>
+      </div>
+    </div>
+
+    <div x-show="loading" class="flex justify-center py-12">
+      <svg class="animate-spin w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
+        <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+      </svg>
+    </div>
+
+    <table x-show="!loading" class="data-table">
+      <thead>
+        <tr>
+          <th>المورد</th>
+          <th>رقم الضريبة</th>
+          <th>عدد الفواتير</th>
+          <th class="text-left">إجمالي الإنفاق</th>
+          <th>متوسط الفاتورة</th>
+          <th>مكررة</th>
+          <th>مُبلَّغة</th>
+          <th>مستوى الخطر</th>
+          <th>جديد؟</th>
+        </tr>
+      </thead>
+      <tbody>
+        <template x-for="v in filteredVendors()" :key="v.id">
+          <tr>
+            <td>
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center text-sm font-bold text-slate-600 dark:text-slate-200 flex-shrink-0"
+                     x-text="(v.vendor_name||'?')[0].toUpperCase()"></div>
+                <span class="font-medium text-slate-800 dark:text-white" x-text="v.vendor_name||'—'"></span>
+              </div>
+            </td>
+            <td class="font-mono text-xs" x-text="v.vendor_vat_number||'—'"></td>
+            <td class="font-mono font-semibold" x-text="v.invoice_count||0"></td>
+            <td class="text-left font-mono font-bold text-slate-800 dark:text-white" x-text="Number(v.total_amount||0).toLocaleString('ar-SA',{minimumFractionDigits:0,maximumFractionDigits:0}) + ' ر.س'"></td>
+            <td class="font-mono text-xs" x-text="Number(v.avg_invoice_amount||0).toLocaleString('ar-SA',{minimumFractionDigits:0,maximumFractionDigits:0})"></td>
+            <td>
+              <span x-show="v.duplicate_count>0"
+                    class="badge bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                    x-text="v.duplicate_count"></span>
+              <span x-show="!v.duplicate_count" class="text-slate-300 dark:text-slate-600">—</span>
+            </td>
+            <td>
+              <span x-show="v.flagged_count>0"
+                    class="badge badge-high"
+                    x-text="v.flagged_count"></span>
+              <span x-show="!v.flagged_count" class="text-slate-300 dark:text-slate-600">—</span>
+            </td>
+            <td>
+              <span :class="{
+                'badge-critical': v.risk_tier==='high'||v.risk_tier==='blocked',
+                'badge-medium':   v.risk_tier==='medium',
+                'badge-low':      v.risk_tier==='low'
+              }" class="badge"
+              x-text="{'high':'عالي','medium':'متوسط','low':'منخفض','blocked':'محظور'}[v.risk_tier]||v.risk_tier||'—'"></span>
+            </td>
+            <td>
+              <span x-show="v.is_new" class="badge badge-info">جديد</span>
+              <span x-show="!v.is_new" class="text-slate-300 dark:text-slate-600">—</span>
+            </td>
+          </tr>
+        </template>
+        <tr x-show="!loading&&!filteredVendors().length">
+          <td colspan="9" class="text-center py-12 text-slate-400">
+            <i data-lucide="building-2" class="w-8 h-8 mx-auto mb-2"></i>
+            <p class="text-sm">لا يوجد موردون</p>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function vendorsPage() {
+  return {
+    vendors: [], loading: true, search: '', riskFilter: '',
+    stats: { total:0, high_risk:0, new_vendors:0, with_duplicates:0 },
+
+    async init() {
+      try {
+        const d = await apiFetch('/invoices/reports/vendors/?page_size=500');
+        this.vendors = d.vendors || d.results || d || [];
+        this.stats.total          = this.vendors.length;
+        this.stats.high_risk      = this.vendors.filter(v=>v.risk_tier==='high'||v.risk_tier==='blocked').length;
+        this.stats.new_vendors    = this.vendors.filter(v=>v.is_new).length;
+        this.stats.with_duplicates= this.vendors.filter(v=>v.duplicate_count>0).length;
+      } catch(e) { notify('فشل تحميل الموردين','error'); }
+      this.loading = false;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    filteredVendors() {
+      return this.vendors.filter(v => {
+        const matchSearch = !this.search || (v.vendor_name||'').toLowerCase().includes(this.search.toLowerCase());
+        const matchRisk   = !this.riskFilter || v.risk_tier === this.riskFilter;
+        return matchSearch && matchRisk;
+      });
+    }
+  }
+}
+</script>
+{% endblock %}

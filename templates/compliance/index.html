@@ -1,0 +1,447 @@
+{% extends "base.html" %}
+{% block title %}الامتثال{% endblock %}
+{% block page_title %}لوحة الامتثال{% endblock %}
+{% block nav_compliance %}active{% endblock %}
+{% block header_actions %}{% endblock %}
+{% block header_primary_action %}{% endblock %}
+
+{% block content %}
+<div x-data="complianceDashboard()"
+     x-init="init()"
+     class="-m-6 min-h-full bg-gradient-to-b from-slate-50 via-white to-slate-100/80 px-4 py-6 sm:px-6 lg:px-8 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900/80">
+  <div class="mx-auto max-w-7xl space-y-6">
+
+    <section class="relative overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white/90 p-6 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.35)] backdrop-blur xl:p-8 dark:border-slate-800 dark:bg-slate-900/80">
+      <div class="absolute -top-24 left-10 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl"></div>
+      <div class="absolute bottom-0 right-0 h-44 w-44 rounded-full bg-primary-500/10 blur-3xl"></div>
+
+      <div class="relative flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
+        <div class="max-w-3xl space-y-5">
+          <div class="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50/80 px-3 py-1 text-xs font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200">
+            <i data-lucide="shield-check" class="h-3.5 w-3.5"></i>
+            FinAI Compliance Center
+          </div>
+
+          <div class="space-y-3">
+            <h1 class="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl xl:text-[2.6rem] dark:text-white">
+              متابعة الامتثال والجاهزية النظامية
+            </h1>
+            <p class="max-w-2xl text-sm leading-8 text-slate-600 sm:text-base dark:text-slate-400">
+              راقب المخالفات المفتوحة، قواعد الامتثال النشطة، والأطر التنظيمية المؤثرة على المؤسسة ضمن عرض موحّد موجّه لفرق المالية والحوكمة.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold"
+                  :class="statusMeta().badgeClass">
+              <span class="h-2 w-2 rounded-full" :class="statusMeta().dotClass"></span>
+              <span x-text="statusMeta().label"></span>
+            </span>
+
+            <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3.5 py-1.5 text-xs text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-400">
+              <i data-lucide="file-check-2" class="h-3.5 w-3.5"></i>
+              <span x-text="'نسبة المعالجة: ' + resolvedRate + '%' "></span>
+            </span>
+
+            <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50/80 px-3.5 py-1.5 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+              <i data-lucide="building-2" class="h-3.5 w-3.5"></i>
+              <span x-text="frameworkCount + ' أطر تنظيمية ظاهرة' "></span>
+            </span>
+          </div>
+        </div>
+
+        <div class="flex flex-col items-stretch gap-3 sm:flex-row xl:justify-end">
+          <a href="{% url 'frontend:settings' %}" class="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900">
+            <i data-lucide="settings" class="h-4 w-4"></i>
+            مراجعة الإعدادات
+          </a>
+          <a href="{% url 'frontend:upload' %}" class="inline-flex h-12 min-w-[12rem] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-6 text-sm font-bold text-white shadow-[0_18px_40px_-18px_rgba(15,23,42,0.95)] transition hover:-translate-y-0.5 hover:bg-slate-800 dark:bg-primary-600 dark:shadow-[0_18px_40px_-18px_rgba(37,99,235,0.9)] dark:hover:bg-primary-500">
+            <i data-lucide="upload-cloud" class="h-4 w-4"></i>
+            رفع مستند للامتثال
+          </a>
+        </div>
+      </div>
+
+      <div class="relative mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div class="rounded-3xl border border-slate-200/80 bg-white/75 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+          <div class="flex items-start justify-between gap-4">
+            <div class="space-y-2">
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">قواعد الامتثال</p>
+              <p class="text-2xl font-semibold text-slate-950 dark:text-white" x-text="ruleCount"></p>
+            </div>
+            <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-200">
+              <i data-lucide="file-check-2" class="h-5 w-5"></i>
+            </span>
+          </div>
+          <p class="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-400">إجمالي القواعد التي يعتمد عليها النظام لرصد حالات عدم الامتثال.</p>
+        </div>
+
+        <div class="rounded-3xl border border-slate-200/80 bg-white/75 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+          <div class="flex items-start justify-between gap-4">
+            <div class="space-y-2">
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">مخالفات مفتوحة</p>
+              <p class="text-2xl font-semibold text-slate-950 dark:text-white" x-text="openCount"></p>
+            </div>
+            <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-200">
+              <i data-lucide="triangle-alert" class="h-5 w-5"></i>
+            </span>
+          </div>
+          <p class="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-400">عدد الحالات التي ما زالت تحتاج متابعة أو قراراً من فريق الحوكمة.</p>
+        </div>
+
+        <div class="rounded-3xl border border-slate-200/80 bg-white/75 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+          <div class="flex items-start justify-between gap-4">
+            <div class="space-y-2">
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">معدل الإغلاق</p>
+              <p class="text-2xl font-semibold text-slate-950 dark:text-white" x-text="resolvedRate + '%' "></p>
+            </div>
+            <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200">
+              <i data-lucide="badge-check" class="h-5 w-5"></i>
+            </span>
+          </div>
+          <p class="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-400">يعكس نسبة الحالات التي تم التعامل معها مقارنةً بجميع المخالفات المسجلة.</p>
+        </div>
+
+        <div class="rounded-3xl border border-slate-200/80 bg-white/75 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+          <div class="flex items-start justify-between gap-4">
+            <div class="space-y-2">
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">درجة الجاهزية</p>
+              <p class="text-2xl font-semibold text-slate-950 dark:text-white" x-text="healthScore + '%' "></p>
+            </div>
+            <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
+              <i data-lucide="shield-check" class="h-5 w-5"></i>
+            </span>
+          </div>
+          <p class="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-400" x-text="healthNarrative()"></p>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid gap-6 xl:grid-cols-2">
+      <section class="rounded-[2rem] border border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_55px_-30px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/80 xl:p-7">
+        {% include "settings/partials/section_header.html" with icon="triangle-alert" eyebrow="Violations" title="المخالفات والحالات المفتوحة" description="تابع أحدث المخالفات وحدد الحالات التي تحتاج قراراً أو تدخلاً سريعاً من فريق الامتثال." aside="يمكنك تغيير العرض بين جميع الحالات، المفتوحة فقط، أو المغلقة لمراجعة التقدم." only %}
+
+        <div class="mt-6 flex flex-wrap gap-3">
+          <button type="button" @click="selectedStatus = 'all'" class="rounded-full px-4 py-2 text-sm font-semibold transition" :class="selectedStatus === 'all' ? 'bg-slate-950 text-white dark:bg-primary-600' : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:border-slate-600'">الكل</button>
+          <button type="button" @click="selectedStatus = 'open'" class="rounded-full px-4 py-2 text-sm font-semibold transition" :class="selectedStatus === 'open' ? 'bg-red-600 text-white' : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:border-slate-600'">مفتوحة</button>
+          <button type="button" @click="selectedStatus = 'resolved'" class="rounded-full px-4 py-2 text-sm font-semibold transition" :class="selectedStatus === 'resolved' ? 'bg-emerald-600 text-white' : 'border border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:border-slate-600'">محلولة</button>
+        </div>
+
+        <div class="mt-6 space-y-3">
+          <template x-if="loading">
+            <div class="space-y-3 animate-pulse">
+              <template x-for="i in 4" :key="'violation-skeleton-' + i">
+                <div class="rounded-3xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/30">
+                  <div class="h-3 w-2/3 rounded-full bg-slate-200 dark:bg-slate-800"></div>
+                  <div class="mt-3 h-3 w-full rounded-full bg-slate-200 dark:bg-slate-800"></div>
+                  <div class="mt-2 h-3 w-1/3 rounded-full bg-slate-200 dark:bg-slate-800"></div>
+                </div>
+              </template>
+            </div>
+          </template>
+
+          <template x-if="!loading && !filteredViolations().length">
+            <div class="rounded-3xl border border-dashed border-slate-300 bg-slate-50/80 p-8 text-center dark:border-slate-700 dark:bg-slate-950/30">
+              <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-200">
+                <i data-lucide="shield-check" class="h-6 w-6"></i>
+              </span>
+              <h3 class="mt-4 text-lg font-semibold text-slate-950 dark:text-white">لا توجد مخالفات بهذا الفلتر</h3>
+              <p class="mt-2 text-sm leading-7 text-slate-500 dark:text-slate-400">الوضع الحالي يبدو مستقراً. راجع القواعد أو عدّل الفلتر إن أردت رؤية نطاق أوسع.</p>
+            </div>
+          </template>
+
+          <template x-for="violation in filteredViolations()" :key="violation.id">
+            <article class="rounded-3xl border border-slate-200/80 bg-slate-50/80 p-4 transition hover:border-slate-300 hover:bg-white dark:border-slate-800 dark:bg-slate-950/30 dark:hover:border-slate-700 dark:hover:bg-slate-950/50">
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold" :class="statusClass(violation.status)">
+                      <span class="h-2 w-2 rounded-full" :class="violation.status === 'open' ? 'bg-red-500' : 'bg-emerald-500'"></span>
+                      <span x-text="statusLabel(violation.status)"></span>
+                    </span>
+                    <span class="text-xs text-slate-400" x-text="formatDate(violation.created_at)"></span>
+                  </div>
+                  <p class="mt-3 text-sm font-semibold text-slate-900 dark:text-white" x-text="violation.description || violation.rule_name || 'مخالفة بدون وصف'"></p>
+                  <p class="mt-1 text-xs leading-6 text-slate-500 dark:text-slate-400" x-text="violation.rule_name || 'بدون مرجع قاعدة واضح' "></p>
+                </div>
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl" :class="violation.status === 'open' ? 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-200' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200'">
+                  <i :data-lucide="violation.status === 'open' ? 'triangle-alert' : 'badge-check'" class="h-4 w-4"></i>
+                </span>
+              </div>
+            </article>
+          </template>
+        </div>
+      </section>
+
+      <section class="rounded-[2rem] border border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_55px_-30px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/80 xl:p-7">
+        {% include "settings/partials/section_header.html" with icon="file-check-2" eyebrow="Rules Registry" title="قواعد الامتثال النشطة" description="استعرض القواعد الحالية وابحث بسرعة في الأسماء وأنواع القواعد والأطر التنظيمية الظاهرة داخل البيانات." aside="يساعدك هذا العرض على معرفة الأطر المسيطرة على البيئة الحالية مثل ZATCA أو السياسات الداخلية." only %}
+
+        <div class="mt-6 relative">
+          <i data-lucide="search" class="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"></i>
+          <input x-model="ruleSearch" type="text" placeholder="ابحث في اسم القاعدة أو الإطار أو النوع" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-11 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
+        </div>
+
+        <div class="mt-6 space-y-3 max-h-[34rem] overflow-y-auto pr-1">
+          <template x-if="loading">
+            <div class="space-y-3 animate-pulse">
+              <template x-for="i in 5" :key="'rule-skeleton-' + i">
+                <div class="rounded-3xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/30">
+                  <div class="h-3 w-2/3 rounded-full bg-slate-200 dark:bg-slate-800"></div>
+                  <div class="mt-3 h-3 w-1/2 rounded-full bg-slate-200 dark:bg-slate-800"></div>
+                </div>
+              </template>
+            </div>
+          </template>
+
+          <template x-if="!loading && !filteredRules().length">
+            <div class="rounded-3xl border border-dashed border-slate-300 bg-slate-50/80 p-8 text-center dark:border-slate-700 dark:bg-slate-950/30">
+              <span class="mx-auto flex h-14 w-14 items-center justify-center rounded-3xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                <i data-lucide="search" class="h-6 w-6"></i>
+              </span>
+              <h3 class="mt-4 text-lg font-semibold text-slate-950 dark:text-white">لا توجد قواعد مطابقة</h3>
+              <p class="mt-2 text-sm leading-7 text-slate-500 dark:text-slate-400">جرّب كلمات بحث مختلفة أو أزل بعض التخصيصات للحصول على عرض أوسع.</p>
+            </div>
+          </template>
+
+          <template x-for="rule in filteredRules()" :key="rule.id">
+            <article class="rounded-3xl border border-slate-200/80 bg-slate-50/80 p-4 transition hover:border-slate-300 hover:bg-white dark:border-slate-800 dark:bg-slate-950/30 dark:hover:border-slate-700 dark:hover:bg-slate-950/50">
+              <div class="flex items-start gap-3">
+                <span class="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200">
+                  <i data-lucide="check-circle-2" class="h-4 w-4"></i>
+                </span>
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <p class="text-sm font-semibold text-slate-900 dark:text-white" x-text="rule.name || 'قاعدة بدون اسم'"></p>
+                    <span class="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300" x-text="rule.framework || 'إطار غير محدد'"></span>
+                  </div>
+                  <p class="mt-2 text-xs leading-6 text-slate-500 dark:text-slate-400" x-text="rule.rule_type || 'نوع قاعدة غير محدد'"></p>
+                </div>
+              </div>
+            </article>
+          </template>
+        </div>
+      </section>
+
+      <section class="rounded-[2rem] border border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_55px_-30px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/80 xl:p-7">
+        {% include "settings/partials/section_header.html" with icon="building-2" eyebrow="Framework View" title="الأطر التنظيمية الأكثر حضوراً" description="رؤية مختصرة للأطر الظاهرة في قواعد الامتثال الحالية حتى تعرف أين يتركز العبء التنظيمي داخل المنظومة." aside="يعتمد هذا الملخص على القيم المتاحة في حقل framework داخل القواعد المحمّلة من الواجهة البرمجية." only %}
+
+        <div class="mt-6 space-y-4">
+          <template x-if="!frameworkBreakdown().length">
+            <div class="rounded-3xl border border-dashed border-slate-300 bg-slate-50/80 p-8 text-center dark:border-slate-700 dark:bg-slate-950/30">
+              <p class="text-sm text-slate-500 dark:text-slate-400">لا توجد أطر تنظيمية مصنفة حتى الآن.</p>
+            </div>
+          </template>
+
+          <template x-for="framework in frameworkBreakdown()" :key="framework.name">
+            <div>
+              <div class="mb-2 flex items-center justify-between gap-3 text-sm">
+                <span class="font-semibold text-slate-700 dark:text-slate-200" x-text="framework.name"></span>
+                <span class="font-mono text-slate-500 dark:text-slate-400" x-text="framework.count + ' قاعدة'"></span>
+              </div>
+              <div class="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                <div class="h-full rounded-full transition-all duration-500" :style="'width:' + framework.pct + '%; background:' + framework.color"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </section>
+
+      <section class="rounded-[2rem] border border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_55px_-30px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/80 xl:p-7">
+        {% include "settings/partials/section_header.html" with icon="shield-check" eyebrow="Readiness Note" title="توصية تشغيلية للفريق" description="ملخص سريع يساعدك على معرفة أين ينبغي أن يبدأ فريق الامتثال جولته التالية داخل النظام." aside="الهدف هنا هو دعم اتخاذ القرار، وليس استبدال التحقق البشري أو المراجعة الرسمية." only %}
+
+        <div class="mt-6 rounded-3xl border border-slate-200/80 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-950/30">
+          <p class="text-sm font-semibold text-slate-900 dark:text-white">الوضع الحالي</p>
+          <p class="mt-2 text-sm leading-8 text-slate-600 dark:text-slate-400" x-text="healthNarrative()"></p>
+        </div>
+
+        <div class="mt-5 space-y-3">
+          <div class="rounded-3xl border border-slate-200/80 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-950/30">
+            <p class="text-sm font-semibold text-slate-900 dark:text-white">الأولوية التالية</p>
+            <p class="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-400" x-text="nextAction()"></p>
+          </div>
+          <div class="rounded-3xl border border-slate-200/80 bg-white/80 p-4 dark:border-slate-800 dark:bg-slate-950/30">
+            <p class="text-sm font-semibold text-slate-900 dark:text-white">اقتراح تحسيني</p>
+            <p class="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-400">
+              اربط مراجعة المخالفات المفتوحة بجدولة دورية في نهاية كل أسبوع، وراجع القواعد ذات الأطر الأكثر حضوراً أولاً لضمان أثر أسرع على الجاهزية العامة.
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function complianceDashboard() {
+  return {
+    violations: [],
+    rules: [],
+    loading: true,
+    selectedStatus: 'all',
+    ruleSearch: '',
+
+    async init() {
+      try {
+        const [violationsResponse, rulesResponse] = await Promise.all([
+          apiFetch('/compliance/violations/?page_size=50'),
+          apiFetch('/compliance/rules/?page_size=50'),
+        ]);
+
+        this.violations = violationsResponse.results || violationsResponse || [];
+        this.rules = rulesResponse.results || rulesResponse || [];
+      } catch (error) {
+        notify('فشل تحميل لوحة الامتثال', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    get ruleCount() {
+      return this.rules.length;
+    },
+
+    get openCount() {
+      return this.violations.filter((violation) => violation.status === 'open').length;
+    },
+
+    get resolvedCount() {
+      return this.violations.filter((violation) => violation.status === 'resolved').length;
+    },
+
+    get resolvedRate() {
+      return this.violations.length ? Math.round((this.resolvedCount / this.violations.length) * 100) : 100;
+    },
+
+    get frameworkCount() {
+      return new Set(this.rules.map((rule) => rule.framework).filter(Boolean)).size;
+    },
+
+    get healthScore() {
+      const issuePenalty = Math.min(this.openCount * 8, 55);
+      const recoveryBonus = Math.min(Math.round(this.resolvedRate * 0.35), 35);
+      return Math.max(35, Math.min(100, 65 - issuePenalty + recoveryBonus));
+    },
+
+    statusMeta() {
+      if (this.loading) {
+        return {
+          label: 'جاري تحميل المؤشرات',
+          badgeClass: 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300',
+          dotClass: 'bg-slate-400 animate-pulse',
+        };
+      }
+
+      if (this.openCount >= 5) {
+        return {
+          label: 'يتطلب تدخلاً سريعاً',
+          badgeClass: 'border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200',
+          dotClass: 'bg-red-500',
+        };
+      }
+
+      if (this.openCount > 0) {
+        return {
+          label: 'يوجد عناصر تحتاج متابعة',
+          badgeClass: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200',
+          dotClass: 'bg-amber-500',
+        };
+      }
+
+      return {
+        label: 'الوضع مستقر حالياً',
+        badgeClass: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200',
+        dotClass: 'bg-emerald-500',
+      };
+    },
+
+    filteredViolations() {
+      const base = this.selectedStatus === 'all'
+        ? this.violations
+        : this.violations.filter((violation) => violation.status === this.selectedStatus);
+      return base.slice(0, 20);
+    },
+
+    filteredRules() {
+      const query = (this.ruleSearch || '').trim().toLowerCase();
+      const items = !query
+        ? this.rules
+        : this.rules.filter((rule) => [rule.name, rule.framework, rule.rule_type]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(query)));
+      return items.slice(0, 20);
+    },
+
+    frameworkBreakdown() {
+      const counts = {};
+      this.rules.forEach((rule) => {
+        const name = rule.framework || 'غير مصنف';
+        counts[name] = (counts[name] || 0) + 1;
+      });
+
+      const total = this.rules.length || 1;
+      const palette = ['#2563eb', '#7c3aed', '#10b981', '#f97316', '#eab308'];
+      return Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([name, count], index) => ({
+          name,
+          count,
+          pct: Number(((count / total) * 100).toFixed(1)),
+          color: palette[index % palette.length],
+        }));
+    },
+
+    statusLabel(status) {
+      return status === 'open' ? 'مفتوحة' : status === 'resolved' ? 'محلولة' : 'قيد المتابعة';
+    },
+
+    statusClass(status) {
+      return status === 'open'
+        ? 'border border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200'
+        : 'border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200';
+    },
+
+    formatDate(value) {
+      if (!value) return 'بدون تاريخ';
+      return new Intl.DateTimeFormat('ar-SA', { dateStyle: 'medium' }).format(new Date(value));
+    },
+
+    healthNarrative() {
+      if (this.loading) {
+        return 'يتم الآن تحليل بيانات الامتثال وتجميع المؤشرات الأساسية.';
+      }
+
+      if (!this.violations.length) {
+        return 'لا توجد مخالفات حالياً، وهذا يعكس وضعاً مستقراً مع الحاجة للاستمرار في المراجعة الوقائية.';
+      }
+
+      if (this.openCount >= 5) {
+        return 'عدد المخالفات المفتوحة مرتفع نسبياً، ويُنصح بإغلاق الحالات الأقدم أولاً ثم مراجعة القواعد المرتبطة بالأطر الأكثر تكراراً.';
+      }
+
+      if (this.openCount > 0) {
+        return 'هناك عدد محدود من العناصر المفتوحة. الوضع تحت السيطرة لكنه يحتاج متابعة منظمة حتى لا تتراكم الحالات على الفريق.';
+      }
+
+      return 'معظم الحالات مغلقة حالياً، مما يشير إلى دورة امتثال منضبطة وجاهزية جيدة للمراجعات التالية.';
+    },
+
+    nextAction() {
+      if (this.openCount >= 5) {
+        return 'ابدأ بجلسة مراجعة مركزة للحالات المفتوحة خلال هذا الأسبوع وحدد مالكي كل مخالفة بوضوح.';
+      }
+      if (this.openCount > 0) {
+        return 'راجع المخالفات المفتوحة بحسب تاريخ الإنشاء وأغلق الحالات التي لا تحتاج تصعيداً إضافياً.';
+      }
+      if (!this.rules.length) {
+        return 'تأكد من أن مكتبة قواعد الامتثال تم تحميلها وربطها بشكل كامل مع المؤسسة.';
+      }
+      return 'حافظ على الوضع الحالي عبر مراجعة دورية للأطر الأكثر حضوراً وتحديث الإعدادات عند الحاجة.';
+    },
+  };
+}
+</script>
+{% endblock %}

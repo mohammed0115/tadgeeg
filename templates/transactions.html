@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}المعاملات المالية{% endblock %}
+{% block page_title %}المعاملات المالية{% endblock %}
+{% block nav_transactions %}active{% endblock %}
+
+{% block content %}
+<div x-data="txList()" x-init="load()">
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="card p-4">
+      <p class="text-xs text-slate-400 mb-1">إجمالي المعاملات</p>
+      <p class="text-2xl font-bold text-slate-800 dark:text-white font-mono" x-text="stats.total ?? '—'"></p>
+    </div>
+    <div class="card p-4">
+      <p class="text-xs text-slate-400 mb-1">مُعلَّقة</p>
+      <p class="text-2xl font-bold text-amber-600 font-mono" x-text="stats.flagged ?? '—'"></p>
+    </div>
+    <div class="card p-4">
+      <p class="text-xs text-slate-400 mb-1">مكررة</p>
+      <p class="text-2xl font-bold text-red-600 font-mono" x-text="stats.duplicates ?? '—'"></p>
+    </div>
+    <div class="card p-4">
+      <p class="text-xs text-slate-400 mb-1">إجمالي المبالغ (ر.س)</p>
+      <p class="text-2xl font-bold text-primary-600 font-mono" x-text="fmtNum(stats.total_amount)"></p>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="card p-4 mb-4 flex flex-wrap items-center gap-3">
+    <div class="flex-1 relative min-w-48">
+      <i data-lucide="search" class="absolute right-3 top-2.5 w-4 h-4 text-slate-400"></i>
+      <input x-model="q" @input.debounce.400ms="load()" placeholder="بحث برقم المرجع أو المورد..."
+             class="input-field pr-9 w-full text-sm"/>
+    </div>
+    <select x-model="txType" @change="load()" class="input-field text-sm w-40">
+      <option value="">كل الأنواع</option>
+      <option value="income">إيرادات</option>
+      <option value="expense">مصروفات</option>
+      <option value="asset">أصول</option>
+      <option value="liability">التزامات</option>
+      <option value="transfer">تحويلات</option>
+      <option value="journal_entry">قيود يومية</option>
+    </select>
+    <select x-model="filterRisk" @change="load()" class="input-field text-sm w-36">
+      <option value="">كل الخطر</option>
+      <option value="critical">حرج</option>
+      <option value="high">عالي</option>
+      <option value="medium">متوسط</option>
+      <option value="low">منخفض</option>
+    </select>
+    <select x-model="flagged" @change="load()" class="input-field text-sm w-36">
+      <option value="">الكل</option>
+      <option value="true">مُعلَّقة فقط</option>
+      <option value="false">غير مُعلَّقة</option>
+    </select>
+    <!-- Date range -->
+    <input type="date" x-model="dateFrom" @change="load()" class="input-field text-sm w-36"/>
+    <input type="date" x-model="dateTo"   @change="load()" class="input-field text-sm w-36"/>
+  </div>
+
+  <!-- Table -->
+  <div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-200 dark:border-slate-700 text-xs text-slate-500 uppercase">
+            <th class="text-right px-4 py-3 font-semibold">المرجع</th>
+            <th class="text-right px-4 py-3 font-semibold">النوع</th>
+            <th class="text-right px-4 py-3 font-semibold">الوصف / المورد</th>
+            <th class="text-right px-4 py-3 font-semibold">المبلغ</th>
+            <th class="text-right px-4 py-3 font-semibold">التاريخ</th>
+            <th class="text-right px-4 py-3 font-semibold">الخطر</th>
+            <th class="text-right px-4 py-3 font-semibold">الحالة</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-if="loading">
+            <tr><td colspan="7" class="text-center py-12 text-slate-400">
+              <i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i>
+            </td></tr>
+          </template>
+          <template x-if="!loading && rows.length === 0">
+            <tr><td colspan="7" class="text-center py-12 text-slate-400">
+              <i data-lucide="layers" class="w-8 h-8 mx-auto mb-2 opacity-30"></i>
+              <p class="text-sm">لا توجد معاملات</p>
+            </td></tr>
+          </template>
+          <template x-for="r in rows" :key="r.id">
+            <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+              <td class="px-4 py-3 font-mono text-xs text-slate-500" x-text="r.reference_number || r.external_id || '—'"></td>
+              <td class="px-4 py-3">
+                <span :class="typeBadge(r.transaction_type)" class="text-xs font-semibold px-2 py-0.5 rounded border"
+                      x-text="typeLabel(r.transaction_type)"></span>
+              </td>
+              <td class="px-4 py-3 max-w-[200px]">
+                <p class="font-medium text-slate-700 dark:text-slate-200 truncate text-xs" x-text="r.vendor_name || r.customer_name || '—'"></p>
+                <p class="text-xs text-slate-400 truncate" x-text="r.description"></p>
+              </td>
+              <td class="px-4 py-3 font-mono text-xs font-semibold"
+                  :class="r.transaction_type === 'income' ? 'text-green-600' : 'text-slate-700 dark:text-slate-300'"
+                  x-text="(r.transaction_type === 'income' ? '+' : '') + fmtCurrency(r.amount, r.currency)"></td>
+              <td class="px-4 py-3 text-xs text-slate-500" x-text="r.transaction_date"></td>
+              <td class="px-4 py-3">
+                <span :class="riskBadge(r.risk_level)" class="text-xs font-semibold px-2 py-0.5 rounded border"
+                      x-text="riskLabel(r.risk_level)"></span>
+              </td>
+              <td class="px-4 py-3 flex items-center gap-2">
+                <template x-if="r.is_flagged">
+                  <span class="text-xs bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800 px-2 py-0.5 rounded font-semibold">مُعلَّقة</span>
+                </template>
+                <template x-if="r.is_duplicate">
+                  <span class="text-xs bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800 px-2 py-0.5 rounded font-semibold">مكررة</span>
+                </template>
+                <template x-if="!r.is_flagged && !r.is_duplicate">
+                  <span class="text-xs bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800 px-2 py-0.5 rounded font-semibold">عادية</span>
+                </template>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+    <!-- Pagination -->
+    <div class="border-t border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
+      <p class="text-xs text-slate-400" x-text="'عرض ' + rows.length + ' من ' + totalCount + ' معاملة'"></p>
+      <div class="flex gap-2">
+        <button @click="page = Math.max(1, page-1); load()" :disabled="page <= 1"
+                class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40">
+          السابق
+        </button>
+        <span class="text-xs px-3 py-1.5 text-slate-500" x-text="'صفحة ' + page"></span>
+        <button @click="page++; load()" :disabled="rows.length < pageSize"
+                class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40">
+          التالي
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function txList() {
+  return {
+    rows: [], stats: {}, loading: true,
+    q: '', txType: '', filterRisk: '', flagged: '', dateFrom: '', dateTo: '',
+    page: 1, pageSize: 50, totalCount: 0,
+
+    async load() {
+      this.loading = true;
+      const p = new URLSearchParams({ page_size: this.pageSize, page: this.page });
+      if (this.q)         p.set('search', this.q);
+      if (this.txType)    p.set('transaction_type', this.txType);
+      if (this.filterRisk)p.set('risk_level', this.filterRisk);
+      if (this.flagged)   p.set('is_flagged', this.flagged);
+      if (this.dateFrom)  p.set('date_from', this.dateFrom);
+      if (this.dateTo)    p.set('date_to', this.dateTo);
+      try {
+        const resp = await apiFetch('/transactions/?' + p).then(r => r.json());
+        this.rows = resp.results ?? resp;
+        this.totalCount = resp.count ?? this.rows.length;
+        // Stats
+        const s = await apiFetch('/transactions/stats/').then(r => r.json()).catch(()=>({}));
+        this.stats = s;
+      } catch(e) { notify('خطأ في تحميل البيانات', 'error'); }
+      finally { this.loading = false; this.$nextTick(() => lucide.createIcons()); }
+    },
+
+    fmtNum(v) { return v ? Number(v).toLocaleString('ar-SA') : '—'; },
+    fmtCurrency(v, c='SAR') { return v ? Number(v).toLocaleString('ar-SA', {maximumFractionDigits:2}) + ' ' + c : '—'; },
+
+    typeLabel(t) {
+      return {'income':'إيرادات','expense':'مصروفات','asset':'أصول','liability':'التزامات',
+              'transfer':'تحويل','journal_entry':'قيد يومي'}[t] ?? t;
+    },
+    typeBadge(t) {
+      return {'income':'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800',
+              'expense':'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
+              'transfer':'bg-blue-50 text-blue-700 border-blue-200',
+              'journal_entry':'bg-purple-50 text-purple-700 border-purple-200'}[t]
+          ?? 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700';
+    },
+    riskLabel(l) { return {'critical':'حرج','high':'عالي','medium':'متوسط','low':'منخفض'}[l]??l; },
+    riskBadge(l) {
+      return {'critical':'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
+              'high':'bg-orange-50 text-orange-700 border-orange-200',
+              'medium':'bg-amber-50 text-amber-700 border-amber-200',
+              'low':'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'}[l]??'';
+    },
+  }
+}
+</script>
+{% endblock %}

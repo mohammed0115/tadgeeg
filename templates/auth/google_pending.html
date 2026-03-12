@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>حسابك قيد المراجعة — Tadgeeg</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Cairo', 'Inter', sans-serif; }
+    body {
+      background:
+        radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.10), transparent 32%),
+        #020617;
+    }
+    .grid-bg {
+      background: radial-gradient(circle at 1px 1px, rgba(255,255,255,.055) 1px, transparent 0);
+      background-size: 28px 28px;
+    }
+  </style>
+</head>
+<body class="min-h-screen overflow-hidden">
+  <div class="fixed inset-0 grid-bg"></div>
+  <div class="fixed inset-0 pointer-events-none">
+    <div class="absolute right-[-8%] top-[-12%] h-[500px] w-[500px] rounded-full bg-blue-600/15 blur-[80px]"></div>
+    <div class="absolute bottom-[-10%] left-[-8%] h-[380px] w-[380px] rounded-full bg-violet-600/10 blur-[80px]"></div>
+    <div class="absolute left-1/2 top-1/2 h-[180px] w-[180px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/10 blur-[60px]"></div>
+  </div>
+
+  <div class="relative flex min-h-screen items-center justify-center p-4">
+    <div class="w-full max-w-[440px]">
+      <div class="mb-8 text-center">
+        <div class="mx-auto mb-5 inline-flex h-16 w-16 items-center justify-center rounded-[18px] bg-gradient-to-br from-blue-500 to-cyan-500 shadow-[0_16px_48px_rgba(37,99,235,0.45)]">
+          <span class="text-2xl font-extrabold text-white">T</span>
+        </div>
+        <h1 class="text-[28px] font-extrabold tracking-[-0.03em] text-white">Tadgeeg</h1>
+        <p class="mt-1 text-sm text-slate-500">منصة التدقيق المالي الذكية</p>
+      </div>
+
+      <div class="rounded-[18px] border border-white/10 bg-slate-900/85 p-7 shadow-[0_24px_64px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+        <div class="mb-5 flex justify-center">
+          <div class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-violet-500 text-2xl font-bold text-white">
+            {{ user.full_name|default:user.email|slice:":1"|upper }}
+          </div>
+        </div>
+
+        <h2 class="mb-2 text-center text-xl font-bold text-white">مرحباً {{ user.full_name|default:user.email }} 👋</h2>
+        <p class="mb-6 text-center text-sm leading-7 text-slate-400">
+          تم تسجيل دخولك بنجاح. حسابك قيد المراجعة من مدير النظام قبل ربطه بالمؤسسة المناسبة.
+        </p>
+
+        <div class="mb-5 rounded-xl border border-blue-500/20 bg-blue-500/10 px-4 py-4 text-sm leading-7 text-blue-200">
+          سيتم ربط حسابك بمؤسستك قريباً. ستصلك رسالة بريد إلكتروني عند اكتمال التفعيل لتتمكن من الوصول الكامل إلى لوحة التحكم.
+        </div>
+
+        <div class="mb-6 rounded-xl border border-white/10 bg-white/[0.04] p-4">
+          <div class="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">البريد الإلكتروني</div>
+          <div class="text-sm text-white">{{ user.email }}</div>
+        </div>
+
+        <div class="grid gap-3 sm:grid-cols-2">
+          <a href="{% url 'frontend:home' %}" class="flex h-11 w-full items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-sm font-semibold text-slate-200 transition hover:bg-white/[0.08]">
+            الصفحة الرئيسية
+          </a>
+          <a href="{% url 'frontend:logout' %}" class="flex h-11 w-full items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-sm font-semibold text-white transition hover:from-blue-700 hover:to-cyan-600">
+            تسجيل الخروج
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

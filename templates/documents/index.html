@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}المستندات{% endblock %}
+{% block page_title %}إدارة المستندات{% endblock %}
+{% block nav_documents %}active{% endblock %}
+{% block content %}
+<div x-data="{docs:[],loading:true,async init(){try{const d=await apiFetch('/documents/?page_size=50');this.docs=d.results||d||[];}catch(e){notify('فشل التحميل','error');}this.loading=false;this.$nextTick(()=>lucide.createIcons())}}" x-init="init()" class="space-y-4 max-w-screen-xl">
+  <div class="card overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/30 flex items-center justify-between">
+      <h3 class="font-semibold text-slate-800 dark:text-white">المستندات المُحمَّلة</h3>
+    </div>
+    <div x-show="loading" class="flex justify-center py-12"><svg class="animate-spin w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg></div>
+    <table x-show="!loading" class="data-table">
+      <thead><tr><th>اسم الملف</th><th>النوع</th><th>الحالة</th><th>ثقة OCR</th><th>تاريخ الرفع</th><th>الحجم</th></tr></thead>
+      <tbody>
+        <template x-for="doc in docs" :key="doc.id">
+          <tr>
+            <td class="font-medium text-slate-800 dark:text-white truncate max-w-xs" x-text="doc.original_filename||doc.file_name||'—'"></td>
+            <td><span class="badge badge-info text-xs" x-text="doc.mime_type||doc.document_type||'—'"></span></td>
+            <td><span class="badge" :class="doc.processing_status==='completed'?'status-approved':'status-pending'" x-text="doc.processing_status||doc.status||'—'"></span></td>
+            <td>
+              <div class="flex items-center gap-2">
+                <div class="w-12 progress-track"><div class="progress-fill bg-primary-500" :style="'width:'+(doc.ocr_confidence||0)+'%'"></div></div>
+                <span class="text-xs font-mono" x-text="(doc.ocr_confidence||0).toFixed(0)+'%'"></span>
+              </div>
+            </td>
+            <td class="text-xs" x-text="(doc.uploaded_at||doc.created_at||'').slice(0,16).replace('T',' ')"></td>
+            <td class="text-xs font-mono" x-text="doc.file_size?((doc.file_size/1024).toFixed(0)+' KB'):'—'"></td>
+          </tr>
+        </template>
+        <tr x-show="!docs.length&&!loading"><td colspan="6" class="text-center py-16 text-slate-400 text-sm"><i data-lucide="folder-open" class="w-8 h-8 mx-auto mb-2"></i><p>لا توجد مستندات</p></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}كشف الشذوذ{% endblock %}
+{% block page_title %}تحليلات كشف الشذوذ{% endblock %}
+{% block nav_analytics %}active{% endblock %}
+
+{% block content %}
+<div x-data="analyticsPage()" x-init="init()" class="space-y-5 max-w-screen-2xl">
+
+  <!-- Benford's Law + Risk -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+    <!-- Benford's Law -->
+    <div class="card p-5">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <h3 class="font-semibold text-slate-800 dark:text-white">قانون بنفورد</h3>
+          <p class="text-xs text-slate-400 mt-0.5">كشف التلاعب في الأرقام بالمقارنة مع التوزيع الطبيعي</p>
+        </div>
+        <button @click="runBenford()" :disabled="loadingBenford"
+                class="btn-ghost text-xs py-1.5 px-3">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> تشغيل
+        </button>
+      </div>
+      <div x-show="loadingBenford" class="flex justify-center py-10">
+        <svg class="animate-spin w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
+          <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+        </svg>
+      </div>
+      <div x-show="!loadingBenford" class="h-48">
+        <canvas id="benfordChart"></canvas>
+      </div>
+      <div x-show="benfordResult" class="mt-3 p-3 rounded-xl text-xs"
+           :class="benfordResult?.suspicious ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400'">
+        <span x-text="benfordResult?.interpretation"></span>
+        <span x-show="benfordResult?.suspicious" class="font-bold"> ⚠️ يُشير إلى تلاعب محتمل!</span>
+      </div>
+    </div>
+
+    <!-- Anomaly scan -->
+    <div class="card p-5">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <h3 class="font-semibold text-slate-800 dark:text-white">فحص الشذوذ الآلي</h3>
+          <p class="text-xs text-slate-400 mt-0.5">تحليل ذكي لاكتشاف الأنماط غير المعتادة</p>
+        </div>
+        <button @click="runAnomaly()" :disabled="loadingAnomaly"
+                class="btn-blue text-xs py-1.5 px-3">
+          <i data-lucide="cpu" class="w-3.5 h-3.5"></i> فحص الآن
+        </button>
+      </div>
+      <div x-show="loadingAnomaly" class="flex justify-center py-10">
+        <svg class="animate-spin w-5 h-5 text-primary-400" fill="none" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
+          <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+        </svg>
+      </div>
+      <div x-show="!loadingAnomaly" class="space-y-3">
+        <template x-for="(anom, i) in anomalies" :key="i">
+          <div class="flex items-start gap-3 p-3 rounded-xl"
+               :class="anom.severity==='high'||anom.severity==='critical'
+                 ? 'bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30'
+                 : 'bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30'">
+            <span class="text-lg flex-shrink-0" x-text="anom.severity==='high'||anom.severity==='critical' ? '🔴' : '🟡'"></span>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-slate-800 dark:text-white" x-text="anom.type||anom.anomaly_type"></p>
+              <p class="text-xs text-slate-500 mt-0.5" x-text="anom.description||anom.message"></p>
+            </div>
+            <span class="badge flex-shrink-0"
+                  :class="{'badge-critical':anom.severity==='critical','badge-high':anom.severity==='high','badge-medium':anom.severity==='medium'}"
+                  x-text="{'critical':'حرج','high':'عالي','medium':'متوسط'}[anom.severity]||anom.severity||'—'"></span>
+          </div>
+        </template>
+        <div x-show="!anomalies.length && !loadingAnomaly"
+             class="text-center py-8 text-slate-400">
+          <i data-lucide="shield-check" class="w-8 h-8 mx-auto mb-2 text-emerald-400"></i>
+          <p class="text-sm">اضغط "فحص الآن" لتشغيل الفحص الذكي</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- High-risk invoices -->
+  <div class="card overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
+      <h3 class="font-semibold text-slate-800 dark:text-white">الفواتير عالية المخاطر</h3>
+      <a href="{% url 'frontend:invoices' %}?risk_level=high" class="text-xs text-primary-500 hover:text-primary-400 font-semibold">عرض الكل ←</a>
+    </div>
+    <table class="data-table">
+      <thead><tr>
+        <th>المورد</th><th>رقم الفاتورة</th><th>التاريخ</th>
+        <th class="text-left">الإجمالي</th><th>نقاط الخطر</th><th>مستوى الخطر</th><th>سبب التحذير</th>
+      </tr></thead>
+      <tbody>
+        <template x-for="inv in riskInvoices" :key="inv.id">
+          <tr @click="window.location='/invoices/'+inv.id+'/'" class="cursor-pointer">
+            <td class="font-medium text-slate-800 dark:text-white" x-text="inv.vendor_name||'—'"></td>
+            <td class="font-mono text-xs" x-text="inv.invoice_number||'—'"></td>
+            <td class="text-xs" x-text="inv.invoice_date||'—'"></td>
+            <td class="text-left font-mono font-bold" x-text="Number(inv.total_amount||0).toLocaleString('ar-SA',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' ' + (inv.currency||'SAR')"></td>
+            <td>
+              <div class="flex items-center gap-2">
+                <div class="w-12 progress-track">
+                  <div class="progress-fill bg-red-500" :style="'width:'+(inv.risk_score||0)+'%'"></div>
+                </div>
+                <span class="font-mono text-xs font-bold text-red-500" x-text="(inv.risk_score||0).toFixed(0)"></span>
+              </div>
+            </td>
+            <td><span :class="'badge-'+inv.risk_level" class="badge" x-text="{'critical':'حرج','high':'عالي','medium':'متوسط','low':'منخفض'}[inv.risk_level]||inv.risk_level"></span></td>
+            <td class="text-xs text-slate-500 max-w-xs truncate" x-text="(inv.ai_summary||'').slice(0,60)"></td>
+          </tr>
+        </template>
+        <tr x-show="!riskInvoices.length">
+          <td colspan="7" class="text-center py-10 text-slate-400 text-sm">
+            <i data-lucide="check-circle-2" class="w-6 h-6 mx-auto mb-1 text-emerald-400"></i>
+            لا توجد فواتير عالية المخاطر
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function analyticsPage() {
+  return {
+    anomalies: [], riskInvoices: [],
+    loadingAnomaly: false, loadingBenford: false,
+    benfordResult: null, benfordChartInst: null,
+
+    async init() {
+      await this.loadRiskInvoices();
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async loadRiskInvoices() {
+      try {
+        const d = await apiFetch('/invoices/reports/risk/?page_size=20');
+        this.riskInvoices = d.results || d || [];
+      } catch(e) {}
+    },
+
+    async runAnomaly() {
+      this.loadingAnomaly = true;
+      try {
+        const d = await apiFetch('/analytics/detect-anomalies/', { method:'POST' });
+        this.anomalies = d.anomalies || d.results || d || [];
+        notify(`تم اكتشاف ${this.anomalies.length} حالة شاذة`, this.anomalies.length ? 'warning' : 'success');
+      } catch(e) { notify('فشل الفحص: '+e.message,'error'); }
+      this.loadingAnomaly = false;
+    },
+
+    async runBenford() {
+      this.loadingBenford = true;
+      try {
+        const d = await apiFetch('/analytics/benford-analysis/', { method:'POST' });
+        this.benfordResult = d;
+        this.$nextTick(() => this.buildBenfordChart(d));
+      } catch(e) { notify('فشل تحليل بنفورد: '+e.message,'error'); }
+      this.loadingBenford = false;
+    },
+
+    buildBenfordChart(data) {
+      const ctx = document.getElementById('benfordChart');
+      if (!ctx) return;
+      if (this.benfordChartInst) this.benfordChartInst.destroy();
+      const dark = document.documentElement.classList.contains('dark');
+      const tc = dark ? '#94a3b8' : '#64748b';
+      const gc = dark ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)';
+      const actual   = data.actual_distribution   || Array(9).fill(0);
+      const expected = data.expected_distribution || [30.1,17.6,12.5,9.7,7.9,6.7,5.8,5.1,4.6];
+      this.benfordChartInst = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['1','2','3','4','5','6','7','8','9'],
+          datasets: [
+            { label:'الفعلي', data:actual,   backgroundColor:'rgba(59,130,246,.7)', borderRadius:4 },
+            { label:'متوقع',  data:expected, type:'line', borderColor:'#ef4444', borderWidth:2,
+              pointBackgroundColor:'#ef4444', fill:false, tension:.4 }
+          ]
+        },
+        options: {
+          responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{ labels:{ color:tc, font:{ size:10 } } } },
+          scales:{
+            x:{ grid:{ color:gc }, ticks:{ color:tc } },
+            y:{ grid:{ color:gc }, ticks:{ color:tc, callback:v=>v+'%' } }
+          }
+        }
+      });
+    }
+  }
+}
+</script>
+{% endblock %}

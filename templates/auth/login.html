@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>تسجيل الدخول — FinAI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <style>
+    * { font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif; }
+    .grid-bg {
+      background: radial-gradient(circle at 1px 1px, rgba(255,255,255,.055) 1px, transparent 0);
+      background-size: 28px 28px;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    .logo-float { animation: float 5s ease-in-out infinite; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-950 flex items-center justify-center p-4 overflow-hidden">
+  <div class="fixed inset-0 grid-bg"></div>
+  <div class="fixed inset-0 pointer-events-none">
+    <div class="absolute top-[-12%] right-[-8%] h-[500px] w-[500px] rounded-full bg-blue-600/15 blur-[80px]"></div>
+    <div class="absolute bottom-[-10%] left-[-8%] h-[380px] w-[380px] rounded-full bg-violet-600/10 blur-[80px]"></div>
+    <div class="absolute left-1/2 top-1/2 h-[200px] w-[200px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-500/10 blur-[60px]"></div>
+  </div>
+
+  <div
+    class="relative w-full max-w-[400px]"
+    x-data="{
+      email: '',
+      password: '',
+      loading: false,
+      error: '',
+      async login() {
+        if (!this.email || !this.password) {
+          this.error = 'يرجى ملء جميع الحقول';
+          return;
+        }
+
+        this.loading = true;
+        this.error = '';
+
+        try {
+          const formData = new FormData();
+          formData.append('email', this.email);
+          formData.append('password', this.password);
+          formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+          const response = await fetch('{% url "frontend:login" %}', {
+            method: 'POST',
+            body: formData,
+          });
+          const data = await response.json();
+
+          if (data.success) {
+            if (data.tokens) {
+              localStorage.setItem('fin_token', data.tokens.access);
+            }
+            window.location.href = data.redirect || '/dashboard/';
+            return;
+          }
+
+          this.error = data.error || 'بيانات الدخول غير صحيحة';
+        } catch (error) {
+          this.error = 'خطأ في الاتصال بالخادم';
+        }
+
+        this.loading = false;
+      }
+    }"
+    @google-error.window="error = $event.detail; loading = false"
+  >
+    <div class="mb-8 text-center">
+      <div class="logo-float mx-auto mb-5 inline-flex h-16 w-16 items-center justify-center rounded-[18px] bg-gradient-to-br from-blue-500 to-cyan-500 shadow-[0_16px_48px_rgba(37,99,235,0.45)]">
+        <svg class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 19h16M6 16V8m4 8V5m4 11v-6m4 6V9" />
+        </svg>
+      </div>
+      <h1 class="text-[28px] font-extrabold tracking-[-0.03em] text-white">FinAI</h1>
+      <p class="mt-1 text-sm text-slate-500">نظام التدقيق المالي الذكي</p>
+    </div>
+
+    <div class="rounded-[16px] border border-white/10 bg-slate-900/85 p-7 shadow-[0_24px_64px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
+      <h2 class="mb-1 text-lg font-bold text-white">أهلاً بعودتك 👋</h2>
+      <p class="mb-6 text-sm text-slate-400">سجّل الدخول للوصول إلى لوحة التحكم</p>
+
+      <div
+        x-show="error"
+        x-transition
+        class="mb-5 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+      >
+        <span>⚠️</span>
+        <span x-text="error"></span>
+      </div>
+
+      {% if messages %}
+        {% for msg in messages %}
+          <div class="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+
+      <form @submit.prevent="login" class="space-y-4">
+        <div>
+          <label class="mb-1.5 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-300">البريد الإلكتروني</label>
+          <input
+            x-model="email"
+            type="email"
+            autocomplete="email"
+            required
+            placeholder="admin@company.sa"
+            class="w-full rounded-md border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white placeholder-slate-500 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400/40"
+          >
+        </div>
+
+        <div>
+          <div class="mb-1.5 flex items-center justify-between gap-3">
+            <label class="block text-xs font-semibold uppercase tracking-[0.08em] text-slate-300">كلمة المرور</label>
+            <a href="#" class="text-xs text-blue-400 hover:text-blue-300">نسيت كلمة المرور؟</a>
+          </div>
+          <input
+            x-model="password"
+            type="password"
+            autocomplete="current-password"
+            required
+            placeholder="••••••••••"
+            class="w-full rounded-md border border-white/10 bg-white/[0.05] px-4 py-3 text-sm text-white placeholder-slate-500 transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400/40"
+          >
+        </div>
+
+        <button
+          type="submit"
+          :disabled="loading"
+          class="mt-2 flex h-10 w-full items-center justify-center gap-2 rounded-md bg-gradient-to-l from-blue-600 to-blue-500 text-sm font-semibold text-white shadow-[0_4px_16px_rgba(37,99,235,0.35)] transition-all hover:from-blue-500 hover:to-cyan-500 disabled:opacity-50"
+        >
+          <template x-if="!loading">
+            <span>تسجيل الدخول ←</span>
+          </template>
+          <template x-if="loading">
+            <span class="flex items-center gap-2">
+              <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"></circle>
+                <path fill="currentColor" class="opacity-75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+              جارٍ التحقق...
+            </span>
+          </template>
+        </button>
+      </form>
+
+      <div class="my-4 flex items-center gap-3">
+        <div class="h-px flex-1 bg-white/10"></div>
+        <span class="text-xs text-slate-400">أو</span>
+        <div class="h-px flex-1 bg-white/10"></div>
+      </div>
+
+      <div
+        id="g_id_onload"
+        data-client_id="{{ google_client_id }}"
+        data-callback="handleGoogleLogin"
+        data-auto_prompt="false"
+      ></div>
+      <div
+        class="g_id_signin mx-auto"
+        data-type="standard"
+        data-shape="rectangular"
+        data-theme="filled_black"
+        data-text="signin_with"
+        data-size="large"
+        data-logo_alignment="left"
+        data-width="100%"
+      ></div>
+
+      <div class="mt-6 flex items-center justify-between border-t border-white/10 pt-5 text-xs text-slate-500">
+        <span class="flex items-center gap-2">
+          <span class="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.75)]"></span>
+          JWT + AES-256
+        </span>
+        <span class="rounded-md border border-green-200/20 bg-green-500/10 px-2 py-1 text-green-300">ZATCA متوافق ✓</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    function CSRF() {
+      return (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+    }
+
+    async function handleGoogleLogin(response) {
+      try {
+        const res = await fetch('/api/v1/auth/google/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': CSRF(),
+          },
+          body: JSON.stringify({ id_token: response.credential }),
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          localStorage.setItem('fin_token', data.access);
+          if (data.needs_org) {
+            window.location.href = '/google-pending/';
+          } else {
+            window.location.href = '/';
+          }
+          return;
+        }
+
+        window.dispatchEvent(new CustomEvent('google-error', {
+          detail: data.error || 'فشل تسجيل الدخول بـ Google',
+        }));
+      } catch (error) {
+        window.dispatchEvent(new CustomEvent('google-error', {
+          detail: 'خطأ في الاتصال',
+        }));
+      }
+    }
+  </script>
+</body>
+</html>

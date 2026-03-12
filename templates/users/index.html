@@ -1,0 +1,695 @@
+{% extends "base.html" %}
+{% block title %}إدارة المستخدمين{% endblock %}
+{% block page_title %}إدارة المستخدمين{% endblock %}
+{% block nav_users %}active{% endblock %}
+{% block header_actions %}{% endblock %}
+{% block header_primary_action %}{% endblock %}
+
+{% block content %}
+<div x-data="userMgmt()"
+     x-init="load()"
+     @keydown.escape.window="closeModal()"
+     class="-m-6 min-h-full bg-gradient-to-b from-slate-50 via-white to-slate-100/80 px-4 py-6 sm:px-6 lg:px-8 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900/80">
+  <div class="mx-auto max-w-7xl space-y-6">
+
+    <section class="relative overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white/90 p-6 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.35)] backdrop-blur xl:p-8 dark:border-slate-800 dark:bg-slate-900/80">
+      <div class="absolute -top-24 left-10 h-48 w-48 rounded-full bg-primary-500/10 blur-3xl"></div>
+      <div class="absolute bottom-0 right-0 h-44 w-44 rounded-full bg-violet-500/10 blur-3xl"></div>
+
+      <div class="relative flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
+        <div class="max-w-3xl space-y-5">
+          <div class="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-primary-50/80 px-3 py-1 text-xs font-semibold text-primary-700 dark:border-primary-500/20 dark:bg-primary-500/10 dark:text-primary-200">
+            <i data-lucide="users" class="h-3.5 w-3.5"></i>
+            FinAI Identity & Access
+          </div>
+
+          <div class="space-y-3">
+            <h1 class="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl xl:text-[2.6rem] dark:text-white">
+              إدارة الفريق والصلاحيات المؤسسية
+            </h1>
+            <p class="max-w-2xl text-sm leading-8 text-slate-600 sm:text-base dark:text-slate-400">
+              تحكم في الحسابات النشطة، أدوار الوصول، واستعداد الأمان لفريق المالية والتدقيق من واجهة واحدة أكثر وضوحاً واحترافية.
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold"
+                  :class="directoryStatusMeta().badgeClass">
+              <span class="h-2 w-2 rounded-full" :class="directoryStatusMeta().dotClass"></span>
+              <span x-text="directoryStatusMeta().label"></span>
+            </span>
+
+            <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3.5 py-1.5 text-xs text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-400">
+              <i data-lucide="shield-check" class="h-3.5 w-3.5"></i>
+              <span x-text="'تغطية MFA: ' + securityCoverage + '%' "></span>
+            </span>
+
+            <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50/80 px-3.5 py-1.5 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+              <i data-lucide="filter" class="h-3.5 w-3.5"></i>
+              <span x-text="filtersActive() ? 'توجد عوامل تصفية مفعلة' : 'عرض كامل لدليل المستخدمين'"></span>
+            </span>
+          </div>
+        </div>
+
+        <div class="flex flex-col items-stretch gap-3 sm:flex-row xl:justify-end">
+          <button type="button"
+                  x-show="filtersActive()"
+                  x-cloak
+                  @click="clearFilters()"
+                  class="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900">
+            <i data-lucide="rotate-ccw" class="h-4 w-4"></i>
+            مسح التصفية
+          </button>
+
+          <button type="button"
+                  @click="openNewUser()"
+                  class="inline-flex h-12 min-w-[12rem] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-6 text-sm font-bold text-white shadow-[0_18px_40px_-18px_rgba(15,23,42,0.95)] transition hover:-translate-y-0.5 hover:bg-slate-800 dark:bg-primary-600 dark:shadow-[0_18px_40px_-18px_rgba(37,99,235,0.9)] dark:hover:bg-primary-500">
+            <i data-lucide="user-plus" class="h-4 w-4"></i>
+            إضافة مستخدم جديد
+          </button>
+        </div>
+      </div>
+
+      <div class="relative mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div class="rounded-3xl border border-slate-200/80 bg-white/75 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+          <div class="flex items-start justify-between gap-4">
+            <div class="space-y-2">
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">إجمالي المستخدمين</p>
+              <p class="text-2xl font-semibold text-slate-950 dark:text-white" x-text="totalUsers"></p>
+            </div>
+            <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-200">
+              <i data-lucide="users" class="h-5 w-5"></i>
+            </span>
+          </div>
+          <p class="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-400">عدد الحسابات المرتبطة حالياً بالمؤسسة عبر الفرق المختلفة.</p>
+        </div>
+
+        <div class="rounded-3xl border border-slate-200/80 bg-white/75 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+          <div class="flex items-start justify-between gap-4">
+            <div class="space-y-2">
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">الحسابات النشطة</p>
+              <p class="text-2xl font-semibold text-slate-950 dark:text-white" x-text="activeUsers"></p>
+            </div>
+            <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200">
+              <i data-lucide="badge-check" class="h-5 w-5"></i>
+            </span>
+          </div>
+          <p class="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-400">الحسابات القادرة فعلياً على الدخول والعمل داخل النظام الآن.</p>
+        </div>
+
+        <div class="rounded-3xl border border-slate-200/80 bg-white/75 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+          <div class="flex items-start justify-between gap-4">
+            <div class="space-y-2">
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">حماية MFA</p>
+              <p class="text-2xl font-semibold text-slate-950 dark:text-white" x-text="mfaEnabledUsers"></p>
+            </div>
+            <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
+              <i data-lucide="shield-check" class="h-5 w-5"></i>
+            </span>
+          </div>
+          <p class="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-400">عدد المستخدمين الذين يملكون طبقة تحقق إضافية لحماية الوصول.</p>
+        </div>
+
+        <div class="rounded-3xl border border-slate-200/80 bg-white/75 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
+          <div class="flex items-start justify-between gap-4">
+            <div class="space-y-2">
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">أدوار إشرافية</p>
+              <p class="text-2xl font-semibold text-slate-950 dark:text-white" x-text="privilegedUsers"></p>
+            </div>
+            <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200">
+              <i data-lucide="shield" class="h-5 w-5"></i>
+            </span>
+          </div>
+          <p class="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-400">حسابات ذات تأثير أعلى على الرقابة، الموافقات، أو تكوين النظام.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-[2rem] border border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_55px_-30px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/80 xl:p-7">
+      {% include "settings/partials/section_header.html" with icon="search" eyebrow="Directory Controls" title="استكشاف الفريق والصلاحيات" description="ابحث بسرعة عن أي مستخدم، صفِّ النتائج حسب الدور أو حالة الحساب، وراجع عدد النتائج الحالية فوراً." aside="استخدم عوامل التصفية لتحديد الأدوار الحساسة أو مراجعة الحسابات الموقوفة قبل الاجتماعات أو التدقيق الداخلي." only %}
+
+      <div class="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,0.85fr)_minmax(0,0.85fr)_minmax(0,0.8fr)]">
+        <div class="relative">
+          <i data-lucide="search" class="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"></i>
+          <input x-model="q"
+                 @input.debounce.200ms="filter()"
+                 type="text"
+                 placeholder="ابحث بالاسم، البريد، القسم، أو رقم الجوال"
+                 class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pr-11 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
+        </div>
+
+        <select x-model="filterRole"
+                @change="filter()"
+                class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:focus:border-primary-400 dark:focus:bg-slate-950">
+          <option value="">كل الأدوار</option>
+          <template x-for="option in roleOptions" :key="option.value">
+            <option :value="option.value" x-text="option.label"></option>
+          </template>
+        </select>
+
+        <select x-model="filterActive"
+                @change="filter()"
+                class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:focus:border-primary-400 dark:focus:bg-slate-950">
+          <option value="">كل الحالات</option>
+          <option value="true">نشطون فقط</option>
+          <option value="false">موقوفون فقط</option>
+        </select>
+
+        <div class="rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-950/40">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">النتائج الحالية</p>
+          <p class="mt-2 text-xl font-semibold text-slate-950 dark:text-white" x-text="filteredCount"></p>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid gap-5 md:grid-cols-2 2xl:grid-cols-3">
+      <template x-if="loading">
+        <template x-for="i in 6" :key="'user-skeleton-' + i">
+          <div class="rounded-[2rem] border border-slate-200/80 bg-white/90 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 animate-pulse">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="h-12 w-12 rounded-2xl bg-slate-200 dark:bg-slate-800"></div>
+                <div class="space-y-2">
+                  <div class="h-3 w-32 rounded-full bg-slate-200 dark:bg-slate-800"></div>
+                  <div class="h-3 w-44 rounded-full bg-slate-200 dark:bg-slate-800"></div>
+                </div>
+              </div>
+              <div class="h-8 w-20 rounded-full bg-slate-200 dark:bg-slate-800"></div>
+            </div>
+            <div class="mt-5 space-y-3">
+              <div class="h-3 w-full rounded-full bg-slate-100 dark:bg-slate-800/70"></div>
+              <div class="h-3 w-4/5 rounded-full bg-slate-100 dark:bg-slate-800/70"></div>
+              <div class="h-3 w-3/5 rounded-full bg-slate-100 dark:bg-slate-800/70"></div>
+            </div>
+            <div class="mt-6 flex gap-3">
+              <div class="h-10 flex-1 rounded-2xl bg-slate-100 dark:bg-slate-800/70"></div>
+              <div class="h-10 flex-1 rounded-2xl bg-slate-100 dark:bg-slate-800/70"></div>
+            </div>
+          </div>
+        </template>
+      </template>
+
+      <template x-if="!loading && !filtered.length">
+        <div class="md:col-span-2 2xl:col-span-3 rounded-[2rem] border border-dashed border-slate-300 bg-white/80 p-12 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900/70">
+          <span class="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+            <i data-lucide="users" class="h-7 w-7"></i>
+          </span>
+          <h2 class="mt-5 text-xl font-semibold text-slate-950 dark:text-white">لا توجد نتائج مطابقة</h2>
+          <p class="mt-2 text-sm leading-7 text-slate-500 dark:text-slate-400">
+            جرّب تغيير عوامل التصفية أو أضف أول مستخدم جديد لتبدأ بناء فريق العمل داخل FinAI.
+          </p>
+          <div class="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <button type="button" @click="clearFilters()" class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900">
+              <i data-lucide="rotate-ccw" class="h-4 w-4"></i>
+              إعادة التصفية
+            </button>
+            <button type="button" @click="openNewUser()" class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-bold text-white transition hover:bg-slate-800 dark:bg-primary-600 dark:hover:bg-primary-500">
+              <i data-lucide="user-plus" class="h-4 w-4"></i>
+              إضافة مستخدم
+            </button>
+          </div>
+        </div>
+      </template>
+
+      <template x-for="u in filtered" :key="u.id">
+        <article class="rounded-[2rem] border border-slate-200/80 bg-white/90 p-5 shadow-[0_20px_55px_-30px_rgba(15,23,42,0.25)] transition duration-200 hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-[0_24px_60px_-28px_rgba(37,99,235,0.28)] dark:border-slate-800 dark:bg-slate-900/80 dark:hover:border-primary-500/30">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex min-w-0 items-center gap-3">
+              <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-sm font-bold text-white"
+                   :style="'background:' + avatarColor(u.email)">
+                <span x-text="avatarInitial(u)"></span>
+              </div>
+              <div class="min-w-0">
+                <p class="truncate text-base font-semibold text-slate-950 dark:text-white" x-text="u.full_name || u.email"></p>
+                <p class="truncate text-sm text-slate-500 dark:text-slate-400" dir="ltr" x-text="u.email"></p>
+              </div>
+            </div>
+
+            <span class="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+                  :class="u.is_active ? 'border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200' : 'border border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200'">
+              <span class="h-2 w-2 rounded-full" :class="u.is_active ? 'bg-emerald-500' : 'bg-red-500'"></span>
+              <span x-text="u.is_active ? 'نشط' : 'موقوف'"></span>
+            </span>
+          </div>
+
+          <div class="mt-5 flex flex-wrap items-center gap-2">
+            <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold"
+                  :class="roleBadge(u.role)"
+                  x-text="roleLabel(u.role)"></span>
+
+            <span class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold"
+                  :class="u.mfa_enabled ? 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-200' : 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300'">
+              <i :data-lucide="u.mfa_enabled ? 'shield-check' : 'shield'" class="h-3.5 w-3.5"></i>
+              <span x-text="u.mfa_enabled ? 'MFA مفعّل' : 'MFA غير مفعّل'"></span>
+            </span>
+          </div>
+
+          <div class="mt-5 grid gap-3 text-sm text-slate-600 dark:text-slate-400">
+            <div class="flex items-center gap-2">
+              <i data-lucide="building-2" class="h-4 w-4 text-slate-400"></i>
+              <span x-text="u.department || 'بدون قسم محدد'"></span>
+            </div>
+            <div class="flex items-center gap-2">
+              <i data-lucide="phone" class="h-4 w-4 text-slate-400"></i>
+              <span dir="ltr" x-text="u.phone || 'لا يوجد رقم جوال'"></span>
+            </div>
+            <div class="flex items-center gap-2">
+              <i data-lucide="clock" class="h-4 w-4 text-slate-400"></i>
+              <span x-text="userLastActivity(u)"></span>
+            </div>
+          </div>
+
+          <div class="mt-6 flex gap-3 border-t border-slate-200/80 pt-5 dark:border-slate-800">
+            <button type="button"
+                    @click="openEdit(u)"
+                    class="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 shadow-sm transition hover:border-primary-300 hover:text-primary-700 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-200 dark:hover:border-primary-500/40 dark:hover:text-primary-200">
+              <i data-lucide="edit-3" class="h-4 w-4"></i>
+              تعديل
+            </button>
+
+            <button type="button"
+                    @click="toggleActive(u)"
+                    class="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-2xl border text-sm font-semibold shadow-sm transition"
+                    :class="u.is_active ? 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/20' : 'border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500/20'">
+              <i :data-lucide="u.is_active ? 'shield-alert' : 'check-circle-2'" class="h-4 w-4"></i>
+              <span x-text="u.is_active ? 'إيقاف الحساب' : 'تفعيل الحساب'"></span>
+            </button>
+
+            <button type="button"
+                    @click="resetPassword(u)"
+                    class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:border-amber-300 hover:text-amber-700 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:border-amber-500/40 dark:hover:text-amber-200"
+                    title="إعادة تعيين كلمة المرور">
+              <i data-lucide="key" class="h-4 w-4"></i>
+            </button>
+          </div>
+        </article>
+      </template>
+    </div>
+  </div>
+
+  <template x-if="showModal">
+    <div x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" @click.self="closeModal()">
+      <div class="w-full max-w-5xl overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white shadow-[0_30px_90px_-35px_rgba(15,23,42,0.55)] dark:border-slate-800 dark:bg-slate-900">
+        <div class="grid gap-0 lg:grid-cols-[minmax(0,1.3fr)_minmax(20rem,0.7fr)]">
+          <div class="p-6 sm:p-8">
+            <div class="flex items-start justify-between gap-4 border-b border-slate-200/80 pb-5 dark:border-slate-800">
+              <div class="space-y-2">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400 dark:text-slate-500">User Workspace</p>
+                <h2 class="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white" x-text="editUser.id ? 'تعديل بيانات المستخدم' : 'إضافة مستخدم جديد'"></h2>
+                <p class="text-sm leading-7 text-slate-500 dark:text-slate-400">اضبط الدور، القسم، وبيانات الوصول بما يتوافق مع مسؤوليات هذا العضو داخل المنصة.</p>
+              </div>
+              <button type="button" @click="closeModal()" class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-slate-300 hover:text-slate-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:text-white">
+                <i data-lucide="x" class="h-4 w-4"></i>
+              </button>
+            </div>
+
+            <div class="mt-6 grid gap-5 md:grid-cols-2">
+              <div class="space-y-2 md:col-span-2">
+                <label class="block text-sm font-semibold text-slate-900 dark:text-white">الاسم الكامل</label>
+                <input x-model="editUser.full_name" type="text" placeholder="محمد أحمد" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
+              </div>
+
+              <div class="space-y-2 md:col-span-2">
+                <label class="block text-sm font-semibold text-slate-900 dark:text-white">البريد الإلكتروني</label>
+                <input x-model="editUser.email" type="email" dir="ltr" placeholder="user@finai.sa" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
+              </div>
+
+              <div class="space-y-2">
+                <label class="block text-sm font-semibold text-slate-900 dark:text-white">الدور</label>
+                <select x-model="editUser.role" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:focus:border-primary-400 dark:focus:bg-slate-950">
+                  <template x-for="option in roleOptions" :key="option.value">
+                    <option :value="option.value" x-text="option.label"></option>
+                  </template>
+                </select>
+              </div>
+
+              <div class="space-y-2">
+                <label class="block text-sm font-semibold text-slate-900 dark:text-white">القسم</label>
+                <input x-model="editUser.department" type="text" placeholder="المالية" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
+              </div>
+
+              <div class="space-y-2">
+                <label class="block text-sm font-semibold text-slate-900 dark:text-white">رقم الجوال</label>
+                <input x-model="editUser.phone" type="text" dir="ltr" placeholder="+966 5x xxx xxxx" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
+              </div>
+
+              <div class="space-y-2" x-show="!editUser.id" x-cloak>
+                <label class="block text-sm font-semibold text-slate-900 dark:text-white">كلمة المرور الأولية</label>
+                <input x-model="editUser.password" type="password" placeholder="8 أحرف على الأقل" class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
+              </div>
+
+              <div class="space-y-2" x-show="editUser.id" x-cloak>
+                <label class="block text-sm font-semibold text-slate-900 dark:text-white">حالة الحساب</label>
+                <button type="button" @click="editUser.is_active = !editUser.is_active" class="flex h-[50px] w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-200 dark:hover:border-slate-600">
+                  <span x-text="editUser.is_active ? 'الحساب نشط حالياً' : 'الحساب موقوف حالياً'"></span>
+                  <span class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs" :class="editUser.is_active ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-200'">
+                    <span class="h-2 w-2 rounded-full" :class="editUser.is_active ? 'bg-emerald-500' : 'bg-red-500'"></span>
+                    <span x-text="editUser.is_active ? 'نشط' : 'موقوف'"></span>
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-8 flex flex-col gap-3 border-t border-slate-200/80 pt-6 sm:flex-row sm:justify-end dark:border-slate-800">
+              <button type="button" @click="closeModal()" class="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900">
+                إلغاء
+              </button>
+              <button type="button" @click="saveUser()" :disabled="saving" class="inline-flex h-12 min-w-[11rem] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-6 text-sm font-bold text-white shadow-[0_18px_40px_-18px_rgba(15,23,42,0.95)] transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-primary-600 dark:shadow-[0_18px_40px_-18px_rgba(37,99,235,0.9)] dark:hover:bg-primary-500">
+                <template x-if="saving">
+                  <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                </template>
+                <i x-show="!saving" data-lucide="save" class="h-4 w-4"></i>
+                <span x-text="editUser.id ? 'حفظ التعديلات' : 'إنشاء المستخدم'"></span>
+              </button>
+            </div>
+          </div>
+
+          <aside class="border-t border-slate-200/80 bg-slate-50/80 p-6 lg:border-r lg:border-t-0 dark:border-slate-800 dark:bg-slate-950/50 sm:p-8">
+            <div class="space-y-5">
+              <div class="space-y-2">
+                <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400 dark:text-slate-500">Access Guidance</p>
+                <h3 class="text-xl font-semibold text-slate-950 dark:text-white">سياسة وصول مقترحة</h3>
+                <p class="text-sm leading-7 text-slate-600 dark:text-slate-400" x-text="roleDescription(editUser.role)"></p>
+              </div>
+
+              <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+                <p class="text-sm font-semibold text-slate-900 dark:text-white">أفضل ممارسات الفريق</p>
+                <ul class="mt-3 space-y-3 text-sm leading-7 text-slate-600 dark:text-slate-400">
+                  <li class="flex items-start gap-2"><i data-lucide="check-circle-2" class="mt-1 h-4 w-4 shrink-0 text-emerald-500"></i><span>امنح الأدوار الإشرافية فقط لمن يحتاجها فعلياً ضمن سير العمل.</span></li>
+                  <li class="flex items-start gap-2"><i data-lucide="check-circle-2" class="mt-1 h-4 w-4 shrink-0 text-emerald-500"></i><span>فعّل MFA للحسابات القيادية أو الحسابات ذات صلاحيات اعتماد أو تعديل.</span></li>
+                  <li class="flex items-start gap-2"><i data-lucide="check-circle-2" class="mt-1 h-4 w-4 shrink-0 text-emerald-500"></i><span>استخدم الأقسام لتسهيل التصفية لاحقاً في التحقيقات أو تدقيق الوصول.</span></li>
+                </ul>
+              </div>
+
+              <div class="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+                <p class="text-sm font-semibold text-slate-900 dark:text-white">ملحوظة تشغيلية</p>
+                <p class="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-400">
+                  عند إنشاء مستخدم جديد، أرسل كلمة المرور الأولية عبر قناة آمنة ثم اطلب من العضو تحديثها عند أول دخول.
+                </p>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function userMgmt() {
+  return {
+    users: [],
+    filtered: [],
+    loading: true,
+    saving: false,
+    showModal: false,
+    q: '',
+    filterRole: '',
+    filterActive: '',
+    editUser: {},
+
+    roleOptions: [
+      { value: 'admin', label: 'مدير النظام' },
+      { value: 'cao', label: 'كبير مدققين' },
+      { value: 'senior_auditor', label: 'مدقق أول' },
+      { value: 'junior_auditor', label: 'مدقق' },
+      { value: 'compliance_officer', label: 'مسؤول الامتثال' },
+      { value: 'finance_manager', label: 'مدير مالي' },
+      { value: 'external_auditor', label: 'مدقق خارجي' },
+    ],
+
+    get totalUsers() {
+      return this.users.length;
+    },
+
+    get activeUsers() {
+      return this.users.filter((user) => user.is_active).length;
+    },
+
+    get mfaEnabledUsers() {
+      return this.users.filter((user) => user.mfa_enabled).length;
+    },
+
+    get privilegedUsers() {
+      return this.users.filter((user) => ['admin', 'cao', 'senior_auditor', 'compliance_officer', 'finance_manager'].includes(user.role)).length;
+    },
+
+    get filteredCount() {
+      return this.filtered.length;
+    },
+
+    get securityCoverage() {
+      return this.activeUsers ? Math.round((this.mfaEnabledUsers / this.activeUsers) * 100) : 0;
+    },
+
+    async load() {
+      this.loading = true;
+      try {
+        const response = await apiFetch('/auth/users/');
+        this.users = response.results ?? response ?? [];
+        this.filter();
+      } catch (error) {
+        notify('خطأ في تحميل المستخدمين', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    filter() {
+      const search = (this.q || '').trim().toLowerCase();
+      this.filtered = this.users.filter((user) => {
+        const matchesSearch = !search || [user.full_name, user.email, user.department, user.phone]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(search));
+        const matchesRole = !this.filterRole || user.role === this.filterRole;
+        const matchesActive = !this.filterActive || String(!!user.is_active) === this.filterActive;
+        return matchesSearch && matchesRole && matchesActive;
+      });
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    filtersActive() {
+      return !!((this.q || '').trim() || this.filterRole || this.filterActive);
+    },
+
+    clearFilters() {
+      this.q = '';
+      this.filterRole = '';
+      this.filterActive = '';
+      this.filter();
+    },
+
+    directoryStatusMeta() {
+      if (!this.totalUsers) {
+        return {
+          label: 'ابدأ ببناء الفريق',
+          badgeClass: 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300',
+          dotClass: 'bg-slate-400',
+        };
+      }
+
+      if (this.securityCoverage < 60) {
+        return {
+          label: 'مراجعة الأمان مطلوبة',
+          badgeClass: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200',
+          dotClass: 'bg-amber-500',
+        };
+      }
+
+      if (this.activeUsers < this.totalUsers) {
+        return {
+          label: 'بعض الحسابات غير فعالة',
+          badgeClass: 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200',
+          dotClass: 'bg-blue-500',
+        };
+      }
+
+      return {
+        label: 'جاهزية وصول قوية',
+        badgeClass: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200',
+        dotClass: 'bg-emerald-500',
+      };
+    },
+
+    newUserTemplate() {
+      return {
+        full_name: '',
+        email: '',
+        role: 'junior_auditor',
+        department: '',
+        phone: '',
+        password: '',
+        is_active: true,
+      };
+    },
+
+    openNewUser() {
+      this.editUser = this.newUserTemplate();
+      this.showModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    openEdit(user) {
+      this.editUser = {
+        id: user.id,
+        full_name: user.full_name || '',
+        email: user.email || '',
+        role: user.role || 'junior_auditor',
+        department: user.department || '',
+        phone: user.phone || '',
+        is_active: !!user.is_active,
+        mfa_enabled: !!user.mfa_enabled,
+      };
+      this.showModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    closeModal() {
+      if (!this.showModal || this.saving) return;
+      this.showModal = false;
+    },
+
+    buildUserPayload() {
+      const payload = {
+        full_name: (this.editUser.full_name || '').trim(),
+        email: (this.editUser.email || '').trim(),
+        role: this.editUser.role || 'junior_auditor',
+        department: (this.editUser.department || '').trim(),
+        phone: (this.editUser.phone || '').trim(),
+        is_active: this.editUser.is_active !== false,
+      };
+
+      if (!this.editUser.id) {
+        payload.password = this.editUser.password || '';
+      }
+
+      return payload;
+    },
+
+    async saveUser() {
+      const payload = this.buildUserPayload();
+
+      if (!payload.full_name || !payload.email) {
+        notify('الاسم والبريد الإلكتروني مطلوبان', 'error');
+        return;
+      }
+
+      if (!this.editUser.id && (!payload.password || payload.password.length < 8)) {
+        notify('كلمة المرور الأولية يجب أن تكون 8 أحرف على الأقل', 'error');
+        return;
+      }
+
+      this.saving = true;
+      try {
+        const url = this.editUser.id ? `/auth/users/${this.editUser.id}/` : '/auth/users/';
+        const method = this.editUser.id ? 'PATCH' : 'POST';
+        const saved = await apiFetch(url, {
+          method,
+          body: JSON.stringify(payload),
+        });
+
+        if (this.editUser.id) {
+          const index = this.users.findIndex((user) => user.id === saved.id);
+          if (index >= 0) this.users.splice(index, 1, saved);
+        } else {
+          this.users.unshift(saved);
+        }
+
+        this.filter();
+        this.showModal = false;
+        notify(this.editUser.id ? 'تم تحديث المستخدم بنجاح' : 'تم إنشاء المستخدم بنجاح', 'success');
+      } catch (error) {
+        notify(`خطأ في الحفظ: ${error.message}`, 'error');
+      } finally {
+        this.saving = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async toggleActive(user) {
+      try {
+        const saved = await apiFetch(`/auth/users/${user.id}/`, {
+          method: 'PATCH',
+          body: JSON.stringify({ is_active: !user.is_active }),
+        });
+        Object.assign(user, saved);
+        this.filter();
+        notify(user.is_active ? 'تم تفعيل المستخدم' : 'تم إيقاف المستخدم', 'success');
+      } catch (error) {
+        notify('تعذر تحديث حالة المستخدم', 'error');
+      }
+    },
+
+    async resetPassword(user) {
+      const password = window.prompt(`كلمة المرور الجديدة للمستخدم ${user.full_name || user.email}:`);
+      if (!password || password.length < 8) {
+        notify('كلمة المرور قصيرة جداً — يجب أن تكون 8 أحرف على الأقل', 'error');
+        return;
+      }
+
+      try {
+        await apiFetch(`/auth/users/${user.id}/set-password/`, {
+          method: 'POST',
+          body: JSON.stringify({ new_password: password }),
+        });
+        notify('تم تغيير كلمة المرور بنجاح', 'success');
+      } catch (error) {
+        notify('خطأ في تغيير كلمة المرور', 'error');
+      }
+    },
+
+    userLastActivity(user) {
+      if (!user.last_login) return 'لم يسجل دخول بعد';
+      return 'آخر دخول: ' + new Intl.DateTimeFormat('ar-SA', { dateStyle: 'medium' }).format(new Date(user.last_login));
+    },
+
+    avatarInitial(user) {
+      return ((user.full_name || user.email || '?').trim()[0] || '?').toUpperCase();
+    },
+
+    avatarColor(email) {
+      const colors = ['#2563eb', '#7c3aed', '#db2777', '#dc2626', '#ea580c', '#16a34a', '#0891b2'];
+      const value = (email || 'a').charCodeAt(0) || 0;
+      return colors[value % colors.length];
+    },
+
+    roleLabel(role) {
+      return {
+        admin: 'مدير النظام',
+        cao: 'كبير مدققين',
+        senior_auditor: 'مدقق أول',
+        junior_auditor: 'مدقق',
+        compliance_officer: 'مسؤول الامتثال',
+        finance_manager: 'مدير مالي',
+        external_auditor: 'مدقق خارجي',
+      }[role] || role;
+    },
+
+    roleDescription(role) {
+      return {
+        admin: 'يملك صلاحية واسعة على الإعدادات والمستخدمين والتكوين العام للنظام. استخدمه للحالات المحدودة فقط.',
+        cao: 'يقود مسار التدقيق ويشرف على القضايا عالية الحساسية والتصعيدات الرئيسية.',
+        senior_auditor: 'يقوم بمراجعات أعمق، ويتابع الأنماط الشاذة، ويقود التحقيقات اليومية.',
+        junior_auditor: 'يناسب أعضاء المراجعة التشغيليين الذين يحتاجون إلى الوصول للفحص والمتابعة دون صلاحيات عليا.',
+        compliance_officer: 'يركز على المتطلبات التنظيمية والضريبية ومتابعة قواعد الامتثال والسياسات.',
+        finance_manager: 'مناسب للقيادات المالية التي تحتاج رؤية تنفيذية ومتابعة الموافقات وحدود الصرف.',
+        external_auditor: 'وصول مراقب وموجّه للمراجعات الخارجية دون توسيع صلاحيات التعديل على كل شيء.',
+      }[role] || 'اختر الدور الأقرب لمسؤوليات هذا المستخدم الحالية.';
+    },
+
+    roleBadge(role) {
+      return {
+        admin: 'border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200',
+        cao: 'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-200',
+        senior_auditor: 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-500/20 dark:bg-primary-500/10 dark:text-primary-200',
+        finance_manager: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200',
+        compliance_officer: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200',
+      }[role] || 'border-slate-200 bg-slate-50 text-slate-600 dark:border-slate-700 dark:bg-slate-800/80 dark:text-slate-300';
+    },
+  };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}التقارير{% endblock %}
+{% block page_title %}التقارير المالية{% endblock %}
+{% block nav_reports %}active{% endblock %}
+
+{% block content %}
+<div x-data="reportsPage()" x-init="init()" class="space-y-5 max-w-screen-2xl">
+
+  <!-- Quick Generate Cards -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    {% for rt in report_types %}
+    <button @click="generate('{{ rt.type }}', '{{ rt.lang }}')"
+            class="card p-5 text-right hover:border-primary-400 dark:hover:border-primary-500 hover:shadow-md transition-all group">
+      <div class="w-11 h-11 rounded-xl {{ rt.bg }} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+        <i data-lucide="{{ rt.icon }}" class="w-5 h-5 {{ rt.color }}"></i>
+      </div>
+      <p class="font-bold text-sm text-slate-800 dark:text-white">{{ rt.label }}</p>
+      <p class="text-xs text-slate-400 mt-1">{{ rt.desc }}</p>
+    </button>
+    {% endfor %}
+  </div>
+
+  <!-- Generating indicator -->
+  <div x-show="generating" x-transition
+       class="card p-5 border-primary-200 dark:border-primary-800/50 bg-primary-50 dark:bg-primary-900/10 flex items-center gap-4">
+    <svg class="animate-spin w-6 h-6 text-primary-500 flex-shrink-0" fill="none" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
+      <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="opacity-75"/>
+    </svg>
+    <div>
+      <p class="font-semibold text-primary-700 dark:text-primary-300">جارٍ توليد التقرير...</p>
+      <p class="text-sm text-primary-500">يحلل الذكاء الاصطناعي البيانات ويصيغ التقرير بالعربية</p>
+    </div>
+  </div>
+
+  <!-- Reports list -->
+  <div class="card overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
+      <h3 class="font-semibold text-slate-800 dark:text-white">التقارير المُولَّدة</h3>
+      <select x-model="filterType" @change="loadReports()" class="select text-xs py-1.5">
+        <option value="">كل الأنواع</option>
+        <option value="invoice_audit">تدقيق فواتير</option>
+        <option value="executive_summary">ملخص تنفيذي</option>
+        <option value="risk_assessment">تقييم مخاطر</option>
+        <option value="vendor_analysis">تحليل موردين</option>
+        <option value="spend_analysis">تحليل إنفاق</option>
+      </select>
+    </div>
+
+    <div x-show="loadingList" class="flex justify-center py-12">
+      <svg class="animate-spin w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
+        <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+      </svg>
+    </div>
+
+    <div x-show="!loadingList" class="divide-y divide-slate-100 dark:divide-slate-700/20">
+      <template x-for="rep in reports" :key="rep.id">
+        <div class="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-violet-500 flex items-center justify-center text-white text-lg flex-shrink-0">📊</div>
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-slate-800 dark:text-white truncate" x-text="rep.title||'تقرير بدون عنوان'"></p>
+            <p class="text-xs text-slate-400 mt-0.5">
+              <span x-text="{'invoice_audit':'تدقيق فواتير','executive_summary':'ملخص تنفيذي','risk_assessment':'تقييم مخاطر','vendor_analysis':'تحليل موردين','spend_analysis':'تحليل إنفاق'}[rep.report_type]||rep.report_type"></span>
+              · <span x-text="rep.language==='ar'?'عربي':'English'"></span>
+              · <span x-text="(rep.created_at||'').slice(0,10)"></span>
+            </p>
+          </div>
+          <button @click="viewReport(rep.id)"
+                  class="btn-ghost text-xs py-1.5 px-3 flex-shrink-0">عرض التقرير</button>
+        </div>
+      </template>
+      <div x-show="!reports.length && !loadingList" class="text-center py-16 text-slate-400">
+        <i data-lucide="file-text" class="w-8 h-8 mx-auto mb-2"></i>
+        <p class="text-sm">لا توجد تقارير بعد — اضغط على أحد الأزرار أعلاه لتوليد تقرير</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Report Viewer Modal -->
+  <div x-show="activeReport" x-transition class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div @click.away="activeReport=null" class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[88vh] flex flex-col">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
+        <h3 class="font-bold text-slate-800 dark:text-white" x-text="activeReport?.title||'التقرير'"></h3>
+        <button @click="activeReport=null" class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-6 space-y-5">
+
+        <!-- Narrative sections -->
+        <template x-for="[key, content] in Object.entries(activeReport?.narrative||{})">
+          <div>
+            <h4 class="font-semibold text-slate-700 dark:text-slate-200 mb-2 capitalize flex items-center gap-2">
+              <span class="w-1.5 h-4 bg-primary-500 rounded-full inline-block"></span>
+              <span x-text="key.replace(/_/g,' ')"></span>
+            </h4>
+            <div class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-700/40 rounded-xl p-4"
+                 x-text="content"></div>
+          </div>
+        </template>
+
+        <!-- Invoice Audit Stats -->
+        <template x-if="activeReport?.data?.invoice_audit">
+          <div class="border-t border-slate-200 dark:border-slate-700 pt-5">
+            <h4 class="font-semibold text-slate-700 dark:text-slate-200 mb-3">📊 إحصاءات تدقيق الفواتير</h4>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div class="bg-slate-50 dark:bg-slate-700/40 rounded-xl p-3 text-center">
+                <div class="text-2xl font-bold text-slate-800 dark:text-white"
+                     x-text="activeReport.data.invoice_audit.overall_stats?.total_invoices||0"></div>
+                <div class="text-xs text-slate-400 mt-0.5">إجمالي الفواتير</div>
+              </div>
+              <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 text-center">
+                <div class="text-2xl font-bold text-red-600 dark:text-red-400"
+                     x-text="activeReport.data.invoice_audit.overall_stats?.flagged_count||0"></div>
+                <div class="text-xs text-slate-400 mt-0.5">مُبلَّغ عنها</div>
+              </div>
+              <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 text-center">
+                <div class="text-2xl font-bold text-amber-600 dark:text-amber-400"
+                     x-text="activeReport.data.invoice_audit.overall_stats?.duplicate_count||0"></div>
+                <div class="text-xs text-slate-400 mt-0.5">مكررة</div>
+              </div>
+              <div class="bg-primary-50 dark:bg-primary-900/20 rounded-xl p-3 text-center">
+                <div class="text-2xl font-bold text-primary-600 dark:text-primary-400"
+                     x-text="(activeReport.data.invoice_audit.validation_summary?.avg_score||0).toFixed(1)+'%'"></div>
+                <div class="text-xs text-slate-400 mt-0.5">متوسط التدقيق</div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function reportsPage() {
+  return {
+    reports:[], loadingList:true, generating:false,
+    filterType:'', activeReport:null,
+
+    async init() { await this.loadReports(); },
+
+    async loadReports() {
+      this.loadingList = true;
+      try {
+        const url = '/reports/' + (this.filterType ? '?report_type='+this.filterType : '');
+        const d = await apiFetch(url);
+        this.reports = d.results || d || [];
+      } catch(e) {}
+      this.loadingList = false;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async generate(type, lang) {
+      this.generating = true;
+      try {
+        const d = await apiFetch('/reports/generate/', {
+          method:'POST',
+          body: JSON.stringify({ report_type:type, language:lang, include_invoices:true })
+        });
+        notify('تم توليد التقرير بنجاح', 'success');
+        await this.loadReports();
+        this.activeReport = d;
+      } catch(e) { notify('فشل توليد التقرير: '+e.message, 'error'); }
+      this.generating = false;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async viewReport(id) {
+      try {
+        this.activeReport = await apiFetch('/reports/'+id+'/');
+        this.$nextTick(() => lucide.createIcons());
+      } catch(e) { notify('فشل التحميل','error'); }
+    }
+  }
+}
+</script>
+{% endblock %}

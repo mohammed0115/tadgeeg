@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}تفاصيل دفعة الفواتير{% endblock %}
+{% block page_title %}تفاصيل الدفعة{% endblock %}
+{% block nav_batches %}active{% endblock %}
+
+{% block content %}
+<div x-data="batchDetail()" x-init="load()">
+
+  <a href="/invoices/batches/" class="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 mb-5 transition-colors">
+    <i data-lucide="arrow-right" class="w-4 h-4"></i> العودة للدفعات
+  </a>
+
+  <template x-if="loading">
+    <div class="card p-12 text-center text-slate-400"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto"></i></div>
+  </template>
+
+  <template x-if="batch && !loading">
+    <div class="space-y-5">
+
+      <!-- Header -->
+      <div class="card p-6">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 class="text-xl font-bold text-slate-800 dark:text-white mb-1" x-text="batch.batch_name || 'دفعة ' + batch.id.slice(0,8)"></h1>
+            <p class="text-sm text-slate-400">
+              رُفعت بواسطة <strong x-text="batch.uploaded_by_name || '—'"></strong>
+              — <span x-text="fmtDate(batch.created_at)"></span>
+            </p>
+          </div>
+          <span :class="batchStatusBadge(batch.status)" class="text-sm font-bold px-3 py-1.5 rounded-xl border" x-text="batchStatusLabel(batch.status)"></span>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="mt-5">
+          <div class="flex justify-between text-xs text-slate-500 mb-1.5">
+            <span x-text="batch.processed_files + ' معالَجة من ' + batch.total_files"></span>
+            <span x-text="batch.failed_files + ' فشلت'"></span>
+          </div>
+          <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+            <div class="h-3 rounded-full transition-all duration-500"
+                 :class="batch.failed_files > 0 ? 'bg-gradient-to-l from-red-500 to-primary-500' : 'bg-primary-500'"
+                 :style="'width:' + Math.round((batch.processed_files/Math.max(batch.total_files,1))*100) + '%'"></div>
+          </div>
+        </div>
+
+        <!-- Stats row -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-5">
+          <div class="bg-slate-50 dark:bg-slate-800 rounded-xl p-3 text-center">
+            <p class="text-xs text-slate-400 mb-0.5">الكلي</p>
+            <p class="text-xl font-bold text-slate-800 dark:text-white font-mono" x-text="batch.total_files"></p>
+          </div>
+          <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 text-center">
+            <p class="text-xs text-slate-400 mb-0.5">نجحت</p>
+            <p class="text-xl font-bold text-green-600 font-mono" x-text="batch.processed_files - batch.failed_files"></p>
+          </div>
+          <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 text-center">
+            <p class="text-xs text-slate-400 mb-0.5">مُعلَّقة</p>
+            <p class="text-xl font-bold text-amber-600 font-mono" x-text="invoices.filter(i=>i.status==='flagged').length"></p>
+          </div>
+          <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 text-center">
+            <p class="text-xs text-slate-400 mb-0.5">فشلت</p>
+            <p class="text-xl font-bold text-red-600 font-mono" x-text="batch.failed_files"></p>
+          </div>
+          <div class="bg-primary-50 dark:bg-primary-900/20 rounded-xl p-3 text-center">
+            <p class="text-xs text-slate-400 mb-0.5">متوسط الدرجة</p>
+            <p class="text-xl font-bold text-primary-600 font-mono" x-text="avgScore + '%'"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="card p-4 flex flex-wrap items-center gap-3">
+        <div class="flex-1 relative min-w-48">
+          <i data-lucide="search" class="absolute right-3 top-2.5 w-4 h-4 text-slate-400"></i>
+          <input x-model="q" placeholder="بحث برقم الفاتورة أو المورد..." class="input-field pr-9 w-full text-sm"/>
+        </div>
+        <select x-model="filterStatus" class="input-field text-sm w-36">
+          <option value="">كل الحالات</option>
+          <option value="validated">تم التحقق</option>
+          <option value="flagged">مُعلَّقة</option>
+          <option value="approved">مُعتمَدة</option>
+          <option value="failed">فشلت</option>
+        </select>
+        <select x-model="filterRisk" class="input-field text-sm w-36">
+          <option value="">كل الخطر</option>
+          <option value="critical">حرج</option>
+          <option value="high">عالي</option>
+          <option value="medium">متوسط</option>
+          <option value="low">منخفض</option>
+        </select>
+      </div>
+
+      <!-- Invoices table -->
+      <div class="card overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-200 dark:border-slate-700 text-xs text-slate-500 uppercase">
+                <th class="text-right px-4 py-3 font-semibold">رقم الفاتورة</th>
+                <th class="text-right px-4 py-3 font-semibold">المورد</th>
+                <th class="text-right px-4 py-3 font-semibold">المبلغ</th>
+                <th class="text-right px-4 py-3 font-semibold">الضريبة</th>
+                <th class="text-right px-4 py-3 font-semibold">نقاط التحقق</th>
+                <th class="text-right px-4 py-3 font-semibold">الخطر</th>
+                <th class="text-right px-4 py-3 font-semibold">الحالة</th>
+                <th class="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-if="filteredInvoices.length === 0">
+                <tr><td colspan="8" class="text-center py-10 text-slate-400 text-sm">لا توجد فواتير</td></tr>
+              </template>
+              <template x-for="inv in filteredInvoices" :key="inv.id">
+                <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                  <td class="px-4 py-3 font-mono text-xs" x-text="inv.invoice_number || '—'"></td>
+                  <td class="px-4 py-3 text-xs font-medium text-slate-700 dark:text-slate-200 max-w-[160px] truncate" x-text="inv.vendor_name || '—'"></td>
+                  <td class="px-4 py-3 font-mono text-xs" x-text="fmtCurrency(inv.total_amount, inv.currency)"></td>
+                  <td class="px-4 py-3 font-mono text-xs text-slate-500" x-text="fmtCurrency(inv.vat_amount, inv.currency)"></td>
+                  <td class="px-4 py-3">
+                    <div class="flex items-center gap-2">
+                      <div class="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 w-16">
+                        <div class="h-1.5 rounded-full" :class="scoreColor(inv.risk_score)"
+                             :style="'width:' + (inv.risk_score||0) + '%'"></div>
+                      </div>
+                      <span class="text-xs font-mono text-slate-500" x-text="(inv.risk_score||0).toFixed(0)+'%'"></span>
+                    </div>
+                  </td>
+                  <td class="px-4 py-3"><span :class="riskBadge(inv.risk_level)" class="text-xs font-semibold px-2 py-0.5 rounded border" x-text="riskLabel(inv.risk_level)"></span></td>
+                  <td class="px-4 py-3"><span :class="statusBadge(inv.status)" class="text-xs font-semibold px-2 py-0.5 rounded border" x-text="statusLabel(inv.status)"></span></td>
+                  <td class="px-4 py-3">
+                    <a :href="'/invoices/' + inv.id + '/'" class="text-primary-500 hover:text-primary-700 transition-colors">
+                      <i data-lucide="eye" class="w-4 h-4"></i>
+                    </a>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function batchDetail() {
+  const batchId = window.location.pathname.split('/').filter(Boolean).pop();
+  return {
+    batch: null, invoices: [], loading: true,
+    q: '', filterStatus: '', filterRisk: '',
+
+    async load() {
+      try {
+        const [b, invs] = await Promise.all([
+          apiFetch(`/invoices/batches/${batchId}/`).then(r => r.json()),
+          apiFetch(`/invoices/?batch=${batchId}&page_size=200`).then(r => r.json()),
+        ]);
+        this.batch = b;
+        this.invoices = invs.results ?? invs;
+      } catch(e) { notify('خطأ في التحميل', 'error'); }
+      finally { this.loading = false; this.$nextTick(() => lucide.createIcons()); }
+    },
+
+    get filteredInvoices() {
+      return this.invoices.filter(i => {
+        const sq = this.q.toLowerCase();
+        const matchQ = !sq || (i.invoice_number||'').toLowerCase().includes(sq) || (i.vendor_name||'').toLowerCase().includes(sq);
+        const matchS = !this.filterStatus || i.status === this.filterStatus;
+        const matchR = !this.filterRisk   || i.risk_level === this.filterRisk;
+        return matchQ && matchS && matchR;
+      });
+    },
+
+    get avgScore() {
+      if (!this.invoices.length) return 0;
+      const sum = this.invoices.reduce((a,i) => a + (i.risk_score||0), 0);
+      return Math.round(sum / this.invoices.length);
+    },
+
+    fmtDate(d) { return d ? new Date(d).toLocaleString('ar-SA') : '—'; },
+    fmtCurrency(v, c='SAR') { return v ? Number(v).toLocaleString('ar-SA', {maximumFractionDigits:2}) + ' ' + (c||'SAR') : '—'; },
+    scoreColor(s) { return s>=85?'bg-green-500':s>=70?'bg-amber-400':s>=50?'bg-orange-500':'bg-red-500'; },
+    riskLabel(l) { return {'critical':'حرج','high':'عالي','medium':'متوسط','low':'منخفض'}[l]??l; },
+    riskBadge(l) { return {'critical':'bg-red-50 text-red-700 border-red-200','high':'bg-orange-50 text-orange-700 border-orange-200','medium':'bg-amber-50 text-amber-700 border-amber-200','low':'bg-green-50 text-green-700 border-green-200'}[l]??''; },
+    statusLabel(s) { return {'validated':'تم التحقق','flagged':'مُعلَّقة','approved':'مُعتمَدة','pending':'قيد الانتظار','failed':'فشلت','rejected':'مرفوضة'}[s]??s; },
+    statusBadge(s) { return {'validated':'bg-blue-50 text-blue-700 border-blue-200','flagged':'bg-amber-50 text-amber-700 border-amber-200','approved':'bg-green-50 text-green-700 border-green-200','failed':'bg-red-50 text-red-700 border-red-200','pending':'bg-slate-50 text-slate-600 border-slate-200'}[s]??''; },
+    batchStatusLabel(s) { return {'completed':'مكتملة','partial':'جزئية','failed':'فشلت','processing':'تعالَج','pending':'قيد الانتظار'}[s]??s; },
+    batchStatusBadge(s) { return {'completed':'bg-green-50 text-green-700 border-green-200','partial':'bg-amber-50 text-amber-700 border-amber-200','failed':'bg-red-50 text-red-700 border-red-200','processing':'bg-blue-50 text-blue-700 border-blue-200','pending':'bg-slate-50 text-slate-600 border-slate-200'}[s]??''; },
+  }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,67 @@
+"""Invoice Serializers"""
+
+from rest_framework import serializers
+from .models import Invoice, InvoiceBatch, InvoiceValidationResult, VendorProfile, InvoiceAuditEvent
+
+
+class InvoiceListSerializer(serializers.ModelSerializer):
+    """Compact serializer for list views."""
+    uploaded_by_name = serializers.CharField(source="uploaded_by.full_name", read_only=True, default="")
+
+    class Meta:
+        model = Invoice
+        fields = [
+            "id", "invoice_number", "invoice_date", "vendor_name", "vendor_vat_number",
+            "total_amount", "vat_amount", "currency", "status", "risk_level", "risk_score",
+            "is_duplicate", "ocr_confidence", "language", "has_qr_code",
+            "uploaded_by_name", "original_filename", "created_at",
+        ]
+
+
+class InvoiceDetailSerializer(serializers.ModelSerializer):
+    """Full serializer including all fields."""
+    uploaded_by_name = serializers.CharField(source="uploaded_by.full_name", read_only=True, default="")
+    approved_by_name = serializers.CharField(source="approved_by.full_name", read_only=True, default="")
+
+    class Meta:
+        model = Invoice
+        fields = "__all__"
+        read_only_fields = [
+            "id", "organization", "uploaded_by", "created_at", "updated_at",
+            "risk_score", "risk_level", "is_duplicate", "ocr_confidence",
+            "raw_text", "extracted_data", "ai_summary",
+        ]
+
+
+class InvoiceValidationResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InvoiceValidationResult
+        exclude = ["id", "invoice"]
+
+
+class InvoiceBatchSerializer(serializers.ModelSerializer):
+    uploaded_by_name = serializers.CharField(source="uploaded_by.full_name", read_only=True, default="")
+
+    class Meta:
+        model = InvoiceBatch
+        fields = [
+            "id", "batch_name", "status", "total_files", "processed_files",
+            "failed_files", "uploaded_by_name", "created_at", "completed_at",
+        ]
+
+
+class VendorProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VendorProfile
+        exclude = ["id", "organization"]
+
+
+class InvoiceAuditEventSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source="user.full_name", read_only=True, default="System")
+
+    class Meta:
+        model = InvoiceAuditEvent
+        fields = [
+            "id", "event_type", "description", "user_name",
+            "before_data", "after_data", "ip_address", "timestamp",
+        ]

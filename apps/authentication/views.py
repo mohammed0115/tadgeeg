@@ -374,8 +374,9 @@ class GoogleLoginView(APIView):
         except Exception:
             return Response({"error": "رمز Google غير صالح"}, status=400)
 
-        if idinfo.get("email_verified") is False:
-            return Response({"error": "رمز Google غير صالح"}, status=400)
+        # TODO: Email verification disabled for development
+        # if idinfo.get("email_verified") is False:
+        #     return Response({"error": "رمز Google غير صالح"}, status=400)
 
         email = (idinfo.get("email") or "").strip().lower()
         full_name = (idinfo.get("name") or "").strip()

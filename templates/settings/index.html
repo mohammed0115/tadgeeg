@@ -8,599 +8,537 @@
 {% block content %}
 <style>
   [x-cloak] { display: none !important; }
+  
+  /* Premium Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(101, 84, 192, 0.3);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(101, 84, 192, 0.5);
+  }
+  
+  /* Smooth focus animations */
+  input:focus, textarea:focus, select:focus {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
 </style>
 
 <div x-data="organizationSettingsPage()"
      x-init="load()"
      @keydown.window.ctrl.s.prevent="saveAll()"
      @keydown.window.meta.s.prevent="saveAll()"
-     class="-m-6 min-h-full bg-gradient-to-b from-slate-50 via-white to-slate-100/80 px-4 py-6 sm:px-6 lg:px-8 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900/80">
-  <div class="mx-auto max-w-7xl space-y-6">
+     class="-m-6 min-h-screen bg-white text-slate-950 dark:bg-slate-950 dark:text-white">
+  
+  <!-- Background Gradients -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute -top-40 right-0 h-96 w-96 rounded-full bg-gradient-to-br from-primary-500/20 via-transparent to-transparent blur-3xl"></div>
+    <div class="absolute top-1/3 -left-40 h-80 w-80 rounded-full bg-gradient-to-br from-violet-500/15 to-transparent blur-3xl"></div>
+    <div class="absolute bottom-0 right-1/3 h-96 w-96 rounded-full bg-gradient-to-br from-blue-500/10 to-transparent blur-3xl"></div>
+  </div>
 
+  <div class="relative mx-auto max-w-7xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
+
+    <!-- Loading Skeleton -->
     <template x-if="loading">
-      <div class="space-y-6 animate-pulse">
-        <div class="overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white/90 p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 xl:p-8">
-          <div class="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
-            <div class="space-y-4 xl:max-w-3xl">
-              <div class="h-4 w-36 rounded-full bg-slate-200 dark:bg-slate-800"></div>
-              <div class="h-10 w-full max-w-xl rounded-2xl bg-slate-200 dark:bg-slate-800"></div>
-              <div class="h-4 w-full max-w-2xl rounded-full bg-slate-200 dark:bg-slate-800"></div>
-              <div class="h-4 w-4/5 max-w-xl rounded-full bg-slate-200 dark:bg-slate-800"></div>
-            </div>
-            <div class="flex gap-3">
-              <div class="h-12 w-32 rounded-2xl bg-slate-200 dark:bg-slate-800"></div>
-              <div class="h-12 w-44 rounded-2xl bg-slate-200 dark:bg-slate-800"></div>
-            </div>
-          </div>
-          <div class="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div class="h-32 rounded-3xl bg-slate-100 dark:bg-slate-800/70"></div>
-            <div class="h-32 rounded-3xl bg-slate-100 dark:bg-slate-800/70"></div>
-            <div class="h-32 rounded-3xl bg-slate-100 dark:bg-slate-800/70"></div>
-            <div class="h-32 rounded-3xl bg-slate-100 dark:bg-slate-800/70"></div>
-          </div>
+      <div class="space-y-8 animate-pulse">
+        <div class="h-64 rounded-3xl bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800/50 dark:to-slate-900/30"></div>
+        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <template x-for="i in 4" :key="i">
+            <div class="h-32 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800/50 dark:to-slate-900/30"></div>
+          </template>
         </div>
-
-        <div class="grid gap-6 xl:grid-cols-2">
-          <div class="h-[28rem] rounded-[2rem] bg-white/80 dark:bg-slate-900/60"></div>
-          <div class="h-[28rem] rounded-[2rem] bg-white/80 dark:bg-slate-900/60"></div>
-          <div class="h-[28rem] rounded-[2rem] bg-white/80 dark:bg-slate-900/60"></div>
-          <div class="h-[28rem] rounded-[2rem] bg-white/80 dark:bg-slate-900/60"></div>
-          <div class="xl:col-span-2 h-72 rounded-[2rem] bg-white/80 dark:bg-slate-900/60"></div>
+        <div class="grid gap-8 lg:grid-cols-2">
+          <template x-for="i in 4" :key="i">
+            <div class="h-96 rounded-3xl bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800/50 dark:to-slate-900/30"></div>
+          </template>
         </div>
       </div>
     </template>
 
+    <!-- Main Content -->
     <template x-if="!loading">
-      <form x-cloak @submit.prevent="saveAll()" class="space-y-6">
+      <form x-cloak @submit.prevent="saveAll()" class="space-y-8">
 
-        <section class="relative overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white/90 p-6 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.35)] backdrop-blur xl:p-8 dark:border-slate-800 dark:bg-slate-900/80">
-          <div class="absolute -top-24 left-10 h-48 w-48 rounded-full bg-primary-500/10 blur-3xl"></div>
-          <div class="absolute bottom-0 right-0 h-40 w-40 rounded-full bg-violet-500/10 blur-3xl"></div>
+        <!-- Premium Hero Header -->
+        <section class="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/50 to-white shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-slate-300/80 hover:shadow-md dark:border-slate-800/60 dark:from-slate-900/80 dark:via-slate-950/50 dark:to-slate-900/80">
+          <div class="absolute -top-32 -right-32 h-64 w-64 rounded-full bg-primary-500/10 blur-3xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"></div>
+          <div class="absolute -bottom-24 -left-32 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"></div>
 
-          <div class="relative flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
-            <div class="max-w-3xl space-y-5">
-              <div class="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-primary-50/80 px-3 py-1 text-xs font-semibold text-primary-700 dark:border-primary-500/20 dark:bg-primary-500/10 dark:text-primary-200">
-                <i data-lucide="badge-check" class="h-3.5 w-3.5"></i>
-                FinAI Control Center
-              </div>
-
-              <div class="space-y-3">
-                <h1 class="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl xl:text-[2.6rem] dark:text-white">
-                  إعدادات المؤسسة والحوكمة المالية
-                </h1>
-                <p class="max-w-2xl text-sm leading-8 text-slate-600 sm:text-base dark:text-slate-400">
-                  نظّم الهوية النظامية، الامتثال الضريبي، حدود الرقابة، وسلوك التدقيق الذكي في واجهة واحدة مصممة لفرق المالية والمراجعة.
-                </p>
-              </div>
-
-              <div class="flex flex-wrap items-center gap-3">
-                <span class="inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold"
-                      :class="statusMeta().badgeClass">
-                  <span class="h-2 w-2 rounded-full" :class="statusMeta().dotClass"></span>
-                  <span x-text="statusMeta().label"></span>
-                </span>
-
-                <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3.5 py-1.5 text-xs text-slate-500 shadow-sm dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-400">
-                  <i data-lucide="clock-3" class="h-3.5 w-3.5"></i>
-                  <span x-text="lastSavedText()"></span>
-                </span>
-
-                <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50/80 px-3.5 py-1.5 text-xs text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
-                  <i data-lucide="save" class="h-3.5 w-3.5"></i>
-                  Ctrl + S للحفظ السريع
-                </span>
-              </div>
-            </div>
-
-            <div class="flex flex-col items-stretch gap-3 sm:flex-row xl:justify-end">
-              <button type="button"
-                      @click="exportData()"
-                      class="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900">
-                <i data-lucide="download" class="h-4 w-4"></i>
-                تصدير نسخة احتياطية
-              </button>
-
-              <button type="submit"
-                      :disabled="saving || !hasUnsavedChanges()"
-                      class="inline-flex h-12 min-w-[13rem] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-6 text-sm font-bold text-white shadow-[0_18px_40px_-18px_rgba(15,23,42,0.95)] transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-primary-600 dark:shadow-[0_18px_40px_-18px_rgba(37,99,235,0.9)] dark:hover:bg-primary-500">
-                <template x-if="saving">
-                  <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                  </svg>
-                </template>
-                <i x-show="!saving" data-lucide="save" class="h-4 w-4"></i>
-                <span x-text="saveButtonLabel()"></span>
-              </button>
-            </div>
-          </div>
-
-          <div class="relative mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div class="rounded-3xl border border-slate-200/80 bg-white/75 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
-              <div class="flex items-start justify-between gap-4">
-                <div class="space-y-2">
-                  <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">اكتمال الملف</p>
-                  <p class="text-2xl font-semibold text-slate-950 dark:text-white" x-text="profileCompletionPercent() + '%' "></p>
+          <div class="relative px-8 py-10 lg:px-10 lg:py-12">
+            <div class="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
+              <!-- Header Content -->
+              <div class="max-w-3xl space-y-6">
+                <div class="inline-flex items-center gap-2.5 rounded-full border border-primary-200/60 bg-primary-50/80 px-3.5 py-1.5 text-xs font-semibold text-primary-700 dark:border-primary-500/20 dark:bg-primary-500/10 dark:text-primary-300">
+                  <span class="flex h-2 w-2 rounded-full bg-primary-600"></span>
+                  FinAI Control Center
                 </div>
-                <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-200">
-                  <i data-lucide="building-2" class="h-5 w-5"></i>
-                </span>
-              </div>
-              <p class="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-400" x-text="profileCompletionMessage()"></p>
-            </div>
 
-            <div class="rounded-3xl border p-5 shadow-sm"
-                 :class="complianceSummary().tone === 'success' ? 'border-emerald-200 bg-emerald-50/90 dark:border-emerald-500/20 dark:bg-emerald-500/10' : 'border-amber-200 bg-amber-50/90 dark:border-amber-500/20 dark:bg-amber-500/10'">
-              <div class="flex items-start justify-between gap-4">
-                <div class="space-y-2">
-                  <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">الامتثال الضريبي</p>
-                  <p class="text-lg font-semibold text-slate-950 dark:text-white" x-text="complianceSummary().title"></p>
+                <div class="space-y-3">
+                  <h1 class="text-4xl font-bold tracking-tight text-slate-950 sm:text-5xl dark:text-white">
+                    إعدادات المؤسسة
+                  </h1>
+                  <p class="max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-400">
+                    أدِر الملف التعريفي، الامتثال الضريبي، الحدود المالية، والتفضيلات الذكية من لوحة تحكم موحدة.
+                  </p>
                 </div>
-                <span class="flex h-11 w-11 items-center justify-center rounded-2xl"
-                      :class="complianceSummary().tone === 'success' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200'">
-                  <i data-lucide="shield-check" class="h-5 w-5"></i>
-                </span>
-              </div>
-              <p class="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-400" x-text="complianceSummary().description"></p>
-            </div>
 
-            <div class="rounded-3xl border border-slate-200/80 bg-white/75 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
-              <div class="flex items-start justify-between gap-4">
-                <div class="space-y-2">
-                  <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">الضبط المالي</p>
-                  <p class="text-lg font-semibold text-slate-950 dark:text-white" x-text="formatMoney(settings.large_invoice_threshold)"></p>
-                </div>
-                <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-200">
-                  <i data-lucide="bar-chart-3" class="h-5 w-5"></i>
-                </span>
-              </div>
-              <p class="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-400" x-text="financialSummary()"></p>
-            </div>
+                <!-- Status Badges -->
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="inline-flex items-center gap-2.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all"
+                        :class="statusMeta().badgeClass">
+                    <span class="h-2 w-2 rounded-full" :class="statusMeta().dotClass"></span>
+                    <span x-text="statusMeta().label"></span>
+                  </span>
 
-            <div class="rounded-3xl border border-slate-200/80 bg-white/75 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/40">
-              <div class="flex items-start justify-between gap-4">
-                <div class="space-y-2">
-                  <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">سلوك التدقيق الذكي</p>
-                  <p class="text-lg font-semibold text-slate-950 dark:text-white" x-text="auditModeLabel()"></p>
+                  <span class="inline-flex items-center gap-2 rounded-full border border-slate-200/60 bg-slate-50/80 px-3.5 py-1.5 text-xs font-medium text-slate-600 dark:border-slate-700/60 dark:bg-slate-950/50 dark:text-slate-400">
+                    <i data-lucide="clock" class="h-3.5 w-3.5"></i>
+                    <span x-text="lastSavedText()"></span>
+                  </span>
+
+                  <span class="inline-flex items-center gap-2 rounded-full border border-slate-200/60 bg-slate-50/80 px-3.5 py-1.5 text-xs font-medium text-slate-600 dark:border-slate-700/60 dark:bg-slate-950/50 dark:text-slate-400">
+                    <i data-lucide="zap" class="h-3.5 w-3.5"></i>
+                    Ctrl + S
+                  </span>
                 </div>
-                <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                  <i data-lucide="brain-circuit" class="h-5 w-5"></i>
-                </span>
               </div>
-              <p class="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-400" x-text="reviewModeDescription()"></p>
+
+              <!-- Action Buttons -->
+              <div class="flex flex-col gap-3 min-w-fit sm:flex-row">
+                <button type="button"
+                        @click="exportData()"
+                        class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200/60 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300/80 hover:bg-slate-50 hover:shadow-md active:scale-95 dark:border-slate-700/60 dark:bg-slate-950/50 dark:text-slate-300 dark:hover:bg-slate-900">
+                  <i data-lucide="download" class="h-4 w-4"></i>
+                  <span class="hidden sm:inline">تصدير</span>
+                </button>
+
+                <button type="submit"
+                        :disabled="saving || !hasUnsavedChanges()"
+                        class="inline-flex h-11 min-w-[14rem] items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-slate-950 to-slate-800 px-6 text-sm font-bold text-white shadow-lg transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed dark:from-primary-600 dark:to-primary-700 dark:hover:shadow-lg">
+                  <template x-if="saving">
+                    <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                  </template>
+                  <i x-show="!saving" data-lucide="save" class="h-4 w-4"></i>
+                  <span x-text="saveButtonLabel()"></span>
+                </button>
+              </div>
             </div>
           </div>
         </section>
 
-        <div class="grid gap-6 xl:grid-cols-2">
-          <section class="rounded-[2rem] border border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_55px_-30px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/80 xl:p-7">
-            {% include "settings/partials/section_header.html" with icon="building-2" eyebrow="Organization Profile" title="الملف التعريفي للمؤسسة" description="عرّف هوية الشركة التي ستظهر في التقارير، المخرجات، وسير عمل الموافقات الداخلية." aside="كل حقل هنا ينعكس على جودة المستندات، دقة التحليلات، وثقة فرق المراجعة في البيانات المرجعية." only %}
-
-            <div class="mt-6 grid gap-5 md:grid-cols-2">
-              <div class="space-y-2 md:col-span-2">
-                <label for="org_name" class="block text-sm font-semibold text-slate-900 dark:text-white">اسم المؤسسة</label>
-                <input id="org_name"
-                       x-model="org.name"
-                       type="text"
-                       placeholder="شركة FinAI للاستشارات المالية"
-                       class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">الاسم الرسمي الذي يظهر في الفواتير، الإقرارات، والتقارير التنفيذية.</p>
+        <!-- Stats Cards -->
+        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div class="group overflow-hidden rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white to-slate-50/80 p-6 shadow-sm transition-all hover:shadow-md dark:border-slate-800/60 dark:from-slate-950/80 dark:to-slate-900/50">
+            <div class="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-primary-500/20 blur-2xl opacity-0 transition-opacity group-hover:opacity-100"></div>
+            <div class="relative space-y-3">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">الملف</p>
+                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-300">
+                  <i data-lucide="check-circle" class="h-4 w-4"></i>
+                </div>
               </div>
-
-              <div class="space-y-2">
-                <label for="org_name_ar" class="block text-sm font-semibold text-slate-900 dark:text-white">الاسم العربي المختصر</label>
-                <input id="org_name_ar"
-                       x-model="org.name_ar"
-                       type="text"
-                       placeholder="فين AI"
-                       class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">مفيد لواجهات العميل والمستندات العربية المختصرة.</p>
-              </div>
-
-              <div class="space-y-2">
-                <label for="org_industry" class="block text-sm font-semibold text-slate-900 dark:text-white">القطاع</label>
-                <input id="org_industry"
-                       x-model="org.industry"
-                       type="text"
-                       placeholder="التقنية المالية"
-                       class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">يساعد النظام على مقارنة الأداء بمعايير ومخاطر قطاعك.</p>
-              </div>
-
-              <div class="space-y-2">
-                <label for="org_country" class="block text-sm font-semibold text-slate-900 dark:text-white">الدولة القانونية</label>
-                <select id="org_country"
-                        x-model="org.country"
-                        class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                  <template x-for="option in countryOptions" :key="option.value">
-                    <option :value="option.value" x-text="option.label"></option>
-                  </template>
-                </select>
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">يؤثر على قواعد الامتثال، التنسيق الضريبي، واللغة التنظيمية المستخدمة.</p>
-              </div>
-
-              <div class="space-y-2">
-                <label for="org_currency" class="block text-sm font-semibold text-slate-900 dark:text-white">العملة الافتراضية</label>
-                <select id="org_currency"
-                        x-model="org.currency"
-                        class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                  <template x-for="option in currencyOptions" :key="option.value">
-                    <option :value="option.value" x-text="option.label"></option>
-                  </template>
-                </select>
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">تستخدم في العروض الافتراضية، العتبات، وتقارير الإدارة.</p>
-              </div>
-
-              <div class="space-y-2">
-                <label for="org_fiscal_year" class="block text-sm font-semibold text-slate-900 dark:text-white">بداية السنة المالية</label>
-                <select id="org_fiscal_year"
-                        x-model="org.fiscal_year_start"
-                        class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                  <template x-for="month in fiscalMonthOptions" :key="month.value">
-                    <option :value="month.value" x-text="month.label"></option>
-                  </template>
-                </select>
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">تضبط دورات التقارير والتجميعات السنوية في FinAI.</p>
-              </div>
-
-              <div class="space-y-2 md:col-span-2">
-                <label for="org_website" class="block text-sm font-semibold text-slate-900 dark:text-white">الموقع الإلكتروني</label>
-                <input id="org_website"
-                       x-model="org.website"
-                       type="url"
-                       dir="ltr"
-                       placeholder="https://finai.sa"
-                       class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">اختياري، ويُستخدم في التصديرات والعروض التعريفية للمؤسسة.</p>
-              </div>
-
-              <div class="space-y-2 md:col-span-2">
-                <label for="org_address" class="block text-sm font-semibold text-slate-900 dark:text-white">العنوان القانوني</label>
-                <textarea id="org_address"
-                          x-model="org.address"
-                          rows="3"
-                          placeholder="الرياض، حي الصحافة، طريق الملك فهد"
-                          class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950"></textarea>
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">يظهر على الترويسات النظامية ويقوّي موثوقية المستندات الصادرة.</p>
-              </div>
+              <p class="text-3xl font-bold text-slate-950 dark:text-white" x-text="profileCompletionPercent() + '%'"></p>
+              <p class="text-xs leading-relaxed text-slate-600 dark:text-slate-400" x-text="profileCompletionMessage()"></p>
             </div>
-          </section>
+          </div>
 
-          <section class="rounded-[2rem] border border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_55px_-30px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/80 xl:p-7">
-            {% include "settings/partials/section_header.html" with icon="file-check-2" eyebrow="Tax & Compliance" title="الضريبة والتسجيل النظامي" description="اجمع بيانات VAT والتكامل التنظيمي في بطاقة واحدة حتى تصبح المراجعة الضريبية أسرع وأكثر موثوقية." aside="في السعودية، يوصى باستكمال بيانات ZATCA والـ QR لضمان جاهزية الفوترة الإلكترونية." only %}
+          <div class="group overflow-hidden rounded-2xl border p-6 shadow-sm transition-all hover:shadow-md"
+               :class="complianceSummary().tone === 'success' ? 'border-emerald-200/60 bg-gradient-to-br from-emerald-50/80 to-white dark:border-emerald-500/20 dark:from-emerald-950/40' : 'border-amber-200/60 bg-gradient-to-br from-amber-50/80 to-white dark:border-amber-500/20 dark:from-amber-950/40'">
+            <div class="relative space-y-3">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">امتثال</p>
+                <div class="flex h-8 w-8 items-center justify-center rounded-lg"
+                     :class="complianceSummary().tone === 'success' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'">
+                  <i :data-lucide="complianceSummary().tone === 'success' ? 'shield-check' : 'alert-circle'" class="h-4 w-4"></i>
+                </div>
+              </div>
+              <p class="text-lg font-bold text-slate-950 dark:text-white" x-text="complianceSummary().title"></p>
+              <p class="text-xs leading-relaxed text-slate-600 dark:text-slate-400" x-text="complianceSummary().description"></p>
+            </div>
+          </div>
 
-            <div class="mt-6 rounded-3xl border p-4"
-                 :class="complianceSummary().tone === 'success' ? 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-500/20 dark:bg-emerald-500/10' : 'border-amber-200 bg-amber-50/80 dark:border-amber-500/20 dark:bg-amber-500/10'">
+          <div class="group overflow-hidden rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white to-slate-50/80 p-6 shadow-sm transition-all hover:shadow-md dark:border-slate-800/60 dark:from-slate-950/80 dark:to-slate-900/50">
+            <div class="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-violet-500/20 blur-2xl opacity-0 transition-opacity group-hover:opacity-100"></div>
+            <div class="relative space-y-3">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">ضبط</p>
+                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300">
+                  <i data-lucide="trending-up" class="h-4 w-4"></i>
+                </div>
+              </div>
+              <p class="text-lg font-bold text-slate-950 dark:text-white" x-text="formatMoney(settings.large_invoice_threshold)"></p>
+              <p class="text-xs leading-relaxed text-slate-600 dark:text-slate-400" x-text="financialSummary()"></p>
+            </div>
+          </div>
+
+          <div class="group overflow-hidden rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white to-slate-50/80 p-6 shadow-sm transition-all hover:shadow-md dark:border-slate-800/60 dark:from-slate-950/80 dark:to-slate-900/50">
+            <div class="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-blue-500/20 blur-2xl opacity-0 transition-opacity group-hover:opacity-100"></div>
+            <div class="relative space-y-3">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">ذكي</p>
+                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
+                  <i data-lucide="brain" class="h-4 w-4"></i>
+                </div>
+              </div>
+              <p class="text-lg font-bold text-slate-950 dark:text-white" x-text="auditModeLabel()"></p>
+              <p class="text-xs leading-relaxed text-slate-600 dark:text-slate-400" x-text="reviewModeDescription()"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Settings Grid -->
+        <div class="grid gap-8 lg:grid-cols-2">
+
+          <!-- 1. Organization Profile -->
+          <section class="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/30 to-white p-8 shadow-sm transition-all hover:shadow-md dark:border-slate-800/60 dark:from-slate-950/80 dark:via-slate-900/40 dark:to-slate-950/80">
+            <div class="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-primary-500/10 blur-3xl opacity-0 transition-opacity group-hover:opacity-100"></div>
+
+            <div class="relative space-y-6 border-b border-slate-100/80 pb-6 dark:border-slate-800/80">
               <div class="flex items-start gap-3">
-                <span class="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl"
-                      :class="complianceSummary().tone === 'success' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200'">
-                  <i :data-lucide="complianceSummary().tone === 'success' ? 'shield-check' : 'triangle-alert'" class="h-4 w-4"></i>
-                </span>
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-300">
+                  <i data-lucide="building-2" class="h-5 w-5"></i>
+                </div>
                 <div>
-                  <p class="text-sm font-semibold text-slate-900 dark:text-white" x-text="complianceSummary().title"></p>
-                  <p class="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-400" x-text="complianceSummary().description"></p>
+                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">هويّة</p>
+                  <h2 class="text-lg font-bold text-slate-950 dark:text-white">الملف التعريفي للمؤسسة</h2>
+                  <p class="mt-1 max-w-sm text-sm text-slate-600 dark:text-slate-400">عرّف بيانات الشركة التي ستظهر في التقارير والمخرجات.</p>
                 </div>
               </div>
             </div>
 
-            <div class="mt-6 grid gap-5 md:grid-cols-2">
+            <div class="relative mt-6 space-y-4">
               <div class="space-y-2">
-                <label for="vat_number" class="block text-sm font-semibold text-slate-900 dark:text-white">الرقم الضريبي (VAT)</label>
-                <input id="vat_number"
-                       x-model="org.vat_number"
-                       type="text"
-                       dir="ltr"
-                       placeholder="300XXXXXXXXXXX3"
-                       class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-mono text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">أدخل الرقم كما يظهر في شهادة التسجيل الضريبي الرسمية.</p>
+                <label class="text-sm font-semibold text-slate-900 dark:text-white">اسم المؤسسة</label>
+                <input x-model="org.name" type="text" placeholder="اسم الشركة"
+                       class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white dark:focus:border-primary-400">
               </div>
-
-              <div class="space-y-2">
-                <label for="cr_number" class="block text-sm font-semibold text-slate-900 dark:text-white">رقم السجل التجاري (CR)</label>
-                <input id="cr_number"
-                       x-model="org.cr_number"
-                       type="text"
-                       dir="ltr"
-                       placeholder="1010XXXXXX"
-                       class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-mono text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">يحسّن ربط الشركة بالوثائق الرسمية وسجل الامتثال.</p>
-              </div>
-
-              <div class="space-y-2">
-                <label for="vat_rate" class="block text-sm font-semibold text-slate-900 dark:text-white">نسبة ضريبة القيمة المضافة</label>
-                <div class="relative">
-                  <input id="vat_rate"
-                         x-model="settings.vat_rate"
-                         type="number"
-                         min="0"
-                         max="100"
-                         step="0.1"
-                         dir="ltr"
-                         placeholder="15"
-                         class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pl-12 text-sm font-mono text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                  <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm font-semibold text-slate-400">%</span>
-                </div>
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">تستخدم افتراضياً في المطابقة بين الضرائب والفواتير والحدود المحاسبية.</p>
-              </div>
-
-              <div class="space-y-2">
-                <label for="zatca_env" class="block text-sm font-semibold text-slate-900 dark:text-white">بيئة ZATCA</label>
-                <select id="zatca_env"
-                        x-model="settings.zatca_env"
-                        class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                  <template x-for="option in zatcaEnvironments" :key="option.value">
-                    <option :value="option.value" x-text="option.label"></option>
-                  </template>
-                </select>
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">اختر البيئة الملائمة لمرحلة الاختبار أو الإطلاق الفعلي.</p>
-              </div>
-
-              <div class="space-y-2 md:col-span-2">
-                <label for="zatca_url" class="block text-sm font-semibold text-slate-900 dark:text-white">رابط التكامل الضريبي / ZATCA API URL</label>
-                <input id="zatca_url"
-                       x-model="settings.zatca_api_url"
-                       type="url"
-                       dir="ltr"
-                       placeholder="https://gw-fatoora.zatca.gov.sa/e-invoicing/..."
-                       class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-mono text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">إن كنت تعمل داخل المملكة، أبقِ هذا الحقل محدّثاً لتقوية مسارات الفوترة الإلكترونية.</p>
-              </div>
-
-              <div class="space-y-2 md:col-span-2">
-                <label for="zatca_qr" class="block text-sm font-semibold text-slate-900 dark:text-white">إظهار رمز QR بشكل إلزامي</label>
-                <select id="zatca_qr"
-                        x-model="settings.zatca_qr_required"
-                        class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                  <option value="true">نعم — مطلوب على الفواتير النظامية</option>
-                  <option value="false">اختياري — حسب نوع المستند والعميل</option>
-                </select>
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">مفيد للفرق التي تريد فرض جاهزية الفاتورة قبل الإصدار أو الترحيل.</p>
-              </div>
-            </div>
-          </section>
-
-          <section class="rounded-[2rem] border border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_55px_-30px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/80 xl:p-7">
-            {% include "settings/partials/section_header.html" with icon="bar-chart-3" eyebrow="Financial Controls" title="حدود الضبط والرقابة المالية" description="اضبط العتبات التي تحدد متى يجب تصعيد المعاملات للمراجعة، أو متى ينبغي على النظام إطلاق تنبيه رقابي." aside="كلما كانت الحدود واضحة، أصبحت إنذارات FinAI أكثر دقة وأقل ضجيجاً على فريق المالية." only %}
-
-            <div class="mt-6 rounded-3xl border border-primary-100 bg-primary-50/70 p-4 dark:border-primary-500/20 dark:bg-primary-500/10">
-              <div class="flex items-start gap-3">
-                <span class="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-primary-700 shadow-sm dark:bg-slate-900 dark:text-primary-200">
-                  <i data-lucide="scan-search" class="h-4 w-4"></i>
-                </span>
-                <div>
-                  <p class="text-sm font-semibold text-slate-900 dark:text-white">رؤية سريعة على الحد الحالي</p>
-                  <p class="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-400" x-text="'الفواتير الأعلى من ' + formatMoney(settings.large_invoice_threshold) + ' سيتم دفعها إلى طبقة مراجعة أعمق، مع سقف يومي قدره ' + fmtNum(settings.max_daily_invoices) + ' فاتورة.'"></p>
-                </div>
-              </div>
-            </div>
-
-            <div class="mt-6 grid gap-5 md:grid-cols-2">
-              <div class="space-y-2">
-                <label for="monthly_budget_limit" class="block text-sm font-semibold text-slate-900 dark:text-white">الميزانية الشهرية المرجعية</label>
-                <input id="monthly_budget_limit"
-                       x-model="settings.monthly_budget_limit"
-                       type="number"
-                       min="0"
-                       dir="ltr"
-                       placeholder="250000"
-                       class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-mono text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">يستخدم كخط أساس عند تقييم الانحرافات الشهرية على مستوى المؤسسة.</p>
-              </div>
-
-              <div class="space-y-2">
-                <label for="large_invoice_threshold" class="block text-sm font-semibold text-slate-900 dark:text-white">حد الفاتورة الكبيرة</label>
-                <input id="large_invoice_threshold"
-                       x-model="settings.large_invoice_threshold"
-                       type="number"
-                       min="0"
-                       dir="ltr"
-                       placeholder="10000"
-                       class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-mono text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">أي مستند يتجاوز هذا الحد يُوسَّع فحصه تلقائياً ويُعطى أولوية أعلى.</p>
-              </div>
-
-              <div class="space-y-2">
-                <label for="anomaly_threshold_pct" class="block text-sm font-semibold text-slate-900 dark:text-white">هامش شذوذ الإنفاق</label>
-                <div class="relative">
-                  <input id="anomaly_threshold_pct"
-                         x-model="settings.anomaly_threshold_pct"
-                         type="number"
-                         min="0"
-                         max="100"
-                         dir="ltr"
-                         placeholder="25"
-                         class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pl-12 text-sm font-mono text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                  <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm font-semibold text-slate-400">%</span>
-                </div>
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">إذا زاد الإنفاق على المتوسط بهذا القدر، يرفع FinAI مستوى التحقق والمقارنة.</p>
-              </div>
-
-              <div class="space-y-2">
-                <label for="max_daily_invoices" class="block text-sm font-semibold text-slate-900 dark:text-white">السقف اليومي للفواتير</label>
-                <input id="max_daily_invoices"
-                       x-model="settings.max_daily_invoices"
-                       type="number"
-                       min="0"
-                       dir="ltr"
-                       placeholder="100"
-                       class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-mono text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">يفيد في رصد الارتفاع المفاجئ في نشاط الفوترة أو سلوك الموردين غير المعتاد.</p>
-              </div>
-
-              <div class="space-y-2 md:col-span-2">
-                <label for="expense_policy_limit" class="block text-sm font-semibold text-slate-900 dark:text-white">حد سياسة مصروفات الموظفين</label>
-                <input id="expense_policy_limit"
-                       x-model="settings.expense_policy_limit"
-                       type="number"
-                       min="0"
-                       dir="ltr"
-                       placeholder="5000"
-                       class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-mono text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">يطبق كمرجع إضافي عند مراجعة المصروفات والتعويضات المرتبطة بالسياسات الداخلية.</p>
-              </div>
-            </div>
-          </section>
-
-          <section class="rounded-[2rem] border border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_55px_-30px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/80 xl:p-7">
-            {% include "settings/partials/section_header.html" with icon="brain-circuit" eyebrow="AI Audit Preferences" title="تفضيلات التدقيق الذكي" description="اضبط كيف يتصرف الذكاء الاصطناعي عند الرصد، التصعيد، وإنشاء الحالات حتى يتوافق مع شهية المخاطر لدى الفريق." aside="يمكنك جعل الذكاء أكثر تحفظاً أو أكثر جرأة بحسب نضج الضوابط الحالية وسرعة عمل فريق المراجعة." only %}
-
-            <div class="mt-6 grid gap-6">
-              <div class="grid gap-5 md:grid-cols-2">
+              <div class="grid gap-3 sm:grid-cols-2">
                 <div class="space-y-2">
-                  <label for="ai_review_mode" class="block text-sm font-semibold text-slate-900 dark:text-white">وضع المراجعة</label>
-                  <select id="ai_review_mode"
-                          x-model="settings.ai_review_mode"
-                          class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:focus:border-primary-400 dark:focus:bg-slate-950">
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">القطاع</label>
+                  <input x-model="org.industry" type="text" placeholder="التقنية المالية"
+                         class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
+                </div>
+                <div class="space-y-2">
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">الدولة</label>
+                  <select x-model="org.country"
+                          class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
+                    <template x-for="option in countryOptions" :key="option.value">
+                      <option :value="option.value" x-text="option.label"></option>
+                    </template>
+                  </select>
+                </div>
+              </div>
+              <div class="grid gap-3 sm:grid-cols-2">
+                <div class="space-y-2">
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">العملة</label>
+                  <select x-model="org.currency"
+                          class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
+                    <template x-for="option in currencyOptions" :key="option.value">
+                      <option :value="option.value" x-text="option.label"></option>
+                    </template>
+                  </select>
+                </div>
+                <div class="space-y-2">
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">السنة المالية</label>
+                  <select x-model="org.fiscal_year_start"
+                          class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
+                    <template x-for="month in fiscalMonthOptions" :key="month.value">
+                      <option :value="month.value" x-text="month.label"></option>
+                    </template>
+                  </select>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <label class="text-sm font-semibold text-slate-900 dark:text-white">العنوان القانوني</label>
+                <textarea x-model="org.address" rows="3" placeholder="الموقع الرسمي"
+                          class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white"></textarea>
+              </div>
+            </div>
+          </section>
+
+          <!-- 2. Tax & Compliance -->
+          <section class="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/30 to-white p-8 shadow-sm transition-all hover:shadow-md dark:border-slate-800/60 dark:from-slate-950/80 dark:via-slate-900/40 dark:to-slate-950/80">
+            <div class="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl opacity-0 transition-opacity group-hover:opacity-100"></div>
+
+            <div class="relative space-y-6 border-b border-slate-100/80 pb-6 dark:border-slate-800/80">
+              <div class="flex items-start gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                  <i data-lucide="file-check-2" class="h-5 w-5"></i>
+                </div>
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">امتثال</p>
+                  <h2 class="text-lg font-bold text-slate-950 dark:text-white">الضريبة والتسجيل النظامي</h2>
+                  <p class="mt-1 max-w-sm text-sm text-slate-600 dark:text-slate-400">بيانات VAT والتكامل التنظيمي لضمان جاهزية الفوترة الإلكترونية.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Status Alert -->
+            <div class="relative my-6 flex gap-3 rounded-2xl border p-4"
+                 :class="complianceSummary().tone === 'success' ? 'border-emerald-200/60 bg-emerald-50/80 dark:border-emerald-500/20' : 'border-amber-200/60 bg-amber-50/80 dark:border-amber-500/20'">
+              <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg"
+                    :class="complianceSummary().tone === 'success' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'">
+                <i :data-lucide="complianceSummary().tone === 'success' ? 'check' : 'alert-circle'" class="h-3 w-3"></i>
+              </span>
+              <div>
+                <p class="text-xs font-semibold text-slate-900 dark:text-white" x-text="complianceSummary().title"></p>
+                <p class="mt-0.5 text-xs text-slate-600 dark:text-slate-400" x-text="complianceSummary().description"></p>
+              </div>
+            </div>
+
+            <div class="relative space-y-4">
+              <div class="grid gap-3 sm:grid-cols-2">
+                <div class="space-y-2">
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">الرقم الضريبي (VAT)</label>
+                  <input x-model="org.vat_number" type="text" dir="ltr" placeholder="300XXXXXXXXXXX3"
+                         class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
+                </div>
+                <div class="space-y-2">
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">رقم السجل (CR)</label>
+                  <input x-model="org.cr_number" type="text" dir="ltr" placeholder="1010XXXXXX"
+                         class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
+                </div>
+              </div>
+              <div class="grid gap-3 sm:grid-cols-2">
+                <div class="space-y-2">
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">نسبة VAT</label>
+                  <div class="relative">
+                    <input x-model="settings.vat_rate" type="number" min="0" max="100" step="0.1" dir="ltr" placeholder="15"
+                           class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 pl-10 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
+                    <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-xs font-semibold text-slate-500">%</span>
+                  </div>
+                </div>
+                <div class="space-y-2">
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">بيئة ZATCA</label>
+                  <select x-model="settings.zatca_env"
+                          class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
+                    <template x-for="option in zatcaEnvironments" :key="option.value">
+                      <option :value="option.value" x-text="option.label"></option>
+                    </template>
+                  </select>
+                </div>
+              </div>
+              <div class="space-y-2">
+                <label class="text-sm font-semibold text-slate-900 dark:text-white">تفعيل QR الإلزامي</label>
+                <select x-model="settings.zatca_qr_required"
+                        class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
+                  <option value="true">نعم — مطلوب</option>
+                  <option value="false">اختياري</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <!-- 3. Financial Controls -->
+          <section class="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/30 to-white p-8 shadow-sm transition-all hover:shadow-md dark:border-slate-800/60 dark:from-slate-950/80 dark:via-slate-900/40 dark:to-slate-950/80">
+            <div class="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-violet-500/10 blur-3xl opacity-0 transition-opacity group-hover:opacity-100"></div>
+
+            <div class="relative space-y-6 border-b border-slate-100/80 pb-6 dark:border-slate-800/80">
+              <div class="flex items-start gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300">
+                  <i data-lucide="bar-chart-3" class="h-5 w-5"></i>
+                </div>
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">ضوابط</p>
+                  <h2 class="text-lg font-bold text-slate-950 dark:text-white">حدود الضبط المالي</h2>
+                  <p class="mt-1 max-w-sm text-sm text-slate-600 dark:text-slate-400">اضبط العتبات التي تحدد متى يتم التصعيد أو الإنذار.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="relative mt-6 space-y-4">
+              <div class="grid gap-3 sm:grid-cols-2">
+                <div class="space-y-2">
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">الميزانية الشهرية</label>
+                  <input x-model="settings.monthly_budget_limit" type="number" min="0" dir="ltr" placeholder="250000"
+                         class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
+                  <p class="text-xs text-slate-500 dark:text-slate-400">الليا</p>
+                </div>
+                <div class="space-y-2">
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">حد الفاتورة الكبيرة</label>
+                  <input x-model="settings.large_invoice_threshold" type="number" min="0" dir="ltr" placeholder="10000"
+                         class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
+                </div>
+              </div>
+              <div class="grid gap-3 sm:grid-cols-2">
+                <div class="space-y-2">
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">هامش الشذوذ</label>
+                  <div class="relative">
+                    <input x-model="settings.anomaly_threshold_pct" type="number" min="0" max="100" dir="ltr" placeholder="25"
+                           class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 pl-10 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
+                    <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-xs font-semibold text-slate-500">%</span>
+                  </div>
+                </div>
+                <div class="space-y-2">
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">السقف اليومي</label>
+                  <input x-model="settings.max_daily_invoices" type="number" min="0" dir="ltr" placeholder="100"
+                         class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
+                </div>
+              </div>
+              <div class="space-y-2">
+                <label class="text-sm font-semibold text-slate-900 dark:text-white">حد مصروفات الموظفين</label>
+                <input x-model="settings.expense_policy_limit" type="number" min="0" dir="ltr" placeholder="5000"
+                       class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
+              </div>
+            </div>
+          </section>
+
+          <!-- 4. AI Audit Preferences -->
+          <section class="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/30 to-white p-8 shadow-sm transition-all hover:shadow-md dark:border-slate-800/60 dark:from-slate-950/80 dark:via-slate-900/40 dark:to-slate-950/80">
+            <div class="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-blue-500/10 blur-3xl opacity-0 transition-opacity group-hover:opacity-100"></div>
+
+            <div class="relative space-y-6 border-b border-slate-100/80 pb-6 dark:border-slate-800/80">
+              <div class="flex items-start gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
+                  <i data-lucide="brain-circuit" class="h-5 w-5"></i>
+                </div>
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">ذكي</p>
+                  <h2 class="text-lg font-bold text-slate-950 dark:text-white">تفضيلات التدقيق الذكي</h2>
+                  <p class="mt-1 max-w-sm text-sm text-slate-600 dark:text-slate-400">اضبط سلوك الذكاء الاصطناعي والإنذارات.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="relative mt-6 space-y-4">
+              <div class="grid gap-3 sm:grid-cols-2">
+                <div class="space-y-2">
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">وضع المراجعة</label>
+                  <select x-model="settings.ai_review_mode"
+                          class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
                     <template x-for="option in reviewModes" :key="option.value">
                       <option :value="option.value" x-text="option.label"></option>
                     </template>
                   </select>
-                  <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">حدد مستوى الجرأة الذي يستخدمه FinAI عند اكتشاف الشذوذ وبناء التوصيات.</p>
                 </div>
-
                 <div class="space-y-2">
-                  <label for="ai_confidence_threshold" class="block text-sm font-semibold text-slate-900 dark:text-white">حد الثقة لاتخاذ الإجراء</label>
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">حد الثقة</label>
                   <div class="relative">
-                    <input id="ai_confidence_threshold"
-                           x-model="settings.ai_confidence_threshold"
-                           type="number"
-                           min="50"
-                           max="100"
-                           dir="ltr"
-                           placeholder="85"
-                           class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 pl-12 text-sm font-mono text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                    <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-sm font-semibold text-slate-400">%</span>
-                  </div>
-                  <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">كلما ارتفع الحد، قلّ التصعيد التلقائي وازدادت الحاجة لتأكيد بشري.</p>
-                </div>
-              </div>
-
-              <div class="rounded-3xl border border-slate-200/80 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/30">
-                <div class="flex items-start gap-3">
-                  <span class="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">
-                    <i data-lucide="badge-check" class="h-4 w-4"></i>
-                  </span>
-                  <div>
-                    <p class="text-sm font-semibold text-slate-900 dark:text-white">سلوك FinAI الحالي</p>
-                    <p class="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-400" x-text="reviewModeDescription()"></p>
+                    <input x-model="settings.ai_confidence_threshold" type="number" min="50" max="100" dir="ltr" placeholder="85"
+                           class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 pl-10 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
+                    <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-xs font-semibold text-slate-500">%</span>
                   </div>
                 </div>
               </div>
 
-              <div class="grid gap-3">
-                {% include "settings/partials/toggle_row.html" with label="مطالبة الذكاء بتفسير القرار" description="أظهر شرحاً مختصراً لكل قرار تدقيق أو تصعيد حتى يسهل على الفريق مراجعته واعتماده." toggle_model="settings.ai_require_explanations" only %}
-                {% include "settings/partials/toggle_row.html" with label="إنشاء قضية تلقائياً عند المخاطر الحرجة" description="افتح قضية تدقيق مباشرة عندما تكون درجة المخاطرة مرتفعة والثقة تتجاوز الحد المحدد." toggle_model="settings.ai_auto_create_case" only %}
-                {% include "settings/partials/toggle_row.html" with label="إيقاف الفواتير عالية المخاطر قبل الاعتماد" description="يمنع اعتماد المستند تلقائياً عند وجود مؤشرات احتيال أو تعارض جوهري في البيانات." toggle_model="settings.ai_block_high_risk_invoices" only %}
-                {% include "settings/partials/toggle_row.html" with label="تنبيهات فورية داخل النظام" description="فعّل الإشعارات اللحظية للحالات الشاذة، القضايا الجديدة، وتحديثات الرقابة المباشرة." toggle_model="notifications.ws_realtime_alerts" only %}
-                {% include "settings/partials/toggle_row.html" with label="إرسال بريد عند إنشاء قضية تدقيق" description="يحافظ على اطلاع قادة المالية والمراجعة عند بدء حالات جديدة تتطلب تدخلهم." toggle_model="notifications.email_audit_case_created" only %}
-                {% include "settings/partials/toggle_row.html" with label="ملخص أسبوعي للفرق التنفيذية" description="يجمع أهم المخاطر والملاحظات والتغييرات في ملخص دوري موحد للقيادات." toggle_model="notifications.email_weekly_summary" only %}
+              <div class="space-y-3 rounded-2xl border border-slate-100/60 bg-slate-50/50 p-4 dark:border-slate-800/60 dark:bg-slate-950/20">
+                {% include "settings/partials/toggle_row.html" with label="طلب تفسير" description="اطلب شرحاً لكل قرار تدقيق." toggle_model="settings.ai_require_explanations" only %}
+                {% include "settings/partials/toggle_row.html" with label="قضية تلقائية" description="افتح قضية عند المخاطر الحرجة." toggle_model="settings.ai_auto_create_case" only %}
+                {% include "settings/partials/toggle_row.html" with label="إيقاف عالي المخاطر" description="منع اعتماد الفواتير عالية المخاطر." toggle_model="settings.ai_block_high_risk_invoices" only %}
               </div>
             </div>
           </section>
 
-          <section class="xl:col-span-2 rounded-[2rem] border border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_55px_-30px_rgba(15,23,42,0.3)] dark:border-slate-800 dark:bg-slate-900/80 xl:p-7">
-            {% include "settings/partials/section_header.html" with icon="receipt" eyebrow="Invoice Defaults" title="إعدادات الفواتير والالتزام الافتراضي" description="اضبط القواعد اليومية التي يجب أن تمر بها الفاتورة قبل اعتمادها أو تصعيدها أو إرسالها للمراجعة الذكية." aside="هذه البطاقة مفيدة لفرق الحسابات الدائنة والرقابة الداخلية حتى توحّد سلوك النظام بين الإدخال والتدقيق." only %}
+          <!-- 5. Invoice Defaults (Full Width) -->
+          <section class="lg:col-span-2 group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/30 to-white p-8 shadow-sm transition-all hover:shadow-md dark:border-slate-800/60 dark:from-slate-950/80 dark:via-slate-900/40 dark:to-slate-950/80">
+            <div class="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-primary-500/10 blur-3xl opacity-0 transition-opacity group-hover:opacity-100"></div>
 
-            <div class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-              <div class="grid gap-5 md:grid-cols-2">
-                <div class="space-y-2">
-                  <label for="invoice_due_days" class="block text-sm font-semibold text-slate-900 dark:text-white">أيام الاستحقاق الافتراضية</label>
-                  <input id="invoice_due_days"
-                         x-model="settings.invoice_due_days"
-                         type="number"
-                         min="0"
-                         dir="ltr"
-                         placeholder="30"
-                         class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-mono text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                  <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">يطبَّق عند إنشاء فواتير أو تحميل مستندات بدون تاريخ استحقاق واضح.</p>
+            <div class="relative space-y-6 border-b border-slate-100/80 pb-6 dark:border-slate-800/80">
+              <div class="flex items-start gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-300">
+                  <i data-lucide="receipt" class="h-5 w-5"></i>
                 </div>
-
-                <div class="space-y-2">
-                  <label for="invoice_rounding_policy" class="block text-sm font-semibold text-slate-900 dark:text-white">سياسة تقريب القيم</label>
-                  <select id="invoice_rounding_policy"
-                          x-model="settings.invoice_rounding_policy"
-                          class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 shadow-sm transition focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:focus:border-primary-400 dark:focus:bg-slate-950">
-                    <template x-for="option in roundingPolicies" :key="option.value">
-                      <option :value="option.value" x-text="option.label"></option>
-                    </template>
-                  </select>
-                  <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">وحّد طريقة تقريب الإجماليات والضرائب للحفاظ على اتساق العمليات.</p>
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">قواعد</p>
+                  <h2 class="text-lg font-bold text-slate-950 dark:text-white">إعدادات الفواتير والالتزام الافتراضي</h2>
+                  <p class="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-400">اضبط القواعس اليومية التي يجب أن تمر بها الفاتورة قبل اعتمادها.</p>
                 </div>
+              </div>
+            </div>
 
-                <div class="md:col-span-2 rounded-3xl border border-slate-200/80 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/30">
-                  <div class="flex items-start gap-3">
-                    <span class="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">
-                      <i data-lucide="file-text" class="h-4 w-4"></i>
-                    </span>
-                    <div>
-                      <p class="text-sm font-semibold text-slate-900 dark:text-white">ملخص القاعدة الحالية</p>
-                      <p class="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-400" x-text="invoiceRulesSummary()"></p>
-                    </div>
+            <div class="relative mt-6 grid gap-8 lg:grid-cols-3">
+              <!-- Left Column -->
+              <div class="lg:col-span-2 space-y-4">
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <div class="space-y-2">
+                    <label class="text-sm font-semibold text-slate-900 dark:text-white">أيام الاستحقاق</label>
+                    <input x-model="settings.invoice_due_days" type="number" min="0" dir="ltr" placeholder="30"
+                           class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
+                  </div>
+                  <div class="space-y-2">
+                    <label class="text-sm font-semibold text-slate-900 dark:text-white">سياسة التقريب</label>
+                    <select x-model="settings.invoice_rounding_policy"
+                            class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
+                      <template x-for="option in roundingPolicies" :key="option.value">
+                        <option :value="option.value" x-text="option.label"></option>
+                      </template>
+                    </select>
                   </div>
                 </div>
 
-                <div class="md:col-span-2 grid gap-3">
-                  {% include "settings/partials/toggle_row.html" with label="طلب أمر شراء قبل الاعتماد" description="أضف خطوة تحقق افتراضية تمنع اعتماد الفاتورة إذا لم يكن رقم أمر الشراء متاحاً." toggle_model="settings.invoice_require_po" only %}
-                  {% include "settings/partials/toggle_row.html" with label="التحقق من الرقم الضريبي للمورد" description="اطلب وجود رقم ضريبي صالح قبل اعتبار الفاتورة مكتملة من منظور الامتثال." toggle_model="settings.invoice_require_vendor_vat" only %}
-                  {% include "settings/partials/toggle_row.html" with label="إيقاف الفواتير ذات البيانات الضريبية الناقصة" description="احجز المستندات غير المكتملة حتى يتم استكمال الرقم الضريبي أو بيانات الامتثال الأساسية." toggle_model="settings.compliance_hold_missing_tax_id" only %}
-                  {% include "settings/partials/toggle_row.html" with label="إرسال بريد عند تعليق فاتورة عالية المخاطر" description="أبلغ المسؤولين فوراً عند تعليق فاتورة بسبب تضارب أو شبهة أو نقص امتثال." toggle_model="notifications.email_invoice_flagged" only %}
-                  {% include "settings/partials/toggle_row.html" with label="تنبيه بقرب تأخر الإقرار الضريبي" description="أرسل تنبيهاً استباقياً عندما تقترب فترات الإقرار أو تسليم المستندات النظامية." toggle_model="notifications.email_vat_late_filing" only %}
-                  {% include "settings/partials/toggle_row.html" with label="تنبيه شذوذ الرواتب" description="فعّل تنبيه خاص عند رصد أنماط غير معتادة في مسيرات الرواتب أو التعويضات." toggle_model="notifications.payroll_anomaly_alert" only %}
+                <div class="space-y-3 rounded-2xl border border-slate-100/60 bg-slate-50/50 p-4 dark:border-slate-800/60 dark:bg-slate-950/20">
+                  {% include "settings/partials/toggle_row.html" with label="طلب أمر شراء" description="مطلوب قبل الاعتماد." toggle_model="settings.invoice_require_po" only %}
+                  {% include "settings/partials/toggle_row.html" with label="التحقق من VAT للمورد" description="VAT صالح مطلوب." toggle_model="settings.invoice_require_vendor_vat" only %}
+                  {% include "settings/partials/toggle_row.html" with label="إيقاف البيانات الناقصة" description="احجز المستندات غير المكتملة." toggle_model="settings.compliance_hold_missing_tax_id" only %}
                 </div>
               </div>
 
-              <div class="space-y-5">
-                <div class="space-y-2 rounded-3xl border border-slate-200/80 bg-white/80 p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950/30">
-                  <label for="invoice_default_notes" class="block text-sm font-semibold text-slate-900 dark:text-white">ملاحظات افتراضية على الفاتورة</label>
-                  <textarea id="invoice_default_notes"
-                            x-model="settings.invoice_default_notes"
-                            rows="10"
-                            placeholder="مثال: يتم سداد الفاتورة خلال 30 يوماً من تاريخ الاعتماد مع الالتزام بمتطلبات الفوترة الإلكترونية والرقابة الداخلية."
-                            class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-7 text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-primary-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700 dark:bg-slate-950/50 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-primary-400 dark:focus:bg-slate-950"></textarea>
-                  <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">أضف عبارات امتثال أو تعليمات دفع قياسية تظهر تلقائياً على المستندات الجديدة.</p>
-                </div>
-
-                <div class="rounded-3xl border border-slate-200/80 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-950/30">
-                  <div class="flex items-start gap-3">
-                    <span class="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">
-                      <i data-lucide="shield-check" class="h-4 w-4"></i>
-                    </span>
-                    <div>
-                      <p class="text-sm font-semibold text-slate-900 dark:text-white">أفضل ممارسة موصى بها</p>
-                      <p class="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-400">
-                        ابدأ بمتطلبات صارمة على VAT وPO عند الإطلاق، ثم خفف القيود تدريجياً عندما تتأكد من نضج سير العمل ووضوح التتبع في المؤسسة.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+              <!-- Right Column -->
+              <div class="space-y-2 rounded-2xl border border-slate-100/60 bg-slate-50/50 p-4 dark:border-slate-800/60 dark:bg-slate-950/20">
+                <label class="text-sm font-semibold text-slate-900 dark:text-white">ملاحظات افتراضية</label>
+                <textarea x-model="settings.invoice_default_notes" rows="6" placeholder="عبارات امتثال..."
+                          class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white dark:placeholder:text-slate-500"></textarea>
+                <p class="text-xs text-slate-500 dark:text-slate-400">تظهر تلقائياً على المستندات الجديدة.</p>
               </div>
             </div>
           </section>
 
-          <section class="xl:col-span-2 rounded-[2rem] border border-dashed border-slate-300 bg-white/75 p-6 dark:border-slate-700 dark:bg-slate-900/60 xl:p-7">
+          <!-- 6. Notifications (Full Width) -->
+          <section class="lg:col-span-2 group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/30 to-white p-8 shadow-sm transition-all hover:shadow-md dark:border-slate-800/60 dark:from-slate-950/80 dark:via-slate-900/40 dark:to-slate-950/80">
+            <div class="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-orange-500/10 blur-3xl opacity-0 transition-opacity group-hover:opacity-100"></div>
+
+            <div class="relative space-y-6 border-b border-slate-100/80 pb-6 dark:border-slate-800/80">
+              <div class="flex items-start gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300">
+                  <i data-lucide="bell" class="h-5 w-5"></i>
+                </div>
+                <div>
+                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">إشعارات</p>
+                  <h2 class="text-lg font-bold text-slate-950 dark:text-white">التنبيهات والإشعارات</h2>
+                  <p class="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-400">تحكم بكيفية ومتى يتم إرسال الإشعارات للفريق.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="relative mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {% include "settings/partials/toggle_row.html" with label="تنبيهات فورية" description="إشعارات الرقابة الفورية." toggle_model="notifications.ws_realtime_alerts" only %}
+              {% include "settings/partials/toggle_row.html" with label="إنشاء قضية" description="بريد عند قضية جديدة." toggle_model="notifications.email_audit_case_created" only %}
+              {% include "settings/partials/toggle_row.html" with label="ملخص أسبوعي" description="ملخص للقيادات." toggle_model="notifications.email_weekly_summary" only %}
+              {% include "settings/partials/toggle_row.html" with label="تعليق الفاتورة" description="إشعار عند التعليق." toggle_model="notifications.email_invoice_flagged" only %}
+              {% include "settings/partials/toggle_row.html" with label="تأخر الإقرار" description="تنبيه بقرب التأخر." toggle_model="notifications.email_vat_late_filing" only %}
+              {% include "settings/partials/toggle_row.html" with label="شذوذ الرواتب" description="تنبيه الأنماط غير المعتادة." toggle_model="notifications.payroll_anomaly_alert" only %}
+            </div>
+          </section>
+
+          <!-- Data Export -->
+          <section class="lg:col-span-2 relative overflow-hidden rounded-3xl border border-dashed border-slate-300/60 bg-gradient-to-br from-slate-50 to-white p-8 transition-all hover:border-slate-400/60 dark:border-slate-700/60 dark:from-slate-900/40 dark:to-slate-950/80">
             <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
               <div class="space-y-2">
-                <p class="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">Admin Actions</p>
-                <h2 class="text-xl font-semibold tracking-tight text-slate-950 dark:text-white">نسخة احتياطية وسجل استعداد الامتثال</h2>
-                <p class="max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-400">
-                  استخدم التصدير لأرشفة البيانات قبل أي تغييرات كبيرة على الضوابط أو عند مشاركة إعدادات المؤسسة مع فريق الحوكمة والمراجعة الخارجية.
-                </p>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">إدارة</p>
+                <h3 class="text-lg font-bold text-slate-950 dark:text-white">نسخة احتياطية وسجل البيانات</h3>
+                <p class="max-w-2xl text-sm text-slate-600 dark:text-slate-400">استخدم التصدير لأرشفة البيانات أو مشاركة الإعدادات.</p>
               </div>
-
               <button type="button"
                       @click="exportData()"
-                      class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950/50 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900">
+                      class="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200/60 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700/60 dark:bg-slate-950/50 dark:text-slate-300">
                 <i data-lucide="download" class="h-4 w-4"></i>
-                تصدير بيانات المؤسسة
+                تصدير
               </button>
             </div>
           </section>
         </div>
-        </div>
+
       </form>
     </template>
+
   </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -611,7 +549,6 @@ function organizationSettingsPage() {
     saving: false,
     lastSavedAt: null,
     snapshot: null,
-
     org: {},
     settings: {},
     notifications: {},
@@ -635,18 +572,10 @@ function organizationSettingsPage() {
     ],
 
     fiscalMonthOptions: [
-      { value: 1, label: 'يناير' },
-      { value: 2, label: 'فبراير' },
-      { value: 3, label: 'مارس' },
-      { value: 4, label: 'أبريل' },
-      { value: 5, label: 'مايو' },
-      { value: 6, label: 'يونيو' },
-      { value: 7, label: 'يوليو' },
-      { value: 8, label: 'أغسطس' },
-      { value: 9, label: 'سبتمبر' },
-      { value: 10, label: 'أكتوبر' },
-      { value: 11, label: 'نوفمبر' },
-      { value: 12, label: 'ديسمبر' },
+      { value: 1, label: 'يناير' },{ value: 2, label: 'فبراير' },{ value: 3, label: 'مارس' },
+      { value: 4, label: 'أبريل' },{ value: 5, label: 'مايو' },{ value: 6, label: 'يونيو' },
+      { value: 7, label: 'يوليو' },{ value: 8, label: 'أغسطس' },{ value: 9, label: 'سبتمبر' },
+      { value: 10, label: 'أكتوبر' },{ value: 11, label: 'نوفمبر' },{ value: 12, label: 'ديسمبر' },
     ],
 
     reviewModes: [
@@ -668,49 +597,23 @@ function organizationSettingsPage() {
     ],
 
     defaultOrg: {
-      name: '',
-      name_ar: '',
-      country: 'SA',
-      currency: 'SAR',
-      vat_number: '',
-      cr_number: '',
-      vat_rate: 15,
-      fiscal_year_start: 1,
-      address: '',
-      website: '',
-      industry: '',
+      name: '', name_ar: '', country: 'SA', currency: 'SAR', vat_number: '', cr_number: '',
+      vat_rate: 15, fiscal_year_start: 1, address: '', website: '', industry: '',
     },
 
     defaultSettings: {
-      monthly_budget_limit: 0,
-      large_invoice_threshold: 10000,
-      vat_rate: 15,
-      anomaly_threshold_pct: 25,
-      max_daily_invoices: 100,
-      expense_policy_limit: 5000,
-      zatca_api_url: '',
-      zatca_env: 'sandbox',
-      zatca_qr_required: 'true',
-      ai_review_mode: 'balanced',
-      ai_confidence_threshold: 85,
-      ai_require_explanations: true,
-      ai_auto_create_case: true,
-      ai_block_high_risk_invoices: false,
-      invoice_due_days: 30,
-      invoice_require_po: true,
-      invoice_require_vendor_vat: true,
-      invoice_rounding_policy: 'standard',
-      invoice_default_notes: '',
-      compliance_hold_missing_tax_id: true,
+      monthly_budget_limit: 0, large_invoice_threshold: 10000, vat_rate: 15,
+      anomaly_threshold_pct: 25, max_daily_invoices: 100, expense_policy_limit: 5000,
+      zatca_api_url: '', zatca_env: 'sandbox', zatca_qr_required: 'true',
+      ai_review_mode: 'balanced', ai_confidence_threshold: 85, ai_require_explanations: true,
+      ai_auto_create_case: true, ai_block_high_risk_invoices: false, invoice_due_days: 30,
+      invoice_require_po: true, invoice_require_vendor_vat: true, invoice_rounding_policy: 'standard',
+      invoice_default_notes: '', compliance_hold_missing_tax_id: true,
     },
 
     defaultNotifications: {
-      email_invoice_flagged: true,
-      email_audit_case_created: true,
-      email_weekly_summary: true,
-      email_vat_late_filing: true,
-      ws_realtime_alerts: true,
-      payroll_anomaly_alert: true,
+      email_invoice_flagged: true, email_audit_case_created: true, email_weekly_summary: true,
+      email_vat_late_filing: true, ws_realtime_alerts: true, payroll_anomaly_alert: true,
     },
 
     async load() {
@@ -719,7 +622,6 @@ function organizationSettingsPage() {
           apiFetch('/auth/organization/'),
           apiFetch('/auth/organization/settings/').catch(() => ({})),
         ]);
-
         this.org = { ...this.defaultOrg, ...(organizationData || {}) };
         this.settings = this.normalizeSettings(settingsData.financial || {}, this.org);
         this.notifications = this.normalizeNotifications(settingsData.notifications || {});
@@ -729,9 +631,7 @@ function organizationSettingsPage() {
         this.org = { ...this.defaultOrg };
         this.settings = this.normalizeSettings({}, this.defaultOrg);
         this.notifications = this.normalizeNotifications({});
-        this.lastSavedAt = null;
-        this.captureSnapshot();
-        notify('تعذر تحميل إعدادات المؤسسة الحالية', 'error');
+        notify('تعذر تحميل الإعدادات', 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());
@@ -741,322 +641,207 @@ function organizationSettingsPage() {
     normalizeSettings(raw = {}, organization = null) {
       const orgData = organization || this.org || this.defaultOrg;
       return {
-        ...this.defaultSettings,
-        vat_rate: orgData?.vat_rate ?? this.defaultSettings.vat_rate,
+        ...this.defaultSettings, vat_rate: orgData?.vat_rate ?? this.defaultSettings.vat_rate,
         ...(raw || {}),
         zatca_qr_required: String(raw?.zatca_qr_required ?? this.defaultSettings.zatca_qr_required),
       };
     },
 
     normalizeNotifications(raw = {}) {
-      const incoming = raw || {};
-      const normalized = { ...this.defaultNotifications, ...incoming };
-
-      if (Object.prototype.hasOwnProperty.call(incoming, 'email_case_created') && !Object.prototype.hasOwnProperty.call(incoming, 'email_audit_case_created')) {
-        normalized.email_audit_case_created = !!incoming.email_case_created;
-      }
-
-      if (Object.prototype.hasOwnProperty.call(incoming, 'email_vat_late') && !Object.prototype.hasOwnProperty.call(incoming, 'email_vat_late_filing')) {
-        normalized.email_vat_late_filing = !!incoming.email_vat_late;
-      }
-
+      const normalized = { ...this.defaultNotifications, ...raw };
+      if (raw.email_case_created && !raw.email_audit_case_created) normalized.email_audit_case_created = !!raw.email_case_created;
+      if (raw.email_vat_late && !raw.email_vat_late_filing) normalized.email_vat_late_filing = !!raw.email_vat_late;
       return normalized;
     },
 
     numericValue(value, fallback = 0) {
-      const number = Number(value);
-      return Number.isFinite(number) ? number : fallback;
+      const n = Number(value);
+      return Number.isFinite(n) ? n : fallback;
     },
 
-    cleanedOrgPayload() {
-      return {
-        name: (this.org.name || '').trim(),
-        name_ar: (this.org.name_ar || '').trim(),
-        country: this.org.country || this.defaultOrg.country,
-        currency: this.org.currency || this.defaultOrg.currency,
-        vat_number: (this.org.vat_number || '').trim(),
-        cr_number: (this.org.cr_number || '').trim(),
-        fiscal_year_start: this.numericValue(this.org.fiscal_year_start, this.defaultOrg.fiscal_year_start),
-        address: (this.org.address || '').trim(),
-        website: (this.org.website || '').trim(),
-        industry: (this.org.industry || '').trim(),
-      };
-    },
-
-    cleanedSettingsPayload() {
-      return {
-        monthly_budget_limit: this.numericValue(this.settings.monthly_budget_limit, this.defaultSettings.monthly_budget_limit),
-        large_invoice_threshold: this.numericValue(this.settings.large_invoice_threshold, this.defaultSettings.large_invoice_threshold),
-        vat_rate: this.numericValue(this.settings.vat_rate, this.defaultSettings.vat_rate),
-        anomaly_threshold_pct: this.numericValue(this.settings.anomaly_threshold_pct, this.defaultSettings.anomaly_threshold_pct),
-        max_daily_invoices: this.numericValue(this.settings.max_daily_invoices, this.defaultSettings.max_daily_invoices),
-        expense_policy_limit: this.numericValue(this.settings.expense_policy_limit, this.defaultSettings.expense_policy_limit),
-        zatca_api_url: (this.settings.zatca_api_url || '').trim(),
-        zatca_env: this.settings.zatca_env || this.defaultSettings.zatca_env,
-        zatca_qr_required: String(this.settings.zatca_qr_required ?? this.defaultSettings.zatca_qr_required),
-        ai_review_mode: this.settings.ai_review_mode || this.defaultSettings.ai_review_mode,
-        ai_confidence_threshold: this.numericValue(this.settings.ai_confidence_threshold, this.defaultSettings.ai_confidence_threshold),
-        ai_require_explanations: !!this.settings.ai_require_explanations,
-        ai_auto_create_case: !!this.settings.ai_auto_create_case,
-        ai_block_high_risk_invoices: !!this.settings.ai_block_high_risk_invoices,
-        invoice_due_days: this.numericValue(this.settings.invoice_due_days, this.defaultSettings.invoice_due_days),
-        invoice_require_po: !!this.settings.invoice_require_po,
-        invoice_require_vendor_vat: !!this.settings.invoice_require_vendor_vat,
-        invoice_rounding_policy: this.settings.invoice_rounding_policy || this.defaultSettings.invoice_rounding_policy,
-        invoice_default_notes: (this.settings.invoice_default_notes || '').trim(),
-        compliance_hold_missing_tax_id: !!this.settings.compliance_hold_missing_tax_id,
-      };
-    },
-
-    cleanedNotificationsPayload() {
-      return {
-        email_invoice_flagged: !!this.notifications.email_invoice_flagged,
-        email_audit_case_created: !!this.notifications.email_audit_case_created,
-        email_weekly_summary: !!this.notifications.email_weekly_summary,
-        email_vat_late_filing: !!this.notifications.email_vat_late_filing,
-        ws_realtime_alerts: !!this.notifications.ws_realtime_alerts,
-        payroll_anomaly_alert: !!this.notifications.payroll_anomaly_alert,
-      };
-    },
+    captureSnapshot() { this.snapshot = JSON.stringify(this.serializeState()); },
+    hasUnsavedChanges() { return this.snapshot !== JSON.stringify(this.serializeState()); },
 
     serializeState() {
       return {
-        org: this.cleanedOrgPayload(),
-        settings: this.cleanedSettingsPayload(),
-        notifications: this.cleanedNotificationsPayload(),
+        org: {
+          name: (this.org.name || '').trim(), name_ar: (this.org.name_ar || '').trim(),
+          country: this.org.country || this.defaultOrg.country, currency: this.org.currency || this.defaultOrg.currency,
+          vat_number: (this.org.vat_number || '').trim(), cr_number: (this.org.cr_number || '').trim(),
+          fiscal_year_start: this.numericValue(this.org.fiscal_year_start, this.defaultOrg.fiscal_year_start),
+          address: (this.org.address || '').trim(), website: (this.org.website || '').trim(),
+          industry: (this.org.industry || '').trim(),
+        },
+        settings: {
+          monthly_budget_limit: this.numericValue(this.settings.monthly_budget_limit),
+          large_invoice_threshold: this.numericValue(this.settings.large_invoice_threshold),
+          vat_rate: this.numericValue(this.settings.vat_rate), anomaly_threshold_pct: this.numericValue(this.settings.anomaly_threshold_pct),
+          max_daily_invoices: this.numericValue(this.settings.max_daily_invoices),
+          expense_policy_limit: this.numericValue(this.settings.expense_policy_limit),
+          zatca_api_url: (this.settings.zatca_api_url || '').trim(), zatca_env: this.settings.zatca_env || this.defaultSettings.zatca_env,
+          zatca_qr_required: String(this.settings.zatca_qr_required ?? this.defaultSettings.zatca_qr_required),
+          ai_review_mode: this.settings.ai_review_mode || this.defaultSettings.ai_review_mode,
+          ai_confidence_threshold: this.numericValue(this.settings.ai_confidence_threshold),
+          ai_require_explanations: !!this.settings.ai_require_explanations, ai_auto_create_case: !!this.settings.ai_auto_create_case,
+          ai_block_high_risk_invoices: !!this.settings.ai_block_high_risk_invoices, invoice_due_days: this.numericValue(this.settings.invoice_due_days),
+          invoice_require_po: !!this.settings.invoice_require_po, invoice_require_vendor_vat: !!this.settings.invoice_require_vendor_vat,
+          invoice_rounding_policy: this.settings.invoice_rounding_policy || this.defaultSettings.invoice_rounding_policy,
+          invoice_default_notes: (this.settings.invoice_default_notes || '').trim(), compliance_hold_missing_tax_id: !!this.settings.compliance_hold_missing_tax_id,
+        },
+        notifications: {
+          email_invoice_flagged: !!this.notifications.email_invoice_flagged,
+          email_audit_case_created: !!this.notifications.email_audit_case_created,
+          email_weekly_summary: !!this.notifications.email_weekly_summary,
+          email_vat_late_filing: !!this.notifications.email_vat_late_filing,
+          ws_realtime_alerts: !!this.notifications.ws_realtime_alerts,
+          payroll_anomaly_alert: !!this.notifications.payroll_anomaly_alert,
+        },
       };
     },
 
-    captureSnapshot() {
-      this.snapshot = JSON.stringify(this.serializeState());
-    },
-
-    hasUnsavedChanges() {
-      return this.snapshot !== JSON.stringify(this.serializeState());
-    },
-
     validateBeforeSave() {
-      if (!(this.org.name || '').trim()) {
-        notify('اسم المؤسسة مطلوب قبل الحفظ', 'error');
-        return false;
-      }
-
+      if (!(this.org.name || '').trim()) { notify('اسم المؤسسة مطلوب', 'error'); return false; }
       const rules = [
-        { label: 'الميزانية الشهرية المرجعية', value: this.settings.monthly_budget_limit, min: 0 },
+        { label: 'الميزانية الشهرية', value: this.settings.monthly_budget_limit, min: 0 },
         { label: 'حد الفاتورة الكبيرة', value: this.settings.large_invoice_threshold, min: 0 },
-        { label: 'نسبة ضريبة القيمة المضافة', value: this.settings.vat_rate, min: 0, max: 100 },
-        { label: 'هامش شذوذ الإنفاق', value: this.settings.anomaly_threshold_pct, min: 0, max: 100 },
-        { label: 'السقف اليومي للفواتير', value: this.settings.max_daily_invoices, min: 0 },
-        { label: 'حد سياسة المصروفات', value: this.settings.expense_policy_limit, min: 0 },
-        { label: 'حد الثقة لاتخاذ الإجراء', value: this.settings.ai_confidence_threshold, min: 50, max: 100 },
-        { label: 'أيام الاستحقاق الافتراضية', value: this.settings.invoice_due_days, min: 0 },
+        { label: 'نسبة VAT', value: this.settings.vat_rate, min: 0, max: 100 },
+        { label: 'هامش الشذوذ', value: this.settings.anomaly_threshold_pct, min: 0, max: 100 },
+        { label: 'السقف اليومي', value: this.settings.max_daily_invoices, min: 0 },
+        { label: 'حد المصروفات', value: this.settings.expense_policy_limit, min: 0 },
+        { label: 'حد الثقة', value: this.settings.ai_confidence_threshold, min: 50, max: 100 },
+        { label: 'أيام الاستحقاق', value: this.settings.invoice_due_days, min: 0 },
       ];
-
       for (const rule of rules) {
-        const number = Number(rule.value);
-        if (!Number.isFinite(number) || number < rule.min || (rule.max !== undefined && number > rule.max)) {
-          notify(`${rule.label} تحتوي على قيمة غير صالحة`, 'error');
-          return false;
+        const n = Number(rule.value);
+        if (!Number.isFinite(n) || n < rule.min || (rule.max !== undefined && n > rule.max)) {
+          notify(`${rule.label} غير صالحة`, 'error'); return false;
         }
       }
-
       return true;
     },
 
     async saveAll() {
       if (this.saving) return;
-      if (!this.hasUnsavedChanges()) {
-        notify('لا توجد تغييرات جديدة للحفظ', 'info');
-        return;
-      }
+      if (!this.hasUnsavedChanges()) { notify('لا توجد تغييرات للحفظ', 'info'); return; }
       if (!this.validateBeforeSave()) return;
-
       this.saving = true;
-
-      const organizationPayload = this.cleanedOrgPayload();
-      const settingsPayload = this.cleanedSettingsPayload();
-      const notificationsPayload = this.cleanedNotificationsPayload();
-
+      const state = this.serializeState();
       try {
-        const [savedOrganization, savedSettings] = await Promise.all([
-          apiFetch('/auth/organization/', {
-            method: 'PATCH',
-            body: JSON.stringify(organizationPayload),
-          }),
-          apiFetch('/auth/organization/settings/', {
-            method: 'POST',
-            body: JSON.stringify({
-              financial: settingsPayload,
-              notifications: notificationsPayload,
-            }),
-          }),
+        const [savedOrg, savedSettings] = await Promise.all([
+          apiFetch('/auth/organization/', { method: 'PATCH', body: JSON.stringify(state.org) }),
+          apiFetch('/auth/organization/settings/', { method: 'POST', body: JSON.stringify({ financial: state.settings, notifications: state.notifications }) }),
         ]);
-
-        this.org = { ...this.defaultOrg, ...(savedOrganization || organizationPayload) };
-        this.settings = this.normalizeSettings(savedSettings?.financial || settingsPayload, this.org);
-        this.notifications = this.normalizeNotifications(savedSettings?.notifications || notificationsPayload);
+        this.org = { ...this.defaultOrg, ...(savedOrg || state.org) };
+        this.settings = this.normalizeSettings(savedSettings?.financial || state.settings, this.org);
+        this.notifications = this.normalizeNotifications(savedSettings?.notifications || state.notifications);
         this.lastSavedAt = this.org.updated_at || new Date().toISOString();
         this.captureSnapshot();
-
-        notify('تم حفظ إعدادات المؤسسة بنجاح', 'success');
+        notify('تم الحفظ بنجاح', 'success');
         this.$nextTick(() => lucide.createIcons());
       } catch (error) {
-        notify(error.message || 'تعذر حفظ إعدادات المؤسسة', 'error');
+        notify(error.message || 'تعذر الحفظ', 'error');
       } finally {
         this.saving = false;
       }
     },
 
-    exportData() {
-      window.location.href = '/api/v1/reports/export/';
-    },
+    exportData() { window.location.href = '/api/v1/reports/export/'; },
 
     profileCompletionPercent() {
       const checks = [
-        (this.org.name || '').trim(),
-        (this.org.name_ar || '').trim(),
-        (this.org.industry || '').trim(),
-        this.org.country,
-        this.org.currency,
-        (this.org.website || '').trim(),
-        (this.org.address || '').trim(),
-        (this.org.vat_number || '').trim(),
-        (this.org.cr_number || '').trim(),
+        (this.org.name || '').trim(), (this.org.name_ar || '').trim(), (this.org.industry || '').trim(),
+        this.org.country, this.org.currency, (this.org.website || '').trim(), (this.org.address || '').trim(),
+        (this.org.vat_number || '').trim(), (this.org.cr_number || '').trim(),
         this.org.country !== 'SA' || (this.settings.zatca_api_url || '').trim(),
       ];
-
-      const completed = checks.filter(Boolean).length;
-      return Math.round((completed / checks.length) * 100);
+      return Math.round((checks.filter(Boolean).length / checks.length) * 100);
     },
 
     profileCompletionMessage() {
-      const percent = this.profileCompletionPercent();
-      if (percent >= 90) {
-        return 'الهوية المؤسسية مكتملة وجاهزة للاستخدام في التقارير والفواتير وتدفقات الموافقة.';
-      }
-      if (percent >= 70) {
-        return 'أكمل بعض الحقول النظامية لرفع مستوى الثقة والتوافق بين الفرق المختلفة.';
-      }
-      return 'ابدأ بإكمال البيانات الأساسية حتى يحصل FinAI على سياق مؤسسي أكثر دقة.';
+      const p = this.profileCompletionPercent();
+      if (p >= 90) return 'الهوية المؤسسية مكتملة وجاهزة للاستخدام.';
+      if (p >= 70) return 'أكمل بعض الحقول النظامية لرفع مستوى الثقة.';
+      return 'ابدأ بإكمال البيانات الأساسية.';
     },
 
     complianceSummary() {
-      const hasVat = !!(this.org.vat_number || '').trim();
-      const hasCr = !!(this.org.cr_number || '').trim();
+      const hasVat = !!(this.org.vat_number || '').trim(), hasCr = !!(this.org.cr_number || '').trim();
       const hasZatca = this.org.country !== 'SA' || !!(this.settings.zatca_api_url || '').trim();
-
-      if (!hasVat || !hasCr) {
-        return {
-          tone: 'warning',
-          title: 'بيانات التسجيل غير مكتملة',
-          description: 'أكمل الرقم الضريبي والسجل التجاري أولاً حتى تصبح تقارير الامتثال أكثر موثوقية.',
-        };
-      }
-
-      if (!hasZatca) {
-        return {
-          tone: 'warning',
-          title: 'الربط الضريبي يحتاج تهيئة',
-          description: 'أضف رابط التكامل الضريبي لرفع جاهزية الفوترة الإلكترونية وتبسيط التحقق النظامي.',
-        };
-      }
-
-      return {
-        tone: 'success',
-        title: 'الامتثال الضريبي جاهز',
-        description: 'المؤسسة تملك الحد الأدنى المطلوب من بيانات VAT والتسجيل والربط التنظيمي.',
+      if (!hasVat || !hasCr) return {
+        tone: 'warning', title: 'بيانات التسجيل غير مكتملة',
+        description: 'أكمل الرقم الضريبي والسجل التجاري أولاً.',
       };
+      if (!hasZatca) return {
+        tone: 'warning', title: 'الربط الضريبي يحتاج تهيئة',
+        description: 'أضف رابط التكامل الضريبي لرفع جاهزية الفوترة الإلكترونية.',
+      };
+      return { tone: 'success', title: 'الامتثال الضريبي جاهز', description: 'جميع البيانات المطلوبة موجودة.' };
     },
 
     auditModeLabel() {
-      const selected = this.reviewModes.find((option) => option.value === this.settings.ai_review_mode);
-      return selected ? selected.label : 'متوازن';
+      const s = this.reviewModes.find(o => o.value === this.settings.ai_review_mode);
+      return s ? s.label : 'متوازن';
     },
 
     reviewModeDescription() {
-      const confidence = fmtNum(this.settings.ai_confidence_threshold, 0);
-      const descriptions = {
-        conservative: `الوضع المحافظ يقلل التصعيد التلقائي ويركز على الحالات عالية الثقة فقط (${confidence}% فأعلى).`,
-        aggressive: `الوضع الاستباقي يوسع نطاق الرصد والتدخل المبكر حتى قبل اكتمال بعض المؤشرات (${confidence}% فأعلى).`,
-        balanced: `الوضع المتوازن يحافظ على جودة التنبيهات مع سرعة مناسبة في التصعيد (${confidence}% فأعلى).`,
+      const c = fmtNum(this.settings.ai_confidence_threshold, 0);
+      const msgs = {
+        conservative: `وضع محافظ يقلل التصعيق التلقائي (${c}% فأعلى).`,
+        aggressive: `وضع استباقي يوسع الرصد المبكر (${c}% فأعلى).`,
+        balanced: `وضع متوازن يحافظ على جودة التنبيهات (${c}% فأعلى).`,
       };
-      return descriptions[this.settings.ai_review_mode] || descriptions.balanced;
+      return msgs[this.settings.ai_review_mode] || msgs.balanced;
     },
 
     financialSummary() {
-      return `التصعيد يبدأ من ${this.formatMoney(this.settings.large_invoice_threshold)} مع حد يومي ${fmtNum(this.settings.max_daily_invoices, 0)} فاتورة وهامش شذوذ ${fmtNum(this.settings.anomaly_threshold_pct, 0)}%.`;
+      return `التصعيق من ${this.formatMoney(this.settings.large_invoice_threshold)} مع حد يومي ${fmtNum(this.settings.max_daily_invoices, 0)} فاتورة.`;
     },
 
     invoiceRulesSummary() {
-      const dueDays = fmtNum(this.settings.invoice_due_days, 0);
-      const poRule = this.settings.invoice_require_po ? 'أمر شراء مطلوب' : 'أمر شراء اختياري';
-      const taxRule = this.settings.invoice_require_vendor_vat ? 'التحقق من VAT مفعل' : 'التحقق من VAT مرن';
-      return `استحقاق خلال ${dueDays} يوماً • ${poRule} • ${taxRule}.`;
+      const d = fmtNum(this.settings.invoice_due_days, 0);
+      const po = this.settings.invoice_require_po ? 'أمر مطلوب' : 'أمر اختياري';
+      const tax = this.settings.invoice_require_vendor_vat ? 'VAT مفعل' : 'VAT مرن';
+      return `${d} يوماً • ${po} • ${tax}.`;
     },
 
     saveButtonLabel() {
-      if (this.saving) return 'جاري حفظ التغييرات...';
-      return this.hasUnsavedChanges() ? 'حفظ جميع التغييرات' : 'كل شيء محفوظ';
+      if (this.saving) return 'جاري الحفظ...';
+      return this.hasUnsavedChanges() ? 'حفظ التغييرات' : 'محفوظ';
     },
 
     statusMeta() {
-      if (this.saving) {
-        return {
-          label: 'جاري الحفظ',
-          badgeClass: 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-500/30 dark:bg-primary-500/10 dark:text-primary-200',
-          dotClass: 'bg-primary-500 animate-pulse',
-        };
-      }
-
-      if (this.hasUnsavedChanges()) {
-        return {
-          label: 'تغييرات غير محفوظة',
-          badgeClass: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200',
-          dotClass: 'bg-amber-500',
-        };
-      }
-
-      if (this.complianceSummary().tone === 'warning') {
-        return {
-          label: 'الإعدادات تحتاج مراجعة',
-          badgeClass: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200',
-          dotClass: 'bg-amber-500',
-        };
-      }
-
+      if (this.saving) return {
+        label: 'جاري', badgeClass: 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-500/30 dark:text-primary-200',
+        dotClass: 'bg-primary-500 animate-pulse',
+      };
+      if (this.hasUnsavedChanges()) return {
+        label: 'تغييرات', badgeClass: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:text-amber-200',
+        dotClass: 'bg-amber-500',
+      };
+      if (this.complianceSummary().tone === 'warning') return {
+        label: 'مراجعة مطلوبة', badgeClass: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:text-amber-200',
+        dotClass: 'bg-amber-500',
+      };
       return {
-        label: 'تم الحفظ',
-        badgeClass: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200',
+        label: 'محفوظ', badgeClass: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:text-emerald-200',
         dotClass: 'bg-emerald-500',
       };
     },
 
     lastSavedText() {
-      if (!this.lastSavedAt) {
-        return 'لم يتم الحفظ بعد';
-      }
-
+      if (!this.lastSavedAt) return 'لم يتم الحفظ بعد';
       try {
-        return 'آخر مزامنة ' + new Intl.DateTimeFormat('ar-SA', {
-          dateStyle: 'medium',
-          timeStyle: 'short',
-        }).format(new Date(this.lastSavedAt));
-      } catch (error) {
-        return 'آخر مزامنة الآن';
-      }
+        return 'آخر ' + new Intl.DateTimeFormat('ar-SA', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(this.lastSavedAt));
+      } catch { return 'آخر الآن'; }
     },
 
-    formatMoney(value) {
+    formatMoney(v) {
       try {
         return new Intl.NumberFormat('ar-SA', {
-          style: 'currency',
-          currency: this.org.currency || 'SAR',
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }).format(Number(value || 0));
-      } catch (error) {
-        return `${fmtNum(value || 0, 0)} ${this.org.currency || ''}`.trim();
-      }
+          style: 'currency', currency: this.org.currency || 'SAR',
+          minimumFractionDigits: 0, maximumFractionDigits: 0,
+        }).format(Number(v || 0));
+      } catch { return `${fmtNum(v || 0, 0)} ${this.org.currency || ''}`.trim(); }
     },
   };
 }

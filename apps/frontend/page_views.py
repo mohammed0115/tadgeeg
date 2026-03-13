@@ -1,18 +1,74 @@
 """FinAI frontend page views."""
 
+import secrets
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+from urllib.parse import urlencode
 
 from django.conf import settings as django_settings
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils.dateparse import parse_date
 from django.views.decorators.csrf import ensure_csrf_cookie
-from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.authentication.serializers import RegisterSerializer
+from apps.authentication.forms import EmailOTPResendForm, EmailOTPVerifyForm
+from apps.authentication.serializers import LoginSerializer, RegisterSerializer
+from apps.authentication.services.email_otp import (
+    EmailOTPError,
+    clear_pending_verification,
+    complete_verified_login,
+    get_challenge_state,
+    get_latest_pending_challenge,
+    get_pending_verification_user,
+    has_pending_verification,
+    issue_email_otp,
+    mask_email_address,
+    resend_email_otp,
+    verify_email_otp,
+)
+from apps.authentication.services.google_oauth import (
+    GoogleOAuthError,
+    build_google_oauth_authorization_url,
+    exchange_google_code_for_tokens,
+    fetch_google_user_profile,
+    get_or_create_local_user_from_google_profile,
+    is_google_oauth_configured,
+)
+
+
+GOOGLE_OAUTH_STATE_SESSION_KEY = "google_oauth_state"
+POST_LOGIN_TOKENS_SESSION_KEY = "post_login_tokens"
+
+
+def _consume_post_login_tokens(request):
+    if not getattr(request.user, "is_authenticated", False):
+        return None
+    tokens = request.session.pop(POST_LOGIN_TOKENS_SESSION_KEY, None)
+    if tokens is not None:
+        request.session.modified = True
+    return tokens
+
+
+def _google_auth_error_message(code: str) -> str:
+    return {
+        "missing_code": "تعذر إكمال تسجيل الدخول عبر Google. حاول مرة أخرى.",
+        "token_exchange_failed": "تعذر التحقق من جلسة Google حالياً. حاول مرة أخرى بعد قليل.",
+        "invalid_client": "إعدادات Google OAuth غير صحيحة حالياً. تحقق من Client ID و Client Secret في الإعدادات.",
+        "invalid_grant": "رمز تسجيل الدخول من Google انتهت صلاحيته أو تم استخدامه بالفعل. ابدأ المحاولة من جديد.",
+        "redirect_uri_mismatch": "عنوان العودة من Google لا يطابق الإعداد الحالي. تحقق من GOOGLE_REDIRECT_URI في Google Cloud.",
+        "userinfo_failed": "تعذر جلب بيانات حساب Google. حاول مرة أخرى.",
+        "no_email": "حساب Google لا يحتوي على بريد إلكتروني متاح للتسجيل.",
+        "invalid_state": "انتهت جلسة تسجيل الدخول عبر Google. ابدأ المحاولة من جديد.",
+        "inactive_user": "هذا الحساب غير نشط حالياً. تواصل مع المسؤول.",
+        "oauth_not_configured": "تسجيل الدخول عبر Google غير مهيأ حالياً.",
+    }.get(code, "تعذر تسجيل الدخول عبر Google حالياً. حاول مرة أخرى.")
+
+
+def _redirect_to_login_with_auth_error(code: str):
+    return redirect(f"{reverse('frontend:login')}?{urlencode({'auth_error': code})}")
 
 
 def _ctx(request, active="dashboard", **extra):
@@ -25,7 +81,12 @@ def _ctx(request, active="dashboard", **extra):
             pending_count = Invoice.objects.filter(organization=organization, status="flagged").count()
     except Exception:
         pass
-    return {"pending_count": pending_count, "active": active, **extra}
+    return {
+        "pending_count": pending_count,
+        "active": active,
+        "bootstrap_tokens": _consume_post_login_tokens(request),
+        **extra,
+    }
 
 
 def _report_types():
@@ -70,22 +131,54 @@ def _report_types():
 
 
 def _public_ctx(request, **extra):
+    auth_error = (request.GET.get("auth_error") or "").strip()
     return {
         "google_client_id": getattr(django_settings, "GOOGLE_CLIENT_ID", ""),
+        "google_oauth_enabled": is_google_oauth_configured(),
+        "auth_error": auth_error,
+        "auth_error_message": _google_auth_error_message(auth_error) if auth_error else "",
         **extra,
     }
 
 
-def _issue_tokens(user):
-    refresh = RefreshToken.for_user(user)
+def _post_auth_redirect(user):
+    return "/verify-email/" if not getattr(user, "is_email_verified", False) else "/dashboard/"
+
+
+def _otp_error_status(error: EmailOTPError) -> int:
+    if error.code in {"resend_cooldown", "resend_limit", "attempts_exceeded"}:
+        return 429
+    if error.code == "send_failed":
+        return 503
+    if error.code == "already_verified":
+        return 409
+    return 400
+
+
+def _otp_pending_payload(user, challenge, *, sent: bool):
+    state = get_challenge_state(challenge)
     return {
-        "access": str(refresh.access_token),
-        "refresh": str(refresh),
+        "success": True,
+        "requires_verification": True,
+        "redirect": "/verify-email/",
+        "masked_email": mask_email_address(user.email),
+        "message": (
+            "تم إرسال رمز تحقق إلى بريدك الإلكتروني."
+            if sent
+            else "يوجد رمز تحقق نشط بالفعل. يرجى التحقق من بريدك الإلكتروني."
+        ),
+        "otp_expires_in_seconds": state["expires_in"],
+        "resend_cooldown_seconds": state["resend_available_in"],
+        "attempts_remaining": state["attempts_remaining"],
     }
 
 
-def _post_auth_redirect(user):
-    return "/google-pending/" if not getattr(user, "organization_id", None) else "/dashboard/"
+def _verified_login_payload(request, user):
+    return {
+        "success": True,
+        "redirect": "/dashboard/",
+        "tokens": complete_verified_login(request, user),
+    }
 
 
 def _first_error(errors):
@@ -365,17 +458,35 @@ def landing(request):
 @ensure_csrf_cookie
 def login_view(request):
     if request.user.is_authenticated:
-        if not getattr(request.user, "organization_id", None):
-            return redirect("frontend:google_pending")
+        if not getattr(request.user, "is_email_verified", False):
+            return redirect("frontend:otp_verify")
         return redirect("frontend:dashboard")
 
+    if request.method == "GET" and has_pending_verification(request):
+        return redirect("frontend:otp_verify")
+
     if request.method == "POST":
-        email = request.POST.get("email", "").strip()
-        password = request.POST.get("password", "")
-        user = authenticate(request, email=email, password=password)
-        if user:
-            login(request, user)
-            return JsonResponse({"success": True, "redirect": _post_auth_redirect(user), "tokens": _issue_tokens(user)})
+        serializer = LoginSerializer(
+            data={
+                "email": request.POST.get("email", "").strip(),
+                "password": request.POST.get("password", ""),
+            }
+        )
+        if not serializer.is_valid():
+            return JsonResponse({"success": False, "error": _first_error(serializer.errors)}, status=400)
+
+        user = serializer.validated_data["user"]
+        if not user.is_email_verified:
+            try:
+                challenge, sent = issue_email_otp(user, request)
+            except EmailOTPError as exc:
+                return JsonResponse(
+                    {"success": False, "error": exc.message, "redirect": "/verify-email/"},
+                    status=_otp_error_status(exc),
+                )
+            return JsonResponse(_otp_pending_payload(user, challenge, sent=sent))
+
+        return JsonResponse(_verified_login_payload(request, user))
         return JsonResponse({"success": False, "error": "البريد الإلكتروني أو كلمة المرور غير صحيحة"})
 
     return render(request, "auth/portal.html", _public_ctx(request, auth_mode="login"))
@@ -384,9 +495,12 @@ def login_view(request):
 @ensure_csrf_cookie
 def register_view(request):
     if request.user.is_authenticated:
-        if not getattr(request.user, "organization_id", None):
-            return redirect("frontend:google_pending")
+        if not getattr(request.user, "is_email_verified", False):
+            return redirect("frontend:otp_verify")
         return redirect("frontend:dashboard")
+
+    if request.method == "GET" and has_pending_verification(request):
+        return redirect("frontend:otp_verify")
 
     if request.method == "POST":
         payload = {
@@ -405,26 +519,169 @@ def register_view(request):
             return JsonResponse({"success": False, "error": _first_error(serializer.errors)}, status=400)
 
         user = serializer.save()
-        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-        return JsonResponse({
-            "success": True,
-            "redirect": _post_auth_redirect(user),
-            "tokens": _issue_tokens(user),
-        })
+        try:
+            challenge, sent = issue_email_otp(user, request)
+        except EmailOTPError as exc:
+            return JsonResponse(
+                {"success": False, "error": exc.message, "redirect": "/verify-email/"},
+                status=_otp_error_status(exc),
+            )
+
+        return JsonResponse(_otp_pending_payload(user, challenge, sent=sent))
 
     return render(request, "auth/portal.html", _public_ctx(request, auth_mode="register"))
 
 
 def logout_view(request):
+    clear_pending_verification(request)
     logout(request)
     return redirect("frontend:home")
 
 
-@login_required(login_url="/login/")
+def google_oauth_login(request):
+    if request.user.is_authenticated:
+        return redirect(_post_auth_redirect(request.user))
+
+    try:
+        state = secrets.token_urlsafe(32)
+        request.session[GOOGLE_OAUTH_STATE_SESSION_KEY] = state
+        request.session.modified = True
+        return redirect(build_google_oauth_authorization_url(state))
+    except GoogleOAuthError as exc:
+        return _redirect_to_login_with_auth_error(exc.code)
+
+
+def google_oauth_callback(request):
+    if request.user.is_authenticated:
+        return redirect(_post_auth_redirect(request.user))
+
+    code = (request.GET.get("code") or "").strip()
+    state = (request.GET.get("state") or "").strip()
+    expected_state = request.session.pop(GOOGLE_OAUTH_STATE_SESSION_KEY, "")
+
+    if not code:
+        return _redirect_to_login_with_auth_error("missing_code")
+    if not state or not expected_state or state != expected_state:
+        return _redirect_to_login_with_auth_error("invalid_state")
+
+    try:
+        token_payload = exchange_google_code_for_tokens(code)
+        profile = fetch_google_user_profile(token_payload["access_token"])
+        user, _ = get_or_create_local_user_from_google_profile(profile)
+    except GoogleOAuthError as exc:
+        return _redirect_to_login_with_auth_error(exc.code)
+
+    if not user.is_active:
+        return _redirect_to_login_with_auth_error("inactive_user")
+
+    request.session[POST_LOGIN_TOKENS_SESSION_KEY] = complete_verified_login(request, user)
+    request.session.modified = True
+    return redirect("frontend:dashboard")
+
+
 def google_pending(request):
-    if request.user.organization:
+    if request.user.is_authenticated and request.user.is_email_verified:
         return redirect("frontend:dashboard")
-    return render(request, "auth/google_pending.html", {"user": request.user})
+    if has_pending_verification(request) or (request.user.is_authenticated and not request.user.is_email_verified):
+        return redirect("frontend:otp_verify")
+    return redirect("frontend:login")
+
+
+@ensure_csrf_cookie
+def otp_verify(request):
+    pending_user = get_pending_verification_user(request)
+    if pending_user is None:
+        return redirect("frontend:login")
+
+    if pending_user.is_email_verified:
+        clear_pending_verification(request)
+        return redirect("frontend:dashboard")
+
+    challenge = get_latest_pending_challenge(pending_user)
+    initial_status = 200
+    initial_error_message = ""
+    if challenge is None:
+        try:
+            challenge, _ = issue_email_otp(pending_user, request)
+        except EmailOTPError as exc:
+            initial_status = _otp_error_status(exc)
+            initial_error_message = exc.message
+            challenge = None
+
+    state = get_challenge_state(challenge)
+    form = EmailOTPVerifyForm(request.POST or None)
+    context = _public_ctx(
+        request,
+        auth_mode="otp",
+        otp_form=form,
+        otp_user=pending_user,
+        masked_email=mask_email_address(pending_user.email),
+        resend_cooldown_seconds=state["resend_available_in"],
+        otp_expires_in_seconds=state["expires_in"],
+        otp_attempts_remaining=state["attempts_remaining"],
+        otp_resend_remaining=state["resend_remaining"],
+        error_message=initial_error_message,
+    )
+
+    if request.method == "POST":
+        if not form.is_valid():
+            error_message = _first_error(form.errors)
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({"success": False, "error": error_message}, status=400)
+            context["error_message"] = error_message
+            return render(request, "auth/otp_verify.html", context, status=400)
+
+        try:
+            verify_email_otp(pending_user, form.cleaned_data["otp_code"])
+        except EmailOTPError as exc:
+            if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                return JsonResponse({"success": False, "error": exc.message}, status=_otp_error_status(exc))
+            context["error_message"] = exc.message
+            return render(request, "auth/otp_verify.html", context, status=_otp_error_status(exc))
+
+        payload = _verified_login_payload(request, pending_user)
+        payload["message"] = "تم التحقق من بريدك الإلكتروني بنجاح."
+        return JsonResponse(payload)
+
+    return render(request, "auth/otp_verify.html", context, status=initial_status)
+
+
+@ensure_csrf_cookie
+def otp_resend(request):
+    if request.method != "POST":
+        return redirect("frontend:otp_verify")
+
+    pending_user = get_pending_verification_user(request)
+    if pending_user is None:
+        return JsonResponse({"success": False, "error": "انتهت جلسة التحقق. سجّل الدخول مجدداً."}, status=400)
+
+    form = EmailOTPResendForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({"success": False, "error": "تعذر إعادة إرسال الرمز حالياً."}, status=400)
+
+    try:
+        challenge = resend_email_otp(pending_user, request)
+    except EmailOTPError as exc:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": exc.message,
+                "retry_after": exc.wait_seconds,
+            },
+            status=_otp_error_status(exc),
+        )
+
+    state = get_challenge_state(challenge)
+    return JsonResponse(
+        {
+            "success": True,
+            "message": "تم إرسال رمز جديد إلى بريدك الإلكتروني.",
+            "masked_email": mask_email_address(pending_user.email),
+            "resend_cooldown_seconds": state["resend_available_in"],
+            "otp_expires_in_seconds": state["expires_in"],
+            "attempts_remaining": state["attempts_remaining"],
+        }
+    )
 
 
 @login_required(login_url="/login/")
@@ -458,7 +715,7 @@ def invoice_detail(request, pk):
     invoice_display = _build_invoice_display(invoice)
     return render(
         request,
-        "invoices/detail.html",
+        "invoices/detail_premium.html",
         _ctx(request, "invoices", invoice=invoice, invoice_display=invoice_display, audit_trail=audit_trail),
     )
 

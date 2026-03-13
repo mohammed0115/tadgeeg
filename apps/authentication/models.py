@@ -1,9 +1,12 @@
 """Authentication App - Custom User Model"""
 
+import uuid
+from datetime import timedelta
+
+from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
-import uuid
 
 
 class UserManager(BaseUserManager):
@@ -11,6 +14,7 @@ class UserManager(BaseUserManager):
         if not email:
             raise ValueError("Email is required")
         email = self.normalize_email(email)
+        extra_fields.setdefault("email_verified_at", timezone.now())
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
@@ -48,6 +52,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     mfa_enabled = models.BooleanField(default=False)
     mfa_secret = models.CharField(max_length=64, blank=True)
+    email_verified_at = models.DateTimeField(null=True, blank=True)
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
     failed_login_attempts = models.PositiveIntegerField(default=0)
     locked_until = models.DateTimeField(null=True, blank=True)
@@ -76,6 +81,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         return False
 
     @property
+    def is_email_verified(self):
+        return self.email_verified_at is not None
+
+    @property
     def can_manage_users(self):
         return self.role == self.Role.ADMIN
 
@@ -95,6 +104,45 @@ class User(AbstractBaseUser, PermissionsMixin):
             self.Role.CHIEF_AUDIT_OFFICER,
             self.Role.SENIOR_AUDITOR,
         ]
+
+
+class EmailOTPVerification(models.Model):
+    """Single-use email OTP challenges for onboarding verification."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="email_otp_verifications",
+    )
+    otp_code_hash = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+    used_at = models.DateTimeField(null=True, blank=True)
+    attempts_count = models.PositiveSmallIntegerField(default=0)
+    resend_count = models.PositiveSmallIntegerField(default=0)
+    last_sent_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "auth_email_otp_verifications"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "created_at"]),
+            models.Index(fields=["user", "is_used"]),
+            models.Index(fields=["expires_at"]),
+        ]
+
+    def __str__(self):
+        return f"Email OTP for {self.user.email}"
+
+    @property
+    def is_expired(self):
+        return timezone.now() >= self.expires_at
+
+    @property
+    def resend_available_at(self):
+        cooldown_seconds = int(getattr(settings, "EMAIL_OTP_RESEND_COOLDOWN_SECONDS", 60))
+        return self.last_sent_at + timedelta(seconds=cooldown_seconds)
 
 
 class Organization(models.Model):

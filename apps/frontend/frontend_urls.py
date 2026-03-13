@@ -6,6 +6,10 @@ app_name = 'frontend'
 
 urlpatterns = [
     path('login/',   views.login_view,  name='login'),
+    path('auth/google/login/', views.google_oauth_login, name='google_oauth_login'),
+    path('auth/google/callback/', views.google_oauth_callback, name='google_oauth_callback'),
+    path('verify-email/', views.otp_verify, name='otp_verify'),
+    path('verify-email/resend/', views.otp_resend, name='otp_resend'),
     path('logout/',  views.logout_view, name='logout'),
     path('',          views.dashboard,  name='home'),
     path('dashboard/', views.dashboard, name='dashboard'),

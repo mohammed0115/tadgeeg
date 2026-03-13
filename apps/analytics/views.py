@@ -317,6 +317,26 @@ class BenfordAnalysisView(APIView):
     """Run Benford's Law analysis on transaction amounts."""
     permission_classes = [IsAuthenticated]
 
+    def _build_response(self, params):
+        qs = Transaction.objects.filter(organization=self.request.user.organization)
+        if v := params.get("date_from"):
+            qs = qs.filter(transaction_date__gte=v)
+        if v := params.get("date_to"):
+            qs = qs.filter(transaction_date__lte=v)
+        if v := params.get("transaction_type"):
+            qs = qs.filter(transaction_type=v)
+
+        amounts = list(qs.values_list("amount", flat=True)[:10000])
+        amounts_float = [float(a) for a in amounts if a > 0]
+
+        result = benford_analysis(amounts_float)
+        distribution = result.get("distribution") or {}
+        result.setdefault("interpretation", result.get("error", "No data available for Benford analysis."))
+        result["actual_distribution"] = [distribution.get(str(d), {}).get("observed", 0) for d in range(1, 10)]
+        result["expected_distribution"] = [distribution.get(str(d), {}).get("expected", 0) for d in range(1, 10)]
+        result["suspicious"] = "passes_benford" in result and not result["passes_benford"]
+        return Response(result)
+
     @extend_schema(
         tags=["Analytics"],
         summary="Perform Benford's Law analysis on transaction amounts",
@@ -327,18 +347,22 @@ class BenfordAnalysisView(APIView):
         ],
     )
     def get(self, request):
-        qs = Transaction.objects.filter(organization=request.user.organization)
-        if v := request.query_params.get("date_from"):
-            qs = qs.filter(transaction_date__gte=v)
-        if v := request.query_params.get("date_to"):
-            qs = qs.filter(transaction_date__lte=v)
-        if v := request.query_params.get("transaction_type"):
-            qs = qs.filter(transaction_type=v)
+        return self._build_response(request.query_params)
 
-        amounts = list(qs.values_list("amount", flat=True)[:10000])
-        amounts_float = [float(a) for a in amounts if a > 0]
-
-        return Response(benford_analysis(amounts_float))
+    @extend_schema(
+        tags=["Analytics"],
+        summary="Perform Benford's Law analysis on transaction amounts",
+        request={
+            "type": "object",
+            "properties": {
+                "date_from": {"type": "string", "format": "date"},
+                "date_to": {"type": "string", "format": "date"},
+                "transaction_type": {"type": "string"},
+            },
+        },
+    )
+    def post(self, request):
+        return self._build_response(request.data)
 
 
 class CashFlowForecastView(APIView):

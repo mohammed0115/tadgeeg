@@ -204,11 +204,7 @@
 
         if (res.ok) {
           localStorage.setItem('fin_token', data.access);
-          if (data.needs_org) {
-            window.location.href = '/google-pending/';
-          } else {
-            window.location.href = '/';
-          }
+          window.location.href = data.redirect || '/verify-email/';
           return;
         }
 

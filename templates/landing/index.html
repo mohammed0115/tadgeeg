@@ -57,7 +57,7 @@
                     {% if request.user.organization_id %}
                         <a href="{% url 'frontend:dashboard' %}" class="rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100">لوحة التحكم</a>
                     {% else %}
-                        <a href="{% url 'frontend:google_pending' %}" class="rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100">حالة الحساب</a>
+                        <a href="{% url 'frontend:otp_verify' %}" class="rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100">حالة الحساب</a>
                     {% endif %}
                     <a href="{% url 'frontend:logout' %}" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800">تسجيل الخروج</a>
                 {% else %}
@@ -127,7 +127,7 @@
                                 {% if request.user.organization_id %}
                                     <a href="{% url 'frontend:dashboard' %}" class="rounded-2xl bg-white px-6 py-3.5 text-center font-bold text-slate-900 shadow-lg transition-colors hover:bg-slate-100">الانتقال إلى لوحة التحكم</a>
                                 {% else %}
-                                    <a href="{% url 'frontend:google_pending' %}" class="rounded-2xl bg-white px-6 py-3.5 text-center font-bold text-slate-900 shadow-lg transition-colors hover:bg-slate-100">استكمال تفعيل الحساب</a>
+                                    <a href="{% url 'frontend:otp_verify' %}" class="rounded-2xl bg-white px-6 py-3.5 text-center font-bold text-slate-900 shadow-lg transition-colors hover:bg-slate-100">استكمال تفعيل الحساب</a>
                                 {% endif %}
                             {% else %}
                                 <a href="{% url 'frontend:register' %}" class="rounded-2xl bg-white px-6 py-3.5 text-center font-bold text-slate-900 shadow-lg transition-colors hover:bg-slate-100">ابدأ تجربتك المجانية</a>
@@ -219,7 +219,7 @@
                             {% if request.user.organization_id %}
                                 <a href="{% url 'frontend:dashboard' %}" class="rounded-2xl bg-white px-5 py-3 text-center font-bold text-slate-900 transition-colors hover:bg-slate-100">لوحة التحكم</a>
                             {% else %}
-                                <a href="{% url 'frontend:google_pending' %}" class="rounded-2xl bg-white px-5 py-3 text-center font-bold text-slate-900 transition-colors hover:bg-slate-100">تفعيل الحساب</a>
+                                <a href="{% url 'frontend:otp_verify' %}" class="rounded-2xl bg-white px-5 py-3 text-center font-bold text-slate-900 transition-colors hover:bg-slate-100">تفعيل الحساب</a>
                             {% endif %}
                             <a href="{% url 'frontend:logout' %}" class="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-center font-bold transition-colors hover:bg-white/15">تسجيل الخروج</a>
                         {% else %}

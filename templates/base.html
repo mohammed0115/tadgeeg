@@ -7,6 +7,9 @@
 
 <!-- Tailwind -->
 <script src="https://cdn.tailwindcss.com"></script>
+{% if bootstrap_tokens %}
+{{ bootstrap_tokens|json_script:"bootstrap-auth-tokens" }}
+{% endif %}
 <script>
 tailwind.config = {
   darkMode: 'class',
@@ -392,6 +395,19 @@ function toastStore() {
 
 // ── API helper ──
 const CSRF = () => (document.cookie.match(/csrftoken=([^;]+)/)||[])[1] || '';
+{% if bootstrap_tokens %}
+(() => {
+  const node = document.getElementById('bootstrap-auth-tokens');
+  if (!node) return;
+  try {
+    const tokens = JSON.parse(node.textContent || '{}');
+    if (tokens.access) localStorage.setItem('fin_token', tokens.access);
+    if (tokens.refresh) localStorage.setItem('fin_refresh_token', tokens.refresh);
+  } catch (error) {
+    console.warn('Failed to bootstrap auth tokens', error);
+  }
+})();
+{% endif %}
 const TOKEN = () => localStorage.getItem('fin_token') || '';
 
 async function apiFetch(path, opts = {}) {

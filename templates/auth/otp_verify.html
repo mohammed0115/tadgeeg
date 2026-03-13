@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>التحقق من البريد الإلكتروني — Tadgeeg</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Cairo', sans-serif; }
+    [x-cloak] { display: none !important; }
+    body {
+      background:
+        radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 24%),
+        radial-gradient(circle at bottom left, rgba(124, 58, 237, 0.12), transparent 30%),
+        linear-gradient(180deg, #eef4ff 0%, #f8fafc 100%);
+    }
+    .auth-grid {
+      background-image:
+        linear-gradient(rgba(148, 163, 184, 0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(148, 163, 184, 0.12) 1px, transparent 1px);
+      background-size: 42px 42px;
+    }
+    .otp-box:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+  </style>
+</head>
+<body class="min-h-screen text-slate-900">
+  <div class="auth-grid fixed inset-0 pointer-events-none"></div>
+
+  <main class="relative flex min-h-screen items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
+    <div class="w-full max-w-xl" x-data="otpVerifyPage({
+      resendCooldown: {{ resend_cooldown_seconds|default:0 }},
+      attemptsRemaining: {{ otp_attempts_remaining|default:5 }},
+      resendRemaining: {{ otp_resend_remaining|default:3 }},
+      initialError: '{{ error_message|default:""|escapejs }}'
+    })" x-init="init()">
+      <div class="mb-6 text-center">
+        <a href="{% url 'frontend:home' %}" class="inline-flex items-center gap-3">
+          <span class="flex h-16 w-16 items-center justify-center rounded-[22px] bg-gradient-to-br from-blue-600 via-cyan-500 to-violet-500 text-2xl font-extrabold text-white shadow-[0_22px_55px_rgba(37,99,235,0.28)]">T</span>
+        </a>
+        <h1 class="mt-5 text-3xl font-extrabold tracking-tight text-slate-900">تحقق من بريدك الإلكتروني</h1>
+        <p class="mt-2 text-sm leading-7 text-slate-500">
+          أدخل رمز التحقق المكوّن من 6 أرقام المرتبط بهذا البريد:
+          <span class="font-bold text-slate-700">{{ masked_email }}</span>
+        </p>
+      </div>
+
+      <section class="rounded-[30px] border border-white/70 bg-white/90 p-6 shadow-[0_32px_80px_rgba(15,23,42,0.12)] backdrop-blur-xl sm:p-8">
+        <div class="mb-6 rounded-2xl border border-blue-100 bg-blue-50/70 p-4 text-sm leading-7 text-blue-900">
+          <div class="font-bold">خطوة واحدة متبقية لتأمين حسابك</div>
+          <div class="mt-1 text-blue-800/80">أدخل الرمز خلال 10 دقائق. الرمز صالح لمرة واحدة فقط.</div>
+        </div>
+
+        <div x-cloak x-show="message" class="mb-5 rounded-2xl px-4 py-3 text-sm font-semibold"
+             :class="messageType === 'error' ? 'border border-red-200 bg-red-50 text-red-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'">
+          <span x-text="message"></span>
+        </div>
+
+        <form id="otp-form" method="post" @submit.prevent="submitOtp" class="space-y-6">
+          {% csrf_token %}
+          <input type="hidden" name="otp_code" id="otp_code">
+
+          <div>
+            <label class="mb-3 block text-sm font-bold text-slate-700">رمز التحقق</label>
+            <div class="grid grid-cols-6 gap-2 sm:gap-3" @paste.prevent="handlePaste">
+              <template x-for="(digit, index) in digits" :key="index">
+                <input
+                  type="text"
+                  inputmode="numeric"
+                  maxlength="1"
+                  class="otp-box h-14 rounded-2xl border border-slate-200 bg-slate-50 text-center text-2xl font-extrabold tracking-wider text-slate-900 transition"
+                  x-model="digits[index]"
+                  @input="handleInput(index, $event)"
+                  @keydown="handleKeydown(index, $event)"
+                  :data-index="index"
+                >
+              </template>
+            </div>
+            <div class="mt-3 flex items-center justify-between text-xs text-slate-500">
+              <span>المحاولات المتبقية: <span class="font-bold text-slate-700" x-text="attemptsRemaining"></span></span>
+              <span>إعادة الإرسال المتبقية: <span class="font-bold text-slate-700" x-text="resendRemaining"></span></span>
+            </div>
+          </div>
+
+          <button type="submit"
+                  class="flex h-12 w-full items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-sm font-bold text-white shadow-lg shadow-blue-900/20 transition hover:from-blue-700 hover:to-cyan-600 disabled:cursor-not-allowed disabled:opacity-70"
+                  :disabled="loading">
+            <span x-show="!loading">تأكيد الرمز والدخول</span>
+            <span x-show="loading">جارٍ التحقق...</span>
+          </button>
+        </form>
+
+        <div class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div class="text-sm font-bold text-slate-800">لم يصلك الرمز؟</div>
+              <div class="mt-1 text-xs text-slate-500">
+                <span x-show="countdown > 0">يمكنك إعادة الإرسال بعد <span class="font-bold text-slate-700" x-text="countdown"></span> ثانية.</span>
+                <span x-show="countdown === 0">يمكنك طلب رمز جديد الآن.</span>
+              </div>
+            </div>
+            <button type="button"
+                    @click="resendOtp"
+                    class="h-11 rounded-2xl border border-slate-200 px-5 text-sm font-bold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    :disabled="countdown > 0 || resendLoading || resendRemaining === 0">
+              <span x-show="!resendLoading">إعادة إرسال الرمز</span>
+              <span x-show="resendLoading">جارٍ الإرسال...</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-5 text-center text-xs leading-6 text-slate-500">
+          إذا لم تطلب إنشاء هذا الحساب أو محاولة تسجيل الدخول، يمكنك تجاهل هذه الخطوة وسيبقى حسابك غير مفعّل.
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    function getCookie(name) {
+      const cookieValue = `; ${document.cookie}`;
+      const parts = cookieValue.split(`; ${name}=`);
+      if (parts.length === 2) {
+        return parts.pop().split(';').shift();
+      }
+      return '';
+    }
+
+    async function parseJson(response) {
+      const text = await response.text();
+      if (!text) return {};
+      try {
+        return JSON.parse(text);
+      } catch (error) {
+        return { error: text };
+      }
+    }
+
+    function storeTokens(payload) {
+      const accessToken = payload?.tokens?.access || payload?.access;
+      const refreshToken = payload?.tokens?.refresh || payload?.refresh;
+      if (accessToken) localStorage.setItem('fin_token', accessToken);
+      if (refreshToken) localStorage.setItem('fin_refresh_token', refreshToken);
+    }
+
+    function otpVerifyPage(config) {
+      return {
+        digits: ['', '', '', '', '', ''],
+        loading: false,
+        resendLoading: false,
+        message: '',
+        messageType: 'success',
+        countdown: Number(config.resendCooldown || 0),
+        attemptsRemaining: Number(config.attemptsRemaining || 5),
+        resendRemaining: Number(config.resendRemaining || 3),
+        timerId: null,
+
+        init() {
+          if (config.initialError) {
+            this.showMessage(config.initialError, 'error');
+          }
+          this.startTimer();
+          this.focusInput(0);
+        },
+
+        startTimer() {
+          if (this.timerId) clearInterval(this.timerId);
+          if (this.countdown <= 0) return;
+          this.timerId = setInterval(() => {
+            if (this.countdown > 0) {
+              this.countdown -= 1;
+            }
+            if (this.countdown <= 0) {
+              clearInterval(this.timerId);
+            }
+          }, 1000);
+        },
+
+        focusInput(index) {
+          const input = document.querySelector(`[data-index="${index}"]`);
+          if (input) input.focus();
+        },
+
+        syncCode() {
+          document.getElementById('otp_code').value = this.digits.join('');
+        },
+
+        handleInput(index, event) {
+          const value = (event.target.value || '').replace(/\D/g, '').slice(-1);
+          this.digits[index] = value;
+          event.target.value = value;
+          this.syncCode();
+          if (value && index < this.digits.length - 1) {
+            this.focusInput(index + 1);
+          }
+        },
+
+        handleKeydown(index, event) {
+          if (event.key === 'Backspace' && !this.digits[index] && index > 0) {
+            this.focusInput(index - 1);
+          }
+        },
+
+        handlePaste(event) {
+          const pasted = (event.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+          if (!pasted) return;
+          this.digits = Array.from({ length: 6 }, (_, index) => pasted[index] || '');
+          this.syncCode();
+          this.focusInput(Math.min(pasted.length, 5));
+        },
+
+        showMessage(message, type = 'success') {
+          this.message = message;
+          this.messageType = type;
+        },
+
+        clearDigits() {
+          this.digits = ['', '', '', '', '', ''];
+          this.syncCode();
+          this.focusInput(0);
+        },
+
+        async submitOtp() {
+          this.syncCode();
+          if (document.getElementById('otp_code').value.length !== 6) {
+            this.showMessage('يرجى إدخال رمز التحقق كاملاً.', 'error');
+            return;
+          }
+
+          this.loading = true;
+          try {
+            const response = await fetch('{% url "frontend:otp_verify" %}', {
+              method: 'POST',
+              headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest',
+              },
+              body: new FormData(document.getElementById('otp-form')),
+            });
+            const data = await parseJson(response);
+
+            if (!response.ok || !data.success) {
+              if (typeof data.attempts_remaining !== 'undefined') {
+                this.attemptsRemaining = data.attempts_remaining;
+              }
+              this.showMessage(data.error || 'تعذر التحقق من الرمز حالياً.', 'error');
+              return;
+            }
+
+            storeTokens(data);
+            this.showMessage(data.message || 'تم التحقق بنجاح.', 'success');
+            window.location.href = data.redirect || '{% url "frontend:dashboard" %}';
+          } catch (error) {
+            this.showMessage('حدث خطأ أثناء الاتصال بالخادم.', 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async resendOtp() {
+          if (this.countdown > 0 || this.resendLoading || this.resendRemaining === 0) return;
+
+          this.resendLoading = true;
+          try {
+            const formData = new FormData();
+            const response = await fetch('{% url "frontend:otp_resend" %}', {
+              method: 'POST',
+              headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'X-Requested-With': 'XMLHttpRequest',
+              },
+              body: formData,
+            });
+            const data = await parseJson(response);
+
+            if (!response.ok || !data.success) {
+              if (data.retry_after) {
+                this.countdown = Number(data.retry_after);
+                this.startTimer();
+              }
+              this.showMessage(data.error || 'تعذر إعادة إرسال الرمز.', 'error');
+              return;
+            }
+
+            this.clearDigits();
+            this.countdown = Number(data.resend_cooldown_seconds || 60);
+            this.attemptsRemaining = Number(data.attempts_remaining || this.attemptsRemaining);
+            this.resendRemaining = Math.max(0, this.resendRemaining - 1);
+            this.startTimer();
+            this.showMessage(data.message || 'تم إرسال رمز جديد.', 'success');
+          } catch (error) {
+            this.showMessage('حدث خطأ أثناء إعادة الإرسال.', 'error');
+          } finally {
+            this.resendLoading = false;
+          }
+        },
+      };
+    }
+  </script>
+</body>
+</html>

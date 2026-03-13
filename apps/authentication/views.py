@@ -1,10 +1,9 @@
 """Authentication Views"""
 
 from django.conf import settings
-from django.contrib.auth import login as django_login
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.utils import timezone
+from django.urls import reverse
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import generics, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -24,6 +23,57 @@ from .serializers import (
     RegisterSerializer,
     UserSerializer,
 )
+from .services.email_otp import (
+    EmailOTPError,
+    clear_pending_verification,
+    complete_verified_login,
+    get_challenge_state,
+    get_pending_verification_user,
+    issue_email_otp,
+    mask_email_address,
+    resend_email_otp,
+    verify_email_otp,
+)
+
+
+def _otp_error_status(error: EmailOTPError) -> int:
+    if error.code in {"resend_cooldown", "resend_limit", "attempts_exceeded"}:
+        return status.HTTP_429_TOO_MANY_REQUESTS
+    if error.code == "send_failed":
+        return status.HTTP_503_SERVICE_UNAVAILABLE
+    if error.code == "already_verified":
+        return status.HTTP_409_CONFLICT
+    return status.HTTP_400_BAD_REQUEST
+
+
+def _otp_pending_payload(user: User, challenge, *, sent: bool) -> dict:
+    state = get_challenge_state(challenge)
+    return {
+        "user": UserSerializer(user).data,
+        "verification_required": True,
+        "redirect": reverse("frontend:otp_verify"),
+        "masked_email": mask_email_address(user.email),
+        "message": (
+            "تم إرسال رمز تحقق مكوّن من 6 أرقام إلى بريدك الإلكتروني."
+            if sent
+            else "تم إرسال رمز تحقق حديث بالفعل. تحقّق من بريدك الإلكتروني ثم أدخل الرمز."
+        ),
+        "otp_expires_at": state["expires_at"].isoformat() if state["expires_at"] else None,
+        "otp_expires_in_seconds": state["expires_in"],
+        "resend_cooldown_seconds": state["resend_available_in"],
+        "attempts_remaining": state["attempts_remaining"],
+        "needs_org": user.organization is None,
+    }
+
+
+def _verified_login_payload(request, user: User) -> dict:
+    tokens = complete_verified_login(request, user)
+    return {
+        **tokens,
+        "user": UserSerializer(user).data,
+        "redirect": reverse("frontend:dashboard"),
+        "needs_org": user.organization is None,
+    }
 
 
 class RegisterView(APIView):
@@ -40,7 +90,23 @@ class RegisterView(APIView):
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         log_action(request, AuditLog.Action.USER_CREATED, "user", str(user.id))
-        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+        try:
+            challenge, sent = issue_email_otp(user, request)
+        except EmailOTPError as exc:
+            payload = UserSerializer(user).data
+            payload.update(
+                {
+                    "verification_required": True,
+                    "redirect": reverse("frontend:otp_verify"),
+                    "error": exc.message,
+                }
+            )
+            return Response(payload, status=_otp_error_status(exc))
+
+        payload = UserSerializer(user).data
+        payload.update(_otp_pending_payload(user, challenge, sent=sent))
+        return Response(payload, status=status.HTTP_201_CREATED)
 
 
 class LoginView(APIView):
@@ -62,16 +128,23 @@ class LoginView(APIView):
         data = serializer.validated_data
 
         user = data["user"]
-        user.last_login_ip = request.META.get("REMOTE_ADDR")
-        user.last_login = timezone.now()
-        user.save(update_fields=["last_login_ip", "last_login"])
+
+        if not user.is_email_verified:
+            try:
+                challenge, sent = issue_email_otp(user, request)
+            except EmailOTPError as exc:
+                return Response(
+                    {
+                        "verification_required": True,
+                        "redirect": reverse("frontend:otp_verify"),
+                        "error": exc.message,
+                    },
+                    status=_otp_error_status(exc),
+                )
+            return Response(_otp_pending_payload(user, challenge, sent=sent), status=status.HTTP_202_ACCEPTED)
 
         log_action(request, AuditLog.Action.LOGIN, "user", str(user.id))
-        return Response({
-            "access": data["access"],
-            "refresh": data["refresh"],
-            "user": UserSerializer(user).data,
-        })
+        return Response(_verified_login_payload(request, user))
 
 
 class LogoutView(APIView):
@@ -393,6 +466,7 @@ class GoogleLoginView(APIView):
                 role=User.Role.JUNIOR_AUDITOR,
                 organization=None,
                 is_active=True,
+                email_verified_at=None,
             )
             user.set_unusable_password()
             user.save()
@@ -403,27 +477,105 @@ class GoogleLoginView(APIView):
         if not user.is_active:
             return Response({"error": "الحساب غير مفعّل"}, status=403)
 
-        user.last_login_ip = request.META.get("REMOTE_ADDR")
-        user.last_login = timezone.now()
-        user.failed_login_attempts = 0
-        user.locked_until = None
-        user.save(update_fields=["last_login_ip", "last_login", "failed_login_attempts", "locked_until"])
-
-        django_login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-        request.user = user
-
-        refresh = RefreshToken.for_user(user)
         if is_new:
             log_action(request, AuditLog.Action.USER_CREATED, "user", str(user.id), {"provider": "google"})
-        log_action(request, AuditLog.Action.LOGIN, "user", str(user.id), {"provider": "google"})
 
-        return Response({
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-            "user": UserSerializer(user).data,
-            "is_new": is_new,
-            "needs_org": user.organization is None,
-        })
+        if not user.is_email_verified:
+            try:
+                challenge, sent = issue_email_otp(user, request)
+            except EmailOTPError as exc:
+                return Response(
+                    {
+                        "error": exc.message,
+                        "verification_required": True,
+                        "redirect": reverse("frontend:otp_verify"),
+                        "is_new": is_new,
+                        "needs_org": user.organization is None,
+                    },
+                    status=_otp_error_status(exc),
+                )
+
+            payload = _otp_pending_payload(user, challenge, sent=sent)
+            payload["is_new"] = is_new
+            return Response(payload, status=status.HTTP_202_ACCEPTED)
+
+        log_action(request, AuditLog.Action.LOGIN, "user", str(user.id), {"provider": "google"})
+        payload = _verified_login_payload(request, user)
+        payload["is_new"] = is_new
+        return Response(payload)
+
+
+class EmailOTPVerifyView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        tags=["Auth"],
+        summary="Verify email OTP and complete login",
+        request={"type": "object", "properties": {"otp_code": {"type": "string"}}},
+    )
+    def post(self, request):
+        user = get_pending_verification_user(request)
+        if user is None:
+            return Response(
+                {"error": "لا توجد عملية تحقق معلّقة. سجّل الدخول أو أنشئ حساباً أولاً."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            verify_email_otp(user, request.data.get("otp_code", ""))
+        except EmailOTPError as exc:
+            return Response(
+                {
+                    "error": exc.message,
+                    "verification_required": True,
+                    "redirect": reverse("frontend:otp_verify"),
+                },
+                status=_otp_error_status(exc),
+            )
+
+        log_action(request, AuditLog.Action.USER_UPDATED, "user", str(user.id), {"email_verified": True})
+        log_action(request, AuditLog.Action.LOGIN, "user", str(user.id), {"provider": "email_otp"})
+        payload = _verified_login_payload(request, user)
+        payload["message"] = "تم التحقق من البريد الإلكتروني بنجاح."
+        return Response(payload)
+
+
+class EmailOTPResendView(APIView):
+    permission_classes = [AllowAny]
+
+    @extend_schema(tags=["Auth"], summary="Resend email OTP")
+    def post(self, request):
+        user = get_pending_verification_user(request)
+        if user is None:
+            clear_pending_verification(request)
+            return Response(
+                {"error": "لا توجد عملية تحقق معلّقة لإعادة إرسال الرمز."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            challenge = resend_email_otp(user, request)
+        except EmailOTPError as exc:
+            return Response(
+                {
+                    "error": exc.message,
+                    "verification_required": True,
+                    "retry_after": exc.wait_seconds,
+                },
+                status=_otp_error_status(exc),
+            )
+
+        state = get_challenge_state(challenge)
+        return Response(
+            {
+                "message": "تم إرسال رمز تحقق جديد إلى بريدك الإلكتروني.",
+                "masked_email": mask_email_address(user.email),
+                "otp_expires_at": state["expires_at"].isoformat() if state["expires_at"] else None,
+                "otp_expires_in_seconds": state["expires_in"],
+                "resend_cooldown_seconds": state["resend_available_in"],
+                "attempts_remaining": state["attempts_remaining"],
+            }
+        )
 
 
 class AuditLogListView(generics.ListAPIView):

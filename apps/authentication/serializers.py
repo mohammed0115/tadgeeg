@@ -1,10 +1,11 @@
 """Authentication Serializers"""
 
+from datetime import timedelta
+
 from django.contrib.auth import authenticate
 from django.utils import timezone
-from datetime import timedelta
 from rest_framework import serializers
-from rest_framework_simplejwt.tokens import RefreshToken
+
 from .models import User, Organization, OrganizationSettings
 
 
@@ -29,15 +30,17 @@ class OrganizationSettingsSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     organization_detail = OrganizationSerializer(source="organization", read_only=True)
     password = serializers.CharField(write_only=True, required=False, min_length=8)
+    is_email_verified = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = User
         fields = [
             "id", "email", "full_name", "role", "department", "phone",
             "organization", "organization_detail", "mfa_enabled",
-            "is_active", "created_at", "last_login", "password",
+            "is_active", "is_email_verified", "email_verified_at",
+            "created_at", "last_login", "password",
         ]
-        read_only_fields = ["id", "created_at", "last_login"]
+        read_only_fields = ["id", "is_email_verified", "email_verified_at", "created_at", "last_login"]
         extra_kwargs = {
             "organization": {"write_only": True, "required": False, "allow_null": True},
         }
@@ -47,6 +50,7 @@ class UserSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         if not validated_data.get("organization") and request and getattr(request.user, "organization_id", None):
             validated_data["organization"] = request.user.organization
+        validated_data.setdefault("email_verified_at", timezone.now())
         user = User(**validated_data)
         if password:
             user.set_password(password)
@@ -95,6 +99,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         user = User.objects.create_user(
             organization=organization,
+            email_verified_at=None,
             **validated_data,
         )
         return user
@@ -135,11 +140,8 @@ class LoginSerializer(serializers.Serializer):
         user_auth.locked_until = None
         user_auth.save(update_fields=["failed_login_attempts", "locked_until"])
 
-        refresh = RefreshToken.for_user(user_auth)
         return {
             "user": user_auth,
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
         }
 
 

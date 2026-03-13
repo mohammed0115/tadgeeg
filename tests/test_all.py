@@ -1,11 +1,16 @@
 import json
+import re
+from io import StringIO
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
-from unittest.mock import patch
+from urllib.parse import parse_qs, urlparse
+from unittest.mock import Mock, patch
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core import mail
+from django.core.management import call_command
 from django.template.loader import get_template
 from django.test import Client, TestCase
 from django.test.utils import override_settings
@@ -13,7 +18,8 @@ from rest_framework.test import APIClient
 
 from apps.analytics.models import NLQueryHistory
 from apps.audit.models import AuditCase
-from apps.authentication.models import Organization, OrganizationSettings
+from apps.authentication.models import EmailOTPVerification, Organization, OrganizationSettings
+from apps.authentication.services.email_otp import PENDING_EMAIL_VERIFICATION_SESSION_KEY
 from apps.compliance.models import ComplianceViolation
 from apps.invoices.models import Invoice, InvoiceBatch, InvoiceValidationResult
 from apps.transactions.models import Transaction
@@ -177,9 +183,12 @@ class AuthenticationFlowTests(BaseFinAITestCase):
         self.organization.refresh_from_db()
         self.assertEqual(self.organization.name, "Updated FinAI Org")
 
-    @override_settings(GOOGLE_CLIENT_ID="test-client-id.apps.googleusercontent.com")
+    @override_settings(
+        GOOGLE_CLIENT_ID="test-client-id.apps.googleusercontent.com",
+        EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
+    )
     @patch("google.oauth2.id_token.verify_oauth2_token")
-    def test_google_login_creates_user_and_session(self, mock_verify):
+    def test_google_login_creates_user_and_starts_email_verification(self, mock_verify):
         mock_verify.return_value = {
             "email": "google.user@finai.sa",
             "name": "Google User",
@@ -191,30 +200,182 @@ class AuthenticationFlowTests(BaseFinAITestCase):
             data=json.dumps({"id_token": "dummy-token"}),
             content_type="application/json",
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 202)
 
         payload = response.json()
         self.assertTrue(payload["is_new"])
         self.assertTrue(payload["needs_org"])
-        self.assertIn("access", payload)
+        self.assertTrue(payload["verification_required"])
+        self.assertEqual(payload["redirect"], "/verify-email/")
+        self.assertNotIn("access", payload)
 
         created_user = User.objects.get(email="google.user@finai.sa")
-        self.assertEqual(self.web_client.session.get("_auth_user_id"), str(created_user.id))
+        self.assertIsNone(created_user.email_verified_at)
+        self.assertEqual(self.web_client.session.get(PENDING_EMAIL_VERIFICATION_SESSION_KEY), str(created_user.id))
+        self.assertIsNone(self.web_client.session.get("_auth_user_id"))
         self.assertTrue(created_user.has_usable_password() is False)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertRegex(mail.outbox[0].body, r"\b\d{6}\b")
 
-    def test_google_pending_renders_for_user_without_organization(self):
+    def test_google_pending_redirects_to_otp_for_unverified_user(self):
         pending_user = User.objects.create_user(
             email="pending@finai.sa",
             password="PendingPass123!",
             full_name="Pending User",
             role=User.Role.JUNIOR_AUDITOR,
             organization=None,
+            email_verified_at=None,
         )
-        self.web_client.force_login(pending_user)
+        session = self.web_client.session
+        session[PENDING_EMAIL_VERIFICATION_SESSION_KEY] = str(pending_user.id)
+        session.save()
 
         response = self.web_client.get("/google-pending/")
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "pending@finai.sa")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/verify-email/")
+
+    @override_settings(
+        GOOGLE_CLIENT_ID="test-client-id.apps.googleusercontent.com",
+        GOOGLE_CLIENT_SECRET="test-client-secret",
+        GOOGLE_REDIRECT_URI="http://testserver/auth/google/callback/",
+    )
+    def test_google_oauth_login_redirects_to_google_and_stores_state(self):
+        response = self.web_client.get("/auth/google/login/")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response["Location"].startswith("https://accounts.google.com/o/oauth2/v2/auth?"))
+        state = self.web_client.session.get("google_oauth_state")
+        self.assertTrue(state)
+        self.assertIn(f"state={state}", response["Location"])
+
+    def test_google_oauth_callback_without_code_redirects_with_error(self):
+        response = self.web_client.get("/auth/google/callback/")
+
+        self.assertEqual(response.status_code, 302)
+        parsed = urlparse(response["Location"])
+        self.assertEqual(parsed.path, "/login/")
+        self.assertEqual(parse_qs(parsed.query).get("auth_error"), ["missing_code"])
+
+    @patch("apps.frontend.page_views.fetch_google_user_profile")
+    @patch("apps.frontend.page_views.exchange_google_code_for_tokens")
+    def test_google_oauth_callback_logs_in_user_and_redirects_dashboard(
+        self,
+        mock_exchange_google_code_for_tokens,
+        mock_fetch_google_user_profile,
+    ):
+        session = self.web_client.session
+        session["google_oauth_state"] = "state-123"
+        session.save()
+
+        mock_exchange_google_code_for_tokens.return_value = {"access_token": "google-access-token"}
+        mock_fetch_google_user_profile.return_value = {
+            "email": "oauth.user@finai.sa",
+            "name": "OAuth User",
+        }
+
+        response = self.web_client.get(
+            "/auth/google/callback/",
+            {"code": "auth-code", "state": "state-123"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response["Location"], "/dashboard/")
+
+        created_user = User.objects.get(email="oauth.user@finai.sa")
+        session = self.web_client.session
+        self.assertEqual(session.get("_auth_user_id"), str(created_user.id))
+        self.assertIn("access", session.get("post_login_tokens", {}))
+        self.assertIsNotNone(created_user.email_verified_at)
+
+    @patch("apps.frontend.page_views.fetch_google_user_profile")
+    @patch("apps.frontend.page_views.exchange_google_code_for_tokens")
+    def test_google_oauth_callback_handles_missing_email(
+        self,
+        mock_exchange_google_code_for_tokens,
+        mock_fetch_google_user_profile,
+    ):
+        session = self.web_client.session
+        session["google_oauth_state"] = "state-456"
+        session.save()
+
+        mock_exchange_google_code_for_tokens.return_value = {"access_token": "google-access-token"}
+        mock_fetch_google_user_profile.return_value = {"name": "OAuth User"}
+
+        response = self.web_client.get(
+            "/auth/google/callback/",
+            {"code": "auth-code", "state": "state-456"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        parsed = urlparse(response["Location"])
+        self.assertEqual(parsed.path, "/login/")
+        self.assertEqual(parse_qs(parsed.query).get("auth_error"), ["no_email"])
+
+    @patch("apps.frontend.page_views.exchange_google_code_for_tokens")
+    def test_google_oauth_callback_handles_token_exchange_failure(self, mock_exchange_google_code_for_tokens):
+        from apps.authentication.services.google_oauth import GoogleOAuthError
+
+        session = self.web_client.session
+        session["google_oauth_state"] = "state-789"
+        session.save()
+
+        mock_exchange_google_code_for_tokens.side_effect = GoogleOAuthError("token_exchange_failed")
+
+        response = self.web_client.get(
+            "/auth/google/callback/",
+            {"code": "auth-code", "state": "state-789"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        parsed = urlparse(response["Location"])
+        self.assertEqual(parsed.path, "/login/")
+        self.assertEqual(parse_qs(parsed.query).get("auth_error"), ["token_exchange_failed"])
+
+    @override_settings(
+        GOOGLE_CLIENT_ID="test-client-id.apps.googleusercontent.com",
+        GOOGLE_CLIENT_SECRET="test-client-secret",
+        GOOGLE_REDIRECT_URI="http://testserver/auth/google/callback/",
+    )
+    @patch("apps.authentication.services.google_oauth.requests.post")
+    def test_google_token_exchange_maps_invalid_client_response(self, mock_post):
+        from apps.authentication.services.google_oauth import GoogleOAuthError, exchange_google_code_for_tokens
+
+        mock_response = Mock()
+        mock_response.status_code = 401
+        mock_response.json.return_value = {"error": "invalid_client", "error_description": "Unauthorized"}
+        mock_response.text = '{"error":"invalid_client","error_description":"Unauthorized"}'
+        mock_post.return_value = mock_response
+
+        with self.assertRaises(GoogleOAuthError) as ctx:
+            exchange_google_code_for_tokens("debug-code")
+
+        self.assertEqual(ctx.exception.code, "invalid_client")
+
+    @patch("apps.frontend.page_views.fetch_google_user_profile")
+    @patch("apps.frontend.page_views.exchange_google_code_for_tokens")
+    def test_google_oauth_callback_handles_userinfo_failure(
+        self,
+        mock_exchange_google_code_for_tokens,
+        mock_fetch_google_user_profile,
+    ):
+        from apps.authentication.services.google_oauth import GoogleOAuthError
+
+        session = self.web_client.session
+        session["google_oauth_state"] = "state-321"
+        session.save()
+
+        mock_exchange_google_code_for_tokens.return_value = {"access_token": "google-access-token"}
+        mock_fetch_google_user_profile.side_effect = GoogleOAuthError("userinfo_failed")
+
+        response = self.web_client.get(
+            "/auth/google/callback/",
+            {"code": "auth-code", "state": "state-321"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        parsed = urlparse(response["Location"])
+        self.assertEqual(parsed.path, "/login/")
+        self.assertEqual(parse_qs(parsed.query).get("auth_error"), ["userinfo_failed"])
 
 
 class TraceabilityWorkflowTests(BaseFinAITestCase):
@@ -320,6 +481,42 @@ class AnalyticsHistoryTests(BaseFinAITestCase):
         self.assertIn("text/csv", export_response["Content-Type"])
         self.assertIn("Show Acme transactions", export_response.content.decode("utf-8"))
 
+    @patch("apps.analytics.views.detect_anomalies_ai")
+    def test_frontend_analytics_endpoints_remain_compatible(self, mock_detect_anomalies_ai):
+        self.create_transaction(amount=Decimal("1234.56"))
+        self.create_transaction(amount=Decimal("2345.67"))
+        self.api_client.force_authenticate(user=self.admin)
+
+        mock_detect_anomalies_ai.return_value = {
+            "anomalies": [
+                {
+                    "transaction_id": "1",
+                    "anomaly_type": "round-number-bias",
+                    "severity": "medium",
+                    "risk_score": 64,
+                    "description": "Suspicious leading-digit pattern",
+                }
+            ]
+        }
+
+        anomaly_response = self.api_client.post(
+            "/api/v1/analytics/detect-anomalies/",
+            {},
+            format="json",
+        )
+        self.assertEqual(anomaly_response.status_code, 200)
+        self.assertEqual(len(anomaly_response.data["anomalies"]), 1)
+
+        benford_response = self.api_client.post(
+            "/api/v1/analytics/benford-analysis/",
+            {},
+            format="json",
+        )
+        self.assertEqual(benford_response.status_code, 200)
+        self.assertEqual(len(benford_response.data["actual_distribution"]), 9)
+        self.assertEqual(len(benford_response.data["expected_distribution"]), 9)
+        self.assertIn("suspicious", benford_response.data)
+
 
 class FrontendRouteTests(BaseFinAITestCase):
     def test_public_landing_and_auth_pages_render_for_anonymous_users(self):
@@ -328,7 +525,27 @@ class FrontendRouteTests(BaseFinAITestCase):
                 response = self.web_client.get(path)
                 self.assertEqual(response.status_code, 200)
 
-    def test_register_page_creates_user_and_redirects_to_pending_review(self):
+    @override_settings(
+        GOOGLE_CLIENT_ID="test-client-id.apps.googleusercontent.com",
+        GOOGLE_CLIENT_SECRET="test-client-secret",
+        GOOGLE_REDIRECT_URI="http://testserver/auth/google/callback/",
+    )
+    def test_login_page_links_google_oauth_when_configured(self):
+        response = self.web_client.get("/login/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "/auth/google/login/")
+        self.assertNotContains(response, "Google Login غير مهيأ في الإعدادات")
+
+    def test_login_page_shows_invalid_client_google_message(self):
+        response = self.web_client.get("/login/", {"auth_error": "invalid_client"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Client ID")
+        self.assertContains(response, "Client Secret")
+
+    @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+    def test_register_page_creates_user_and_redirects_to_otp_verification(self):
         response = self.web_client.post(
             "/register/",
             {
@@ -342,11 +559,15 @@ class FrontendRouteTests(BaseFinAITestCase):
         self.assertEqual(response.status_code, 200)
         payload = json.loads(response.content.decode("utf-8"))
         self.assertTrue(payload["success"])
-        self.assertEqual(payload["redirect"], "/google-pending/")
+        self.assertTrue(payload["requires_verification"])
+        self.assertEqual(payload["redirect"], "/verify-email/")
 
         user = User.objects.get(email="new-auditor@finai.sa")
         self.assertIsNone(user.organization_id)
-        self.assertEqual(str(user.id), self.web_client.session.get("_auth_user_id"))
+        self.assertIsNone(user.email_verified_at)
+        self.assertEqual(self.web_client.session.get(PENDING_EMAIL_VERIFICATION_SESSION_KEY), str(user.id))
+        self.assertIsNone(self.web_client.session.get("_auth_user_id"))
+        self.assertEqual(len(mail.outbox), 1)
 
     def test_new_frontend_pages_render_for_authenticated_users(self):
         invoice = self.create_invoice()
@@ -477,3 +698,121 @@ class InvoiceRiskLogicTests(BaseFinAITestCase):
         self.assertEqual(invoice.risk_level, "high")
         self.assertEqual(invoice.status, Invoice.Status.FLAGGED)
         self.assertGreaterEqual(invoice.risk_score, 70)
+
+
+@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
+class EmailOTPFlowTests(BaseFinAITestCase):
+    def _register_pending_user(self, email="otp-user@finai.sa"):
+        response = self.web_client.post(
+            "/register/",
+            {
+                "full_name": "OTP User",
+                "email": email,
+                "password": "StrongPass123!",
+                "password_confirm": "StrongPass123!",
+            },
+        )
+        self.assertEqual(response.status_code, 200)
+        return User.objects.get(email=email)
+
+    def _extract_last_otp(self):
+        self.assertTrue(mail.outbox)
+        match = re.search(r"\b(\d{6})\b", mail.outbox[-1].body)
+        self.assertIsNotNone(match)
+        return match.group(1)
+
+    def test_verify_email_otp_marks_user_verified_and_logs_in(self):
+        user = self._register_pending_user()
+        otp_code = self._extract_last_otp()
+
+        response = self.web_client.post(
+            "/verify-email/",
+            {"otp_code": otp_code},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["redirect"], "/dashboard/")
+        self.assertIn("tokens", payload)
+
+        user.refresh_from_db()
+        self.assertTrue(user.is_email_verified)
+        self.assertEqual(str(user.id), self.web_client.session.get("_auth_user_id"))
+        self.assertIsNone(self.web_client.session.get(PENDING_EMAIL_VERIFICATION_SESSION_KEY))
+
+        verification = EmailOTPVerification.objects.get(user=user)
+        self.assertTrue(verification.is_used)
+
+    def test_invalid_email_otp_increments_attempt_counter(self):
+        user = self._register_pending_user("wrong-otp@finai.sa")
+
+        response = self.web_client.post(
+            "/verify-email/",
+            {"otp_code": "000000"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        verification = EmailOTPVerification.objects.get(user=user)
+        self.assertEqual(verification.attempts_count, 1)
+        self.assertFalse(user.is_email_verified)
+
+    def test_resend_endpoint_is_throttled_until_cooldown_finishes(self):
+        self._register_pending_user("resend-otp@finai.sa")
+
+        response = self.web_client.post(
+            "/verify-email/resend/",
+            {},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 429)
+        payload = response.json()
+        self.assertIn("error", payload)
+        self.assertGreater(payload.get("retry_after", 0), 0)
+
+    @patch("apps.frontend.page_views.issue_email_otp")
+    def test_verify_page_surfaces_initial_otp_send_failure(self, mock_issue_email_otp):
+        from apps.authentication.services.email_otp import EmailOTPError
+
+        pending_user = User.objects.create_user(
+            email="otp-failure@finai.sa",
+            password="StrongPass123!",
+            full_name="OTP Failure",
+            role=User.Role.JUNIOR_AUDITOR,
+            organization=None,
+            email_verified_at=None,
+        )
+        session = self.web_client.session
+        session[PENDING_EMAIL_VERIFICATION_SESSION_KEY] = str(pending_user.id)
+        session.save()
+
+        mock_issue_email_otp.side_effect = EmailOTPError(
+            "تعذر إرسال رمز التحقق حالياً. يرجى المحاولة مرة أخرى بعد قليل.",
+            code="send_failed",
+        )
+
+        response = self.web_client.get("/verify-email/")
+
+        self.assertEqual(response.status_code, 503)
+        self.assertContains(response, "تعذر إرسال رمز التحقق حالياً", status_code=503)
+
+    def test_send_test_otp_email_command_uses_real_otp_service(self):
+        stdout = StringIO()
+
+        call_command(
+            "send_test_otp_email",
+            "command-otp@finai.sa",
+            "--create-if-missing",
+            stdout=stdout,
+        )
+
+        user = User.objects.get(email="command-otp@finai.sa")
+        challenge = EmailOTPVerification.objects.get(user=user)
+
+        self.assertFalse(user.is_email_verified)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn(str(challenge.id), stdout.getvalue())
+        self.assertIn("OTP email sent successfully.", stdout.getvalue())

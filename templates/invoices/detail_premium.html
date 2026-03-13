@@ -1,0 +1,345 @@
+﻿{% extends "base.html" %}
+{% block title %}تفاصيل الفاتورة{% endblock %}
+{% block page_title %}تفاصيل الفاتورة{% endblock %}
+{% block nav_invoices %}active{% endblock %}
+
+{% block breadcrumb %}
+  <span class="mx-2 text-sm text-slate-400">/</span>
+  <a href="{% url 'frontend:invoices' %}" class="text-sm text-slate-400 hover:text-primary-500">الفواتير</a>
+  <span class="mx-2 text-sm text-slate-400">/</span>
+  <span class="text-sm text-slate-600 dark:text-slate-300">{{ invoice_display.invoice_number }}</span>
+{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'frontend:invoices' %}" class="btn-ghost border border-slate-200/80 px-4 py-2.5 text-xs dark:border-slate-700/60">
+  <i data-lucide="arrow-right" class="h-4 w-4"></i>
+  <span>العودة للفواتير</span>
+</a>
+{% endblock %}
+
+{% block header_primary_action %}{% endblock %}
+
+{% block content %}
+<div x-data="invoiceDetail('{{ invoice.id }}', {{ invoice_display.validation_score|default:0 }}, {{ invoice_display.rules_passed|default:0 }}, {{ invoice_display.rules_failed|default:0 }})"
+     x-init="init()"
+     @keydown.escape.window="closeDecision()"
+     class="-m-6 min-h-full bg-gradient-to-b from-slate-100 via-slate-50 to-slate-100 dark:from-slate-950 dark:via-slate-950 dark:to-slate-900">
+  <div class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+    <section class="relative overflow-hidden rounded-[32px] border border-slate-200/70 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 p-6 text-white shadow-[0_30px_80px_-45px_rgba(15,23,42,0.85)] sm:p-8">
+      <div class="absolute inset-0 opacity-30" style="background-image: radial-gradient(circle at top right, rgba(59,130,246,.4), transparent 28%), radial-gradient(circle at bottom left, rgba(16,185,129,.18), transparent 26%);"></div>
+      <div class="relative grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_330px]">
+        <div class="space-y-6">
+          <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
+            <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5"><i data-lucide="shield-check" class="h-3.5 w-3.5"></i><span>مراجعة FinAI</span></span>
+            <span class="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">{{ invoice_display.risk_label_ar }}</span>
+            <span class="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">{{ invoice_display.status_label }}</span>
+            {% if invoice.is_duplicate %}<span class="rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1.5 text-amber-100">مكرر</span>{% endif %}
+          </div>
+
+          <div>
+            <p class="text-sm text-slate-300">لوحة مراجعة تنفيذية</p>
+            <h1 class="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">{{ invoice_display.vendor_name }}</h1>
+            <p class="mt-3 max-w-3xl text-sm leading-7 text-slate-300">واجهة موحّدة تجمع بيانات الفاتورة، حالة الامتثال، ونتائج التدقيق قبل اتخاذ قرار الاعتماد.</p>
+            <div class="mt-4 flex flex-wrap gap-3 text-sm text-slate-300">
+              <span class="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5"><i data-lucide="hash" class="h-4 w-4"></i><span class="font-mono" dir="ltr">{{ invoice_display.invoice_number }}</span></span>
+              <span class="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5"><i data-lucide="calendar-range" class="h-4 w-4"></i><span dir="ltr">{{ invoice_display.invoice_date_display }}</span></span>
+              <span class="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5"><i data-lucide="scan-line" class="h-4 w-4"></i><span>{{ invoice_display.source_method_label }}</span></span>
+              <span class="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5"><i data-lucide="building-2" class="h-4 w-4"></i><span class="truncate">{{ invoice.original_filename }}</span></span>
+            </div>
+          </div>
+
+          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-[24px] border border-white/10 bg-white/8 p-4"><p class="text-xs text-slate-400">الإجمالي</p><p class="mt-3 text-2xl font-semibold text-white">{{ invoice_display.total_amount_display }}</p></div>
+            <div class="rounded-[24px] border border-white/10 bg-white/8 p-4"><p class="text-xs text-slate-400">ضريبة القيمة</p><p class="mt-3 text-2xl font-semibold text-white">{{ invoice_display.vat_amount_display }}</p></div>
+            <div class="rounded-[24px] border border-white/10 bg-white/8 p-4"><p class="text-xs text-slate-400">دقة التحقق</p><p class="mt-3 text-2xl font-semibold text-white font-mono">{{ invoice_display.validation_score|floatformat:0 }}%</p></div>
+            <div class="rounded-[24px] border border-white/10 bg-white/8 p-4"><p class="text-xs text-slate-400">OCR</p><p class="mt-3 text-2xl font-semibold text-white font-mono">{{ invoice_display.ocr_confidence|floatformat:0 }}%</p></div>
+          </div>
+
+          <div class="rounded-[24px] border border-white/10 bg-white/8 px-5 py-4 text-sm leading-7 text-slate-300">
+            {% if invoice.status == 'approved' %}
+            الفاتورة معتمدة ويمكن إدخالها في الدورة المحاسبية.
+            {% elif invoice.status == 'rejected' %}
+            الفاتورة مرفوضة. راجع سبب الرفض ومواضع التعثّر قبل إعادة إرسالها.
+            {% elif invoice_display.effective_status == 'flagged' %}
+            درجة المخاطر مرتفعة وتحتاج مراجعة دقيقة قبل الاعتماد.
+            {% else %}
+            الفاتورة جاهزة للمراجعة النهائية مع عرض كامل للبيانات ومؤشرات الامتثال.
+            {% endif %}
+          </div>
+        </div>
+
+        <aside class="rounded-[28px] border border-white/10 bg-white/6 p-5 backdrop-blur-md">
+          <p class="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">مؤشر المخاطر</p>
+          <div class="mt-5 flex justify-center">
+            <div class="relative h-40 w-40 rounded-full" style="background: conic-gradient({{ invoice_display.risk_ring_color }} {{ invoice_display.risk_score }}%, rgba(148,163,184,0.18) 0);">
+              <div class="absolute inset-3 rounded-full bg-slate-950"></div>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="font-mono text-4xl font-bold text-white">{{ invoice_display.risk_score|floatformat:0 }}</span>
+                <span class="mt-1 text-xs text-slate-400">مخاطر</span>
+              </div>
+            </div>
+          </div>
+          <div class="mt-5 grid grid-cols-2 gap-3">
+            <div class="rounded-2xl border border-white/10 bg-white/6 p-4 text-center"><p class="text-xs text-slate-400">ناجح</p><p class="mt-2 font-mono text-2xl font-semibold text-white" x-text="passed"></p></div>
+            <div class="rounded-2xl border border-white/10 bg-white/6 p-4 text-center"><p class="text-xs text-slate-400">فاشل</p><p class="mt-2 font-mono text-2xl font-semibold text-white" x-text="failed"></p></div>
+          </div>
+          <div class="mt-5 space-y-3">
+            {% if invoice.status != 'approved' and invoice.status != 'rejected' %}
+            <button type="button" @click="openDecision('approve')" class="btn-primary w-full justify-center rounded-2xl py-3.5 text-sm"><i data-lucide="check-circle-2" class="h-4.5 w-4.5"></i><span>اعتماد</span></button>
+            <button type="button" @click="openDecision('reject')" class="btn-red w-full justify-center rounded-2xl py-3.5 text-sm"><i data-lucide="x-circle" class="h-4.5 w-4.5"></i><span>رفض</span></button>
+            {% endif %}
+            <button type="button" @click="revalidate()" :disabled="revalidating" class="btn-ghost w-full justify-center rounded-2xl border border-white/10 bg-white/8 py-3.5 text-sm text-white hover:bg-white/12">
+              <i data-lucide="refresh-cw" class="h-4.5 w-4.5" :class="revalidating ? 'animate-spin' : ''"></i>
+              <span x-text="revalidating ? 'جاري التدقيق...' : 'إعادة التدقيق'"></span>
+            </button>
+            {% if invoice.file %}<a href="{{ invoice.file.url }}" target="_blank" rel="noopener" class="btn-ghost w-full justify-center rounded-2xl border border-white/10 bg-white/8 py-3.5 text-sm text-white hover:bg-white/12"><i data-lucide="download" class="h-4.5 w-4.5"></i><span>تنزيل المستند</span></a>{% endif %}
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <div class="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_330px]">
+      <div class="min-w-0 space-y-6">
+        <section class="card border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.35)] dark:bg-slate-900/65 lg:p-7">
+          {% include "settings/partials/section_header.html" with icon="building-2" eyebrow="نظرة عامة" title="بيانات الفاتورة" description="الحقول الأساسية وربطها المحاسبي في تنسيق أوضح وأكثر مهنية." badge_text=invoice_display.status_label badge_class=invoice_display.status_badge_class %}
+          <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40"><p class="text-xs text-slate-400">رقم الفاتورة</p><p class="mt-3 text-sm font-semibold text-slate-900 dark:text-white font-mono" dir="ltr">{{ invoice_display.invoice_number }}</p></div>
+            <div class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40"><p class="text-xs text-slate-400">تاريخ الإصدار</p><p class="mt-3 text-sm font-semibold text-slate-900 dark:text-white" dir="ltr">{{ invoice_display.invoice_date_display }}</p></div>
+            <div class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40"><p class="text-xs text-slate-400">الاستحقاق</p><p class="mt-3 text-sm font-semibold text-slate-900 dark:text-white" dir="ltr">{{ invoice_display.due_date_display }}</p></div>
+            <div class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40"><p class="text-xs text-slate-400">الرقم الضريبي</p><p class="mt-3 text-sm font-semibold text-slate-900 dark:text-white font-mono" dir="ltr">{{ invoice_display.vendor_vat_number|default:"—" }}</p></div>
+            <div class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40"><p class="text-xs text-slate-400">العميل</p><p class="mt-3 text-sm font-semibold text-slate-900 dark:text-white">{{ invoice.customer_name|default:"—" }}</p></div>
+            <div class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40"><p class="text-xs text-slate-400">العملة</p><p class="mt-3 text-sm font-semibold text-slate-900 dark:text-white font-mono">{{ invoice_display.currency }}</p></div>
+            <div class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40"><p class="text-xs text-slate-400">مركز التكلفة</p><p class="mt-3 text-sm font-semibold text-slate-900 dark:text-white">{{ invoice.cost_center|default:"—" }}</p></div>
+            <div class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40"><p class="text-xs text-slate-400">رمز الحساب</p><p class="mt-3 text-sm font-semibold text-slate-900 dark:text-white font-mono">{{ invoice.account_code|default:"—" }}</p></div>
+            <div class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40"><p class="text-xs text-slate-400">الميزانية / القسم</p><p class="mt-3 text-sm font-semibold text-slate-900 dark:text-white">{{ invoice.budget_code|default:invoice.department|default:"—" }}</p></div>
+          </div>
+        </section>
+
+        <section class="card border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.35)] dark:bg-slate-900/65 lg:p-7">
+          {% include "settings/partials/section_header.html" with icon="sparkles" eyebrow="الذكاء الاصطناعي" title="الملخص التنفيذي" description="خلاصة واضحة لما استخرجه المحرك وما يستحق التركيز قبل الاعتماد." badge_text=invoice_display.source_method_label %}
+          <div class="mt-6 rounded-[26px] border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-slate-50 p-5 dark:border-blue-900/40 dark:from-blue-950/20 dark:via-slate-900 dark:to-slate-950">
+            <p class="text-sm leading-7 text-slate-700 dark:text-slate-300">{{ invoice_display.ai_summary }}</p>
+            {% if invoice.processing_error %}<div class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">{{ invoice.processing_error }}</div>{% endif %}
+          </div>
+        </section>
+
+        <section class="card border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.35)] dark:bg-slate-900/65 lg:p-7">
+          <div class="flex flex-col gap-5 border-b border-slate-200/80 pb-5 dark:border-slate-800 lg:flex-row lg:items-end lg:justify-between">
+            <div><p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">الرقابة والامتثال</p><h2 class="mt-2 text-xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-2xl">نتائج التدقيق</h2><p class="mt-2 text-sm text-slate-600 dark:text-slate-400">فلترة القواعد حسب المجموعة مع إبراز مواضع التعثر أولًا.</p></div>
+            <div class="flex gap-3 text-xs">
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/60"><span class="block text-slate-400">ناجح</span><span class="mt-1 block font-mono font-semibold text-slate-900 dark:text-white" x-text="passed"></span></div>
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900/60"><span class="block text-slate-400">فاشل</span><span class="mt-1 block font-mono font-semibold text-slate-900 dark:text-white" x-text="failed"></span></div>
+            </div>
+          </div>
+
+          <div class="mt-5 flex flex-wrap gap-2">
+            <template x-for="tab in ruleTabs" :key="tab.code">
+              <button type="button" @click="activeGroup = tab.code" class="inline-flex items-center gap-2 rounded-2xl border px-3.5 py-2 text-xs font-semibold transition"
+                      :style="activeGroup === tab.code ? `background:${tab.color};border-color:${tab.color};color:white` : ''"
+                      :class="activeGroup === tab.code ? '' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900/50 dark:text-slate-300'">
+                <span x-text="tab.label"></span><span class="rounded-full px-2 py-0.5 text-[11px]" :class="activeGroup === tab.code ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300'" x-text="tabCount(tab.code)"></span>
+              </button>
+            </template>
+          </div>
+
+          <div class="mt-6 space-y-3">
+            <template x-if="loadingRules"><div class="space-y-3"><div class="h-24 animate-pulse rounded-3xl bg-slate-100 dark:bg-slate-800/60"></div><div class="h-24 animate-pulse rounded-3xl bg-slate-100 dark:bg-slate-800/60"></div></div></template>
+            <template x-for="[code, rule] in filteredRules()" :key="code">
+              <article class="rounded-[26px] border border-slate-200/80 bg-slate-50/70 p-5 dark:border-slate-800 dark:bg-slate-950/35">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                  <div class="flex min-w-0 flex-1 items-start gap-3">
+                    <div class="mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl text-sm font-bold" :class="rule.passed ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'"><span x-text="rule.passed ? '✓' : '!' "></span></div>
+                    <div class="min-w-0 flex-1"><div class="flex flex-wrap items-center gap-2"><span class="rounded-xl px-2.5 py-1 text-[11px] font-bold font-mono" :style="'background:' + ruleGroupColor(code) + '18; color:' + ruleGroupColor(code)" x-text="code"></span><h3 class="text-sm font-semibold text-slate-900 dark:text-white" x-text="rule.description || 'قاعدة تدقيق مالية'"></h3></div><p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300" x-text="rule.message || 'لا توجد ملاحظات إضافية.'"></p></div>
+                  </div>
+                  <div class="flex flex-wrap gap-2 lg:justify-end"><span class="badge" :class="rule.passed ? 'badge-low' : 'badge-high'" x-text="rule.passed ? 'ناجح' : 'فشل'"></span><template x-if="!rule.passed"><span class="badge" :class="severityClass(rule.severity)" x-text="severityLabel(rule.severity)"></span></template></div>
+                </div>
+              </article>
+            </template>
+            <div x-show="!loadingRules && !filteredRules().length" x-cloak class="rounded-3xl border border-dashed border-slate-300 py-12 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">لا توجد نتائج لهذه المجموعة.</div>
+          </div>
+        </section>
+
+        {% if invoice.line_items %}
+        <section class="card border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.35)] dark:bg-slate-900/65 lg:p-7">
+          {% include "settings/partials/section_header.html" with icon="receipt" eyebrow="البنود" title="تفاصيل البنود" description="عرض عناصر الفاتورة بشكل أوضح للمراجعة المالية." badge_text=invoice.line_items|length %}
+          <div class="mt-6 overflow-x-auto rounded-[24px] border border-slate-200/80 dark:border-slate-800">
+            <table class="data-table min-w-full">
+              <thead><tr><th>الوصف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead>
+              <tbody>
+                {% for item in invoice.line_items %}
+                <tr><td class="max-w-[340px]"><span class="line-clamp-2 font-medium text-slate-800 dark:text-slate-100">{{ item.description|default:"—" }}</span></td><td class="font-mono" dir="ltr">{{ item.quantity|default:"—" }}</td><td class="font-mono" dir="ltr">{{ item.unit_price|floatformat:2|default:"—" }}</td><td class="font-mono font-semibold text-slate-900 dark:text-white" dir="ltr">{{ item.total|floatformat:2|default:"—" }}</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        {% endif %}
+        <section class="card border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.35)] dark:bg-slate-900/65 lg:p-7">
+          {% include "settings/partials/section_header.html" with icon="history" eyebrow="الأثر التشغيلي" title="سجل المراجعة" description="من قام بالإجراء ومتى تم ذلك." badge_text=audit_trail|length %}
+          <div class="mt-6 space-y-4">
+            {% for ev in audit_trail %}
+            <div class="relative rounded-[24px] border border-slate-200/80 bg-slate-50/70 p-5 pr-8 dark:border-slate-800 dark:bg-slate-950/35"><span class="absolute right-4 top-6 h-2.5 w-2.5 rounded-full bg-primary-500"></span><div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><div class="flex flex-wrap items-center gap-2"><span class="rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white dark:bg-slate-700">{{ ev.event_type }}</span><span class="text-sm font-semibold text-slate-900 dark:text-white">{{ ev.description }}</span></div><p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ ev.user.full_name|default:"System" }}</p></div><p class="text-xs text-slate-500 dark:text-slate-400" dir="ltr">{{ ev.timestamp|date:"Y-m-d H:i" }}</p></div></div>
+            {% empty %}
+            <div class="rounded-3xl border border-dashed border-slate-300 py-12 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">لا توجد أحداث مراجعة حتى الآن.</div>
+            {% endfor %}
+          </div>
+        </section>
+      </div>
+
+      <aside class="space-y-6">
+        <section class="card border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.35)] dark:bg-slate-900/65">
+          {% include "settings/partials/section_header.html" with icon="clipboard-check" eyebrow="مسار القرار" title="الحالة التشغيلية" description="آخر قرار ومن المسؤول عنه." badge_text=invoice_display.status_label badge_class=invoice_display.status_badge_class %}
+          <div class="mt-6 space-y-3 text-sm">
+            <div class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40"><p class="text-xs text-slate-400">المعتمد / الرافض</p><p class="mt-3 font-semibold text-slate-900 dark:text-white">{{ invoice.approved_by.full_name|default:"—" }}</p><p class="mt-1 text-xs text-slate-500 dark:text-slate-400" dir="ltr">{{ invoice.approved_at|date:"Y-m-d H:i"|default:"لم يُسجل بعد" }}</p></div>
+            {% if invoice.rejected_reason %}<div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900/30 dark:bg-red-950/20 dark:text-red-300">{{ invoice.rejected_reason }}</div>{% endif %}
+            {% if invoice.duplicate_of_id %}<a href="{% url 'frontend:invoice_detail' invoice.duplicate_of_id %}" class="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 font-semibold text-amber-700 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-300"><span>عرض الفاتورة الأصلية</span><i data-lucide="link" class="h-4 w-4"></i></a>{% endif %}
+          </div>
+        </section>
+
+        <section class="card border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.35)] dark:bg-slate-900/65">
+          {% include "settings/partials/section_header.html" with icon="shield-check" eyebrow="الثقة" title="إشارات الامتثال" description="لقطة سريعة للضريبة، التكرار، وربط الحسابات." %}
+          <div class="mt-6 space-y-3 text-sm">
+            <div class="flex items-start justify-between gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/80 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/40"><div><p class="font-semibold text-slate-900 dark:text-white">QR الضريبي</p><p class="mt-1 text-xs text-slate-500 dark:text-slate-400">مطابقة متطلبات الفوترة.</p></div><span class="{% if invoice.has_qr_code and invoice.qr_code_valid %}badge-low{% elif invoice.has_qr_code %}badge-medium{% else %}badge-high{% endif %}">{% if invoice.has_qr_code and invoice.qr_code_valid %}صالح{% elif invoice.has_qr_code %}مراجعة{% else %}غير متوفر{% endif %}</span></div>
+            <div class="flex items-start justify-between gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/80 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/40"><div><p class="font-semibold text-slate-900 dark:text-white">التكرار</p><p class="mt-1 text-xs text-slate-500 dark:text-slate-400">كشف الإدخالات المتشابهة.</p></div><span class="{% if invoice.is_duplicate %}badge-high{% else %}badge-low{% endif %}">{% if invoice.is_duplicate %}مكرر{% else %}سليم{% endif %}</span></div>
+            <div class="flex items-start justify-between gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/80 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/40"><div><p class="font-semibold text-slate-900 dark:text-white">الرقم الضريبي</p><p class="mt-1 text-xs text-slate-500 dark:text-slate-400">اكتمال بيانات المورد.</p></div><span class="{% if invoice_display.vendor_vat_number %}badge-low{% else %}badge-medium{% endif %}">{% if invoice_display.vendor_vat_number %}متوفر{% else %}ناقص{% endif %}</span></div>
+            <div class="flex items-start justify-between gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/80 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/40"><div><p class="font-semibold text-slate-900 dark:text-white">الربط المحاسبي</p><p class="mt-1 text-xs text-slate-500 dark:text-slate-400">مركز تكلفة + رمز حساب.</p></div><span class="{% if invoice.cost_center and invoice.account_code %}badge-low{% elif invoice.cost_center or invoice.account_code %}badge-medium{% else %}badge-high{% endif %}">{% if invoice.cost_center and invoice.account_code %}مكتمل{% elif invoice.cost_center or invoice.account_code %}جزئي{% else %}ناقص{% endif %}</span></div>
+          </div>
+        </section>
+
+        <section class="card border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.35)] dark:bg-slate-900/65">
+          {% include "settings/partials/section_header.html" with icon="folder-open" eyebrow="بيانات المصدر" title="الملف والتحميل" description="تفاصيل تساعد على التتبع والحوكمة." %}
+          <div class="mt-6 space-y-4 text-sm">
+            <div class="flex items-center justify-between gap-4 border-b border-slate-200/80 pb-4 dark:border-slate-800"><span class="text-slate-500 dark:text-slate-400">الملف</span><span class="max-w-[200px] truncate font-semibold text-slate-900 dark:text-white">{{ invoice.original_filename }}</span></div>
+            <div class="flex items-center justify-between gap-4 border-b border-slate-200/80 pb-4 dark:border-slate-800"><span class="text-slate-500 dark:text-slate-400">الحجم / النوع</span><span class="font-semibold text-slate-900 dark:text-white">{{ invoice.file_size|filesizeformat }} · {{ invoice.mime_type|default:"—" }}</span></div>
+            <div class="flex items-center justify-between gap-4 border-b border-slate-200/80 pb-4 dark:border-slate-800"><span class="text-slate-500 dark:text-slate-400">رفع بواسطة</span><span class="font-semibold text-slate-900 dark:text-white">{{ invoice.uploaded_by.full_name|default:"—" }}</span></div>
+            <div class="flex items-center justify-between gap-4 border-b border-slate-200/80 pb-4 dark:border-slate-800"><span class="text-slate-500 dark:text-slate-400">آخر تحديث</span><span class="font-semibold text-slate-900 dark:text-white" dir="ltr">{{ invoice.updated_at|date:"Y-m-d H:i" }}</span></div>
+            <div class="flex items-center justify-between gap-4"><span class="text-slate-500 dark:text-slate-400">المعرّف</span><span class="font-mono text-xs font-semibold text-slate-900 dark:text-white" dir="ltr">{{ invoice.id }}</span></div>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <div x-show="decisionModal.open" x-cloak x-transition.opacity class="modal-backdrop" @click.self="closeDecision()">
+    <div class="modal-box max-w-lg rounded-[28px] border border-slate-200/80 bg-white p-6 dark:border-slate-700/60 dark:bg-slate-900 sm:p-7">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">قرار المراجعة</p>
+          <h3 class="mt-2 text-xl font-semibold tracking-tight text-slate-950 dark:text-white" x-text="decisionModal.action === 'approve' ? 'اعتماد الفاتورة' : 'رفض الفاتورة'"></h3>
+          <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ invoice_display.vendor_name }} — {{ invoice_display.invoice_number }}</p>
+        </div>
+        <button type="button" @click="closeDecision()" class="rounded-2xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-slate-200"><i data-lucide="x" class="h-4.5 w-4.5"></i></button>
+      </div>
+      <p class="mt-5 text-sm leading-7 text-slate-600 dark:text-slate-300"><span x-show="decisionModal.action === 'approve'">سيتم تثبيت قرار الاعتماد في سجل التدقيق.</span><span x-show="decisionModal.action === 'reject'">أدخل سببًا واضحًا ليظهر للفريق المالي لاحقًا.</span></p>
+      <div x-show="decisionModal.action === 'reject'" x-cloak class="mt-5">
+        <label class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">سبب الرفض</label>
+        <textarea x-model="decisionModal.reason" rows="4" class="input resize-none" placeholder="اكتب سبب الرفض بوضوح..."></textarea>
+      </div>
+      <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
+        <button type="button" @click="closeDecision()" class="btn-ghost flex-1 justify-center py-3">إلغاء</button>
+        <button type="button" @click="submitDecision()" :disabled="decisionModal.submitting" class="flex-1 justify-center py-3 text-sm" :class="decisionModal.action === 'approve' ? 'btn-green' : 'btn-red'"><i data-lucide="loader-circle" class="h-4.5 w-4.5 animate-spin" x-show="decisionModal.submitting" x-cloak></i><span x-text="decisionModal.submitting ? 'جاري التنفيذ...' : (decisionModal.action === 'approve' ? 'تأكيد الاعتماد' : 'تأكيد الرفض')"></span></button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function invoiceDetail(invoiceId, initialScore, initialPassed, initialFailed) {
+  return {
+    rules: {},
+    passed: Number(initialPassed || 0),
+    failed: Number(initialFailed || 0),
+    activeGroup: 'ALL',
+    loadingRules: true,
+    revalidating: false,
+    decisionModal: { open: false, action: 'approve', reason: '', submitting: false },
+    ruleTabs: [
+      { code: 'ALL', label: 'الكل', color: '#0f172a' },
+      { code: 'INV', label: 'رأس الفاتورة', color: '#2563eb' },
+      { code: 'DUP', label: 'التكرار', color: '#8b5cf6' },
+      { code: 'VAT', label: 'الضريبة', color: '#06b6d4' },
+      { code: 'ANO', label: 'الشذوذ', color: '#ef4444' },
+      { code: 'CTL', label: 'الرقابة', color: '#0ea5e9' },
+      { code: 'DOC', label: 'المستند', color: '#22c55e' },
+    ],
+    async init() {
+      try {
+        const data = await apiFetch('/invoices/' + invoiceId + '/');
+        if (data.validation?.validation_details) {
+          this.rules = data.validation.validation_details || {};
+          this.passed = Number(data.validation.rules_passed || this.passed || 0);
+          this.failed = Number(data.validation.rules_failed || this.failed || 0);
+        }
+      } catch (error) {
+        console.warn('invoice detail', error);
+      } finally {
+        this.loadingRules = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+    sortedRules() {
+      return Object.entries(this.rules || {}).sort((first, second) => {
+        if (Boolean(first[1]?.passed) !== Boolean(second[1]?.passed)) return Number(first[1]?.passed) - Number(second[1]?.passed);
+        return first[0].localeCompare(second[0]);
+      });
+    },
+    filteredRules() {
+      const entries = this.sortedRules();
+      return this.activeGroup === 'ALL' ? entries : entries.filter(([code]) => code.startsWith(this.activeGroup));
+    },
+    tabCount(groupCode) {
+      return groupCode === 'ALL' ? this.sortedRules().length : this.sortedRules().filter(([code]) => code.startsWith(groupCode)).length;
+    },
+    ruleGroupColor(code) {
+      const tab = this.ruleTabs.find((item) => item.code !== 'ALL' && code.startsWith(item.code));
+      return tab ? tab.color : '#64748b';
+    },
+    severityLabel(severity) {
+      return { critical: 'حرج', high: 'عالٍ', medium: 'متوسط', low: 'منخفض', info: 'معلومة' }[severity] || 'ملاحظة';
+    },
+    severityClass(severity) {
+      return { critical: 'badge-high', high: 'badge-high', medium: 'badge-medium', low: 'badge-info', info: 'badge-info' }[severity] || 'badge-info';
+    },
+    openDecision(action) {
+      this.decisionModal = { open: true, action, reason: '', submitting: false };
+      this.$nextTick(() => lucide.createIcons());
+    },
+    closeDecision() {
+      if (!this.decisionModal.submitting) this.decisionModal.open = false;
+    },
+    async submitDecision() {
+      if (this.decisionModal.action === 'reject' && !this.decisionModal.reason.trim()) {
+        notify('يرجى إدخال سبب الرفض', 'error');
+        return;
+      }
+      this.decisionModal.submitting = true;
+      try {
+        await apiFetch('/invoices/' + invoiceId + '/approve/', { method: 'POST', body: JSON.stringify({ action: this.decisionModal.action, reason: this.decisionModal.reason }) });
+        this.decisionModal.open = false;
+        notify(this.decisionModal.action === 'approve' ? 'تم اعتماد الفاتورة' : 'تم رفض الفاتورة', this.decisionModal.action === 'approve' ? 'success' : 'info');
+        setTimeout(() => location.reload(), 800);
+      } catch (error) {
+        notify('فشل: ' + error.message, 'error');
+      } finally {
+        this.decisionModal.submitting = false;
+      }
+    },
+    async revalidate() {
+      if (this.revalidating) return;
+      this.revalidating = true;
+      try {
+        await apiFetch('/invoices/' + invoiceId + '/revalidate/', { method: 'POST' });
+        notify('تمت إعادة تشغيل التدقيق وسيتم تحديث الصفحة الآن.', 'success');
+        setTimeout(() => location.reload(), 1000);
+      } catch (error) {
+        notify('فشل: ' + error.message, 'error');
+      } finally {
+        this.revalidating = false;
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

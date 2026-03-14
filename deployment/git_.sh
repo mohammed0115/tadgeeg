@@ -4,7 +4,7 @@
 # Usage: bash git_.sh [start|stop|status|install]
 #
 # Watches all three branches for changes:
-#   master → triggers safe pull request on live server
+#   main   → triggers safe pull request on live server
 #   dev    → triggers safe pull request on dev server
 #   test   → triggers safe pull request on test server
 #
@@ -29,12 +29,24 @@ LOG_FILE="/var/log/finai/git_autodeploy.log"
 POLL_INTERVAL=60          # Check every 60 seconds
 LOCK_FILE="/var/lock/${DAEMON_NAME}.lock"
 
-# Branch → Environment mapping
-declare -A BRANCH_ENV_MAP=(
-  ["master"]="live"
-  ["dev"]="dev"
-  ["test"]="test"
-)
+# Branch → Environment mapping (loaded from deployment/config/*.env)
+declare -A BRANCH_ENV_MAP=()
+
+load_branch_env_map() {
+  BRANCH_ENV_MAP=()
+
+  for ENV_NAME in live dev test; do
+    ENV_FILE="$SCRIPT_DIR/config/${ENV_NAME}.env"
+    [ -f "$ENV_FILE" ] || continue
+
+    BRANCH=""
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+
+    [ -n "${BRANCH:-}" ] || continue
+    BRANCH_ENV_MAP["$BRANCH"]="$ENV_NAME"
+  done
+}
 
 mkdir -p "$(dirname "$LOG_FILE")" "$(dirname "$PID_FILE")"
 
@@ -112,8 +124,10 @@ Log: $DEPLOY_LOG" | mail -s "[FinAI $ENV_LABEL] AUTO-DEPLOY FAILED" "$SSL_EMAIL"
 
 # ── Main polling loop (runs as daemon) ────────────────────────────────────────
 run_daemon() {
+  load_branch_env_map
+
   log "🟢 Git auto-deploy daemon started (PID $$, poll every ${POLL_INTERVAL}s)"
-  log "   Watching: master→live, dev→dev, test→test"
+  log "   Watching configured branches from deployment/config/*.env"
 
   while true; do
     for BRANCH in "${!BRANCH_ENV_MAP[@]}"; do
@@ -255,7 +269,7 @@ case "$ACTION" in
     echo "  install  — Install as systemd service (recommended for production)"
     echo ""
     echo "Branch → Environment mapping:"
-    echo "  master  → live   (tadgeeg.com)"
+    echo "  main    → live   (tadgeeg.com)"
     echo "  dev     → dev    (dev.tadgeeg.com)"
     echo "  test    → test   (test.tadgeeg.com)"
     echo ""

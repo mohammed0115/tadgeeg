@@ -322,8 +322,32 @@ if [ -f "$REQUIREMENTS" ]; then
   log "✅ Requirements installed"
 
   log "🔎 Verifying Python runtime packages..."
-  "$VENV_DIR/bin/python" -c "import django, celery, gunicorn, MySQLdb" >>"$LOG_FILE" 2>&1
-  log "✅ Python runtime packages verified"
+  if "$VENV_DIR/bin/python" - <<'PY' >>"$LOG_FILE" 2>&1
+import importlib
+import sys
+
+required_modules = ["django", "celery", "gunicorn", "MySQLdb"]
+missing = []
+
+for module_name in required_modules:
+    try:
+        importlib.import_module(module_name)
+    except Exception as exc:
+        missing.append(f"{module_name}: {exc}")
+
+if missing:
+    for item in missing:
+        print(item)
+    sys.exit(1)
+PY
+  then
+    log "✅ Python runtime packages verified"
+  else
+    log "❌ Python runtime package verification failed"
+    log "❌ Recent runtime verification output:"
+    tail -n 20 "$LOG_FILE"
+    exit 1
+  fi
 else
   log "⚠️  requirements.txt not found at $REQUIREMENTS (run Git sync first)"
 fi

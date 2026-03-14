@@ -21,6 +21,7 @@ ENV="${1:-live}"
 ENV_FILE="$SCRIPT_DIR/config/${ENV}.env"
 [ -f "$ENV_FILE" ] || { echo "❌ Unknown environment: $ENV  (live|dev|test)"; exit 1; }
 source "$ENV_FILE"
+SYNC_REPO_URL="${SYNC_REPO_URL:-$REPO_URL}"
 
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/refresh.log"
@@ -30,6 +31,13 @@ exec 200>"$LOCK_FILE"
 flock -n 200 || { echo "⏳ Another refresh is already running for [$ENV_LABEL]. Exiting."; exit 0; }
 
 log() { echo "$(date '+%F %T') [$ENV_LABEL] $1" | tee -a "$LOG_FILE"; }
+
+clean_untracked() {
+  git clean -fd \
+    -e ".secret.env" \
+    -e "venv/" \
+    -e ".venv/" >>"$LOG_FILE" 2>&1
+}
 
 echo ""
 echo "╔══════════════════════════════════════════════╗"
@@ -45,9 +53,10 @@ START_TIME=$(date +%s)
 # ── 1. Git pull ───────────────────────────────────────────────────────────────
 log "🔄 [1/8] Syncing git ($BRANCH)..."
 cd "$PROJECT_ROOT"
+git remote set-url origin "$SYNC_REPO_URL" >>"$LOG_FILE" 2>&1
 git fetch origin "$BRANCH" >>"$LOG_FILE" 2>&1
 git reset --hard "origin/$BRANCH" >>"$LOG_FILE" 2>&1
-git clean -fd >>"$LOG_FILE" 2>&1
+clean_untracked
 COMMIT=$(git log -1 --format="%h — %s (%ar)")
 log "📌 HEAD: $COMMIT"
 

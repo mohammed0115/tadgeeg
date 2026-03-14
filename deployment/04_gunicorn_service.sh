@@ -1,0 +1,229 @@
+#!/bin/bash
+# ============================================================
+# FinAI Deployment — Step 04: Gunicorn Systemd Service
+# Usage: bash 04_gunicorn_service.sh [live|dev|test]
+# Smart: updates service file if exists, creates if not
+# ============================================================
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV="${1:-live}"
+
+ENV_FILE="$SCRIPT_DIR/config/${ENV}.env"
+[ -f "$ENV_FILE" ] || { echo "❌ Unknown environment: $ENV"; exit 1; }
+source "$ENV_FILE"
+
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/gunicorn_setup.log"
+
+log() { echo "$(date '+%F %T') [$ENV_LABEL] $1" | tee -a "$LOG_FILE"; }
+
+SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
+CELERY_SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}_celery.service"
+CELERYBEAT_FILE="/etc/systemd/system/${SERVICE_NAME}_celerybeat.service"
+
+echo ""
+echo "╔══════════════════════════════════════════════════════╗"
+echo "║  FinAI [$ENV_LABEL] — STEP 04: Gunicorn Service     ║"
+echo "╚══════════════════════════════════════════════════════╝"
+echo ""
+
+# ── Pre-flight checks ─────────────────────────────────────────────────────────
+[ -d "$VENV_DIR" ] || { log "❌ venv not found: $VENV_DIR"; exit 1; }
+[ -f "$BACKEND_DIR/manage.py" ] || { log "❌ manage.py not found: $BACKEND_DIR"; exit 1; }
+
+# ── Load secrets ──────────────────────────────────────────────────────────────
+SECRET_FILE="$WEB_ROOT/.secret.env"
+SECRET_ENV_BLOCK=""
+if [ -f "$SECRET_FILE" ]; then
+  while IFS= read -r line; do
+    [[ "$line" =~ ^[A-Z_]+=.+ ]] && SECRET_ENV_BLOCK="${SECRET_ENV_BLOCK}Environment=\"$line\"\n" || true
+  done < "$SECRET_FILE"
+fi
+
+# ── Django prep ───────────────────────────────────────────────────────────────
+log "🔄 Activating venv and running Django management commands..."
+cd "$BACKEND_DIR"
+source "$VENV_DIR/bin/activate"
+
+log "🗄️  Running database migrations..."
+python manage.py migrate --noinput >>"$LOG_FILE" 2>&1
+log "✅ Migrations done"
+
+log "📦 Collecting static files..."
+python manage.py collectstatic --noinput >>"$LOG_FILE" 2>&1
+
+log "📁 Copying static files to $STATIC_ROOT..."
+mkdir -p "$STATIC_ROOT"
+cp -r staticfiles/. "$STATIC_ROOT/" 2>/dev/null || true
+chown -R www-data:www-data "$STATIC_ROOT"
+chmod -R 755 "$STATIC_ROOT"
+log "✅ Static files collected"
+
+# ── Write Gunicorn systemd service ────────────────────────────────────────────
+log "⚙️  Writing systemd service: $SERVICE_FILE"
+
+cat > "$SERVICE_FILE" <<UNIT
+[Unit]
+Description=FinAI [$ENV_LABEL] — Gunicorn Application Server
+After=network.target mysql.service redis.service
+Wants=redis.service
+
+[Service]
+Type=notify
+NotifyAccess=all
+User=www-data
+Group=www-data
+WorkingDirectory=$BACKEND_DIR
+RuntimeDirectory=gunicorn_${ENV}
+RuntimeDirectoryMode=0755
+
+# Core environment
+Environment="DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE}"
+Environment="DJANGO_ENV=${DJANGO_ENV}"
+Environment="ALLOWED_HOSTS=${ALLOWED_HOSTS}"
+Environment="TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata"
+Environment="REDIS_URL=${REDIS_URL}"
+Environment="DB_NAME=${DB_NAME}"
+Environment="DB_USER=${DB_USER}"
+Environment="DB_HOST=${DB_HOST}"
+Environment="DB_PORT=${DB_PORT}"
+$(printf "%b" "$SECRET_ENV_BLOCK")
+
+# Socket cleanup on start
+ExecStartPre=/bin/rm -f ${SOCKET}
+
+# Gunicorn
+ExecStart=${VENV_DIR}/bin/gunicorn ${DJANGO_SETTINGS_MODULE%.*}.wsgi:application \\
+  --name finai_${ENV} \\
+  --workers ${GUNICORN_WORKERS} \\
+  --bind unix:${SOCKET} \\
+  --timeout ${GUNICORN_TIMEOUT} \\
+  --max-requests ${GUNICORN_MAX_REQUESTS} \\
+  --max-requests-jitter 50 \\
+  --log-level info \\
+  --access-logfile ${LOG_DIR}/access.log \\
+  --error-logfile ${LOG_DIR}/error.log \\
+  --capture-output \\
+  --forwarded-allow-ips='*'
+
+ExecReload=/bin/kill -s HUP \$MAINPID
+
+Restart=on-failure
+RestartSec=5
+KillMode=mixed
+TimeoutStopSec=30
+
+# Security hardening
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+# ── Write Celery worker service ───────────────────────────────────────────────
+log "⚙️  Writing Celery worker service: $CELERY_SERVICE_FILE"
+
+cat > "$CELERY_SERVICE_FILE" <<UNIT
+[Unit]
+Description=FinAI [$ENV_LABEL] — Celery Worker
+After=network.target redis.service mysql.service
+Requires=redis.service
+
+[Service]
+Type=forking
+User=www-data
+Group=www-data
+WorkingDirectory=$BACKEND_DIR
+PIDFile=$LOG_DIR/celery.pid
+
+Environment="DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE}"
+Environment="DJANGO_ENV=${DJANGO_ENV}"
+Environment="REDIS_URL=${REDIS_URL}"
+Environment="DB_NAME=${DB_NAME}"
+Environment="DB_USER=${DB_USER}"
+Environment="DB_HOST=${DB_HOST}"
+Environment="DB_PORT=${DB_PORT}"
+$(printf "%b" "$SECRET_ENV_BLOCK")
+
+ExecStart=${VENV_DIR}/bin/celery -A finai_backend worker \\
+  --detach \\
+  --loglevel=info \\
+  --logfile=${LOG_DIR}/celery.log \\
+  --pidfile=${LOG_DIR}/celery.pid \\
+  --concurrency=4
+
+ExecStop=/bin/kill -s TERM \$MAINPID
+
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+# ── Write Celery beat service ─────────────────────────────────────────────────
+log "⚙️  Writing Celery beat service: $CELERYBEAT_FILE"
+
+cat > "$CELERYBEAT_FILE" <<UNIT
+[Unit]
+Description=FinAI [$ENV_LABEL] — Celery Beat Scheduler
+After=network.target redis.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=$BACKEND_DIR
+
+Environment="DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE}"
+Environment="DJANGO_ENV=${DJANGO_ENV}"
+Environment="REDIS_URL=${REDIS_URL}"
+$(printf "%b" "$SECRET_ENV_BLOCK")
+
+ExecStart=${VENV_DIR}/bin/celery -A finai_backend beat \\
+  --loglevel=info \\
+  --logfile=${LOG_DIR}/celerybeat.log \\
+  --scheduler django_celery_beat.schedulers:DatabaseScheduler
+
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+# ── Socket file permissions ───────────────────────────────────────────────────
+touch "$SOCKET" 2>/dev/null || true
+chown www-data:www-data "$SOCKET" 2>/dev/null || true
+
+# ── Systemd reload & enable ───────────────────────────────────────────────────
+log "🔄 Reloading systemd..."
+systemctl daemon-reload
+
+for SVC in "$SERVICE_NAME" "${SERVICE_NAME}_celery" "${SERVICE_NAME}_celerybeat"; do
+  log "▶️  Enabling & (re)starting: $SVC"
+  systemctl enable "$SVC" >>"$LOG_FILE" 2>&1
+  systemctl restart "$SVC" >>"$LOG_FILE" 2>&1
+done
+
+sleep 4
+
+# ── Status check ──────────────────────────────────────────────────────────────
+FAILED=0
+for SVC in "$SERVICE_NAME" "${SERVICE_NAME}_celery" "${SERVICE_NAME}_celerybeat"; do
+  if systemctl is-active --quiet "$SVC"; then
+    log "✅ $SVC is running"
+  else
+    log "❌ $SVC FAILED to start"
+    journalctl -u "$SVC" -n 20 --no-pager >> "$LOG_FILE" 2>&1
+    FAILED=$((FAILED+1))
+  fi
+done
+
+[ "$FAILED" -eq 0 ] || exit 1
+
+echo ""
+echo "✅ [STEP 04] Gunicorn & Celery Services SETUP COMPLETED for [$ENV_LABEL]"

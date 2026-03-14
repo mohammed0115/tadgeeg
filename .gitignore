@@ -1,8 +1,10 @@
 .env
 .env.*
 !.env.example
+.secret.env
 
 .venv/
+venv/
 __pycache__/
 *.pyc
 *.pyo

@@ -49,6 +49,10 @@ apt_install() {
   run_with_retries "apt-get install: $*" apt-get install -y "$@"
 }
 
+package_installed() {
+  dpkg -s "$1" &>/dev/null
+}
+
 pip_install() {
   local original_path="$PATH"
   PATH="$VENV_DIR/bin:$PATH"
@@ -66,6 +70,46 @@ require_command() {
     log "❌ ${command_name} is still missing. ${hint}"
     exit 1
   }
+}
+
+ensure_mysql_build_deps() {
+  if package_installed default-libmysqlclient-dev || package_installed libmysqlclient-dev; then
+    log "✅ MySQL build headers already installed"
+    return 0
+  fi
+
+  if package_installed libmariadb-dev && package_installed libmariadb-dev-compat; then
+    log "✅ MariaDB compatibility build headers already installed"
+    return 0
+  fi
+
+  log "🧩 Installing MySQL/MariaDB build headers for mysqlclient..."
+
+  if apt_install default-libmysqlclient-dev; then
+    log "✅ Installed default-libmysqlclient-dev"
+    return 0
+  fi
+
+  log "⚠️  default-libmysqlclient-dev unavailable — trying libmysqlclient-dev"
+  if apt_install libmysqlclient-dev; then
+    log "✅ Installed libmysqlclient-dev"
+    return 0
+  fi
+
+  log "⚠️  libmysqlclient-dev unavailable — trying MariaDB compatibility headers"
+  if apt_install libmariadb-dev libmariadb-dev-compat; then
+    log "✅ Installed libmariadb-dev and libmariadb-dev-compat"
+    return 0
+  fi
+
+  log "⚠️  libmariadb-dev package pair unavailable — trying libmariadb-dev-compat only"
+  if apt_install libmariadb-dev-compat; then
+    log "✅ Installed libmariadb-dev-compat"
+    return 0
+  fi
+
+  log "❌ Could not install any MySQL/MariaDB development headers needed for mysqlclient"
+  return 1
 }
 
 echo ""
@@ -90,8 +134,6 @@ PKGS=(
   nginx
   ca-certificates
   python-is-python3
-  default-libmysqlclient-dev
-  libmariadb-dev-compat
   pkg-config
   libffi-dev
   libssl-dev
@@ -113,6 +155,8 @@ for pkg in "${PKGS[@]}"; do
     apt_install "$pkg"
   fi
 done
+
+ensure_mysql_build_deps || exit 1
 
 require_command nginx "Nginx should have been installed during core package setup."
 

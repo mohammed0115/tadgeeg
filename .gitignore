@@ -4,6 +4,7 @@
 .secret.env
 deployment/docker/env/*.env
 !deployment/docker/env/*.env.example
+deployment/docker/logs/
 
 .venv/
 venv/

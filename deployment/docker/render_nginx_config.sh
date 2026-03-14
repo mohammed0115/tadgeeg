@@ -18,29 +18,35 @@ case "$MODE" in
     ;;
 esac
 
-source_env() {
-  local env_name="$1"
-  local file="$ENV_DIR/${env_name}.env"
+load_env_file() {
+  local file="$1"
   [ -f "$file" ] || {
     echo "Missing env file: $file"
     exit 1
   }
 
-  set -a
-  # shellcheck disable=SC1090
-  source "$file"
-  set +a
+  while IFS= read -r raw_line || [ -n "$raw_line" ]; do
+    local line="${raw_line%$'\r'}"
+
+    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+    [[ "$line" == *=* ]] || continue
+
+    local key="${line%%=*}"
+    local value="${line#*=}"
+
+    export "$key=$value"
+  done < "$file"
 }
 
-source_env live
+load_env_file "$ENV_DIR/live.env"
 LIVE_SERVER_NAMES="$SERVER_NAMES"
 LIVE_CERT_NAME="$CERT_NAME"
 
-source_env dev
+load_env_file "$ENV_DIR/dev.env"
 DEV_SERVER_NAMES="$SERVER_NAMES"
 DEV_CERT_NAME="$CERT_NAME"
 
-source_env test
+load_env_file "$ENV_DIR/test.env"
 TEST_SERVER_NAMES="$SERVER_NAMES"
 TEST_CERT_NAME="$CERT_NAME"
 

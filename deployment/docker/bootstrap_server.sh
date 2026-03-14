@@ -1,9 +1,26 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_DIR="$SCRIPT_DIR/env"
 DEPLOY_SCRIPT="$SCRIPT_DIR/deploy.sh"
+LOG_DIR="$SCRIPT_DIR/logs"
+TIMESTAMP="$(date '+%Y%m%d_%H%M%S')"
+LOG_FILE="$LOG_DIR/bootstrap_${TIMESTAMP}.log"
+LATEST_LOG="$LOG_DIR/bootstrap_latest.log"
+
+mkdir -p "$LOG_DIR"
+exec > >(tee -a "$LOG_FILE") 2>&1
+ln -sfn "$LOG_FILE" "$LATEST_LOG" 2>/dev/null || true
+
+on_error() {
+  local exit_code=$?
+  printf '%s [bootstrap] ERROR: command failed: %s (exit %s)\n' "$(date '+%F %T')" "$BASH_COMMAND" "$exit_code"
+  printf '%s [bootstrap] ERROR: see log file %s\n' "$(date '+%F %T')" "$LOG_FILE"
+  exit "$exit_code"
+}
+
+trap on_error ERR
 
 log() {
   printf '%s [bootstrap] %s\n' "$(date '+%F %T')" "$1"
@@ -62,7 +79,7 @@ random_secret() {
 }
 
 random_password() {
-  python3 -c "import secrets, string; chars=string.ascii_letters+string.digits+'!@#$%^&*'; print(''.join(secrets.choice(chars) for _ in range(24)))"
+  python3 -c "import secrets; print(secrets.token_urlsafe(24))"
 }
 
 set_key_value() {
@@ -147,6 +164,9 @@ show_next_steps() {
   - dev
   - test
 
+ملف المتابعة:
+  deployment/docker/logs/bootstrap_latest.log
+
 أوامر مفيدة:
   bash deployment/docker/deploy.sh ps
   bash deployment/docker/deploy.sh logs nginx
@@ -166,6 +186,7 @@ EOF
 
 main() {
   require_root
+  log "Bootstrap log file: $LOG_FILE"
   install_docker
   bootstrap_env_files
   prepare_directories

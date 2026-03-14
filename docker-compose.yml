@@ -1,50 +1,63 @@
-version: "3.9"
-
 services:
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    env_file:
+      - .env
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
     command: >
-      sh -c "python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+      gunicorn finai_backend.wsgi:application
+      --bind 0.0.0.0:8000
+      --workers ${GUNICORN_WORKERS:-3}
+      --timeout ${GUNICORN_TIMEOUT:-120}
+      --access-logfile -
+      --error-logfile -
+    expose:
+      - "8000"
     volumes:
-      - .:/app
-      - media_files:/app/media
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+      - logs_volume:/app/logs
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - web
+    env_file:
+      - .env
+    environment:
+      NGINX_HOST: ${NGINX_HOST:-_}
     ports:
-      - "8000:8000"
-    env_file: .env
-    depends_on:
-      redis:
-        condition: service_started
-    environment:
-      REDIS_URL: redis://redis:6379/0
-
-  celery:
-    build: .
-    command: celery -A finai_backend worker --loglevel=info --concurrency=4
+      - "80:80"
     volumes:
-      - .:/app
-      - media_files:/app/media
-    env_file: .env
-    depends_on:
-      - redis
-    environment:
-      REDIS_URL: redis://redis:6379/0
-
-  celery-beat:
-    build: .
-    command: celery -A finai_backend beat --loglevel=info
-    volumes:
-      - .:/app
-    env_file: .env
-    depends_on:
-      - redis
-    environment:
-      REDIS_URL: redis://redis:6379/0
+      - static_volume:/vol/static:ro
+      - media_volume:/vol/media:ro
+      - ./docker/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
 
 volumes:
-  media_files:
+  mysql_data:
+  static_volume:
+  media_volume:
+  logs_volume:

@@ -40,6 +40,16 @@ DEBUG = os.environ.get("DEBUG", "True") == "True"
 
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
+CSRF_TRUSTED_ORIGINS_RAW = os.environ.get("CSRF_TRUSTED_ORIGINS", "").strip()
+if CSRF_TRUSTED_ORIGINS_RAW:
+    CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in CSRF_TRUSTED_ORIGINS_RAW.split(",") if origin.strip()]
+
+USE_X_FORWARDED_HOST = os.environ.get("USE_X_FORWARDED_HOST", "False") == "True"
+USE_X_FORWARDED_PORT = os.environ.get("USE_X_FORWARDED_PORT", "False") == "True"
+
+if os.environ.get("ENABLE_SECURE_PROXY_SSL_HEADER", "False") == "True":
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 # ─── Apps ────────────────────────────────────────────────────────────────────
 DJANGO_APPS = [
     "django.contrib.admin",

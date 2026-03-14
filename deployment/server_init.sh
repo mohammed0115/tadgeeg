@@ -26,6 +26,57 @@ fail()    { echo -e "${RED}[FAIL]${RESET}  $1"; exit 1; }
 section() { echo ""; echo -e "${BOLD}━━━  $1  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"; echo ""; }
 ask()     { echo -en "${BOLD}▶ $1${RESET} "; }
 
+MYSQL_AUTH_MODE=""
+MYSQL_AUTH_ARGS=()
+DEBIAN_MYSQL_DEFAULTS="/etc/mysql/debian.cnf"
+
+detect_mysql_auth() {
+  MYSQL_AUTH_MODE=""
+  MYSQL_AUTH_ARGS=()
+
+  if mysql -u root -p"${MYSQL_ROOT_PASS}" -e "SELECT 1" >/dev/null 2>&1; then
+    MYSQL_AUTH_MODE="root-password"
+    MYSQL_AUTH_ARGS=(-u root -p"${MYSQL_ROOT_PASS}")
+    return 0
+  fi
+
+  if mysql -u root -e "SELECT 1" >/dev/null 2>&1; then
+    MYSQL_AUTH_MODE="root-socket"
+    MYSQL_AUTH_ARGS=(-u root)
+    return 0
+  fi
+
+  if [ -f "$DEBIAN_MYSQL_DEFAULTS" ] && mysql --defaults-file="$DEBIAN_MYSQL_DEFAULTS" -e "SELECT 1" >/dev/null 2>&1; then
+    MYSQL_AUTH_MODE="debian-maint"
+    MYSQL_AUTH_ARGS=(--defaults-file="$DEBIAN_MYSQL_DEFAULTS")
+    return 0
+  fi
+
+  return 1
+}
+
+mysql_exec() {
+  mysql "${MYSQL_AUTH_ARGS[@]}" "$@"
+}
+
+mysql_exec_or_fail() {
+  detect_mysql_auth || fail "Unable to authenticate to MySQL. Use the existing MySQL root password, or verify $DEBIAN_MYSQL_DEFAULTS exists and is valid."
+
+  case "$MYSQL_AUTH_MODE" in
+    root-password)
+      info "Authenticated to MySQL with the supplied root password"
+      ;;
+    root-socket)
+      warn "Authenticated to MySQL via local socket; applying the supplied root password now"
+      ;;
+    debian-maint)
+      warn "Using Debian maintenance credentials to apply the supplied root password"
+      ;;
+  esac
+
+  mysql_exec "$@"
+}
+
 # ── Root check ────────────────────────────────────────────────────────────────
 [ "$(id -u)" -eq 0 ] || fail "Must run as root: sudo bash server_init.sh"
 
@@ -75,7 +126,7 @@ read -rs OPENAI_KEY; echo ""
 [ -n "$OPENAI_KEY" ] || fail "OpenAI API key is required"
 
 # ── MySQL root password ───────────────────────────────────────────────────────
-ask "MySQL ROOT password (new — will be set now):"
+ask "MySQL ROOT password (existing if already configured; new on fresh installs):"
 read -rs MYSQL_ROOT_PASS; echo ""
 [ -n "$MYSQL_ROOT_PASS" ] || fail "MySQL root password cannot be empty"
 
@@ -209,31 +260,35 @@ success "System updated and base packages installed"
 # ═══════════════════════════════════════════════════════════════════════════════
 section "STEP 2 — MySQL Installation"
 
-if command -v mysql &>/dev/null; then
+if command -v mysql &>/dev/null && systemctl list-unit-files | grep -q '^mysql.service'; then
   success "MySQL already installed ($(mysql --version | awk '{print $3}'))"
 else
   info "Installing MySQL Server..."
   apt-get install -y mysql-server
-  systemctl enable mysql
-  systemctl start mysql
   success "MySQL installed"
 fi
 
+systemctl enable mysql
+systemctl start mysql
+systemctl is-active --quiet mysql || fail "MySQL service failed to start"
+
 # Secure MySQL without interactive prompt
 info "Securing MySQL..."
-mysql -u root <<SQL
-  ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${MYSQL_ROOT_PASS}';
+mysql_exec_or_fail <<SQL
+  ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASS}';
   DELETE FROM mysql.user WHERE User='';
   DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost','127.0.0.1','::1');
   DROP DATABASE IF EXISTS test;
   DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
   FLUSH PRIVILEGES;
 SQL
+MYSQL_AUTH_MODE="root-password"
+MYSQL_AUTH_ARGS=(-u root -p"${MYSQL_ROOT_PASS}")
 success "MySQL secured"
 
 # Create databases and users
 info "Creating databases and users..."
-mysql -u root -p"${MYSQL_ROOT_PASS}" <<SQL
+mysql_exec <<SQL
   -- Live
   CREATE DATABASE IF NOT EXISTS \`finai_live\`
     CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

@@ -57,10 +57,24 @@ if [ -f "$SECRET_FILE" ]; then
   done < "$SECRET_FILE"
 fi
 
+load_secret_env() {
+  [ -f "$SECRET_FILE" ] || return 0
+
+  while IFS= read -r line; do
+    [[ "$line" =~ ^[A-Z_]+=.+ ]] || continue
+    export "$line"
+  done < "$SECRET_FILE"
+}
+
 # ── Django prep ───────────────────────────────────────────────────────────────
 log "🔄 Activating venv and running Django management commands..."
 cd "$BACKEND_DIR"
 source "$VENV_DIR/bin/activate"
+load_secret_env
+
+log "🔎 Verifying Django runtime dependencies..."
+python -c "import os, django, celery, gunicorn; __import__('MySQLdb') if (os.environ.get('DB_ENGINE') == 'django.db.backends.mysql' or os.environ.get('DB_NAME')) else None" >>"$LOG_FILE" 2>&1
+log "✅ Django runtime dependencies verified"
 
 log "🗄️  Running database migrations..."
 python manage.py migrate --noinput >>"$LOG_FILE" 2>&1

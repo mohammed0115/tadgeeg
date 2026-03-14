@@ -40,7 +40,8 @@ PKGS=(
   unzip
   nginx
   ca-certificates
-  libmysqlclient-dev
+  default-libmysqlclient-dev
+  libmariadb-dev-compat
   pkg-config
   libffi-dev
   libssl-dev
@@ -118,6 +119,10 @@ if [ -f "$REQUIREMENTS" ]; then
   log "📦 Installing Python requirements..."
   "$VENV_DIR/bin/pip" install -r "$REQUIREMENTS" >>"$LOG_FILE" 2>&1
   log "✅ Requirements installed"
+
+  log "🔎 Verifying Python runtime packages..."
+  "$VENV_DIR/bin/python" -c "import django, celery, gunicorn, MySQLdb" >>"$LOG_FILE" 2>&1
+  log "✅ Python runtime packages verified"
 else
   log "⚠️  requirements.txt not found at $REQUIREMENTS (run Git sync first)"
 fi

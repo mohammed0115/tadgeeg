@@ -32,6 +32,17 @@ flock -n 200 || { echo "⏳ Another refresh is already running for [$ENV_LABEL].
 
 log() { echo "$(date '+%F %T') [$ENV_LABEL] $1" | tee -a "$LOG_FILE"; }
 
+SECRET_FILE="$WEB_ROOT/.secret.env"
+
+load_secret_env() {
+  [ -f "$SECRET_FILE" ] || return 0
+
+  while IFS= read -r line; do
+    [[ "$line" =~ ^[A-Z_]+=.+ ]] || continue
+    export "$line"
+  done < "$SECRET_FILE"
+}
+
 clean_untracked() {
   git clean -fd \
     -e ".secret.env" \
@@ -71,6 +82,7 @@ log "✅ Requirements up to date"
 log "🗄️  [3/8] Running database migrations..."
 cd "$BACKEND_DIR"
 source "$VENV_DIR/bin/activate"
+load_secret_env
 python manage.py migrate --noinput >>"$LOG_FILE" 2>&1
 log "✅ Migrations complete"
 

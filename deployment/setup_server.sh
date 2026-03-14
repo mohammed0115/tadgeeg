@@ -210,9 +210,9 @@ ask "WWW domain for LIVE [www.tadgeeg.com]:"
 read -r LIVE_WWW
 LIVE_WWW="${LIVE_WWW:-www.${LIVE_DOMAIN}}"
 
-ask "Git branch for LIVE [master]:"
+ask "Git branch for LIVE [main]:"
 read -r LIVE_BRANCH
-LIVE_BRANCH="${LIVE_BRANCH:-master}"
+LIVE_BRANCH="${LIVE_BRANCH:-main}"
 
 ask "Web root for LIVE [/var/www/live]:"
 read -r LIVE_ROOT

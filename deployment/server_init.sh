@@ -520,7 +520,7 @@ ENV
 
 write_env "live" "LIVE" \
   "tadgeeg.com" "www.tadgeeg.com" \
-  "master" "/var/www/live" \
+  "main" "/var/www/live" \
   "8001" "5" "120" "1000" "0" \
   "False" "production"
 

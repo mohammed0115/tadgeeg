@@ -139,6 +139,8 @@ ensure_runtime_dependencies() {
   log "✅ Django runtime dependencies verified"
 }
 
+PYTHON_BIN="$VENV_DIR/bin/python"
+
 # ── Django prep ───────────────────────────────────────────────────────────────
 ensure_virtualenv
 log "🔄 Activating venv and running Django management commands..."
@@ -172,8 +174,7 @@ After=network.target redis.service
 Wants=redis.service
 
 [Service]
-Type=notify
-NotifyAccess=all
+Type=simple
 PermissionsStartOnly=true
 User=www-data
 Group=www-data
@@ -191,14 +192,16 @@ Environment="DB_NAME=${DB_NAME}"
 Environment="DB_USER=${DB_USER}"
 Environment="DB_HOST=${DB_HOST}"
 Environment="DB_PORT=${DB_PORT}"
+Environment="PATH=${VENV_DIR}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 $(printf "%b" "$SECRET_ENV_BLOCK")
 
 # Socket cleanup on start
+ExecStartPre=/usr/bin/test -x ${PYTHON_BIN}
 ExecStartPre=/usr/bin/install -d -o www-data -g www-data -m 0755 ${SYSTEMD_SOCKET_DIR}
 ExecStartPre=/bin/rm -f ${SYSTEMD_SOCKET}
 
 # Gunicorn
-ExecStart=${VENV_DIR}/bin/gunicorn ${DJANGO_SETTINGS_MODULE%.*}.wsgi:application \\
+ExecStart=${PYTHON_BIN} -m gunicorn ${DJANGO_SETTINGS_MODULE%.*}.wsgi:application \\
   --name finai_${ENV} \\
   --workers ${GUNICORN_WORKERS} \\
   --bind unix:${SYSTEMD_SOCKET} \\
@@ -249,9 +252,10 @@ Environment="DB_NAME=${DB_NAME}"
 Environment="DB_USER=${DB_USER}"
 Environment="DB_HOST=${DB_HOST}"
 Environment="DB_PORT=${DB_PORT}"
+Environment="PATH=${VENV_DIR}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 $(printf "%b" "$SECRET_ENV_BLOCK")
 
-ExecStart=${VENV_DIR}/bin/celery -A finai_backend worker \\
+ExecStart=${PYTHON_BIN} -m celery -A finai_backend worker \\
   --loglevel=info \\
   --logfile=${LOG_DIR}/celery.log \\
   --concurrency=4
@@ -282,9 +286,10 @@ WorkingDirectory=$BACKEND_DIR
 Environment="DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE}"
 Environment="DJANGO_ENV=${DJANGO_ENV}"
 Environment="REDIS_URL=${REDIS_URL}"
+Environment="PATH=${VENV_DIR}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 $(printf "%b" "$SECRET_ENV_BLOCK")
 
-ExecStart=${VENV_DIR}/bin/celery -A finai_backend beat \\
+ExecStart=${PYTHON_BIN} -m celery -A finai_backend beat \\
   --loglevel=info \\
   --logfile=${LOG_DIR}/celerybeat.log \\
   --schedule ${LOG_DIR}/celerybeat-schedule

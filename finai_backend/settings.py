@@ -12,8 +12,20 @@ from dotenv import load_dotenv
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-LOG_DIR = BASE_DIR / "logs"
-LOG_DIR.mkdir(parents=True, exist_ok=True)
+LOG_DIR = Path(os.environ.get("DJANGO_LOG_DIR", BASE_DIR / "logs"))
+if not LOG_DIR.is_absolute():
+    LOG_DIR = BASE_DIR / LOG_DIR
+
+LOG_FILE = LOG_DIR / "finai.log"
+FILE_LOGGING_ENABLED = False
+
+try:
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    with open(LOG_FILE, "a", encoding="utf-8"):
+        pass
+    FILE_LOGGING_ENABLED = os.access(LOG_FILE, os.W_OK)
+except OSError:
+    FILE_LOGGING_ENABLED = False
 SQLITE_NAME = os.environ.get("SQLITE_NAME", "db_runtime.sqlite3")
 SQLITE_PATH = Path(SQLITE_NAME)
 if not SQLITE_PATH.is_absolute():
@@ -328,6 +340,19 @@ MAX_UPLOAD_SIZE_MB = int(os.environ.get("MAX_UPLOAD_SIZE_MB", "50"))
 MAX_UPLOAD_SIZE = MAX_UPLOAD_SIZE_MB * 1024 * 1024
 
 # ─── Logging ─────────────────────────────────────────────────────────────────
+LOGGING_HANDLERS = {
+    "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
+}
+
+if FILE_LOGGING_ENABLED:
+    LOGGING_HANDLERS["file"] = {
+        "class": "logging.FileHandler",
+        "filename": LOG_FILE,
+        "formatter": "verbose",
+    }
+
+FINAI_LOG_HANDLERS = ["console", *(["file"] if FILE_LOGGING_ENABLED else [])]
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -337,18 +362,11 @@ LOGGING = {
             "style": "{",
         },
     },
-    "handlers": {
-        "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
-        "file": {
-            "class": "logging.FileHandler",
-            "filename": LOG_DIR / "finai.log",
-            "formatter": "verbose",
-        },
-    },
+    "handlers": LOGGING_HANDLERS,
     "root": {"handlers": ["console"], "level": "INFO"},
     "loggers": {
         "django": {"handlers": ["console"], "level": "WARNING", "propagate": False},
-        "finai": {"handlers": ["console", "file"], "level": "DEBUG", "propagate": False},
+        "finai": {"handlers": FINAI_LOG_HANDLERS, "level": "DEBUG", "propagate": False},
     },
 }
 LOGIN_URL = '/login/'

@@ -120,12 +120,17 @@ ensure_virtualenv() {
 }
 
 ensure_mysql_build_deps() {
+  if command -v mariadb_config &>/dev/null || pkg-config --exists mariadb 2>/dev/null || [ -f /usr/include/mariadb/mysql.h ]; then
+    log "✅ Existing MariaDB/MySQL development headers detected"
+    return 0
+  fi
+
   if package_installed default-libmysqlclient-dev || package_installed libmysqlclient-dev; then
     log "✅ MySQL build headers already installed"
     return 0
   fi
 
-  if package_installed libmariadb-dev && package_installed libmariadb-dev-compat; then
+  if package_installed libmariadb-dev || package_installed libmariadb-dev-compat; then
     log "✅ MariaDB compatibility build headers already installed"
     return 0
   fi

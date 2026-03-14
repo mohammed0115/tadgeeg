@@ -66,15 +66,38 @@ load_secret_env() {
   done < "$SECRET_FILE"
 }
 
+ensure_runtime_dependencies() {
+  log "🔎 Verifying Django runtime dependencies..."
+
+  if python -c "import os, django, celery, gunicorn; __import__('MySQLdb') if (os.environ.get('DB_ENGINE') == 'django.db.backends.mysql' or os.environ.get('DB_NAME')) else None" >>"$LOG_FILE" 2>&1; then
+    log "✅ Django runtime dependencies verified"
+    return 0
+  fi
+
+  log "⚠️  Runtime dependency check failed — retrying pip install from requirements.txt"
+  if [ ! -f "$BACKEND_DIR/requirements.txt" ]; then
+    log "❌ requirements.txt not found at $BACKEND_DIR/requirements.txt"
+    exit 1
+  fi
+
+  pip install --upgrade pip setuptools wheel >>"$LOG_FILE" 2>&1
+  pip install -r "$BACKEND_DIR/requirements.txt" >>"$LOG_FILE" 2>&1
+
+  python -c "import os, django, celery, gunicorn; __import__('MySQLdb') if (os.environ.get('DB_ENGINE') == 'django.db.backends.mysql' or os.environ.get('DB_NAME')) else None" >>"$LOG_FILE" 2>&1 || {
+    log "❌ Runtime dependencies are still missing after reinstall"
+    exit 1
+  }
+
+  log "✅ Django runtime dependencies verified"
+}
+
 # ── Django prep ───────────────────────────────────────────────────────────────
 log "🔄 Activating venv and running Django management commands..."
 cd "$BACKEND_DIR"
 source "$VENV_DIR/bin/activate"
 load_secret_env
 
-log "🔎 Verifying Django runtime dependencies..."
-python -c "import os, django, celery, gunicorn; __import__('MySQLdb') if (os.environ.get('DB_ENGINE') == 'django.db.backends.mysql' or os.environ.get('DB_NAME')) else None" >>"$LOG_FILE" 2>&1
-log "✅ Django runtime dependencies verified"
+ensure_runtime_dependencies
 
 log "🗄️  Running database migrations..."
 python manage.py migrate --noinput >>"$LOG_FILE" 2>&1

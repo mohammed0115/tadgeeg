@@ -18,113 +18,54 @@ LOG_FILE="$LOG_DIR/nginx_setup.log"
 
 log() { echo "$(date '+%F %T') [$ENV_LABEL] $1" | tee -a "$LOG_FILE"; }
 
-resolve_socket_path() {
-  local configured_socket="$1"
-  local configured_dir
-  configured_dir="$(dirname "$configured_socket")"
+APT_RETRY_COUNT="${APT_RETRY_COUNT:-3}"
 
-  if [ "$configured_dir" = "/run" ]; then
-    echo "/run/${SERVICE_NAME}/$(basename "$configured_socket")"
+run_with_retries() {
+  local description="$1"
+  shift
+  local attempt=1
+
+  until "$@" >>"$LOG_FILE" 2>&1; do
+    if [ "$attempt" -ge "$APT_RETRY_COUNT" ]; then
+      log "❌ ${description} failed after ${APT_RETRY_COUNT} attempts"
+      return 1
+    fi
+
+    log "⚠️  ${description} failed (attempt ${attempt}/${APT_RETRY_COUNT}) — retrying in 5 seconds..."
+    attempt=$((attempt + 1))
+    sleep 5
+  done
+
+  return 0
+}
+
+apt_update() {
+  run_with_retries "apt-get update" apt-get update -y
+}
+
+apt_install() {
+  [ "$#" -gt 0 ] || return 0
+  run_with_retries "apt-get install: $*" apt-get install -y "$@"
+}
+
+ensure_nginx_available() {
+  if command -v nginx &>/dev/null; then
+    local nginx_version
+    nginx_version="$(nginx -v 2>&1 | awk -F/ '{print $2}')"
+    log "✅ Nginx already installed (${nginx_version:-unknown})"
   else
-    echo "$configured_socket"
+    log "📦 Nginx not installed — installing automatically..."
+    apt_update
+    apt_install nginx ca-certificates
+    log "✅ Nginx installed"
   fi
+
+  systemctl enable nginx >>"$LOG_FILE" 2>&1 || true
+  systemctl start nginx >>"$LOG_FILE" 2>&1 || systemctl restart nginx >>"$LOG_FILE" 2>&1 || true
 }
 
-NGINX_SOCKET="$(resolve_socket_path "$SOCKET")"
-
-echo ""
-echo "╔══════════════════════════════════════════════════════╗"
-echo "║  FinAI [$ENV_LABEL] — STEP 05: Nginx Configuration  ║"
-echo "╚══════════════════════════════════════════════════════╝"
-echo ""
-
-# ── Pre-flight ────────────────────────────────────────────────────────────────
-command -v nginx &>/dev/null || { log "❌ Nginx not installed. Run 02_system_setup.sh first."; exit 1; }
-
-# Socket may not exist yet if gunicorn hasn't started; we write config anyway
-# and let it be validated after gunicorn is running.
-
-# ── Write nginx.conf security baseline (global, only once) ───────────────────
-NGINX_CONF="/etc/nginx/nginx.conf"
-if ! grep -q "finai_security" "$NGINX_CONF" 2>/dev/null; then
-  log "🔧 Hardening global nginx.conf..."
-  # Inject security header block in http block
-  sed -i '/http {/a \
-    # --- FinAI Security Baseline ---\n\
-    server_tokens off;\n\
-    add_header X-Frame-Options SAMEORIGIN;\n\
-    add_header X-Content-Type-Options nosniff;\n\
-    add_header X-XSS-Protection "1; mode=block";\n\
-    add_header Referrer-Policy "strict-origin-when-cross-origin";\n\
-    # finai_security\n' "$NGINX_CONF" 2>/dev/null || true
-fi
-
-# ── Write site config ─────────────────────────────────────────────────────────
-log "📝 Writing Nginx site: $NGINX_SITE_FILE"
-
-mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
-
-cat > "$NGINX_SITE_FILE" <<NGINX
-# ============================================================
-# FinAI — Nginx Site Config: $ENV_LABEL
-# Domains: $DOMAIN_ALL
-# Generated: $(date '+%F %T')
-# ============================================================
-
-# Rate limiting zones
-limit_req_zone \$binary_remote_addr zone=finai_${ENV}_api:10m rate=30r/m;
-limit_req_zone \$binary_remote_addr zone=finai_${ENV}_upload:10m rate=10r/m;
-
-# Upstream
-upstream finai_${ENV}_gunicorn {
-    server unix:${NGINX_SOCKET} fail_timeout=10s;
-}
-
-# ── HTTP → HTTPS redirect ──────────────────────────────────
-server {
-    listen 80;
-    listen [::]:80;
-    server_name $DOMAIN_ALL;
-
-    # ACME challenge (Let's Encrypt)
-    location /.well-known/acme-challenge/ {
-        root /var/www/letsencrypt;
-    }
-
-    location / {
-        return 301 https://\$host\$request_uri;
-    }
-}
-
-# ── HTTPS ──────────────────────────────────────────────────
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name $DOMAIN_ALL;
-
-    # SSL (certbot will fill in certificate paths)
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
-    ssl_prefer_server_ciphers off;
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 1d;
-    ssl_stapling on;
-    ssl_stapling_verify on;
-
-    # HSTS (only set on live)
-$([ "$ENV_NAME" = "live" ] && echo '    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;' || echo '    # HSTS disabled on non-live environments')
-
-    # Size limits
-    client_max_body_size 50M;
-    client_body_timeout 60s;
-    client_header_timeout 60s;
-    keepalive_timeout 65s;
-    send_timeout 60s;
-
-    # Logs
-    access_log /var/log/nginx/finai_${ENV}_access.log combined;
-    error_log  /var/log/nginx/finai_${ENV}_error.log warn;
-
+write_application_locations() {
+  cat <<NGINX
     # ── Static files ─────────────────────────────────────
     location /static/ {
         alias $STATIC_ROOT/;
@@ -139,7 +80,6 @@ $([ "$ENV_NAME" = "live" ] && echo '    add_header Strict-Transport-Security "ma
         alias $MEDIA_ROOT/;
         expires 7d;
         add_header Cache-Control "private";
-        # Block direct access to uploaded documents
         location ~* \.(pdf|docx?|xlsx?|zip)$ {
             add_header Content-Disposition "attachment";
         }
@@ -197,8 +137,161 @@ $([ "$ENV_NAME" = "live" ] && echo '    add_header Strict-Transport-Security "ma
         access_log off;
         log_not_found off;
     }
+NGINX
+}
+
+write_http_server() {
+  if [ "${USE_SSL:-true}" = "true" ] && [ "$SSL_READY" = "true" ]; then
+    cat <<NGINX
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $DOMAIN_ALL;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/letsencrypt;
+    }
+
+    location / {
+        return 301 https://\$host\$request_uri;
+    }
 }
 NGINX
+  else
+    cat <<NGINX
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $DOMAIN_ALL;
+
+    access_log /var/log/nginx/finai_${ENV}_access.log combined;
+    error_log  /var/log/nginx/finai_${ENV}_error.log warn;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/letsencrypt;
+    }
+
+$(write_application_locations)
+}
+NGINX
+  fi
+}
+
+write_https_server() {
+  [ "${USE_SSL:-true}" = "true" ] || return 0
+  [ "$SSL_READY" = "true" ] || return 0
+
+  cat <<NGINX
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name $DOMAIN_ALL;
+
+    ssl_certificate $CERT_FULLCHAIN;
+    ssl_certificate_key $CERT_PRIVKEY;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+
+$([ "$ENV_NAME" = "live" ] && echo '    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;' || echo '    # HSTS disabled on non-live environments')
+
+    client_max_body_size 50M;
+    client_body_timeout 60s;
+    client_header_timeout 60s;
+    keepalive_timeout 65s;
+    send_timeout 60s;
+
+    access_log /var/log/nginx/finai_${ENV}_access.log combined;
+    error_log  /var/log/nginx/finai_${ENV}_error.log warn;
+
+$(write_application_locations)
+}
+NGINX
+}
+
+write_nginx_site() {
+  cat <<NGINX
+# ============================================================
+# FinAI — Nginx Site Config: $ENV_LABEL
+# Domains: $DOMAIN_ALL
+# Generated: $(date '+%F %T')
+# ============================================================
+
+limit_req_zone \$binary_remote_addr zone=finai_${ENV}_api:10m rate=30r/m;
+limit_req_zone \$binary_remote_addr zone=finai_${ENV}_upload:10m rate=10r/m;
+
+upstream finai_${ENV}_gunicorn {
+    server unix:${NGINX_SOCKET} fail_timeout=10s;
+}
+NGINX
+
+  write_http_server
+  write_https_server
+}
+
+resolve_socket_path() {
+  local configured_socket="$1"
+  local configured_dir
+  configured_dir="$(dirname "$configured_socket")"
+
+  if [ "$configured_dir" = "/run" ]; then
+    echo "/run/${SERVICE_NAME}/$(basename "$configured_socket")"
+  else
+    echo "$configured_socket"
+  fi
+}
+
+NGINX_SOCKET="$(resolve_socket_path "$SOCKET")"
+CERT_FULLCHAIN="/etc/letsencrypt/live/$DOMAIN_MAIN/fullchain.pem"
+CERT_PRIVKEY="/etc/letsencrypt/live/$DOMAIN_MAIN/privkey.pem"
+SSL_READY="false"
+
+if [ "${USE_SSL:-true}" = "true" ] && [ -f "$CERT_FULLCHAIN" ] && [ -f "$CERT_PRIVKEY" ]; then
+  SSL_READY="true"
+fi
+
+echo ""
+echo "╔══════════════════════════════════════════════════════╗"
+echo "║  FinAI [$ENV_LABEL] — STEP 05: Nginx Configuration  ║"
+echo "╚══════════════════════════════════════════════════════╝"
+echo ""
+
+# ── Pre-flight ────────────────────────────────────────────────────────────────
+ensure_nginx_available
+
+if [ "${USE_SSL:-true}" = "true" ] && [ "$SSL_READY" != "true" ]; then
+  log "ℹ️  SSL certificate not found yet for $DOMAIN_MAIN — writing HTTP-only config until Step 06 succeeds"
+fi
+
+# Socket may not exist yet if gunicorn hasn't started; we write config anyway
+# and let it be validated after gunicorn is running.
+
+# ── Write nginx.conf security baseline (global, only once) ───────────────────
+NGINX_CONF="/etc/nginx/nginx.conf"
+if ! grep -q "finai_security" "$NGINX_CONF" 2>/dev/null; then
+  log "🔧 Hardening global nginx.conf..."
+  # Inject security header block in http block
+  sed -i '/http {/a \
+    # --- FinAI Security Baseline ---\n\
+    server_tokens off;\n\
+    add_header X-Frame-Options SAMEORIGIN;\n\
+    add_header X-Content-Type-Options nosniff;\n\
+    add_header X-XSS-Protection "1; mode=block";\n\
+    add_header Referrer-Policy "strict-origin-when-cross-origin";\n\
+    # finai_security\n' "$NGINX_CONF" 2>/dev/null || true
+fi
+
+# ── Write site config ─────────────────────────────────────────────────────────
+log "📝 Writing Nginx site: $NGINX_SITE_FILE"
+
+mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+
+write_nginx_site > "$NGINX_SITE_FILE"
 
 # ── Enable site ───────────────────────────────────────────────────────────────
 log "🔗 Enabling site..."
@@ -233,4 +326,8 @@ systemctl is-active --quiet nginx \
 
 echo ""
 echo "✅ [STEP 05] Nginx Setup COMPLETED for [$ENV_LABEL]"
-echo "   Domain:  https://$DOMAIN_MAIN"
+if [ "$SSL_READY" = "true" ]; then
+  echo "   Domain:  https://$DOMAIN_MAIN"
+else
+  echo "   Domain:  http://$DOMAIN_MAIN"
+fi

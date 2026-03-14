@@ -324,9 +324,17 @@ WASSLA_EMAIL_ASYNC_ENABLED = os.environ.get("WASSLA_EMAIL_ASYNC_ENABLED", "False
 from celery.schedules import crontab
 
 CELERY_BEAT_SCHEDULE = {
+    "nightly-anomaly-scan": {
+        "task": "documents.run_nightly_anomaly_scan",
+        "schedule": crontab(hour=2, minute=0),   # 2:00 AM daily (Asia/Riyadh)
+    },
+    "weekly-kpi-report": {
+        "task": "documents.generate_weekly_kpi_report",
+        "schedule": crontab(hour=6, minute=0, day_of_week=1),  # Monday 6 AM
+    },
     "weekly-audit-summary": {
-        "task": "notifications.weekly_summary",
-        "schedule": crontab(hour=9, minute=0, day_of_week=1),
+        "task": "audit.run_weekly_audit_summary",
+        "schedule": crontab(hour=9, minute=0, day_of_week=1),  # Monday 9 AM
     },
 }
 
@@ -345,9 +353,24 @@ TESSERACT_CMD = os.environ.get("TESSERACT_CMD", "/usr/bin/tesseract")
 TESSERACT_LANGUAGES = os.environ.get("TESSERACT_LANGUAGES", "ara+eng")
 
 # ─── File Upload ──────────────────────────────────────────────────────────────
-ALLOWED_UPLOAD_EXTENSIONS = [".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".xlsx", ".csv"]
-MAX_UPLOAD_SIZE_MB = int(os.environ.get("MAX_UPLOAD_SIZE_MB", "50"))
-MAX_UPLOAD_SIZE = MAX_UPLOAD_SIZE_MB * 1024 * 1024
+ALLOWED_UPLOAD_EXTENSIONS = [
+    # Images
+    ".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp", ".webp",
+    # Documents
+    ".pdf",
+    # Archives
+    ".zip",
+    # Spreadsheets
+    ".xls", ".xlsx", ".xlsm",
+    # Data files
+    ".csv", ".tsv",
+    # Structured data
+    ".json", ".jsonl",
+]
+MAX_UPLOAD_SIZE_MB      = int(os.environ.get("MAX_UPLOAD_SIZE_MB", "50"))
+MAX_UPLOAD_SIZE         = MAX_UPLOAD_SIZE_MB * 1024 * 1024
+MAX_ZIP_UPLOAD_SIZE_MB  = int(os.environ.get("MAX_ZIP_UPLOAD_SIZE_MB", "200"))
+MAX_ZIP_UPLOAD_SIZE     = MAX_ZIP_UPLOAD_SIZE_MB * 1024 * 1024
 
 # ─── Logging ─────────────────────────────────────────────────────────────────
 LOGGING_HANDLERS = {

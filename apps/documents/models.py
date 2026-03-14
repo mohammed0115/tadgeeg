@@ -122,6 +122,74 @@ class DocumentPageResult(models.Model):
         ordering = ["page_number"]
 
 
+class DocumentAnalysisResult(models.Model):
+    """
+    Persisted output of the full Financial AI + Audit pipeline for one document.
+
+    Created by process_document_full_pipeline Celery task after:
+      DocumentEngine.ingest() → FinancialAIEngine.analyse() → AuditEngine.evaluate()
+
+    This model is the single source of truth for AI-derived risk and compliance data
+    attached to a Document record.
+    """
+
+    class RiskLevel(models.TextChoices):
+        LOW      = "low",      "Low"
+        MEDIUM   = "medium",   "Medium"
+        HIGH     = "high",     "High"
+        CRITICAL = "critical", "Critical"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    document = models.OneToOneField(
+        Document, on_delete=models.CASCADE, related_name="analysis_result"
+    )
+
+    # ── Classification ─────────────────────────────────────────────────────────
+    ai_document_type       = models.CharField(max_length=50, default="other")
+    classification_confidence = models.FloatField(default=0.0)
+    classification_method  = models.CharField(max_length=50, default="unknown")
+
+    # ── Key extracted fields (queryable, denormalised) ─────────────────────────
+    vendor_name     = models.CharField(max_length=255, blank=True)
+    document_number = models.CharField(max_length=100, blank=True)
+    doc_date        = models.DateField(null=True, blank=True)
+    currency        = models.CharField(max_length=10, default="SAR")
+    total_amount    = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+    tax_amount      = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+
+    # ── Risk & intelligence scores ─────────────────────────────────────────────
+    risk_score       = models.PositiveSmallIntegerField(default=0, help_text="0–100")
+    risk_level       = models.CharField(max_length=10, choices=RiskLevel.choices, default=RiskLevel.LOW)
+    fraud_score      = models.FloatField(default=0.0, help_text="0.0–1.0")
+    duplicate_score  = models.FloatField(default=0.0, help_text="0.0–1.0")
+    compliance_score = models.FloatField(default=1.0, help_text="0.0–1.0")
+    is_duplicate     = models.BooleanField(default=False)
+    requires_review  = models.BooleanField(default=False)
+    escalate         = models.BooleanField(default=False)
+
+    # ── Full serialised output ─────────────────────────────────────────────────
+    analysis_data    = models.JSONField(default=dict, help_text="Full FinancialAnalysisResult.to_dict()")
+    audit_report     = models.JSONField(default=dict, help_text="Serialised AuditReport from AuditEngine")
+
+    # ── Processing metadata ────────────────────────────────────────────────────
+    pipeline_version    = models.CharField(max_length=20, default="2.0")
+    processing_errors   = models.JSONField(default=list)
+    processing_time_ms  = models.PositiveIntegerField(null=True, blank=True)
+    created_at          = models.DateTimeField(auto_now_add=True)
+    updated_at          = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "document_analysis_results"
+        indexes  = [
+            models.Index(fields=["risk_level"]),
+            models.Index(fields=["is_duplicate"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        return f"Analysis[{self.document.original_filename}] risk={self.risk_level}"
+
+
 from .typed_models import (
     PurchaseOrder,
     PurchaseOrderValidation,

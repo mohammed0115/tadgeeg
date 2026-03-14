@@ -50,7 +50,12 @@ apt_install() {
 }
 
 pip_install() {
-  run_with_retries "pip install: $*" "$VENV_DIR/bin/pip" "$@"
+  local original_path="$PATH"
+  PATH="$VENV_DIR/bin:$PATH"
+  run_with_retries "pip install: $*" "$VENV_DIR/bin/python" -m pip "$@"
+  local status=$?
+  PATH="$original_path"
+  return $status
 }
 
 require_command() {
@@ -84,6 +89,7 @@ PKGS=(
   unzip
   nginx
   ca-certificates
+  python-is-python3
   default-libmysqlclient-dev
   libmariadb-dev-compat
   pkg-config
@@ -163,6 +169,10 @@ else
   log "✅ Virtual environment created"
 fi
 
+export PATH="$VENV_DIR/bin:$PATH"
+hash -r
+require_command python "The virtual environment should expose a python command."
+
 log "📦 Upgrading pip, setuptools, wheel..."
 pip_install install --upgrade pip setuptools wheel
 
@@ -170,7 +180,11 @@ pip_install install --upgrade pip setuptools wheel
 REQUIREMENTS="$BACKEND_DIR/requirements.txt"
 if [ -f "$REQUIREMENTS" ]; then
   log "📦 Installing Python requirements..."
-  pip_install install -r "$REQUIREMENTS"
+  if ! pip_install install -r "$REQUIREMENTS"; then
+    log "❌ Requirements installation failed — recent pip output:"
+    tail -n 40 "$LOG_FILE" || true
+    exit 1
+  fi
   log "✅ Requirements installed"
 
   log "🔎 Verifying Python runtime packages..."

@@ -151,11 +151,10 @@ After=network.target redis.service mysql.service
 Requires=redis.service
 
 [Service]
-Type=forking
+Type=simple
 User=www-data
 Group=www-data
 WorkingDirectory=$BACKEND_DIR
-PIDFile=$LOG_DIR/celery.pid
 
 Environment="DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE}"
 Environment="DJANGO_ENV=${DJANGO_ENV}"
@@ -167,10 +166,8 @@ Environment="DB_PORT=${DB_PORT}"
 $(printf "%b" "$SECRET_ENV_BLOCK")
 
 ExecStart=${VENV_DIR}/bin/celery -A finai_backend worker \\
-  --detach \\
   --loglevel=info \\
   --logfile=${LOG_DIR}/celery.log \\
-  --pidfile=${LOG_DIR}/celery.pid \\
   --concurrency=4
 
 ExecStop=/bin/kill -s TERM \$MAINPID
@@ -204,7 +201,7 @@ $(printf "%b" "$SECRET_ENV_BLOCK")
 ExecStart=${VENV_DIR}/bin/celery -A finai_backend beat \\
   --loglevel=info \\
   --logfile=${LOG_DIR}/celerybeat.log \\
-  --scheduler django_celery_beat.schedulers:DatabaseScheduler
+  --schedule ${LOG_DIR}/celerybeat-schedule
 
 Restart=on-failure
 RestartSec=10

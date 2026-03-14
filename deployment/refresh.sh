@@ -35,6 +35,7 @@ log() { echo "$(date '+%F %T') [$ENV_LABEL] $1" | tee -a "$LOG_FILE"; }
 
 SECRET_FILE="$WEB_ROOT/.secret.env"
 APT_RETRY_COUNT="${APT_RETRY_COUNT:-3}"
+DJANGO_APP_LOG_DIR_DEFAULT="$LOG_DIR/django"
 
 load_secret_env() {
   [ -f "$SECRET_FILE" ] || return 0
@@ -123,6 +124,24 @@ fix_web_root_permissions() {
   if [ -f "$SECRET_FILE" ]; then
     chmod 600 "$SECRET_FILE" 2>/dev/null || true
   fi
+}
+
+prepare_django_log_dir() {
+  DJANGO_APP_LOG_DIR="${DJANGO_LOG_DIR:-$DJANGO_APP_LOG_DIR_DEFAULT}"
+
+  mkdir -p "$DJANGO_APP_LOG_DIR"
+  touch "$DJANGO_APP_LOG_DIR/finai.log"
+
+  chown -R www-data:www-data "$DJANGO_APP_LOG_DIR" 2>/dev/null || true
+  chmod 755 "$DJANGO_APP_LOG_DIR" 2>/dev/null || true
+  chmod 664 "$DJANGO_APP_LOG_DIR/finai.log" 2>/dev/null || true
+
+  if [ -d "$BACKEND_DIR/logs" ]; then
+    chown -R www-data:www-data "$BACKEND_DIR/logs" 2>/dev/null || true
+  fi
+
+  export DJANGO_LOG_DIR="$DJANGO_APP_LOG_DIR"
+  log "✅ Django app log directory ready at $DJANGO_APP_LOG_DIR"
 }
 
 restart_service() {
@@ -221,6 +240,7 @@ log "🗄️  [3/8] Running database migrations..."
 cd "$BACKEND_DIR"
 source "$VENV_DIR/bin/activate"
 load_secret_env
+prepare_django_log_dir
 python manage.py migrate --noinput >>"$LOG_FILE" 2>&1
 log "✅ Migrations complete"
 

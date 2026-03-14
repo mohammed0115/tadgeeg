@@ -55,6 +55,8 @@ if [ -f "$SECRET_FILE" ]; then
     [[ "$line" =~ ^[A-Z_]+=.+ ]] && SECRET_ENV_BLOCK="${SECRET_ENV_BLOCK}Environment=\"$line\"\n" || true
   done < "$SECRET_FILE"
 fi
+DJANGO_APP_LOG_DIR_DEFAULT="$LOG_DIR/django"
+SECRET_ENV_BLOCK="${SECRET_ENV_BLOCK}Environment=\"DJANGO_LOG_DIR=${DJANGO_APP_LOG_DIR_DEFAULT}\"\n"
 
 ensure_virtualenv() {
   if [ -d "$VENV_DIR" ] && [ ! -x "$VENV_DIR/bin/python" ]; then
@@ -83,6 +85,24 @@ fix_static_permissions() {
   if [ -f "$SECRET_FILE" ]; then
     chmod 600 "$SECRET_FILE" 2>/dev/null || true
   fi
+}
+
+prepare_django_log_dir() {
+  DJANGO_APP_LOG_DIR="${DJANGO_LOG_DIR:-$DJANGO_APP_LOG_DIR_DEFAULT}"
+
+  mkdir -p "$DJANGO_APP_LOG_DIR"
+  touch "$DJANGO_APP_LOG_DIR/finai.log"
+
+  chown -R www-data:www-data "$DJANGO_APP_LOG_DIR" 2>/dev/null || true
+  chmod 755 "$DJANGO_APP_LOG_DIR" 2>/dev/null || true
+  chmod 664 "$DJANGO_APP_LOG_DIR/finai.log" 2>/dev/null || true
+
+  if [ -d "$BACKEND_DIR/logs" ]; then
+    chown -R www-data:www-data "$BACKEND_DIR/logs" 2>/dev/null || true
+  fi
+
+  export DJANGO_LOG_DIR="$DJANGO_APP_LOG_DIR"
+  log "✅ Django app log directory ready at $DJANGO_APP_LOG_DIR"
 }
 
 load_secret_env() {
@@ -125,6 +145,7 @@ log "🔄 Activating venv and running Django management commands..."
 cd "$BACKEND_DIR"
 source "$VENV_DIR/bin/activate"
 load_secret_env
+prepare_django_log_dir
 
 ensure_runtime_dependencies
 

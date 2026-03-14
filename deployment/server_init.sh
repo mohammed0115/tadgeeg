@@ -29,14 +29,62 @@ ask()     { echo -en "${BOLD}▶ $1${RESET} "; }
 MYSQL_AUTH_MODE=""
 MYSQL_AUTH_ARGS=()
 DEBIAN_MYSQL_DEFAULTS="/etc/mysql/debian.cnf"
+MYSQL_ROOT_CURRENT_PASS=""
+APT_RETRY_COUNT="${APT_RETRY_COUNT:-3}"
+
+run_with_retries() {
+  local description="$1"
+  shift
+  local attempt=1
+
+  until "$@"; do
+    if [ "$attempt" -ge "$APT_RETRY_COUNT" ]; then
+      fail "${description} failed after ${APT_RETRY_COUNT} attempts"
+    fi
+
+    warn "${description} failed (attempt ${attempt}/${APT_RETRY_COUNT}) — retrying in 5 seconds..."
+    attempt=$((attempt + 1))
+    sleep 5
+  done
+}
+
+apt_update() {
+  run_with_retries "apt-get update" apt-get update -y
+}
+
+apt_upgrade() {
+  run_with_retries "apt-get upgrade" apt-get upgrade -y
+}
+
+apt_install() {
+  [ "$#" -gt 0 ] || return 0
+  run_with_retries "apt-get install: $*" apt-get install -y "$@"
+}
+
+try_mysql_password_auth() {
+  local password="$1"
+  local mode="$2"
+
+  [ -n "$password" ] || return 1
+
+  if mysql -u root -p"$password" -e "SELECT 1" >/dev/null 2>&1; then
+    MYSQL_AUTH_MODE="$mode"
+    MYSQL_AUTH_ARGS=(-u root -p"$password")
+    return 0
+  fi
+
+  return 1
+}
 
 detect_mysql_auth() {
   MYSQL_AUTH_MODE=""
   MYSQL_AUTH_ARGS=()
 
-  if mysql -u root -p"${MYSQL_ROOT_PASS}" -e "SELECT 1" >/dev/null 2>&1; then
-    MYSQL_AUTH_MODE="root-password"
-    MYSQL_AUTH_ARGS=(-u root -p"${MYSQL_ROOT_PASS}")
+  if try_mysql_password_auth "${MYSQL_ROOT_CURRENT_PASS:-}" "root-current-password"; then
+    return 0
+  fi
+
+  if try_mysql_password_auth "${MYSQL_ROOT_PASS:-}" "root-target-password"; then
     return 0
   fi
 
@@ -59,12 +107,38 @@ mysql_exec() {
   mysql "${MYSQL_AUTH_ARGS[@]}" "$@"
 }
 
+prompt_for_mysql_auth_retry() {
+  [ -t 0 ] || return 1
+
+  local attempt=1
+  while [ "$attempt" -le 3 ]; do
+    echo ""
+    warn "Unable to authenticate to MySQL with the current values."
+    ask "Enter CURRENT MySQL root password (attempt ${attempt}/3, leave blank if socket auth should work):"
+    read -rs MYSQL_ROOT_CURRENT_PASS; echo ""
+
+    if detect_mysql_auth; then
+      return 0
+    fi
+
+    attempt=$((attempt + 1))
+  done
+
+  return 1
+}
+
 mysql_exec_or_fail() {
-  detect_mysql_auth || fail "Unable to authenticate to MySQL. Use the existing MySQL root password, or verify $DEBIAN_MYSQL_DEFAULTS exists and is valid."
+  if ! detect_mysql_auth; then
+    prompt_for_mysql_auth_retry || fail "Unable to authenticate to MySQL. Provide the existing MySQL root password, or verify $DEBIAN_MYSQL_DEFAULTS exists and is valid."
+    detect_mysql_auth || fail "Unable to authenticate to MySQL. Provide the existing MySQL root password, or verify $DEBIAN_MYSQL_DEFAULTS exists and is valid."
+  fi
 
   case "$MYSQL_AUTH_MODE" in
-    root-password)
-      info "Authenticated to MySQL with the supplied root password"
+    root-current-password)
+      info "Authenticated to MySQL with the existing root password"
+      ;;
+    root-target-password)
+      info "Authenticated to MySQL with the target root password"
       ;;
     root-socket)
       warn "Authenticated to MySQL via local socket; applying the supplied root password now"
@@ -129,6 +203,9 @@ read -rs OPENAI_KEY; echo ""
 ask "MySQL ROOT password (existing if already configured; new on fresh installs):"
 read -rs MYSQL_ROOT_PASS; echo ""
 [ -n "$MYSQL_ROOT_PASS" ] || fail "MySQL root password cannot be empty"
+
+ask "Current MySQL ROOT password if already configured (leave blank for fresh installs/socket auth):"
+read -rs MYSQL_ROOT_CURRENT_PASS; echo ""
 
 # ── Per-environment DB passwords ──────────────────────────────────────────────
 ask "DB password for LIVE environment:"
@@ -246,12 +323,12 @@ SCRIPT_DIR="$DEPLOY_DIR/deployment"
 # ═══════════════════════════════════════════════════════════════════════════════
 section "STEP 1 — System Update"
 
-apt-get update -y
-apt-get upgrade -y
-apt-get install -y \
+apt_update
+apt_upgrade
+apt_install \
   git curl wget gnupg lsb-release \
   build-essential software-properties-common \
-  ufw fail2ban
+  ufw fail2ban ca-certificates
 
 success "System updated and base packages installed"
 
@@ -264,7 +341,7 @@ if command -v mysql &>/dev/null && systemctl list-unit-files | grep -q '^mysql.s
   success "MySQL already installed ($(mysql --version | awk '{print $3}'))"
 else
   info "Installing MySQL Server..."
-  apt-get install -y mysql-server
+  apt_install mysql-server
   success "MySQL installed"
 fi
 
@@ -272,10 +349,19 @@ systemctl enable mysql
 systemctl start mysql
 systemctl is-active --quiet mysql || fail "MySQL service failed to start"
 
+mysql_escape_string() {
+  printf "%s" "$1" | sed -e 's/\\/\\\\/g' -e "s/'/''/g"
+}
+
+MYSQL_ROOT_PASS_SQL="$(mysql_escape_string "$MYSQL_ROOT_PASS")"
+DB_PASS_LIVE_SQL="$(mysql_escape_string "$DB_PASS_LIVE")"
+DB_PASS_DEV_SQL="$(mysql_escape_string "$DB_PASS_DEV")"
+DB_PASS_TEST_SQL="$(mysql_escape_string "$DB_PASS_TEST")"
+
 # Secure MySQL without interactive prompt
 info "Securing MySQL..."
 mysql_exec_or_fail <<SQL
-  ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASS}';
+  ALTER USER 'root'@'localhost' IDENTIFIED BY '${MYSQL_ROOT_PASS_SQL}';
   DELETE FROM mysql.user WHERE User='';
   DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost','127.0.0.1','::1');
   DROP DATABASE IF EXISTS test;
@@ -293,21 +379,21 @@ mysql_exec <<SQL
   CREATE DATABASE IF NOT EXISTS \`finai_live\`
     CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
   CREATE USER IF NOT EXISTS 'finai_live_user'@'127.0.0.1'
-    IDENTIFIED BY '${DB_PASS_LIVE}';
+    IDENTIFIED BY '${DB_PASS_LIVE_SQL}';
   GRANT ALL PRIVILEGES ON \`finai_live\`.* TO 'finai_live_user'@'127.0.0.1';
 
   -- Dev
   CREATE DATABASE IF NOT EXISTS \`finai_dev\`
     CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
   CREATE USER IF NOT EXISTS 'finai_dev_user'@'127.0.0.1'
-    IDENTIFIED BY '${DB_PASS_DEV}';
+    IDENTIFIED BY '${DB_PASS_DEV_SQL}';
   GRANT ALL PRIVILEGES ON \`finai_dev\`.* TO 'finai_dev_user'@'127.0.0.1';
 
   -- Test
   CREATE DATABASE IF NOT EXISTS \`finai_test\`
     CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
   CREATE USER IF NOT EXISTS 'finai_test_user'@'127.0.0.1'
-    IDENTIFIED BY '${DB_PASS_TEST}';
+    IDENTIFIED BY '${DB_PASS_TEST_SQL}';
   GRANT ALL PRIVILEGES ON \`finai_test\`.* TO 'finai_test_user'@'127.0.0.1';
 
   FLUSH PRIVILEGES;

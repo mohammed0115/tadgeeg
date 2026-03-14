@@ -18,6 +18,66 @@ LOG_FILE="$LOG_DIR/ssl_setup.log"
 
 log() { echo "$(date '+%F %T') [$ENV_LABEL] $1" | tee -a "$LOG_FILE"; }
 
+APT_RETRY_COUNT="${APT_RETRY_COUNT:-3}"
+
+run_with_retries() {
+  local description="$1"
+  shift
+  local attempt=1
+
+  until "$@" >>"$LOG_FILE" 2>&1; do
+    if [ "$attempt" -ge "$APT_RETRY_COUNT" ]; then
+      log "❌ ${description} failed after ${APT_RETRY_COUNT} attempts"
+      return 1
+    fi
+
+    log "⚠️  ${description} failed (attempt ${attempt}/${APT_RETRY_COUNT}) — retrying in 5 seconds..."
+    attempt=$((attempt + 1))
+    sleep 5
+  done
+
+  return 0
+}
+
+apt_update() {
+  run_with_retries "apt-get update" apt-get update -y
+}
+
+apt_install() {
+  [ "$#" -gt 0 ] || return 0
+  run_with_retries "apt-get install: $*" apt-get install -y "$@"
+}
+
+ensure_nginx_and_certbot() {
+  if ! command -v nginx &>/dev/null; then
+    log "📦 Nginx not installed — installing automatically before SSL setup"
+    apt_update
+    apt_install nginx ca-certificates
+  fi
+
+  if command -v certbot &>/dev/null; then
+    CERTBOT_VER=$(certbot --version 2>&1 | awk '{print $2}')
+    log "✅ Certbot already installed ($CERTBOT_VER)"
+  else
+    log "📦 Installing Certbot..."
+    apt_update
+    apt_install certbot python3-certbot-nginx
+    log "✅ Certbot installed"
+  fi
+
+  systemctl enable nginx >>"$LOG_FILE" 2>&1 || true
+  systemctl start nginx >>"$LOG_FILE" 2>&1 || systemctl restart nginx >>"$LOG_FILE" 2>&1 || true
+}
+
+resolve_domain_ip() {
+  local domain="$1"
+
+  getent ahostsv4 "$domain" 2>/dev/null | awk 'NR==1 {print $1; exit}' \
+    || dig +short "$domain" 2>/dev/null | tail -1 \
+    || host "$domain" 2>/dev/null | awk '/has address/{print $4}' | head -1 \
+    || true
+}
+
 echo ""
 echo "╔═══════════════════════════════════════════════════╗"
 echo "║  FinAI [$ENV_LABEL] — STEP 06: SSL/TLS Setup     ║"
@@ -31,22 +91,25 @@ if [ "${USE_SSL:-true}" != "true" ]; then
   exit 0
 fi
 
-# ── Certbot install ───────────────────────────────────────────────────────────
-if command -v certbot &>/dev/null; then
-  CERTBOT_VER=$(certbot --version 2>&1 | awk '{print $2}')
-  log "✅ Certbot already installed ($CERTBOT_VER)"
-else
-  log "📦 Installing Certbot..."
-  apt-get update -y >>"$LOG_FILE" 2>&1
-  apt-get install -y certbot python3-certbot-nginx >>"$LOG_FILE" 2>&1
-  log "✅ Certbot installed"
+ensure_nginx_and_certbot
+
+mkdir -p /var/www/letsencrypt
+
+if [ ! -f "$NGINX_SITE_FILE" ]; then
+  log "ℹ️  Nginx site config not found yet — generating it before SSL setup"
+  bash "$SCRIPT_DIR/05_nginx_setup.sh" "$ENV" >>"$LOG_FILE" 2>&1 || {
+    log "❌ Failed to generate Nginx site config before SSL setup"
+    exit 1
+  }
 fi
 
 # ── DNS check ─────────────────────────────────────────────────────────────────
 log "🔍 Checking DNS resolution for $DOMAIN_MAIN..."
-RESOLVED_IP=$(dig +short "$DOMAIN_MAIN" | tail -1 2>/dev/null || host "$DOMAIN_MAIN" | awk '/has address/{print $4}' | head -1 || echo "")
+RESOLVED_IP="$(resolve_domain_ip "$DOMAIN_MAIN")"
+DNS_READY="false"
 
 if [ "$RESOLVED_IP" = "$SERVER_IP" ]; then
+  DNS_READY="true"
   log "✅ DNS OK: $DOMAIN_MAIN → $RESOLVED_IP"
 elif [ -z "$RESOLVED_IP" ]; then
   log "⚠️  DNS not resolving yet for $DOMAIN_MAIN — SSL issuance may fail"
@@ -81,28 +144,48 @@ if [ -f "$CERT_PATH" ]; then
   else
     log "🔁 Certificate expires soon — renewing..."
     certbot renew \
-      --nginx \
       --non-interactive \
       --quiet \
-      >> "$LOG_FILE" 2>&1
-    log "✅ Certificate renewed"
+      >> "$LOG_FILE" 2>&1 \
+      && log "✅ Certificate renewed" \
+      || log "⚠️  Certificate renewal returned warnings — check certbot output"
   fi
 else
-  # No certificate — issue new one
-  log "📜 Requesting new SSL certificate from Let's Encrypt..."
-  certbot --nginx \
+  if [ "$DNS_READY" != "true" ]; then
+    if [ "$ENV_NAME" = "live" ]; then
+      log "❌ DNS for $DOMAIN_MAIN must point to $SERVER_IP before live SSL can be issued"
+      exit 1
+    fi
+
+    log "⚠️  DNS is not ready for $DOMAIN_MAIN — skipping SSL issuance and keeping HTTP-only Nginx config"
+    echo ""
+    echo "⚠️  [STEP 06] SSL skipped for [$ENV_LABEL] until DNS points to $SERVER_IP"
+    exit 0
+  fi
+
+  log "📜 Requesting new SSL certificate from Let's Encrypt (webroot validation)..."
+  certbot certonly \
+    --webroot \
+    --webroot-path /var/www/letsencrypt \
     $DOMAIN_ARGS \
     --email "$SSL_EMAIL" \
     --agree-tos \
     --no-eff-email \
-    --redirect \
     --non-interactive \
     >> "$LOG_FILE" 2>&1
   log "✅ SSL certificate issued"
 fi
 
+if [ -f "$CERT_PATH" ]; then
+  log "🔁 Rebuilding Nginx config with SSL certificates..."
+  bash "$SCRIPT_DIR/05_nginx_setup.sh" "$ENV" >>"$LOG_FILE" 2>&1 || {
+    log "❌ Failed to rebuild Nginx config after SSL issuance/renewal"
+    exit 1
+  }
+fi
+
 # ── Setup auto-renewal cron ───────────────────────────────────────────────────
-CRON_ENTRY="0 3 * * * certbot renew --quiet --post-hook 'systemctl reload nginx'"
+CRON_ENTRY="0 3 * * * root certbot renew --quiet --post-hook 'systemctl reload nginx'"
 CRON_FILE="/etc/cron.d/certbot_finai_${ENV}"
 
 if [ -f "$CRON_FILE" ]; then
@@ -114,11 +197,15 @@ else
 fi
 
 # ── Dry-run test ──────────────────────────────────────────────────────────────
-log "🔁 Testing auto-renewal (dry-run)..."
-certbot renew --dry-run --quiet >>"$LOG_FILE" 2>&1 && log "✅ Dry-run OK" || log "⚠️  Dry-run had warnings (check certbot logs)"
+if [ -f "$CERT_PATH" ]; then
+  log "🔁 Testing auto-renewal (dry-run)..."
+  certbot renew --dry-run --quiet >>"$LOG_FILE" 2>&1 && log "✅ Dry-run OK" || log "⚠️  Dry-run had warnings (check certbot logs)"
+else
+  log "ℹ️  No certificate exists yet — skipping certbot dry-run"
+fi
 
 # ── Reload Nginx ──────────────────────────────────────────────────────────────
-systemctl reload nginx >>"$LOG_FILE" 2>&1
+systemctl reload nginx >>"$LOG_FILE" 2>&1 || systemctl restart nginx >>"$LOG_FILE" 2>&1
 
 echo ""
 echo "✅ [STEP 06] SSL Setup COMPLETED for [$ENV_LABEL]"

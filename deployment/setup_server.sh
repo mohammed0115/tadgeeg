@@ -310,6 +310,21 @@ if [[ "${CREATE_SECRETS,,}" == "y" || "${CREATE_SECRETS,,}" == "yes" ]]; then
   read -r OPENAI_MAX_TOKENS
   OPENAI_MAX_TOKENS="${OPENAI_MAX_TOKENS:-4096}"
 
+  echo ""
+  echo "  Google OAuth settings"
+  echo "  Leave Client ID blank to skip Google OAuth on deployed environments."
+  echo ""
+  ask "Google Client ID (leave blank to skip):"
+  read -r GOOGLE_CLIENT_ID
+
+  if [ -n "$GOOGLE_CLIENT_ID" ]; then
+    ask "Google Client Secret:"
+    read -rs GOOGLE_CLIENT_SECRET; echo ""
+    [ -n "$GOOGLE_CLIENT_SECRET" ] || fail "Google Client Secret cannot be empty when Client ID is provided"
+  else
+    GOOGLE_CLIENT_SECRET=""
+  fi
+
   # ── Email / SMTP ──────────────────────────────────────────────────────────
   echo ""
   echo "  Email / SMTP settings (alerts, password reset, reports)"
@@ -367,6 +382,18 @@ if [[ "${CREATE_SECRETS,,}" == "y" || "${CREATE_SECRETS,,}" == "yes" ]]; then
       test) _DOMAIN="$TEST_DOMAIN"  ;;
     esac
 
+    GOOGLE_BLOCK=""
+    if [ -n "${GOOGLE_CLIENT_ID:-}" ] && [ -n "${GOOGLE_CLIENT_SECRET:-}" ]; then
+      GOOGLE_BLOCK=$(cat <<GOOGLE
+
+# ── Google OAuth ──────────────────────────────────────────
+GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+GOOGLE_REDIRECT_URI=https://${_DOMAIN}/auth/google/callback/
+GOOGLE
+)
+    fi
+
     cat > "$SECRET_FILE" <<SECRET
 # ── Django ────────────────────────────────────────────────
 SECRET_KEY=${SECRET_KEY}
@@ -386,6 +413,7 @@ OPENAI_API_KEY=${OPENAI_API_KEY}
 OPENAI_MODEL=${OPENAI_MODEL}
 OPENAI_MAX_TOKENS=${OPENAI_MAX_TOKENS}
 OPENAI_TIMEOUT=30
+${GOOGLE_BLOCK}
 
 # ── Email / SMTP ──────────────────────────────────────────
 EMAIL_HOST=${EMAIL_HOST}
@@ -427,6 +455,9 @@ else
   echo "    DB_HOST=127.0.0.1"
   echo "    DB_PORT=3306"
   echo "    OPENAI_API_KEY=sk-..."
+  echo "    GOOGLE_CLIENT_ID=<optional-google-client-id>"
+  echo "    GOOGLE_CLIENT_SECRET=<optional-google-client-secret>"
+  echo "    GOOGLE_REDIRECT_URI=https://<domain>/auth/google/callback/"
   echo "    ALERT_EMAIL=${ALERT_EMAIL}"
   echo "    DB_ROOT_PASSWORD=<root-password>"
 fi

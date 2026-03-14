@@ -199,6 +199,21 @@ ask "OpenAI API Key (sk-...):"
 read -rs OPENAI_KEY; echo ""
 [ -n "$OPENAI_KEY" ] || fail "OpenAI API key is required"
 
+echo ""
+echo "  Google OAuth settings"
+echo "  Leave Client ID blank to skip Google OAuth on deployed environments."
+echo ""
+ask "Google Client ID (leave blank to skip):"
+read -r GOOGLE_CLIENT_ID
+
+if [ -n "$GOOGLE_CLIENT_ID" ]; then
+  ask "Google Client Secret:"
+  read -rs GOOGLE_CLIENT_SECRET; echo ""
+  [ -n "$GOOGLE_CLIENT_SECRET" ] || fail "Google Client Secret cannot be empty when Client ID is provided"
+else
+  GOOGLE_CLIENT_SECRET=""
+fi
+
 # ── MySQL root password ───────────────────────────────────────────────────────
 ask "MySQL ROOT password (existing if already configured; new on fresh installs):"
 read -rs MYSQL_ROOT_PASS; echo ""
@@ -528,6 +543,19 @@ section "STEP 5 — Write Secret Files"
 write_secret() {
   local WEB_ROOT="$1" SECRET_KEY="$2" DB_PASS="$3" DB_NAME="$4" DB_USER="$5"
   local ALLOWED_HOSTS_VAR="$6" DOMAIN_VAR="$7"
+  local GOOGLE_BLOCK=""
+
+  if [ -n "${GOOGLE_CLIENT_ID:-}" ] && [ -n "${GOOGLE_CLIENT_SECRET:-}" ]; then
+    GOOGLE_BLOCK=$(cat <<GOOGLE
+
+# ── Google OAuth ──────────────────────────────────────────
+GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+GOOGLE_REDIRECT_URI=https://${DOMAIN_VAR}/auth/google/callback/
+GOOGLE
+)
+  fi
+
   mkdir -p "$WEB_ROOT"
   cat > "$WEB_ROOT/.secret.env" <<SECRET
 # ── Django ────────────────────────────────────────────────
@@ -548,6 +576,7 @@ OPENAI_API_KEY=${OPENAI_KEY}
 OPENAI_MODEL=${OPENAI_MODEL}
 OPENAI_MAX_TOKENS=${OPENAI_MAX_TOKENS}
 OPENAI_TIMEOUT=30
+${GOOGLE_BLOCK}
 
 # ── Email / SMTP ──────────────────────────────────────────
 EMAIL_HOST=${EMAIL_HOST}

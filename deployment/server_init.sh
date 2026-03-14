@@ -15,6 +15,7 @@
 #   7.  Git auto-deploy daemon (optional)
 # ============================================================
 set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
 
 # ── Colours ───────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'

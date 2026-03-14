@@ -13,6 +13,7 @@ ENV="${1:-live}"
 ENV_FILE="$SCRIPT_DIR/config/${ENV}.env"
 [ -f "$ENV_FILE" ] || { echo "❌ Unknown environment: $ENV"; exit 1; }
 source "$ENV_FILE"
+export DEBIAN_FRONTEND=noninteractive
 
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/system_setup.log"
@@ -68,6 +69,52 @@ require_command() {
 
   command -v "$command_name" &>/dev/null || {
     log "❌ ${command_name} is still missing. ${hint}"
+    exit 1
+  }
+}
+
+fix_web_root_permissions() {
+  [ -d "$WEB_ROOT" ] || return 0
+
+  find "$WEB_ROOT" -maxdepth 1 -type d -exec chmod 755 {} + 2>/dev/null || true
+
+  if [ -d "$STATIC_ROOT" ]; then
+    find "$STATIC_ROOT" -type d -exec chmod 755 {} + 2>/dev/null || true
+    find "$STATIC_ROOT" -type f -exec chmod 644 {} + 2>/dev/null || true
+  fi
+
+  if [ -d "$MEDIA_ROOT" ]; then
+    chown -R www-data:www-data "$MEDIA_ROOT" 2>/dev/null || true
+    find "$MEDIA_ROOT" -type d -exec chmod 755 {} + 2>/dev/null || true
+    find "$MEDIA_ROOT" -type f -exec chmod 644 {} + 2>/dev/null || true
+  fi
+
+  if [ -f "$WEB_ROOT/.secret.env" ]; then
+    chmod 600 "$WEB_ROOT/.secret.env" 2>/dev/null || true
+  fi
+}
+
+ensure_virtualenv() {
+  if [ -d "$VENV_DIR" ] && [ ! -x "$VENV_DIR/bin/python" ]; then
+    log "⚠️  Virtual environment at $VENV_DIR is incomplete — recreating it"
+    rm -rf "$VENV_DIR"
+  fi
+
+  if [ -d "$VENV_DIR" ]; then
+    log "✅ Virtual environment already exists at $VENV_DIR"
+  else
+    log "🐍 Creating virtual environment..."
+    python3.12 -m venv "$VENV_DIR"
+    log "✅ Virtual environment created"
+  fi
+
+  if [ ! -x "$VENV_DIR/bin/pip" ]; then
+    log "🔧 Bootstrapping pip inside the virtual environment..."
+    "$VENV_DIR/bin/python" -m ensurepip --upgrade >>"$LOG_FILE" 2>&1
+  fi
+
+  [ -x "$VENV_DIR/bin/python" ] || {
+    log "❌ Virtual environment python executable is missing after setup"
     exit 1
   }
 }
@@ -198,20 +245,12 @@ for DIR in "$WEB_ROOT" "$WEB_ROOT/app" "$STATIC_ROOT" "$MEDIA_ROOT" "$LOG_DIR"; 
     log "  📁 Created: $DIR"
   fi
 done
-
-chown -R www-data:www-data "$WEB_ROOT" 2>/dev/null || true
-chmod -R 755 "$WEB_ROOT"
+fix_web_root_permissions
 
 # ── Virtual environment ────────────────────────────────────────────────────────
 mkdir -p "$BACKEND_DIR"
 
-if [ -d "$VENV_DIR" ]; then
-  log "✅ Virtual environment already exists at $VENV_DIR"
-else
-  log "🐍 Creating virtual environment..."
-  python3.12 -m venv "$VENV_DIR"
-  log "✅ Virtual environment created"
-fi
+ensure_virtualenv
 
 export PATH="$VENV_DIR/bin:$PATH"
 hash -r

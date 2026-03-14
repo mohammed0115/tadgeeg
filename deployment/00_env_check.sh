@@ -38,6 +38,22 @@ check() {
   fi
 }
 
+internet_ok() {
+  ping -c1 -W3 8.8.8.8 &>/dev/null && return 0
+
+  if command -v curl &>/dev/null; then
+    curl -Is --max-time 5 https://pypi.org/simple/ >/dev/null 2>&1 && return 0
+    curl -Is --max-time 5 http://archive.ubuntu.com/ubuntu/ >/dev/null 2>&1 && return 0
+  fi
+
+  if command -v wget &>/dev/null; then
+    wget -q --spider --timeout=5 https://pypi.org/simple/ && return 0
+    wget -q --spider --timeout=5 http://archive.ubuntu.com/ubuntu/ && return 0
+  fi
+
+  return 1
+}
+
 # ── 1. OS ─────────────────────────────────────────────────────────────────────
 if grep -qi ubuntu /etc/os-release 2>/dev/null; then
   OS_VER=$(grep VERSION_ID /etc/os-release | cut -d'"' -f2)
@@ -64,9 +80,9 @@ MEM_MB=$(free -m | awk '/Mem:/{print $2}')
   || check "RAM (${MEM_MB}MB)" "false" "Need at least 2 GB RAM"
 
 # ── 5. Internet ───────────────────────────────────────────────────────────────
-ping -c1 -W3 8.8.8.8 &>/dev/null \
+internet_ok \
   && check "Internet connectivity" "true" \
-  || check "Internet connectivity" "false" "No network access"
+  || check "Internet connectivity" "false" "No network access (ping/HTTP checks failed)"
 
 # ── 6. Python 3.12 ───────────────────────────────────────────────────────────
 if command -v python3.12 &>/dev/null; then

@@ -12,6 +12,7 @@ ENV="${1:-live}"
 ENV_FILE="$SCRIPT_DIR/config/${ENV}.env"
 [ -f "$ENV_FILE" ] || { echo "❌ Unknown environment: $ENV"; exit 1; }
 source "$ENV_FILE"
+export DEBIAN_FRONTEND=noninteractive
 
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/nginx_setup.log"

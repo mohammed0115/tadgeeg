@@ -18,9 +18,23 @@ LOG_FILE="$LOG_DIR/gunicorn_setup.log"
 
 log() { echo "$(date '+%F %T') [$ENV_LABEL] $1" | tee -a "$LOG_FILE"; }
 
+resolve_socket_path() {
+  local configured_socket="$1"
+  local configured_dir
+  configured_dir="$(dirname "$configured_socket")"
+
+  if [ "$configured_dir" = "/run" ]; then
+    echo "/run/${SERVICE_NAME}/$(basename "$configured_socket")"
+  else
+    echo "$configured_socket"
+  fi
+}
+
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 CELERY_SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}_celery.service"
 CELERYBEAT_FILE="/etc/systemd/system/${SERVICE_NAME}_celerybeat.service"
+SYSTEMD_SOCKET="$(resolve_socket_path "$SOCKET")"
+SYSTEMD_SOCKET_DIR="$(dirname "$SYSTEMD_SOCKET")"
 
 echo ""
 echo "╔══════════════════════════════════════════════════════╗"
@@ -31,6 +45,8 @@ echo ""
 # ── Pre-flight checks ─────────────────────────────────────────────────────────
 [ -d "$VENV_DIR" ] || { log "❌ venv not found: $VENV_DIR"; exit 1; }
 [ -f "$BACKEND_DIR/manage.py" ] || { log "❌ manage.py not found: $BACKEND_DIR"; exit 1; }
+chown -R www-data:www-data "$LOG_DIR"
+chmod 755 "$LOG_DIR"
 
 # ── Load secrets ──────────────────────────────────────────────────────────────
 SECRET_FILE="$WEB_ROOT/.secret.env"
@@ -72,10 +88,11 @@ Wants=redis.service
 [Service]
 Type=notify
 NotifyAccess=all
+PermissionsStartOnly=true
 User=www-data
 Group=www-data
 WorkingDirectory=$BACKEND_DIR
-RuntimeDirectory=gunicorn_${ENV}
+RuntimeDirectory=${SERVICE_NAME}
 RuntimeDirectoryMode=0755
 
 # Core environment
@@ -91,13 +108,14 @@ Environment="DB_PORT=${DB_PORT}"
 $(printf "%b" "$SECRET_ENV_BLOCK")
 
 # Socket cleanup on start
-ExecStartPre=/bin/rm -f ${SOCKET}
+ExecStartPre=/usr/bin/install -d -o www-data -g www-data -m 0755 ${SYSTEMD_SOCKET_DIR}
+ExecStartPre=/bin/rm -f ${SYSTEMD_SOCKET}
 
 # Gunicorn
 ExecStart=${VENV_DIR}/bin/gunicorn ${DJANGO_SETTINGS_MODULE%.*}.wsgi:application \\
   --name finai_${ENV} \\
   --workers ${GUNICORN_WORKERS} \\
-  --bind unix:${SOCKET} \\
+  --bind unix:${SYSTEMD_SOCKET} \\
   --timeout ${GUNICORN_TIMEOUT} \\
   --max-requests ${GUNICORN_MAX_REQUESTS} \\
   --max-requests-jitter 50 \\
@@ -196,8 +214,7 @@ WantedBy=multi-user.target
 UNIT
 
 # ── Socket file permissions ───────────────────────────────────────────────────
-touch "$SOCKET" 2>/dev/null || true
-chown www-data:www-data "$SOCKET" 2>/dev/null || true
+
 
 # ── Systemd reload & enable ───────────────────────────────────────────────────
 log "🔄 Reloading systemd..."
@@ -206,7 +223,12 @@ systemctl daemon-reload
 for SVC in "$SERVICE_NAME" "${SERVICE_NAME}_celery" "${SERVICE_NAME}_celerybeat"; do
   log "▶️  Enabling & (re)starting: $SVC"
   systemctl enable "$SVC" >>"$LOG_FILE" 2>&1
-  systemctl restart "$SVC" >>"$LOG_FILE" 2>&1
+  if ! systemctl restart "$SVC" >>"$LOG_FILE" 2>&1; then
+    log "❌ Failed to restart $SVC"
+    systemctl status "$SVC" --no-pager >>"$LOG_FILE" 2>&1 || true
+    journalctl -u "$SVC" -n 50 --no-pager >>"$LOG_FILE" 2>&1 || true
+    exit 1
+  fi
 done
 
 sleep 4

@@ -18,8 +18,21 @@ LOG_FILE="$LOG_DIR/monitoring.log"
 
 log() { echo "$(date '+%F %T') [$ENV_LABEL] $1" | tee -a "$LOG_FILE"; }
 
+resolve_socket_path() {
+  local configured_socket="$1"
+  local configured_dir
+  configured_dir="$(dirname "$configured_socket")"
+
+  if [ "$configured_dir" = "/run" ]; then
+    echo "/run/${SERVICE_NAME}/$(basename "$configured_socket")"
+  else
+    echo "$configured_socket"
+  fi
+}
+
 HEALTH_SCRIPT="/usr/local/bin/finai_health_${ENV}.sh"
 STATUS_FILE="$LOG_DIR/health.status"
+MONITOR_SOCKET="$(resolve_socket_path "$SOCKET")"
 
 echo ""
 echo "╔═══════════════════════════════════════════════════╗"
@@ -39,6 +52,8 @@ LOG_DIR="$LOG_DIR"
 STATUS_FILE="$STATUS_FILE"
 LOG_FILE="\$LOG_DIR/health.log"
 DOMAIN="https://$DOMAIN_MAIN"
+SECRET_FILE="$WEB_ROOT/.secret.env"
+SOCKET_PATH="$MONITOR_SOCKET"
 
 mkdir -p "\$LOG_DIR"
 : > "\$STATUS_FILE"   # Clear status file on each run
@@ -81,7 +96,12 @@ else
 fi
 
 # ── MySQL check ──────────────────────────────────────────────────────────────
-if mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -e "SELECT 1;" "$DB_NAME" &>/dev/null; then
+DB_PASSWORD=""
+if [ -f "\$SECRET_FILE" ]; then
+  DB_PASSWORD=\$(grep '^DB_PASSWORD=' "\$SECRET_FILE" | head -n 1 | cut -d= -f2-)
+fi
+
+if MYSQL_PWD="\$DB_PASSWORD" mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -e "SELECT 1;" "$DB_NAME" &>/dev/null; then
   log "✅ MySQL connection OK"
 else
   log "❌ MySQL connection FAILED"
@@ -98,7 +118,7 @@ else
 fi
 
 # ── Gunicorn socket check ──────────────────────────────────────────────────────
-if [ -S "$SOCKET" ]; then
+if [ -S "$SOCKET_PATH" ]; then
   log "✅ Gunicorn socket exists"
 else
   log "❌ Gunicorn socket missing"

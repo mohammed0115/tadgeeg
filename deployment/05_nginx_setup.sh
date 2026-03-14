@@ -18,6 +18,20 @@ LOG_FILE="$LOG_DIR/nginx_setup.log"
 
 log() { echo "$(date '+%F %T') [$ENV_LABEL] $1" | tee -a "$LOG_FILE"; }
 
+resolve_socket_path() {
+  local configured_socket="$1"
+  local configured_dir
+  configured_dir="$(dirname "$configured_socket")"
+
+  if [ "$configured_dir" = "/run" ]; then
+    echo "/run/${SERVICE_NAME}/$(basename "$configured_socket")"
+  else
+    echo "$configured_socket"
+  fi
+}
+
+NGINX_SOCKET="$(resolve_socket_path "$SOCKET")"
+
 echo ""
 echo "╔══════════════════════════════════════════════════════╗"
 echo "║  FinAI [$ENV_LABEL] — STEP 05: Nginx Configuration  ║"
@@ -63,7 +77,7 @@ limit_req_zone \$binary_remote_addr zone=finai_${ENV}_upload:10m rate=10r/m;
 
 # Upstream
 upstream finai_${ENV}_gunicorn {
-    server unix:${SOCKET} fail_timeout=10s;
+    server unix:${NGINX_SOCKET} fail_timeout=10s;
 }
 
 # ── HTTP → HTTPS redirect ──────────────────────────────────

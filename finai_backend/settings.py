@@ -19,7 +19,10 @@ SQLITE_PATH = Path(SQLITE_NAME)
 if not SQLITE_PATH.is_absolute():
     SQLITE_PATH = BASE_DIR / SQLITE_PATH
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "change-me-in-production-use-long-random-string")
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY",
+    os.environ.get("DJANGO_SECRET_KEY", "change-me-in-production-use-long-random-string"),
+)
 
 DEBUG = os.environ.get("DEBUG", "True") == "True"
 
@@ -104,12 +107,30 @@ CHANNEL_LAYERS = {
 }
 
 # ─── Database ─────────────────────────────────────────────────────────────────
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": SQLITE_PATH,
+_db_engine = os.environ.get("DB_ENGINE", "")
+
+if _db_engine == "django.db.backends.mysql" or os.environ.get("DB_NAME"):
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.mysql",
+            "NAME": os.environ.get("DB_NAME", "finai_live"),
+            "USER": os.environ.get("DB_USER", "finai_live_user"),
+            "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+            "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
+            "PORT": os.environ.get("DB_PORT", "3306"),
+            "OPTIONS": {
+                "charset": "utf8mb4",
+                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
+            },
+        }
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": SQLITE_PATH,
+        }
+    }
 
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 AUTH_USER_MODEL = "authentication.User"
@@ -211,9 +232,17 @@ SIMPLE_JWT = {
 }
 
 # ─── CORS ─────────────────────────────────────────────────────────────────────
-CORS_ALLOWED_ORIGINS = os.environ.get(
-    "CORS_ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173"
-).split(",")
+_default_cors = "http://localhost:3000,http://localhost:5173"
+if not DEBUG:
+    # Build CORS origins from ALLOWED_HOSTS automatically for production
+    _hosts = os.environ.get("ALLOWED_HOSTS", "")
+    _prod_origins = ",".join(
+        f"https://{h.strip()}" for h in _hosts.split(",")
+        if h.strip() and not h.strip() in ("localhost", "127.0.0.1")
+    )
+    _default_cors = _prod_origins or _default_cors
+
+CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", _default_cors).split(",")
 CORS_ALLOW_CREDENTIALS = True
 
 # ─── OpenAPI / Spectacular ────────────────────────────────────────────────────
@@ -247,14 +276,27 @@ GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "")
 
-EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "")
-SITE_URL = os.environ.get("SITE_URL", "http://localhost:8000")
+# ─── Email ────────────────────────────────────────────────────────────────────
+# Falls back to console backend in production if SMTP is not configured,
+# so missing email config never silently swallows errors.
+_email_user = os.environ.get("EMAIL_HOST_USER", "")
+_email_pass = os.environ.get("EMAIL_HOST_PASSWORD", "")
+_email_configured = bool(_email_user and _email_pass)
+
+if _email_configured:
+    EMAIL_BACKEND = os.environ.get(
+        "EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend"
+    )
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+EMAIL_HOST          = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT          = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER     = _email_user
+EMAIL_HOST_PASSWORD = _email_pass
+EMAIL_USE_TLS       = os.environ.get("EMAIL_USE_TLS", "True") == "True"
+DEFAULT_FROM_EMAIL  = os.environ.get("DEFAULT_FROM_EMAIL", _email_user or "noreply@tadgeeg.com")
+SITE_URL            = os.environ.get("SITE_URL", f"https://tadgeeg.com" if not DEBUG else "http://localhost:8000")
 WASSLA_EMAIL_ASYNC_ENABLED = os.environ.get("WASSLA_EMAIL_ASYNC_ENABLED", "False") == "True"
 
 from celery.schedules import crontab
@@ -267,9 +309,14 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 # ─── OpenAI ───────────────────────────────────────────────────────────────────
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
-OPENAI_MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o")
+OPENAI_API_KEY    = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_MODEL      = os.environ.get("OPENAI_MODEL", "gpt-4o")
 OPENAI_MAX_TOKENS = int(os.environ.get("OPENAI_MAX_TOKENS", "4096"))
+OPENAI_TIMEOUT    = int(os.environ.get("OPENAI_TIMEOUT", "30"))
+
+if not DEBUG and not OPENAI_API_KEY:
+    import warnings
+    warnings.warn("OPENAI_API_KEY is not set — AI features will be disabled", RuntimeWarning)
 
 # ─── Tesseract OCR ────────────────────────────────────────────────────────────
 TESSERACT_CMD = os.environ.get("TESSERACT_CMD", "/usr/bin/tesseract")

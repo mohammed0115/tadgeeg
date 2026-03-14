@@ -159,6 +159,51 @@ ensure_mysql_build_deps() {
   return 1
 }
 
+python_include_file() {
+  python3.12 - <<'PY'
+import sysconfig
+from pathlib import Path
+
+include_dir = sysconfig.get_paths().get("include", "")
+print(Path(include_dir) / "Python.h")
+PY
+}
+
+ensure_python_build_deps() {
+  local include_file
+
+  log "🧩 Ensuring Python 3.12 support packages (venv, distutils, headers)..."
+
+  apt_install python3.12-venv || {
+    log "❌ Failed to install python3.12-venv"
+    return 1
+  }
+
+  if ! apt_install python3.12-distutils; then
+    log "⚠️  python3.12-distutils unavailable — continuing without it"
+  fi
+
+  if ! apt_install python3.12-dev; then
+    log "⚠️  python3.12-dev unavailable — trying libpython3.12-dev"
+    if ! apt_install libpython3.12-dev; then
+      log "⚠️  libpython3.12-dev unavailable — trying python3-dev"
+      apt_install python3-dev || {
+        log "❌ Could not install Python development headers"
+        return 1
+      }
+    fi
+  fi
+
+  include_file="$(python_include_file 2>>"$LOG_FILE" || true)"
+
+  if [ -z "$include_file" ] || [ ! -f "$include_file" ]; then
+    log "❌ Python development header not found after installation: ${include_file:-unknown}"
+    return 1
+  fi
+
+  log "✅ Python development headers available at $include_file"
+}
+
 echo ""
 echo "╔═══════════════════════════════════════════════════╗"
 echo "║  FinAI [$ENV_LABEL] — STEP 02: System Setup      ║"
@@ -220,6 +265,7 @@ else
 fi
 
 require_command python3.12 "Python 3.12 is required for the FinAI backend."
+ensure_python_build_deps || exit 1
 
 # ── MySQL client ──────────────────────────────────────────────────────────────
 if command -v mysql &>/dev/null; then

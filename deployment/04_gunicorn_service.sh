@@ -43,7 +43,6 @@ echo "╚═══════════════════════�
 echo ""
 
 # ── Pre-flight checks ─────────────────────────────────────────────────────────
-[ -d "$VENV_DIR" ] || { log "❌ venv not found: $VENV_DIR"; exit 1; }
 [ -f "$BACKEND_DIR/manage.py" ] || { log "❌ manage.py not found: $BACKEND_DIR"; exit 1; }
 chown -R www-data:www-data "$LOG_DIR"
 chmod 755 "$LOG_DIR"
@@ -57,6 +56,35 @@ if [ -f "$SECRET_FILE" ]; then
   done < "$SECRET_FILE"
 fi
 
+ensure_virtualenv() {
+  if [ -d "$VENV_DIR" ] && [ ! -x "$VENV_DIR/bin/python" ]; then
+    log "⚠️  Virtual environment at $VENV_DIR is incomplete — rebuilding it via Step 02"
+    bash "$SCRIPT_DIR/02_system_setup.sh" "$ENV" >>"$LOG_FILE" 2>&1
+  fi
+
+  if [ ! -d "$VENV_DIR" ] || [ ! -x "$VENV_DIR/bin/python" ]; then
+    log "⚠️  Virtual environment missing — rebuilding it via Step 02"
+    bash "$SCRIPT_DIR/02_system_setup.sh" "$ENV" >>"$LOG_FILE" 2>&1
+  fi
+
+  [ -x "$VENV_DIR/bin/python" ] || {
+    log "❌ Virtual environment is still unavailable after rebuilding"
+    exit 1
+  }
+}
+
+fix_static_permissions() {
+  if [ -d "$STATIC_ROOT" ]; then
+    chown -R www-data:www-data "$STATIC_ROOT" 2>/dev/null || true
+    find "$STATIC_ROOT" -type d -exec chmod 755 {} + 2>/dev/null || true
+    find "$STATIC_ROOT" -type f -exec chmod 644 {} + 2>/dev/null || true
+  fi
+
+  if [ -f "$SECRET_FILE" ]; then
+    chmod 600 "$SECRET_FILE" 2>/dev/null || true
+  fi
+}
+
 load_secret_env() {
   [ -f "$SECRET_FILE" ] || return 0
 
@@ -69,7 +97,7 @@ load_secret_env() {
 ensure_runtime_dependencies() {
   log "🔎 Verifying Django runtime dependencies..."
 
-  if python -c "import os, django, celery, gunicorn; __import__('MySQLdb') if (os.environ.get('DB_ENGINE') == 'django.db.backends.mysql' or os.environ.get('DB_NAME')) else None" >>"$LOG_FILE" 2>&1; then
+  if "$VENV_DIR/bin/python" -c "import os, django, celery, gunicorn; __import__('MySQLdb') if (os.environ.get('DB_ENGINE') == 'django.db.backends.mysql' or os.environ.get('DB_NAME')) else None" >>"$LOG_FILE" 2>&1; then
     log "✅ Django runtime dependencies verified"
     return 0
   fi
@@ -80,10 +108,10 @@ ensure_runtime_dependencies() {
     exit 1
   fi
 
-  pip install --upgrade pip setuptools wheel >>"$LOG_FILE" 2>&1
-  pip install -r "$BACKEND_DIR/requirements.txt" >>"$LOG_FILE" 2>&1
+  "$VENV_DIR/bin/python" -m pip install --upgrade pip setuptools wheel >>"$LOG_FILE" 2>&1
+  "$VENV_DIR/bin/python" -m pip install -r "$BACKEND_DIR/requirements.txt" >>"$LOG_FILE" 2>&1
 
-  python -c "import os, django, celery, gunicorn; __import__('MySQLdb') if (os.environ.get('DB_ENGINE') == 'django.db.backends.mysql' or os.environ.get('DB_NAME')) else None" >>"$LOG_FILE" 2>&1 || {
+  "$VENV_DIR/bin/python" -c "import os, django, celery, gunicorn; __import__('MySQLdb') if (os.environ.get('DB_ENGINE') == 'django.db.backends.mysql' or os.environ.get('DB_NAME')) else None" >>"$LOG_FILE" 2>&1 || {
     log "❌ Runtime dependencies are still missing after reinstall"
     exit 1
   }
@@ -92,6 +120,7 @@ ensure_runtime_dependencies() {
 }
 
 # ── Django prep ───────────────────────────────────────────────────────────────
+ensure_virtualenv
 log "🔄 Activating venv and running Django management commands..."
 cd "$BACKEND_DIR"
 source "$VENV_DIR/bin/activate"
@@ -109,8 +138,7 @@ python manage.py collectstatic --noinput >>"$LOG_FILE" 2>&1
 log "📁 Copying static files to $STATIC_ROOT..."
 mkdir -p "$STATIC_ROOT"
 cp -r staticfiles/. "$STATIC_ROOT/" 2>/dev/null || true
-chown -R www-data:www-data "$STATIC_ROOT"
-chmod -R 755 "$STATIC_ROOT"
+fix_static_permissions
 log "✅ Static files collected"
 
 # ── Write Gunicorn systemd service ────────────────────────────────────────────
@@ -119,7 +147,7 @@ log "⚙️  Writing systemd service: $SERVICE_FILE"
 cat > "$SERVICE_FILE" <<UNIT
 [Unit]
 Description=FinAI [$ENV_LABEL] — Gunicorn Application Server
-After=network.target mysql.service redis.service
+After=network.target redis.service
 Wants=redis.service
 
 [Service]
@@ -184,7 +212,7 @@ log "⚙️  Writing Celery worker service: $CELERY_SERVICE_FILE"
 cat > "$CELERY_SERVICE_FILE" <<UNIT
 [Unit]
 Description=FinAI [$ENV_LABEL] — Celery Worker
-After=network.target redis.service mysql.service
+After=network.target redis.service
 Requires=redis.service
 
 [Service]
@@ -257,6 +285,7 @@ systemctl daemon-reload
 for SVC in "$SERVICE_NAME" "${SERVICE_NAME}_celery" "${SERVICE_NAME}_celerybeat"; do
   log "▶️  Enabling & (re)starting: $SVC"
   systemctl enable "$SVC" >>"$LOG_FILE" 2>&1
+  systemctl reset-failed "$SVC" >>"$LOG_FILE" 2>&1 || true
   if ! systemctl restart "$SVC" >>"$LOG_FILE" 2>&1; then
     log "❌ Failed to restart $SVC"
     systemctl status "$SVC" --no-pager >>"$LOG_FILE" 2>&1 || true

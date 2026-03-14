@@ -22,6 +22,7 @@ ENV_FILE="$SCRIPT_DIR/config/${ENV}.env"
 [ -f "$ENV_FILE" ] || { echo "❌ Unknown environment: $ENV  (live|dev|test)"; exit 1; }
 source "$ENV_FILE"
 SYNC_REPO_URL="${SYNC_REPO_URL:-$REPO_URL}"
+export DEBIAN_FRONTEND=noninteractive
 
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/refresh.log"
@@ -33,6 +34,7 @@ flock -n 200 || { echo "⏳ Another refresh is already running for [$ENV_LABEL].
 log() { echo "$(date '+%F %T') [$ENV_LABEL] $1" | tee -a "$LOG_FILE"; }
 
 SECRET_FILE="$WEB_ROOT/.secret.env"
+APT_RETRY_COUNT="${APT_RETRY_COUNT:-3}"
 
 load_secret_env() {
   [ -f "$SECRET_FILE" ] || return 0
@@ -48,6 +50,131 @@ clean_untracked() {
     -e ".secret.env" \
     -e "venv/" \
     -e ".venv/" >>"$LOG_FILE" 2>&1
+}
+
+run_with_retries() {
+  local description="$1"
+  shift
+  local attempt=1
+
+  until "$@" >>"$LOG_FILE" 2>&1; do
+    if [ "$attempt" -ge "$APT_RETRY_COUNT" ]; then
+      log "❌ ${description} failed after ${APT_RETRY_COUNT} attempts"
+      return 1
+    fi
+
+    log "⚠️  ${description} failed (attempt ${attempt}/${APT_RETRY_COUNT}) — retrying in 5 seconds..."
+    attempt=$((attempt + 1))
+    sleep 5
+  done
+
+  return 0
+}
+
+pip_install() {
+  local original_path="$PATH"
+  PATH="$VENV_DIR/bin:$PATH"
+  run_with_retries "pip install: $*" "$VENV_DIR/bin/python" -m pip "$@"
+  local status=$?
+  PATH="$original_path"
+  return $status
+}
+
+ensure_virtualenv() {
+  if [ -d "$VENV_DIR" ] && [ ! -x "$VENV_DIR/bin/python" ]; then
+    log "⚠️  Virtual environment at $VENV_DIR is incomplete — recreating it"
+    rm -rf "$VENV_DIR"
+  fi
+
+  if [ ! -d "$VENV_DIR" ]; then
+    command -v python3.12 &>/dev/null || {
+      log "❌ python3.12 is required before refresh can recreate the virtual environment"
+      exit 1
+    }
+
+    log "🐍 Recreating missing virtual environment..."
+    python3.12 -m venv "$VENV_DIR"
+  fi
+
+  if [ ! -x "$VENV_DIR/bin/pip" ]; then
+    log "🔧 Bootstrapping pip in the virtual environment..."
+    "$VENV_DIR/bin/python" -m ensurepip --upgrade >>"$LOG_FILE" 2>&1
+  fi
+
+  export PATH="$VENV_DIR/bin:$PATH"
+  hash -r
+}
+
+fix_web_root_permissions() {
+  [ -d "$WEB_ROOT" ] || return 0
+
+  if [ -d "$STATIC_ROOT" ]; then
+    chown -R www-data:www-data "$STATIC_ROOT" 2>/dev/null || true
+    find "$STATIC_ROOT" -type d -exec chmod 755 {} + 2>/dev/null || true
+    find "$STATIC_ROOT" -type f -exec chmod 644 {} + 2>/dev/null || true
+  fi
+
+  if [ -d "$MEDIA_ROOT" ]; then
+    chown -R www-data:www-data "$MEDIA_ROOT" 2>/dev/null || true
+    find "$MEDIA_ROOT" -type d -exec chmod 755 {} + 2>/dev/null || true
+    find "$MEDIA_ROOT" -type f -exec chmod 644 {} + 2>/dev/null || true
+  fi
+
+  if [ -f "$SECRET_FILE" ]; then
+    chmod 600 "$SECRET_FILE" 2>/dev/null || true
+  fi
+}
+
+restart_service() {
+  local service_name="$1"
+
+  if ! systemctl list-unit-files --type=service | grep -q "^${service_name}.service"; then
+    log "ℹ️  Skipping missing service: $service_name"
+    return 0
+  fi
+
+  systemctl reset-failed "$service_name" >>"$LOG_FILE" 2>&1 || true
+
+  if ! systemctl restart "$service_name" >>"$LOG_FILE" 2>&1; then
+    log "❌ $service_name failed to restart"
+    systemctl status "$service_name" --no-pager >>"$LOG_FILE" 2>&1 || true
+    journalctl -u "$service_name" -n 80 --no-pager >>"$LOG_FILE" 2>&1 || true
+    return 1
+  fi
+
+  sleep 2
+
+  if ! systemctl is-active --quiet "$service_name"; then
+    log "❌ $service_name is not active after restart"
+    systemctl status "$service_name" --no-pager >>"$LOG_FILE" 2>&1 || true
+    journalctl -u "$service_name" -n 80 --no-pager >>"$LOG_FILE" 2>&1 || true
+    return 1
+  fi
+
+  log "  ✅ $service_name restarted OK"
+}
+
+ensure_nginx_ready() {
+  if command -v nginx &>/dev/null; then
+    return 0
+  fi
+
+  log "⚠️  Nginx is not installed — invoking deployment/05_nginx_setup.sh"
+  bash "$SCRIPT_DIR/05_nginx_setup.sh" "$ENV" >>"$LOG_FILE" 2>&1
+}
+
+smoke_test_http() {
+  if command -v curl &>/dev/null; then
+    curl -sS -o /dev/null -w "%{http_code}" --max-time 15 -H "Host: $DOMAIN_MAIN" http://127.0.0.1/health/ 2>/dev/null || echo "000"
+    return
+  fi
+
+  if command -v wget &>/dev/null; then
+    wget -q -S --spider --timeout=15 --header="Host: $DOMAIN_MAIN" http://127.0.0.1/health/ 2>&1 | awk '/HTTP\// { code=$2 } END { print code ? code : "000" }' || echo "000"
+    return
+  fi
+
+  echo "000"
 }
 
 echo ""
@@ -73,9 +200,20 @@ log "📌 HEAD: $COMMIT"
 
 # ── 2. Requirements ───────────────────────────────────────────────────────────
 log "📦 [2/8] Installing/updating Python requirements..."
-"$VENV_DIR/bin/pip" install -q --upgrade pip >>"$LOG_FILE" 2>&1
-[ -f "$BACKEND_DIR/requirements.txt" ] && \
-  "$VENV_DIR/bin/pip" install -q -r "$BACKEND_DIR/requirements.txt" >>"$LOG_FILE" 2>&1
+ensure_virtualenv
+pip_install install --upgrade pip setuptools wheel
+
+if [ -f "$BACKEND_DIR/requirements.txt" ]; then
+  if ! pip_install install -r "$BACKEND_DIR/requirements.txt"; then
+    log "❌ Requirements installation failed — recent pip output:"
+    tail -n 40 "$LOG_FILE" || true
+    exit 1
+  fi
+else
+  log "❌ requirements.txt not found at $BACKEND_DIR/requirements.txt"
+  exit 1
+fi
+
 log "✅ Requirements up to date"
 
 # ── 3. Migrations ─────────────────────────────────────────────────────────────
@@ -95,46 +233,42 @@ log "✅ Static collected"
 log "📁 [5/8] Copying static files to $STATIC_ROOT..."
 mkdir -p "$STATIC_ROOT"
 cp -r staticfiles/. "$STATIC_ROOT/" 2>/dev/null || true
-chown -R www-data:www-data "$STATIC_ROOT"
-chmod -R 755 "$STATIC_ROOT"
+fix_web_root_permissions
 log "✅ Static files deployed"
 
 # Also ensure media dir permissions
 mkdir -p "$MEDIA_ROOT"
-chown -R www-data:www-data "$MEDIA_ROOT"
+fix_web_root_permissions
 
 # ── 6. Restart services ───────────────────────────────────────────────────────
 log "🔄 [6/8] Restarting application services..."
+FAILED_SERVICES=0
 for SVC in "$SERVICE_NAME" "${SERVICE_NAME}_celery" "${SERVICE_NAME}_celerybeat"; do
-  if systemctl list-unit-files --type=service | grep -q "^${SVC}.service"; then
-    systemctl restart "$SVC" >>"$LOG_FILE" 2>&1
-    sleep 2
-    systemctl is-active --quiet "$SVC" \
-      && log "  ✅ $SVC restarted OK" \
-      || log "  ❌ $SVC failed to start"
-  fi
+  restart_service "$SVC" || FAILED_SERVICES=$((FAILED_SERVICES + 1))
 done
+
+[ "$FAILED_SERVICES" -eq 0 ] || exit 1
 
 # ── 7. Nginx test + reload ────────────────────────────────────────────────────
 log "🌐 [7/8] Testing and reloading Nginx..."
-nano /etc/nginx/sites-available/"$NGINX_SITE_NAME" --view 2>/dev/null || true
+ensure_nginx_ready
 nginx -t >>"$LOG_FILE" 2>&1 || { log "❌ Nginx config invalid!"; nginx -t; exit 1; }
 systemctl reload nginx >>"$LOG_FILE" 2>&1
 log "✅ Nginx reloaded"
 
 # ── 8. Smoke test ─────────────────────────────────────────────────────────────
-log "🔍 [8/8] Smoke-testing https://$DOMAIN_MAIN/health/ ..."
+log "🔍 [8/8] Smoke-testing local Nginx health endpoint for $DOMAIN_MAIN ..."
 sleep 3
-HTTP_CODE=$(curl -sk -o /dev/null -w "%{http_code}" --max-time 15 "https://$DOMAIN_MAIN/health/" 2>/dev/null || echo "000")
-if [[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "301" || "$HTTP_CODE" == "302" ]]; then
+HTTP_CODE=$(smoke_test_http)
+if [[ "$HTTP_CODE" == "200" || "$HTTP_CODE" == "301" || "$HTTP_CODE" == "302" || "$HTTP_CODE" == "307" || "$HTTP_CODE" == "308" ]]; then
   log "✅ Smoke test PASSED (HTTP $HTTP_CODE)"
 else
-  log "⚠️  Smoke test returned HTTP $HTTP_CODE (may still be starting up)"
+  log "❌ Smoke test returned HTTP $HTTP_CODE"
+  exit 1
 fi
 
 # ── Permissions final pass ────────────────────────────────────────────────────
-chown -R www-data:www-data "$WEB_ROOT" 2>/dev/null || true
-chmod -R 755 "$WEB_ROOT"
+fix_web_root_permissions
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 END_TIME=$(date +%s)

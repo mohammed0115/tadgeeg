@@ -12,11 +12,47 @@ ENV="${1:-live}"
 ENV_FILE="$SCRIPT_DIR/config/${ENV}.env"
 [ -f "$ENV_FILE" ] || { echo "❌ Unknown environment: $ENV"; exit 1; }
 source "$ENV_FILE"
+export DEBIAN_FRONTEND=noninteractive
 
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/notifications.log"
+STATUS_FILE="$LOG_DIR/health.status"
 
 log() { echo "$(date '+%F %T') [$ENV_LABEL] $1" | tee -a "$LOG_FILE"; }
+
+APT_RETRY_COUNT="${APT_RETRY_COUNT:-3}"
+
+run_with_retries() {
+  local description="$1"
+  shift
+  local attempt=1
+
+  until "$@" >>"$LOG_FILE" 2>&1; do
+    if [ "$attempt" -ge "$APT_RETRY_COUNT" ]; then
+      log "❌ ${description} failed after ${APT_RETRY_COUNT} attempts"
+      return 1
+    fi
+
+    log "⚠️  ${description} failed (attempt ${attempt}/${APT_RETRY_COUNT}) — retrying in 5 seconds..."
+    attempt=$((attempt + 1))
+    sleep 5
+  done
+
+  return 0
+}
+
+apt_update() {
+  run_with_retries "apt-get update" apt-get update -y
+}
+
+apt_install() {
+  [ "$#" -gt 0 ] || return 0
+  run_with_retries "apt-get install: $*" apt-get install -y "$@"
+}
+
+mail_available() {
+  command -v mail &>/dev/null
+}
 
 echo ""
 echo "╔══════════════════════════════════════════════════════╗"
@@ -25,13 +61,17 @@ echo "╚═══════════════════════�
 echo ""
 
 # ── Install mail utilities ────────────────────────────────────────────────────
-if command -v mail &>/dev/null || command -v sendmail &>/dev/null; then
+if mail_available; then
   log "✅ Mail utilities already installed"
 else
   log "📦 Installing mail utilities..."
-  apt-get install -y mailutils ssmtp >>"$LOG_FILE" 2>&1 || \
-  apt-get install -y postfix >>"$LOG_FILE" 2>&1 || \
-  log "⚠️  Could not install mail utilities — email alerts disabled"
+  apt_update || true
+
+  if apt_install mailutils || apt_install bsd-mailx; then
+    log "✅ Mail utilities installed"
+  else
+    log "⚠️  Could not install mail utilities — email alerts will fall back to log files only"
+  fi
 fi
 
 # ── Load alert config from secret file ───────────────────────────────────────
@@ -48,37 +88,66 @@ log "📝 Writing alert script: $ALERT_SCRIPT"
 cat > "$ALERT_SCRIPT" <<SCRIPT
 #!/bin/bash
 # FinAI [$ENV_LABEL] — Service Alert Script
+set -euo pipefail
+
 ALERT_EMAIL="$ALERT_EMAIL"
 ENV_LABEL="$ENV_LABEL"
 STATUS_FILE="$STATUS_FILE"
 LOG_DIR="$LOG_DIR"
+SERVER_IP="$SERVER_IP"
+DOMAIN_MAIN="$DOMAIN_MAIN"
+HEALTH_LOG="$LOG_DIR/health.log"
 
 send_alert() {
   local subject="\$1"
   local body="\$2"
-  if command -v mail &>/dev/null; then
+
+  if [ -n "\$ALERT_EMAIL" ] && command -v mail &>/dev/null; then
     echo "\$body" | mail -s "[FinAI \$ENV_LABEL ALERT] \$subject" "\$ALERT_EMAIL" 2>/dev/null || true
   fi
-  # Also log to file
+
   echo "\$(date '+%F %T') ALERT: \$subject" >> "\$LOG_DIR/alerts.log"
   echo "\$body" >> "\$LOG_DIR/alerts.log"
+  echo "" >> "\$LOG_DIR/alerts.log"
 }
 
-# Read status file for issues
-if [ -f "\$STATUS_FILE" ] && [ -s "\$STATUS_FILE" ]; then
-  ISSUES=\$(cat "\$STATUS_FILE")
-  BODY="FinAI [\$ENV_LABEL] health check detected issues at \$(date):
+case "\${1:-health}" in
+  health)
+    if [ -f "\$STATUS_FILE" ] && [ -s "\$STATUS_FILE" ]; then
+      ISSUES=\$(cat "\$STATUS_FILE")
+      BODY="FinAI [\$ENV_LABEL] health check detected issues at \$(date):
 
 \$ISSUES
 
-Server: $SERVER_IP
-Domain: https://$DOMAIN_MAIN
-Log:    $LOG_DIR/health.log
+Server: \$SERVER_IP
+Domain: https://\$DOMAIN_MAIN
+Log:    \$HEALTH_LOG
 
 -- FinAI Auto-Monitor"
 
-  send_alert "Health Check Issues Detected" "\$BODY"
-fi
+      send_alert "Health Check Issues Detected" "\$BODY"
+    fi
+    ;;
+  service-failure)
+    UNIT_NAME="\${2:-unknown.service}"
+    BODY="FinAI [\$ENV_LABEL] detected a service failure.
+
+Service : \$UNIT_NAME
+Server  : \$SERVER_IP
+Domain  : https://\$DOMAIN_MAIN
+Time    : \$(date)
+
+Run: journalctl -u \$UNIT_NAME -n 80 --no-pager
+
+-- FinAI Auto-Monitor"
+
+    send_alert "Service Failure: \$UNIT_NAME" "\$BODY"
+    ;;
+  deployment-success)
+    BODY="\${2:-FinAI deployment completed successfully.}"
+    send_alert "Deployment Successful" "\$BODY"
+    ;;
+esac
 SCRIPT
 
 chmod +x "$ALERT_SCRIPT"
@@ -88,46 +157,36 @@ log "✅ Alert script created"
 ALERT_CRON_FILE="/etc/cron.d/finai_alert_${ENV}"
 ALERT_CRON="*/5 * * * * root $ALERT_SCRIPT"
 
-if [ -f "$ALERT_CRON_FILE" ]; then
-  echo "$ALERT_CRON" > "$ALERT_CRON_FILE"
-  log "✅ Alert cron updated"
-else
-  echo "$ALERT_CRON" > "$ALERT_CRON_FILE"
-  chmod 644 "$ALERT_CRON_FILE"
-  log "⏰ Alert cron installed"
-fi
+echo "$ALERT_CRON" > "$ALERT_CRON_FILE"
+chmod 644 "$ALERT_CRON_FILE"
+log "⏰ Alert cron installed/updated"
 
 # ── Systemd on-failure email for critical services ────────────────────────────
-for SVC in "$SERVICE_NAME" "${SERVICE_NAME}_celery"; do
+for SVC in "$SERVICE_NAME" "${SERVICE_NAME}_celery" "${SERVICE_NAME}_celerybeat"; do
   SVC_FILE="/etc/systemd/system/${SVC}.service"
-  if [ -f "$SVC_FILE" ] && ! grep -q "OnFailure" "$SVC_FILE"; then
-    # Create override drop-in for failure notification
+  if [ -f "$SVC_FILE" ]; then
     OVERRIDE_DIR="/etc/systemd/system/${SVC}.service.d"
     mkdir -p "$OVERRIDE_DIR"
     cat > "$OVERRIDE_DIR/alert.conf" <<OVERRIDE
 [Unit]
 OnFailure=finai-failure-alert@%n.service
 OVERRIDE
-    log "⚙️  OnFailure override added for $SVC"
+    log "⚙️  OnFailure override installed for $SVC"
   fi
 done
 
 # ── Failure alert systemd unit ────────────────────────────────────────────────
 FAILURE_UNIT="/etc/systemd/system/finai-failure-alert@.service"
-if [ ! -f "$FAILURE_UNIT" ]; then
-  cat > "$FAILURE_UNIT" <<UNIT
+cat > "$FAILURE_UNIT" <<UNIT
 [Unit]
 Description=FinAI Service Failure Alert for %i
 
 [Service]
 Type=oneshot
-ExecStart=/bin/bash -c '\
-  echo "FinAI service %i failed on $SERVER_IP ($ENV_LABEL) at \$(date). Check: journalctl -u %i -n 50" \
-  | mail -s "[FinAI $ENV_LABEL CRITICAL] Service %i FAILED" $ALERT_EMAIL 2>/dev/null || true'
+ExecStart=/bin/bash -lc '$ALERT_SCRIPT service-failure "%i"'
 UNIT
-  systemctl daemon-reload >>"$LOG_FILE" 2>&1
-  log "✅ Failure alert systemd unit created"
-fi
+systemctl daemon-reload >>"$LOG_FILE" 2>&1
+log "✅ Failure alert systemd unit created/updated"
 
 # ── Send deployment success notification ──────────────────────────────────────
 COMMIT=$(git -C "$PROJECT_ROOT" log -1 --format="%h — %s" 2>/dev/null || echo "N/A")
@@ -144,17 +203,17 @@ Deployed at : $(date '+%F %T')
 Services running:
 $(systemctl is-active "$SERVICE_NAME" 2>/dev/null && echo "  ✅ Gunicorn ($SERVICE_NAME)" || echo "  ❌ Gunicorn ($SERVICE_NAME)")
 $(systemctl is-active "${SERVICE_NAME}_celery" 2>/dev/null && echo "  ✅ Celery" || echo "  ❌ Celery")
+$(systemctl is-active "${SERVICE_NAME}_celerybeat" 2>/dev/null && echo "  ✅ Celery beat" || echo "  ❌ Celery beat")
 $(systemctl is-active nginx 2>/dev/null && echo "  ✅ Nginx" || echo "  ❌ Nginx")
 $(systemctl is-active redis-server 2>/dev/null && echo "  ✅ Redis" || echo "  ❌ Redis")
 
 -- FinAI Auto-Deployment"
 
-if command -v mail &>/dev/null; then
-  echo "$DEPLOY_MSG" | mail -s "[FinAI $ENV_LABEL] Deployment Successful" "$ALERT_EMAIL" 2>/dev/null \
-    && log "📧 Deployment notification sent to $ALERT_EMAIL" \
-    || log "⚠️  Could not send email (mail not configured)"
+if [ -n "$ALERT_EMAIL" ] && mail_available; then
+  "$ALERT_SCRIPT" deployment-success "$DEPLOY_MSG"
+  log "📧 Deployment notification dispatched to $ALERT_EMAIL"
 else
-  log "⚠️  mail command not available — skipping email notification"
+  log "⚠️  mail command not available or alert email empty — skipping email notification"
 fi
 
 # Always log the message

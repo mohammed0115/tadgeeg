@@ -25,7 +25,36 @@ DEPLOY_LOG="$LOG_DIR/deploy_$(date +%Y%m%d_%H%M%S).log"
 touch "$DEPLOY_LOG"
 
 log()  { echo "$(date '+%F %T') [$ENV_LABEL] $1" | tee -a "$DEPLOY_LOG"; }
-fail() { echo ""; echo "❌ DEPLOYMENT FAILED at: $1"; echo "   Log: $DEPLOY_LOG"; exit 1; }
+
+step_log_path() {
+  case "$1" in
+    01_git_sync.sh) echo "$LOG_DIR/git_sync.log" ;;
+    02_system_setup.sh) echo "$LOG_DIR/system_setup.log" ;;
+    03_ocr_setup.sh) echo "$LOG_DIR/ocr_setup.log" ;;
+    04_gunicorn_service.sh) echo "$LOG_DIR/gunicorn_setup.log" ;;
+    05_nginx_setup.sh) echo "$LOG_DIR/nginx_setup.log" ;;
+    06_ssl_setup.sh) echo "$LOG_DIR/ssl_setup.log" ;;
+    07_monitoring.sh) echo "$LOG_DIR/monitoring.log" ;;
+    08_notifications.sh) echo "$LOG_DIR/notifications.log" ;;
+    *) echo "" ;;
+  esac
+}
+
+CURRENT_STEP_NAME=""
+CURRENT_STEP_SCRIPT=""
+CURRENT_STEP_LOG=""
+
+fail() {
+  echo ""
+  echo "❌ DEPLOYMENT FAILED at: $1"
+  echo "   Log: $DEPLOY_LOG"
+  if [ -n "$CURRENT_STEP_LOG" ]; then
+    echo "   Step log: $CURRENT_STEP_LOG"
+  fi
+  echo "   Recent deploy log lines:"
+  tail -n 20 "$DEPLOY_LOG" 2>/dev/null || true
+  exit 1
+}
 
 DEPLOY_START=$(date +%s)
 STEP_COUNT=9
@@ -70,6 +99,10 @@ run_step() {
   local STEP_NAME="$2"
   local SCRIPT="$3"
 
+  CURRENT_STEP_NAME="$STEP_NAME"
+  CURRENT_STEP_SCRIPT="$SCRIPT"
+  CURRENT_STEP_LOG="$(step_log_path "$SCRIPT")"
+
   echo ""
   echo "────────────────────────────────────────────────────"
   echo "  Step $STEP_NUM/$STEP_COUNT — $STEP_NAME"
@@ -77,6 +110,10 @@ run_step() {
   log "▶ Step $STEP_NUM: $STEP_NAME"
 
   STEP_START=$(date +%s)
+
+  if [ ! -f "$SCRIPT_DIR/$SCRIPT" ]; then
+    fail "Missing deployment step script: $SCRIPT"
+  fi
 
   if bash "$SCRIPT_DIR/$SCRIPT" "$ENV" 2>&1 | tee -a "$DEPLOY_LOG"; then
     STEP_END=$(date +%s)

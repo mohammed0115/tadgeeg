@@ -30,5 +30,12 @@ logs/
 
 .idea/
 .vscode/
-Thumbs.db
+*.swp
+*.swo
+*~
 .DS_Store
+Thumbs.db
+
+# Python IDE
+*.sublime-workspace
+*.sublime-project

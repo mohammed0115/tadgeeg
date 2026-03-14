@@ -21,19 +21,31 @@ prepare_directories() {
   mkdir -p "$SCRIPT_DIR/nginx/generated" "$SCRIPT_DIR/certbot/www" "$SCRIPT_DIR/certbot/conf"
 }
 
-issue_cert() {
-  local env_name="$1"
-  local file="$ENV_DIR/${env_name}.env"
-
+load_env_file() {
+  local file="$1"
   [ -f "$file" ] || {
     echo "Missing env file: $file"
     exit 1
   }
 
-  set -a
-  # shellcheck disable=SC1090
-  source "$file"
-  set +a
+  while IFS= read -r raw_line || [ -n "$raw_line" ]; do
+    local line="${raw_line%$'\r'}"
+
+    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+    [[ "$line" == *=* ]] || continue
+
+    local key="${line%%=*}"
+    local value="${line#*=}"
+
+    export "$key=$value"
+  done < "$file"
+}
+
+issue_cert() {
+  local env_name="$1"
+  local file="$ENV_DIR/${env_name}.env"
+
+  load_env_file "$file"
 
   [ -n "${SERVER_NAMES:-}" ] || {
     echo "SERVER_NAMES missing in $file"

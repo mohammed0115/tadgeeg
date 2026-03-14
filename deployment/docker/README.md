@@ -40,6 +40,10 @@ sudo bash deployment/docker/bootstrap_server.sh
 - تشغيل كل البيئات الثلاث دفعة واحدة
 - توليد إعداد Nginx HTTP جاهز قبل الإقلاع
 
+ملف المتابعة يُكتب تلقائيًا في:
+
+- `deployment/docker/logs/bootstrap_latest.log`
+
 بعد ذلك يمكنك تعديل القيم الحساسة مثل:
 
 - `GOOGLE_CLIENT_ID`

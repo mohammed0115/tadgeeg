@@ -1,0 +1,376 @@
+"""
+Financial Audit Rule Engine
+
+The rule engine evaluates a financial document against a registry of
+modular audit rules and produces a structured AuditReport.
+
+Architecture:
+  - REGISTERED_RULES: ordered list of all active rule classes
+  - AuditEngine.evaluate(): dispatches each rule, collects results
+  - AuditReport: aggregates results + computes overall risk
+  - save_audit_issues(): persists failed rules as AuditCase records
+
+Usage from tasks / views:
+
+    from apps.audit.audit_engine import AuditEngine
+
+    engine = AuditEngine(organisation_id=org.id)
+    report = engine.evaluate(
+        document=financial_result.to_dict(),
+        invoice_id=invoice.id,
+        context={"duplicate_result": dup, "compliance_result": comp},
+    )
+
+    if report.escalate:
+        engine.save_audit_issues(report, invoice=invoice)
+
+Rule lifecycle:
+  Upload
+  → FinancialAIEngine.analyse()
+  → AuditEngine.evaluate()
+  → AuditIssue records created
+  → AuditCase escalated (if required)
+"""
+
+import logging
+import time
+from dataclasses import dataclass, field
+from typing import Optional, Type
+
+from .rules.base_rule import AuditRule, RuleResult, RuleStatus, Severity
+from .rules.duplicate_invoice_rule import DuplicateInvoiceRule
+from .rules.vat_validation_rule import VATValidationRule
+from .rules.missing_fields_rule import MissingFieldsRule
+from .rules.amount_anomaly_rule import AmountAnomalyRule
+from .rules.date_validation_rule import DateValidationRule
+from .rules.vendor_risk_rule import VendorRiskRule
+
+logger = logging.getLogger("finai")
+
+# ── Rule Registry ─────────────────────────────────────────────────────────────
+# Ordered list: critical-path rules first.
+# Add new rules here — they'll be auto-discovered by evaluate().
+
+REGISTERED_RULES: list[Type[AuditRule]] = [
+    DuplicateInvoiceRule,      # R001 — Must run first (highest impact)
+    MissingFieldsRule,         # R003 — Data completeness
+    VATValidationRule,         # R002 — Compliance
+    DateValidationRule,        # R005 — Date anomalies
+    AmountAnomalyRule,         # R004 — Statistical analysis
+    VendorRiskRule,            # R006 — Vendor screening
+]
+
+# Severity → weight mapping for aggregate risk calculation
+SEVERITY_RISK_WEIGHTS: dict[str, float] = {
+    "CRITICAL": 40.0,
+    "HIGH":     25.0,
+    "MEDIUM":   10.0,
+    "LOW":       5.0,
+}
+
+# Risk level thresholds (same as RiskEngine for consistency)
+RISK_THRESHOLDS = {
+    "critical": 75,
+    "high": 50,
+    "medium": 25,
+}
+
+
+# ── Audit Report ──────────────────────────────────────────────────────────────
+
+@dataclass
+class AuditReport:
+    """
+    Complete result of running all audit rules against a document.
+    """
+
+    document_id: Optional[int] = None
+    rule_results: list[RuleResult] = field(default_factory=list)
+    risk_score: int = 0
+    risk_level: str = "low"
+    total_rules: int = 0
+    passed_rules: int = 0
+    failed_rules: int = 0
+    skipped_rules: int = 0
+    error_rules: int = 0
+    escalate: bool = False
+    processing_time_ms: int = 0
+    summary: str = ""
+
+    @property
+    def failed_results(self) -> list[RuleResult]:
+        return [r for r in self.rule_results if r.result == RuleStatus.FAILED]
+
+    @property
+    def critical_failures(self) -> list[RuleResult]:
+        return [
+            r for r in self.failed_results
+            if r.severity in (Severity.CRITICAL, "CRITICAL")
+        ]
+
+    @property
+    def high_failures(self) -> list[RuleResult]:
+        return [
+            r for r in self.failed_results
+            if r.severity in (Severity.HIGH, "HIGH")
+        ]
+
+    def to_dict(self) -> dict:
+        return {
+            "document_id": self.document_id,
+            "rule_results": [r.to_dict() for r in self.rule_results],
+            "risk_score": self.risk_score,
+            "risk_level": self.risk_level,
+            "total_rules": self.total_rules,
+            "passed_rules": self.passed_rules,
+            "failed_rules": self.failed_rules,
+            "skipped_rules": self.skipped_rules,
+            "error_rules": self.error_rules,
+            "escalate": self.escalate,
+            "processing_time_ms": self.processing_time_ms,
+            "summary": self.summary,
+        }
+
+
+# ── Audit Engine ──────────────────────────────────────────────────────────────
+
+class AuditEngine:
+    """
+    Financial Audit Rule Engine.
+
+    Evaluates all registered rules and produces an AuditReport.
+    Can persist findings to the database as AuditCase / issue records.
+    """
+
+    def __init__(
+        self,
+        organisation_id: int = None,
+        rules: list[Type[AuditRule]] = None,
+    ):
+        self.organisation_id = organisation_id
+        self.rule_classes = rules or REGISTERED_RULES
+
+    def evaluate(
+        self,
+        document: dict,
+        invoice_id: int = None,
+        context: dict = None,
+    ) -> AuditReport:
+        """
+        Run all registered rules against the document.
+
+        Args:
+            document:   Normalised document dict (from FinancialAIEngine.to_dict()).
+            invoice_id: Optional Invoice PK for database persistence.
+            context:    Pre-computed sub-results (duplicate_result, etc.)
+                        to avoid redundant computation.
+
+        Returns:
+            AuditReport
+        """
+        t_start = time.monotonic()
+        context = context or {}
+        results: list[RuleResult] = []
+
+        logger.info(
+            "[AuditEngine] Evaluating %d rules for document=%s invoice=%s",
+            len(self.rule_classes),
+            document.get("document_number", "?"),
+            invoice_id,
+        )
+
+        for rule_class in self.rule_classes:
+            rule = rule_class()
+            try:
+                result = rule.evaluate(
+                    document=document,
+                    organisation_id=self.organisation_id,
+                    context=context,
+                )
+                result.document_id = invoice_id
+            except Exception as exc:
+                result = rule._error(exc)
+                logger.exception(
+                    "[AuditEngine] Rule %s crashed unexpectedly", rule.rule_id
+                )
+            results.append(result)
+
+            # Log individual result
+            logger.debug(
+                "[AuditEngine] Rule %s (%s): %s — %s",
+                result.rule_id,
+                result.severity,
+                result.result,
+                result.explanation[:100] if result.explanation else "",
+            )
+
+        # ── Aggregate ─────────────────────────────────────────────────────────
+        report = self._build_report(results, invoice_id)
+        report.processing_time_ms = int((time.monotonic() - t_start) * 1000)
+
+        logger.info(
+            "[AuditEngine] Complete: risk=%s (%d) | passed=%d failed=%d | %dms",
+            report.risk_level,
+            report.risk_score,
+            report.passed_rules,
+            report.failed_rules,
+            report.processing_time_ms,
+        )
+
+        return report
+
+    def save_audit_issues(
+        self,
+        report: AuditReport,
+        invoice=None,
+        transaction=None,
+        created_by=None,
+    ) -> list:
+        """
+        Persist failed rule results as AuditCase records.
+
+        Only creates cases for FAILED results with HIGH or CRITICAL severity.
+        MEDIUM/LOW failures are stored as sub-issues on existing cases.
+
+        Returns:
+            List of created AuditCase instances.
+        """
+        from .models import AuditCase
+
+        cases = []
+        for result in report.failed_results:
+            sev = (result.severity.value if isinstance(result.severity, Severity)
+                   else str(result.severity))
+
+            if sev not in ("CRITICAL", "HIGH"):
+                continue  # Only create cases for significant issues
+
+            priority_map = {"CRITICAL": "critical", "HIGH": "high"}
+            priority = priority_map.get(sev, "medium")
+
+            try:
+                case_data = {
+                    "organisation_id": self.organisation_id,
+                    "case_type": "audit",
+                    "priority": priority,
+                    "status": "open",
+                    "title": f"[{result.rule_id}] {result.rule_name}",
+                    "description": result.explanation,
+                    "ai_findings": result.to_dict(),
+                    "ai_risk_score": report.risk_score,
+                }
+                if invoice:
+                    case_data["invoice"] = invoice
+                if transaction:
+                    case_data["transaction"] = transaction
+                if created_by:
+                    case_data["created_by"] = created_by
+
+                case = AuditCase.objects.create(**case_data)
+                cases.append(case)
+                logger.info(
+                    "[AuditEngine] Created AuditCase %s for rule %s",
+                    case.pk, result.rule_id,
+                )
+            except Exception as exc:
+                logger.error(
+                    "[AuditEngine] Failed to create AuditCase for rule %s: %s",
+                    result.rule_id, exc,
+                )
+
+        return cases
+
+    # ── Internal ──────────────────────────────────────────────────────────────
+
+    def _build_report(
+        self, results: list[RuleResult], document_id: Optional[int]
+    ) -> AuditReport:
+        """Aggregate rule results into an AuditReport."""
+        passed = sum(1 for r in results if r.result == RuleStatus.PASSED)
+        failed = sum(1 for r in results if r.result == RuleStatus.FAILED)
+        skipped = sum(1 for r in results if r.result == RuleStatus.SKIPPED)
+        errors = sum(1 for r in results if r.result == RuleStatus.ERROR)
+
+        # Compute risk score from failed rules
+        raw_score = 0.0
+        for r in results:
+            if r.result == RuleStatus.FAILED:
+                sev = r.severity.value if isinstance(r.severity, Severity) else str(r.severity)
+                raw_score += SEVERITY_RISK_WEIGHTS.get(sev, 5.0)
+
+        risk_score = min(int(round(raw_score)), 100)
+
+        # Risk level
+        if risk_score >= RISK_THRESHOLDS["critical"]:
+            risk_level = "critical"
+        elif risk_score >= RISK_THRESHOLDS["high"]:
+            risk_level = "high"
+        elif risk_score >= RISK_THRESHOLDS["medium"]:
+            risk_level = "medium"
+        else:
+            risk_level = "low"
+
+        escalate = risk_level in ("high", "critical")
+
+        # Summary
+        critical_rules = [
+            r.rule_name for r in results
+            if r.result == RuleStatus.FAILED
+            and (r.severity == Severity.CRITICAL or r.severity == "CRITICAL")
+        ]
+        if critical_rules:
+            summary = f"CRITICAL issues: {', '.join(critical_rules)}"
+        elif failed > 0:
+            failed_names = [r.rule_name for r in results if r.result == RuleStatus.FAILED]
+            summary = f"{failed} rule(s) failed: {', '.join(failed_names[:3])}"
+        else:
+            summary = f"All {passed} applicable rules passed."
+
+        return AuditReport(
+            document_id=document_id,
+            rule_results=results,
+            risk_score=risk_score,
+            risk_level=risk_level,
+            total_rules=len(results),
+            passed_rules=passed,
+            failed_rules=failed,
+            skipped_rules=skipped,
+            error_rules=errors,
+            escalate=escalate,
+            summary=summary,
+        )
+
+
+# ── Convenience function ──────────────────────────────────────────────────────
+
+def run_audit(
+    document: dict,
+    organisation_id: int = None,
+    invoice_id: int = None,
+    context: dict = None,
+    persist: bool = False,
+    invoice=None,
+    created_by=None,
+) -> AuditReport:
+    """
+    One-call audit evaluation.
+
+    Args:
+        document:        Normalised document dict.
+        organisation_id: Organisation ID.
+        invoice_id:      Invoice PK (for DB linkage).
+        context:         Pre-computed results dict.
+        persist:         If True, create AuditCase records for failures.
+        invoice:         Invoice model instance (for FK).
+        created_by:      User who triggered the audit.
+
+    Returns:
+        AuditReport
+    """
+    engine = AuditEngine(organisation_id=organisation_id)
+    report = engine.evaluate(document, invoice_id=invoice_id, context=context)
+
+    if persist and report.failed_rules > 0:
+        engine.save_audit_issues(report, invoice=invoice, created_by=created_by)
+
+    return report

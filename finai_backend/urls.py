@@ -11,6 +11,9 @@ urlpatterns = [
     # Admin
     path("admin/", admin.site.urls),
     path("django-admin/", RedirectView.as_view(pattern_name="admin:index", permanent=False)),
+    path("accounts/login/", RedirectView.as_view(url="/login/", permanent=False)),
+    path("accounts/register/", RedirectView.as_view(url="/register/", permanent=False)),
+    path("accounts/logout/", RedirectView.as_view(url="/logout/", permanent=False)),
 
     # API Schema
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

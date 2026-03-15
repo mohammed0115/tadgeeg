@@ -14,7 +14,7 @@ Usage from tasks / views:
 
     from apps.audit.audit_engine import AuditEngine
 
-    engine = AuditEngine(organisation_id=org.id)
+    engine = AuditEngine(organization_id=org.id)
     report = engine.evaluate(
         document=financial_result.to_dict(),
         invoice_id=invoice.id,
@@ -144,10 +144,10 @@ class AuditEngine:
 
     def __init__(
         self,
-        organisation_id: int = None,
+        organization_id: int = None,
         rules: list[Type[AuditRule]] = None,
     ):
-        self.organisation_id = organisation_id
+        self.organization_id = organization_id
         self.rule_classes = rules or REGISTERED_RULES
 
     def evaluate(
@@ -184,7 +184,7 @@ class AuditEngine:
             try:
                 result = rule.evaluate(
                     document=document,
-                    organisation_id=self.organisation_id,
+                    organization_id=self.organization_id,
                     context=context,
                 )
                 result.document_id = invoice_id
@@ -249,14 +249,26 @@ class AuditEngine:
             priority = priority_map.get(sev, "medium")
 
             try:
+                import json as _json
+                def _json_safe(obj):
+                    """Recursively convert non-serializable types to strings."""
+                    if isinstance(obj, dict):
+                        return {k: _json_safe(v) for k, v in obj.items()}
+                    if isinstance(obj, (list, tuple)):
+                        return [_json_safe(i) for i in obj]
+                    try:
+                        _json.dumps(obj)
+                        return obj
+                    except (TypeError, ValueError):
+                        return str(obj)
                 case_data = {
-                    "organisation_id": self.organisation_id,
+                    "organization_id": self.organization_id,
                     "case_type": "audit",
                     "priority": priority,
                     "status": "open",
                     "title": f"[{result.rule_id}] {result.rule_name}",
                     "description": result.explanation,
-                    "ai_findings": result.to_dict(),
+                    "ai_findings": _json_safe(result.to_dict()),
                     "ai_risk_score": report.risk_score,
                 }
                 if invoice:
@@ -345,7 +357,7 @@ class AuditEngine:
 
 def run_audit(
     document: dict,
-    organisation_id: int = None,
+    organization_id: int = None,
     invoice_id: int = None,
     context: dict = None,
     persist: bool = False,
@@ -357,7 +369,7 @@ def run_audit(
 
     Args:
         document:        Normalised document dict.
-        organisation_id: Organisation ID.
+        organization_id: Organisation ID.
         invoice_id:      Invoice PK (for DB linkage).
         context:         Pre-computed results dict.
         persist:         If True, create AuditCase records for failures.
@@ -367,7 +379,7 @@ def run_audit(
     Returns:
         AuditReport
     """
-    engine = AuditEngine(organisation_id=organisation_id)
+    engine = AuditEngine(organization_id=organization_id)
     report = engine.evaluate(document, invoice_id=invoice_id, context=context)
 
     if persist and report.failed_rules > 0:

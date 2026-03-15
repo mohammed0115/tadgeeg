@@ -61,18 +61,30 @@ class ImageParser(DocumentParser):
         # ── 2. Preprocess ────────────────────────────────────────────────────
         preprocessed_path = self._preprocess(image, file_path)
 
-        # ── 3. Tesseract OCR ─────────────────────────────────────────────────
+        # ── 3. OCR (Tesseract primary → OpenAI upgrade if low confidence) ───────
         try:
-            from core.services.ocr_service import extract_text_tesseract
+            from core.services.ocr_service import extract_text_openai, extract_text_tesseract
 
             ocr_result = extract_text_tesseract(preprocessed_path or file_path)
             raw_text = ocr_result.get("text", "").strip()
             confidence = ocr_result.get("confidence", 0.0)
+
+            # Upgrade to OpenAI OCR when Tesseract confidence is low or empty
+            if confidence < 60 or not raw_text:
+                logger.info("[ImageParser] Tesseract confidence %.0f%% — upgrading to OpenAI OCR", confidence)
+                ai_ocr = extract_text_openai(file_path)
+                if ai_ocr.get("text"):
+                    raw_text = ai_ocr["text"]
+                    confidence = ai_ocr.get("confidence", confidence)
+                    result.metadata["source"] = "openai_ocr"
+                    result.metadata["is_handwritten"] = ai_ocr.get("is_handwritten", False)
+            else:
+                result.metadata["source"] = "tesseract"
+
             result.raw_text = raw_text
             result.metadata["ocr_confidence"] = confidence
-            result.metadata["source"] = "tesseract"
         except Exception as exc:
-            result.add_error(f"Tesseract OCR failed: {exc}")
+            result.add_error(f"OCR failed: {exc}")
 
         # ── 4. AI Vision enhancement ─────────────────────────────────────────
         if use_ai:

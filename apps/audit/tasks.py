@@ -124,7 +124,7 @@ def audit_high_risk_documents(self):
                     "missing_fields":   doc_dict.get("missing_fields", []),
                 },
             }
-            engine = AuditEngine(organisation_id=doc.organization_id)
+            engine = AuditEngine(organization_id=doc.organization_id)
             report = engine.evaluate(document=doc_dict, context=context)
 
             # Persist any newly-created audit cases for escalated findings

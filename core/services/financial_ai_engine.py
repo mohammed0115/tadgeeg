@@ -161,18 +161,18 @@ class FinancialAIEngine:
         engine = DocumentEngine()
         ingest = engine.ingest("/path/to/invoice.pdf")
 
-        ai_engine = FinancialAIEngine(organisation_id=org.id, country_code="SA")
+        ai_engine = FinancialAIEngine(organization_id=org.id, country_code="SA")
         result = ai_engine.analyse(ingest)
         print(result.risk_level)
     """
 
     def __init__(
         self,
-        organisation_id: int = None,
+        organization_id: int = None,
         country_code: str = "SA",
         use_ai: bool = True,
     ):
-        self.organisation_id = organisation_id
+        self.organization_id = organization_id
         self.country_code = country_code
         self.use_ai = use_ai
 
@@ -296,7 +296,7 @@ class FinancialAIEngine:
     def _step_duplicate(self, result: FinancialAnalysisResult, document: dict):
         from core.services.detection.duplicate_detector import DuplicateDetector
 
-        detector = DuplicateDetector(organisation_id=self.organisation_id)
+        detector = DuplicateDetector(organization_id=self.organization_id)
         dup_result = detector.detect(document)
 
         result.duplicate_score = float(dup_result.get("duplicate_score", 0.0))
@@ -307,7 +307,7 @@ class FinancialAIEngine:
     def _step_fraud(self, result: FinancialAnalysisResult, document: dict):
         from core.services.detection.fraud_detector import FraudDetector
 
-        detector = FraudDetector(organisation_id=self.organisation_id)
+        detector = FraudDetector(organization_id=self.organization_id)
         fraud_result = detector.detect(document)
 
         result.fraud_score = float(fraud_result.get("fraud_score", 0.0))
@@ -405,7 +405,7 @@ class FinancialAIEngine:
 
 def process_document(
     file_path: str,
-    organisation_id: int = None,
+    organization_id: int = None,
     country_code: str = "SA",
     use_ai: bool = True,
 ) -> FinancialAnalysisResult:
@@ -414,7 +414,7 @@ def process_document(
 
     Args:
         file_path:       Absolute path to the uploaded file.
-        organisation_id: Organisation ID for multi-tenant isolation.
+        organization_id: Organisation ID for multi-tenant isolation.
         country_code:    ISO country code for compliance rules.
         use_ai:          Whether to use OpenAI.
 
@@ -427,7 +427,7 @@ def process_document(
     ingestion = doc_engine.ingest(file_path)
 
     ai_engine = FinancialAIEngine(
-        organisation_id=organisation_id,
+        organization_id=organization_id,
         country_code=country_code,
         use_ai=use_ai,
     )

@@ -42,7 +42,7 @@ class DateValidationRule(AuditRule):
     def evaluate(
         self,
         document: dict,
-        organisation_id: int = None,
+        organization_id: int = None,
         context: dict = None,
     ) -> RuleResult:
         context = context or {}
@@ -70,7 +70,7 @@ class DateValidationRule(AuditRule):
             anomalies.append(f"Document date {doc_date} is {days_ahead} day(s) in the future")
 
         # ── D02: Before organisation registration ─────────────────────────────
-        org_reg_date = self._get_org_registration_date(organisation_id)
+        org_reg_date = self._get_org_registration_date(organization_id)
         if org_reg_date:
             details["org_registration_date"] = str(org_reg_date)
             # Allow 30 days grace (invoices issued just before registration are ok)
@@ -105,7 +105,7 @@ class DateValidationRule(AuditRule):
                 pass
 
         # ── D05: Year-end concentration ───────────────────────────────────────
-        ye_result = self._check_year_end_concentration(doc_date, organisation_id)
+        ye_result = self._check_year_end_concentration(doc_date, organization_id)
         if ye_result:
             self.severity = min(self.severity, Severity.MEDIUM)
             anomalies.append(ye_result)
@@ -120,12 +120,12 @@ class DateValidationRule(AuditRule):
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
-    def _get_org_registration_date(self, organisation_id: int) -> Optional[date]:
-        if not organisation_id:
+    def _get_org_registration_date(self, organization_id: int) -> Optional[date]:
+        if not organization_id:
             return None
         try:
             from apps.authentication.models import Organization
-            org = Organization.objects.get(pk=organisation_id)
+            org = Organization.objects.get(pk=organization_id)
             created = getattr(org, "created_at", None)
             if created:
                 return created.date() if hasattr(created, "date") else created
@@ -133,16 +133,16 @@ class DateValidationRule(AuditRule):
             logger.debug("[DateValidationRule] org reg date error: %s", exc)
         return None
 
-    def _check_year_end_concentration(self, doc_date: date, organisation_id: int) -> str:
+    def _check_year_end_concentration(self, doc_date: date, organization_id: int) -> str:
         """Check if this document falls in the last days of the fiscal year."""
-        if not organisation_id:
+        if not organization_id:
             return ""
         try:
             from apps.authentication.models import Organization
             from apps.invoices.models import Invoice
             from datetime import datetime
 
-            org = Organization.objects.get(pk=organisation_id)
+            org = Organization.objects.get(pk=organization_id)
             fiscal_start = getattr(org, "fiscal_year_start", 1)  # Default January
             fiscal_start = int(fiscal_start or 1)
 
@@ -160,11 +160,11 @@ class DateValidationRule(AuditRule):
             if year_end_start <= doc_date <= fiscal_end:
                 # Count invoices in this window
                 window_count = Invoice.objects.filter(
-                    organisation_id=organisation_id,
+                    organization_id=organization_id,
                     invoice_date__range=(year_end_start, fiscal_end),
                 ).count()
                 total_year = Invoice.objects.filter(
-                    organisation_id=organisation_id,
+                    organization_id=organization_id,
                     invoice_date__year=fiscal_end.year,
                 ).count()
                 if total_year > 10:

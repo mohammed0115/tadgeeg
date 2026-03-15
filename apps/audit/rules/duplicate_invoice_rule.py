@@ -33,7 +33,7 @@ class DuplicateInvoiceRule(AuditRule):
     def evaluate(
         self,
         document: dict,
-        organisation_id: int = None,
+        organization_id: int = None,
         context: dict = None,
     ) -> RuleResult:
         context = context or {}
@@ -46,7 +46,7 @@ class DuplicateInvoiceRule(AuditRule):
         if dup_result is None:
             try:
                 from core.services.detection.duplicate_detector import DuplicateDetector
-                detector = DuplicateDetector(organisation_id=organisation_id)
+                detector = DuplicateDetector(organization_id=organization_id)
                 dup_result = detector.detect(document)
             except Exception as exc:
                 return self._error(exc)

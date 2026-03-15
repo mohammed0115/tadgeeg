@@ -42,7 +42,7 @@ class AmountAnomalyRule(AuditRule):
     def evaluate(
         self,
         document: dict,
-        organisation_id: int = None,
+        organization_id: int = None,
         context: dict = None,
     ) -> RuleResult:
         context = context or {}
@@ -60,7 +60,7 @@ class AmountAnomalyRule(AuditRule):
         details: dict = {"total_amount": total, "vendor": vendor}
 
         # ── Check 1: vs vendor historical average ─────────────────────────────
-        vendor_avg = self._get_vendor_avg(vendor, organisation_id)
+        vendor_avg = self._get_vendor_avg(vendor, organization_id)
         if vendor_avg and vendor_avg > 0:
             ratio = total / vendor_avg
             details["vendor_avg"] = vendor_avg
@@ -71,7 +71,7 @@ class AmountAnomalyRule(AuditRule):
                 )
 
         # ── Check 2: z-score across organisation ──────────────────────────────
-        stats = context.get("org_amount_stats") or self._get_org_stats(organisation_id)
+        stats = context.get("org_amount_stats") or self._get_org_stats(organization_id)
         if stats:
             mean = stats.get("mean", 0)
             std = stats.get("std", 0)
@@ -87,7 +87,7 @@ class AmountAnomalyRule(AuditRule):
                     )
 
         # ── Check 3: vendor is new ────────────────────────────────────────────
-        is_new_vendor = self._is_new_vendor(vendor, organisation_id)
+        is_new_vendor = self._is_new_vendor(vendor, organization_id)
         if is_new_vendor and total > 10000:
             details["is_new_vendor"] = True
             anomalies.append(
@@ -107,31 +107,31 @@ class AmountAnomalyRule(AuditRule):
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
-    def _get_vendor_avg(self, vendor: str, organisation_id: int) -> float:
+    def _get_vendor_avg(self, vendor: str, organization_id: int) -> float:
         if not vendor:
             return 0.0
         try:
             from apps.invoices.models import VendorProfile
 
             qs = VendorProfile.objects.filter(vendor_name__iexact=vendor)
-            if organisation_id:
-                qs = qs.filter(organisation_id=organisation_id)
+            if organization_id:
+                qs = qs.filter(organization_id=organization_id)
 
             profile = qs.first()
-            if profile and profile.average_amount:
-                return float(profile.average_amount)
+            if profile and profile.avg_invoice_amount:
+                return float(profile.avg_invoice_amount)
         except Exception as exc:
             logger.debug("[AmountAnomalyRule] vendor avg error: %s", exc)
         return 0.0
 
-    def _get_org_stats(self, organisation_id: int) -> dict:
-        if not organisation_id:
+    def _get_org_stats(self, organization_id: int) -> dict:
+        if not organization_id:
             return {}
         try:
             from django.db.models import Avg, StdDev
             from apps.invoices.models import Invoice
 
-            qs = Invoice.objects.filter(organisation_id=organisation_id, total_amount__gt=0)
+            qs = Invoice.objects.filter(organization_id=organization_id, total_amount__gt=0)
             stats = qs.aggregate(mean=Avg("total_amount"), std=StdDev("total_amount"))
             return {
                 "mean": float(stats.get("mean") or 0),
@@ -141,15 +141,15 @@ class AmountAnomalyRule(AuditRule):
             logger.debug("[AmountAnomalyRule] org stats error: %s", exc)
         return {}
 
-    def _is_new_vendor(self, vendor: str, organisation_id: int) -> bool:
+    def _is_new_vendor(self, vendor: str, organization_id: int) -> bool:
         if not vendor:
             return False
         try:
             from apps.invoices.models import Invoice
 
             qs = Invoice.objects.filter(vendor_name__iexact=vendor)
-            if organisation_id:
-                qs = qs.filter(organisation_id=organisation_id)
+            if organization_id:
+                qs = qs.filter(organization_id=organization_id)
             return qs.count() == 0
         except Exception:
             return False

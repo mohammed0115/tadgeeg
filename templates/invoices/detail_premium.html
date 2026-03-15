@@ -30,7 +30,7 @@
       <div class="relative grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_330px]">
         <div class="space-y-6">
           <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
-            <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5"><i data-lucide="shield-check" class="h-3.5 w-3.5"></i><span>مراجعة FinAI</span></span>
+            <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5"><i data-lucide="shield-check" class="h-3.5 w-3.5"></i><span>مراجعة Tadgeeg</span></span>
             <span class="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">{{ invoice_display.risk_label_ar }}</span>
             <span class="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">{{ invoice_display.status_label }}</span>
             {% if invoice.is_duplicate %}<span class="rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1.5 text-amber-100">مكرر</span>{% endif %}
@@ -52,7 +52,7 @@
             <div class="rounded-[24px] border border-white/10 bg-white/8 p-4"><p class="text-xs text-slate-400">الإجمالي</p><p class="mt-3 text-2xl font-semibold text-white">{{ invoice_display.total_amount_display }}</p></div>
             <div class="rounded-[24px] border border-white/10 bg-white/8 p-4"><p class="text-xs text-slate-400">ضريبة القيمة</p><p class="mt-3 text-2xl font-semibold text-white">{{ invoice_display.vat_amount_display }}</p></div>
             <div class="rounded-[24px] border border-white/10 bg-white/8 p-4"><p class="text-xs text-slate-400">دقة التحقق</p><p class="mt-3 text-2xl font-semibold text-white font-mono">{{ invoice_display.validation_score|floatformat:0 }}%</p></div>
-            <div class="rounded-[24px] border border-white/10 bg-white/8 p-4"><p class="text-xs text-slate-400">OCR</p><p class="mt-3 text-2xl font-semibold text-white font-mono">{{ invoice_display.ocr_confidence|floatformat:0 }}%</p></div>
+            <div class="rounded-[24px] border border-white/10 bg-white/8 p-4"><p class="text-xs text-slate-400">دقة التعرف الضوئي</p><p class="mt-3 text-2xl font-semibold text-white font-mono">{{ invoice_display.ocr_confidence|floatformat:0 }}%</p></div>
           </div>
 
           <div class="rounded-[24px] border border-white/10 bg-white/8 px-5 py-4 text-sm leading-7 text-slate-300">
@@ -100,6 +100,7 @@
 
     <div class="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_330px]">
       <div class="min-w-0 space-y-6">
+        <!-- 1. بيانات الفاتورة -->
         <section class="card border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.35)] dark:bg-slate-900/65 lg:p-7">
           {% include "settings/partials/section_header.html" with icon="building-2" eyebrow="نظرة عامة" title="بيانات الفاتورة" description="الحقول الأساسية وربطها المحاسبي في تنسيق أوضح وأكثر مهنية." badge_text=invoice_display.status_label badge_class=invoice_display.status_badge_class %}
           <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -115,14 +116,47 @@
           </div>
         </section>
 
+        <!-- 2. تفاصيل البنود -->
+        {% if invoice.line_items %}
         <section class="card border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.35)] dark:bg-slate-900/65 lg:p-7">
-          {% include "settings/partials/section_header.html" with icon="sparkles" eyebrow="الذكاء الاصطناعي" title="الملخص التنفيذي" description="خلاصة واضحة لما استخرجه المحرك وما يستحق التركيز قبل الاعتماد." badge_text=invoice_display.source_method_label %}
-          <div class="mt-6 rounded-[26px] border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-slate-50 p-5 dark:border-blue-900/40 dark:from-blue-950/20 dark:via-slate-900 dark:to-slate-950">
-            <p class="text-sm leading-7 text-slate-700 dark:text-slate-300">{{ invoice_display.ai_summary }}</p>
-            {% if invoice.processing_error %}<div class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/20 dark:text-red-300">{{ invoice.processing_error }}</div>{% endif %}
+          {% include "settings/partials/section_header.html" with icon="receipt" eyebrow="البنود" title="تفاصيل البنود" description="عرض عناصر الفاتورة بشكل أوضح للمراجعة المالية." badge_text=invoice.line_items|length %}
+          <div class="mt-6 overflow-x-auto rounded-[24px] border border-slate-200/80 dark:border-slate-800">
+            <table class="data-table min-w-full">
+              <thead><tr><th>الوصف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead>
+              <tbody>
+                {% for item in invoice.line_items %}
+                <tr><td class="max-w-[340px]"><span class="line-clamp-2 font-medium text-slate-800 dark:text-slate-100">{{ item.description|default:"—" }}</span></td><td class="font-mono" dir="ltr">{{ item.quantity|default:"—" }}</td><td class="font-mono" dir="ltr">{{ item.unit_price|floatformat:2|default:"—" }}</td><td class="font-mono font-semibold text-slate-900 dark:text-white" dir="ltr">{{ item.total|floatformat:2|default:"—" }}</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        {% endif %}
+
+        <!-- 3. جملة الفاتورة النهائية -->
+        <section class="card border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.35)] dark:bg-slate-900/65 lg:p-7">
+          {% include "settings/partials/section_header.html" with icon="calculator" eyebrow="الملخص المالي" title="جملة الفاتورة النهائية" description="ملخص الأرقام المالية ومطابقة ضريبة القيمة المضافة." %}
+          <div class="mt-6 space-y-3">
+            <div class="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/80 px-5 py-4 dark:border-slate-800 dark:bg-slate-950/40">
+              <span class="text-sm text-slate-500 dark:text-slate-400">المجموع الفرعي (قبل الضريبة)</span>
+              <span class="font-mono text-sm font-semibold text-slate-900 dark:text-white" dir="ltr">{{ invoice_display.subtotal_display|default:"—" }}</span>
+            </div>
+            <div class="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/80 px-5 py-4 dark:border-slate-800 dark:bg-slate-950/40">
+              <span class="text-sm text-slate-500 dark:text-slate-400">الخصم</span>
+              <span class="font-mono text-sm font-semibold text-slate-900 dark:text-white" dir="ltr">{{ invoice_display.discount_display|default:"—" }}</span>
+            </div>
+            <div class="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/80 px-5 py-4 dark:border-slate-800 dark:bg-slate-950/40">
+              <span class="text-sm text-slate-500 dark:text-slate-400">ضريبة القيمة المضافة ({{ invoice.vat_rate|default:"15" }}%)</span>
+              <span class="font-mono text-sm font-semibold text-slate-900 dark:text-white" dir="ltr">{{ invoice_display.vat_amount_display }}</span>
+            </div>
+            <div class="flex items-center justify-between rounded-[20px] border border-primary-200 bg-primary-50 px-5 py-4 dark:border-primary-900/40 dark:bg-primary-950/20">
+              <span class="text-base font-bold text-slate-900 dark:text-white">الإجمالي النهائي</span>
+              <span class="font-mono text-xl font-bold text-primary-700 dark:text-primary-300" dir="ltr">{{ invoice_display.total_amount_display }}</span>
+            </div>
           </div>
         </section>
 
+        <!-- 4. نتائج التدقيق -->
         <section class="card border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.35)] dark:bg-slate-900/65 lg:p-7">
           <div class="flex flex-col gap-5 border-b border-slate-200/80 pb-5 dark:border-slate-800 lg:flex-row lg:items-end lg:justify-between">
             <div><p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-400">الرقابة والامتثال</p><h2 class="mt-2 text-xl font-semibold tracking-tight text-slate-950 dark:text-white sm:text-2xl">نتائج التدقيق</h2><p class="mt-2 text-sm text-slate-600 dark:text-slate-400">فلترة القواعد حسب المجموعة مع إبراز مواضع التعثر أولًا.</p></div>
@@ -159,26 +193,11 @@
           </div>
         </section>
 
-        {% if invoice.line_items %}
-        <section class="card border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.35)] dark:bg-slate-900/65 lg:p-7">
-          {% include "settings/partials/section_header.html" with icon="receipt" eyebrow="البنود" title="تفاصيل البنود" description="عرض عناصر الفاتورة بشكل أوضح للمراجعة المالية." badge_text=invoice.line_items|length %}
-          <div class="mt-6 overflow-x-auto rounded-[24px] border border-slate-200/80 dark:border-slate-800">
-            <table class="data-table min-w-full">
-              <thead><tr><th>الوصف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead>
-              <tbody>
-                {% for item in invoice.line_items %}
-                <tr><td class="max-w-[340px]"><span class="line-clamp-2 font-medium text-slate-800 dark:text-slate-100">{{ item.description|default:"—" }}</span></td><td class="font-mono" dir="ltr">{{ item.quantity|default:"—" }}</td><td class="font-mono" dir="ltr">{{ item.unit_price|floatformat:2|default:"—" }}</td><td class="font-mono font-semibold text-slate-900 dark:text-white" dir="ltr">{{ item.total|floatformat:2|default:"—" }}</td></tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </section>
-        {% endif %}
         <section class="card border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.35)] dark:bg-slate-900/65 lg:p-7">
           {% include "settings/partials/section_header.html" with icon="history" eyebrow="الأثر التشغيلي" title="سجل المراجعة" description="من قام بالإجراء ومتى تم ذلك." badge_text=audit_trail|length %}
           <div class="mt-6 space-y-4">
             {% for ev in audit_trail %}
-            <div class="relative rounded-[24px] border border-slate-200/80 bg-slate-50/70 p-5 pr-8 dark:border-slate-800 dark:bg-slate-950/35"><span class="absolute right-4 top-6 h-2.5 w-2.5 rounded-full bg-primary-500"></span><div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><div class="flex flex-wrap items-center gap-2"><span class="rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white dark:bg-slate-700">{{ ev.event_type }}</span><span class="text-sm font-semibold text-slate-900 dark:text-white">{{ ev.description }}</span></div><p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ ev.user.full_name|default:"System" }}</p></div><p class="text-xs text-slate-500 dark:text-slate-400" dir="ltr">{{ ev.timestamp|date:"Y-m-d H:i" }}</p></div></div>
+            <div class="relative rounded-[24px] border border-slate-200/80 bg-slate-50/70 p-5 pr-8 dark:border-slate-800 dark:bg-slate-950/35"><span class="absolute right-4 top-6 h-2.5 w-2.5 rounded-full bg-primary-500"></span><div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"><div><div class="flex flex-wrap items-center gap-2"><span class="rounded-full bg-slate-900 px-2.5 py-1 text-[11px] font-semibold tracking-[0.1em] text-white dark:bg-slate-700">{% if ev.event_type == 'uploaded' %}رُفع{% elif ev.event_type == 'processed' %}مُعالج{% elif ev.event_type == 'validated' %}مُدقق{% elif ev.event_type == 'approved' %}مُعتمد{% elif ev.event_type == 'rejected' %}مرفوض{% elif ev.event_type == 'flagged' %}مُبلَّغ{% elif ev.event_type == 'revalidated' %}أُعيد التدقيق{% else %}{{ ev.event_type }}{% endif %}</span><span class="text-sm font-semibold text-slate-900 dark:text-white">{{ ev.description }}</span></div><p class="mt-2 text-xs text-slate-500 dark:text-slate-400">{{ ev.user.full_name|default:"النظام" }}</p></div><p class="text-xs text-slate-500 dark:text-slate-400" dir="ltr">{{ ev.timestamp|date:"Y-m-d H:i" }}</p></div></div>
             {% empty %}
             <div class="rounded-3xl border border-dashed border-slate-300 py-12 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">لا توجد أحداث مراجعة حتى الآن.</div>
             {% endfor %}
@@ -190,7 +209,7 @@
         <section class="card border-slate-200/80 bg-white/90 p-6 shadow-[0_20px_50px_-35px_rgba(15,23,42,0.35)] dark:bg-slate-900/65">
           {% include "settings/partials/section_header.html" with icon="clipboard-check" eyebrow="مسار القرار" title="الحالة التشغيلية" description="آخر قرار ومن المسؤول عنه." badge_text=invoice_display.status_label badge_class=invoice_display.status_badge_class %}
           <div class="mt-6 space-y-3 text-sm">
-            <div class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40"><p class="text-xs text-slate-400">المعتمد / الرافض</p><p class="mt-3 font-semibold text-slate-900 dark:text-white">{{ invoice.approved_by.full_name|default:"—" }}</p><p class="mt-1 text-xs text-slate-500 dark:text-slate-400" dir="ltr">{{ invoice.approved_at|date:"Y-m-d H:i"|default:"لم يُسجل بعد" }}</p></div>
+            <div class="rounded-2xl border border-slate-200/80 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950/40"><p class="text-xs text-slate-400">المعتمد / الرافض</p><p class="mt-3 font-semibold text-slate-900 dark:text-white">{{ invoice.approved_by.full_name|default:"—" }}</p><p class="mt-1 text-xs text-slate-500 dark:text-slate-400" dir="ltr">{{ invoice.approved_at|date:"Y-m-d H:i"|default:"لم يُسجَّل بعد" }}</p></div>
             {% if invoice.rejected_reason %}<div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900/30 dark:bg-red-950/20 dark:text-red-300">{{ invoice.rejected_reason }}</div>{% endif %}
             {% if invoice.duplicate_of_id %}<a href="{% url 'frontend:invoice_detail' invoice.duplicate_of_id %}" class="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 font-semibold text-amber-700 dark:border-amber-900/30 dark:bg-amber-950/20 dark:text-amber-300"><span>عرض الفاتورة الأصلية</span><i data-lucide="link" class="h-4 w-4"></i></a>{% endif %}
           </div>
@@ -210,7 +229,7 @@
           {% include "settings/partials/section_header.html" with icon="folder-open" eyebrow="بيانات المصدر" title="الملف والتحميل" description="تفاصيل تساعد على التتبع والحوكمة." %}
           <div class="mt-6 space-y-4 text-sm">
             <div class="flex items-center justify-between gap-4 border-b border-slate-200/80 pb-4 dark:border-slate-800"><span class="text-slate-500 dark:text-slate-400">الملف</span><span class="max-w-[200px] truncate font-semibold text-slate-900 dark:text-white">{{ invoice.original_filename }}</span></div>
-            <div class="flex items-center justify-between gap-4 border-b border-slate-200/80 pb-4 dark:border-slate-800"><span class="text-slate-500 dark:text-slate-400">الحجم / النوع</span><span class="font-semibold text-slate-900 dark:text-white">{{ invoice.file_size|filesizeformat }} · {{ invoice.mime_type|default:"—" }}</span></div>
+            <div class="flex items-center justify-between gap-4 border-b border-slate-200/80 pb-4 dark:border-slate-800"><span class="text-slate-500 dark:text-slate-400">الحجم / النوع</span><span class="font-semibold text-slate-900 dark:text-white">{{ invoice.file_size|filesizeformat }} · {% if invoice.mime_type == 'application/pdf' %}PDF{% elif 'image' in invoice.mime_type %}صورة{% elif 'excel' in invoice.mime_type or 'spreadsheet' in invoice.mime_type %}Excel{% elif 'json' in invoice.mime_type %}JSON{% elif 'zip' in invoice.mime_type %}ZIP{% else %}{{ invoice.mime_type|default:"—" }}{% endif %}</span></div>
             <div class="flex items-center justify-between gap-4 border-b border-slate-200/80 pb-4 dark:border-slate-800"><span class="text-slate-500 dark:text-slate-400">رفع بواسطة</span><span class="font-semibold text-slate-900 dark:text-white">{{ invoice.uploaded_by.full_name|default:"—" }}</span></div>
             <div class="flex items-center justify-between gap-4 border-b border-slate-200/80 pb-4 dark:border-slate-800"><span class="text-slate-500 dark:text-slate-400">آخر تحديث</span><span class="font-semibold text-slate-900 dark:text-white" dir="ltr">{{ invoice.updated_at|date:"Y-m-d H:i" }}</span></div>
             <div class="flex items-center justify-between gap-4"><span class="text-slate-500 dark:text-slate-400">المعرّف</span><span class="font-mono text-xs font-semibold text-slate-900 dark:text-white" dir="ltr">{{ invoice.id }}</span></div>

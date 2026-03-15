@@ -18,80 +18,100 @@
       background-size: 32px 32px;
     }
 
-    /* ── Floating animation ── */
+    /* ── Premium entrance animations ── */
     @keyframes float {
       0%, 100% { transform: translateY(0px) rotate(0deg); }
-      33%       { transform: translateY(-10px) rotate(1deg); }
-      66%       { transform: translateY(-5px) rotate(-1deg); }
+      33%       { transform: translateY(-12px) rotate(1deg); }
+      66%       { transform: translateY(-6px) rotate(-1deg); }
     }
     @keyframes float-slow {
       0%, 100% { transform: translateY(0px); }
-      50%       { transform: translateY(-14px); }
+      50%       { transform: translateY(-18px); }
     }
     @keyframes drift {
       0%, 100% { transform: translate(0, 0) scale(1); }
-      50%       { transform: translate(12px, -8px) scale(1.04); }
+      50%       { transform: translate(16px, -12px) scale(1.05); }
     }
     @keyframes shimmer {
       0%   { background-position: -200% center; }
       100% { background-position: 200% center; }
     }
-    @keyframes pulse-ring {
-      0%   { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
-      70%  { box-shadow: 0 0 0 14px rgba(59,130,246,0); }
-      100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+    @keyframes shine-sweep {
+      0%   { transform: translateX(-100%) skewX(-12deg); }
+      100% { transform: translateX(200%) skewX(-12deg); }
     }
-    @keyframes count-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes glow-pulse {
+      0%, 100%   { box-shadow: 0 0 20px rgba(37,99,235,0.15), 0 8px 32px rgba(37,99,235,0.1); }
+      50%        { box-shadow: 0 0 30px rgba(37,99,235,0.25), 0 12px 40px rgba(37,99,235,0.15); }
+    }
 
-    .logo-float   { animation: float 5s ease-in-out infinite; }
-    .blob-1       { animation: drift 8s ease-in-out infinite; }
-    .blob-2       { animation: drift 11s ease-in-out infinite reverse; }
-    .blob-3       { animation: float-slow 7s ease-in-out infinite; }
+    .logo-float   { animation: float 5.5s cubic-bezier(0.4, 0.0, 0.2, 1) infinite !important; }
+    .blob-1       { animation: drift 8.5s ease-in-out infinite !important; }
+    .blob-2       { animation: drift 12s ease-in-out infinite reverse !important; }
+    .blob-3       { animation: float-slow 7.5s cubic-bezier(0.4, 0.0, 0.2, 1) infinite !important; }
 
     .gradient-text {
-      background: linear-gradient(135deg, #60a5fa 0%, #22d3ee 40%, #a78bfa 80%, #60a5fa 100%);
-      background-size: 200% auto;
+      background: linear-gradient(135deg, #60a5fa 0%, #22d3ee 35%, #a78bfa 70%, #60a5fa 100%);
+      background-size: 250% auto;
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      animation: shimmer 4s linear infinite;
+      animation: shimmer 5s linear infinite !important;
     }
 
+    .shine-sweep {
+      position: relative;
+      overflow: hidden;
+    }
     .shine-sweep::before {
       content: '';
       position: absolute;
       inset: 0;
-      transform: translateX(-100%) skewX(-12deg);
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
-      transition: transform 0.8s ease;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
+      opacity: 0;
     }
-    .shine-sweep:hover::before { transform: translateX(200%) skewX(-12deg); }
+    .shine-sweep:hover::before { 
+      animation: shine-sweep 1.2s ease-in-out forwards !important;
+    }
+
+    .glow-button { animation: glow-pulse 3s ease-in-out infinite !important; }
+
+    /* Smooth transitions */
+    * { transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1); }
+    input, button, select, textarea { transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1); }
 
     /* Reduce motion */
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { animation: none !important; transition: none !important; }
+      *, *::before, *::after { 
+        animation: none !important; 
+        transition: none !important; 
+      }
     }
   </style>
 </head>
 
 <body class="min-h-screen bg-slate-950 flex items-center justify-center p-4 lg:p-8 overflow-x-hidden">
 
-  <!-- ── Global ambient background ── -->
+  <!-- ── Global ambient background with enhanced blur ── -->
   <div class="fixed inset-0 grid-bg pointer-events-none"></div>
   <div class="fixed inset-0 pointer-events-none overflow-hidden">
-    <div class="absolute top-[-15%] right-[-10%]  h-[600px] w-[600px] rounded-full bg-blue-700/12  blur-[100px]"></div>
-    <div class="absolute bottom-[-12%] left-[-8%]  h-[500px] w-[500px] rounded-full bg-violet-700/10 blur-[100px]"></div>
-    <div class="absolute top-1/2 left-1/3 h-[300px] w-[300px] -translate-y-1/2 rounded-full bg-cyan-600/8  blur-[80px]"></div>
+    <!-- Primary blue glow -->
+    <div class="absolute top-[-20%] right-[-15%] h-[700px] w-[700px] rounded-full bg-blue-600/15 blur-[120px] animate-pulse"></div>
+    <!-- Secondary violet glow -->
+    <div class="absolute bottom-[-15%] left-[-10%] h-[600px] w-[600px] rounded-full bg-violet-700/12 blur-[110px] animate-pulse" style="animation-delay:1s"></div>
+    <!-- Tertiary cyan accent -->
+    <div class="absolute top-1/3 left-1/4 h-[400px] w-[400px] -translate-y-1/2 rounded-full bg-cyan-500/10 blur-[90px] animate-pulse" style="animation-delay:0.5s"></div>
   </div>
 
   <!-- ══════════════════════════════════════════════════════════════════════════
        ROOT Alpine component — handles page entrance + login logic
   ══════════════════════════════════════════════════════════════════════════ -->
   <div
-    class="relative w-full max-w-[1120px]"
+    class="relative w-full max-w-[1280px]"
     x-data="{
-      /* ── Entrance ── */
+      /* ── Entrance Animation ── */
       show: false,
+      pbLoaded: false,
 
       /* ── Form state ── */
       email:    '',
@@ -104,10 +124,9 @@
       stats: { users: 0, uptime: 0 },
 
       init() {
-        /* Staggered entrance: start after first paint */
-        requestAnimationFrame(() => setTimeout(() => { this.show = true; }, 80));
-
-        /* Count-up numbers after entrance */
+        /* Trigger entrance animations on mount */
+        setTimeout(() => { this.show = true; }, 100);
+        setTimeout(() => { this.pbLoaded = true; }, 650);
         setTimeout(() => {
           this.countUp('users',  0, 500, 1400);
           this.countUp('uptime', 0, 999, 1800);
@@ -115,14 +134,15 @@
       },
 
       countUp(key, from, to, duration) {
-        const start = performance.now();
-        const step = (now) => {
-          const p = Math.min((now - start) / duration, 1);
-          const ease = 1 - Math.pow(1 - p, 3);
-          this.stats[key] = Math.round(from + (to - from) * ease);
-          if (p < 1) requestAnimationFrame(step);
+        const start = Date.now();
+        const animate = () => {
+          const elapsed = Date.now() - start;
+          const progress = Math.min(elapsed / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          this.stats[key] = Math.round(from + (to - from) * eased);
+          if (progress < 1) requestAnimationFrame(animate);
         };
-        requestAnimationFrame(step);
+        requestAnimationFrame(animate);
       },
 
       async login() {
@@ -159,52 +179,55 @@
   >
 
     <!-- ════════════════════════════════════════════
-         TWO-COLUMN GRID
+         TWO-COLUMN GRID — Responsive layout
     ════════════════════════════════════════════ -->
-    <div class="grid items-center gap-6 lg:grid-cols-[1fr_1.1fr] lg:gap-10">
+    <div class="grid items-center gap-8 lg:grid-cols-[1fr_1.2fr] lg:gap-12">
 
       <!-- ╔═══════════════════════════════════════╗
            ║   LEFT  —  Authentication Card       ║
            ╚═══════════════════════════════════════╝ -->
       <div
         class="transition-all duration-700 ease-out"
-        :class="show ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10'"
+        :class="show ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'"
       >
 
-        <!-- Logo header -->
-        <div class="mb-7 text-center">
+        <!-- Logo header with enhanced animation -->
+        <div class="mb-8 text-center">
           <div
-            class="logo-float mx-auto mb-4 inline-flex h-[68px] w-[68px] items-center justify-center rounded-[20px] bg-gradient-to-br from-blue-500 via-sky-400 to-cyan-400
-                   shadow-[0_16px_56px_rgba(37,99,235,0.45)]"
-            style="animation-delay:0.2s"
+            class="logo-float mx-auto mb-5 inline-flex h-[72px] w-[72px] items-center justify-center rounded-[24px]
+                   bg-gradient-to-br from-blue-500 via-sky-400 to-cyan-400
+                   shadow-[0_20px_60px_rgba(37,99,235,0.5)]
+                   transition-all duration-700 hover:shadow-[0_30px_80px_rgba(37,99,235,0.6)]"
           >
-            <svg class="h-9 w-9 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+            <svg class="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M4 19h16M6 16V8m4 8V5m4 11v-6m4 6V9" />
             </svg>
           </div>
-          <h1 class="text-3xl font-black tracking-tight text-white">FinAI</h1>
-          <p class="mt-1 text-sm text-slate-400">نظام التدقيق المالي الذكي</p>
+          <h1 class="text-4xl font-black tracking-tight text-white">FinAI</h1>
+          <p class="mt-1.5 text-sm font-medium text-slate-400">نظام التدقيق المالي الذكي</p>
         </div>
 
-        <!-- ── Glass Card ── -->
-        <div class="relative overflow-hidden rounded-[28px] border border-white/10 bg-slate-900/80 p-8
-                    shadow-[0_32px_80px_rgba(0,0,0,0.55)] backdrop-blur-2xl">
+        <!-- ── Premium Glass Card ── -->
+        <div class="relative overflow-hidden rounded-[32px] border border-white/12
+                    bg-slate-900/60 backdrop-blur-2xl
+                    shadow-[0_32px_96px_rgba(0,0,0,0.6)]
+                    p-10 transition-all duration-500 hover:border-white/15">
 
-          <!-- decorative corner glows inside card -->
-          <div class="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-blue-600/10 blur-3xl pointer-events-none"></div>
-          <div class="absolute -bottom-10 -right-10 h-32 w-32 rounded-full bg-violet-600/8 blur-3xl pointer-events-none"></div>
+          <!-- Decorative corner glows inside card -->
+          <div class="absolute -top-20 -left-16 h-56 w-56 rounded-full bg-blue-600/12 blur-3xl pointer-events-none animate-pulse"></div>
+          <div class="absolute -bottom-16 -right-12 h-48 w-48 rounded-full bg-violet-600/10 blur-3xl pointer-events-none animate-pulse" style="animation-delay:0.8s"></div>
 
-          <!-- Greeting -->
+          <!-- Greeting with staggered entrance -->
           <div
-            class="transition-all duration-500 ease-out"
-            :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
-            style="transition-delay:200ms"
+            class="transition-all duration-500 ease-out mb-7"
+            :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
+            style="transition-delay:250ms"
           >
-            <h2 class="mb-1 text-xl font-bold text-white">أهلاً بعودتك 👋</h2>
-            <p class="mb-7 text-sm text-slate-400">سجّل الدخول للوصول إلى لوحة التحكم</p>
+            <h2 class="mb-1 text-2xl font-bold text-white">أهلاً بعودتك 👋</h2>
+            <p class="text-sm text-slate-400 font-medium">سجّل الدخول للوصول إلى لوحة التحكم الذكية</p>
           </div>
 
-          <!-- Error message (Alpine) -->
+          <!-- Error message with smooth entrance ── -->
           <div
             x-show="error"
             x-transition:enter="transition ease-out duration-300"
@@ -213,10 +236,10 @@
             x-transition:leave="transition ease-in duration-200"
             x-transition:leave-start="opacity-100"
             x-transition:leave-end="opacity-0"
-            class="mb-5 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+            class="mb-5 flex items-start gap-3 rounded-xl border border-red-500/30 bg-gradient-to-br from-red-500/12 to-red-400/5 px-4 py-3.5 text-sm text-red-300 backdrop-blur-sm"
           >
-            <svg class="h-4 w-4 shrink-0 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 4h.01M5.07 19H19a2 2 0 001.73-3L13.73 4a2 2 0 00-3.46 0L3.34 16a2 2 0 001.73 3z"/>
+            <svg class="h-5 w-5 shrink-0 text-red-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
             <span x-text="error"></span>
           </div>
@@ -224,8 +247,10 @@
           <!-- Django messages -->
           {% if messages %}
             {% for msg in messages %}
-              <div class="mb-4 flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-                <span>⚠️</span>
+              <div class="mb-4 flex items-start gap-3 rounded-xl border border-red-500/30 bg-gradient-to-br from-red-500/12 to-red-400/5 px-4 py-3.5 text-sm text-red-300 backdrop-blur-sm">
+                <svg class="h-5 w-5 shrink-0 text-red-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
                 <span>{{ msg }}</span>
               </div>
             {% endfor %}
@@ -234,18 +259,19 @@
           <!-- ── Login Form ── -->
           <form @submit.prevent="login" class="space-y-5" novalidate>
 
-            <!-- Email -->
+            <!-- Email Input -->
             <div
               class="transition-all duration-500 ease-out"
-              :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
-              style="transition-delay:300ms"
+              :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
+              style="transition-delay:320ms"
             >
-              <label class="mb-2 block text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+              <label class="mb-2.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
                 البريد الإلكتروني
               </label>
               <div class="relative group">
-                <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-4 text-slate-500 transition-colors group-focus-within:text-blue-400">
-                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-4 text-slate-500 
+                           transition-colors duration-300 group-focus-within:text-blue-400 group-focus-within:scale-110">
+                  <svg class="h-5 w-5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                   </svg>
                 </div>
@@ -255,25 +281,26 @@
                   autocomplete="email"
                   required
                   placeholder="admin@company.sa"
-                  class="w-full rounded-xl border border-white/10 bg-white/[0.04] pe-11 ps-4 py-3.5 text-sm text-white
-                         placeholder-slate-600 transition-all duration-300
-                         focus:border-blue-500/70 focus:outline-none focus:ring-2 focus:ring-blue-500/25
-                         focus:bg-white/[0.07] focus:scale-[1.008]
-                         hover:border-white/20"
+                  class="w-full rounded-xl border border-white/10 bg-white/[0.03] pe-12 ps-4 py-3.5 text-sm text-white
+                         placeholder-slate-600 font-medium transition-all duration-300
+                         focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/30
+                         focus:bg-white/[0.06] focus:scale-[1.01]
+                         hover:border-white/20 hover:bg-white/[0.04]"
                 >
               </div>
             </div>
 
-            <!-- Password -->
+            <!-- Password Input -->
             <div
               class="transition-all duration-500 ease-out"
-              :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
+              :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
               style="transition-delay:380ms"
               x-data="{ showPwd: false }"
             >
-              <div class="mb-2 flex items-center justify-between gap-3">
-                <label class="block text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">كلمة المرور</label>
-                <a href="#" class="text-[11px] text-blue-400 transition-colors hover:text-cyan-300 hover:underline underline-offset-2">
+              <div class="mb-2.5 flex items-center justify-between gap-3">
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">كلمة المرور</label>
+                <a href="#" class="text-xs font-semibold text-blue-400 transition-all duration-200 
+                                hover:text-cyan-300 hover:underline underline-offset-2">
                   نسيت كلمة المرور؟
                 </a>
               </div>
@@ -282,14 +309,14 @@
                   type="button"
                   @click="showPwd = !showPwd"
                   class="absolute inset-y-0 end-0 flex items-center pe-4 text-slate-500 transition-all duration-200
-                         hover:text-blue-400 focus:outline-none focus:text-blue-400"
+                         hover:text-blue-400 hover:scale-110 focus:outline-none focus:text-blue-400"
                   :aria-label="showPwd ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'"
                 >
-                  <svg x-show="!showPwd" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <svg x-show="!showPwd" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                   </svg>
-                  <svg x-show="showPwd" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <svg x-show="showPwd" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
                   </svg>
                 </button>
@@ -299,31 +326,32 @@
                   autocomplete="current-password"
                   required
                   placeholder="••••••••••"
-                  class="w-full rounded-xl border border-white/10 bg-white/[0.04] pe-11 ps-4 py-3.5 text-sm text-white
-                         placeholder-slate-600 transition-all duration-300
-                         focus:border-blue-500/70 focus:outline-none focus:ring-2 focus:ring-blue-500/25
-                         focus:bg-white/[0.07] focus:scale-[1.008]
-                         hover:border-white/20"
+                  class="w-full rounded-xl border border-white/10 bg-white/[0.03] pe-12 ps-4 py-3.5 text-sm text-white
+                         placeholder-slate-600 font-medium transition-all duration-300
+                         focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/30
+                         focus:bg-white/[0.06] focus:scale-[1.01]
+                         hover:border-white/20 hover:bg-white/[0.04]"
                 >
               </div>
             </div>
 
             <!-- ── Premium Submit Button ── -->
             <div
-              class="pt-1 transition-all duration-500 ease-out"
-              :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'"
-              style="transition-delay:460ms"
+              class="pt-2 transition-all duration-500 ease-out"
+              :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
+              style="transition-delay:440ms"
             >
               <button
                 type="submit"
                 :disabled="loading"
-                class="shine-sweep group relative w-full overflow-hidden rounded-2xl px-6 py-4 text-base font-extrabold text-white
-                       bg-gradient-to-l from-blue-600 via-sky-500 to-cyan-400
-                       shadow-[0_8px_32px_rgba(37,99,235,0.35)]
+                class="shine-sweep glow-button group relative w-full overflow-hidden rounded-[18px] px-6 py-4 
+                       text-base font-extrabold text-white
+                       bg-gradient-to-r from-blue-600 via-sky-500 to-cyan-400
+                       shadow-[0_12px_40px_rgba(37,99,235,0.4)]
                        transition-all duration-300
-                       hover:-translate-y-[2px] hover:shadow-[0_16px_48px_rgba(37,99,235,0.5)]
-                       active:translate-y-0 active:shadow-[0_4px_16px_rgba(37,99,235,0.3)]
-                       disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                       hover:-translate-y-1 hover:shadow-[0_20px_60px_rgba(37,99,235,0.5)]
+                       active:translate-y-0 active:shadow-[0_6px_20px_rgba(37,99,235,0.3)]
+                       disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
               >
                 <template x-if="!loading">
                   <span class="relative flex items-center justify-center gap-3">
@@ -349,11 +377,11 @@
             </div>
           </form>
 
-          <!-- Divider -->
-          <div class="my-6 flex items-center gap-3">
-            <div class="h-px flex-1 bg-white/8"></div>
-            <span class="text-[11px] text-slate-500">أو الدخول عبر</span>
-            <div class="h-px flex-1 bg-white/8"></div>
+          <!-- ── Divider ── -->
+          <div class="my-7 flex items-center gap-4">
+            <div class="h-px flex-1 bg-gradient-to-r from-white/5 to-transparent"></div>
+            <span class="text-xs text-slate-500 font-medium">أو الدخول عبر</span>
+            <div class="h-px flex-1 bg-gradient-to-l from-white/5 to-transparent"></div>
           </div>
 
           <!-- Google Sign-in -->
@@ -374,22 +402,22 @@
             data-width="100%"
           ></div>
 
-          <!-- Security footer -->
-          <div class="mt-7 flex items-center justify-between border-t border-white/8 pt-5 text-[11px] text-slate-500">
-            <span class="flex items-center gap-2">
-              <span class="h-2 w-2 rounded-full bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.8)] animate-pulse"></span>
-              JWT + AES-256
+          <!-- ── Security footer ── -->
+          <div class="mt-8 flex items-center justify-between border-t border-white/8 pt-6 text-xs text-slate-500">
+            <span class="flex items-center gap-2.5">
+              <span class="h-2 w-2 rounded-full bg-green-400 shadow-[0_0_12px_rgba(74,222,128,0.9)] animate-pulse"></span>
+              <span class="font-medium">JWT + AES-256</span>
             </span>
-            <span class="rounded-lg border border-green-300/15 bg-green-500/8 px-3 py-1 text-green-300/80 font-medium">
+            <span class="rounded-lg border border-green-400/20 bg-green-500/10 px-3 py-1.5 text-green-300/90 font-semibold">
               ZATCA متوافق ✓
             </span>
           </div>
         </div><!-- /glass card -->
 
         <!-- Register link -->
-        <p class="mt-5 text-center text-sm text-slate-500">
+        <p class="mt-6 text-center text-sm text-slate-500 font-medium">
           ليس لديك حساب؟
-          <a href="#" class="font-semibold text-blue-400 transition-colors hover:text-cyan-300">إنشاء حساب جديد</a>
+          <a href="#" class="font-semibold text-blue-400 transition-all duration-200 hover:text-cyan-300 hover:underline underline-offset-3">إنشاء حساب جديد</a>
         </p>
 
       </div><!-- /left column -->
@@ -400,118 +428,116 @@
            ╚═══════════════════════════════════════╝ -->
       <div
         class="hidden lg:block transition-all duration-700 ease-out"
-        :class="show ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'"
-        style="transition-delay:150ms"
-        x-data="{
-          pbLoaded: false,
-          init() { setTimeout(() => this.pbLoaded = true, 600); }
-        }"
+        :class="show ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-8'"
+        style="transition-delay:200ms"
       >
-        <div class="relative overflow-hidden rounded-[32px] border border-white/12
-                    bg-gradient-to-br from-slate-900/90 via-slate-900/80 to-slate-800/70
-                    shadow-[0_32px_96px_rgba(0,0,0,0.6)] backdrop-blur-2xl p-10">
+        <div class="relative overflow-hidden rounded-[36px] border border-white/12
+                    bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-800/50
+                    shadow-[0_40px_120px_rgba(0,0,0,0.7)] backdrop-blur-2xl p-12 transition-all duration-500">
 
           <!-- ── Floating blobs inside panel ── -->
-          <div class="blob-1 absolute -top-16  -right-16 h-60 w-60 rounded-full bg-blue-500/15  blur-3xl pointer-events-none"></div>
-          <div class="blob-2 absolute -bottom-20 -left-16  h-72 w-72 rounded-full bg-violet-500/12 blur-3xl pointer-events-none"></div>
-          <div class="blob-3 absolute top-1/2   right-1/4  h-40 w-40 rounded-full bg-cyan-400/10  blur-2xl  pointer-events-none -translate-y-1/2"></div>
+          <div class="blob-1 absolute -top-24 -right-20 h-80 w-80 rounded-full bg-blue-500/20 blur-3xl pointer-events-none"></div>
+          <div class="blob-2 absolute -bottom-24 -left-20 h-96 w-96 rounded-full bg-violet-500/15 blur-3xl pointer-events-none"></div>
+          <div class="blob-3 absolute top-2/3 right-1/3 h-56 w-56 rounded-full bg-cyan-400/12 blur-2xl pointer-events-none -translate-y-1/2"></div>
 
-          <!-- ── Hero headline ── -->
+          <!-- ── Hero headline section ── -->
           <div
-            class="transition-all duration-600 ease-out mb-8"
-            :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
-            style="transition-delay:350ms"
+            class="transition-all duration-600 ease-out mb-10"
+            :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
+            style="transition-delay:400ms"
           >
             <!-- Platform badge -->
-            <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-blue-400/25 bg-blue-500/10 px-4 py-1.5">
-              <span class="h-2 w-2 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_8px_rgba(34,211,238,0.7)]"></span>
-              <span class="text-xs font-semibold text-blue-300/90 tracking-wide">AI-Powered Financial Auditing</span>
+            <div class="mb-6 inline-flex items-center gap-2.5 rounded-full border border-blue-400/25 
+                        bg-gradient-to-r from-blue-500/15 to-cyan-500/10 px-4 py-2 backdrop-blur-sm">
+              <span class="h-2.5 w-2.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_12px_rgba(34,211,238,0.8)]"></span>
+              <span class="text-xs font-semibold text-blue-300/95 tracking-wider">AI-Powered Financial Auditing</span>
             </div>
 
-            <h2 class="text-4xl font-black leading-tight tracking-tight">
+            <!-- Main headline with gradient -->
+            <h2 class="mb-5 text-5xl font-black leading-tight tracking-tight">
               <span class="gradient-text">ذكاء مالي</span>
               <br>
               <span class="text-white">لا يتسامح مع الأخطاء</span>
             </h2>
 
-            <p class="mt-4 max-w-sm text-sm leading-relaxed text-slate-400">
-              منصة تدقيق مالي مدعومة بالذكاء الاصطناعي — تحليل آلاف الفواتير بدقة استثنائية، كشف التلاعب، والامتثال لمعايير هيئة الزكاة والضريبة.
+            <!-- Description -->
+            <p class="max-w-xl text-sm leading-relaxed text-slate-400 font-medium">
+              منصة تدقيق مالي مدعومة بالذكاء الاصطناعي — تحليل آلاف الفواتير بدقة استثنائية، كشف التلاعب، والامتثال الكامل لمعايير هيئة الزكاة والضريبة.
             </p>
           </div>
 
-          <!-- ── Stat chips ── -->
+          <!-- ── Stat chips (with hover animation) ── -->
           <div
-            class="mb-8 flex flex-wrap gap-3 transition-all duration-600 ease-out"
-            :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
-            style="transition-delay:500ms"
+            class="mb-10 flex flex-wrap gap-3.5 transition-all duration-600 ease-out"
+            :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
+            style="transition-delay:550ms"
           >
             <!-- Users chip -->
-            <div class="group flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3
-                        transition-all duration-300 hover:border-blue-400/30 hover:bg-blue-500/8 hover:scale-[1.03] hover:shadow-[0_8px_24px_rgba(37,99,235,0.2)]">
-              <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-blue-500/20 text-blue-400">
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <div class="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3.5
+                        transition-all duration-300 hover:border-blue-400/40 hover:bg-blue-500/12 hover:scale-[1.04]
+                        hover:shadow-[0_12px_36px_rgba(37,99,235,0.25)] cursor-default">
+              <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/25 text-blue-300 group-hover:bg-blue-500/35 transition-all">
+                <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0"/>
                 </svg>
               </div>
               <div class="leading-none">
-                <div class="text-lg font-extrabold text-white">
-                  +<span x-text="stats.users"></span>
-                </div>
-                <div class="text-[10px] text-slate-400 mt-0.5">مستخدم نشط</div>
+                <div class="text-lg font-black text-white">+<span x-text="stats.users"></span></div>
+                <div class="text-xs text-slate-400 mt-1 font-medium">مستخدم نشط</div>
               </div>
             </div>
 
             <!-- Uptime chip -->
-            <div class="group flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3
-                        transition-all duration-300 hover:border-emerald-400/30 hover:bg-emerald-500/8 hover:scale-[1.03] hover:shadow-[0_8px_24px_rgba(16,185,129,0.2)]">
-              <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400">
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <div class="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3.5
+                        transition-all duration-300 hover:border-emerald-400/40 hover:bg-emerald-500/12 hover:scale-[1.04]
+                        hover:shadow-[0_12px_36px_rgba(16,185,129,0.25)] cursor-default">
+              <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/25 text-emerald-300 group-hover:bg-emerald-500/35 transition-all">
+                <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                 </svg>
               </div>
               <div class="leading-none">
-                <div class="text-lg font-extrabold text-white">
-                  <span x-text="(stats.uptime / 10).toFixed(1)"></span>%
-                </div>
-                <div class="text-[10px] text-slate-400 mt-0.5">وقت التشغيل</div>
+                <div class="text-lg font-black text-white"><span x-text="(stats.uptime / 10).toFixed(1)"></span>%</div>
+                <div class="text-xs text-slate-400 mt-1 font-medium">وقت التشغيل</div>
               </div>
             </div>
 
             <!-- ZATCA chip -->
-            <div class="group flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3
-                        transition-all duration-300 hover:border-violet-400/30 hover:bg-violet-500/8 hover:scale-[1.03] hover:shadow-[0_8px_24px_rgba(139,92,246,0.2)]">
-              <div class="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-500/20 text-violet-400">
-                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <div class="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-3.5
+                        transition-all duration-300 hover:border-violet-400/40 hover:bg-violet-500/12 hover:scale-[1.04]
+                        hover:shadow-[0_12px_36px_rgba(139,92,246,0.25)] cursor-default">
+              <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500/25 text-violet-300 group-hover:bg-violet-500/35 transition-all">
+                <svg class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
               </div>
               <div class="leading-none">
-                <div class="text-sm font-extrabold text-white">ZATCA</div>
-                <div class="text-[10px] text-slate-400 mt-0.5">متوافق بالكامل</div>
+                <div class="text-sm font-black text-white">ZATCA</div>
+                <div class="text-xs text-slate-400 mt-1 font-medium">متوافق</div>
               </div>
             </div>
           </div>
 
-          <!-- ── Animated progress bars ── -->
+          <!-- ── Animated progress bars section ── -->
           <div
-            class="space-y-5 transition-all duration-600 ease-out"
-            :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
-            style="transition-delay:640ms"
+            class="space-y-6 transition-all duration-600 ease-out mb-10"
+            :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
+            style="transition-delay:700ms"
           >
-            <!-- AI Processing -->
+            <!-- AI Processing Power -->
             <div>
-              <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center gap-2">
-                  <div class="h-1.5 w-1.5 rounded-full bg-blue-400"></div>
-                  <span class="text-xs font-semibold text-slate-300">قوة معالجة AI</span>
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2.5">
+                  <div class="h-2 w-2 rounded-full bg-blue-400"></div>
+                  <span class="text-sm font-semibold text-slate-300">قوة معالجة AI</span>
                 </div>
-                <span class="text-xs font-bold text-blue-300">94%</span>
+                <span class="text-sm font-bold text-blue-300">94%</span>
               </div>
-              <div class="h-2 rounded-full bg-slate-800/80 overflow-hidden ring-1 ring-white/5">
+              <div class="h-2.5 rounded-full bg-slate-800/80 overflow-hidden ring-1 ring-white/5">
                 <div
-                  class="h-full rounded-full bg-gradient-to-l from-blue-600 to-cyan-400
-                         transition-all duration-[1100ms] ease-out
-                         shadow-[0_0_12px_rgba(37,99,235,0.6)]"
+                  class="h-full rounded-full bg-gradient-to-r from-blue-600 to-cyan-400
+                         transition-all duration-[1200ms] ease-out
+                         shadow-[0_0_16px_rgba(37,99,235,0.7)]"
                   :style="pbLoaded ? 'width:94%' : 'width:0%'"
                 ></div>
               </div>
@@ -519,18 +545,18 @@
 
             <!-- Automation -->
             <div>
-              <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center gap-2">
-                  <div class="h-1.5 w-1.5 rounded-full bg-emerald-400"></div>
-                  <span class="text-xs font-semibold text-slate-300">الأتمتة الذكية</span>
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2.5">
+                  <div class="h-2 w-2 rounded-full bg-emerald-400"></div>
+                  <span class="text-sm font-semibold text-slate-300">الأتمتة الذكية</span>
                 </div>
-                <span class="text-xs font-bold text-emerald-300">97%</span>
+                <span class="text-sm font-bold text-emerald-300">97%</span>
               </div>
-              <div class="h-2 rounded-full bg-slate-800/80 overflow-hidden ring-1 ring-white/5">
+              <div class="h-2.5 rounded-full bg-slate-800/80 overflow-hidden ring-1 ring-white/5">
                 <div
-                  class="h-full rounded-full bg-gradient-to-l from-emerald-500 to-teal-300
-                         transition-all duration-[1300ms] ease-out
-                         shadow-[0_0_12px_rgba(16,185,129,0.6)]"
+                  class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-300
+                         transition-all duration-[1400ms] ease-out
+                         shadow-[0_0_16px_rgba(16,185,129,0.7)]"
                   :style="pbLoaded ? 'width:97%' : 'width:0%'"
                 ></div>
               </div>
@@ -538,18 +564,18 @@
 
             <!-- Security -->
             <div>
-              <div class="flex items-center justify-between mb-2">
-                <div class="flex items-center gap-2">
-                  <div class="h-1.5 w-1.5 rounded-full bg-violet-400"></div>
-                  <span class="text-xs font-semibold text-slate-300">درجة الأمان</span>
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2.5">
+                  <div class="h-2 w-2 rounded-full bg-violet-400"></div>
+                  <span class="text-sm font-semibold text-slate-300">درجة الأمان</span>
                 </div>
-                <span class="text-xs font-bold text-violet-300">92%</span>
+                <span class="text-sm font-bold text-violet-300">92%</span>
               </div>
-              <div class="h-2 rounded-full bg-slate-800/80 overflow-hidden ring-1 ring-white/5">
+              <div class="h-2.5 rounded-full bg-slate-800/80 overflow-hidden ring-1 ring-white/5">
                 <div
-                  class="h-full rounded-full bg-gradient-to-l from-violet-600 to-fuchsia-300
-                         transition-all duration-[1500ms] ease-out
-                         shadow-[0_0_12px_rgba(139,92,246,0.6)]"
+                  class="h-full rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-300
+                         transition-all duration-[1600ms] ease-out
+                         shadow-[0_0_16px_rgba(139,92,246,0.7)]"
                   :style="pbLoaded ? 'width:92%' : 'width:0%'"
                 ></div>
               </div>
@@ -558,9 +584,9 @@
 
           <!-- ── Feature pills ── -->
           <div
-            class="mt-8 flex flex-wrap gap-2 transition-all duration-600 ease-out"
-            :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
-            style="transition-delay:780ms"
+            class="flex flex-wrap gap-2.5 transition-all duration-600 ease-out mb-10"
+            :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
+            style="transition-delay:820ms"
           >
             <template x-for="(pill, i) in [
               { label: 'كشف الاحتيال', color: 'blue'    },
@@ -570,8 +596,8 @@
               { label: 'مراجعة 30 قاعدة', color: 'amber' },
             ]" :key="i">
               <span
-                class="rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1.5 text-[11px] font-semibold text-slate-400
-                       transition-all duration-300 hover:bg-white/[0.08] hover:text-white hover:border-white/20 hover:scale-105 cursor-default"
+                class="rounded-full border border-white/12 bg-white/[0.05] px-4 py-2 text-xs font-semibold text-slate-400
+                       transition-all duration-300 hover:bg-white/[0.1] hover:text-white hover:border-white/25 hover:scale-110 cursor-default"
                 :class="{
                   'hover:text-blue-300':   pill.color === 'blue',
                   'hover:text-cyan-300':   pill.color === 'cyan',
@@ -586,19 +612,19 @@
 
           <!-- ── Bottom trust line ── -->
           <div
-            class="mt-8 border-t border-white/8 pt-6 flex items-center justify-between
+            class="border-t border-white/8 pt-7 flex items-center justify-between
                    transition-all duration-600 ease-out"
-            :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
-            style="transition-delay:900ms"
+            :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'"
+            style="transition-delay:920ms"
           >
-            <div class="flex items-center gap-2 text-[11px] text-slate-500">
-              <svg class="h-3.5 w-3.5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <div class="flex items-center gap-2.5 text-xs text-slate-500 font-medium">
+              <svg class="h-4 w-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
               </svg>
               مشفر بمعيار AES-256 · ISO 27001
             </div>
-            <div class="flex items-center gap-1.5 text-[11px] text-slate-500">
-              <span class="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse shadow-[0_0_6px_rgba(74,222,128,0.7)]"></span>
+            <div class="flex items-center gap-2 text-xs text-slate-500 font-medium">
+              <span class="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]"></span>
               جميع الأنظمة تعمل
             </div>
           </div>

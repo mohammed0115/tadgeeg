@@ -71,7 +71,7 @@ from .typed_serializers import (
 
 logger = logging.getLogger("finai")
 
-ALLOWED_EXT = {".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif", ".zip"}
+ALLOWED_EXT = {".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif", ".zip", ".csv", ".json", ".jsonl", ".xlsx", ".xls"}
 
 VALID_TYPES = list(DOCUMENT_TYPE_MAP.keys())
 
@@ -79,13 +79,42 @@ VALID_TYPES = list(DOCUMENT_TYPE_MAP.keys())
 # ── OCR helper (shared with invoice pipeline) ──────────────────────────────────
 
 def _run_ocr(file_path: str, ext: str) -> tuple[str, float]:
-    """Run OCR and return (text, confidence)."""
+    """
+    Extract text based on file type:
+    - For images/PDF: Use Tesseract OCR
+    - For structured data (CSV/JSON/XLSX): Use parsers
+    """
     try:
+        # For structured data files, use parsers instead of OCR
+        if ext in {".csv", ".json", ".jsonl", ".xlsx", ".xls"}:
+            from core.services.parsers.csv_parser import CSVParser
+            from core.services.parsers.json_parser import JSONParser
+            from core.services.parsers.excel_parser import ExcelParser
+            
+            parser = None
+            if ext == ".csv":
+                parser = CSVParser()
+            elif ext in {".json", ".jsonl"}:
+                parser = JSONParser()
+            elif ext in {".xlsx", ".xls"}:
+                parser = ExcelParser()
+            
+            if parser:
+                result = parser.parse(file_path)
+                if result.success:
+                    text = result.raw_text or ""
+                    if result.structured:
+                        import json
+                        text += "\n\n[STRUCTURED DATA]\n" + json.dumps(result.structured, ensure_ascii=False, indent=2)[:5000]
+                    return text, 1.0  # 100% confidence for structured data
+            return "", 0.0
+        
+        # For images and PDFs, use Tesseract OCR
         image_paths = pdf_to_images(file_path) if ext == ".pdf" else [file_path]
         result = extract_text_tesseract(image_paths[0])
         return result.get("text", ""), result.get("confidence", 0.0)
     except Exception as e:
-        logger.warning(f"OCR failed: {e}")
+        logger.warning(f"Text extraction failed: {e}")
         return "", 0.0
 
 
@@ -115,8 +144,8 @@ def _safe_decimal(val):
 def _process_typed_document(file_obj, filename: str, doc_type: str, org, user, request=None) -> dict:
     """
     Full pipeline for one non-invoice document:
-      1. Save base Document record
-      2. OCR
+      1. Save base Document record (and ensure file is written)
+      2. Extract text (OCR or parsers)
       3. AI extraction (type-specific prompt)
       4. Create typed model record
       5. Run type-specific validation rules
@@ -138,9 +167,18 @@ def _process_typed_document(file_obj, filename: str, doc_type: str, org, user, r
         processing_status=Document.ProcessingStatus.PROCESSING,
     )
 
-    # ── 2. OCR ──────────────────────────────────────────────────────────────
-    raw_text, ocr_confidence = _run_ocr(base_doc.file.path, ext)
-    img_path = base_doc.file.path
+    # Ensure the file is saved to disk before we try to parse it
+    file_path = base_doc.file.path
+    if not os.path.exists(file_path):
+        # If using remote storage, write to temp file
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp:
+            tmp.write(file_data)
+            file_path = tmp.name
+
+    # ── 2. Extract Text ─────────────────────────────────────────────────────
+    raw_text, ocr_confidence = _run_ocr(file_path, ext)
+    img_path = file_path
 
     if ext == ".pdf":
         imgs = pdf_to_images(img_path)
@@ -391,18 +429,21 @@ class TypedDocumentUploadView(APIView):
 
         for f in uploaded_files:
             ext = os.path.splitext(f.name)[1].lower()
-            if ext == ".zip":
-                zr, ze = _process_zip_typed(f, doc_type, org, request.user, request)
-                results.extend(zr); errors.extend(ze)
-            elif ext in ALLOWED_EXT:
-                try:
+            try:
+                if ext == ".zip":
+                    zr, ze = _process_zip_typed(f, doc_type, org, request.user, request)
+                    results.extend(zr); errors.extend(ze)
+                elif ext in ALLOWED_EXT:
                     r = _process_typed_document(f, f.name, doc_type, org, request.user, request)
                     results.append(r)
-                except Exception as e:
-                    logger.error(f"Failed {f.name}: {e}")
-                    errors.append({"filename": f.name, "error": str(e)})
-            else:
-                errors.append({"filename": f.name, "error": f"نوع الملف غير مدعوم: {ext}"})
+                else:
+                    errors.append({"filename": f.name, "error": f"نوع الملف غير مدعوم: {ext}"})
+            except Exception as e:
+                logger.exception(f"Upload failed for {f.name}: {e}")
+                errors.append({
+                    "filename": f.name, 
+                    "error": f"خطأ في المعالجة: {str(e)[:200]}"
+                })
 
         log_action(request, AuditLog.Action.DOCUMENT_UPLOAD, doc_type, "",
                    {"files": len(results), "errors": len(errors)})

@@ -77,7 +77,7 @@
       </div>
 
       <div class="grid items-stretch gap-8 lg:grid-cols-[430px_minmax(0,1fr)] xl:grid-cols-[460px_minmax(0,1fr)]" dir="ltr">
-        <section class="order-2 lg:order-1" dir="rtl">
+        <section class="order-1 lg:order-2" dir="rtl">
           <div
             class="auth-shadow rounded-[34px] border border-white/70 bg-white/92 p-6 sm:p-7 lg:min-h-[780px]"
             x-data="authPortal('{{ auth_mode|default:'login'|escapejs }}', {{ google_oauth_enabled|yesno:'true,false' }}, '{{ auth_error_message|default:''|escapejs }}')"
@@ -228,7 +228,7 @@
           </div>
         </section>
 
-        <section class="order-1 overflow-hidden rounded-[34px] border border-white/60 marketing-surface panel-grid shadow-2xl shadow-blue-900/5 lg:order-2" dir="rtl">
+        <section class="order-2 overflow-hidden rounded-[34px] border border-white/60 marketing-surface panel-grid shadow-2xl shadow-blue-900/5 lg:order-1" dir="rtl">
           <div class="flex h-full min-h-[640px] flex-col justify-between p-8 lg:p-12 xl:p-14">
             <div class="flex items-start justify-between gap-6">
               <div class="rounded-full border border-white/60 bg-white/40 px-4 py-2 text-sm font-semibold text-slate-500">عربي</div>

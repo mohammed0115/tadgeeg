@@ -301,22 +301,53 @@ class CurrentOrganizationView(APIView):
 
     def get_permissions(self):
         permissions = [IsAuthenticated()]
-        if self.request.method == "PATCH":
+        if self.request.method == "PATCH" and getattr(self.request.user, "organization_id", None):
             permissions.append(IsAdminUser())
         return permissions
+
+    def _default_payload(self):
+        return {
+            "id": None,
+            "name": "",
+            "name_ar": "",
+            "country": Organization.Country.SAUDI_ARABIA,
+            "currency": Organization.Currency.SAR,
+            "vat_number": "",
+            "cr_number": "",
+            "vat_rate": 15,
+            "industry": "",
+            "fiscal_year_start": 1,
+            "address": "",
+            "website": "",
+            "created_at": None,
+            "updated_at": None,
+        }
+
+    def _attach_organization(self, user, organization):
+        update_fields = ["organization"]
+        user.organization = organization
+        if user.role != User.Role.ADMIN:
+            user.role = User.Role.ADMIN
+            update_fields.append("role")
+        user.save(update_fields=update_fields)
 
     @extend_schema(tags=["Auth"], summary="Get the current user's organization")
     def get(self, request):
         organization = getattr(request.user, "organization", None)
         if not organization:
-            return Response({"error": "User has no organization."}, status=400)
+            return Response(self._default_payload())
         return Response(OrganizationSerializer(organization).data)
 
     @extend_schema(tags=["Auth"], summary="Update the current user's organization", request=OrganizationSerializer)
     def patch(self, request):
         organization = getattr(request.user, "organization", None)
         if not organization:
-            return Response({"error": "User has no organization."}, status=400)
+            serializer = OrganizationSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            organization = serializer.save()
+            self._attach_organization(request.user, organization)
+            log_action(request, AuditLog.Action.CONFIG_CHANGED, "organization", str(organization.id))
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         serializer = OrganizationSerializer(organization, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -372,6 +403,13 @@ class OrganizationSettingsView(APIView):
         )
         return settings_obj
 
+    def _default_payload(self):
+        defaults = self._defaults(Organization())
+        return {
+            "financial": defaults.get("financial", {}),
+            "notifications": defaults.get("notifications", {}),
+        }
+
     def _payload(self, settings_obj):
         return {
             "financial": settings_obj.financial or {},
@@ -382,7 +420,7 @@ class OrganizationSettingsView(APIView):
     def get(self, request):
         settings_obj = self._get_settings(request)
         if not settings_obj:
-            return Response({"error": "User has no organization."}, status=400)
+            return Response(self._default_payload())
         return Response(self._payload(settings_obj))
 
     @extend_schema(tags=["Auth"], summary="Update current organization settings", request=OrganizationSettingsSerializer)

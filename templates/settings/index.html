@@ -727,10 +727,14 @@ function organizationSettingsPage() {
       this.saving = true;
       const state = this.serializeState();
       try {
-        const [savedOrg, savedSettings] = await Promise.all([
-          apiFetch('/auth/organization/', { method: 'PATCH', body: JSON.stringify(state.org) }),
-          apiFetch('/auth/organization/settings/', { method: 'POST', body: JSON.stringify({ financial: state.settings, notifications: state.notifications }) }),
-        ]);
+        const savedOrg = await apiFetch('/auth/organization/', {
+          method: 'PATCH',
+          body: JSON.stringify(state.org),
+        });
+        const savedSettings = await apiFetch('/auth/organization/settings/', {
+          method: 'POST',
+          body: JSON.stringify({ financial: state.settings, notifications: state.notifications }),
+        });
         this.org = { ...this.defaultOrg, ...(savedOrg || state.org) };
         this.settings = this.normalizeSettings(savedSettings?.financial || state.settings, this.org);
         this.notifications = this.normalizeNotifications(savedSettings?.notifications || state.notifications);

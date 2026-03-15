@@ -44,6 +44,6 @@ class AuditLogAdmin(admin.ModelAdmin):
     readonly_fields = ["timestamp"]
 
 
-admin.site.site_header = "FinAI — نظام التدقيق المالي"
-admin.site.site_title = "FinAI Admin"
+admin.site.site_header = "Tadgeeg — نظام التدقيق المالي"
+admin.site.site_title = "Tadgeeg Admin"
 admin.site.index_title = "لوحة إدارة النظام"

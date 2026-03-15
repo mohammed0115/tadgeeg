@@ -59,7 +59,7 @@ class MissingFieldsRule(AuditRule):
     def evaluate(
         self,
         document: dict,
-        organisation_id: int = None,
+        organization_id: int = None,
         context: dict = None,
     ) -> RuleResult:
         doc_type = (document.get("document_type") or "other").lower()

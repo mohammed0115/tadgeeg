@@ -34,7 +34,7 @@ class VATValidationRule(AuditRule):
     def evaluate(
         self,
         document: dict,
-        organisation_id: int = None,
+        organization_id: int = None,
         context: dict = None,
     ) -> RuleResult:
         context = context or {}
@@ -46,7 +46,7 @@ class VATValidationRule(AuditRule):
         comp_result = context.get("compliance_result")
         if comp_result is None:
             try:
-                country = self._get_country(organisation_id)
+                country = self._get_country(organization_id)
                 from core.services.compliance.vat_validator import VATValidator
                 validator = VATValidator(country_code=country)
                 comp_result = validator.validate(document)
@@ -85,12 +85,12 @@ class VATValidationRule(AuditRule):
             details={"compliance_score": compliance_score, "vat_valid": vat_valid}
         )
 
-    def _get_country(self, organisation_id: int) -> str:
-        if not organisation_id:
+    def _get_country(self, organization_id: int) -> str:
+        if not organization_id:
             return "SA"
         try:
             from apps.authentication.models import Organization
-            org = Organization.objects.get(pk=organisation_id)
+            org = Organization.objects.get(pk=organization_id)
             return getattr(org, "country", "SA") or "SA"
         except Exception:
             return "SA"

@@ -25,7 +25,7 @@ from rest_framework.views import APIView
 from apps.authentication.permissions import IsSeniorAuditorOrAbove, IsOwnOrganization
 from core.services.invoice_ai_service import analyze_invoice_risk, extract_invoice_with_ai
 from core.services.invoice_validator import RULES, TOTAL_RULES, compute_file_hash, run_all_rules
-from core.services.ocr_service import extract_text_tesseract, pdf_to_images
+from core.services.ocr_service import pdf_to_images
 from core.utils.audit import log_action
 from apps.authentication.models import AuditLog
 
@@ -41,8 +41,13 @@ from .serializers import (
 logger = logging.getLogger("finai")
 
 ALLOWED_MIME = {"application/pdf", "image/jpeg", "image/png", "image/tiff",
-                "application/zip", "application/x-zip-compressed"}
-ALLOWED_EXT  = {".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif", ".zip"}
+                "application/zip", "application/x-zip-compressed",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "application/vnd.ms-excel", "application/json", "text/json",
+                "text/csv", "text/plain", "text/tab-separated-values",
+                "application/csv", "application/octet-stream"}
+ALLOWED_EXT  = {".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif", ".zip",
+                ".xlsx", ".xls", ".json", ".csv", ".tsv"}
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -137,26 +142,31 @@ def _merge_risk_assessment(invoice, validation_result, risk_result):
 
 def _process_single_file(file_obj, filename: str, org, user, batch=None, request=None) -> dict:
     """
-    Full pipeline for one file:
-      1. OCR with Tesseract
-      2. AI extraction with OpenAI
-      3. Save Invoice record
-      4. Run 30 validation rules
-      5. AI risk analysis
-      6. Update vendor profile
+    Full invoice processing pipeline:
+      1. Upload File        — save raw file, create Invoice record
+      2. Document Engine    — MIME detection, route to correct parser
+      3. File Parser        — PDF/Image/Excel/JSON/CSV parser
+      4. OCR/Text Extract   — Tesseract (+ OpenAI OCR upgrade if confidence < 60%)
+      5. OpenAI Extraction  — ZATCA-specific invoice field extraction (GPT-4o)
+      6. Financial AI       — classify → dup → fraud → compliance → risk
+      7. Audit Engine       — run 6 audit rules, persist AuditCase
+      8. Risk Engine        — merge scores from val + AI → final risk level
+      9. Save to DB         — update Invoice, InvoiceValidationResult, VendorProfile
 
     Returns:
         dict with invoice_id, validation, risk, errors.
     """
+    from core.services.document_engine import DocumentEngine
+    from core.services.financial_ai_engine import FinancialAIEngine
+    from apps.audit.audit_engine import run_audit
+
     start = time.time()
     ext = os.path.splitext(filename)[1].lower()
     file_data = file_obj.read()
     file_obj.seek(0)
 
-    # Compute hash for duplicate detection
+    # ── Step 1: Upload File — save raw bytes, create initial Invoice record ───
     file_hash = compute_file_hash(io.BytesIO(file_data))
-
-    # Create invoice record (initial)
     invoice = Invoice.objects.create(
         organization=org,
         uploaded_by=user,
@@ -167,43 +177,56 @@ def _process_single_file(file_obj, filename: str, org, user, batch=None, request
         mime_type=file_obj.content_type if hasattr(file_obj, "content_type") else "",
         extracted_data={"file_hash": file_hash},
     )
-
     _save_audit_event(invoice, user, InvoiceAuditEvent.EventType.UPLOADED,
-                      f"Uploaded file: {filename}", request=request)
+                      f"Uploaded: {filename}", request=request)
 
-    # ── Step 1: OCR ──────────────────────────────────────────────────────────
-    raw_text = ""
-    ocr_confidence = 0.0
-    image_paths = []
+    file_path = invoice.file.path
 
-    try:
-        tmp_path = invoice.file.path
+    # ── Steps 2 & 3: Document Engine → File Parser ───────────────────────────
+    # MIME detection → routes to PDF / Image / Excel / JSON / CSV parser
+    doc_engine = DocumentEngine(use_ai=True)
+    ingestion = doc_engine.ingest(file_path)
 
-        if ext == ".pdf":
-            image_paths = pdf_to_images(tmp_path)
-            img_for_ai = image_paths[0] if image_paths else tmp_path
-        else:
-            img_for_ai = tmp_path
-            image_paths = [tmp_path]
+    if ingestion.fatal_error:
+        invoice.status = Invoice.Status.FAILED
+        invoice.extracted_data = {"file_hash": file_hash, "error": ingestion.fatal_error}
+        invoice.save()
+        return {
+            "invoice_id": str(invoice.id), "filename": filename,
+            "success": False, "error": ingestion.fatal_error, "risk_level": "high",
+        }
 
-        tess_result = extract_text_tesseract(image_paths[0])
-        raw_text = tess_result.get("text", "")
-        ocr_confidence = tess_result.get("confidence", 0.0)
+    # ── Step 4: OCR / Text Extraction (handled inside the parser) ────────────
+    # image_parser:  Tesseract → OpenAI OCR upgrade when confidence < 60%
+    # pdf_parser:    PyMuPDF page render → Tesseract → OpenAI OCR upgrade
+    # excel_parser:  pandas direct extraction (no OCR needed)
+    # json_parser:   direct text extraction (no OCR needed)
+    raw_text = ingestion.raw_text
+    ocr_confidence = float(ingestion.metadata.get("ocr_confidence", 0.0))
 
-    except Exception as e:
-        logger.warning(f"Tesseract OCR failed for {filename}: {e}")
-        img_for_ai = invoice.file.path
-        raw_text = ""
+    _save_audit_event(invoice, user, InvoiceAuditEvent.EventType.PROCESSED,
+                      f"Parser: {ingestion.extraction_method} | OCR confidence: {ocr_confidence:.0f}%",
+                      request=request)
 
-    # ── Step 2: AI Extraction (OpenAI) ───────────────────────────────────────
+    # ── Step 5: OpenAI Extraction — ZATCA-specific invoice field extraction ───
+    # For vision: images use file_path directly; PDFs render first page
+    if ext == ".pdf":
+        try:
+            img_pages = pdf_to_images(file_path)
+            img_for_ai = img_pages[0] if img_pages else file_path
+        except Exception:
+            img_for_ai = file_path
+    else:
+        img_for_ai = file_path
+
     try:
         ai_data = extract_invoice_with_ai(img_for_ai, raw_text)
     except Exception as e:
-        logger.warning(f"AI extraction failed for {filename}: {e}")
+        logger.warning(f"OpenAI extraction failed for {filename}: {e}")
         from core.services.invoice_ai_service import _fallback_extraction
         ai_data = _fallback_extraction(raw_text)
 
-    # ── Step 3: Populate Invoice from extracted data ──────────────────────────
+    # Populate Invoice fields (ai_data ZATCA extraction takes priority)
     def _safe_decimal(val):
         try:
             return Decimal(str(val)) if val else Decimal("0")
@@ -215,22 +238,22 @@ def _process_single_file(file_obj, filename: str, org, user, batch=None, request
             return None
         try:
             from datetime import datetime
-            for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%d/%m/%y"):
+            for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y",
+                        "%Y/%m/%d", "%d %b %Y", "%d %B %Y"):
                 try:
                     return datetime.strptime(str(val), fmt).date()
                 except ValueError:
                     continue
         except Exception:
-            return None
+            pass
+        return None
 
     invoice.invoice_number    = str(_first_non_empty(ai_data.get("invoice_number"), filename) or "")
     invoice.invoice_date      = _safe_date(ai_data.get("invoice_date"))
     invoice.due_date          = _safe_date(ai_data.get("due_date"))
     invoice.vendor_name       = str(_first_non_empty(
-        ai_data.get("vendor_name"),
-        ai_data.get("vendor_name_ar"),
-        ai_data.get("supplier_name"),
-        ai_data.get("merchant_name"),
+        ai_data.get("vendor_name"), ai_data.get("vendor_name_ar"),
+        ai_data.get("supplier_name"), ai_data.get("merchant_name"),
     ) or "")
     invoice.vendor_name_ar    = str(_first_non_empty(ai_data.get("vendor_name_ar"), ai_data.get("vendor_name")) or "")
     invoice.vendor_vat_number = str(ai_data.get("vendor_vat_number", "") or "")
@@ -248,7 +271,7 @@ def _process_single_file(file_obj, filename: str, org, user, batch=None, request
     invoice.line_items        = ai_data.get("line_items", [])
     invoice.has_qr_code       = bool(ai_data.get("has_qr_code", False))
     invoice.qr_code_valid     = bool(ai_data.get("qr_code_valid", False))
-    invoice.is_handwritten    = bool(ai_data.get("is_handwritten", False))
+    invoice.is_handwritten    = bool(ai_data.get("is_handwritten") or ingestion.metadata.get("is_handwritten", False))
     invoice.is_clear          = bool(ai_data.get("is_clear", True))
     invoice.has_alterations   = bool(ai_data.get("has_alterations", False))
     invoice.language          = str(ai_data.get("language", "unknown"))
@@ -259,90 +282,116 @@ def _process_single_file(file_obj, filename: str, org, user, batch=None, request
     invoice.status            = Invoice.Status.PROCESSING
     invoice.save()
 
-    _save_audit_event(invoice, user, InvoiceAuditEvent.EventType.PROCESSED,
-                      f"OCR confidence: {ocr_confidence:.0f}% | AI extraction: {ai_data.get('_extraction_method','unknown')}",
-                      request=request)
+    # ── Step 6: Financial AI Engine ──────────────────────────────────────────
+    # classify → field extract → duplicate detection → fraud detection
+    # → ZATCA compliance → Risk Engine (internal final step)
+    ai_engine = FinancialAIEngine(organization_id=org.id, country_code="SA", use_ai=True)
+    analysis = ai_engine.analyse(ingestion)
 
-    # ── Step 4: Run all 30 validation rules ───────────────────────────────────
+    # ── Step 7: Audit Engine — 6 structural audit rules + AuditCase persist ───
+    try:
+        run_audit(
+            analysis.to_dict(),
+            organization_id=org.id,
+            invoice_id=invoice.id,
+            persist=True,
+        )
+    except Exception as e:
+        logger.warning(f"Audit engine failed for {filename}: {e}")
+
+    # ── Also run 30 ZATCA validation rules against the Invoice model fields ───
     val_result = run_all_rules(invoice, organization=org, file_hash=file_hash)
 
-    # Save validation result
-    vr, _ = InvoiceValidationResult.objects.update_or_create(
+    InvoiceValidationResult.objects.update_or_create(
         invoice=invoice,
         defaults={
-            "has_invoice_number":       "INV-001" in val_result["passed_rule_codes"],
-            "has_invoice_date":         "INV-002" in val_result["passed_rule_codes"],
-            "has_vendor_name":          "INV-003" in val_result["passed_rule_codes"],
-            "has_vendor_vat":           "INV-004" in val_result["passed_rule_codes"],
-            "has_total_amount":         "INV-005" in val_result["passed_rule_codes"],
-            "has_currency":             "INV-006" in val_result["passed_rule_codes"],
-            "total_greater_zero":       "INV-007" in val_result["passed_rule_codes"],
-            "no_vat_without_base":      "INV-008" in val_result["passed_rule_codes"],
-            "duplicate_invoice_number": "DUP-001" in val_result["failed_rule_codes"],
+            "has_invoice_number":          "INV-001" in val_result["passed_rule_codes"],
+            "has_invoice_date":            "INV-002" in val_result["passed_rule_codes"],
+            "has_vendor_name":             "INV-003" in val_result["passed_rule_codes"],
+            "has_vendor_vat":              "INV-004" in val_result["passed_rule_codes"],
+            "has_total_amount":            "INV-005" in val_result["passed_rule_codes"],
+            "has_currency":                "INV-006" in val_result["passed_rule_codes"],
+            "total_greater_zero":          "INV-007" in val_result["passed_rule_codes"],
+            "no_vat_without_base":         "INV-008" in val_result["passed_rule_codes"],
+            "duplicate_invoice_number":    "DUP-001" in val_result["failed_rule_codes"],
             "duplicate_vendor_and_number": "DUP-002" in val_result["failed_rule_codes"],
-            "duplicate_vendor_amount_date": "DUP-003" in val_result["failed_rule_codes"],
-            "duplicate_file_hash":      "DUP-004" in val_result["failed_rule_codes"],
-            "duplicate_across_months":  "DUP-005" in val_result["failed_rule_codes"],
-            "vat_rate_correct":         "VAT-001" in val_result["passed_rule_codes"],
-            "vat_calculation_correct":  "VAT-002" in val_result["passed_rule_codes"],
-            "vat_subtotal_correct":     "VAT-003" in val_result["passed_rule_codes"],
-            "vat_number_present":       "VAT-004" in val_result["passed_rule_codes"],
-            "qr_code_valid":            "VAT-005" in val_result["passed_rule_codes"],
-            "amount_unusually_high":    "ANO-001" in val_result["failed_rule_codes"],
-            "new_unknown_vendor":       "ANO-002" in val_result["failed_rule_codes"],
-            "many_invoices_same_day":   "ANO-003" in val_result["failed_rule_codes"],
-            "sudden_price_change":      "ANO-004" in val_result["failed_rule_codes"],
-            "many_invoices_year_end":   "ANO-005" in val_result["failed_rule_codes"],
-            "vendor_dominates_invoices":"ANO-006" in val_result["failed_rule_codes"],
-            "has_cost_center":          "CTL-001" in val_result["passed_rule_codes"],
-            "has_account_code":         "CTL-002" in val_result["passed_rule_codes"],
-            "has_approver":             "CTL-005" in val_result["passed_rule_codes"],
-            "document_is_clear":        "DOC-001" in val_result["passed_rule_codes"],
-            "appears_genuine":          "DOC-002" in val_result["passed_rule_codes"],
-            "no_alterations":           "DOC-003" in val_result["passed_rule_codes"],
-            "has_qr_code":              "DOC-004" in val_result["passed_rule_codes"],
-            "rules_passed":             val_result["rules_passed"],
-            "rules_failed":             val_result["rules_failed"],
-            "validation_score":         val_result["validation_score"],
-            "failed_rule_codes":        val_result["failed_rule_codes"],
-            "validation_details":       val_result["rule_details"],
+            "duplicate_vendor_amount_date":"DUP-003" in val_result["failed_rule_codes"],
+            "duplicate_file_hash":         "DUP-004" in val_result["failed_rule_codes"],
+            "duplicate_across_months":     "DUP-005" in val_result["failed_rule_codes"],
+            "vat_rate_correct":            "VAT-001" in val_result["passed_rule_codes"],
+            "vat_calculation_correct":     "VAT-002" in val_result["passed_rule_codes"],
+            "vat_subtotal_correct":        "VAT-003" in val_result["passed_rule_codes"],
+            "vat_number_present":          "VAT-004" in val_result["passed_rule_codes"],
+            "qr_code_valid":               "VAT-005" in val_result["passed_rule_codes"],
+            "amount_unusually_high":       "ANO-001" in val_result["failed_rule_codes"],
+            "new_unknown_vendor":          "ANO-002" in val_result["failed_rule_codes"],
+            "many_invoices_same_day":      "ANO-003" in val_result["failed_rule_codes"],
+            "sudden_price_change":         "ANO-004" in val_result["failed_rule_codes"],
+            "many_invoices_year_end":      "ANO-005" in val_result["failed_rule_codes"],
+            "vendor_dominates_invoices":   "ANO-006" in val_result["failed_rule_codes"],
+            "has_cost_center":             "CTL-001" in val_result["passed_rule_codes"],
+            "has_account_code":            "CTL-002" in val_result["passed_rule_codes"],
+            "has_approver":                "CTL-005" in val_result["passed_rule_codes"],
+            "document_is_clear":           "DOC-001" in val_result["passed_rule_codes"],
+            "appears_genuine":             "DOC-002" in val_result["passed_rule_codes"],
+            "no_alterations":              "DOC-003" in val_result["passed_rule_codes"],
+            "has_qr_code":                 "DOC-004" in val_result["passed_rule_codes"],
+            "rules_passed":                val_result["rules_passed"],
+            "rules_failed":                val_result["rules_failed"],
+            "validation_score":            val_result["validation_score"],
+            "failed_rule_codes":           val_result["failed_rule_codes"],
+            "validation_details":          val_result["rule_details"],
         }
     )
 
     _save_audit_event(invoice, user, InvoiceAuditEvent.EventType.VALIDATED,
-                      f"Validation score: {val_result['validation_score']}% | Failed: {val_result['failed_rule_codes']}",
+                      f"Validation: {val_result['validation_score']:.0f}% | Failed: {val_result['failed_rule_codes']}",
                       request=request)
 
-    # ── Step 5: AI Risk Analysis ──────────────────────────────────────────────
+    # ── Step 8: Risk Engine — merge validation + AI scores → final risk level ─
+    # analyze_invoice_risk provides vendor-history-aware risk from invoice_ai_service
+    # FinancialAIEngine already ran its own Risk Engine; we take the max score
     vendor_hist = _get_vendor_history(org, invoice.vendor_name)
     try:
-        risk_result = analyze_invoice_risk(
+        ai_risk = analyze_invoice_risk(
             {k: v for k, v in ai_data.items() if not k.startswith("_")},
             vendor_hist,
         )
     except Exception as e:
-        logger.warning(f"AI risk analysis failed: {e}")
-        risk_result = {}
+        logger.warning(f"AI risk analysis failed for {filename}: {e}")
+        ai_risk = {}
 
-    # Merge risk into invoice
-    risk_result = _merge_risk_assessment(invoice, val_result, risk_result)
+    # Final score = max(Financial AI risk, invoice AI risk, fallback from val rules)
+    ai_risk["overall_risk_score"] = max(
+        _to_float(ai_risk.get("overall_risk_score"), 0.0),
+        float(analysis.risk_score),
+    )
+    _merge_risk_assessment(invoice, val_result, ai_risk)
+
+    # ── Step 9: Save to DB ────────────────────────────────────────────────────
+    invoice.is_duplicate = invoice.is_duplicate or analysis.is_duplicate
     invoice.save()
 
-    # ── Step 6: Update vendor profile ────────────────────────────────────────
     _update_vendor_profile(org, invoice)
 
     elapsed_ms = int((time.time() - start) * 1000)
-    logger.info(f"Invoice {invoice.id} processed in {elapsed_ms}ms | Score: {val_result['validation_score']}%")
+    logger.info(
+        "[Upload] %s | risk=%s | score=%.0f%% | dup=%s | fraud=%.2f | %dms",
+        filename, invoice.risk_level, val_result["validation_score"],
+        invoice.is_duplicate, analysis.fraud_score, elapsed_ms,
+    )
 
     return {
-        "invoice_id": str(invoice.id),
-        "filename": filename,
-        "success": True,
+        "invoice_id":       str(invoice.id),
+        "filename":         filename,
+        "success":          True,
         "validation_score": val_result["validation_score"],
-        "rules_failed": val_result["failed_rule_codes"],
-        "risk_level": invoice.risk_level,
-        "status": invoice.status,
-        "processing_ms": elapsed_ms,
+        "rules_failed":     val_result["failed_rule_codes"],
+        "risk_level":       invoice.risk_level,
+        "is_duplicate":     invoice.is_duplicate,
+        "fraud_score":      round(analysis.fraud_score, 2),
+        "status":           invoice.status,
+        "processing_ms":    elapsed_ms,
     }
 
 
@@ -463,7 +512,40 @@ class InvoiceUploadView(APIView):
                 zip_results, zip_errors = _process_zip(uploaded_file, org, request.user, batch, request)
                 results.extend(zip_results)
                 errors.extend(zip_errors)
-                batch.total_files += len(zip_results) + len(zip_errors) - 1  # replace 1 zip with n files
+                batch.total_files += len(zip_results) + len(zip_errors) - 1
+            # ── CSV/TSV: process each row as a separate invoice ───────────────
+            elif ext in {".csv", ".tsv"}:
+                csv_results, csv_errors = _process_csv_rows(uploaded_file, filename, org, request.user, batch, request)
+                if csv_results or csv_errors:
+                    results.extend(csv_results)
+                    errors.extend(csv_errors)
+                    batch.total_files += len(csv_results) + len(csv_errors) - 1
+                else:
+                    try:
+                        r = _process_single_file(uploaded_file, filename, org, request.user, batch, request)
+                        results.append(r)
+                        batch.processed_files += 1
+                    except Exception as e:
+                        logger.error(f"Failed processing {filename}: {e}")
+                        errors.append({"filename": filename, "error": str(e)})
+                        batch.failed_files += 1
+            # ── JSON array: process each dict as a separate invoice ────────────
+            elif ext == ".json":
+                json_results, json_errors = _process_json_list(uploaded_file, filename, org, request.user, batch, request)
+                if json_results or json_errors:
+                    results.extend(json_results)
+                    errors.extend(json_errors)
+                    batch.total_files += len(json_results) + len(json_errors) - 1
+                else:
+                    # Not a list — process as single file
+                    try:
+                        r = _process_single_file(uploaded_file, filename, org, request.user, batch, request)
+                        results.append(r)
+                        batch.processed_files += 1
+                    except Exception as e:
+                        logger.error(f"Failed processing {filename}: {e}")
+                        errors.append({"filename": filename, "error": str(e)})
+                        batch.failed_files += 1
             else:
                 try:
                     r = _process_single_file(uploaded_file, filename, org, request.user, batch, request)
@@ -509,7 +591,7 @@ def _process_zip(zip_file, org, user, batch, request) -> tuple[list, list]:
                     continue
                 name = os.path.basename(member.filename)
                 ext = os.path.splitext(name)[1].lower()
-                if ext not in {".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif"}:
+                if ext not in {".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif", ".xlsx", ".xls", ".json"}:
                     continue
                 try:
                     data = zf.read(member)
@@ -528,9 +610,105 @@ def _process_zip(zip_file, org, user, batch, request) -> tuple[list, list]:
     return results, errors
 
 
+def _process_csv_rows(csv_file, filename: str, org, user, batch, request) -> tuple[list, list]:
+    """
+    Parse a CSV/TSV file and process each row as a separate invoice.
+    Returns (results, errors). Returns ([], []) if the file has ≤1 data row (caller handles as single).
+    """
+    results, errors = [], []
+    try:
+        import pandas as pd
+        raw = csv_file.read()
+        csv_file.seek(0)
+
+        # Detect delimiter
+        sample = raw[:4096].decode("utf-8", errors="replace")
+        delimiter = max({",": sample.count(","), ";": sample.count(";"),
+                         "\t": sample.count("\t"), "|": sample.count("|")},
+                        key=lambda k: {",": sample.count(","), ";": sample.count(";"),
+                                       "\t": sample.count("\t"), "|": sample.count("|")}[k])
+
+        df = pd.read_csv(
+            io.BytesIO(raw), sep=delimiter, dtype=str,
+            keep_default_na=False, on_bad_lines="skip",
+            encoding="utf-8-sig",
+        )
+        df = df.dropna(how="all")
+
+        if len(df) <= 1:
+            return [], []  # Single row — caller processes as one file
+
+    except Exception as e:
+        logger.warning(f"CSV pre-parse failed for {filename}: {e}")
+        return [], []
+
+    base_name = os.path.splitext(filename)[0]
+    for idx, row in df.iterrows():
+        row_dict = {k: v for k, v in row.items() if str(v).strip()}
+        if not row_dict:
+            continue
+        row_name = f"{base_name}_row{idx + 1}.json"
+        item_bytes = __import__("json").dumps(row_dict, ensure_ascii=False).encode("utf-8")
+        file_like = io.BytesIO(item_bytes)
+        file_like.name = row_name
+        file_like.content_type = "application/json"
+        try:
+            r = _process_single_file(file_like, row_name, org, user, batch, request)
+            results.append(r)
+            batch.processed_files += 1
+        except Exception as e:
+            logger.error(f"CSV row {row_name} failed: {e}")
+            errors.append({"filename": row_name, "error": str(e)})
+            batch.failed_files += 1
+
+    return results, errors
+
+
+def _process_json_list(json_file, filename: str, org, user, batch, request) -> tuple[list, list]:
+    """
+    If a JSON file contains a list[dict], process each dict as a separate invoice.
+    Returns (results, errors). Returns ([], []) if the JSON is NOT a list (caller handles it).
+    """
+    import json as _json
+    results, errors = [], []
+    try:
+        raw = json_file.read()
+        json_file.seek(0)
+        data = _json.loads(raw.decode("utf-8", errors="replace").lstrip("\xef\xbb\xbf"))
+    except Exception:
+        return [], []
+
+    if not isinstance(data, list):
+        return [], []  # Not a list — caller will process as single file
+
+    base_name = os.path.splitext(filename)[0]
+    for idx, item in enumerate(data):
+        if not isinstance(item, dict):
+            continue
+        item_name = f"{base_name}_item{idx + 1}.json"
+        item_bytes = _json.dumps(item, ensure_ascii=False).encode("utf-8")
+        file_like = io.BytesIO(item_bytes)
+        file_like.name = item_name
+        file_like.content_type = "application/json"
+        try:
+            r = _process_single_file(file_like, item_name, org, user, batch, request)
+            results.append(r)
+            batch.processed_files += 1
+        except Exception as e:
+            logger.error(f"JSON item {item_name} failed: {e}")
+            errors.append({"filename": item_name, "error": str(e)})
+            batch.failed_files += 1
+
+    return results, errors
+
+
 def _guess_mime(ext: str) -> str:
-    return {"pdf": "application/pdf", "jpg": "image/jpeg", "jpeg": "image/jpeg",
-            "png": "image/png", "tiff": "image/tiff", "tif": "image/tiff"}.get(ext.lstrip("."), "application/octet-stream")
+    return {
+        "pdf": "application/pdf", "jpg": "image/jpeg", "jpeg": "image/jpeg",
+        "png": "image/png", "tiff": "image/tiff", "tif": "image/tiff",
+        "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "xls": "application/vnd.ms-excel", "json": "application/json",
+    }.get(ext.lstrip("."), "application/octet-stream")
 
 
 class InvoiceListView(generics.ListAPIView):

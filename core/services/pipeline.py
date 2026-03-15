@@ -21,7 +21,7 @@ Usage (direct):
     result = run_full_pipeline_for_file(
         file_path="/media/documents/2024/03/invoice.pdf",
         document_id=uuid_str,
-        organisation_id=42,
+        organization_id=42,
         country_code="SA",
     )
 """
@@ -69,7 +69,7 @@ def run_full_pipeline(document_id: str) -> dict:
         result = run_full_pipeline_for_file(
             file_path=doc.file.path,
             document_id=str(doc.id),
-            organisation_id=doc.organization_id,
+            organization_id=doc.organization_id,
             country_code=_get_org_country(doc.organization_id),
             use_ai=True,
         )
@@ -87,7 +87,7 @@ def run_full_pipeline(document_id: str) -> dict:
 def run_full_pipeline_for_file(
     file_path: str,
     document_id: Optional[str] = None,
-    organisation_id: Optional[int] = None,
+    organization_id: Optional[int] = None,
     country_code: str = "SA",
     use_ai: bool = True,
 ) -> dict:
@@ -163,7 +163,7 @@ def run_full_pipeline_for_file(
     try:
         from core.services.financial_ai_engine import FinancialAIEngine
         ai_engine = FinancialAIEngine(
-            organisation_id=organisation_id,
+            organization_id=organization_id,
             country_code=country_code,
             use_ai=use_ai,
         )
@@ -219,7 +219,7 @@ def run_full_pipeline_for_file(
             },
         }
 
-        audit_engine = AuditEngine(organisation_id=organisation_id)
+        audit_engine = AuditEngine(organization_id=organization_id)
         report = audit_engine.evaluate(
             document=doc_dict,
             context=context,
@@ -364,13 +364,13 @@ def _persist_result(doc, result: dict):
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _get_org_country(organisation_id) -> str:
+def _get_org_country(organization_id) -> str:
     """Retrieve organisation country code; defaults to SA."""
-    if not organisation_id:
+    if not organization_id:
         return "SA"
     try:
         from apps.authentication.models import Organization
-        org = Organization.objects.get(pk=organisation_id)
+        org = Organization.objects.get(pk=organization_id)
         return getattr(org, "country_code", "SA") or "SA"
     except Exception:
         return "SA"

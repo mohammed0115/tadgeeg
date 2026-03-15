@@ -397,10 +397,18 @@ def _build_invoice_display(invoice):
         "tesseract_fallback",
     )
     extraction_method_label = {
-        "openai_vision": "OpenAI GPT + OCR",
-        "tesseract_fallback": "Tesseract OCR",
-        "ocr_fallback": "OCR محلي",
-    }.get(extraction_method, extraction_method)
+        "openai_vision":    "استخراج ذكي (GPT-4o + OCR)",
+        "openai_text":      "استخراج ذكي (GPT-4o نص)",
+        "openai_ocr":       "تعرف ضوئي ذكي (GPT-4o)",
+        "tesseract_fallback": "تعرف ضوئي (Tesseract)",
+        "ocr_fallback":     "تعرف ضوئي محلي",
+        "image_ai_vision":  "رؤية ذكية (GPT-4o)",
+        "image_ocr":        "تعرف ضوئي على صورة",
+        "pdf_ocr":          "تعرف ضوئي على PDF",
+        "excel_parser":     "تحليل ملف Excel",
+        "json_parser":      "تحليل ملف JSON",
+        "csv_parser":       "تحليل ملف CSV",
+    }.get(extraction_method, "استخراج تلقائي")
 
     def _format_amount(amount):
         if amount is None:

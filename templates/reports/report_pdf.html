@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>{{ report.title }}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Cairo', 'Arial', sans-serif;
+    font-size: 11pt;
+    color: #1e293b;
+    background: #fff;
+    direction: rtl;
+    line-height: 1.7;
+  }
+
+  /* ── Page layout ── */
+  @page {
+    size: A4;
+    margin: 18mm 15mm 18mm 15mm;
+    @bottom-center {
+      content: "صفحة " counter(page) " من " counter(pages);
+      font-family: 'Cairo', Arial, sans-serif;
+      font-size: 8pt;
+      color: #94a3b8;
+    }
+  }
+
+  /* ── Cover header ── */
+  .cover {
+    background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%);
+    color: #fff;
+    padding: 36pt 32pt 28pt;
+    border-radius: 8pt;
+    margin-bottom: 24pt;
+    page-break-inside: avoid;
+  }
+  .cover-brand { font-size: 26pt; font-weight: 900; letter-spacing: -0.5pt; }
+  .cover-brand span { color: #93c5fd; }
+  .cover-title { font-size: 17pt; font-weight: 700; margin-top: 10pt; }
+  .cover-meta { font-size: 9pt; color: #bfdbfe; margin-top: 8pt; }
+  .cover-meta span { margin-left: 16pt; }
+
+  /* ── Section headings ── */
+  .section-title {
+    font-size: 13pt;
+    font-weight: 700;
+    color: #1e40af;
+    border-right: 4pt solid #2563eb;
+    padding-right: 10pt;
+    margin: 20pt 0 10pt;
+    page-break-after: avoid;
+  }
+
+  /* ── Narrative blocks ── */
+  .narrative-block {
+    background: #f8fafc;
+    border: 1pt solid #e2e8f0;
+    border-radius: 6pt;
+    padding: 12pt 14pt;
+    margin-bottom: 10pt;
+    page-break-inside: avoid;
+  }
+  .narrative-label {
+    font-size: 9.5pt;
+    font-weight: 700;
+    color: #7c3aed;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+    margin-bottom: 5pt;
+  }
+  .narrative-text {
+    font-size: 10.5pt;
+    color: #334155;
+    line-height: 1.8;
+  }
+
+  /* ── KPI grid ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8pt;
+    margin-bottom: 14pt;
+  }
+  .kpi-card {
+    border: 1pt solid #e2e8f0;
+    border-radius: 6pt;
+    padding: 10pt 8pt;
+    text-align: center;
+    page-break-inside: avoid;
+  }
+  .kpi-value {
+    font-size: 18pt;
+    font-weight: 900;
+    color: #1e40af;
+    line-height: 1;
+  }
+  .kpi-value.red   { color: #dc2626; }
+  .kpi-value.amber { color: #d97706; }
+  .kpi-value.green { color: #16a34a; }
+  .kpi-label {
+    font-size: 8pt;
+    color: #64748b;
+    margin-top: 4pt;
+  }
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5pt;
+    margin-bottom: 14pt;
+    page-break-inside: avoid;
+  }
+  th {
+    background: #1e40af;
+    color: #fff;
+    font-weight: 700;
+    padding: 7pt 8pt;
+    text-align: right;
+    font-size: 9pt;
+  }
+  td {
+    padding: 6pt 8pt;
+    border-bottom: 0.5pt solid #e2e8f0;
+    color: #334155;
+  }
+  tr:nth-child(even) td { background: #f8fafc; }
+
+  .badge {
+    display: inline-block;
+    padding: 2pt 6pt;
+    border-radius: 20pt;
+    font-size: 8pt;
+    font-weight: 700;
+  }
+  .badge-critical { background: #fee2e2; color: #991b1b; }
+  .badge-high     { background: #ffedd5; color: #9a3412; }
+  .badge-medium   { background: #fef9c3; color: #854d0e; }
+  .badge-low      { background: #dcfce7; color: #166534; }
+
+  /* ── Footer ── */
+  .footer {
+    margin-top: 30pt;
+    padding-top: 10pt;
+    border-top: 1pt solid #e2e8f0;
+    font-size: 8pt;
+    color: #94a3b8;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Cover ── -->
+<div class="cover">
+  <div class="cover-brand">Tadgeeg <span>AI</span></div>
+  <div class="cover-title">{{ report.title }}</div>
+  <div class="cover-meta">
+    <span>المنشأة: {{ org.name }}</span>
+    <span>النوع: {{ report.get_report_type_display|default:report.report_type }}</span>
+    {% if report.period_from %}<span>الفترة: {{ report.period_from }} — {{ report.period_to }}</span>{% endif %}
+    <span>تاريخ الإنشاء: {{ report.created_at|date:"Y-m-d" }}</span>
+  </div>
+</div>
+
+<!-- ── Narrative sections ── -->
+{% if narrative %}
+<div class="section-title">الملخص التحليلي</div>
+{% for key, content in narrative.items %}
+<div class="narrative-block">
+  <div class="narrative-label">{{ key|capfirst }}</div>
+  <div class="narrative-text">{{ content }}</div>
+</div>
+{% endfor %}
+{% endif %}
+
+<!-- ── Invoice KPIs ── -->
+{% with stats=data.invoice_audit.overall_stats val=data.invoice_audit.validation_summary %}
+{% if stats %}
+<div class="section-title">إحصاءات تدقيق الفواتير</div>
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-value">{{ stats.total_invoices|default:0 }}</div>
+    <div class="kpi-label">إجمالي الفواتير</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value red">{{ stats.flagged_count|default:0 }}</div>
+    <div class="kpi-label">مُبلَّغ عنها</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value amber">{{ stats.duplicate_count|default:0 }}</div>
+    <div class="kpi-label">مكررة</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value {% if val.avg_score >= 80 %}green{% elif val.avg_score >= 50 %}amber{% else %}red{% endif %}">
+      {{ val.avg_score|default:0|floatformat:1 }}%
+    </div>
+    <div class="kpi-label">متوسط التدقيق</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value red">{{ stats.critical_count|default:0 }}</div>
+    <div class="kpi-label">حرجة</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value amber">{{ stats.high_count|default:0 }}</div>
+    <div class="kpi-label">عالية الخطورة</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value">{{ stats.total_amount|default:0|floatformat:0 }}</div>
+    <div class="kpi-label">إجمالي المبالغ ({{ org.currency|default:"SAR" }})</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value">{{ stats.avg_risk_score|default:0|floatformat:1 }}</div>
+    <div class="kpi-label">متوسط درجة المخاطر</div>
+  </div>
+</div>
+{% endif %}
+{% endwith %}
+
+<!-- ── Top Risk Invoices ── -->
+{% if data.invoice_audit.top_risk_invoices %}
+<div class="section-title">أعلى الفواتير خطورة</div>
+<table>
+  <thead>
+    <tr>
+      <th>رقم الفاتورة</th>
+      <th>المورد</th>
+      <th>المبلغ</th>
+      <th>التاريخ</th>
+      <th>مستوى الخطر</th>
+      <th>درجة الخطر</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for inv in data.invoice_audit.top_risk_invoices %}
+    <tr>
+      <td>{{ inv.invoice_number|default:"—" }}</td>
+      <td>{{ inv.vendor_name|default:"—" }}</td>
+      <td>{{ inv.total_amount|floatformat:2 }}</td>
+      <td>{{ inv.invoice_date|default:"—" }}</td>
+      <td>
+        <span class="badge badge-{{ inv.risk_level }}">{{ inv.risk_level }}</span>
+      </td>
+      <td>{{ inv.risk_score|default:0 }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<!-- ── Vendor Analysis ── -->
+{% if data.invoice_audit.vendor_analysis %}
+<div class="section-title">تحليل الموردين</div>
+<table>
+  <thead>
+    <tr>
+      <th>المورد</th>
+      <th>عدد الفواتير</th>
+      <th>إجمالي الإنفاق</th>
+      <th>المتوسط</th>
+      <th>نسبة الإنفاق</th>
+      <th>مُبلَّغ عنها</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for v in data.invoice_audit.vendor_analysis %}
+    <tr>
+      <td>{{ v.vendor_name|default:"—" }}</td>
+      <td>{{ v.invoice_count }}</td>
+      <td>{{ v.total_amount|floatformat:2 }}</td>
+      <td>{{ v.avg_amount|floatformat:2 }}</td>
+      <td>{{ v.spend_share_pct|floatformat:1 }}%</td>
+      <td>{{ v.flagged_invoices }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<!-- ── Top Failed Rules ── -->
+{% if data.invoice_audit.top_failed_rules %}
+<div class="section-title">أكثر بنود التدقيق إخفاقاً</div>
+<table>
+  <thead>
+    <tr>
+      <th>كود البند</th>
+      <th>الوصف</th>
+      <th>عدد الإخفاقات</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for rule in data.invoice_audit.top_failed_rules %}
+    <tr>
+      <td><strong>{{ rule.rule_code }}</strong></td>
+      <td>{{ rule.description }}</td>
+      <td><span class="badge badge-high">{{ rule.failures }}</span></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<!-- ── Financial Summary ── -->
+{% if data.financial_summary %}
+<div class="section-title">الملخص المالي</div>
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-value green">{{ data.financial_summary.total_income|floatformat:0|default:0 }}</div>
+    <div class="kpi-label">إجمالي الإيرادات</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value red">{{ data.financial_summary.total_expense|floatformat:0|default:0 }}</div>
+    <div class="kpi-label">إجمالي المصروفات</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value {% if data.financial_summary.net_profit >= 0 %}green{% else %}red{% endif %}">
+      {{ data.financial_summary.net_profit|floatformat:0|default:0 }}
+    </div>
+    <div class="kpi-label">صافي الربح</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value amber">{{ data.financial_summary.flagged_transactions|default:0 }}</div>
+    <div class="kpi-label">معاملات مُبلَّغ عنها</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Audit Cases ── -->
+{% if data.audit_cases %}
+<div class="section-title">قضايا التدقيق</div>
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-value">{{ data.audit_cases.total|default:0 }}</div>
+    <div class="kpi-label">إجمالي القضايا</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value amber">{{ data.audit_cases.open|default:0 }}</div>
+    <div class="kpi-label">مفتوحة</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value green">{{ data.audit_cases.resolved|default:0 }}</div>
+    <div class="kpi-label">محلولة</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-value red">{{ data.audit_cases.critical|default:0 }}</div>
+    <div class="kpi-label">حرجة</div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ── Footer ── -->
+<div class="footer">
+  Tadgeeg — نظام التدقيق المالي الذكي &nbsp;|&nbsp; {{ org.name }} &nbsp;|&nbsp;
+  صُدِر بتاريخ {{ report.created_at|date:"Y-m-d H:i" }} &nbsp;|&nbsp;
+  هذا التقرير سري ومُعدٌّ للاستخدام الداخلي فقط
+</div>
+
+</body>
+</html>

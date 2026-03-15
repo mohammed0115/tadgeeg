@@ -198,7 +198,7 @@ def _send_otp_email(user: User, otp_code: str, expires_at) -> None:
         "otp_code": otp_code,
         "expires_minutes": config.expiry_minutes,
         "expires_at": expires_at,
-        "product_name": "Tadgeeg / FinAI",
+        "product_name": "Tadgeeg",
     }
     html_body = render_to_string("auth/otp_email.html", context)
     text_body = (
@@ -208,7 +208,7 @@ def _send_otp_email(user: User, otp_code: str, expires_at) -> None:
         "إذا لم تطلب هذا الرمز، يمكنك تجاهل هذه الرسالة بأمان."
     )
     email = EmailMultiAlternatives(
-        subject="رمز التحقق من البريد الإلكتروني - Tadgeeg / FinAI",
+        subject="رمز التحقق من البريد الإلكتروني - Tadgeeg",
         body=text_body,
         from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@finai.sa"),
         to=[user.email],

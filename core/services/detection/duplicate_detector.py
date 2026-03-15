@@ -41,13 +41,13 @@ class DuplicateDetector:
     Multi-signal duplicate document detector.
 
     Usage:
-        detector = DuplicateDetector(organisation_id=org.id)
+        detector = DuplicateDetector(organization_id=org.id)
         result = detector.detect(document)
         print(result['duplicate_score'], result['duplicate_reasons'])
     """
 
-    def __init__(self, organisation_id: int = None):
-        self.organisation_id = organisation_id
+    def __init__(self, organization_id: int = None):
+        self.organization_id = organization_id
 
     def detect(self, document: dict) -> dict:
         """
@@ -132,8 +132,8 @@ class DuplicateDetector:
             qs = Invoice.objects.filter(
                 invoice_number__iexact=doc_number,
             )
-            if self.organisation_id:
-                qs = qs.filter(organisation_id=self.organisation_id)
+            if self.organization_id:
+                qs = qs.filter(organization_id=self.organization_id)
 
             matches = []
             for inv in qs:
@@ -162,8 +162,8 @@ class DuplicateDetector:
             from apps.invoices.models import Invoice
 
             qs = Invoice.objects.only("id", "invoice_number", "vendor_name")
-            if self.organisation_id:
-                qs = qs.filter(organisation_id=self.organisation_id)
+            if self.organization_id:
+                qs = qs.filter(organization_id=self.organization_id)
 
             matches = []
             for inv in qs[:500]:  # Cap to avoid full-table scan
@@ -212,8 +212,8 @@ class DuplicateDetector:
                 invoice_date__range=(date_from, date_to),
                 total_amount__range=(amount_min, amount_max),
             )
-            if self.organisation_id:
-                qs = qs.filter(organisation_id=self.organisation_id)
+            if self.organization_id:
+                qs = qs.filter(organization_id=self.organization_id)
 
             matches = []
             for inv in qs:
@@ -244,8 +244,8 @@ class DuplicateDetector:
             qs = InvoiceValidationResult.objects.filter(
                 details__file_hash=file_hash
             )
-            if self.organisation_id:
-                qs = qs.filter(invoice__organisation_id=self.organisation_id)
+            if self.organization_id:
+                qs = qs.filter(invoice__organization_id=self.organization_id)
 
             if qs.exists():
                 ids = list(qs.values_list("invoice_id", flat=True))
@@ -280,8 +280,8 @@ class DuplicateDetector:
                 invoice_number__iexact=doc_number,
             ).exclude(invoice_date__year=parsed_date.year, invoice_date__month=parsed_date.month)
 
-            if self.organisation_id:
-                qs = qs.filter(organisation_id=self.organisation_id)
+            if self.organization_id:
+                qs = qs.filter(organization_id=self.organization_id)
 
             if qs.exists():
                 ids = list(qs.values_list("id", flat=True))

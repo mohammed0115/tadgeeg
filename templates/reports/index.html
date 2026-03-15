@@ -67,7 +67,11 @@
             </p>
           </div>
           <button @click="viewReport(rep.id)"
-                  class="btn-ghost text-xs py-1.5 px-3 flex-shrink-0">عرض التقرير</button>
+                  class="btn-ghost text-xs py-1.5 px-3 flex-shrink-0">عرض</button>
+          <button @click="downloadPDF(rep.id, rep.title)"
+                  class="btn-ghost text-xs py-1.5 px-3 flex-shrink-0 flex items-center gap-1 text-primary-600 dark:text-primary-400">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>PDF
+          </button>
         </div>
       </template>
       <div x-show="!reports.length && !loadingList" class="text-center py-16 text-slate-400">
@@ -82,9 +86,21 @@
     <div @click.away="activeReport=null" class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[88vh] flex flex-col">
       <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
         <h3 class="font-bold text-slate-800 dark:text-white" x-text="activeReport?.title||'التقرير'"></h3>
-        <button @click="activeReport=null" class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
+        <div class="flex items-center gap-2">
+          <button @click="downloadPDF(activeReport.id, activeReport.title)"
+                  class="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5"
+                  :disabled="pdfLoading" title="تنزيل PDF">
+            <svg x-show="pdfLoading" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
+              <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            <i x-show="!pdfLoading" data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span x-text="pdfLoading ? 'جارٍ التنزيل...' : 'تنزيل PDF'"></span>
+          </button>
+          <button @click="activeReport=null" class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
       </div>
       <div class="flex-1 overflow-y-auto p-6 space-y-5">
 
@@ -140,7 +156,7 @@
 function reportsPage() {
   return {
     reports:[], loadingList:true, generating:false,
-    filterType:'', activeReport:null,
+    filterType:'', activeReport:null, pdfLoading:false,
 
     async init() { await this.loadReports(); },
 
@@ -175,6 +191,28 @@ function reportsPage() {
         this.activeReport = await apiFetch('/reports/'+id+'/');
         this.$nextTick(() => lucide.createIcons());
       } catch(e) { notify('فشل التحميل','error'); }
+    },
+
+    async downloadPDF(id, title) {
+      this.pdfLoading = true;
+      try {
+        const token = localStorage.getItem('fin_token');
+        const res = await fetch('/api/v1/reports/'+id+'/pdf/', {
+          headers: { 'Authorization': 'Bearer '+token }
+        });
+        if (!res.ok) throw new Error('فشل التنزيل ('+res.status+')');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = (title||'report').replace(/\s+/g,'_').slice(0,60)+'.pdf';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        notify('تم تنزيل التقرير بنجاح', 'success');
+      } catch(e) { notify('فشل تنزيل PDF: '+e.message, 'error'); }
+      this.pdfLoading = false;
     }
   }
 }

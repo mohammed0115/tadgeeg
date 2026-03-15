@@ -197,6 +197,74 @@ def _get_frames(image):
         pass
 
 
+# ─── OpenAI Vision OCR ────────────────────────────────────────────────────────
+
+OCR_TEXT_PROMPT = """You are a high-accuracy OCR engine for financial documents in Arabic and English.
+Read ALL text from this image exactly as it appears — preserve numbers, dates, VAT numbers, amounts, and labels.
+Output ONLY a JSON object with this structure:
+{
+  "text": "<full verbatim text, use \\n for line breaks>",
+  "confidence": <0-100, your OCR confidence>,
+  "language": "ar|en|mixed",
+  "is_handwritten": false
+}
+Do not interpret or summarize — extract every character you can see."""
+
+
+def extract_text_openai(image_path: str) -> dict:
+    """
+    Use GPT-4o Vision as an OCR engine to extract raw text from an image.
+
+    Returns:
+        dict with keys: text, confidence, language, is_handwritten, method
+    """
+    if not settings.OPENAI_API_KEY:
+        return {"text": "", "confidence": 0.0, "language": "unknown",
+                "is_handwritten": False, "method": "openai_ocr_skipped"}
+
+    try:
+        from openai import OpenAI
+
+        client = OpenAI(api_key=settings.OPENAI_API_KEY)
+
+        with open(image_path, "rb") as f:
+            image_data = base64.b64encode(f.read()).decode("utf-8")
+
+        ext = Path(image_path).suffix.lower()
+        mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                    ".png": "image/png", ".tiff": "image/tiff", ".tif": "image/tiff"}
+        mime_type = mime_map.get(ext, "image/png")
+
+        response = client.chat.completions.create(
+            model=settings.OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": OCR_TEXT_PROMPT},
+                {"role": "user", "content": [{
+                    "type": "image_url",
+                    "image_url": {"url": f"data:{mime_type};base64,{image_data}", "detail": "high"}
+                }]},
+            ],
+            max_tokens=4000,
+            response_format={"type": "json_object"},
+            temperature=0,
+        )
+
+        data = json.loads(response.choices[0].message.content)
+        return {
+            "text":           data.get("text", ""),
+            "confidence":     float(data.get("confidence", 90)),
+            "language":       data.get("language", "unknown"),
+            "is_handwritten": bool(data.get("is_handwritten", False)),
+            "method":         "openai_ocr",
+            "tokens_used":    response.usage.total_tokens,
+        }
+
+    except Exception as e:
+        logger.error(f"OpenAI OCR failed for {image_path}: {e}")
+        return {"text": "", "confidence": 0.0, "language": "unknown",
+                "is_handwritten": False, "method": "openai_ocr_failed", "error": str(e)}
+
+
 # ─── OpenAI Vision Enhancement ────────────────────────────────────────────────
 
 def enhance_with_openai(image_path: str, document_type: str, raw_text: str = "") -> dict:

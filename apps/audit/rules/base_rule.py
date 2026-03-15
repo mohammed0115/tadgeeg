@@ -92,7 +92,7 @@ class AuditRule(abc.ABC):
     def evaluate(
         self,
         document: dict,
-        organisation_id: int = None,
+        organization_id: int = None,
         context: dict = None,
     ) -> RuleResult:
         """
@@ -100,7 +100,7 @@ class AuditRule(abc.ABC):
 
         Args:
             document:        Normalised document dict from FinancialAIEngine.
-            organisation_id: Organisation ID for DB queries.
+            organization_id: Organisation ID for DB queries.
             context:         Optional extra context (financial_analysis, etc.).
 
         Returns:

@@ -56,13 +56,13 @@ class FraudDetector:
     Statistical and rule-based fraud signal detector.
 
     Usage:
-        detector = FraudDetector(organisation_id=org.id)
+        detector = FraudDetector(organization_id=org.id)
         result = detector.detect(document)
         print(result['fraud_score'], result['fraud_patterns'])
     """
 
-    def __init__(self, organisation_id: int = None):
-        self.organisation_id = organisation_id
+    def __init__(self, organization_id: int = None):
+        self.organization_id = organization_id
 
     def detect(self, document: dict) -> dict:
         """
@@ -141,8 +141,8 @@ class FraudDetector:
             from apps.invoices.models import Invoice
 
             qs = Invoice.objects.filter(total_amount=total, vendor_name__iexact=vendor)
-            if self.organisation_id:
-                qs = qs.filter(organisation_id=self.organisation_id)
+            if self.organization_id:
+                qs = qs.filter(organization_id=self.organization_id)
 
             count = qs.count()
             if count >= 2:
@@ -195,11 +195,11 @@ class FraudDetector:
                 return True, f"Invoice date {doc_date} is in the future"
 
             # Check against org registration date if available
-            if self.organisation_id:
+            if self.organization_id:
                 try:
                     from apps.authentication.models import Organization
 
-                    org = Organization.objects.get(pk=self.organisation_id)
+                    org = Organization.objects.get(pk=self.organization_id)
                     reg_date = getattr(org, "created_at", None)
                     if reg_date:
                         reg_date = reg_date.date() if hasattr(reg_date, "date") else reg_date
@@ -258,8 +258,8 @@ class FraudDetector:
                 vendor_name__iexact=vendor,
                 invoice_date=date_str,
             )
-            if self.organisation_id:
-                qs = qs.filter(organisation_id=self.organisation_id)
+            if self.organization_id:
+                qs = qs.filter(organization_id=self.organization_id)
 
             count = qs.count()
             if count >= SAME_DAY_INVOICE_LIMIT:
@@ -303,8 +303,8 @@ class FraudDetector:
             profile = VendorProfile.objects.filter(
                 vendor_name__iexact=vendor,
             )
-            if self.organisation_id:
-                profile = profile.filter(organisation_id=self.organisation_id)
+            if self.organization_id:
+                profile = profile.filter(organization_id=self.organization_id)
 
             profile = profile.first()
             if profile:
@@ -347,12 +347,12 @@ class FraudDetector:
             from apps.invoices.models import VendorProfile
 
             profile = VendorProfile.objects.filter(vendor_name__iexact=vendor_name)
-            if self.organisation_id:
-                profile = profile.filter(organisation_id=self.organisation_id)
+            if self.organization_id:
+                profile = profile.filter(organization_id=self.organization_id)
 
             p = profile.first()
-            if p and p.average_amount:
-                return float(p.average_amount)
+            if p and p.avg_invoice_amount:
+                return float(p.avg_invoice_amount)
         except Exception as exc:
             logger.debug("[FraudDetector] vendor avg lookup error: %s", exc)
         return None

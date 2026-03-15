@@ -23,6 +23,22 @@ from .models import Report
 logger = logging.getLogger("finai")
 
 
+def _json_safe(obj):
+    """Recursively convert Decimal / UUID / date to JSON-safe Python types."""
+    import decimal, uuid, datetime
+    if isinstance(obj, dict):
+        return {k: _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe(i) for i in obj]
+    if isinstance(obj, decimal.Decimal):
+        return float(obj)
+    if isinstance(obj, uuid.UUID):
+        return str(obj)
+    if isinstance(obj, (datetime.date, datetime.datetime)):
+        return obj.isoformat()
+    return obj
+
+
 # ─── Helper: collect invoice section data ─────────────────────────────────────
 
 def _collect_invoice_data(org, date_from=None, date_to=None) -> dict:
@@ -36,7 +52,7 @@ def _collect_invoice_data(org, date_from=None, date_to=None) -> dict:
     # ── Overall stats ──────────────────────────────────────────────────────────
     stats = inv_qs.aggregate(
         total_invoices=Count("id"),
-        total_amount=Sum("total_amount"),
+        total_invoiced=Sum("total_amount"),
         total_vat=Sum("vat_amount"),
         avg_amount=Avg("total_amount"),
         avg_risk_score=Avg("risk_score"),
@@ -111,17 +127,17 @@ def _collect_invoice_data(org, date_from=None, date_to=None) -> dict:
         inv_qs.values("vendor_name")
         .annotate(
             invoice_count=Count("id"),
-            total_amount=Sum("total_amount"),
+            vendor_total=Sum("total_amount"),
             avg_amount=Avg("total_amount"),
             flagged=Count("id", filter=Q(risk_level__in=["high", "critical"])),
             duplicates=Count("id", filter=Q(is_duplicate=True)),
         )
-        .order_by("-total_amount")[:15]
+        .order_by("-vendor_total")[:15]
     )
     vendor_list = []
-    total_spend = float(stats["total_amount"] or 0)
+    total_spend = float(stats["total_invoiced"] or 0)
     for v in vendor_stats:
-        v_total = float(v["total_amount"] or 0)
+        v_total = float(v["vendor_total"] or 0)
         vendor_list.append({
             "vendor_name": v["vendor_name"],
             "invoice_count": v["invoice_count"],
@@ -213,7 +229,7 @@ def _collect_invoice_data(org, date_from=None, date_to=None) -> dict:
     return {
         "overall_stats": {
             **stats,
-            "total_amount":    round(float(stats["total_amount"]  or 0), 2),
+            "total_amount":    round(float(stats["total_invoiced"]  or 0), 2),
             "total_vat":       round(float(stats["total_vat"]     or 0), 2),
             "avg_amount":      round(float(stats["avg_amount"]    or 0), 2),
             "avg_risk_score":  round(float(stats["avg_risk_score"] or 0), 2),
@@ -350,6 +366,7 @@ class GenerateAuditReportView(APIView):
         )
 
         # ── AI Narrative ───────────────────────────────────────────────────────
+        audit_data = _json_safe(audit_data)
         narrative = generate_audit_narrative(audit_data, language=language)
 
         # ── Save Report ────────────────────────────────────────────────────────
@@ -358,8 +375,8 @@ class GenerateAuditReportView(APIView):
             generated_by=request.user,
             report_type=report_type,
             language=language,
-            period_from=date_from,
-            period_to=date_to,
+            period_from=date_from or "",
+            period_to=date_to or str(date.today()),
             data=audit_data,
             narrative=narrative,
             title=f"{report_type.replace('_', ' ').title()} Report — {date_to}",
@@ -398,7 +415,7 @@ class InvoiceAuditReportView(APIView):
         date_to   = request.query_params.get("date_to") or str(date.today())
         language  = request.query_params.get("language", "en")
 
-        data = _collect_invoice_data(org, date_from, date_to)
+        data = _json_safe(_collect_invoice_data(org, date_from, date_to))
 
         # AI narrative for invoice audit specifically
         narrative = generate_audit_narrative(
@@ -571,5 +588,33 @@ class ReportExportView(APIView):
             json.dumps(payload, cls=DjangoJSONEncoder, ensure_ascii=False, indent=2),
             content_type="application/json; charset=utf-8",
         )
-        response["Content-Disposition"] = f'attachment; filename="finai-export-{org.id}.json"'
+        response["Content-Disposition"] = f'attachment; filename="tadgeeg-export-{org.id}.json"'
+        return response
+
+
+class ReportPDFView(APIView):
+    """Render a saved report as a downloadable PDF."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            report = Report.objects.get(pk=pk, organization=request.user.organization)
+        except Report.DoesNotExist:
+            return HttpResponse("التقرير غير موجود.", status=404)
+
+        from django.template.loader import render_to_string
+        from weasyprint import HTML as WP_HTML
+
+        html_str = render_to_string("reports/report_pdf.html", {
+            "report": report,
+            "narrative": report.narrative or {},
+            "data": report.data or {},
+            "org": request.user.organization,
+        }, request=request)
+
+        pdf_bytes = WP_HTML(string=html_str, base_url=request.build_absolute_uri("/")).write_pdf()
+
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        safe_title = (report.title or "report").replace(" ", "_").replace("/", "-")[:60]
+        response["Content-Disposition"] = f'attachment; filename="{safe_title}.pdf"'
         return response

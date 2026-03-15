@@ -59,7 +59,7 @@ def _base_html(title: str, body_html: str, color: str = "#2563eb") -> str:
         <!-- Header -->
         <tr>
           <td style="background:{color};padding:28px 32px;">
-            <span style="color:#fff;font-size:22px;font-weight:bold;">FinAI</span>
+            <span style="color:#fff;font-size:22px;font-weight:bold;">Tadgeeg</span>
             <span style="color:rgba(255,255,255,.75);font-size:14px;margin-right:12px;">نظام التدقيق المالي</span>
           </td>
         </tr>
@@ -79,7 +79,7 @@ def _base_html(title: str, body_html: str, color: str = "#2563eb") -> str:
         <tr>
           <td style="background:#f8fafc;padding:16px 32px;border-top:1px solid #e2e8f0;">
             <p style="margin:0;font-size:12px;color:#94a3b8;text-align:center;">
-              FinAI — نظام التدقيق المالي الذكي | هذه الرسالة تلقائية، لا تردّ عليها
+              Tadgeeg — نظام التدقيق المالي الذكي | هذه الرسالة تلقائية، لا تردّ عليها
             </p>
           </td>
         </tr>
@@ -134,7 +134,7 @@ def notify_invoice_flagged(invoice, recipients: list[str]):
 <p style="margin:20px 0 4px;">{_btn("مراجعة الفاتورة", f"{settings.SITE_URL}/invoices/{invoice.id}/", risk_color)}</p>
 """
     html = _base_html(f"⚠️ فاتورة مُعلَّقة — {invoice.invoice_number or 'بدون رقم'}", body, risk_color)
-    return _send(recipients, f"[FinAI] فاتورة مُعلَّقة: {invoice.invoice_number or invoice.vendor_name}", html)
+    return _send(recipients, f"[Tadgeeg] فاتورة مُعلَّقة: {invoice.invoice_number or invoice.vendor_name}", html)
 
 
 def notify_audit_case_created(case, recipients: list[str]):
@@ -160,7 +160,7 @@ def notify_audit_case_created(case, recipients: list[str]):
 {_btn("فتح القضية", f"{settings.SITE_URL}/audit/{case.id}/", priority_color)}
 """
     html = _base_html(f"📋 قضية تدقيق جديدة — {case.case_number}", body, priority_color)
-    return _send(recipients, f"[FinAI] قضية تدقيق: {case.case_number} — {case.title[:50]}", html)
+    return _send(recipients, f"[Tadgeeg] قضية تدقيق: {case.case_number} — {case.title[:50]}", html)
 
 
 def notify_audit_case_escalated(case, recipients: list[str]):
@@ -175,7 +175,7 @@ def notify_audit_case_escalated(case, recipients: list[str]):
 {_btn("مراجعة القضية", f"{settings.SITE_URL}/audit/{case.id}/", "#dc2626")}
 """
     html = _base_html(f"🚨 إحالة قضية — {case.case_number}", body, "#dc2626")
-    return _send(recipients, f"[FinAI] إحالة عاجلة: {case.case_number}", html)
+    return _send(recipients, f"[Tadgeeg] إحالة عاجلة: {case.case_number}", html)
 
 
 def notify_payroll_anomaly(payroll, anomaly_type: str, details: str, recipients: list[str]):
@@ -199,7 +199,7 @@ def notify_payroll_anomaly(payroll, anomaly_type: str, details: str, recipients:
 {_btn("مراجعة كشف الرواتب", f"{settings.SITE_URL}/documents/payroll/{payroll.id}/", color)}
 """
     html = _base_html(f"⚠️ {title_ar}", body, color)
-    return _send(recipients, f"[FinAI] شذوذ في الرواتب: {title_ar}", html)
+    return _send(recipients, f"[Tadgeeg] شذوذ في الرواتب: {title_ar}", html)
 
 
 def notify_vat_late_filing(vat_return, recipients: list[str]):
@@ -217,14 +217,14 @@ def notify_vat_late_filing(vat_return, recipients: list[str]):
 {_btn("مراجعة الإقرار", f"{settings.SITE_URL}/documents/vat-returns/{vat_return.id}/", "#dc2626")}
 """
     html = _base_html(f"⏰ تأخر في تقديم الإقرار الضريبي", body, "#dc2626")
-    return _send(recipients, f"[FinAI] تأخر إقرار ضريبي: {vat_return.vat_number}", html)
+    return _send(recipients, f"[Tadgeeg] تأخر إقرار ضريبي: {vat_return.vat_number}", html)
 
 
 def send_welcome_email(user, temp_password: str = ""):
     """Welcome email for new users."""
     body = f"""
 <p style="color:#0f172a;font-size:16px;margin:0 0 16px;">أهلاً <strong>{user.full_name}</strong>،</p>
-<p style="color:#64748b;margin:0 0 20px;">تم إنشاء حسابك في نظام FinAI للتدقيق المالي الذكي.</p>
+<p style="color:#64748b;margin:0 0 20px;">تم إنشاء حسابك في نظام Tadgeeg للتدقيق المالي الذكي.</p>
 <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin:0 0 20px;">
   {"".join([_kv_row("البريد الإلكتروني", user.email),
              _kv_row("الدور", user.get_role_display() if hasattr(user, 'get_role_display') else user.role, "#f8fafc"),
@@ -234,8 +234,8 @@ def send_welcome_email(user, temp_password: str = ""):
 {"<p style='color:#dc2626;font-size:13px;'>⚠️ يرجى تغيير كلمة المرور فور تسجيل الدخول الأول.</p>" if temp_password else ""}
 {_btn("تسجيل الدخول", f"{settings.SITE_URL}/login/")}
 """
-    html = _base_html("مرحباً بك في FinAI 🎉", body, "#2563eb")
-    return _send([user.email], "[FinAI] مرحباً بك في نظام التدقيق المالي", html)
+    html = _base_html("مرحباً بك في Tadgeeg 🎉", body, "#2563eb")
+    return _send([user.email], "[Tadgeeg] مرحباً بك في نظام التدقيق المالي", html)
 
 
 def send_weekly_summary(org, summary_data: dict, recipients: list[str]):
@@ -258,7 +258,7 @@ def send_weekly_summary(org, summary_data: dict, recipients: list[str]):
 {_btn("عرض التقرير الكامل", f"{settings.SITE_URL}/reports/")}
 """
     html = _base_html(f"📊 ملخص أسبوعي — {org.name}", body)
-    return _send(recipients, f"[FinAI] الملخص الأسبوعي — {org.name}", html)
+    return _send(recipients, f"[Tadgeeg] الملخص الأسبوعي — {org.name}", html)
 
 
 # ── Celery tasks ──────────────────────────────────────────────────────────────

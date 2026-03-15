@@ -46,7 +46,7 @@ class VendorRiskRule(AuditRule):
     def evaluate(
         self,
         document: dict,
-        organisation_id: int = None,
+        organization_id: int = None,
         context: dict = None,
     ) -> RuleResult:
         context = context or {}
@@ -70,7 +70,7 @@ class VendorRiskRule(AuditRule):
             details["suspicious_name"] = True
 
         # ── V02: Blocked vendor ────────────────────────────────────────────────
-        profile = self._get_vendor_profile(vendor, organisation_id)
+        profile = self._get_vendor_profile(vendor, organization_id)
         if profile:
             risk_tier = getattr(profile, "risk_tier", "low")
             if risk_tier == "blocked":
@@ -97,7 +97,7 @@ class VendorRiskRule(AuditRule):
         # ── V04: Spend dominance ──────────────────────────────────────────────
         total_amount = float(document.get("total_amount") or 0)
         if total_amount > 0:
-            dominance = self._check_spend_dominance(vendor, total_amount, organisation_id)
+            dominance = self._check_spend_dominance(vendor, total_amount, organization_id)
             if dominance:
                 self.severity = max(self.severity, Severity.MEDIUM)
                 issues.append(dominance)
@@ -105,7 +105,7 @@ class VendorRiskRule(AuditRule):
 
         # ── V05: VAT number used by multiple vendors ───────────────────────────
         if vendor_vat:
-            mismatch = self._check_vat_identity_mismatch(vendor, vendor_vat, organisation_id)
+            mismatch = self._check_vat_identity_mismatch(vendor, vendor_vat, organization_id)
             if mismatch:
                 self.severity = Severity.HIGH
                 issues.append(mismatch)
@@ -121,20 +121,20 @@ class VendorRiskRule(AuditRule):
 
     # ── Helpers ───────────────────────────────────────────────────────────────
 
-    def _get_vendor_profile(self, vendor: str, organisation_id: int):
+    def _get_vendor_profile(self, vendor: str, organization_id: int):
         try:
             from apps.invoices.models import VendorProfile
 
             qs = VendorProfile.objects.filter(vendor_name__iexact=vendor)
-            if organisation_id:
-                qs = qs.filter(organisation_id=organisation_id)
+            if organization_id:
+                qs = qs.filter(organization_id=organization_id)
             return qs.first()
         except Exception as exc:
             logger.debug("[VendorRiskRule] profile lookup error: %s", exc)
         return None
 
     def _check_spend_dominance(
-        self, vendor: str, amount: float, organisation_id: int
+        self, vendor: str, amount: float, organization_id: int
     ) -> str:
         try:
             from django.db.models import Sum
@@ -144,9 +144,9 @@ class VendorRiskRule(AuditRule):
             vendor_qs = Invoice.objects.filter(
                 vendor_name__iexact=vendor, total_amount__gt=0
             )
-            if organisation_id:
-                total_qs = total_qs.filter(organisation_id=organisation_id)
-                vendor_qs = vendor_qs.filter(organisation_id=organisation_id)
+            if organization_id:
+                total_qs = total_qs.filter(organization_id=organization_id)
+                vendor_qs = vendor_qs.filter(organization_id=organization_id)
 
             org_total = total_qs.aggregate(t=Sum("total_amount"))["t"] or 0
             vendor_total = vendor_qs.aggregate(t=Sum("total_amount"))["t"] or 0
@@ -162,7 +162,7 @@ class VendorRiskRule(AuditRule):
         return ""
 
     def _check_vat_identity_mismatch(
-        self, vendor: str, vat_number: str, organisation_id: int
+        self, vendor: str, vat_number: str, organization_id: int
     ) -> str:
         try:
             from apps.invoices.models import Invoice
@@ -173,8 +173,8 @@ class VendorRiskRule(AuditRule):
             ).exclude(
                 vendor_name__iexact=vendor
             )
-            if organisation_id:
-                qs = qs.filter(organisation_id=organisation_id)
+            if organization_id:
+                qs = qs.filter(organization_id=organization_id)
 
             other_vendors = (
                 qs.values_list("vendor_name", flat=True)

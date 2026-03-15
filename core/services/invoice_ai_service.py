@@ -78,13 +78,20 @@ Return ONLY JSON:
 }"""
 
 
+_IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".tiff", ".tif", ".pdf"}
+_TEXT_EXTS  = {".xlsx", ".xls", ".json", ".csv"}
+
+
 def extract_invoice_with_ai(image_path: str, raw_text: str = "") -> dict:
     """
-    Extract structured invoice data using OpenAI GPT-4 Vision.
+    Extract structured invoice data using OpenAI GPT-4o.
+
+    - Image/PDF files  → GPT-4o Vision (base64 image_url)
+    - Excel/JSON files → GPT-4o text-only (raw_text already extracted)
 
     Args:
-        image_path: Path to image file (PNG, JPG, TIFF).
-        raw_text: Optional pre-extracted text from Tesseract.
+        image_path: Path to the stored file.
+        raw_text: Pre-extracted text (Tesseract for images, pandas/json for xlsx/json).
 
     Returns:
         dict with extracted invoice fields.
@@ -93,42 +100,71 @@ def extract_invoice_with_ai(image_path: str, raw_text: str = "") -> dict:
         logger.warning("OpenAI not configured — using text-only extraction.")
         return _fallback_extraction(raw_text)
 
+    ext = Path(image_path).suffix.lower()
+    use_vision = ext in _IMAGE_EXTS
+
     try:
         from openai import OpenAI
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
-        with open(image_path, "rb") as f:
-            image_data = base64.b64encode(f.read()).decode("utf-8")
+        if use_vision:
+            # ── Vision path (PDF rendered to image, JPG, PNG, TIFF) ──────────
+            with open(image_path, "rb") as f:
+                image_data = base64.b64encode(f.read()).decode("utf-8")
 
-        ext = Path(image_path).suffix.lower()
-        mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg",
-                    ".png": "image/png", ".tiff": "image/tiff", ".tif": "image/tiff"}
-        mime_type = mime_map.get(ext, "image/png")
+            mime_map = {".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+                        ".png": "image/png", ".tiff": "image/tiff", ".tif": "image/tiff"}
+            mime_type = mime_map.get(ext, "image/png")
 
-        user_content = []
-        if raw_text:
+            user_content = []
+            if raw_text:
+                user_content.append({
+                    "type": "text",
+                    "text": f"Pre-extracted text (Tesseract):\n{raw_text[:2000]}\n\nNow analyze the image:"
+                })
             user_content.append({
-                "type": "text",
-                "text": f"Pre-extracted text (Tesseract):\n{raw_text[:2000]}\n\nNow analyze the image:"
+                "type": "image_url",
+                "image_url": {"url": f"data:{mime_type};base64,{image_data}", "detail": "high"}
             })
-        user_content.append({
-            "type": "image_url",
-            "image_url": {"url": f"data:{mime_type};base64,{image_data}", "detail": "high"}
-        })
 
-        response = client.chat.completions.create(
-            model=settings.OPENAI_MODEL,
-            messages=[
-                {"role": "system", "content": INVOICE_EXTRACTION_PROMPT},
-                {"role": "user",   "content": user_content},
-            ],
-            max_tokens=2000,
-            response_format={"type": "json_object"},
-            temperature=0,
-        )
+            response = client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[
+                    {"role": "system", "content": INVOICE_EXTRACTION_PROMPT},
+                    {"role": "user",   "content": user_content},
+                ],
+                max_tokens=2000,
+                response_format={"type": "json_object"},
+                temperature=0,
+            )
+            method = "openai_vision"
+
+        else:
+            # ── Text-only path (xlsx, xls, json, csv) ────────────────────────
+            if not raw_text:
+                logger.warning(f"No raw_text for text-only extraction of {image_path}")
+                return _fallback_extraction(raw_text)
+
+            text_prompt = (
+                f"The following is the full text content extracted from a financial document "
+                f"({ext} file). Extract all invoice fields as specified.\n\n"
+                f"Document content:\n{raw_text[:6000]}"
+            )
+
+            response = client.chat.completions.create(
+                model=settings.OPENAI_MODEL,
+                messages=[
+                    {"role": "system", "content": INVOICE_EXTRACTION_PROMPT},
+                    {"role": "user",   "content": text_prompt},
+                ],
+                max_tokens=2000,
+                response_format={"type": "json_object"},
+                temperature=0,
+            )
+            method = "openai_text"
 
         data = json.loads(response.choices[0].message.content)
-        data["_extraction_method"] = "openai_vision"
+        data["_extraction_method"] = method
         data["_tokens_used"] = response.usage.total_tokens
         return data
 

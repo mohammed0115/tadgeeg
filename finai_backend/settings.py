@@ -173,10 +173,12 @@ USE_TZ = True
 # ─── Static / Media ───────────────────────────────────────────────────────────
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 STATIC_ROOT.mkdir(parents=True, exist_ok=True)
 MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+(BASE_DIR / "static").mkdir(parents=True, exist_ok=True)
 
 if not DEBUG:
     STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"

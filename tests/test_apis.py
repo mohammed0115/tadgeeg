@@ -11,6 +11,7 @@ Tests validate:
 
 import pytest
 from django.urls import reverse
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 from rest_framework.test import APIClient
 from decimal import Decimal
@@ -221,10 +222,67 @@ class TestInvoiceUploadAPI:
         """Should apply all 30 audit rules"""
         mock_audit = mocker.patch('apps.audit.audit_engine.AuditEngine.evaluate')
         mock_audit.return_value = Mock(issues=[])
-        
+
         with patch('apps.invoices.views.InvoiceUploadView.post'):
             # Verify that audit engine would be called
             pass
+
+    def test_invoice_upload_accepts_structured_csv(self, authenticated_client):
+        """Should parse a single-invoice CSV upload without using OCR."""
+        csv_content = "\n".join([
+            "invoice_number,invoice_date,vendor_name,vendor_vat_number,currency,subtotal,vat_amount,total_amount,cost_center,account_code",
+            "INV-CSV-001,2026-03-15,Structured Vendor,300000000000003,SAR,100,15,115,CC-100,AC-200",
+        ])
+        upload = SimpleUploadedFile(
+            "invoice.csv",
+            csv_content.encode("utf-8"),
+            content_type="text/csv",
+        )
+
+        response = authenticated_client.post(
+            reverse("invoice-upload"),
+            {"files": upload},
+            format="multipart",
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["processed"] == 1
+        assert response.data["failed"] == 0
+
+        invoice = Invoice.objects.get(original_filename="invoice.csv")
+        assert invoice.invoice_number == "INV-CSV-001"
+        assert invoice.vendor_name == "Structured Vendor"
+        assert invoice.vendor_vat_number == "300000000000003"
+        assert invoice.cost_center == "CC-100"
+        assert invoice.account_code == "AC-200"
+        assert invoice.ocr_confidence == 100.0
+        assert str(invoice.total_amount) == "115.00"
+        assert invoice.extracted_data["_extraction_method"] == "structured_csv"
+
+    def test_invoice_upload_rejects_multi_invoice_csv(self, authenticated_client):
+        """Should reject CSV files that contain conflicting invoice headers."""
+        csv_content = "\n".join([
+            "invoice_number,invoice_date,vendor_name,total_amount",
+            "INV-CSV-001,2026-03-15,Structured Vendor,115",
+            "INV-CSV-002,2026-03-16,Structured Vendor,230",
+        ])
+        upload = SimpleUploadedFile(
+            "multiple-invoices.csv",
+            csv_content.encode("utf-8"),
+            content_type="text/csv",
+        )
+
+        response = authenticated_client.post(
+            reverse("invoice-upload"),
+            {"files": upload},
+            format="multipart",
+        )
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.data["processed"] == 0
+        assert response.data["failed"] == 1
+        assert "multiple invoice records" in response.data["errors"][0]["error"].lower()
+        assert not Invoice.objects.filter(original_filename="multiple-invoices.csv").exists()
 
 
 # ─── Invoice Approval Tests ───────────────────────────────────────────────

@@ -1,15 +1,19 @@
 """
 Invoice Auditing Views
-Supports: single file, multiple files, ZIP archive upload.
+Supports: single file, multiple files, structured data files, ZIP archive upload.
 Runs all 30 validation rules + AI analysis on each invoice.
 """
 
+import csv
 import io
+import json
 import logging
+import math
 import os
+import re
 import time
 import zipfile
-from datetime import date
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 from django.core.files.base import ContentFile
@@ -40,9 +44,81 @@ from .serializers import (
 
 logger = logging.getLogger("finai")
 
-ALLOWED_MIME = {"application/pdf", "image/jpeg", "image/png", "image/tiff",
-                "application/zip", "application/x-zip-compressed"}
-ALLOWED_EXT  = {".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif", ".zip"}
+IMAGE_EXT = {".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif"}
+STRUCTURED_EXT = {".csv", ".xlsx", ".xls", ".json"}
+ZIP_EXT = {".zip"}
+
+ALLOWED_MIME = {
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/tiff",
+    "application/zip",
+    "application/x-zip-compressed",
+    "text/csv",
+    "application/csv",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/json",
+    "text/json",
+}
+ALLOWED_EXT = IMAGE_EXT | STRUCTURED_EXT | ZIP_EXT
+
+_FIELD_ALIAS_GROUPS = {
+    "invoice_number": {"invoice_no", "invoice_id", "number", "reference", "ref", "رقم الفاتورة", "رقم_الفاتورة"},
+    "invoice_date": {"date", "issued_at", "تاريخ الفاتورة", "تاريخ_الفاتورة", "التاريخ"},
+    "due_date": {"due", "due_date_at", "تاريخ الاستحقاق", "تاريخ_الاستحقاق"},
+    "vendor_name": {"vendor", "vendor_name_en", "supplier", "supplier_name", "merchant_name", "المورد", "اسم المورد", "اسم_المورد"},
+    "vendor_name_ar": {"vendor_ar", "vendor_name_arabic", "اسم المورد بالعربية", "اسم_المورد_بالعربية"},
+    "vendor_vat_number": {"vat_number", "vendor_vat", "vendor_tax_number", "supplier_vat", "vat_no", "الرقم الضريبي", "الرقم_الضريبي", "الرقم الضريبي للمورد", "الرقم_الضريبي_للمورد"},
+    "vendor_cr_number": {"cr_number", "commercial_registration", "registration_number", "السجل التجاري", "السجل_التجاري", "رقم السجل التجاري", "رقم_السجل_التجاري"},
+    "vendor_address": {"address", "vendor_location", "عنوان المورد", "عنوان_المورد"},
+    "vendor_phone": {"phone", "vendor_mobile", "هاتف المورد", "هاتف_المورد"},
+    "customer_name": {"customer", "client_name", "اسم العميل", "اسم_العميل"},
+    "customer_vat_number": {"customer_vat", "customer_tax_number", "الرقم الضريبي للعميل", "الرقم_الضريبي_للعميل"},
+    "currency": {"currency_code", "عملة", "العملة"},
+    "subtotal": {"sub_total", "amount_before_tax", "before_tax", "net_amount", "subtotal_amount", "المبلغ قبل الضريبة", "المبلغ_قبل_الضريبة", "الإجمالي قبل الضريبة", "الإجمالي_قبل_الضريبة"},
+    "vat_rate": {"tax_rate", "vat_percent", "vat_pct", "نسبة الضريبة", "نسبة_الضريبة", "نسبة القيمة المضافة", "نسبة_القيمة_المضافة"},
+    "vat_amount": {"tax_amount", "vat_value", "vat", "tax", "قيمة الضريبة", "قيمة_الضريبة", "مبلغ الضريبة", "مبلغ_الضريبة"},
+    "discount": {"discount_amount", "الخصم", "قيمة الخصم", "قيمة_الخصم"},
+    "total_amount": {"amount", "total", "grand_total", "invoice_total", "المبلغ", "الإجمالي", "المبلغ الإجمالي", "المبلغ_الإجمالي", "الإجمالي_النهائي"},
+    "line_items": {"items", "details", "تفاصيل البنود", "تفاصيل_البنود", "البنود"},
+    "cost_center": {"costcentre", "cost_centre", "مركز التكلفة", "مركز_التكلفة"},
+    "account_code": {"account", "gl_code", "ledger_code", "رمز الحساب", "رمز_الحساب", "الحساب"},
+    "budget_code": {"budget", "budget_ref", "رمز الميزانية", "رمز_الميزانية"},
+    "department": {"dept", "القسم"},
+    "has_qr_code": {"qr", "qr_code", "has_qr", "يوجد qr", "يوجد_qr", "يوجد رمز qr", "يوجد_رمز_qr"},
+    "qr_code_valid": {"qr_valid", "valid_qr", "صلاحية_qr", "qr_صالح"},
+    "is_clear": {"clear", "document_clear", "واضح", "واضحة"},
+    "has_alterations": {"tampered", "altered", "modified", "به تلاعب", "به_تلاعب"},
+    "language": {"lang", "اللغة"},
+    "ai_summary": {"summary", "notes", "ملاحظات", "ملخص"},
+}
+
+_LINE_ITEM_ALIAS_GROUPS = {
+    "description": {"description", "details", "item", "item_description", "line_description", "narration"},
+    "quantity": {"qty", "quantity", "count"},
+    "unit_price": {"unit_price", "unitprice", "price", "unit_cost", "rate"},
+    "total": {"line_total", "linetotal", "total", "amount", "value"},
+    "vat_rate": {"vat_rate", "vatrate", "tax_rate", "taxrate"},
+}
+
+
+def _normalize_alias_key(value):
+    return re.sub(r"[^0-9a-zA-Z\u0600-\u06FF]+", "", str(value or "").strip().lower())
+
+
+STRUCTURED_FIELD_ALIASES = {}
+for canonical, aliases in _FIELD_ALIAS_GROUPS.items():
+    STRUCTURED_FIELD_ALIASES[_normalize_alias_key(canonical)] = canonical
+    for alias in aliases:
+        STRUCTURED_FIELD_ALIASES[_normalize_alias_key(alias)] = canonical
+
+LINE_ITEM_FIELD_ALIASES = {}
+for canonical, aliases in _LINE_ITEM_ALIAS_GROUPS.items():
+    LINE_ITEM_FIELD_ALIASES[_normalize_alias_key(canonical)] = canonical
+    for alias in aliases:
+        LINE_ITEM_FIELD_ALIASES[_normalize_alias_key(alias)] = canonical
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -64,9 +140,23 @@ def _save_audit_event(invoice, user, event_type, description="", before=None, af
     )
 
 
+def _is_blank_value(value):
+    if value is None:
+        return True
+    if isinstance(value, Decimal) and value.is_nan():
+        return True
+    if isinstance(value, float) and math.isnan(value):
+        return True
+    if isinstance(value, str):
+        return value.strip().lower() in {"", "nan", "none", "null", "nat"}
+    if isinstance(value, (list, tuple, set, dict)):
+        return len(value) == 0
+    return False
+
+
 def _first_non_empty(*values):
     for value in values:
-        if value is None:
+        if _is_blank_value(value):
             continue
         if isinstance(value, str):
             cleaned = value.strip()
@@ -82,6 +172,424 @@ def _to_float(value, default=0.0):
         return float(value)
     except (TypeError, ValueError, ArithmeticError):
         return default
+
+
+def _safe_decimal(value, default="0"):
+    if _is_blank_value(value):
+        return Decimal(default)
+
+    if isinstance(value, Decimal):
+        return value
+
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if isinstance(value, float) and math.isnan(value):
+            return Decimal(default)
+        try:
+            return Decimal(str(value))
+        except Exception:
+            return Decimal(default)
+
+    text = str(value).strip().replace(",", "")
+    if text.endswith("%"):
+        text = text[:-1]
+    match = re.search(r"-?\d+(?:\.\d+)?", text)
+    if not match:
+        return Decimal(default)
+    try:
+        return Decimal(match.group(0))
+    except Exception:
+        return Decimal(default)
+
+
+def _safe_date(value):
+    if _is_blank_value(value):
+        return None
+
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+
+    if isinstance(value, Decimal):
+        value = float(value)
+
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        try:
+            numeric_value = float(value)
+            if 0 < numeric_value < 60000:
+                return (datetime(1899, 12, 30) + timedelta(days=numeric_value)).date()
+        except Exception:
+            return None
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    iso_text = text.replace("Z", "+00:00")
+    try:
+        return datetime.fromisoformat(iso_text).date()
+    except ValueError:
+        pass
+
+    for fmt in (
+        "%Y-%m-%d",
+        "%Y/%m/%d",
+        "%d/%m/%Y",
+        "%d-%m-%Y",
+        "%d/%m/%y",
+        "%m/%d/%Y",
+        "%d.%m.%Y",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y/%m/%d %H:%M:%S",
+    ):
+        try:
+            return datetime.strptime(text, fmt).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _safe_bool(value, default=False):
+    if _is_blank_value(value):
+        return default
+
+    if isinstance(value, bool):
+        return value
+
+    if isinstance(value, Decimal):
+        return value != 0
+
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if isinstance(value, float) and math.isnan(value):
+            return default
+        return value != 0
+
+    text = str(value).strip().lower()
+    if text in {"true", "1", "yes", "y", "on"}:
+        return True
+    if text in {"false", "0", "no", "n", "off"}:
+        return False
+    return default
+
+
+def _safe_line_items(value):
+    if _is_blank_value(value):
+        return []
+
+    if isinstance(value, list):
+        return value
+    if isinstance(value, tuple):
+        return list(value)
+    if isinstance(value, dict):
+        items = value.get("items")
+        if isinstance(items, list):
+            return items
+        return [value]
+
+    text = str(value).strip()
+    if not text:
+        return []
+
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        return [{"description": text}]
+    return _safe_line_items(parsed)
+
+
+def _resolve_saved_file_path(invoice, file_data: bytes, ext: str) -> str:
+    try:
+        file_path = invoice.file.path
+        if file_path and os.path.exists(file_path):
+            return file_path
+    except Exception:
+        pass
+
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(suffix=ext, delete=False) as tmp_file:
+        tmp_file.write(file_data)
+        return tmp_file.name
+
+
+def _detect_text_encoding(raw_bytes: bytes) -> str:
+    try:
+        import chardet
+
+        detected = chardet.detect(raw_bytes[:8192])
+        encoding = detected.get("encoding")
+        if encoding:
+            return encoding
+    except ImportError:
+        pass
+
+    for encoding in ("utf-8-sig", "utf-8", "utf-16", "cp1256", "iso-8859-1", "latin-1"):
+        try:
+            raw_bytes.decode(encoding)
+            return encoding
+        except (UnicodeDecodeError, LookupError):
+            continue
+    return "utf-8"
+
+
+def _load_structured_records(file_path: str, ext: str) -> tuple[str, list[dict], dict]:
+    if ext == ".csv":
+        with open(file_path, "rb") as source_file:
+            raw_bytes = source_file.read()
+
+        encoding = _detect_text_encoding(raw_bytes)
+        raw_text = raw_bytes.decode(encoding, errors="replace")
+        sample = raw_text[:4096]
+
+        try:
+            delimiter = csv.Sniffer().sniff(sample, delimiters=",;\t|").delimiter
+        except csv.Error:
+            delimiter = ","
+
+        reader = csv.DictReader(io.StringIO(raw_text), delimiter=delimiter)
+        records = [
+            row for row in reader
+            if any(not _is_blank_value(value) for value in (row or {}).values())
+        ]
+        return raw_text, records, {
+            "encoding": encoding,
+            "delimiter": delimiter,
+            "row_count": len(records),
+            "column_count": len(reader.fieldnames or []),
+        }
+
+    if ext == ".json":
+        with open(file_path, "rb") as source_file:
+            raw_bytes = source_file.read()
+
+        json_data = None
+        last_error = None
+        for encoding in ("utf-8-sig", "utf-8", "utf-16", "cp1256", "latin-1"):
+            try:
+                json_data = json.loads(raw_bytes.decode(encoding))
+                break
+            except Exception as exc:
+                last_error = exc
+
+        if json_data is None:
+            raise ValueError(f"Failed to parse JSON invoice file: {last_error}")
+
+        if isinstance(json_data, dict):
+            records = json_data.get("records") if isinstance(json_data.get("records"), list) else [json_data]
+        elif isinstance(json_data, list):
+            records = [item for item in json_data if isinstance(item, dict)]
+        else:
+            raise ValueError("JSON invoice file must contain an object or a list of objects.")
+
+        return json.dumps(json_data, ensure_ascii=False, indent=2, default=str), records, {
+            "record_count": len(records),
+            "format": type(json_data).__name__,
+        }
+
+    if ext in {".xlsx", ".xls"}:
+        try:
+            import pandas as pd
+        except ImportError as exc:
+            raise ValueError("pandas is required to parse Excel invoice uploads.") from exc
+
+        sheets = pd.read_excel(file_path, sheet_name=None, dtype=str, keep_default_na=False)
+        records = []
+        raw_text_parts = []
+        sheet_names = []
+        for sheet_name, dataframe in sheets.items():
+            if dataframe.empty:
+                continue
+            sheet_names.append(sheet_name)
+            raw_text_parts.append(f"=== Sheet: {sheet_name} ===")
+            raw_text_parts.append(dataframe.to_string(index=False))
+            for row in dataframe.to_dict("records"):
+                if any(not _is_blank_value(value) for value in row.values()):
+                    row["_sheet"] = sheet_name
+                    records.append(row)
+
+        return "\n\n".join(raw_text_parts), records, {
+            "sheet_names": sheet_names,
+            "sheet_count": len(sheet_names),
+            "record_count": len(records),
+        }
+
+    raise ValueError(f"Unsupported structured invoice file type: {ext}")
+
+
+def _normalize_structured_record(record: dict) -> dict:
+    normalized = {}
+    for key, value in (record or {}).items():
+        canonical = STRUCTURED_FIELD_ALIASES.get(_normalize_alias_key(key))
+        if not canonical or _is_blank_value(value):
+            continue
+        normalized[canonical] = _first_non_empty(normalized.get(canonical), value)
+    return normalized
+
+
+def _extract_line_item_from_record(record: dict) -> dict:
+    line_item = {}
+    for key, value in (record or {}).items():
+        canonical = LINE_ITEM_FIELD_ALIASES.get(_normalize_alias_key(key))
+        if not canonical or _is_blank_value(value):
+            continue
+        line_item[canonical] = value
+
+    if not line_item:
+        return {}
+
+    quantity = _safe_decimal(line_item.get("quantity"))
+    unit_price = _safe_decimal(line_item.get("unit_price"))
+    total = _safe_decimal(line_item.get("total"))
+    vat_rate = _safe_decimal(line_item.get("vat_rate"), default="15")
+
+    normalized_line_item = {
+        "description": str(_first_non_empty(line_item.get("description"), "") or ""),
+        "quantity": float(quantity),
+        "unit_price": float(unit_price),
+        "total": float(total),
+        "vat_rate": float(vat_rate),
+    }
+    has_explicit_line_item_fields = any(
+        [
+            normalized_line_item["description"],
+            normalized_line_item["quantity"],
+            normalized_line_item["unit_price"],
+        ]
+    )
+    if has_explicit_line_item_fields and any(
+        [
+            normalized_line_item["total"],
+            normalized_line_item["quantity"],
+            normalized_line_item["unit_price"],
+            normalized_line_item["description"],
+        ]
+    ):
+        return normalized_line_item
+    return {}
+
+
+def _merge_structured_records(records: list[dict]) -> dict:
+    normalized_records = []
+    for record in records:
+        if not isinstance(record, dict):
+            continue
+        normalized_record = _normalize_structured_record(record)
+        if normalized_record or _extract_line_item_from_record(record):
+            normalized_records.append((record, normalized_record))
+
+    if not normalized_records:
+        raise ValueError("Structured file did not contain any invoice data.")
+
+    unique_headers = {}
+    for field_name in ("invoice_number", "vendor_name", "invoice_date"):
+        values = set()
+        for _, normalized_record in normalized_records:
+            value = normalized_record.get(field_name)
+            if _is_blank_value(value):
+                continue
+            if field_name.endswith("_date"):
+                parsed = _safe_date(value)
+                if parsed:
+                    values.add(parsed.isoformat())
+            else:
+                values.add(str(value).strip())
+        unique_headers[field_name] = values
+
+    conflicting_fields = [field_name for field_name, values in unique_headers.items() if len(values) > 1]
+    if conflicting_fields:
+        raise ValueError(
+            "Structured file contains multiple invoice records. Upload one invoice per file or split them into a ZIP archive."
+        )
+
+    merged = {}
+    line_items = []
+    for raw_record, normalized_record in normalized_records:
+        for key, value in normalized_record.items():
+            if key == "line_items" or _is_blank_value(value):
+                continue
+            merged[key] = _first_non_empty(merged.get(key), value)
+
+        line_items.extend(_safe_line_items(normalized_record.get("line_items")))
+
+        row_line_item = _extract_line_item_from_record(raw_record)
+        if row_line_item:
+            line_items.append(row_line_item)
+
+    if len(normalized_records) > 1 and not any(unique_headers.values()):
+        raise ValueError(
+            "Structured file has multiple rows but no shared invoice identifiers. Upload one invoice per file or use a ZIP archive."
+        )
+
+    if line_items:
+        merged["line_items"] = line_items
+    return merged
+
+
+def _extract_structured_invoice_data(file_path: str, ext: str) -> tuple[str, float, dict]:
+    raw_text, records, metadata = _load_structured_records(file_path, ext)
+    if records:
+        structured_data = _merge_structured_records(records)
+    else:
+        structured_data = {}
+
+    if not structured_data:
+        raise ValueError("Structured file did not contain any invoice fields.")
+
+    subtotal = _safe_decimal(structured_data.get("subtotal"))
+    vat_amount = _safe_decimal(structured_data.get("vat_amount"))
+    discount = _safe_decimal(structured_data.get("discount"))
+    total_amount = _safe_decimal(structured_data.get("total_amount"))
+
+    if subtotal == 0 and total_amount > 0 and vat_amount > 0:
+        subtotal = max(total_amount - vat_amount + discount, Decimal("0"))
+    if total_amount == 0 and (subtotal > 0 or vat_amount > 0 or discount > 0):
+        total_amount = subtotal + vat_amount - discount
+    if vat_amount == 0 and subtotal > 0 and total_amount > 0:
+        vat_amount = max(total_amount - subtotal + discount, Decimal("0"))
+
+    vat_rate = _safe_decimal(structured_data.get("vat_rate"), default="15")
+    if vat_rate == 0 and subtotal > 0 and vat_amount > 0:
+        vat_rate = (vat_amount / subtotal) * Decimal("100")
+
+    invoice_date = _safe_date(structured_data.get("invoice_date"))
+    due_date = _safe_date(structured_data.get("due_date"))
+    line_items = _safe_line_items(structured_data.get("line_items"))
+
+    invoice_data = {
+        "invoice_number": str(_first_non_empty(structured_data.get("invoice_number"), "") or ""),
+        "invoice_date": invoice_date.isoformat() if invoice_date else None,
+        "due_date": due_date.isoformat() if due_date else None,
+        "vendor_name": str(_first_non_empty(structured_data.get("vendor_name"), "") or ""),
+        "vendor_name_ar": str(_first_non_empty(structured_data.get("vendor_name_ar"), "") or ""),
+        "vendor_vat_number": str(_first_non_empty(structured_data.get("vendor_vat_number"), "") or ""),
+        "vendor_cr_number": str(_first_non_empty(structured_data.get("vendor_cr_number"), "") or ""),
+        "vendor_address": str(_first_non_empty(structured_data.get("vendor_address"), "") or ""),
+        "vendor_phone": str(_first_non_empty(structured_data.get("vendor_phone"), "") or ""),
+        "customer_name": str(_first_non_empty(structured_data.get("customer_name"), "") or ""),
+        "customer_vat_number": str(_first_non_empty(structured_data.get("customer_vat_number"), "") or ""),
+        "currency": str(_first_non_empty(structured_data.get("currency"), "SAR") or "SAR").upper()[:3],
+        "subtotal": float(subtotal),
+        "vat_rate": float(vat_rate),
+        "vat_amount": float(vat_amount),
+        "discount": float(discount),
+        "total_amount": float(total_amount),
+        "line_items": line_items,
+        "has_qr_code": _safe_bool(structured_data.get("has_qr_code"), False),
+        "qr_code_valid": _safe_bool(structured_data.get("qr_code_valid"), False),
+        "is_handwritten": _safe_bool(structured_data.get("is_handwritten"), False),
+        "is_clear": _safe_bool(structured_data.get("is_clear"), True),
+        "has_alterations": _safe_bool(structured_data.get("has_alterations"), False),
+        "language": str(_first_non_empty(structured_data.get("language"), "unknown") or "unknown"),
+        "cost_center": str(_first_non_empty(structured_data.get("cost_center"), "") or ""),
+        "account_code": str(_first_non_empty(structured_data.get("account_code"), "") or ""),
+        "budget_code": str(_first_non_empty(structured_data.get("budget_code"), "") or ""),
+        "department": str(_first_non_empty(structured_data.get("department"), "") or ""),
+        "ai_summary": str(_first_non_empty(structured_data.get("ai_summary"), "") or ""),
+        "_extraction_method": f"structured_{ext.lstrip('.')}",
+        "_parser_metadata": metadata,
+        "_source_record_count": len(records),
+    }
+    return raw_text, 100.0, invoice_data
 
 
 def _risk_level_from_score(score):
@@ -138,8 +646,8 @@ def _merge_risk_assessment(invoice, validation_result, risk_result):
 def _process_single_file(file_obj, filename: str, org, user, batch=None, request=None) -> dict:
     """
     Full pipeline for one file:
-      1. OCR with Tesseract
-      2. AI extraction with OpenAI
+      1. OCR or structured parsing
+      2. AI extraction for visual invoices
       3. Save Invoice record
       4. Run 30 validation rules
       5. AI risk analysis
@@ -174,55 +682,41 @@ def _process_single_file(file_obj, filename: str, org, user, batch=None, request
     # ── Step 1: OCR ──────────────────────────────────────────────────────────
     raw_text = ""
     ocr_confidence = 0.0
+    ai_data = {}
     image_paths = []
+    saved_file_path = _resolve_saved_file_path(invoice, file_data, ext)
 
-    try:
-        tmp_path = invoice.file.path
+    if ext in STRUCTURED_EXT:
+        raw_text, ocr_confidence, ai_data = _extract_structured_invoice_data(saved_file_path, ext)
+    else:
+        try:
+            if ext == ".pdf":
+                image_paths = pdf_to_images(saved_file_path)
+                img_for_ai = image_paths[0] if image_paths else saved_file_path
+            else:
+                img_for_ai = saved_file_path
+                image_paths = [saved_file_path]
 
-        if ext == ".pdf":
-            image_paths = pdf_to_images(tmp_path)
-            img_for_ai = image_paths[0] if image_paths else tmp_path
-        else:
-            img_for_ai = tmp_path
-            image_paths = [tmp_path]
+            tess_result = extract_text_tesseract(image_paths[0])
+            raw_text = tess_result.get("text", "")
+            ocr_confidence = tess_result.get("confidence", 0.0)
 
-        tess_result = extract_text_tesseract(image_paths[0])
-        raw_text = tess_result.get("text", "")
-        ocr_confidence = tess_result.get("confidence", 0.0)
-
-    except Exception as e:
-        logger.warning(f"Tesseract OCR failed for {filename}: {e}")
-        img_for_ai = invoice.file.path
-        raw_text = ""
+        except Exception as e:
+            logger.warning(f"Tesseract OCR failed for {filename}: {e}")
+            img_for_ai = saved_file_path
+            raw_text = ""
 
     # ── Step 2: AI Extraction (OpenAI) ───────────────────────────────────────
-    try:
-        ai_data = extract_invoice_with_ai(img_for_ai, raw_text)
-    except Exception as e:
-        logger.warning(f"AI extraction failed for {filename}: {e}")
-        from core.services.invoice_ai_service import _fallback_extraction
-        ai_data = _fallback_extraction(raw_text)
+    if ext not in STRUCTURED_EXT:
+        try:
+            ai_data = extract_invoice_with_ai(img_for_ai, raw_text)
+        except Exception as e:
+            logger.warning(f"AI extraction failed for {filename}: {e}")
+            from core.services.invoice_ai_service import _fallback_extraction
+
+            ai_data = _fallback_extraction(raw_text)
 
     # ── Step 3: Populate Invoice from extracted data ──────────────────────────
-    def _safe_decimal(val):
-        try:
-            return Decimal(str(val)) if val else Decimal("0")
-        except Exception:
-            return Decimal("0")
-
-    def _safe_date(val):
-        if not val:
-            return None
-        try:
-            from datetime import datetime
-            for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%d/%m/%y"):
-                try:
-                    return datetime.strptime(str(val), fmt).date()
-                except ValueError:
-                    continue
-        except Exception:
-            return None
-
     invoice.invoice_number    = str(_first_non_empty(ai_data.get("invoice_number"), filename) or "")
     invoice.invoice_date      = _safe_date(ai_data.get("invoice_date"))
     invoice.due_date          = _safe_date(ai_data.get("due_date"))
@@ -245,12 +739,12 @@ def _process_single_file(file_obj, filename: str, org, user, batch=None, request
     invoice.vat_amount        = _safe_decimal(ai_data.get("vat_amount", 0))
     invoice.discount          = _safe_decimal(ai_data.get("discount", 0))
     invoice.total_amount      = _safe_decimal(ai_data.get("total_amount", 0))
-    invoice.line_items        = ai_data.get("line_items", [])
-    invoice.has_qr_code       = bool(ai_data.get("has_qr_code", False))
-    invoice.qr_code_valid     = bool(ai_data.get("qr_code_valid", False))
-    invoice.is_handwritten    = bool(ai_data.get("is_handwritten", False))
-    invoice.is_clear          = bool(ai_data.get("is_clear", True))
-    invoice.has_alterations   = bool(ai_data.get("has_alterations", False))
+    invoice.line_items        = _safe_line_items(ai_data.get("line_items", []))
+    invoice.has_qr_code       = _safe_bool(ai_data.get("has_qr_code", False), False)
+    invoice.qr_code_valid     = _safe_bool(ai_data.get("qr_code_valid", False), False)
+    invoice.is_handwritten    = _safe_bool(ai_data.get("is_handwritten", False), False)
+    invoice.is_clear          = _safe_bool(ai_data.get("is_clear", True), True)
+    invoice.has_alterations   = _safe_bool(ai_data.get("has_alterations", False), False)
     invoice.language          = str(ai_data.get("language", "unknown"))
     invoice.raw_text          = raw_text
     invoice.ocr_confidence    = ocr_confidence
@@ -406,7 +900,7 @@ class InvoiceUploadView(APIView):
     Upload invoices for auditing.
 
     Supports:
-    - Single file (PDF / JPG / PNG / TIFF)
+    - Single file (PDF / JPG / PNG / TIFF / CSV / XLS / XLSX / JSON)
     - Multiple files (multipart with multiple 'files' fields)
     - ZIP archive (contains multiple invoice files)
     """
@@ -509,7 +1003,7 @@ def _process_zip(zip_file, org, user, batch, request) -> tuple[list, list]:
                     continue
                 name = os.path.basename(member.filename)
                 ext = os.path.splitext(name)[1].lower()
-                if ext not in {".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif"}:
+                if ext not in (ALLOWED_EXT - ZIP_EXT):
                     continue
                 try:
                     data = zf.read(member)
@@ -530,7 +1024,9 @@ def _process_zip(zip_file, org, user, batch, request) -> tuple[list, list]:
 
 def _guess_mime(ext: str) -> str:
     return {"pdf": "application/pdf", "jpg": "image/jpeg", "jpeg": "image/jpeg",
-            "png": "image/png", "tiff": "image/tiff", "tif": "image/tiff"}.get(ext.lstrip("."), "application/octet-stream")
+            "png": "image/png", "tiff": "image/tiff", "tif": "image/tiff",
+            "csv": "text/csv", "json": "application/json", "xls": "application/vnd.ms-excel",
+            "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}.get(ext.lstrip("."), "application/octet-stream")
 
 
 class InvoiceListView(generics.ListAPIView):

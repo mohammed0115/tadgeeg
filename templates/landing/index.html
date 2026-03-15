@@ -1,245 +1,1094 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tadgeeg - منصة التدقيق المالي الذكية</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        * { font-family: 'Cairo', 'Inter', sans-serif; }
-        body {
-            background:
-                radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 28%),
-                radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.10), transparent 32%),
-                #f8fafc;
-        }
-        .hero-gradient {
-            background: linear-gradient(135deg, #1d4ed8 0%, #6d28d9 55%, #8b5cf6 100%);
-        }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.12);
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            backdrop-filter: blur(10px);
-        }
-        .soft-card {
-            background: rgba(255, 255, 255, 0.92);
-            border: 1px solid rgba(226, 232, 240, 0.95);
-            box-shadow: 0 20px 50px rgba(15, 23, 42, 0.08);
-        }
-        .section-title {
-            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .logo-glow {
-            box-shadow: 0 16px 40px rgba(37, 99, 235, 0.18);
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FinAI — منصة الذكاء الاصطناعي للتدقيق المالي وامتثال ZATCA في منطقة الخليج العربي">
+  <title>FinAI — التدقيق المالي بالذكاء الاصطناعي</title>
+
+  <!-- Cairo Arabic Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Alpine.js CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+
+  <link rel="icon" href="{% static 'img/logo.png' %}" onerror="this.remove()">
+
+  <!-- ─── Tailwind Config ─────────────────────────────────────── -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Cairo', 'ui-sans-serif', 'system-ui'] },
+          keyframes: {
+            float:      { '0%,100%': { transform: 'translateY(0)'    }, '50%': { transform: 'translateY(-12px)' } },
+            floatAlt:   { '0%,100%': { transform: 'translateY(-6px)' }, '50%': { transform: 'translateY(6px)'  } },
+            shimmerBg:  { '0%': { backgroundPosition: '-200% center' }, '100%': { backgroundPosition: '200% center' } },
+            pulseGlow:  { '0%,100%': { opacity: '0.45', transform: 'scale(1)'    }, '50%': { opacity: '0.75', transform: 'scale(1.08)' } },
+            fadeInUp:   { '0%': { opacity: '0', transform: 'translateY(24px)' },  '100%': { opacity: '1', transform: 'translateY(0)' } },
+            checkPop:   { '0%': { transform: 'scale(0) rotate(-30deg)', opacity: '0' }, '65%': { transform: 'scale(1.25) rotate(5deg)', opacity: '1' }, '100%': { transform: 'scale(1) rotate(0deg)', opacity: '1' } },
+            spinOnce:   { '0%': { transform: 'rotate(0deg)' }, '100%': { transform: 'rotate(360deg)' } },
+          },
+          animation: {
+            'float':       'float 5.5s ease-in-out infinite',
+            'float-alt':   'floatAlt 4.5s ease-in-out infinite',
+            'float-slow':  'float 7s ease-in-out infinite',
+            'shimmer-bg':  'shimmerBg 3s linear infinite',
+            'pulse-glow':  'pulseGlow 3s ease-in-out infinite',
+            'fade-in-up':  'fadeInUp 0.7s ease-out both',
+            'check-pop':   'checkPop 0.5s cubic-bezier(0.175,0.885,0.32,1.275) both',
+            'spin-once':   'spinOnce 0.4s ease-out both',
+          },
+        },
+      },
+    }
+  </script>
+
+  <!-- ─── Custom CSS ──────────────────────────────────────────── -->
+  <style>
+    *, *::before, *::after { font-family: 'Cairo', sans-serif; }
+    html { scroll-behavior: smooth; }
+
+    /* Gradient text */
+    .text-grad {
+      background: linear-gradient(135deg, #7c3aed 0%, #ec4899 55%, #3b82f6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Shimmer CTA button */
+    .btn-primary {
+      background-image: linear-gradient(110deg, #6d28d9, #8b5cf6 30%, #a855f7 50%, #8b5cf6 70%, #6d28d9);
+      background-size: 200% 100%;
+      transition: background-position .5s ease, transform .2s ease, box-shadow .2s ease;
+    }
+    .btn-primary:hover {
+      background-position: right center;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(124,58,237,.5);
+    }
+
+    /* Glass card */
+    .glass {
+      background: rgba(255,255,255,.75);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+
+    /* Soft grid bg */
+    .bg-dot {
+      background-image: radial-gradient(rgba(139,92,246,.12) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+
+    /* Navbar blur on scroll */
+    .nav-scrolled {
+      background: rgba(255,255,255,.88) !important;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 4px 30px rgba(0,0,0,.07);
+    }
+
+    /* Feature card base */
+    .feat-card {
+      transition: transform .3s cubic-bezier(.4,0,.2,1),
+                  box-shadow .3s ease,
+                  border-color .3s ease;
+    }
+    .feat-card:hover { transform: translateY(-4px); }
+
+    /* Country card */
+    .country-card {
+      transition: transform .3s cubic-bezier(.4,0,.2,1), box-shadow .3s ease;
+    }
+    .country-card:hover { transform: translateY(-6px) scale(1.03); box-shadow: 0 20px 40px rgba(139,92,246,.15); }
+
+    /* Metric card */
+    .metric-card {
+      transition: transform .3s ease, box-shadow .3s ease;
+    }
+    .metric-card:hover { transform: translateY(-6px) scale(1.03); box-shadow: 0 20px 40px rgba(139,92,246,.22); }
+
+    /* Result row */
+    .result-row {
+      transition: box-shadow .25s ease;
+    }
+    .result-row:hover { box-shadow: 0 8px 24px rgba(0,0,0,.07); }
+
+    /* Checklist row */
+    .cl-row {
+      transition: background .4s ease, border-color .4s ease;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: linear-gradient(#8b5cf6,#ec4899); border-radius: 10px; }
+  </style>
 </head>
-<body class="text-slate-900 antialiased">
-    <header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/80 backdrop-blur-xl">
-        <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-            <a href="{% url 'frontend:home' %}" class="flex items-center gap-3">
-                <div class="logo-glow flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 via-cyan-500 to-violet-500 text-lg font-extrabold text-white">T</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ROOT Alpine component
+     ═══════════════════════════════════════════════════════════════ -->
+<body
+  class="bg-white text-gray-900 antialiased overflow-x-hidden"
+  x-data="landingApp()"
+  x-init="init()"
+>
+
+  <!-- Ambient blobs (fixed, pointer-events-none) -->
+  <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">
+    <div class="absolute -top-48 -right-48 w-[520px] h-[520px] bg-violet-100 rounded-full blur-3xl opacity-60 animate-pulse-glow"></div>
+    <div class="absolute top-1/3 -left-40 w-96 h-96 bg-pink-100 rounded-full blur-3xl opacity-50 animate-float-slow"></div>
+    <div class="absolute bottom-1/4 left-1/3 w-80 h-80 bg-blue-100 rounded-full blur-3xl opacity-40 animate-float-alt"></div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════
+       SECTION 1 — NAVBAR
+       ═══════════════════════════════════════════════════ -->
+  <nav
+    class="fixed top-0 right-0 left-0 z-50 py-4 transition-all duration-300"
+    :class="scrolled ? 'nav-scrolled py-3' : 'bg-transparent'"
+  >
+    <div class="max-w-7xl mx-auto px-5 flex items-center justify-between">
+
+      <!-- Logo (Right in RTL) -->
+      <a href="/" class="flex items-center gap-3 flex-shrink-0">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-pink-500 flex items-center justify-center shadow-lg">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+          </svg>
+        </div>
+        <span class="text-xl font-extrabold text-gray-900 tracking-tight">Fin<span class="text-grad">AI</span></span>
+      </a>
+
+      <!-- Nav links (Center) -->
+      <div class="hidden md:flex items-center gap-7">
+        <a href="#features"    class="text-sm font-medium text-gray-600 hover:text-violet-600 transition-colors">المميزات</a>
+        <a href="#compliance"  class="text-sm font-medium text-gray-600 hover:text-violet-600 transition-colors">الامتثال</a>
+        <a href="#countries"   class="text-sm font-medium text-gray-600 hover:text-violet-600 transition-colors">دول الخليج</a>
+        <a href="#cta"         class="text-sm font-medium text-gray-600 hover:text-violet-600 transition-colors">التسعير</a>
+      </div>
+
+      <!-- Auth buttons (Left in RTL) -->
+      <div class="flex items-center gap-3">
+        <a href="/accounts/login/"
+           class="hidden sm:inline text-sm font-semibold text-gray-700 hover:text-violet-600 transition-colors px-3 py-2">
+          تسجيل الدخول
+        </a>
+        <a href="/accounts/register/"
+           class="btn-primary px-5 py-2.5 rounded-xl text-white text-sm font-bold shadow-md">
+          ابدأ مجانًا
+        </a>
+      </div>
+    </div>
+  </nav>
+
+
+  <!-- ═══════════════════════════════════════════════════
+       SECTION 2 — HERO
+       ═══════════════════════════════════════════════════ -->
+  <section class="relative min-h-screen flex items-center pt-24 pb-20 overflow-hidden bg-dot">
+    <div class="max-w-7xl mx-auto px-5 w-full relative z-10">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-14 items-center">
+
+        <!-- ── RIGHT col: Headline + CTAs ── -->
+        <div class="space-y-7 animate-fade-in-up">
+
+          <!-- Trust pill -->
+          <div class="inline-flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-full px-4 py-2 text-sm font-semibold text-violet-700">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            معتمد من هيئة الزكاة والضريبة والجمارك
+          </div>
+
+          <!-- Headline -->
+          <h1 class="text-5xl lg:text-[4.2rem] xl:text-7xl font-black leading-[1.12] text-gray-900">
+            التدقيق المالي<br>
+            <span class="text-grad">بالذكاء الاصطناعي</span>
+          </h1>
+
+          <!-- Subtext -->
+          <p class="text-lg lg:text-xl text-gray-500 leading-relaxed max-w-lg">
+            منصة ذكية تجمع الدقة التحليلية بالامتثال الكامل لمتطلبات ZATCA.
+            أتمتة التدقيق، كشف الاحتيال، وتحليل المستندات المالية في ثوانٍ.
+          </p>
+
+          <!-- CTA buttons -->
+          <div class="flex flex-wrap gap-4 pt-1">
+            <a href="/accounts/register/"
+               class="btn-primary px-8 py-4 rounded-2xl text-white font-bold text-lg shadow-xl">
+              ابدأ تجربتك المجانية
+            </a>
+            <a href="#features"
+               class="flex items-center gap-2 px-7 py-4 rounded-2xl bg-white border-2 border-gray-200
+                      text-gray-700 font-bold text-lg hover:border-violet-300 hover:text-violet-700
+                      hover:shadow-lg transition-all duration-300">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664zM21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+              شاهد العرض التجريبي
+            </a>
+          </div>
+
+          <!-- Trust indicators -->
+          <div class="flex flex-wrap items-center gap-5 pt-1">
+            <span class="flex items-center gap-1.5 text-sm text-gray-500">
+              <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              بدون عقد ملزم
+            </span>
+            <span class="flex items-center gap-1.5 text-sm text-gray-500">
+              <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              إعداد خلال 5 دقائق
+            </span>
+            <span class="flex items-center gap-1.5 text-sm text-gray-500">
+              <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              دعم فني ٢٤/٧
+            </span>
+          </div>
+        </div>
+
+        <!-- ── LEFT col: Floating metric cards ── -->
+        <div class="relative flex items-center justify-center">
+          <!-- soft halo -->
+          <div class="absolute w-72 h-72 bg-gradient-to-br from-violet-100 to-pink-100 rounded-full blur-3xl opacity-70"></div>
+
+          <div class="relative grid grid-cols-2 gap-4 max-w-xs w-full">
+
+            <!-- Card 1 -->
+            <div class="metric-card glass border border-white rounded-2xl p-5 shadow-lg animate-float">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="w-8 h-8 rounded-lg bg-violet-100 flex items-center justify-center">
+                  <svg class="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                  </svg>
+                </div>
+                <span class="text-xs text-gray-500 font-medium">الفواتير</span>
+              </div>
+              <div class="text-2xl font-black text-grad">+2.5M</div>
+              <div class="text-xs text-gray-400 mt-0.5">فاتورة معالجة</div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="metric-card glass border border-white rounded-2xl p-5 shadow-lg animate-float-alt">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="w-8 h-8 rounded-lg bg-pink-100 flex items-center justify-center">
+                  <svg class="w-4 h-4 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                  </svg>
+                </div>
+                <span class="text-xs text-gray-500 font-medium">المنظمات</span>
+              </div>
+              <div class="text-2xl font-black text-pink-500">+1,200</div>
+              <div class="text-xs text-gray-400 mt-0.5">منظمة نشطة</div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="metric-card glass border border-white rounded-2xl p-5 shadow-lg animate-float-slow">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                  </svg>
+                </div>
+                <span class="text-xs text-gray-500 font-medium">أتمتة التدقيق</span>
+              </div>
+              <div class="text-2xl font-black text-blue-500">95%</div>
+              <div class="text-xs text-gray-400 mt-0.5">تدقيق آلي</div>
+            </div>
+
+            <!-- Card 4 -->
+            <div class="metric-card glass border border-white rounded-2xl p-5 shadow-lg animate-float">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                  </svg>
+                </div>
+                <span class="text-xs text-gray-500 font-medium">الدقة</span>
+              </div>
+              <div class="text-2xl font-black text-emerald-500">98%</div>
+              <div class="text-xs text-gray-400 mt-0.5">معدل الدقة</div>
+            </div>
+
+          </div><!-- /grid -->
+        </div><!-- /left col -->
+
+      </div><!-- /grid -->
+    </div>
+
+    <!-- Wave divider -->
+    <div class="absolute bottom-0 left-0 right-0 pointer-events-none" aria-hidden="true">
+      <svg viewBox="0 0 1440 72" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+        <path d="M0 72L1440 72L1440 24C1200 64 960 4 720 24C480 44 240 4 0 24L0 72Z" fill="#F8FAFC"/>
+      </svg>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════
+       SECTION 3 — GCC COUNTRIES
+       ═══════════════════════════════════════════════════ -->
+  <section id="countries" class="py-20 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-5">
+
+      <!-- Header -->
+      <div class="text-center mb-14">
+        <div class="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-full px-4 py-2 text-sm font-semibold text-blue-700 mb-5">
+          🌍 نغطي منطقة الخليج العربي بالكامل
+        </div>
+        <h2 class="text-4xl lg:text-5xl font-black text-gray-900 mb-3">
+          امتثال ضريبي شامل في
+          <span class="text-grad">دول الخليج</span>
+        </h2>
+        <p class="text-lg text-gray-500 max-w-xl mx-auto">
+          نظام مبني خصيصًا لمتطلبات الأنظمة الضريبية لكل دولة خليجية
+        </p>
+      </div>
+
+      <!-- Country cards -->
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+
+        <div class="country-card bg-white rounded-2xl p-5 text-center shadow-sm border border-gray-100">
+          <div class="text-4xl mb-3">🇸🇦</div>
+          <div class="font-bold text-gray-800 text-sm leading-snug">المملكة العربية السعودية</div>
+          <div class="text-xs text-violet-600 mt-1.5 font-semibold">ZATCA</div>
+        </div>
+
+        <div class="country-card bg-white rounded-2xl p-5 text-center shadow-sm border border-gray-100">
+          <div class="text-4xl mb-3">🇦🇪</div>
+          <div class="font-bold text-gray-800 text-sm leading-snug">الإمارات العربية المتحدة</div>
+          <div class="text-xs text-blue-600 mt-1.5 font-semibold">FTA</div>
+        </div>
+
+        <div class="country-card bg-white rounded-2xl p-5 text-center shadow-sm border border-gray-100">
+          <div class="text-4xl mb-3">🇰🇼</div>
+          <div class="font-bold text-gray-800 text-sm leading-snug">الكويت</div>
+          <div class="text-xs text-emerald-600 mt-1.5 font-semibold">DGIT</div>
+        </div>
+
+        <div class="country-card bg-white rounded-2xl p-5 text-center shadow-sm border border-gray-100">
+          <div class="text-4xl mb-3">🇶🇦</div>
+          <div class="font-bold text-gray-800 text-sm leading-snug">قطر</div>
+          <div class="text-xs text-pink-600 mt-1.5 font-semibold">GTA</div>
+        </div>
+
+        <div class="country-card bg-white rounded-2xl p-5 text-center shadow-sm border border-gray-100">
+          <div class="text-4xl mb-3">🇧🇭</div>
+          <div class="font-bold text-gray-800 text-sm leading-snug">البحرين</div>
+          <div class="text-xs text-orange-600 mt-1.5 font-semibold">NBR</div>
+        </div>
+
+        <div class="country-card bg-white rounded-2xl p-5 text-center shadow-sm border border-gray-100">
+          <div class="text-4xl mb-3">🇴🇲</div>
+          <div class="font-bold text-gray-800 text-sm leading-snug">سلطنة عُمان</div>
+          <div class="text-xs text-teal-600 mt-1.5 font-semibold">ROP</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════
+       SECTION 4 — WHY FINAI (Interactive Feature Cards)
+       ═══════════════════════════════════════════════════ -->
+  <section id="features" class="py-24 bg-white">
+    <div class="max-w-7xl mx-auto px-5" x-data="{ active: null }">
+
+      <!-- Header -->
+      <div class="text-center mb-16">
+        <div class="inline-flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-full px-4 py-2 text-sm font-semibold text-violet-700 mb-5">
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
+          لماذا تختار FinAI؟
+        </div>
+        <h2 class="text-4xl lg:text-5xl font-black text-gray-900 mb-3">
+          قدرات لا مثيل لها في
+          <span class="text-grad">التدقيق المالي</span>
+        </h2>
+        <p class="text-lg text-gray-500 max-w-xl mx-auto">
+          اضغط على أي ميزة لاستكشاف التفاصيل — نظام شامل لمؤسسات الخليج
+        </p>
+      </div>
+
+      <!-- Feature cards grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+
+        <!-- ── CARD 1: Automation ── -->
+        <div
+          class="feat-card rounded-3xl p-7 cursor-pointer border-2 relative overflow-hidden select-none"
+          :class="active === 1
+            ? 'border-violet-400 bg-gradient-to-br from-violet-50 to-white shadow-2xl shadow-violet-200/60 scale-[1.025]'
+            : 'border-gray-100 bg-white hover:border-violet-200 hover:shadow-xl'"
+          @click="active = (active === 1) ? null : 1"
+        >
+          <!-- Active glow overlay -->
+          <div class="absolute inset-0 bg-gradient-to-br from-violet-500/6 to-transparent rounded-3xl transition-opacity duration-300 pointer-events-none"
+               :class="active === 1 ? 'opacity-100' : 'opacity-0'"></div>
+          <div class="relative">
+            <!-- Icon -->
+            <div class="w-14 h-14 rounded-2xl mb-5 flex items-center justify-center transition-all duration-300"
+                 :class="active === 1 ? 'bg-violet-600 shadow-lg shadow-violet-300/50' : 'bg-violet-100'">
+              <svg class="w-7 h-7 transition-all duration-300"
+                   :class="active === 1 ? 'text-white scale-110' : 'text-violet-600'"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">أتمتة بنسبة 95%</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">تشغيل آلي كامل لعمليات التدقيق والمراجعة دون تدخل يدوي.</p>
+            <!-- Expanded -->
+            <div
+              x-show="active === 1"
+              x-transition:enter="transition ease-out duration-350"
+              x-transition:enter-start="opacity-0 -translate-y-2"
+              x-transition:enter-end="opacity-100 translate-y-0"
+              x-transition:leave="transition ease-in duration-200"
+              x-transition:leave-start="opacity-100 translate-y-0"
+              x-transition:leave-end="opacity-0 -translate-y-2"
+              class="mt-4 pt-4 border-t border-violet-100 space-y-2"
+            >
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>معالجة آلاف الفواتير في ثوانٍ</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>تقليل الأخطاء البشرية بنسبة 99%</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>توفير 80% من وقت الفريق المالي</p>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ── CARD 2: ZATCA ── -->
+        <div
+          class="feat-card rounded-3xl p-7 cursor-pointer border-2 relative overflow-hidden select-none"
+          :class="active === 2
+            ? 'border-emerald-400 bg-gradient-to-br from-emerald-50 to-white shadow-2xl shadow-emerald-200/60 scale-[1.025]'
+            : 'border-gray-100 bg-white hover:border-emerald-200 hover:shadow-xl'"
+          @click="active = (active === 2) ? null : 2"
+        >
+          <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/6 to-transparent rounded-3xl transition-opacity duration-300 pointer-events-none"
+               :class="active === 2 ? 'opacity-100' : 'opacity-0'"></div>
+          <div class="relative">
+            <div class="w-14 h-14 rounded-2xl mb-5 flex items-center justify-center transition-all duration-300"
+                 :class="active === 2 ? 'bg-emerald-600 shadow-lg shadow-emerald-300/50' : 'bg-emerald-100'">
+              <svg class="w-7 h-7 transition-all duration-300"
+                   :class="active === 2 ? 'text-white scale-110' : 'text-emerald-600'"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">امتثال كامل لـ ZATCA</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">توافق تام مع متطلبات الفوترة الإلكترونية المرحلة الثانية.</p>
+            <div
+              x-show="active === 2"
+              x-transition:enter="transition ease-out duration-350"
+              x-transition:enter-start="opacity-0 -translate-y-2"
+              x-transition:enter-end="opacity-100 translate-y-0"
+              x-transition:leave="transition ease-in duration-200"
+              x-transition:leave-start="opacity-100 translate-y-0"
+              x-transition:leave-end="opacity-0 -translate-y-2"
+              class="mt-4 pt-4 border-t border-emerald-100 space-y-2"
+            >
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></span>رمز QR وفق معيار TLV</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></span>ربط مباشر مع بوابة فاتورة</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></span>تحقق تلقائي من ضريبة القيمة المضافة</p>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ── CARD 3: AI ── -->
+        <div
+          class="feat-card rounded-3xl p-7 cursor-pointer border-2 relative overflow-hidden select-none"
+          :class="active === 3
+            ? 'border-blue-400 bg-gradient-to-br from-blue-50 to-white shadow-2xl shadow-blue-200/60 scale-[1.025]'
+            : 'border-gray-100 bg-white hover:border-blue-200 hover:shadow-xl'"
+          @click="active = (active === 3) ? null : 3"
+        >
+          <div class="absolute inset-0 bg-gradient-to-br from-blue-500/6 to-transparent rounded-3xl transition-opacity duration-300 pointer-events-none"
+               :class="active === 3 ? 'opacity-100' : 'opacity-0'"></div>
+          <div class="relative">
+            <div class="w-14 h-14 rounded-2xl mb-5 flex items-center justify-center transition-all duration-300"
+                 :class="active === 3 ? 'bg-blue-600 shadow-lg shadow-blue-300/50' : 'bg-blue-100'">
+              <svg class="w-7 h-7 transition-all duration-300"
+                   :class="active === 3 ? 'text-white scale-110' : 'text-blue-600'"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">ذكاء اصطناعي متقدم</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">نماذج GPT-4o وتعلم الآلة المتخصصة في البيانات المالية العربية.</p>
+            <div
+              x-show="active === 3"
+              x-transition:enter="transition ease-out duration-350"
+              x-transition:enter-start="opacity-0 -translate-y-2"
+              x-transition:enter-end="opacity-100 translate-y-0"
+              x-transition:leave="transition ease-in duration-200"
+              x-transition:leave-start="opacity-100 translate-y-0"
+              x-transition:leave-end="opacity-0 -translate-y-2"
+              class="mt-4 pt-4 border-t border-blue-100 space-y-2"
+            >
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>استخراج البيانات من PDF والصور</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>معالجة اللغة العربية بدقة عالية</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>OCR هجين متعدد المحركات</p>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ── CARD 4: Security ── -->
+        <div
+          class="feat-card rounded-3xl p-7 cursor-pointer border-2 relative overflow-hidden select-none"
+          :class="active === 4
+            ? 'border-orange-400 bg-gradient-to-br from-orange-50 to-white shadow-2xl shadow-orange-200/60 scale-[1.025]'
+            : 'border-gray-100 bg-white hover:border-orange-200 hover:shadow-xl'"
+          @click="active = (active === 4) ? null : 4"
+        >
+          <div class="absolute inset-0 bg-gradient-to-br from-orange-500/6 to-transparent rounded-3xl transition-opacity duration-300 pointer-events-none"
+               :class="active === 4 ? 'opacity-100' : 'opacity-0'"></div>
+          <div class="relative">
+            <div class="w-14 h-14 rounded-2xl mb-5 flex items-center justify-center transition-all duration-300"
+                 :class="active === 4 ? 'bg-orange-600 shadow-lg shadow-orange-300/50' : 'bg-orange-100'">
+              <svg class="w-7 h-7 transition-all duration-300"
+                   :class="active === 4 ? 'text-white scale-110' : 'text-orange-600'"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">أمان عالي المستوى</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">تشفير طرفي، إدارة هوية متعددة المستأجرين، وحماية بيانات حساسة.</p>
+            <div
+              x-show="active === 4"
+              x-transition:enter="transition ease-out duration-350"
+              x-transition:enter-start="opacity-0 -translate-y-2"
+              x-transition:enter-end="opacity-100 translate-y-0"
+              x-transition:leave="transition ease-in duration-200"
+              x-transition:leave-start="opacity-100 translate-y-0"
+              x-transition:leave-end="opacity-0 -translate-y-2"
+              class="mt-4 pt-4 border-t border-orange-100 space-y-2"
+            >
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>تشفير AES-256 للبيانات المخزنة</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>مصادقة ثنائية العوامل (2FA)</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>سجل تدقيق كامل لجميع العمليات</p>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ── CARD 5: Fraud Detection ── -->
+        <div
+          class="feat-card rounded-3xl p-7 cursor-pointer border-2 relative overflow-hidden select-none"
+          :class="active === 5
+            ? 'border-red-400 bg-gradient-to-br from-red-50 to-white shadow-2xl shadow-red-200/60 scale-[1.025]'
+            : 'border-gray-100 bg-white hover:border-red-200 hover:shadow-xl'"
+          @click="active = (active === 5) ? null : 5"
+        >
+          <div class="absolute inset-0 bg-gradient-to-br from-red-500/6 to-transparent rounded-3xl transition-opacity duration-300 pointer-events-none"
+               :class="active === 5 ? 'opacity-100' : 'opacity-0'"></div>
+          <div class="relative">
+            <div class="w-14 h-14 rounded-2xl mb-5 flex items-center justify-center transition-all duration-300"
+                 :class="active === 5 ? 'bg-red-600 shadow-lg shadow-red-300/50' : 'bg-red-100'">
+              <svg class="w-7 h-7 transition-all duration-300"
+                   :class="active === 5 ? 'text-white scale-110' : 'text-red-600'"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">كشف الاحتيال</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">10 خوارزميات متخصصة لاكتشاف مؤشرات الاحتيال والمعاملات المشبوهة.</p>
+            <div
+              x-show="active === 5"
+              x-transition:enter="transition ease-out duration-350"
+              x-transition:enter-start="opacity-0 -translate-y-2"
+              x-transition:enter-end="opacity-100 translate-y-0"
+              x-transition:leave="transition ease-in duration-200"
+              x-transition:leave-start="opacity-100 translate-y-0"
+              x-transition:leave-end="opacity-0 -translate-y-2"
+              class="mt-4 pt-4 border-t border-red-100 space-y-2"
+            >
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0"></span>تحليل قانون بنفورد للأرقام</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0"></span>كشف الفواتير المكررة تلقائيًا</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0"></span>تنبيهات فورية عند الاكتشاف</p>
+            </div>
+          </div>
+        </div>
+
+
+        <!-- ── CARD 6: Predictive Analytics ── -->
+        <div
+          class="feat-card rounded-3xl p-7 cursor-pointer border-2 relative overflow-hidden select-none"
+          :class="active === 6
+            ? 'border-pink-400 bg-gradient-to-br from-pink-50 to-white shadow-2xl shadow-pink-200/60 scale-[1.025]'
+            : 'border-gray-100 bg-white hover:border-pink-200 hover:shadow-xl'"
+          @click="active = (active === 6) ? null : 6"
+        >
+          <div class="absolute inset-0 bg-gradient-to-br from-pink-500/6 to-transparent rounded-3xl transition-opacity duration-300 pointer-events-none"
+               :class="active === 6 ? 'opacity-100' : 'opacity-0'"></div>
+          <div class="relative">
+            <div class="w-14 h-14 rounded-2xl mb-5 flex items-center justify-center transition-all duration-300"
+                 :class="active === 6 ? 'bg-pink-600 shadow-lg shadow-pink-300/50' : 'bg-pink-100'">
+              <svg class="w-7 h-7 transition-all duration-300"
+                   :class="active === 6 ? 'text-white scale-110' : 'text-pink-600'"
+                   fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
+              </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">تحليلات تنبؤية</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">نماذج توقعية تستشرف الأداء المالي وتحدد المخاطر قبل وقوعها.</p>
+            <div
+              x-show="active === 6"
+              x-transition:enter="transition ease-out duration-350"
+              x-transition:enter-start="opacity-0 -translate-y-2"
+              x-transition:enter-end="opacity-100 translate-y-0"
+              x-transition:leave="transition ease-in duration-200"
+              x-transition:leave-start="opacity-100 translate-y-0"
+              x-transition:leave-end="opacity-0 -translate-y-2"
+              class="mt-4 pt-4 border-t border-pink-100 space-y-2"
+            >
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-pink-400 flex-shrink-0"></span>توقع التدفق النقدي للأشهر القادمة</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-pink-400 flex-shrink-0"></span>تقييم مخاطر الموردين تلقائيًا</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-pink-400 flex-shrink-0"></span>تقارير ذكية قابلة للتصدير</p>
+            </div>
+          </div>
+        </div>
+
+
+      </div><!-- /feature grid -->
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════
+       SECTION 5 — COMPLIANCE + RESULTS
+       ═══════════════════════════════════════════════════ -->
+  <section id="compliance" class="py-24 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-5">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+
+
+        <!-- ── RIGHT col: Measurable outcomes ── -->
+        <div class="space-y-8">
+          <div>
+            <div class="inline-flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-full px-4 py-2 text-sm font-semibold text-violet-700 mb-6">
+              📊 نتائج موثقة وقابلة للقياس
+            </div>
+            <h2 class="text-4xl lg:text-5xl font-black text-gray-900 leading-tight mb-4">
+              نتائج قابلة للقياس
+              <span class="text-grad">من اليوم الأول</span>
+            </h2>
+            <p class="text-lg text-gray-500 leading-relaxed">
+              لا تنتظر أشهرًا لرؤية الفرق. منصة FinAI مصممة لتحقيق نتائج ملموسة فور التشغيل.
+            </p>
+          </div>
+
+          <div class="space-y-4">
+
+            <div class="result-row flex items-start gap-4 p-5 bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <div class="w-11 h-11 rounded-xl bg-violet-100 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+              </div>
+              <div>
+                <div class="font-bold text-gray-900 mb-0.5">تقليل تكاليف التدقيق بنسبة 70%</div>
+                <div class="text-sm text-gray-500">عبر أتمتة المهام المتكررة والتحقق التلقائي</div>
+              </div>
+            </div>
+
+            <div class="result-row flex items-start gap-4 p-5 bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <div class="w-11 h-11 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              </div>
+              <div>
+                <div class="font-bold text-gray-900 mb-0.5">من أسابيع إلى ساعات</div>
+                <div class="text-sm text-gray-500">معالجة آلاف المستندات في وقت قياسي</div>
+              </div>
+            </div>
+
+            <div class="result-row flex items-start gap-4 p-5 bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <div class="w-11 h-11 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+              </div>
+              <div>
+                <div class="font-bold text-gray-900 mb-0.5">صفر مخالفات ضريبية</div>
+                <div class="text-sm text-gray-500">التحقق الآلي الكامل من متطلبات ZATCA</div>
+              </div>
+            </div>
+
+            <div class="result-row flex items-start gap-4 p-5 bg-white rounded-2xl border border-gray-100 shadow-sm">
+              <div class="w-11 h-11 rounded-xl bg-pink-100 flex items-center justify-center flex-shrink-0">
+                <svg class="w-5 h-5 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              </div>
+              <div>
+                <div class="font-bold text-gray-900 mb-0.5">اكتشاف 3× أكثر من الاحتيالات</div>
+                <div class="text-sm text-gray-500">مقارنةً بالأساليب التقليدية</div>
+              </div>
+            </div>
+
+          </div>
+        </div><!-- /right col -->
+
+
+        <!-- ── LEFT col: Animated ZATCA Checklist card ── -->
+        <div id="compliance-checklist" class="sticky top-24">
+
+          <div class="bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden">
+
+            <!-- Card Header -->
+            <div class="bg-gradient-to-l from-violet-700 to-purple-800 p-6 relative overflow-hidden">
+              <!-- subtle grid overlay -->
+              <div class="absolute inset-0 opacity-[.08]" aria-hidden="true">
+                <svg width="100%" height="100%"><defs><pattern id="pg" width="12" height="12" patternUnits="userSpaceOnUse"><path d="M 12 0 L 0 0 0 12" fill="none" stroke="white" stroke-width=".6"/></pattern></defs><rect width="100%" height="100%" fill="url(#pg)"/></svg>
+              </div>
+
+              <div class="relative flex items-center gap-3">
+                <div class="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                  </svg>
                 </div>
                 <div>
-                    <div class="text-xl font-extrabold italic text-slate-900">Tadgeeg <span class="font-semibold">for Financial Audit</span></div>
-                    <div class="text-sm text-slate-500">منصة التدقيق المالي الذكية</div>
+                  <h3 class="text-white font-bold text-lg leading-tight">معتمد من ZATCA</h3>
+                  <p class="text-violet-200 text-xs mt-0.5">فحص متطلبات الامتثال الكاملة</p>
                 </div>
+
+                <!-- Replay button -->
+                <button
+                  @click="replayChecklist()"
+                  class="mr-auto w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center hover:bg-white/25 transition-colors"
+                  title="إعادة تشغيل الفحص"
+                >
+                  <svg class="w-4 h-4 text-white" :class="replaying ? 'animate-spin-once' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Progress bar -->
+              <div class="relative mt-4">
+                <div class="flex justify-between text-xs text-violet-200 mb-1.5">
+                  <span>التقدم الكلي</span>
+                  <span x-text="checklistItems.filter(i => i.done).length + ' / ' + checklistItems.length"></span>
+                </div>
+                <div class="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                  <div
+                    class="h-full bg-white rounded-full transition-all duration-700 ease-out"
+                    :style="`width: ${checklistItems.filter(i=>i.done).length / checklistItems.length * 100}%`"
+                  ></div>
+                </div>
+              </div>
+            </div><!-- /header -->
+
+
+            <!-- Checklist items -->
+            <div class="p-5 space-y-2.5">
+              <template x-for="(item, idx) in checklistItems" :key="item.id">
+
+                <div
+                  x-show="item.visible"
+                  x-transition:enter="transition ease-out duration-500"
+                  x-transition:enter-start="opacity-0 translate-x-5"
+                  x-transition:enter-end="opacity-100 translate-x-0"
+                  class="cl-row flex items-center gap-3 px-4 py-3.5 rounded-2xl border"
+                  :class="item.done
+                    ? 'bg-gradient-to-l from-violet-50 to-white border-violet-100'
+                    : 'bg-gray-50 border-gray-100'"
+                >
+
+                  <!-- Icon circle -->
+                  <div
+                    class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 transition-all duration-400"
+                    :class="item.done ? 'bg-violet-600 shadow-md shadow-violet-300/50' : 'bg-gray-200'"
+                  >
+                    <!-- Spinner while not yet done -->
+                    <svg
+                      x-show="item.visible && !item.done"
+                      class="w-4 h-4 text-gray-400 animate-spin"
+                      fill="none" viewBox="0 0 24 24"
+                    >
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                    </svg>
+
+                    <!-- Checkmark pop-in -->
+                    <svg
+                      x-show="item.done"
+                      x-transition:enter="transition ease-out duration-400"
+                      x-transition:enter-start="opacity-0 scale-0 rotate-12"
+                      x-transition:enter-end="opacity-100 scale-100 rotate-0"
+                      class="w-4 h-4 text-white"
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                    </svg>
+                  </div>
+
+                  <!-- Label -->
+                  <span
+                    class="flex-1 font-semibold text-sm transition-colors duration-400"
+                    :class="item.done ? 'text-gray-800' : 'text-gray-400'"
+                    x-text="item.text"
+                  ></span>
+
+                  <!-- Status badge -->
+                  <span
+                    x-show="item.done"
+                    x-transition:enter="transition ease-out duration-300 delay-150"
+                    x-transition:enter-start="opacity-0 scale-75"
+                    x-transition:enter-end="opacity-100 scale-100"
+                    class="text-xs font-semibold text-violet-600 bg-violet-100 px-2.5 py-1 rounded-full flex-shrink-0"
+                  >مكتمل</span>
+
+                </div>
+              </template>
+            </div><!-- /items -->
+
+
+            <!-- Success footer (appears when all done) -->
+            <div class="px-5 pb-5">
+              <div
+                x-show="checklistItems.length > 0 && checklistItems.every(i => i.done)"
+                x-transition:enter="transition ease-out duration-500"
+                x-transition:enter-start="opacity-0 translate-y-3"
+                x-transition:enter-end="opacity-100 translate-y-0"
+                class="flex items-center gap-3 p-4 bg-gradient-to-l from-emerald-50 to-green-50 rounded-2xl border border-emerald-200"
+              >
+                <div class="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0 shadow-md shadow-emerald-300/40">
+                  <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="font-bold text-emerald-700 text-sm">اجتاز جميع متطلبات ZATCA</div>
+                  <div class="text-xs text-emerald-600 mt-0.5">جاهز للإرسال الرسمي للهيئة</div>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /card -->
+
+          <!-- Trust badges below card -->
+          <div class="flex flex-wrap items-center justify-center gap-3 mt-5">
+            <div class="flex items-center gap-1.5 text-xs text-gray-500 bg-white rounded-full px-3 py-1.5 shadow-sm border border-gray-100">🔒 ISO 27001</div>
+            <div class="flex items-center gap-1.5 text-xs text-gray-500 bg-white rounded-full px-3 py-1.5 shadow-sm border border-gray-100">✅ ZATCA Phase 2</div>
+            <div class="flex items-center gap-1.5 text-xs text-gray-500 bg-white rounded-full px-3 py-1.5 shadow-sm border border-gray-100">🛡️ SOC 2 Type II</div>
+          </div>
+
+        </div><!-- /sticky left col -->
+
+      </div><!-- /grid -->
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════
+       SECTION 6 — CTA
+       ═══════════════════════════════════════════════════ -->
+  <section id="cta" class="py-28 relative overflow-hidden">
+
+    <!-- Gradient background -->
+    <div class="absolute inset-0 bg-gradient-to-br from-violet-900 via-purple-800 to-pink-800"></div>
+    <!-- Animated blobs -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-violet-500/25 rounded-full blur-3xl animate-pulse-glow"></div>
+      <div class="absolute top-0 right-0 w-96 h-96 bg-blue-500/15 rounded-full blur-3xl animate-float"></div>
+      <div class="absolute bottom-0 left-0 w-80 h-80 bg-pink-500/20 rounded-full blur-3xl animate-float-alt"></div>
+    </div>
+    <!-- Dot grid -->
+    <div class="absolute inset-0 bg-dot opacity-15"></div>
+
+    <div class="relative max-w-3xl mx-auto px-5 text-center">
+
+      <div class="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 text-sm font-medium text-white/80 mb-8">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        ابدأ اليوم — الإعداد خلال 5 دقائق
+      </div>
+
+      <h2 class="text-4xl lg:text-6xl font-black text-white mb-5 leading-tight">
+        جاهز لتحويل<br>
+        <span class="bg-gradient-to-l from-violet-300 via-pink-300 to-blue-300 bg-clip-text text-transparent">
+          تدقيقك المالي؟
+        </span>
+      </h2>
+
+      <p class="text-lg text-white/65 mb-10 max-w-xl mx-auto leading-relaxed">
+        انضم إلى أكثر من 1,200 منظمة في منطقة الخليج تستخدم FinAI لأتمتة تدقيقها المالي والامتثال لمتطلبات ZATCA.
+      </p>
+
+      <!-- Email + CTA -->
+      <div class="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto mb-6">
+        <input
+          type="email"
+          placeholder="أدخل بريدك الإلكتروني"
+          class="flex-1 px-5 py-4 rounded-2xl bg-white/10 backdrop-blur border border-white/20 text-white placeholder-white/45 focus:outline-none focus:ring-2 focus:ring-white/30 focus:bg-white/15 transition-all text-right text-sm"
+        >
+        <button class="btn-primary px-7 py-4 rounded-2xl text-white font-bold text-base whitespace-nowrap shadow-xl hover:scale-105 transition-transform duration-200">
+          ابدأ مجانًا
+        </button>
+      </div>
+
+      <p class="text-white/40 text-sm">لا يلزم بطاقة ائتمانية &middot; 14 يومًا تجريبيًا &middot; إلغاء في أي وقت</p>
+    </div>
+  </section>
+
+
+  <!-- ═══════════════════════════════════════════════════
+       SECTION 7 — FOOTER
+       ═══════════════════════════════════════════════════ -->
+  <footer class="bg-gray-950 text-gray-400 pt-16 pb-10">
+    <div class="max-w-7xl mx-auto px-5">
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+
+        <!-- Brand -->
+        <div class="md:col-span-2 space-y-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-pink-500 flex items-center justify-center shadow-lg">
+              <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+              </svg>
+            </div>
+            <span class="text-xl font-extrabold text-white">Fin<span class="text-grad">AI</span></span>
+          </div>
+          <p class="text-gray-500 text-sm leading-relaxed max-w-xs">
+            منصة الذكاء الاصطناعي الرائدة للتدقيق المالي وامتثال ZATCA في منطقة الخليج العربي.
+          </p>
+          <div class="flex gap-2.5 pt-1">
+            <a href="#" class="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-violet-600 transition-colors">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84"/></svg>
             </a>
-
-            <div class="flex items-center gap-3">
-                <span class="rounded-xl px-3 py-2 text-sm font-medium text-slate-500">EN</span>
-                {% if request.user.is_authenticated %}
-                    {% if request.user.organization_id %}
-                        <a href="{% url 'frontend:dashboard' %}" class="rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100">لوحة التحكم</a>
-                    {% else %}
-                        <a href="{% url 'frontend:otp_verify' %}" class="rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100">حالة الحساب</a>
-                    {% endif %}
-                    <a href="{% url 'frontend:logout' %}" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800">تسجيل الخروج</a>
-                {% else %}
-                    <a href="{% url 'frontend:login' %}" class="rounded-xl px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100">تسجيل الدخول</a>
-                    <a href="{% url 'frontend:register' %}" class="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800">ابدأ الآن</a>
-                {% endif %}
-            </div>
+            <a href="#" class="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-violet-600 transition-colors">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+            </a>
+          </div>
         </div>
-    </header>
 
-    <main>
-        <section class="mx-auto max-w-7xl px-6 pb-16 pt-10 lg:pb-20 lg:pt-16">
-            <div class="hero-gradient overflow-hidden rounded-[32px] text-white shadow-2xl shadow-blue-900/15">
-                <div class="grid items-center gap-10 px-6 py-10 sm:px-10 lg:grid-cols-2 lg:px-14 lg:py-14">
-                    <div class="grid grid-cols-2 gap-4" dir="rtl">
-                        <div class="glass-card col-span-2 rounded-3xl p-5">
-                            <div class="mb-2 text-sm text-blue-100">أداء المنصة</div>
-                            <div class="mb-5 text-3xl font-extrabold">1.2M+ فاتورة معالجة</div>
-                            <div class="space-y-4">
-                                <div>
-                                    <div class="mb-2 flex items-center justify-between text-sm">
-                                        <span>دقة الاستخراج</span>
-                                        <span>98%</span>
-                                    </div>
-                                    <div class="h-2 overflow-hidden rounded-full bg-white/15"><div class="h-full w-[98%] rounded-full bg-cyan-300"></div></div>
-                                </div>
-                                <div>
-                                    <div class="mb-2 flex items-center justify-between text-sm">
-                                        <span>أتمتة التدقيق</span>
-                                        <span>95%</span>
-                                    </div>
-                                    <div class="h-2 overflow-hidden rounded-full bg-white/15"><div class="h-full w-[95%] rounded-full bg-emerald-300"></div></div>
-                                </div>
-                                <div>
-                                    <div class="mb-2 flex items-center justify-between text-sm">
-                                        <span>موثوقية النظام</span>
-                                        <span>99.9%</span>
-                                    </div>
-                                    <div class="h-2 overflow-hidden rounded-full bg-white/15"><div class="h-full w-[99%] rounded-full bg-fuchsia-300"></div></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="glass-card rounded-3xl p-5 text-center">
-                            <div class="text-3xl font-extrabold">24/7</div>
-                            <div class="mt-2 text-sm text-blue-100">دعم فني وتشغيلي</div>
-                        </div>
-                        <div class="glass-card rounded-3xl p-5 text-center">
-                            <div class="text-3xl font-extrabold">6</div>
-                            <div class="mt-2 text-sm text-blue-100">دول خليجية مدعومة</div>
-                        </div>
-                    </div>
-
-                    <div dir="rtl">
-                        <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/12 px-4 py-2 text-sm font-semibold">
-                            <span>🚀</span>
-                            <span>معتمد من ZATCA ومتوافق مع الفاتورة الإلكترونية</span>
-                        </div>
-                        <h1 class="mb-5 text-4xl font-extrabold leading-tight sm:text-5xl lg:text-6xl">
-                            منصة التدقيق المالي
-                            <span class="block text-cyan-200">بالذكاء الاصطناعي</span>
-                        </h1>
-                        <p class="mb-8 max-w-2xl text-base leading-8 text-blue-50/95 sm:text-lg">
-                            ارفع الفواتير، استخرج البيانات، اكتشف المخاطر، وولّد تقارير تدقيق احترافية قابلة للتنزيل من منصة واحدة مصممة خصيصاً للشركات في الخليج.
-                        </p>
-                        <div class="mb-8 flex flex-col gap-3 sm:flex-row">
-                            {% if request.user.is_authenticated %}
-                                {% if request.user.organization_id %}
-                                    <a href="{% url 'frontend:dashboard' %}" class="rounded-2xl bg-white px-6 py-3.5 text-center font-bold text-slate-900 shadow-lg transition-colors hover:bg-slate-100">الانتقال إلى لوحة التحكم</a>
-                                {% else %}
-                                    <a href="{% url 'frontend:otp_verify' %}" class="rounded-2xl bg-white px-6 py-3.5 text-center font-bold text-slate-900 shadow-lg transition-colors hover:bg-slate-100">استكمال تفعيل الحساب</a>
-                                {% endif %}
-                            {% else %}
-                                <a href="{% url 'frontend:register' %}" class="rounded-2xl bg-white px-6 py-3.5 text-center font-bold text-slate-900 shadow-lg transition-colors hover:bg-slate-100">ابدأ تجربتك المجانية</a>
-                                <a href="{% url 'frontend:login' %}" class="rounded-2xl border border-white/25 bg-white/10 px-6 py-3.5 text-center font-bold transition-colors hover:bg-white/15">تسجيل الدخول</a>
-                            {% endif %}
-                        </div>
-                        <div class="flex flex-wrap gap-3 text-sm">
-                            <span class="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">بدون بطاقة ائتمان</span>
-                            <span class="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">إعداد سريع</span>
-                            <span class="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">حماية AES-256</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="mx-auto max-w-7xl px-6 pb-16 lg:pb-20" dir="rtl">
-            <div class="mb-10 text-center">
-                <div class="mb-4 inline-flex items-center gap-2 rounded-full bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">
-                    <span>✨</span>
-                    <span>لماذا Tadgeeg؟</span>
-                </div>
-                <h2 class="section-title mb-4 text-3xl font-extrabold lg:text-4xl">كل ما تحتاجه لتدقيق الفواتير في مكان واحد</h2>
-                <p class="mx-auto max-w-3xl leading-8 text-slate-600">
-                    منصة واحدة تجمع الرفع، الاستخراج، التحقق، الامتثال، والتقارير في تجربة عربية سلسة ومهيأة لفرق المالية والتدقيق داخل السعودية والخليج.
-                </p>
-            </div>
-
-            <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-                <div class="soft-card rounded-3xl p-6">
-                    <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-100 text-2xl text-blue-700">🧠</div>
-                    <h3 class="mb-2 text-lg font-bold">استخراج ذكي للبيانات</h3>
-                    <p class="text-sm leading-7 text-slate-600">استخراج أرقام الفواتير، المورد، العميل، البنود، والإجماليات بدقة عالية للغة العربية والإنجليزية.</p>
-                </div>
-                <div class="soft-card rounded-3xl p-6">
-                    <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-2xl text-emerald-700">✅</div>
-                    <h3 class="mb-2 text-lg font-bold">Checklist تدقيق واضح</h3>
-                    <p class="text-sm leading-7 text-slate-600">فحوصات تحقق مفصلة مع حالة كل عنصر، وملاحظات واضحة تساعد فريقك على اتخاذ القرار بسرعة.</p>
-                </div>
-                <div class="soft-card rounded-3xl p-6">
-                    <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-100 text-2xl text-purple-700">📄</div>
-                    <h3 class="mb-2 text-lg font-bold">تقارير PDF قابلة للتنزيل</h3>
-                    <p class="text-sm leading-7 text-slate-600">إنشاء تقارير تدقيق احترافية ومنظمة، تدعم العربية، وجاهزة للمشاركة والتنزيل مباشرة.</p>
-                </div>
-                <div class="soft-card rounded-3xl p-6">
-                    <div class="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-2xl text-amber-700">🛡️</div>
-                    <h3 class="mb-2 text-lg font-bold">امتثال خليجي</h3>
-                    <p class="text-sm leading-7 text-slate-600">مصمم ليناسب بيئات الأعمال الخليجية مع دعم لامتثال ZATCA والتحقق الضريبي والضبط المحاسبي.</p>
-                </div>
-            </div>
-        </section>
-
-        <section class="mx-auto max-w-7xl px-6 pb-16 lg:pb-20" dir="rtl">
-            <div class="grid items-stretch gap-6 lg:grid-cols-2">
-                <div class="soft-card rounded-3xl p-8">
-                    <h3 class="mb-6 text-2xl font-extrabold">مؤشرات رئيسية</h3>
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-center">
-                            <div class="text-3xl font-extrabold text-blue-700">98%</div>
-                            <div class="mt-2 text-sm text-slate-500">دقة استخراج البيانات</div>
-                        </div>
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-center">
-                            <div class="text-3xl font-extrabold text-purple-700">95%</div>
-                            <div class="mt-2 text-sm text-slate-500">أتمتة أعمال التدقيق</div>
-                        </div>
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-center">
-                            <div class="text-3xl font-extrabold text-emerald-700">1.2M+</div>
-                            <div class="mt-2 text-sm text-slate-500">مستند تمت معالجته</div>
-                        </div>
-                        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-center">
-                            <div class="text-3xl font-extrabold text-amber-700">6</div>
-                            <div class="mt-2 text-sm text-slate-500">دول خليجية مدعومة</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="hero-gradient rounded-3xl p-8 text-white shadow-xl shadow-purple-900/15">
-                    <h3 class="mb-4 text-2xl font-extrabold">ابدأ من هنا</h3>
-                    <p class="mb-6 leading-8 text-blue-50">
-                        واجهة تعريفية واضحة قبل تسجيل الدخول، مع صفحات مصادقة حديثة توجه المستخدم بسلاسة إلى إنشاء الحساب أو الدخول ومتابعة العمل داخل النظام.
-                    </p>
-                    <div class="mb-8 space-y-3">
-                        <div class="flex items-center gap-3"><span class="text-xl">•</span><span>اعرض قيمة المنصة للعميل قبل الدخول</span></div>
-                        <div class="flex items-center gap-3"><span class="text-xl">•</span><span>وجّه المستخدم إلى تسجيل الدخول أو إنشاء الحساب</span></div>
-                        <div class="flex items-center gap-3"><span class="text-xl">•</span><span>حافظ على تجربة بصرية موحدة بين الصفحة العامة وصفحات المصادقة</span></div>
-                    </div>
-                    <div class="flex flex-col gap-3 sm:flex-row">
-                        {% if request.user.is_authenticated %}
-                            {% if request.user.organization_id %}
-                                <a href="{% url 'frontend:dashboard' %}" class="rounded-2xl bg-white px-5 py-3 text-center font-bold text-slate-900 transition-colors hover:bg-slate-100">لوحة التحكم</a>
-                            {% else %}
-                                <a href="{% url 'frontend:otp_verify' %}" class="rounded-2xl bg-white px-5 py-3 text-center font-bold text-slate-900 transition-colors hover:bg-slate-100">تفعيل الحساب</a>
-                            {% endif %}
-                            <a href="{% url 'frontend:logout' %}" class="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-center font-bold transition-colors hover:bg-white/15">تسجيل الخروج</a>
-                        {% else %}
-                            <a href="{% url 'frontend:register' %}" class="rounded-2xl bg-white px-5 py-3 text-center font-bold text-slate-900 transition-colors hover:bg-slate-100">إنشاء حساب</a>
-                            <a href="{% url 'frontend:login' %}" class="rounded-2xl border border-white/20 bg-white/10 px-5 py-3 text-center font-bold transition-colors hover:bg-white/15">الدخول للحساب</a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer class="border-t border-slate-200 bg-white/70 backdrop-blur-sm">
-        <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-6 py-6 text-sm text-slate-500 md:flex-row" dir="rtl">
-            <div>© 2026 Tadgeeg for Financial Audit. All rights reserved.</div>
-            <div class="flex items-center gap-4">
-                <a href="{% url 'frontend:login' %}" class="hover:text-slate-800">تسجيل الدخول</a>
-                <a href="{% url 'frontend:register' %}" class="hover:text-slate-800">إنشاء حساب</a>
-            </div>
+        <!-- Product links -->
+        <div>
+          <h4 class="text-white font-semibold mb-4 text-sm">المنتج</h4>
+          <ul class="space-y-2.5 text-sm">
+            <li><a href="#features"   class="hover:text-violet-400 transition-colors">المميزات</a></li>
+            <li><a href="#compliance" class="hover:text-violet-400 transition-colors">الامتثال ZATCA</a></li>
+            <li><a href="#cta"        class="hover:text-violet-400 transition-colors">التسعير</a></li>
+            <li><a href="#"           class="hover:text-violet-400 transition-colors">التكاملات</a></li>
+            <li><a href="#"           class="hover:text-violet-400 transition-colors">واجهة برمجة التطبيقات</a></li>
+          </ul>
         </div>
-    </footer>
+
+        <!-- Company links -->
+        <div>
+          <h4 class="text-white font-semibold mb-4 text-sm">الشركة</h4>
+          <ul class="space-y-2.5 text-sm">
+            <li><a href="#" class="hover:text-violet-400 transition-colors">من نحن</a></li>
+            <li><a href="#" class="hover:text-violet-400 transition-colors">الوظائف</a></li>
+            <li><a href="#" class="hover:text-violet-400 transition-colors">المدونة</a></li>
+            <li><a href="#" class="hover:text-violet-400 transition-colors">تواصل معنا</a></li>
+            <li><a href="#" class="hover:text-violet-400 transition-colors">سياسة الخصوصية</a></li>
+          </ul>
+        </div>
+
+      </div><!-- /grid -->
+
+      <!-- Bottom bar -->
+      <div class="border-t border-gray-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p class="text-sm text-gray-600">© 2026 FinAI. جميع الحقوق محفوظة.</p>
+        <div class="flex items-center gap-2 text-xs text-gray-600">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          جميع الأنظمة تعمل بشكل طبيعي
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+
+  <!-- ═══════════════════════════════════════════════════
+       Alpine.js Root Component
+       ═══════════════════════════════════════════════════ -->
+  <script>
+    function landingApp() {
+      return {
+        /* ── state ── */
+        scrolled: false,
+        replaying: false,
+        checklistStarted: false,
+
+        checklistItems: [
+          { id: 1, text: 'معالجة الفواتير الإلكترونية',    visible: false, done: false },
+          { id: 2, text: 'التحقق من الأرقام الضريبية',      visible: false, done: false },
+          { id: 3, text: 'حساب ضريبة القيمة المضافة',       visible: false, done: false },
+          { id: 4, text: 'تقارير امتثال شاملة',             visible: false, done: false },
+          { id: 5, text: 'حماية البيانات المحلية',           visible: false, done: false },
+        ],
+
+        /* ── lifecycle ── */
+        init() {
+          // Navbar scroll detection
+          window.addEventListener('scroll', () => {
+            this.scrolled = window.scrollY > 20;
+          }, { passive: true });
+
+          // Trigger checklist when its section scrolls into view
+          this.$nextTick(() => {
+            const el = document.getElementById('compliance-checklist');
+            if (!el) return;
+
+            const observer = new IntersectionObserver(
+              (entries) => {
+                entries.forEach(entry => {
+                  if (entry.isIntersecting && !this.checklistStarted) {
+                    this.checklistStarted = true;
+                    this._runChecklist();
+                    observer.disconnect();
+                  }
+                });
+              },
+              { threshold: 0.25 }
+            );
+            observer.observe(el);
+          });
+        },
+
+        /* ── checklist animation ── */
+        _runChecklist() {
+          // Row appears → short pause → tick mark animates in
+          const ROW_DELAY  = 680;   // ms between rows appearing
+          const TICK_AFTER = 480;   // ms after row appears before tick pops
+
+          this.checklistItems.forEach((item, idx) => {
+            const rowAt  = idx * ROW_DELAY;
+            const tickAt = rowAt + TICK_AFTER;
+
+            setTimeout(() => { item.visible = true; }, rowAt);
+            setTimeout(() => { item.done    = true; }, tickAt);
+          });
+        },
+
+        replayChecklist() {
+          if (this.replaying) return;
+          this.replaying = true;
+
+          // Reset all items instantly
+          this.checklistItems.forEach(item => {
+            item.visible = false;
+            item.done    = false;
+          });
+
+          // Brief pause so Alpine re-hides the rows before re-running
+          setTimeout(() => {
+            this.replaying = false;
+            this._runChecklist();
+          }, 420);
+        },
+      };
+    }
+  </script>
+
 </body>
 </html>

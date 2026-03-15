@@ -1,0 +1,330 @@
+name: FinAI CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # ─── Code Quality & Testing ────────────────────────────────────────────
+
+  lint-and-test:
+    runs-on: ubuntu-latest
+    name: Lint, Test & Coverage
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: finai_test
+          POSTGRES_USER: finai_test
+          POSTGRES_PASSWORD: test_password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmagic1 tesseract-ocr
+      
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-test.txt
+      
+      - name: Run linting (flake8)
+        run: |
+          flake8 apps core --max-line-length=100 --ignore=E203,W503
+        continue-on-error: true
+      
+      - name: Run import sorting check (isort)
+        run: |
+          isort --check-only --profile black apps core
+        continue-on-error: true
+      
+      - name: Run type checking (mypy)
+        run: |
+          mypy apps core --ignore-missing-imports
+        continue-on-error: true
+      
+      - name: Run pytest with coverage
+        env:
+          DJANGO_SETTINGS_MODULE: finai_backend.settings
+          DEBUG: 'False'
+          DATABASE_URL: postgresql://finai_test:test_password@localhost:5432/finai_test
+          REDIS_URL: redis://localhost:6379/0
+          CELERY_ALWAYS_EAGER: 'True'
+          SENTRY_DSN: ''
+        run: |
+          pytest tests/ \
+            --cov=apps \
+            --cov=core \
+            --cov-report=xml \
+            --cov-report=html \
+            --cov-fail-under=60 \
+            -v \
+            --tb=short
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+      
+      - name: Archive coverage report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: htmlcov/
+
+  # ─── Security Scanning ────────────────────────────────────────────────
+
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Scanning
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit safety django-talisman
+      
+      - name: Run Bandit security check
+        run: |
+          bandit -r apps core -ll -f json -o bandit-report.json || true
+        continue-on-error: true
+      
+      - name: Check for known vulnerabilities
+        run: |
+          pip install -r requirements.txt
+          safety check --json || true
+        continue-on-error: true
+      
+      - name: Upload security reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-reports
+          path: bandit-report.json
+
+  # ─── Database Migration Testing ───────────────────────────────────────
+
+  migrations-check:
+    runs-on: ubuntu-latest
+    name: Database Migrations Check
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Check for missing migrations
+        env:
+          DEBUG: 'False'
+        run: |
+          python manage.py makemigrations --check --dry-run
+      
+      - name: Run migrations
+        env:
+          DEBUG: 'False'
+        run: |
+          python manage.py migrate --run-syncdb
+
+  # ─── Build Docker Image ───────────────────────────────────────────────
+
+  build-docker:
+    needs: [lint-and-test, security-scan, migrations-check]
+    runs-on: ubuntu-latest
+    name: Build Docker Image
+    permissions:
+      contents: read
+      packages: write
+    
+    if: github.event_name == 'push'
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ─── Deploy to Staging ────────────────────────────────────────────────
+
+  deploy-staging:
+    needs: build-docker
+    runs-on: ubuntu-latest
+    name: Deploy to Staging
+    
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Deploy to staging environment
+        env:
+          DEPLOY_KEY: ${{ secrets.STAGING_DEPLOY_KEY }}
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H $STAGING_HOST >> ~/.ssh/known_hosts
+          
+          ssh -i ~/.ssh/deploy_key $STAGING_USER@$STAGING_HOST \
+            "cd /apps/tadgeeg && git pull origin develop && docker-compose up -d"
+      
+      - name: Run smoke tests
+        env:
+          STAGING_URL: ${{ secrets.STAGING_URL }}
+        run: |
+          curl -f $STAGING_URL/health/ || exit 1
+
+  # ─── Deploy to Production ─────────────────────────────────────────────
+
+  deploy-production:
+    needs: build-docker
+    runs-on: ubuntu-latest
+    name: Deploy to Production
+    
+    if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
+    
+    environment:
+      name: production
+      url: ${{ secrets.PROD_URL }}
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Notify deployment start
+        run: |
+          echo "Deploying version ${{ github.ref }} to production"
+      
+      - name: Deploy to production environment
+        env:
+          DEPLOY_KEY: ${{ secrets.PROD_DEPLOY_KEY }}
+          PROD_HOST: ${{ secrets.PROD_HOST }}
+          PROD_USER: ${{ secrets.PROD_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H $PROD_HOST >> ~/.ssh/known_hosts
+          
+          ssh -i ~/.ssh/deploy_key $PROD_USER@$PROD_HOST \
+            "cd /apps/tadgeeg && git pull origin main && docker-compose up -d"
+      
+      - name: Run production health checks
+        env:
+          PROD_URL: ${{ secrets.PROD_URL }}
+        run: |
+          sleep 30  # Wait for services to start
+          curl -f $PROD_URL/health/ || exit 1
+          curl -f $PROD_URL/api/v1/health/openai/ || exit 1
+      
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+  # ─── Notify Results ───────────────────────────────────────────────────
+
+  notify:
+    needs: [lint-and-test, security-scan]
+    runs-on: ubuntu-latest
+    name: Notify Results
+    if: always()
+    
+    steps:
+      - name: Check job status
+        run: |
+          if [ "${{ needs.lint-and-test.result }}" != "success" ]; then
+            echo "❌ Tests failed"
+            exit 1
+          fi
+          if [ "${{ needs.security-scan.result }}" != "success" ]; then
+            echo "⚠️  Security scan found issues"
+          fi
+          echo "✅ CI/CD pipeline complete"

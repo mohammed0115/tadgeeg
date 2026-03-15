@@ -260,7 +260,7 @@ function docUploader() {
       { id: 'single', label: 'ملف واحد', icon: 'file-text', subtext: 'PDF أو صورة' },
       { id: 'multiple', label: 'ملفات متعددة', icon: 'folder-open', subtext: 'رفع دفعة ملفات' },
       { id: 'zip', label: 'دفعة ZIP', icon: 'archive', subtext: 'ملف مضغوط واحد' },
-      { id: 'csvjson', label: 'CSV / JSON', icon: 'file-json', subtext: 'قريبًا' },
+      { id: 'csvjson', label: 'CSV / JSON', icon: 'file-json', subtext: 'ملفات منظمة' },
     ],
 
     languageOptions: [
@@ -310,7 +310,7 @@ function docUploader() {
         single: 'PDF، JPG، PNG، TIFF، TIF — الحد الأقصى 50MB لكل ملف',
         multiple: 'PDF، JPG، PNG، TIFF، TIF — حتى 50MB لكل ملف',
         zip: 'ملف ZIP واحد يحتوي على مستندات PDF أو صور — حتى 50MB',
-        csvjson: 'CSV أو JSON — دعم الواجهة جاهز وسيتم ربط المعالجة لاحقًا',
+        csvjson: 'CSV أو JSON أو XLSX — ملفات البيانات المنظمة',
       }[this.selectedMode];
     },
 
@@ -342,7 +342,7 @@ function docUploader() {
     },
 
     get uploadDisabled() {
-      return this.uploading || !this.files.length || !this.selectedType || this.selectedMode === 'csvjson';
+      return this.uploading || !this.files.length || !this.selectedType;
     },
 
     get submitLabel() {
@@ -475,11 +475,6 @@ function docUploader() {
     },
 
     async upload() {
-      if (this.selectedMode === 'csvjson') {
-        notify('استيراد CSV / JSON غير مفعّل بعد.', 'warning');
-        return;
-      }
-
       if (!this.selectedType) {
         notify('اختر نوع المستند أولاً.', 'warning');
         return;

@@ -1,223 +1,227 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% if auth_mode == 'register' %}إنشاء حساب — Tadgeeg{% else %}تسجيل الدخول — Tadgeeg{% endif %}</title>
+  <title>{% if auth_mode == 'register' %}إنشاء حساب - Tadgeeg{% else %}تسجيل الدخول - Tadgeeg{% endif %}</title>
+  <meta name="description" content="بوابة الدخول إلى Tadgeeg بنفس لغة صفحة الهبوط وصفحات استعادة كلمة المرور.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
   <style>
-    * { font-family: 'Cairo', 'Inter', sans-serif; }
+    * { font-family: 'Cairo', sans-serif; }
     [x-cloak] { display: none !important; }
+    :root { color-scheme: light; }
     body {
       background:
-        radial-gradient(circle at top right, rgba(37, 99, 235, 0.10), transparent 22%),
-        radial-gradient(circle at bottom left, rgba(124, 58, 237, 0.10), transparent 28%),
-        linear-gradient(180deg, #f3f7ff 0%, #eef4ff 34%, #f8fafc 100%);
+        radial-gradient(circle at top right, rgba(124,58,237,.14), transparent 24%),
+        radial-gradient(circle at 15% 80%, rgba(236,72,153,.14), transparent 22%),
+        radial-gradient(circle at 70% 60%, rgba(59,130,246,.12), transparent 28%),
+        linear-gradient(180deg, #fff 0%, #f5f3ff 36%, #eff6ff 100%);
     }
-    .panel-grid {
-      background-image:
-        linear-gradient(rgba(148, 163, 184, 0.12) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(148, 163, 184, 0.12) 1px, transparent 1px);
-      background-size: 52px 52px;
-    }
-    .section-title {
-      background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 45%, #7c3aed 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .hero-line {
-      background: linear-gradient(90deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.28) 100%);
-    }
-    .hero-line > span {
-      display: block;
-      height: 100%;
-      border-radius: 9999px;
-    }
-    .auth-shadow {
-      box-shadow: 0 30px 80px rgba(15, 23, 42, 0.08);
-    }
-    .marketing-surface {
+    .bg-dot { background-image: radial-gradient(rgba(139,92,246,.14) 1px, transparent 1px); background-size: 28px 28px; }
+    .text-grad { background: linear-gradient(135deg, #7c3aed 0%, #ec4899 52%, #2563eb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .glass { background: rgba(255,255,255,.76); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+    .hero-card {
       background:
-        radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 24%),
-        radial-gradient(circle at bottom left, rgba(124, 58, 237, 0.14), transparent 32%),
-        rgba(255, 255, 255, 0.55);
-      backdrop-filter: blur(10px);
+        linear-gradient(180deg, rgba(255,255,255,.8), rgba(255,255,255,.68)),
+        radial-gradient(circle at top right, rgba(196,181,253,.34), transparent 36%);
     }
-    .pill-tab-active {
-      background: #ffffff;
-      color: #0f172a;
-      box-shadow: inset 0 0 0 1px rgba(203, 213, 225, 0.9);
-    }
-    .brand-mark {
-      box-shadow: 0 18px 42px rgba(37, 99, 235, 0.16);
-    }
+    .soft-outline { box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 24px 80px rgba(15,23,42,.08); }
+    .btn-primary { background-image: linear-gradient(110deg, #6d28d9, #8b5cf6 32%, #a855f7 55%, #3b82f6 100%); background-size: 200% 100%; transition: background-position .35s ease, transform .2s ease, box-shadow .2s ease; }
+    .btn-primary:hover { background-position: right center; transform: translateY(-2px); box-shadow: 0 16px 40px rgba(124,58,237,.22); }
+    .input-surface { background: #faf7ff; border: 1px solid #e2e8f0; transition: border-color .25s ease, box-shadow .25s ease, background-color .25s ease; }
+    .input-surface:focus { outline: none; border-color: rgba(139,92,246,.6); background: #fff; box-shadow: 0 0 0 4px rgba(139,92,246,.12); }
+    .pill-active { background: #fff; color: #0f172a; box-shadow: inset 0 0 0 1px rgba(221,214,254,.9), 0 10px 24px rgba(124,58,237,.08); }
+    .soft-card { background: rgba(255,255,255,.72); border: 1px solid rgba(255,255,255,.8); box-shadow: 0 24px 80px rgba(15,23,42,.08); }
+    .info-chip { background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.68)); border: 1px solid rgba(255,255,255,.92); }
+    .metric-card { transition: transform .25s ease, box-shadow .25s ease; }
+    .metric-card:hover { transform: translateY(-4px); box-shadow: 0 16px 36px rgba(124,58,237,.12); }
+    .step-dot { box-shadow: 0 0 0 5px rgba(255,255,255,.9); }
+    .panel-topline { background: linear-gradient(90deg, rgba(124,58,237,0), rgba(124,58,237,.9), rgba(59,130,246,0)); }
   </style>
 </head>
 <body class="min-h-screen overflow-x-hidden text-slate-900">
+  <div class="pointer-events-none fixed inset-0 bg-dot"></div>
+  <div class="pointer-events-none fixed inset-0 overflow-hidden">
+    <div class="absolute -top-32 right-[-8rem] h-80 w-80 rounded-full bg-violet-200/70 blur-3xl"></div>
+    <div class="absolute bottom-[-7rem] left-[-5rem] h-72 w-72 rounded-full bg-pink-200/70 blur-3xl"></div>
+    <div class="absolute top-1/3 left-1/3 h-64 w-64 rounded-full bg-blue-200/60 blur-3xl"></div>
+  </div>
+
   <main class="relative min-h-screen px-4 py-6 sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-[1600px]">
+    <div class="mx-auto max-w-7xl">
       <div class="mb-6 flex items-center justify-between gap-4">
         <a href="{% url 'frontend:home' %}" class="flex items-center gap-3">
-          <img src="/static/img/logo.png" alt="Tadgeeg Logo" class="brand-mark h-14 w-14 rounded-[22px] object-cover shadow-lg shadow-blue-900/10">
+          <img src="{% static 'img/logo.png' %}" alt="Tadgeeg Logo" class="h-12 w-12 rounded-2xl object-cover shadow-lg shadow-violet-900/10">
           <div>
-            <div class="text-[17px] font-extrabold italic text-slate-900 sm:text-[18px]">Tadgeeg for Financial Auditing</div>
-            <div class="text-sm text-slate-500">منصة مالية ذكية</div>
+            <div class="text-lg font-extrabold text-slate-900">Tadgeeg - <span class="text-grad">AI</span></div>
+            <div class="text-sm text-slate-500">منصة التدقيق المالي الذكية</div>
           </div>
         </a>
-
         <div class="flex items-center gap-3">
           <a href="{% url 'frontend:home' %}" class="rounded-2xl px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-white/60 hover:text-slate-900">الواجهة الرئيسية</a>
-          <span class="rounded-2xl border border-white/70 bg-white/70 px-4 py-2 text-sm font-semibold text-slate-600">عربي</span>
+          <span class="rounded-2xl border border-white/80 bg-white/70 px-4 py-2 text-sm font-semibold text-slate-600">واجهة عربية</span>
         </div>
       </div>
 
-      <div class="grid items-stretch gap-8 lg:grid-cols-[minmax(0,1fr)_430px] xl:grid-cols-[minmax(0,1fr)_460px]" dir="ltr">
+      <div class="grid items-start gap-8 lg:grid-cols-[minmax(0,1.02fr)_minmax(420px,0.82fr)] xl:grid-cols-[minmax(0,1fr)_minmax(460px,0.8fr)] xl:gap-12" dir="ltr">
         <section class="order-1 lg:order-2" dir="rtl">
-          <div
-            class="auth-shadow rounded-[34px] border border-white/70 bg-white/92 p-6 sm:p-7 lg:min-h-[780px]"
-            x-data="authPortal('{{ auth_mode|default:'login'|escapejs }}', {{ google_oauth_enabled|yesno:'true,false' }}, '{{ auth_error_message|default:''|escapejs }}')"
-            @google-error.window="error = $event.detail; loading = false"
-          >
-            <div class="grid grid-cols-2 gap-1.5 rounded-[24px] border border-slate-200 bg-slate-100 p-1.5">
-              <a
-                href="{% url 'frontend:register' %}"
-                class="rounded-[18px] px-4 py-4 text-center text-[15px] font-bold transition-all"
-                :class="mode === 'register' ? 'pill-tab-active' : 'text-slate-500 hover:text-slate-800'"
-              >
-                إنشاء حساب
-              </a>
-              <a
-                href="{% url 'frontend:login' %}"
-                class="rounded-[18px] px-4 py-4 text-center text-[15px] font-bold transition-all"
-                :class="mode === 'login' ? 'pill-tab-active' : 'text-slate-500 hover:text-slate-800'"
-              >
-                تسجيل الدخول
-              </a>
+          <div class="relative overflow-hidden rounded-[38px] border border-white/80 bg-white/90 p-7 shadow-[0_30px_80px_rgba(15,23,42,0.08)] sm:p-10 lg:p-11 xl:p-12"
+               x-data="authPortal('{{ auth_mode|default:'login'|escapejs }}', {{ google_oauth_enabled|yesno:'true,false' }}, '{{ auth_error_message|default:''|escapejs }}')"
+               @google-error.window="error = $event.detail; loading = false">
+            <div class="panel-topline absolute inset-x-10 top-0 h-1 rounded-full"></div>
+
+            <div class="grid grid-cols-2 gap-1 rounded-[22px] border border-slate-200 bg-slate-100/95 p-1">
+              <a href="{% url 'frontend:register' %}" class="rounded-[16px] px-4 py-3.5 text-center text-sm font-bold transition-all" :class="mode === 'register' ? 'pill-active' : 'text-slate-500 hover:text-slate-800'">إنشاء حساب</a>
+              <a href="{% url 'frontend:login' %}" class="rounded-[16px] px-4 py-3.5 text-center text-sm font-bold transition-all" :class="mode === 'login' ? 'pill-active' : 'text-slate-500 hover:text-slate-800'">تسجيل الدخول</a>
             </div>
 
-            <div class="mt-10" x-show="mode === 'login'" x-cloak>
-              <div class="mb-8 text-center">
-                <h1 class="mb-2 text-[42px] font-extrabold leading-none text-slate-800">مرحباً بعودتك</h1>
-                <p class="text-lg text-slate-500">تسجيل الدخول للوصول إلى لوحة التحكم المالية</p>
+            <div class="mt-12" x-show="mode === 'login'" x-cloak>
+              <div class="mb-10 flex items-start justify-between gap-4">
+                <div>
+                  <div class="mb-3 text-sm font-bold uppercase tracking-[0.3em] text-violet-500">تسجيل الدخول</div>
+                  <h1 class="max-w-[26rem] text-[2rem] font-black leading-[1.15] text-slate-900 sm:text-[2.35rem]">ادخل إلى حسابك بهدوء واضح</h1>
+                  <p class="mt-4 max-w-[28rem] text-base leading-7 text-slate-500">أدخل بريدك الإلكتروني وكلمة المرور للعودة مباشرة إلى لوحة Tadgeeg.</p>
+                </div>
+                <div class="hidden h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-gradient-to-br from-violet-600 via-fuchsia-500 to-blue-500 text-white shadow-lg shadow-violet-500/20 sm:flex">
+                  <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6.75v-1.5a3.75 3.75 0 0 0-7.5 0v1.5m-2.25 0h12a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 18 18.75H6a1.5 1.5 0 0 1-1.5-1.5v-9a1.5 1.5 0 0 1 1.5-1.5Z" />
+                  </svg>
+                </div>
               </div>
 
               <form class="space-y-6" method="post" action="{% url 'frontend:login' %}" @submit.prevent="submitLogin()">
-                <label class="block">
-                  <span class="mb-3 block text-right text-[15px] font-bold text-slate-700">عنوان البريد الإلكتروني</span>
-                  <input x-model="login.email" type="email" name="email" placeholder="name@company.sa" class="h-16 w-full rounded-[20px] border border-slate-200 bg-[#edf3ff] px-5 text-lg outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" autocomplete="email">
-                </label>
-
-                <label class="block">
-                  <span class="mb-3 block text-right text-[15px] font-bold text-slate-700">كلمة المرور</span>
+                <label class="block rounded-[28px] border border-violet-100 bg-gradient-to-br from-violet-50/80 to-white p-6">
+                  <span class="mb-3 block text-sm font-bold text-slate-700">عنوان البريد الإلكتروني</span>
                   <div class="relative">
-                    <input :type="showPassword ? 'text' : 'password'" x-model="login.password" name="password" placeholder="••••••••" class="h-16 w-full rounded-[20px] border border-slate-200 bg-[#edf3ff] px-16 text-lg outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" autocomplete="current-password">
-                    <button type="button" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600" @click="showPassword = !showPassword" aria-label="إظهار أو إخفاء كلمة المرور">
-                      <svg x-show="!showPassword" xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
-                      <svg x-show="showPassword" x-cloak xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m3 3 18 18" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.584 10.587A2 2 0 0 0 12 14a2 2 0 0 0 1.414-.586" /><path stroke-linecap="round" stroke-linejoin="round" d="M9.88 5.09A10.936 10.936 0 0 1 12 5c4.478 0 8.268 2.943 9.542 7a10.97 10.97 0 0 1-4.337 5.486M6.228 6.228A10.958 10.958 0 0 0 2.458 12c1.274 4.057 5.065 7 9.542 7a10.96 10.96 0 0 0 5.772-1.772" /></svg>
-                    </button>
+                    <span class="pointer-events-none absolute inset-y-0 right-5 flex items-center text-slate-400">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 8.25 10.5 13.5a2.86 2.86 0 0 0 3 0L21 8.25M5.25 19.5h13.5A2.25 2.25 0 0 0 21 17.25v-10.5A2.25 2.25 0 0 0 18.75 4.5H5.25A2.25 2.25 0 0 0 3 6.75v10.5A2.25 2.25 0 0 0 5.25 19.5Z" />
+                      </svg>
+                    </span>
+                    <input x-model="login.email" type="email" name="email" placeholder="name@company.sa" class="input-surface h-[62px] w-full rounded-[22px] px-5 pr-14 text-lg" autocomplete="email">
                   </div>
                 </label>
 
-                <div class="flex items-center justify-between gap-4 text-base text-slate-500">
-                  <button type="button" class="font-semibold text-sky-600 transition hover:text-sky-700">نسيت كلمة المرور؟</button>
-                  <label class="inline-flex items-center gap-3 text-slate-600">
-                    <input x-model="login.remember" type="checkbox" class="h-6 w-6 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500">
-                    <span class="font-medium">تذكرني</span>
+                <label class="block rounded-[28px] border border-slate-200 bg-white/80 p-6">
+                  <div class="mb-3 flex items-center justify-between gap-3">
+                    <span class="text-sm font-bold text-slate-700">كلمة المرور</span>
+                    <a href="{% url 'frontend:password_reset' %}" class="text-sm font-bold text-violet-600 transition hover:text-violet-800">نسيت كلمة المرور؟</a>
+                  </div>
+                  <div class="relative">
+                    <button type="button" class="absolute inset-y-0 left-5 flex items-center text-slate-400 transition hover:text-slate-600" @click="showPassword = !showPassword" aria-label="إظهار أو إخفاء كلمة المرور">
+                      <svg x-show="!showPassword" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
+                      <svg x-show="showPassword" x-cloak xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m3 3 18 18" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.584 10.587A2 2 0 0 0 12 14a2 2 0 0 0 1.414-.586" /><path stroke-linecap="round" stroke-linejoin="round" d="M9.88 5.09A10.936 10.936 0 0 1 12 5c4.478 0 8.268 2.943 9.542 7a10.97 10.97 0 0 1-4.337 5.486M6.228 6.228A10.958 10.958 0 0 0 2.458 12c1.274 4.057 5.065 7 9.542 7a10.96 10.96 0 0 0 5.772-1.772" /></svg>
+                    </button>
+                    <input :type="showPassword ? 'text' : 'password'" x-model="login.password" name="password" placeholder="••••••••" class="input-surface h-[62px] w-full rounded-[22px] px-5 pl-14 text-lg" autocomplete="current-password">
+                  </div>
+                  <p class="mt-3 text-sm leading-6 text-slate-500">يمكنك استعادة كلمة المرور من الرابط أعلاه إذا احتجت ذلك لاحقًا.</p>
+                </label>
+
+                <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
+                  <label class="inline-flex items-center gap-3">
+                    <input x-model="login.remember" type="checkbox" class="h-5 w-5 rounded-md border-slate-300 text-violet-600 focus:ring-violet-500">
+                    <span class="font-bold">تذكرني</span>
                   </label>
+                  <span>دخول واضح ومتسق مع رحلة الاستعادة.</span>
                 </div>
 
                 <div x-show="error" x-cloak class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" x-text="error"></div>
 
-                <button type="submit" class="flex h-[72px] w-full items-center justify-center gap-3 rounded-[22px] bg-gradient-to-r from-blue-600 to-cyan-500 text-2xl font-extrabold text-white shadow-lg shadow-blue-500/25 transition hover:from-blue-700 hover:to-cyan-600 disabled:cursor-not-allowed disabled:opacity-60" :disabled="loading">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16m-6-6 6 6-6 6" /></svg>
-                  <span x-text="loading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'"></span>
+                <button type="submit" class="btn-primary flex h-[68px] w-full items-center justify-center gap-3 rounded-[24px] px-6 text-lg font-black text-white shadow-lg shadow-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60" :disabled="loading">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16m-6-6 6 6-6 6" /></svg>
+                  <span x-text="loading ? 'جارٍ تسجيل الدخول...' : 'تسجيل الدخول'"></span>
                 </button>
               </form>
 
-              <div class="my-8 flex items-center gap-4 text-slate-400">
+              <div class="my-10 flex items-center gap-4 text-slate-400">
                 <div class="h-px flex-1 bg-slate-200"></div>
-                <span class="text-lg font-medium">أو تسجيل الدخول عبر</span>
+                <span class="text-base font-medium">أو المتابعة عبر</span>
                 <div class="h-px flex-1 bg-slate-200"></div>
               </div>
 
               <div class="rounded-[22px] border border-slate-200 bg-white p-4">
                 {% if google_oauth_enabled %}
-                <a href="{% url 'frontend:google_oauth_login' %}" class="flex h-14 items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">
+                <a href="{% url 'frontend:google_oauth_login' %}" class="flex h-14 items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-700 transition hover:border-violet-200 hover:bg-violet-50/40 hover:text-violet-700">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="h-6 w-6" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.4H42V20H24v8h11.3C33.6 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.6Z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.1 29.3 4 24 4c-7.7 0-14.3 4.3-17.7 10.7Z"/><path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.5-5.2l-6.2-5.2C29.3 35.1 26.8 36 24 36c-5.2 0-9.6-3.3-11.2-8l-6.5 5C9.7 39.6 16.3 44 24 44Z"/><path fill="#1976D2" d="M43.6 20.4H42V20H24v8h11.3c-1.1 3.1-3.3 5.5-6 7l6.2 5.2C39.4 36.6 44 30.9 44 24c0-1.3-.1-2.4-.4-3.6Z"/></svg>
                   <span>المتابعة عبر Google</span>
                 </a>
                 {% else %}
-                  <div class="flex h-14 items-center justify-center rounded-2xl bg-slate-50 text-base font-semibold text-slate-400">Google Login غير مهيأ في الإعدادات</div>
+                <div class="flex h-14 items-center justify-center rounded-2xl bg-slate-50 text-base font-semibold text-slate-400">Google Login غير مهيأ في الإعدادات</div>
                 {% endif %}
               </div>
             </div>
 
-            <div class="mt-10" x-show="mode === 'register'" x-cloak>
-              <div class="mb-8 text-center">
-                <h1 class="mb-2 text-[42px] font-extrabold leading-none text-slate-800">إنشاء حساب جديد</h1>
-                <p class="text-lg text-slate-500">أنشئ حسابك للوصول إلى منصة التدقيق المالي</p>
+            <div class="mt-12" x-show="mode === 'register'" x-cloak>
+              <div class="mb-10 flex items-start justify-between gap-4">
+                <div>
+                  <div class="mb-3 text-sm font-bold uppercase tracking-[0.3em] text-violet-500">إنشاء حساب</div>
+                  <h1 class="max-w-[26rem] text-[2rem] font-black leading-[1.15] text-slate-900 sm:text-[2.35rem]">أنشئ حسابك</h1>
+                  <p class="mt-4 max-w-[28rem] text-base leading-7 text-slate-500">أدخل بياناتك الأساسية وسنرسل رمز التحقق إلى بريدك قبل تفعيل الحساب.</p>
+                </div>
+                <div class="hidden h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-gradient-to-br from-violet-600 via-fuchsia-500 to-blue-500 text-white shadow-lg shadow-violet-500/20 sm:flex">
+                  <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 7.5V6a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v1.5m12 0A1.5 1.5 0 0 1 19.5 9v10.5A1.5 1.5 0 0 1 18 21H6A1.5 1.5 0 0 1 4.5 19.5V9A1.5 1.5 0 0 1 6 7.5m12 0H6" />
+                  </svg>
+                </div>
               </div>
 
               <form class="space-y-6" method="post" action="{% url 'frontend:register' %}" @submit.prevent="submitRegister()">
-                <label class="block">
-                  <span class="mb-3 block text-right text-[15px] font-bold text-slate-700">الاسم</span>
-                  <input x-model="register.full_name" type="text" name="full_name" placeholder="محمد أحمد" class="h-16 w-full rounded-[20px] border border-slate-200 bg-[#edf3ff] px-5 text-lg outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" autocomplete="name">
+                <label class="block rounded-[28px] border border-slate-200 bg-white/80 p-6">
+                  <span class="mb-3 block text-sm font-bold text-slate-700">الاسم الكامل</span>
+                  <input x-model="register.full_name" type="text" name="full_name" placeholder="محمد أحمد" class="input-surface h-[62px] w-full rounded-[22px] px-5 text-lg" autocomplete="name">
                 </label>
 
-                <label class="block">
-                  <span class="mb-3 block text-right text-[15px] font-bold text-slate-700">البريد الإلكتروني</span>
-                  <input x-model="register.email" type="email" name="email" placeholder="name@company.sa" class="h-16 w-full rounded-[20px] border border-slate-200 bg-[#edf3ff] px-5 text-lg outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" autocomplete="email">
+                <label class="block rounded-[28px] border border-violet-100 bg-gradient-to-br from-violet-50/80 to-white p-6">
+                  <span class="mb-3 block text-sm font-bold text-slate-700">البريد الإلكتروني</span>
+                  <input x-model="register.email" type="email" name="email" placeholder="name@company.sa" class="input-surface h-[62px] w-full rounded-[22px] px-5 text-lg" autocomplete="email">
+                  <p class="mt-3 text-sm leading-6 text-slate-500">سيصل رمز التحقق إلى هذا البريد بعد إنشاء الحساب مباشرة.</p>
                 </label>
 
-                <label class="block">
-                  <span class="mb-3 block text-right text-[15px] font-bold text-slate-700">كلمة المرور</span>
-                  <div class="relative">
-                    <input :type="showPassword ? 'text' : 'password'" x-model="register.password" name="password" placeholder="••••••••" class="h-16 w-full rounded-[20px] border border-slate-200 bg-[#edf3ff] px-16 text-lg outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" autocomplete="new-password">
-                    <button type="button" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-slate-600" @click="showPassword = !showPassword" aria-label="إظهار أو إخفاء كلمة المرور">
-                      <svg x-show="!showPassword" xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
-                      <svg x-show="showPassword" x-cloak xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m3 3 18 18" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.584 10.587A2 2 0 0 0 12 14a2 2 0 0 0 1.414-.586" /><path stroke-linecap="round" stroke-linejoin="round" d="M9.88 5.09A10.936 10.936 0 0 1 12 5c4.478 0 8.268 2.943 9.542 7a10.97 10.97 0 0 1-4.337 5.486M6.228 6.228A10.958 10.958 0 0 0 2.458 12c1.274 4.057 5.065 7 9.542 7a10.96 10.96 0 0 0 5.772-1.772" /></svg>
-                    </button>
-                  </div>
+                <label class="block rounded-[28px] border border-slate-200 bg-white/80 p-6">
+                  <span class="mb-3 block text-sm font-bold text-slate-700">كلمة المرور</span>
+                  <input :type="showPassword ? 'text' : 'password'" x-model="register.password" name="password" placeholder="••••••••" class="input-surface h-[62px] w-full rounded-[22px] px-5 text-lg" autocomplete="new-password">
+                  <p class="mt-3 text-sm leading-6 text-slate-500">استخدم 8 أحرف على الأقل مع صيغة مناسبة للاستخدام المؤسسي.</p>
                 </label>
 
-                <label class="block">
-                  <span class="mb-3 block text-right text-[15px] font-bold text-slate-700">تأكيد كلمة المرور</span>
-                  <input :type="showConfirm ? 'text' : 'password'" x-model="register.password_confirm" name="password_confirm" placeholder="••••••••" class="h-16 w-full rounded-[20px] border border-slate-200 bg-[#edf3ff] px-5 text-lg outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100" autocomplete="new-password">
+                <label class="block rounded-[28px] border border-slate-200 bg-white/80 p-6">
+                  <span class="mb-3 block text-sm font-bold text-slate-700">تأكيد كلمة المرور</span>
+                  <input :type="showConfirm ? 'text' : 'password'" x-model="register.password_confirm" name="password_confirm" placeholder="••••••••" class="input-surface h-[62px] w-full rounded-[22px] px-5 text-lg" autocomplete="new-password">
                 </label>
 
-                <div class="flex items-center justify-between gap-3 text-sm text-slate-500">
+                <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
                   <label class="inline-flex items-center gap-3">
-                    <input x-model="showConfirm" type="checkbox" class="h-5 w-5 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500">
-                    <span>إظهار تأكيد كلمة المرور</span>
+                    <input x-model="showConfirm" type="checkbox" class="h-5 w-5 rounded-md border-slate-300 text-violet-600 focus:ring-violet-500">
+                    <span class="font-bold">إظهار تأكيد كلمة المرور</span>
                   </label>
-                  <span>سيتم مراجعة الحساب قبل التفعيل المؤسسي</span>
+                  <span>سنتأكد من تطابق الحقلين قبل متابعة التسجيل.</span>
                 </div>
 
                 <div x-show="error" x-cloak class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" x-text="error"></div>
-
-                <button type="submit" class="flex h-[72px] w-full items-center justify-center gap-3 rounded-[22px] bg-gradient-to-r from-blue-600 to-cyan-500 text-2xl font-extrabold text-white shadow-lg shadow-blue-500/25 transition hover:from-blue-700 hover:to-cyan-600 disabled:cursor-not-allowed disabled:opacity-60" :disabled="loading">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16m-6-6 6 6-6 6" /></svg>
-                  <span x-text="loading ? 'جاري إنشاء الحساب...' : 'إنشاء الحساب'"></span>
+                <button type="submit" class="btn-primary flex h-[68px] w-full items-center justify-center gap-3 rounded-[24px] px-6 text-lg font-black text-white shadow-lg shadow-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60" :disabled="loading">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16m-6-6 6 6-6 6" /></svg>
+                  <span x-text="loading ? 'جارٍ إنشاء الحساب...' : 'إنشاء الحساب'"></span>
                 </button>
               </form>
 
-              <div class="my-8 flex items-center gap-4 text-slate-400">
+              <div class="my-10 flex items-center gap-4 text-slate-400">
                 <div class="h-px flex-1 bg-slate-200"></div>
-                <span class="text-lg font-medium">أو التسجيل السريع عبر</span>
+                <span class="text-base font-medium">أو المتابعة عبر</span>
                 <div class="h-px flex-1 bg-slate-200"></div>
               </div>
 
               <div class="rounded-[22px] border border-slate-200 bg-white p-4">
                 {% if google_oauth_enabled %}
-                <a href="{% url 'frontend:google_oauth_login' %}" class="flex h-14 items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50">
+                <a href="{% url 'frontend:google_oauth_login' %}" class="flex h-14 items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-700 transition hover:border-violet-200 hover:bg-violet-50/40 hover:text-violet-700">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="h-6 w-6" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.4H42V20H24v8h11.3C33.6 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.6Z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.1 29.3 4 24 4c-7.7 0-14.3 4.3-17.7 10.7Z"/><path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.5-5.2l-6.2-5.2C29.3 35.1 26.8 36 24 36c-5.2 0-9.6-3.3-11.2-8l-6.5 5C9.7 39.6 16.3 44 24 44Z"/><path fill="#1976D2" d="M43.6 20.4H42V20H24v8h11.3c-1.1 3.1-3.3 5.5-6 7l6.2 5.2C39.4 36.6 44 30.9 44 24c0-1.3-.1-2.4-.4-3.6Z"/></svg>
                   <span>المتابعة عبر Google</span>
                 </a>
                 {% else %}
-                  <div class="flex h-14 items-center justify-center rounded-2xl bg-slate-50 text-base font-semibold text-slate-400">Google Login غير مهيأ في الإعدادات</div>
+                <div class="flex h-14 items-center justify-center rounded-2xl bg-slate-50 text-base font-semibold text-slate-400">Google Login غير مهيأ في الإعدادات</div>
                 {% endif %}
               </div>
             </div>
@@ -226,68 +230,59 @@
           </div>
         </section>
 
-        <section class="order-2 overflow-hidden rounded-[34px] border border-white/60 marketing-surface panel-grid shadow-2xl shadow-blue-900/5 lg:order-1" dir="rtl">
-          <div class="flex h-full min-h-[640px] flex-col justify-between p-8 lg:p-12 xl:p-14">
-            <div class="flex items-start justify-between gap-6">
-              <div class="rounded-full border border-white/60 bg-white/40 px-4 py-2 text-sm font-semibold text-slate-500">عربي</div>
-              <div class="text-left">
-                <div class="text-[26px] font-extrabold italic text-slate-800 sm:text-[32px]">Tadgeeg for Financial Auditing</div>
-                <div class="text-xl text-slate-400">منصة مالية ذكية</div>
+        <section class="order-2 self-start overflow-hidden rounded-[36px] border border-white/70 glass hero-card soft-outline px-8 py-10 sm:px-10 lg:sticky lg:top-6 lg:order-1 lg:min-h-[calc(100vh-8rem)] lg:px-12 lg:py-12 xl:px-14" dir="rtl">
+          <div class="flex h-full flex-col gap-8 lg:gap-10">
+            <div class="max-w-[35rem]">
+              <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700">
+                <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+                نفس هدوء صفحة الهبوط والاستعادة
               </div>
+              <h2 class="max-w-2xl text-[2.15rem] font-black leading-[1.08] tracking-tight text-slate-900 sm:text-[2.8rem] lg:text-[3.35rem]">اهلا وسهلا بك في منصة التدقيق المالي<span class="block text-grad">الذكية</span></h2>
+              <p class="mt-4 max-w-xl text-base leading-8 text-slate-500 sm:text-lg">نظام متطور يعتمد على تقنيات التعلم العميق لضمان دقة الامتثال المالي والضريبي لشركتك في دول الخليج.</p>
             </div>
 
-            <div class="py-6 text-right">
-              <h2 class="section-title text-5xl font-extrabold leading-[1.05] sm:text-6xl xl:text-[92px]">
-                منصة تدقيق مالي
-                <span class="block">الذكية</span>
-              </h2>
-              <p class="mt-6 max-w-3xl text-2xl leading-[1.8] text-slate-500 xl:text-[28px]">
-                معالجة المستندات المدعومة بالذكاء الاصطناعي، والأتمتة التنظيمية، ورؤى مالية فورية مصممة خصيصاً لأعمال دول مجلس التعاون الخليجي.
-              </p>
+            <div class="grid gap-3 sm:grid-cols-3">
+              <div class="metric-card soft-card rounded-[24px] px-4 py-5 text-center"><div class="text-[1.7rem] font-black text-slate-900">60ث</div><div class="mt-1.5 text-xs font-semibold text-slate-500 sm:text-sm">متوسط بدء الجلسة</div></div>
+              <div class="metric-card soft-card rounded-[24px] px-4 py-5 text-center"><div class="text-[1.7rem] font-black text-slate-900">OTP</div><div class="mt-1.5 text-xs font-semibold text-slate-500 sm:text-sm">التحقق عبر البريد</div></div>
+              <div class="metric-card soft-card rounded-[24px] px-4 py-5 text-center"><div class="text-[1.7rem] font-black text-slate-900">AES-256</div><div class="mt-1.5 text-xs font-semibold text-slate-500 sm:text-sm">حماية البيانات</div></div>
             </div>
 
-            <div class="space-y-8">
-              <div class="grid gap-6 xl:grid-cols-[1.35fr_0.85fr]">
-                <div class="space-y-6">
-                  <div>
-                    <div class="mb-3 flex items-center justify-between text-2xl text-slate-500">
-                      <span>قوة معالجة AI</span>
-                      <span class="font-bold text-slate-700">94%</span>
-                    </div>
-                    <div class="hero-line h-3 rounded-full"><span class="w-[94%] bg-gradient-to-r from-blue-600 to-blue-400"></span></div>
-                  </div>
-                  <div>
-                    <div class="mb-3 flex items-center justify-between text-2xl text-slate-500">
-                      <span>الأتمتة</span>
-                      <span class="font-bold text-slate-700">97%</span>
-                    </div>
-                    <div class="hero-line h-3 rounded-full"><span class="w-[97%] bg-gradient-to-r from-emerald-500 to-emerald-300"></span></div>
-                  </div>
-                  <div>
-                    <div class="mb-3 flex items-center justify-between text-2xl text-slate-500">
-                      <span>درجة الأمان</span>
-                      <span class="font-bold text-slate-700">92%</span>
-                    </div>
-                    <div class="hero-line h-3 rounded-full"><span class="w-[92%] bg-gradient-to-r from-violet-600 to-fuchsia-300"></span></div>
-                  </div>
+            <div class="soft-card max-w-[34rem] rounded-[32px] p-5 sm:p-6 lg:mt-auto">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <div class="text-xs font-black uppercase tracking-[0.24em] text-slate-400">معاينة الدخول</div>
+                  <div class="mt-2 text-xl font-black leading-tight text-slate-900 sm:text-[1.65rem]">تجربة أوضح وأهدأ للوصول إلى الحساب</div>
                 </div>
-
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-1">
-                  <div class="rounded-[28px] border border-white/55 bg-white/55 px-6 py-5 text-center shadow-sm">
-                    <div class="text-4xl font-extrabold text-slate-800">99.9%</div>
-                    <div class="mt-2 text-xl text-slate-500">وقت التشغيل</div>
-                  </div>
-                  <div class="rounded-[28px] border border-white/55 bg-white/55 px-6 py-5 text-center shadow-sm">
-                    <div class="text-4xl font-extrabold text-slate-800">500+</div>
-                    <div class="mt-2 text-xl text-slate-500">مستخدم نشط</div>
-                  </div>
+                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-gradient-to-br from-violet-600 via-fuchsia-500 to-blue-500 text-white shadow-lg shadow-violet-500/20">
+                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3l7.5 3v6c0 4.5-3.12 8.63-7.5 9-4.38-.37-7.5-4.5-7.5-9V6L12 3Z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m9 12 2 2 4-4" />
+                  </svg>
                 </div>
               </div>
 
-              <div class="flex flex-wrap items-center justify-end gap-3 text-lg">
-                <span class="rounded-full border border-white/60 bg-white/45 px-5 py-2 font-semibold text-slate-600">بدون بطاقة ائتمان</span>
-                <span class="rounded-full border border-white/60 bg-white/45 px-5 py-2 font-semibold text-slate-600">إعداد سريع</span>
-                <span class="rounded-full border border-white/60 bg-white/45 px-5 py-2 font-semibold text-slate-600">حماية AES-256</span>
+              <div class="mt-6 space-y-3">
+                <div class="flex items-center justify-between rounded-[22px] border border-white/80 bg-white/70 px-4 py-3.5">
+                  <div class="flex items-center gap-3">
+                    <span class="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-sm font-black text-violet-700">01</span>
+                    <div class="text-sm font-semibold text-slate-700">إدخال البريد أو بيانات الحساب</div>
+                  </div>
+                  <span class="text-xs font-semibold text-slate-400">سريع</span>
+                </div>
+                <div class="flex items-center justify-between rounded-[22px] border border-white/80 bg-white/70 px-4 py-3.5">
+                  <div class="flex items-center gap-3">
+                    <span class="flex h-8 w-8 items-center justify-center rounded-full bg-pink-100 text-sm font-black text-pink-600">02</span>
+                    <div class="text-sm font-semibold text-slate-700">تحقق هادئ بدون تعقيد بصري</div>
+                  </div>
+                  <span class="text-xs font-semibold text-slate-400">منظّم</span>
+                </div>
+                <div class="flex items-center justify-between rounded-[22px] border border-white/80 bg-white/70 px-4 py-3.5">
+                  <div class="flex items-center gap-3">
+                    <span class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-black text-blue-600">03</span>
+                    <div class="text-sm font-semibold text-slate-700">الانتقال مباشرة إلى لوحة Tadgeeg</div>
+                  </div>
+                  <span class="text-xs font-semibold text-slate-400">مباشر</span>
+                </div>
               </div>
             </div>
           </div>
@@ -300,139 +295,52 @@
     function getCookie(name) {
       const cookieValue = `; ${document.cookie}`;
       const parts = cookieValue.split(`; ${name}=`);
-      if (parts.length === 2) {
-        return parts.pop().split(';').shift();
-      }
+      if (parts.length === 2) return parts.pop().split(';').shift();
       return '';
     }
-
     async function parseJson(response) {
       const text = await response.text();
-      if (!text) {
-        return {};
-      }
-
-      try {
-        return JSON.parse(text);
-      } catch (error) {
-        return { error: text };
-      }
+      if (!text) return {};
+      try { return JSON.parse(text); } catch (error) { return { error: text }; }
     }
-
     function storeTokens(payload) {
       const accessToken = payload?.tokens?.access || payload?.access;
       const refreshToken = payload?.tokens?.refresh || payload?.refresh;
-
-      if (accessToken) {
-        localStorage.setItem('fin_token', accessToken);
-      }
-      if (refreshToken) {
-        localStorage.setItem('fin_refresh_token', refreshToken);
-      }
+      if (accessToken) localStorage.setItem('fin_token', accessToken);
+      if (refreshToken) localStorage.setItem('fin_refresh_token', refreshToken);
     }
-
     function authPortal(initialMode, googleEnabled, initialError) {
       return {
-        mode: initialMode,
-        googleEnabled,
-        loading: false,
-        error: initialError || '',
-        showPassword: false,
-        showConfirm: false,
-        login: {
-          email: '',
-          password: '',
-          remember: false,
-        },
-        register: {
-          full_name: '',
-          email: '',
-          password: '',
-          password_confirm: '',
-        },
+        mode: initialMode, googleEnabled, loading: false, error: initialError || '', showPassword: false, showConfirm: false,
+        login: { email: '', password: '', remember: false },
+        register: { full_name: '', email: '', password: '', password_confirm: '' },
         async submitLogin() {
           this.error = '';
-          if (!this.login.email || !this.login.password) {
-            this.error = 'يرجى إدخال البريد الإلكتروني وكلمة المرور.';
-            return;
-          }
-
+          if (!this.login.email || !this.login.password) { this.error = 'يرجى إدخال البريد الإلكتروني وكلمة المرور.'; return; }
           this.loading = true;
-          const formData = new FormData();
-          formData.append('email', this.login.email);
-          formData.append('password', this.login.password);
-
+          const formData = new FormData(); formData.append('email', this.login.email); formData.append('password', this.login.password);
           try {
-            const response = await fetch('{% url "frontend:login" %}', {
-              method: 'POST',
-              headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-                'X-Requested-With': 'XMLHttpRequest',
-              },
-              body: formData,
-            });
+            const response = await fetch('{% url "frontend:login" %}', { method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
             const data = await parseJson(response);
-
-            if (!response.ok || !data.success) {
-              this.error = data.error || 'تعذر تسجيل الدخول. حاول مرة أخرى.';
-              return;
-            }
-
-            storeTokens(data);
-            window.location.href = data.redirect || '{% url "frontend:dashboard" %}';
-          } catch (error) {
-            this.error = 'حدث خطأ في الاتصال بالخادم.';
-          } finally {
-            this.loading = false;
-          }
+            if (!response.ok || !data.success) { this.error = data.error || 'تعذر تسجيل الدخول. حاول مرة أخرى.'; return; }
+            storeTokens(data); window.location.href = data.redirect || '{% url "frontend:dashboard" %}';
+          } catch (error) { this.error = 'حدث خطأ في الاتصال بالخادم.'; } finally { this.loading = false; }
         },
         async submitRegister() {
           this.error = '';
-          if (!this.register.full_name || !this.register.email || !this.register.password || !this.register.password_confirm) {
-            this.error = 'يرجى تعبئة جميع الحقول المطلوبة.';
-            return;
-          }
-
-          if (this.register.password.length < 8) {
-            this.error = 'كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل.';
-            return;
-          }
-
-          if (this.register.password !== this.register.password_confirm) {
-            this.error = 'كلمتا المرور غير متطابقتين.';
-            return;
-          }
-
+          if (!this.register.full_name || !this.register.email || !this.register.password || !this.register.password_confirm) { this.error = 'يرجى تعبئة جميع الحقول المطلوبة.'; return; }
+          if (this.register.password.length < 8) { this.error = 'كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل.'; return; }
+          if (this.register.password !== this.register.password_confirm) { this.error = 'كلمتا المرور غير متطابقتين.'; return; }
           this.loading = true;
           const formData = new FormData();
-          formData.append('full_name', this.register.full_name);
-          formData.append('email', this.register.email);
-          formData.append('password', this.register.password);
-          formData.append('password_confirm', this.register.password_confirm);
-
+          formData.append('full_name', this.register.full_name); formData.append('email', this.register.email);
+          formData.append('password', this.register.password); formData.append('password_confirm', this.register.password_confirm);
           try {
-            const response = await fetch('{% url "frontend:register" %}', {
-              method: 'POST',
-              headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-                'X-Requested-With': 'XMLHttpRequest',
-              },
-              body: formData,
-            });
+            const response = await fetch('{% url "frontend:register" %}', { method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
             const data = await parseJson(response);
-
-            if (!response.ok || !data.success) {
-              this.error = data.error || 'تعذر إنشاء الحساب حالياً.';
-              return;
-            }
-
-            storeTokens(data);
-            window.location.href = data.redirect || '{% url "frontend:google_pending" %}';
-          } catch (error) {
-            this.error = 'حدث خطأ في الاتصال بالخادم.';
-          } finally {
-            this.loading = false;
-          }
+            if (!response.ok || !data.success) { this.error = data.error || 'تعذر إنشاء الحساب حاليًا.'; return; }
+            storeTokens(data); window.location.href = data.redirect || '{% url "frontend:google_pending" %}';
+          } catch (error) { this.error = 'حدث خطأ في الاتصال بالخادم.'; } finally { this.loading = false; }
         },
       };
     }

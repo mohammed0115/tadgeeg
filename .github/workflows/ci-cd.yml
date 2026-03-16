@@ -2,10 +2,10 @@ name: FinAI CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, dev ]
     tags: [ 'v*' ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, dev ]
 
 env:
   REGISTRY: ghcr.io
@@ -225,19 +225,19 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ─── Deploy to Staging ────────────────────────────────────────────────
+  # ─── Deploy to Dev ────────────────────────────────────────────────────
 
-  deploy-staging:
+  deploy-dev:
     needs: build-docker
     runs-on: ubuntu-latest
-    name: Deploy to Staging
+    name: Deploy to Dev
     
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
     
     steps:
       - uses: actions/checkout@v3
       
-      - name: Deploy to staging environment
+      - name: Deploy to dev environment
         env:
           DEPLOY_KEY: ${{ secrets.STAGING_DEPLOY_KEY }}
           STAGING_HOST: ${{ secrets.STAGING_HOST }}
@@ -249,7 +249,7 @@ jobs:
           ssh-keyscan -H $STAGING_HOST >> ~/.ssh/known_hosts
           
           ssh -i ~/.ssh/deploy_key $STAGING_USER@$STAGING_HOST \
-            "cd /apps/tadgeeg && git pull origin develop && docker-compose up -d"
+            "cd /apps/tadgeeg && git pull origin dev && docker-compose up -d"
       
       - name: Run smoke tests
         env:

@@ -29,6 +29,7 @@ from apps.authentication.models import AuditLog
 from apps.authentication.permissions import IsOwnOrganization
 from core.utils.audit import log_action
 
+from core.services.file_validator import FileValidator, FileValidationError
 from .models import Document, ExtractedData, DocumentPageResult, DocumentAnalysisResult
 from .serializers import (
     DocumentSerializer,
@@ -77,13 +78,23 @@ class DocumentUploadView(APIView):
         doc_type      = serializer.validated_data.get("document_type", Document.DocumentType.OTHER)
         notes         = serializer.validated_data.get("notes", "")
 
+        # ── MIME + ZIP security validation (Phase 0) ──────────────────────────
+        try:
+            file_meta = FileValidator.validate(uploaded_file)
+        except FileValidationError as exc:
+            logger.warning(
+                "[Upload] Rejected file '%s' from user=%s: %s",
+                uploaded_file.name, request.user.pk, exc,
+            )
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
         doc = Document.objects.create(
             organization      = org,
             uploaded_by       = request.user,
             file              = uploaded_file,
             original_filename = uploaded_file.name,
             file_size         = uploaded_file.size,
-            mime_type         = uploaded_file.content_type or "",
+            mime_type         = file_meta["detected_mime"],   # content-detected, not header claim
             document_type     = doc_type,
             processing_status = Document.ProcessingStatus.PENDING,
             notes             = notes,
@@ -91,9 +102,12 @@ class DocumentUploadView(APIView):
 
         log_action(request, AuditLog.Action.DOCUMENT_UPLOAD, "document", str(doc.id))
 
-        # Queue the full pipeline asynchronously
+        # Queue the full pipeline asynchronously (pass correlation ID for log tracing)
         from .tasks import process_document_task
-        process_document_task.delay(str(doc.id))
+        process_document_task.apply_async(
+            args=[str(doc.id)],
+            headers={"request_id": getattr(request, "correlation_id", "")},
+        )
 
         return Response(DocumentSerializer(doc).data, status=status.HTTP_201_CREATED)
 

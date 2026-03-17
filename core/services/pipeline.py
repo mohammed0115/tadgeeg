@@ -39,12 +39,15 @@ PIPELINE_VERSION = "2.0"
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def run_full_pipeline(document_id: str) -> dict:
+def run_full_pipeline(document_id: str, session_id: Optional[str] = None) -> dict:
     """
     Run the complete pipeline for an existing Document record.
 
     Loads the document from the database, processes it, and saves
     a DocumentAnalysisResult.  Updates Document.processing_status throughout.
+
+    :param document_id: UUID string of the Document to process.
+    :param session_id:  Optional UUID string of an AuditSession to link findings to.
 
     Returns a summary dict suitable for Celery task result storage.
     """
@@ -65,6 +68,7 @@ def run_full_pipeline(document_id: str) -> dict:
     doc.processing_error = ""
     doc.save(update_fields=["processing_status", "processing_error"])
 
+    _t0 = time.monotonic()
     try:
         result = run_full_pipeline_for_file(
             file_path=doc.file.path,
@@ -72,8 +76,11 @@ def run_full_pipeline(document_id: str) -> dict:
             organization_id=doc.organization_id,
             country_code=_get_org_country(doc.organization_id),
             use_ai=True,
+            session_id=session_id,
+            document_obj=doc,
         )
         _persist_result(doc, result)
+        _record_pipeline_metric(doc.processing_status, time.monotonic() - _t0)
         return result
 
     except Exception as exc:
@@ -81,7 +88,18 @@ def run_full_pipeline(document_id: str) -> dict:
         doc.processing_status = Document.ProcessingStatus.FAILED
         doc.processing_error = str(exc)
         doc.save(update_fields=["processing_status", "processing_error"])
+        _record_pipeline_metric("failed", time.monotonic() - _t0)
         return {"success": False, "error": str(exc), "document_id": document_id}
+
+
+def _record_pipeline_metric(status: str, duration_s: float) -> None:
+    """Record document processing metrics — fire-and-forget, never raises."""
+    try:
+        from core.utils.metrics import documents_processed_total, document_processing_seconds
+        documents_processed_total.labels(status=status).inc()
+        document_processing_seconds.observe(duration_s)
+    except Exception:
+        pass  # metrics are best-effort
 
 
 def run_full_pipeline_for_file(
@@ -90,6 +108,8 @@ def run_full_pipeline_for_file(
     organization_id: Optional[int] = None,
     country_code: str = "SA",
     use_ai: bool = True,
+    session_id: Optional[str] = None,
+    document_obj=None,
 ) -> dict:
     """
     Run the full pipeline on an arbitrary file path.
@@ -158,6 +178,9 @@ def run_full_pipeline_for_file(
         _set_timing(summary, t_start)
         return summary
 
+    # ── Update Document status: PROCESSING (stage boundary) ──────────────
+    _update_document_status(document_id, "processing", "stage_1_complete")
+
     # ── Stage 2: Financial AI Analysis ───────────────────────────────────────
     analysis = None
     try:
@@ -197,6 +220,61 @@ def run_full_pipeline_for_file(
         errors.append(f"Stage 2 (Financial AI) exception: {exc}")
         logger.exception("[Pipeline] Stage 2 exception for %s", file_path)
         # Continue to audit with whatever partial data we have
+
+    # ── Update Document status: stage boundary ────────────────────────────
+    _update_document_status(document_id, "processing", "stage_2_complete")
+
+    # ── Stage 3.5: Normalization + Validation + Finding Persistence ──────────
+    validation_summary: dict = {}
+    try:
+        from core.services.validation_service import ValidationService
+
+        # Resolve AuditSession if a session_id was supplied
+        audit_session = None
+        if session_id:
+            try:
+                from apps.audit.models import AuditSession
+                audit_session = AuditSession.objects.get(pk=session_id)
+                # Advance session state: NORMALIZING
+                if audit_session.can_transition_to(AuditSession.State.NORMALIZING):
+                    audit_session.state = AuditSession.State.NORMALIZING
+                    audit_session.save(update_fields=["state", "updated_at"])
+            except Exception as exc:
+                logger.warning("[Pipeline] Could not load AuditSession %s: %s", session_id, exc)
+
+        val_svc = ValidationService(
+            session=audit_session,
+            document=document_obj,
+            persist=audit_session is not None,
+        )
+        val_result = val_svc.run(analysis.to_dict() if analysis else {})
+        validation_summary = val_result.summary
+        summary["validation"] = validation_summary
+
+        # Advance session state: VALIDATING
+        if audit_session and audit_session.can_transition_to(AuditSession.State.VALIDATING):
+            audit_session.state = AuditSession.State.VALIDATING
+            audit_session.save(update_fields=["state", "updated_at"])
+
+        # If critical findings → mark requires_review + escalate
+        if val_result.has_critical:
+            summary["requires_review"] = True
+            summary["escalate"]        = True
+            logger.warning(
+                "[Pipeline] Stage 3.5 — %d critical validation finding(s) for %s",
+                len(val_result.report.critical_failures), file_path,
+            )
+
+        logger.info(
+            "[Pipeline] Stage 3.5 DONE — rules=%d failed=%d critical=%d findings_saved=%d",
+            validation_summary.get("total_rules", 0),
+            validation_summary.get("failed", 0),
+            validation_summary.get("critical_failures", 0),
+            validation_summary.get("findings_persisted", 0),
+        )
+    except Exception as exc:
+        errors.append(f"Stage 3.5 (Validation) exception: {exc}")
+        logger.exception("[Pipeline] Stage 3.5 exception for %s", file_path)
 
     # ── Stage 3: Audit Rule Engine ────────────────────────────────────────────
     try:
@@ -411,6 +489,33 @@ def _parse_date(value):
         except ValueError:
             continue
     return None
+
+
+def _update_document_status(document_id: Optional[str], status: str, checkpoint: str = ""):
+    """
+    Lightweight stage-boundary status update.
+    Uses the ProcessingStatus enum to avoid storing raw string values.
+    Non-blocking — never raises.
+    """
+    if not document_id:
+        return
+    try:
+        from apps.documents.models import Document
+        # Map raw string → enum value so the DB receives the correct choice key.
+        status_map = {
+            "pending":      Document.ProcessingStatus.PENDING,
+            "processing":   Document.ProcessingStatus.PROCESSING,
+            "completed":    Document.ProcessingStatus.COMPLETED,
+            "failed":       Document.ProcessingStatus.FAILED,
+            "needs_review": Document.ProcessingStatus.NEEDS_REVIEW,
+        }
+        enum_status = status_map.get(status, Document.ProcessingStatus.PROCESSING)
+        Document.objects.filter(pk=document_id).update(
+            processing_status=enum_status,
+        )
+        logger.debug("[Pipeline] Document %s status=%s checkpoint=%s", document_id, enum_status, checkpoint)
+    except Exception:
+        pass  # Non-critical — never block the pipeline
 
 
 def _serialise_audit_report(report) -> dict:

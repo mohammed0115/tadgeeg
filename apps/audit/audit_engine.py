@@ -44,6 +44,7 @@ from .rules.missing_fields_rule import MissingFieldsRule
 from .rules.amount_anomaly_rule import AmountAnomalyRule
 from .rules.date_validation_rule import DateValidationRule
 from .rules.vendor_risk_rule import VendorRiskRule
+from .rules.forward_date_fraud_rule import ForwardDateFraudRule
 
 logger = logging.getLogger("finai")
 
@@ -55,7 +56,8 @@ REGISTERED_RULES: list[Type[AuditRule]] = [
     DuplicateInvoiceRule,      # R001 — Must run first (highest impact)
     MissingFieldsRule,         # R003 — Data completeness
     VATValidationRule,         # R002 — Compliance
-    DateValidationRule,        # R005 — Date anomalies
+    DateValidationRule,        # R005 — Date anomalies (single-document)
+    ForwardDateFraudRule,      # R007 — Vendor-level forward-dating fraud pattern
     AmountAnomalyRule,         # R004 — Statistical analysis
     VendorRiskRule,            # R006 — Vendor screening
 ]

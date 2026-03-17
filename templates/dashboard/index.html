@@ -395,6 +395,108 @@
           </template>
         </div>
       </div>
+
+      <!-- ── Validation Findings Panel ───────────────────────────────────── -->
+      <div class="dashboard-surface p-6">
+        <!-- Header -->
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="text-right">
+            <h2 class="text-2xl font-bold text-slate-900">نتائج التحقق المالي</h2>
+            <p class="mt-1 text-sm text-slate-500">مخرجات قواعد التحقق V001–V005 على المستندات المعالجة</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <a href="/audit/findings/" class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50">
+              <i data-lucide="list" class="h-4 w-4"></i>
+              عرض الكل
+            </a>
+          </div>
+        </div>
+
+        <!-- Executive summary counters -->
+        <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-center">
+            <p class="text-2xl font-bold text-red-600" x-text="findingsSummary.critical"></p>
+            <p class="mt-1 text-xs font-semibold text-red-500">حرجة</p>
+          </div>
+          <div class="rounded-2xl border border-orange-200 bg-orange-50 p-4 text-center">
+            <p class="text-2xl font-bold text-orange-600" x-text="findingsSummary.high"></p>
+            <p class="mt-1 text-xs font-semibold text-orange-500">عالية</p>
+          </div>
+          <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-center">
+            <p class="text-2xl font-bold text-amber-600" x-text="findingsSummary.medium"></p>
+            <p class="mt-1 text-xs font-semibold text-amber-500">متوسطة</p>
+          </div>
+          <div class="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-center">
+            <p class="text-2xl font-bold text-blue-600" x-text="findingsSummary.low"></p>
+            <p class="mt-1 text-xs font-semibold text-blue-500">منخفضة</p>
+          </div>
+        </div>
+
+        <!-- Findings list -->
+        <div class="mt-5 space-y-3">
+
+          <!-- Loading skeleton -->
+          <template x-if="loadingFindings">
+            <template x-for="n in [1,2,3]" :key="n">
+              <div class="h-16 animate-pulse rounded-2xl bg-slate-100"></div>
+            </template>
+          </template>
+
+          <!-- Empty state -->
+          <template x-if="!loadingFindings && findings.length === 0">
+            <div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-10 text-center">
+              <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600">
+                <i data-lucide="badge-check" class="h-6 w-6"></i>
+              </div>
+              <p class="mt-3 text-sm font-semibold text-slate-700">لا توجد نتائج حالياً</p>
+              <p class="mt-1 text-xs text-slate-400">اجتازت جميع المستندات قواعد التحقق المالي</p>
+            </div>
+          </template>
+
+          <!-- Finding items -->
+          <template x-if="!loadingFindings && findings.length > 0">
+            <template x-for="finding in findings" :key="finding.id">
+              <div class="dashboard-alert-item flex items-start gap-4" :class="findingSeverityClass(finding.severity)">
+                <!-- Icon -->
+                <div class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl" :class="findingSeverityIconWrap(finding.severity)">
+                  <i :data-lucide="findingSeverityIcon(finding.severity)" class="h-4 w-4"></i>
+                </div>
+
+                <!-- Text -->
+                <div class="min-w-0 flex-1 text-right">
+                  <div class="flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-2">
+                    <p class="truncate text-sm font-bold" x-text="finding.title"></p>
+                    <span class="w-fit rounded-full px-2 py-0.5 font-mono text-xs font-semibold" :class="findingSeverityClass(finding.severity)" x-text="findingSeverityLabel(finding.severity)"></span>
+                  </div>
+                  <p class="mt-0.5 line-clamp-1 text-xs opacity-75" x-text="finding.description"></p>
+                  <p x-show="finding.rule_code" class="mt-1 font-mono text-xs opacity-50" x-text="'قاعدة: ' + finding.rule_code"></p>
+                </div>
+
+                <!-- Status badge -->
+                <div class="flex-shrink-0">
+                  <span
+                    class="rounded-full px-2.5 py-1 text-xs font-semibold"
+                    :class="{
+                      'bg-red-100 text-red-700':    finding.status === 'open',
+                      'bg-amber-100 text-amber-700': finding.status === 'reviewed',
+                      'bg-green-100 text-green-700': finding.status === 'resolved',
+                      'bg-slate-100 text-slate-600': finding.status === 'dismissed',
+                    }"
+                    x-text="{
+                      open:      'مفتوح',
+                      reviewed:  'مراجعة',
+                      resolved:  'محلول',
+                      dismissed: 'مرفوض',
+                    }[finding.status] || finding.status"
+                  ></span>
+                </div>
+              </div>
+            </template>
+          </template>
+
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -425,6 +527,9 @@ function dashboard() {
     riskDist: [],
     alerts: [],
     ruleGroups: [],
+    findings: [],
+    findingsSummary: { total: 0, critical: 0, high: 0, medium: 0, low: 0 },
+    loadingFindings: true,
 
     get todayLabel() {
       return new Intl.DateTimeFormat('ar-SA', {
@@ -557,7 +662,7 @@ function dashboard() {
 
     init() {
       this.initRuleGroups();
-      Promise.all([this.loadSpendReport(), this.loadReviewQueues()])
+      Promise.all([this.loadSpendReport(), this.loadReviewQueues(), this.loadFindings()])
         .finally(() => this.$nextTick(() => lucide.createIcons()));
     },
 
@@ -686,6 +791,63 @@ function dashboard() {
       }
 
       this.alerts = items.slice(0, 4);
+    },
+
+    async loadFindings() {
+      this.loadingFindings = true;
+      try {
+        const data = await apiFetch('/audit/findings/?page_size=8&ordering=-severity,-created_at');
+        const items = data.results || [];
+        this.findings = items;
+
+        // Build summary counters
+        const summary = { total: data.count || 0, critical: 0, high: 0, medium: 0, low: 0 };
+        items.forEach((f) => {
+          if (summary[f.severity] !== undefined) summary[f.severity]++;
+        });
+        this.findingsSummary = summary;
+      } catch (error) {
+        console.warn('dashboard findings', error);
+        this.findings = [];
+      } finally {
+        this.loadingFindings = false;
+      }
+    },
+
+    findingSeverityIcon(severity) {
+      return {
+        critical: 'flame',
+        high:     'triangle-alert',
+        medium:   'alert-circle',
+        low:      'info',
+      }[severity] || 'bell-ring';
+    },
+
+    findingSeverityClass(severity) {
+      return {
+        critical: 'border-red-200 bg-red-50 text-red-700',
+        high:     'border-orange-200 bg-orange-50 text-orange-700',
+        medium:   'border-amber-200 bg-amber-50 text-amber-700',
+        low:      'border-blue-200 bg-blue-50 text-blue-700',
+      }[severity] || 'border-slate-200 bg-slate-50 text-slate-600';
+    },
+
+    findingSeverityIconWrap(severity) {
+      return {
+        critical: 'bg-red-100 text-red-600',
+        high:     'bg-orange-100 text-orange-600',
+        medium:   'bg-amber-100 text-amber-600',
+        low:      'bg-blue-100 text-blue-600',
+      }[severity] || 'bg-slate-100 text-slate-500';
+    },
+
+    findingSeverityLabel(severity) {
+      return {
+        critical: 'حرج',
+        high:     'عالي',
+        medium:   'متوسط',
+        low:      'منخفض',
+      }[severity] || 'غير محدد';
     },
 
     buildCashFlowChart() {

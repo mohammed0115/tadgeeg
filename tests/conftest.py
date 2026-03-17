@@ -37,10 +37,32 @@ User = get_user_model()
 
 @pytest.fixture(scope='session')
 def django_db_setup():
-    """Configure test database for entire test session"""
+    """Configure test database for entire test session.
+
+    Uses SQLite :memory: by default (fast, zero-config).
+    If DB_ENGINE / DB_NAME env vars are set (e.g. in CI against MySQL),
+    the configured database is used as-is — Django will create a test_* copy.
+    """
+    if os.environ.get("DB_ENGINE") or os.environ.get("DB_NAME"):
+        # CI / real-DB path — leave settings.DATABASES unchanged;
+        # Django's test runner will create a test_{DB_NAME} database.
+        return
+
     settings.DATABASES['default'] = {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',  # Use in-memory database for speed
+        'NAME': ':memory:',
+        'ATOMIC_REQUESTS': False,
+        'AUTOCOMMIT': True,
+        'CONN_MAX_AGE': 0,
+        'CONN_HEALTH_CHECKS': False,
+        'OPTIONS': {},
+        'TIME_ZONE': None,
+        'TEST': {
+            'NAME': None,
+            'CHARSET': None,
+            'COLLATION': None,
+            'MIGRATE': True,
+        },
     }
 
 
@@ -217,11 +239,12 @@ def mock_tesseract():
 
 @pytest.fixture
 def mock_circuit_breaker():
-    """Mock circuit breaker to always be CLOSED"""
-    with patch('core.utils.circuit_breaker.OPENAI_CIRCUIT_BREAKER') as mock:
-        mock.state = 'CLOSED'
-        mock.call = Mock(side_effect=lambda func, *args, **kwargs: func(*args, **kwargs))
-        yield mock
+    """Mock circuit breaker to always be CLOSED (pass-through)"""
+    with patch('core.services.ai.circuit_breaker._openai_cb') as mock_cb:
+        mock_cb.is_open = False
+        mock_cb.is_closed = True
+        mock_cb.call = Mock(side_effect=lambda func, *args, **kwargs: func(*args, **kwargs))
+        yield mock_cb
 
 
 # ─── Celery Task Fixtures ─────────────────────────────────────────────────

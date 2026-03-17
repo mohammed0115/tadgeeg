@@ -33,6 +33,9 @@ urlpatterns = [
 
     # Health
     path("health/", include("core.utils.health_urls")),
+
+    # Prometheus metrics — restrict to internal network via METRICS_TOKEN env var
+    path("metrics/", include("core.utils.metrics_urls")),
 ]
 
 if settings.DEBUG:

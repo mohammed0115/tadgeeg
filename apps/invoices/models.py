@@ -164,8 +164,14 @@ class InvoiceBatch(models.Model):
     id              = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization    = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="invoice_batches")
     uploaded_by     = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="invoice_batches")
+    audit_session   = models.ForeignKey(
+        "audit.AuditSession",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="batches",
+    )
     batch_name      = models.CharField(max_length=255, blank=True)
-    status          = models.BatchStatus if False else models.CharField(max_length=15, choices=BatchStatus.choices, default=BatchStatus.PENDING)
+    status          = models.CharField(max_length=15, choices=BatchStatus.choices, default=BatchStatus.PENDING)
     total_files     = models.PositiveIntegerField(default=0)
     processed_files = models.PositiveIntegerField(default=0)
     failed_files    = models.PositiveIntegerField(default=0)

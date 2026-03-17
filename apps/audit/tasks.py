@@ -7,6 +7,11 @@ generate periodic audit summaries.
 Scheduled tasks:
   run_weekly_audit_summary    — Monday 9:00 AM — org-wide summary of open audit cases
   audit_high_risk_documents   — Daily 3:00 AM  — re-audit recently uploaded high-risk docs
+
+On-demand tasks (called from upload views):
+  process_audit_session       — Advance a session through the state machine
+  generate_session_summary    — Build AI executive summary for a completed session
+  retry_session_failed_docs   — Retry failed documents inside a session
 """
 
 import logging
@@ -144,3 +149,144 @@ def audit_high_risk_documents(self):
 
     logger.info("[Task:audit_high_risk] Complete. Audited %d high-risk documents.", audited)
     return {"audited": audited}
+
+
+# ── Session tasks ──────────────────────────────────────────────────────────────
+
+@shared_task(
+    bind=True,
+    max_retries=2,
+    default_retry_delay=30,
+    name="audit.process_audit_session",
+    time_limit=900,
+)
+def process_audit_session(self, session_id: str, language: str = "ar"):
+    """
+    Drive an AuditSession through its state machine after all documents
+    have been submitted for processing.
+
+    Called by the upload view once all per-document tasks are dispatched.
+
+    Steps:
+      RECEIVED → EXTRACTING → NORMALIZING → VALIDATING → COMPLETED/REVIEW_REQUIRED
+    """
+    from .models import AuditSession
+    from .session_service import AuditSessionService, InvalidStateTransition
+
+    try:
+        session = AuditSession.objects.get(pk=session_id)
+    except AuditSession.DoesNotExist:
+        logger.error("[Task:process_session] Session %s not found", session_id)
+        return {"error": "session_not_found"}
+
+    if session.is_terminal:
+        logger.info("[Task:process_session] Session %s already terminal (%s)", session_id, session.state)
+        return {"state": session.state}
+
+    svc = AuditSessionService(session)
+
+    try:
+        # Walk through intermediate states
+        for next_state in [
+            AuditSession.State.EXTRACTING,
+            AuditSession.State.NORMALIZING,
+            AuditSession.State.VALIDATING,
+        ]:
+            if session.can_transition_to(next_state):
+                svc.transition(next_state)
+                session = svc.session
+
+        # Attempt final completion
+        svc.maybe_complete()
+
+        # Generate AI summary if session is done
+        if session.state in (AuditSession.State.COMPLETED, AuditSession.State.REVIEW_REQUIRED):
+            generate_session_summary.delay(session_id=session_id, language=language)
+
+    except InvalidStateTransition as exc:
+        logger.warning("[Task:process_session] Transition error for %s: %s", session_id, exc)
+    except Exception as exc:
+        logger.exception("[Task:process_session] Unhandled error for %s: %s", session_id, exc)
+        try:
+            svc.transition(AuditSession.State.FAILED)
+        except Exception:
+            pass
+        raise self.retry(exc=exc)
+
+    session.refresh_from_db()
+    return {"session_id": session_id, "state": session.state, "progress": session.progress_pct}
+
+
+@shared_task(
+    bind=True,
+    max_retries=1,
+    name="audit.generate_session_summary",
+    time_limit=120,
+)
+def generate_session_summary(self, session_id: str, language: str = "ar"):
+    """
+    Generate and persist an AI executive summary for an AuditSession.
+    Called automatically when a session reaches COMPLETED or REVIEW_REQUIRED.
+    """
+    from .models import AuditSession
+    from .session_service import AuditSessionService
+
+    try:
+        session = AuditSession.objects.get(pk=session_id)
+    except AuditSession.DoesNotExist:
+        logger.error("[Task:session_summary] Session %s not found", session_id)
+        return
+
+    try:
+        svc = AuditSessionService(session)
+        narrative = svc.generate_executive_summary(language=language)
+        logger.info(
+            "[Task:session_summary] Generated summary for session %s (%d sections)",
+            session_id, len(narrative),
+        )
+        return {"session_id": session_id, "sections": len(narrative)}
+    except Exception as exc:
+        logger.exception("[Task:session_summary] Failed for %s: %s", session_id, exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(
+    bind=True,
+    max_retries=2,
+    default_retry_delay=60,
+    name="audit.retry_session_failed_docs",
+    time_limit=600,
+)
+def retry_session_failed_docs(self, session_id: str):
+    """
+    Retry all failed invoices that belong to a given AuditSession.
+    Resets the session's failed_count and re-dispatches processing.
+    """
+    from .models import AuditSession
+    from apps.invoices.models import Invoice
+
+    try:
+        session = AuditSession.objects.get(pk=session_id)
+    except AuditSession.DoesNotExist:
+        return {"error": "not_found"}
+
+    # Find failed invoices linked to this session's batch
+    failed_invoices = Invoice.objects.filter(
+        batch__audit_session=session,
+        status__in=["failed", "error"],
+    )
+
+    retried = 0
+    for inv in failed_invoices:
+        try:
+            inv.status = "pending"
+            inv.save(update_fields=["status", "updated_at"])
+            retried += 1
+        except Exception as exc:
+            logger.error("[Task:retry_failed] Invoice %s error: %s", inv.id, exc)
+
+    logger.info(
+        "[Task:retry_failed] Session %s — retried %d invoices",
+        session_id, retried,
+    )
+    return {"session_id": session_id, "retried": retried}

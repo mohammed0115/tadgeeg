@@ -12,7 +12,9 @@ Multiple fallback libraries guarantee maximum read coverage.
 
 import logging
 import os
+import re
 import tempfile
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -68,8 +70,9 @@ class PDFParser(DocumentParser):
         result.metadata["page_count"] = len(page_texts)
         result.metadata["total_chars"] = len(result.raw_text)
 
-        # ── 3. AI Structured extraction ───────────────────────────────────────
+        # ── 3. AI Structured extraction (with regex fallback) ────────────────
         if use_ai and result.raw_text:
+            t_ai = time.monotonic()
             try:
                 from core.services.ai.openai_extractor import extract_with_text
 
@@ -78,8 +81,21 @@ class PDFParser(DocumentParser):
                     result.structured = ai_structured
                     result.extraction_method = "pdf_ai_text"
                     result.metadata["ai_enhanced"] = True
+                    logger.info(
+                        "[PDFParser] OpenAI extraction OK in %.0fms",
+                        (time.monotonic() - t_ai) * 1000,
+                    )
             except Exception as exc:
-                result.add_error(f"OpenAI text extraction failed: {exc}")
+                logger.warning(
+                    "[PDFParser] OpenAI extraction failed in %.0fms (%s) — falling back to regex",
+                    (time.monotonic() - t_ai) * 1000, exc,
+                )
+                result.add_error(f"OpenAI text extraction failed (regex fallback used): {exc}")
+                # Regex fallback: extract key financial fields from raw text
+                result.structured = _regex_extract(result.raw_text)
+                if result.structured:
+                    result.extraction_method = "pdf_regex_fallback"
+                    result.metadata["ai_enhanced"] = False
 
         result.success = bool(result.raw_text or result.structured)
         if not result.success:
@@ -171,3 +187,64 @@ class PDFParser(DocumentParser):
                     pass
 
         return page_texts
+
+
+# ── Module-level regex fallback ───────────────────────────────────────────────
+
+def _regex_extract(text: str) -> dict:
+    """
+    Last-resort structured extraction using regex patterns.
+    Covers the most critical financial fields for GCC invoices.
+    Returns {} if nothing useful is found.
+    """
+    if not text:
+        return {}
+
+    result: dict = {}
+
+    # Saudi VAT number (15 digits, starts and ends with 3)
+    vat_match = re.search(r"\b3\d{13}3\b", text)
+    if vat_match:
+        result["vendor_vat_number"] = vat_match.group()
+
+    # Invoice number (common Arabic/English labels)
+    inv_match = re.search(
+        r"(?:invoice\s*(?:no|number|#|رقم الفاتورة)[:\s#]*)"
+        r"([\w\-\/]+)",
+        text, re.IGNORECASE,
+    )
+    if inv_match:
+        result["invoice_number"] = inv_match.group(1).strip()
+
+    # Date patterns (YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY)
+    date_match = re.search(
+        r"\b(\d{4}-\d{2}-\d{2}|\d{2}[\/\-]\d{2}[\/\-]\d{4})\b", text
+    )
+    if date_match:
+        result["date"] = date_match.group(1)
+
+    # Total / grand total amount
+    total_match = re.search(
+        r"(?:total|grand\s*total|المبلغ الإجمالي|الإجمالي)[:\s]+"
+        r"([\d,]+\.?\d{0,2})",
+        text, re.IGNORECASE,
+    )
+    if total_match:
+        result["total_amount"] = total_match.group(1).replace(",", "")
+
+    # VAT amount
+    vat_amount_match = re.search(
+        r"(?:vat|tax|ضريبة القيمة المضافة)[:\s]+"
+        r"([\d,]+\.?\d{0,2})",
+        text, re.IGNORECASE,
+    )
+    if vat_amount_match:
+        result["tax_amount"] = vat_amount_match.group(1).replace(",", "")
+
+    # Currency
+    currency_match = re.search(r"\b(SAR|AED|USD|EUR|GBP|ريال)\b", text)
+    if currency_match:
+        raw_curr = currency_match.group(1)
+        result["currency"] = "SAR" if raw_curr == "ريال" else raw_curr
+
+    return result

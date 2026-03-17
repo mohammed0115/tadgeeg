@@ -67,6 +67,7 @@ THIRD_PARTY_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     "drf_spectacular",
+    "django_celery_beat",
 ]
 
 LOCAL_APPS = [
@@ -85,6 +86,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 # ─── Middleware ───────────────────────────────────────────────────────────────
 MIDDLEWARE = [
+    "core.utils.logging.CorrelationIdMiddleware",  # Phase 2 — must be FIRST
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
@@ -182,6 +184,39 @@ MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 
 if not DEBUG:
     STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+# ─── S3 / Object Storage (Phase 5) ────────────────────────────────────────────
+_use_s3 = os.environ.get("USE_S3", "").strip().lower() in {"1", "true", "yes"}
+
+if _use_s3:
+    # boto3 / django-storages global config
+    AWS_ACCESS_KEY_ID       = os.environ.get("AWS_ACCESS_KEY_ID", "")
+    AWS_SECRET_ACCESS_KEY   = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
+    AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME", "finai-documents")
+    AWS_S3_REGION_NAME      = os.environ.get("AWS_S3_REGION_NAME", "me-south-1")
+    AWS_S3_ENDPOINT_URL     = os.environ.get("AWS_S3_ENDPOINT_URL") or None
+
+    # Never allow S3 to override ACLs set by bucket policy
+    AWS_DEFAULT_ACL         = None
+    AWS_QUERYSTRING_AUTH    = True
+    AWS_S3_FILE_OVERWRITE   = False
+    AWS_S3_OBJECT_PARAMETERS = {"ServerSideEncryption": "AES256"}
+
+    # Route all uploaded files through the private document backend
+    STORAGES = {
+        "default": {
+            "BACKEND": "core.storage.PrivateDocumentStorage",
+        },
+        "staticfiles": {
+            "BACKEND": (
+                "whitenoise.storage.CompressedManifestStaticFilesStorage"
+                if not DEBUG
+                else "django.contrib.staticfiles.storage.StaticFilesStorage"
+            ),
+        },
+    }
+    # Media URL comes from the storage backend itself (pre-signed)
+    MEDIA_URL = f"https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/documents/"
 
 SESSION_COOKIE_AGE = 60 * 30
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
@@ -350,6 +385,56 @@ if not DEBUG and not OPENAI_API_KEY:
     import warnings
     warnings.warn("OPENAI_API_KEY is not set — AI features will be disabled", RuntimeWarning)
 
+# ─── OpenAI Circuit Breaker ───────────────────────────────────────────────────
+# After CIRCUIT_BREAKER_FAILURE_THRESHOLD consecutive failures the circuit opens
+# and all OpenAI calls return None immediately (falling back to regex/OCR paths).
+# After CIRCUIT_BREAKER_RECOVERY_TIMEOUT seconds, a probe call is allowed.
+CIRCUIT_BREAKER_FAILURE_THRESHOLD = int(os.environ.get("CB_FAILURE_THRESHOLD", "5"))
+CIRCUIT_BREAKER_RECOVERY_TIMEOUT  = float(os.environ.get("CB_RECOVERY_TIMEOUT", "60"))
+CIRCUIT_BREAKER_HALF_OPEN_CALLS   = int(os.environ.get("CB_HALF_OPEN_CALLS", "2"))
+
+# ─── ZIP Security ─────────────────────────────────────────────────────────────
+ZIP_MAX_COMPRESSION_RATIO = int(os.environ.get("ZIP_MAX_COMPRESSION_RATIO", "100"))
+ZIP_MAX_FILE_COUNT        = int(os.environ.get("ZIP_MAX_FILE_COUNT", "500"))
+ZIP_MAX_NESTING_DEPTH     = int(os.environ.get("ZIP_MAX_NESTING_DEPTH", "1"))
+
+# ─── Sentry ───────────────────────────────────────────────────────────────────
+SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
+SENTRY_ENVIRONMENT = os.environ.get("SENTRY_ENVIRONMENT", "production" if not DEBUG else "development")
+SENTRY_TRACES_SAMPLE_RATE = float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.1"))
+SENTRY_PROFILES_SAMPLE_RATE = float(os.environ.get("SENTRY_PROFILES_SAMPLE_RATE", "0.05"))
+
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
+    import logging as _logging
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=SENTRY_ENVIRONMENT,
+        integrations=[
+            DjangoIntegration(
+                transaction_style="url",
+                middleware_spans=True,
+            ),
+            CeleryIntegration(
+                monitor_beat_tasks=True,
+                propagate_traces=True,
+            ),
+            LoggingIntegration(
+                level=_logging.WARNING,          # breadcrumbs from WARNING+
+                event_level=_logging.ERROR,      # send events for ERROR+
+            ),
+        ],
+        traces_sample_rate=SENTRY_TRACES_SAMPLE_RATE,
+        profiles_sample_rate=SENTRY_PROFILES_SAMPLE_RATE,
+        send_default_pii=False,                  # never send PII
+        attach_stacktrace=True,
+        release=os.environ.get("APP_VERSION", ""),
+    )
+
 # ─── Tesseract OCR ────────────────────────────────────────────────────────────
 TESSERACT_CMD = os.environ.get("TESSERACT_CMD", "/usr/bin/tesseract")
 TESSERACT_LANGUAGES = os.environ.get("TESSERACT_LANGUAGES", "ara+eng")
@@ -374,16 +459,27 @@ MAX_UPLOAD_SIZE         = MAX_UPLOAD_SIZE_MB * 1024 * 1024
 MAX_ZIP_UPLOAD_SIZE_MB  = int(os.environ.get("MAX_ZIP_UPLOAD_SIZE_MB", "200"))
 MAX_ZIP_UPLOAD_SIZE     = MAX_ZIP_UPLOAD_SIZE_MB * 1024 * 1024
 
-# ─── Logging ─────────────────────────────────────────────────────────────────
-LOGGING_HANDLERS = {
-    "console": {"class": "logging.StreamHandler", "formatter": "verbose"},
+# ─── Logging (Phase 2 — structured JSON) ─────────────────────────────────────
+# LOG_FORMAT env var: "json" (default in production) | "text" (readable in dev)
+_LOG_FORMAT = os.environ.get("LOG_FORMAT", "json" if not DEBUG else "text")
+
+_CONSOLE_HANDLER: dict = {
+    "class":   "logging.StreamHandler",
+    "filters": ["correlation_id"],
 }
+if _LOG_FORMAT == "json":
+    _CONSOLE_HANDLER["formatter"] = "json"
+else:
+    _CONSOLE_HANDLER["formatter"] = "verbose"
+
+LOGGING_HANDLERS: dict = {"console": _CONSOLE_HANDLER}
 
 if FILE_LOGGING_ENABLED:
     LOGGING_HANDLERS["file"] = {
-        "class": "logging.FileHandler",
-        "filename": LOG_FILE,
-        "formatter": "verbose",
+        "class":     "logging.FileHandler",
+        "filename":  str(LOG_FILE),
+        "formatter": "json",           # always JSON in file for log aggregators
+        "filters":   ["correlation_id"],
     }
 
 FINAI_LOG_HANDLERS = ["console", *(["file"] if FILE_LOGGING_ENABLED else [])]
@@ -391,17 +487,28 @@ FINAI_LOG_HANDLERS = ["console", *(["file"] if FILE_LOGGING_ENABLED else [])]
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {
+        "correlation_id": {
+            "()": "core.utils.logging.RequestContextFilter",
+        },
+    },
     "formatters": {
+        "json": {
+            "()": "core.utils.logging.JsonFormatter",
+        },
         "verbose": {
-            "format": "[{asctime}] {levelname} {name} {message}",
-            "style": "{",
+            "format": "[{asctime}] [{levelname}] [{name}] [rid={request_id}] {message}",
+            "style":  "{",
         },
     },
     "handlers": LOGGING_HANDLERS,
     "root": {"handlers": ["console"], "level": "INFO"},
     "loggers": {
-        "django": {"handlers": ["console"], "level": "WARNING", "propagate": False},
-        "finai": {"handlers": FINAI_LOG_HANDLERS, "level": "DEBUG", "propagate": False},
+        "django":          {"handlers": ["console"], "level": "WARNING", "propagate": False},
+        "django.request":  {"handlers": ["console"], "level": "ERROR",   "propagate": False},
+        "celery":          {"handlers": ["console"], "level": "INFO",    "propagate": False},
+        "celery.task":     {"handlers": ["console"], "level": "INFO",    "propagate": False},
+        "finai":           {"handlers": FINAI_LOG_HANDLERS, "level": "DEBUG", "propagate": False},
     },
 }
 LOGIN_URL = '/login/'

@@ -21,6 +21,7 @@ urlpatterns = [
     path('vendors/',                views.vendors,        name='vendors'),
     path('analytics/',              views.analytics,      name='analytics'),
     path('audit/',                  views.audit,          name='audit'),
+    path('audit/sessions/<uuid:pk>/', views.audit_session_detail, name='audit_session_detail'),
     path('compliance/',             views.compliance,     name='compliance'),
     path('documents/',              views.documents,      name='documents'),
     # Typed document pages

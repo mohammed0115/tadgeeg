@@ -81,7 +81,12 @@ Return ONLY this JSON structure:
 {EXTRACTION_SCHEMA}"""
 
 MAX_RETRIES = 3
-BASE_RETRY_DELAY = 2   # seconds
+BASE_RETRY_DELAY = 2   # seconds (used only outside Celery context)
+
+# When running inside a Celery task, set this flag to True so the retry
+# logic raises immediately instead of blocking with time.sleep().
+# The Celery task's own retry mechanism handles the backoff.
+_IN_CELERY_CONTEXT = False
 
 
 # ── Client factory ────────────────────────────────────────────────────────────
@@ -105,38 +110,74 @@ def _chat_with_retry(messages: list, json_mode: bool = True) -> Optional[str]:
     """
     Call OpenAI chat completion with exponential-backoff retry.
 
+    Wraps each attempt with the OpenAI circuit breaker so persistent
+    failures automatically stop reaching the upstream API.
+
     Returns the raw content string, or None on hard failure.
     """
     import openai
+    from core.services.ai.circuit_breaker import (
+        get_openai_circuit_breaker,
+        CircuitBreakerOpen,
+    )
+
+    cb = get_openai_circuit_breaker()
+
+    # Fast-path: circuit is OPEN — no point even trying
+    if cb.is_open:
+        logger.warning("[OpenAI] Circuit breaker is OPEN — skipping API call")
+        return None
+
+    def _do_call() -> str:
+        client = _get_client()
+        kwargs = {
+            "model": _model(),
+            "messages": messages,
+            "max_tokens": getattr(settings, "OPENAI_MAX_TOKENS", 2000),
+            "temperature": 0,
+        }
+        if json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
+        response = client.chat.completions.create(**kwargs)
+        return response.choices[0].message.content
 
     last_exc = None
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            client = _get_client()
-            kwargs = {
-                "model": _model(),
-                "messages": messages,
-                "max_tokens": getattr(settings, "OPENAI_MAX_TOKENS", 2000),
-                "temperature": 0,
-            }
-            if json_mode:
-                kwargs["response_format"] = {"type": "json_object"}
-            response = client.chat.completions.create(**kwargs)
-            return response.choices[0].message.content
-        except (openai.RateLimitError, openai.APIConnectionError) as exc:
+            return cb.call(_do_call)
+        except CircuitBreakerOpen as exc:
+            logger.warning("[OpenAI] Circuit OPEN (retry_after=%.0fs) — aborting", exc.retry_after)
+            return None
+        except (
+            openai.RateLimitError,
+            openai.APIConnectionError,
+            openai.APITimeoutError,   # covers httpx.TimeoutException too
+        ) as exc:
             last_exc = exc
-            wait = BASE_RETRY_DELAY * (2 ** (attempt - 1))
             logger.warning(
-                "[OpenAI] Transient error (attempt %d/%d): %s — retrying in %ds",
-                attempt, MAX_RETRIES, exc, wait,
+                "[OpenAI] Transient error (attempt %d/%d): %s",
+                attempt, MAX_RETRIES, exc,
             )
+            if _IN_CELERY_CONTEXT:
+                # Do NOT sleep — let Celery's own retry countdown handle backoff.
+                # Re-raise so the task's except block can call self.retry().
+                raise
+            wait = BASE_RETRY_DELAY * (2 ** (attempt - 1))
+            logger.debug("[OpenAI] Sleeping %ds before retry", wait)
             time.sleep(wait)
         except openai.AuthenticationError as exc:
-            logger.error("[OpenAI] Authentication failed: %s", exc)
+            logger.error("[OpenAI] Authentication failed — no retry: %s", exc)
+            return None
+        except openai.BadRequestError as exc:
+            # Permanent: malformed request / unsupported content — don't retry
+            logger.error("[OpenAI] Bad request (permanent): %s", exc)
             return None
         except Exception as exc:
             logger.error("[OpenAI] Unexpected error on attempt %d: %s", attempt, exc)
             last_exc = exc
+            if attempt < MAX_RETRIES:
+                time.sleep(BASE_RETRY_DELAY)
+                continue
             break
 
     logger.error("[OpenAI] All retries exhausted. Last error: %s", last_exc)
@@ -176,17 +217,26 @@ def extract_with_text(raw_text: str, document_type: str = None) -> dict:
         logger.warning("[OpenAI] extract_with_text called with empty text.")
         return {}
 
+    # Layer 1 — sanitize document text before sending (prompt injection defence)
+    from core.services.ai.prompt_sanitizer import PromptSanitizer
+    safe_text = PromptSanitizer.sanitize_input(raw_text)
+
     # Truncate to token budget (~6000 chars ≈ 1500 tokens for the document text)
-    truncated = raw_text[:6000]
+    truncated = safe_text[:6000]
 
     hint = f"\nDocument type hint: {document_type}" if document_type else ""
+    # Layer 2 — harden system prompt against role-override attacks
+    system_prompt = PromptSanitizer.build_hardened_system_prompt(TEXT_EXTRACTION_PROMPT + hint)
     messages = [
-        {"role": "system", "content": TEXT_EXTRACTION_PROMPT + hint},
+        {"role": "system", "content": system_prompt},
         {"role": "user", "content": f"Document text:\n\n{truncated}"},
     ]
 
     raw = _chat_with_retry(messages, json_mode=True)
     result = _parse_json_response(raw)
+
+    # Layer 3 — validate output schema (rejects non-financial injection responses)
+    result = PromptSanitizer.validate_output(result)
 
     if result:
         logger.info(

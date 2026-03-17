@@ -142,6 +142,9 @@ class DocumentEngine:
         if not self._validate_file(file_path, result):
             return self._finalise(result, t_start)
 
+        # ── 2a. Compute file hash (before any extraction for idempotency) ───────
+        result.metadata["file_hash"] = self._compute_hash(file_path)
+
         # ── 2. Detect MIME type ───────────────────────────────────────────────
         mime = self._detect_mime(file_path, result)
         result.mime_type = mime
@@ -366,6 +369,19 @@ class DocumentEngine:
         return s  # Return as-is if unparseable
 
     # ── Utility ───────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _compute_hash(file_path: str) -> str:
+        """Compute SHA-256 of the file in 64 KB chunks (memory-safe)."""
+        import hashlib
+        sha = hashlib.sha256()
+        try:
+            with open(file_path, "rb") as fh:
+                for chunk in iter(lambda: fh.read(65536), b""):
+                    sha.update(chunk)
+            return sha.hexdigest()
+        except OSError:
+            return ""
 
     def _finalise(self, result: IngestionResult, t_start: float) -> IngestionResult:
         result.processing_time_ms = int((time.monotonic() - t_start) * 1000)

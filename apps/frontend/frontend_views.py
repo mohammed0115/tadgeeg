@@ -164,6 +164,13 @@ def audit(request):
     return render(request, 'audit/index.html', _ctx(request, 'audit'))
 
 
+@login_required(login_url='/login/')
+def audit_session_detail(request, pk):
+    ctx = _ctx(request, 'audit')
+    ctx['session_id'] = str(pk)
+    return render(request, 'audit/session_detail.html', ctx)
+
+
 # ── Compliance ────────────────────────────────────────────────────────────────
 
 @login_required(login_url='/login/')

@@ -190,6 +190,64 @@ class DocumentAnalysisResult(models.Model):
         return f"Analysis[{self.document.original_filename}] risk={self.risk_level}"
 
 
+class DocumentStateHistory(models.Model):
+    """
+    Immutable audit trail of every processing_status change on a Document.
+
+    Written by DocumentStateHistoryService whenever a Document transitions
+    states.  Never updated after creation — append-only by design.
+
+    Usage:
+        from apps.documents.services import DocumentStateHistoryService
+        DocumentStateHistoryService.record(
+            document=doc,
+            from_state=old_status,
+            to_state=new_status,
+            changed_by=request.user,   # or None for system transitions
+            reason="Pipeline stage 1 complete",
+            metadata={"pipeline_version": "2.0", "processing_time_ms": 340},
+        )
+    """
+
+    id          = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    document    = models.ForeignKey(
+        Document, on_delete=models.CASCADE, related_name="state_history"
+    )
+    from_state  = models.CharField(
+        max_length=20, choices=Document.ProcessingStatus.choices,
+        blank=True,    # Blank on initial PENDING creation
+    )
+    to_state    = models.CharField(
+        max_length=20, choices=Document.ProcessingStatus.choices,
+    )
+    changed_by  = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="document_state_changes",
+        help_text="Null = system / Celery worker",
+    )
+    reason      = models.CharField(max_length=500, blank=True)
+    metadata    = models.JSONField(
+        default=dict, blank=True,
+        help_text="Arbitrary context: pipeline_version, processing_time_ms, worker_id …",
+    )
+    created_at  = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table   = "document_state_history"
+        ordering   = ["created_at"]
+        indexes    = [
+            models.Index(fields=["document", "created_at"]),
+            models.Index(fields=["to_state", "created_at"]),
+        ]
+
+    def __str__(self) -> str:
+        who = self.changed_by.email if self.changed_by_id else "system"
+        return (
+            f"{self.document.original_filename}: "
+            f"{self.from_state or '—'} → {self.to_state} [{who}]"
+        )
+
+
 from .typed_models import (
     PurchaseOrder,
     PurchaseOrderValidation,

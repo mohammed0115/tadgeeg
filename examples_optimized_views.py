@@ -247,7 +247,48 @@ class OptimizedDocumentSearchView(generics.ListAPIView):
         query = self.request.query_params.get('q', '')
         status = self.request.query_params.get('status', '')
         
-        qs = (
+        qs = (برومبت مراجعة مهمة الـ Finalize (Chord Callback Audit)
+
+الدور: Senior Backend Engineer & Distributed Systems Expert.
+السياق: مراجعة كود ملف apps/audit/tasks.py وتحديداً مهمة _zip_session_finalize_task التي تعمل كـ Callback لمجموعة مهام Celery.
+
+بنود المراجعة التقنية:
+
+1. إدارة الحالة (State Management)
+
+هل يتم استخدام AuditSessionService.transition() بشكل صحيح لضمان عدم حدوث انتقالات غير منطقية في الحالات (Invalid Transitions)؟
+
+هل يتم التعامل مع حالة FAILED في حال حدوث استثناء غير متوقع داخل atomic block؟
+
+2. تكامل النتائج (Results Integration)
+
+كيف يتم التعامل مع الـ results القادمة من المهام الفرعية؟ هل النظام قادر على تمييز الفشل الجزئي (Partial Failures) والتعامل معه دون كسر التقرير النهائي؟
+
+هل يتم تحديث الـ Risk Score بناءً على كافة النتائج المسجلة فعلياً في قاعدة البيانات؟
+
+3. الأمان وتعدد المسارات (Concurrency & Safety)
+
+هل استخدام select_for_update() كافٍ لمنع الـ Race Conditions في بيئة موزعة تعمل بـ Workers متعددين؟
+
+هل يتم ضمان عمل transaction.atomic() لحماية بيانات الجلسة من التلف في حال فشل استدعاء الـ AI Summary؟
+
+4. كفاءة الـ AI Summary
+
+هل يتم تمرير سياق كافٍ لخدمة AISummaryService لإنتاج ملخص دقيق باللغة العربية؟
+
+هل توجد استراتيجية Fallback في حال تعذر الوصول لـ OpenAI في هذه المرحلة الختامية؟
+
+المخرجات المطلوبة:
+
+قائمة ملاحظات (Code Review Notes): تحديد أي سطر برمجي قد يسبب مشكلة في الإنتاج.
+
+سيناريوهات الاختبار (Test Cases):
+
+ماذا يحدث إذا كانت قائمة النتائج فارغة؟
+
+ماذا يحدث إذا سقطت قاعدة البيانات أثناء الـ Finalize؟
+
+تحسينات مقترحة: أي كود إضافي لرفع مستوى الـ Observability (Logging & Monitoring).
             Document.objects
             .filter(organization=org)
             .select_related('uploaded_by')

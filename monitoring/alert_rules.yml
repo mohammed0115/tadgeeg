@@ -1,0 +1,88 @@
+groups:
+  - name: finai_pipeline
+    interval: 1m
+    rules:
+      - alert: DocumentsStuck
+        expr: finai_documents_stuck > 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $value }} documents stuck in pipeline for >1 hour"
+          description: "Documents have been in pending/processing state for over an hour. Check Celery workers."
+
+      - alert: DocumentQueueBacklog
+        expr: finai_documents_queued > 50
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Document queue backlog: {{ $value }} documents pending"
+          description: "More than 50 documents queued for >15 minutes. Celery workers may be down."
+
+      - alert: PipelineProcessingRateHigh
+        expr: rate(finai_documents_processed_total{status="failed"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High document processing failure rate"
+          description: "More than 10% of documents are failing in the last 5 minutes."
+
+  - name: finai_openai
+    interval: 1m
+    rules:
+      - alert: OpenAICircuitBreakerOpen
+        expr: finai_openai_circuit_breaker_open == 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OpenAI circuit breaker is OPEN"
+          description: "All OpenAI calls are being rejected. Check API key and OpenAI status page."
+
+      - alert: OpenAIHighLatency
+        expr: histogram_quantile(0.95, rate(finai_openai_call_duration_seconds_bucket[5m])) > 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OpenAI p95 latency > 20s"
+          description: "95th percentile OpenAI response time is above 20 seconds."
+
+  - name: finai_http
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(finai_http_requests_total{status_code=~"5.."}[5m]))
+          / sum(rate(finai_http_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "HTTP 5xx error rate > 5%"
+          description: "More than 5% of requests are returning server errors."
+
+      - alert: HighP99Latency
+        expr: histogram_quantile(0.99, rate(finai_http_request_duration_seconds_bucket[5m])) > 5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HTTP p99 latency > 5s"
+          description: "99th percentile HTTP response time exceeds 5 seconds."
+
+  - name: finai_celery
+    interval: 1m
+    rules:
+      - alert: CeleryHighFailureRate
+        expr: |
+          sum(rate(finai_celery_tasks_total{result="failure"}[10m]))
+          / sum(rate(finai_celery_tasks_total[10m])) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Celery task failure rate > 10%"
+          description: "More than 10% of Celery tasks are failing. Check worker logs."

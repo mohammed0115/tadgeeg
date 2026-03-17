@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+{% block title %}جلسة التدقيق{% endblock %}
+{% block page_title %}جلسة التدقيق{% endblock %}
+{% block nav_audit %}active{% endblock %}
+
+{% block content %}
+<div x-data="sessionPage('{{ session_id }}')" x-init="init()" class="space-y-5 max-w-screen-xl">
+
+  <!-- Back + Header -->
+  <div class="flex items-center gap-3">
+    <a href="/audit/" class="btn-ghost text-sm py-1.5 px-3 flex items-center gap-1.5">
+      <i data-lucide="arrow-right" class="w-4 h-4"></i> عودة
+    </a>
+    <div class="flex-1">
+      <h2 class="text-lg font-bold text-slate-800 dark:text-white" x-text="session.session_name || 'جلسة تدقيق'"></h2>
+      <p class="text-xs text-slate-400" x-text="'معرّف الجلسة: ' + (session.id||'')"></p>
+    </div>
+    <!-- Actions -->
+    <div class="flex items-center gap-2" x-show="!loading">
+      <button x-show="session.failed_count > 0 && session.is_terminal"
+              @click="retry()"
+              class="btn-ghost text-xs py-1.5 px-3 flex items-center gap-1.5 text-amber-600">
+        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> إعادة المحاولة
+      </button>
+      <button @click="regenerateSummary()"
+              x-show="session.is_terminal"
+              class="btn-ghost text-xs py-1.5 px-3 flex items-center gap-1.5 text-primary-600">
+        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> تحديث الملخص
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div x-show="loading" class="flex justify-center py-16">
+    <svg class="animate-spin w-8 h-8 text-primary-500" fill="none" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
+      <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+    </svg>
+  </div>
+
+  <div x-show="!loading" class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+    <!-- Left: Status + Progress -->
+    <div class="lg:col-span-1 space-y-4">
+
+      <!-- State card -->
+      <div class="card p-5">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-sm font-semibold text-slate-600 dark:text-slate-300">الحالة</span>
+          <span :class="{
+            'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300':   session.state==='received' || session.state==='extracting' || session.state==='normalizing' || session.state==='validating',
+            'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300': session.state==='review_required',
+            'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300': session.state==='completed',
+            'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300':         session.state==='failed',
+          }" class="text-xs font-bold px-2.5 py-1 rounded-full" x-text="stateLabel(session.state)"></span>
+        </div>
+
+        <!-- Progress bar -->
+        <div class="mb-3">
+          <div class="flex justify-between text-xs text-slate-400 mb-1">
+            <span>التقدم</span>
+            <span x-text="(session.progress_pct||0) + '%'"></span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+            <div class="h-full rounded-full transition-all duration-500"
+                 :class="session.state==='failed' ? 'bg-red-500' : session.state==='completed' ? 'bg-green-500' : 'bg-primary-500'"
+                 :style="'width:' + (session.progress_pct||0) + '%'"></div>
+          </div>
+        </div>
+
+        <!-- Spinning indicator if processing -->
+        <div x-show="!session.is_terminal" class="flex items-center gap-2 text-xs text-primary-500 mt-2">
+          <svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
+            <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <span>جارٍ المعالجة…</span>
+        </div>
+      </div>
+
+      <!-- Counters -->
+      <div class="card p-5">
+        <p class="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">الإحصاءات</p>
+        <div class="space-y-2.5">
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-500">إجمالي الوثائق</span>
+            <span class="font-bold text-slate-800 dark:text-white" x-text="session.total_count||0"></span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-500">تمت معالجتها</span>
+            <span class="font-bold text-green-600" x-text="session.success_count||0"></span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-500">تطلب مراجعة</span>
+            <span class="font-bold text-amber-600" x-text="session.review_required_count||0"></span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-500">فشلت</span>
+            <span class="font-bold text-red-600" x-text="session.failed_count||0"></span>
+          </div>
+          <hr class="border-slate-100 dark:border-slate-700">
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-500">مكررة</span>
+            <span class="font-bold text-slate-700 dark:text-slate-200" x-text="session.duplicate_count||0"></span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-500">مخالفات الامتثال</span>
+            <span class="font-bold text-slate-700 dark:text-slate-200" x-text="session.compliance_issues||0"></span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-500">عالية الخطورة</span>
+            <span class="font-bold text-red-600" x-text="session.high_risk_count||0"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Risk summary -->
+      <div class="card p-5" x-show="session.is_terminal">
+        <p class="text-sm font-semibold text-slate-600 dark:text-slate-300 mb-3">مستوى المخاطر</p>
+        <div class="flex items-center gap-3">
+          <div class="text-3xl font-black"
+               :class="{
+                 'text-green-500': session.overall_risk_level==='low',
+                 'text-amber-500': session.overall_risk_level==='medium',
+                 'text-orange-500': session.overall_risk_level==='high',
+                 'text-red-600': session.overall_risk_level==='critical',
+               }"
+               x-text="Math.round(session.overall_risk_score||0)"></div>
+          <div>
+            <div class="text-sm font-bold"
+                 :class="{
+                   'text-green-600': session.overall_risk_level==='low',
+                   'text-amber-600': session.overall_risk_level==='medium',
+                   'text-orange-600': session.overall_risk_level==='high',
+                   'text-red-600': session.overall_risk_level==='critical',
+                 }"
+                 x-text="{'low':'منخفض','medium':'متوسط','high':'عالٍ','critical':'حرج'}[session.overall_risk_level]||'-'"></div>
+            <div class="text-xs text-slate-400">درجة المخاطر الإجمالية</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right: Narrative + Findings -->
+    <div class="lg:col-span-2 space-y-4">
+
+      <!-- AI Executive Summary -->
+      <div class="card p-5" x-show="session.is_terminal">
+        <h4 class="font-semibold text-slate-700 dark:text-slate-200 mb-3 flex items-center gap-2">
+          <i data-lucide="sparkles" class="w-4 h-4 text-violet-500"></i>
+          الملخص التنفيذي بالذكاء الاصطناعي
+        </h4>
+        <template x-if="Object.keys(session.executive_summary||{}).length">
+          <div class="space-y-3">
+            <template x-for="[key, content] in Object.entries(session.executive_summary)">
+              <div class="bg-slate-50 dark:bg-slate-700/40 rounded-xl p-4">
+                <p class="text-xs font-bold text-violet-600 dark:text-violet-400 mb-1.5 uppercase" x-text="key.replace(/_/g,' ')"></p>
+                <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed" x-text="content"></p>
+              </div>
+            </template>
+          </div>
+        </template>
+        <div x-show="!Object.keys(session.executive_summary||{}).length" class="text-sm text-slate-400 text-center py-4">
+          لم يُولَّد الملخص بعد
+        </div>
+      </div>
+
+      <!-- In-progress placeholder -->
+      <div class="card p-8 text-center" x-show="!session.is_terminal">
+        <div class="w-14 h-14 mx-auto mb-3 rounded-2xl bg-primary-50 dark:bg-primary-900/20 flex items-center justify-center">
+          <svg class="animate-spin w-7 h-7 text-primary-500" fill="none" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
+            <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+        </div>
+        <p class="font-semibold text-slate-700 dark:text-slate-200">جارٍ تحليل الوثائق…</p>
+        <p class="text-sm text-slate-400 mt-1">سيظهر الملخص التنفيذي هنا عند اكتمال المعالجة</p>
+      </div>
+
+      <!-- Findings -->
+      <div class="card overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/30 flex items-center justify-between">
+          <h4 class="font-semibold text-slate-700 dark:text-slate-200">
+            المخالفات والنتائج
+            <span class="text-xs font-normal text-slate-400 mr-1" x-text="'('+findings.length+')'"></span>
+          </h4>
+          <select x-model="findingFilter" @change="filterFindings()"
+                  class="select text-xs py-1 px-2">
+            <option value="">الكل</option>
+            <option value="critical">حرج</option>
+            <option value="high">عالٍ</option>
+            <option value="medium">متوسط</option>
+            <option value="low">منخفض</option>
+          </select>
+        </div>
+        <div class="divide-y divide-slate-100 dark:divide-slate-700/20">
+          <template x-for="f in filteredFindings" :key="f.id">
+            <div class="px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors">
+              <div class="flex items-start gap-3">
+                <span :class="{
+                    'bg-red-100 text-red-700':    f.severity==='critical',
+                    'bg-orange-100 text-orange-700': f.severity==='high',
+                    'bg-amber-100 text-amber-700': f.severity==='medium',
+                    'bg-slate-100 text-slate-600': f.severity==='low',
+                  }"
+                  class="text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 mt-0.5"
+                  x-text="{'critical':'حرج','high':'عالٍ','medium':'متوسط','low':'منخفض'}[f.severity]||f.severity"></span>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold text-slate-800 dark:text-white" x-text="f.title"></p>
+                  <p class="text-xs text-slate-500 mt-0.5" x-text="f.description"></p>
+                  <p class="text-xs text-slate-400 mt-1" x-text="f.rule_code ? 'كود: '+f.rule_code : ''"></p>
+                </div>
+                <button x-show="f.status==='open'"
+                        @click="resolveFinding(f.id)"
+                        class="text-xs btn-ghost py-1 px-2 flex-shrink-0 text-green-600">
+                  إغلاق
+                </button>
+                <span x-show="f.status!=='open'"
+                      class="text-xs text-slate-400" x-text="f.status"></span>
+              </div>
+            </div>
+          </template>
+          <div x-show="filteredFindings.length===0" class="text-center text-sm text-slate-400 py-8">
+            لا توجد نتائج
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function sessionPage(sessionId) {
+  return {
+    sessionId,
+    session: {},
+    findings: [],
+    filteredFindings: [],
+    findingFilter: '',
+    loading: true,
+    pollTimer: null,
+
+    async init() {
+      await this.loadSession();
+      await this.loadFindings();
+      this.loading = false;
+      this.$nextTick(() => lucide.createIcons());
+      if (!this.session.is_terminal) this.startPolling();
+    },
+
+    async loadSession() {
+      try {
+        this.session = await apiFetch('/audit/sessions/' + this.sessionId + '/');
+      } catch(e) { notify('فشل تحميل الجلسة', 'error'); }
+    },
+
+    async loadFindings() {
+      try {
+        const d = await apiFetch('/audit/findings/?session=' + this.sessionId + '&limit=100');
+        this.findings = d.results || [];
+        this.filterFindings();
+      } catch(e) {}
+    },
+
+    filterFindings() {
+      this.filteredFindings = this.findingFilter
+        ? this.findings.filter(f => f.severity === this.findingFilter)
+        : this.findings;
+    },
+
+    startPolling() {
+      this.pollTimer = setInterval(async () => {
+        try {
+          const p = await apiFetch('/audit/sessions/' + this.sessionId + '/progress/');
+          this.session = { ...this.session, ...p };
+          if (p.is_terminal) {
+            clearInterval(this.pollTimer);
+            // Reload full session for summary
+            await this.loadSession();
+            await this.loadFindings();
+            this.$nextTick(() => lucide.createIcons());
+          }
+        } catch(e) {}
+      }, 3000);
+    },
+
+    async retry() {
+      try {
+        await apiFetch('/audit/sessions/' + this.sessionId + '/retry/', { method: 'POST', body: '{}' });
+        notify('جارٍ إعادة المحاولة…', 'success');
+        await this.loadSession();
+      } catch(e) { notify('فشلت إعادة المحاولة', 'error'); }
+    },
+
+    async regenerateSummary() {
+      try {
+        await apiFetch('/audit/sessions/' + this.sessionId + '/summary/', { method: 'POST', body: JSON.stringify({ language: 'ar' }) });
+        notify('جارٍ توليد الملخص…', 'success');
+        setTimeout(() => this.loadSession(), 5000);
+      } catch(e) { notify('فشل التوليد', 'error'); }
+    },
+
+    async resolveFinding(id) {
+      try {
+        await apiFetch('/audit/findings/' + id + '/resolve/', { method: 'PATCH', body: JSON.stringify({ status: 'resolved' }) });
+        const f = this.findings.find(x => x.id === id);
+        if (f) f.status = 'resolved';
+        this.filterFindings();
+      } catch(e) { notify('فشل الإغلاق', 'error'); }
+    },
+
+    stateLabel(s) {
+      return { received:'مستلمة', extracting:'استخراج', normalizing:'تطبيع', validating:'تحقق',
+               review_required:'تطلب مراجعة', completed:'مكتملة', failed:'فشلت' }[s] || s;
+    },
+  }
+}
+</script>
+{% endblock %}

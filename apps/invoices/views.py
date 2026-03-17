@@ -458,6 +458,8 @@ class InvoiceUploadView(APIView):
     - Single file (PDF / JPG / PNG / TIFF)
     - Multiple files (multipart with multiple 'files' fields)
     - ZIP archive (contains multiple invoice files)
+    - CSV / TSV (each row = one invoice)
+    - JSON (array of invoice objects or single dict)
     """
     parser_classes = [MultiPartParser, FormParser]
     permission_classes = [IsAuthenticated]
@@ -472,127 +474,72 @@ class InvoiceUploadView(APIView):
         }},
     )
     def post(self, request):
+        from apps.invoices.upload_pipeline import InvoiceUploadOrchestrator
+
         org = request.user.organization
         if not org:
             return Response({"error": "User has no organization."}, status=400)
 
-        uploaded_files = request.FILES.getlist("files")
+        uploaded_files = request.FILES.getlist("files") or (
+            [request.FILES["file"]] if "file" in request.FILES else []
+        )
         if not uploaded_files:
-            # Try single file key
-            single = request.FILES.get("file")
-            if single:
-                uploaded_files = [single]
-            else:
-                return Response({"error": "No files uploaded. Use 'files' or 'file' field."}, status=400)
+            return Response({"error": "No files uploaded. Use 'files' or 'file' field."}, status=400)
 
-        batch_name = request.data.get("batch_name", f"Batch {timezone.now().strftime('%Y-%m-%d %H:%M')}")
-
-        # Create batch
-        batch = InvoiceBatch.objects.create(
-            organization=org,
-            uploaded_by=request.user,
-            batch_name=batch_name,
-            total_files=len(uploaded_files),
+        batch_name = request.data.get(
+            "batch_name",
+            f"Batch {timezone.now().strftime('%Y-%m-%d %H:%M')}",
         )
 
-        results = []
-        errors  = []
-
-        for uploaded_file in uploaded_files:
-            filename = uploaded_file.name
-            ext = os.path.splitext(filename)[1].lower()
-
-            if ext not in ALLOWED_EXT:
-                errors.append({"filename": filename, "error": f"Unsupported file type: {ext}"})
-                batch.failed_files += 1
-                continue
-
-            # ── ZIP: extract and process each file inside ─────────────────────
-            if ext == ".zip":
-                zip_results, zip_errors = _process_zip(uploaded_file, org, request.user, batch, request)
-                results.extend(zip_results)
-                errors.extend(zip_errors)
-                batch.total_files += len(zip_results) + len(zip_errors) - 1
-            # ── CSV/TSV: process each row as a separate invoice ───────────────
-            elif ext in {".csv", ".tsv"}:
-                csv_results, csv_errors = _process_csv_rows(uploaded_file, filename, org, request.user, batch, request)
-                if csv_results or csv_errors:
-                    results.extend(csv_results)
-                    errors.extend(csv_errors)
-                    batch.total_files += len(csv_results) + len(csv_errors) - 1
-                else:
-                    try:
-                        r = _process_single_file(uploaded_file, filename, org, request.user, batch, request)
-                        results.append(r)
-                        batch.processed_files += 1
-                    except Exception as e:
-                        logger.error(f"Failed processing {filename}: {e}")
-                        errors.append({"filename": filename, "error": str(e)})
-                        batch.failed_files += 1
-            # ── JSON array: process each dict as a separate invoice ────────────
-            elif ext == ".json":
-                json_results, json_errors = _process_json_list(uploaded_file, filename, org, request.user, batch, request)
-                if json_results or json_errors:
-                    results.extend(json_results)
-                    errors.extend(json_errors)
-                    batch.total_files += len(json_results) + len(json_errors) - 1
-                else:
-                    # Not a list — process as single file
-                    try:
-                        r = _process_single_file(uploaded_file, filename, org, request.user, batch, request)
-                        results.append(r)
-                        batch.processed_files += 1
-                    except Exception as e:
-                        logger.error(f"Failed processing {filename}: {e}")
-                        errors.append({"filename": filename, "error": str(e)})
-                        batch.failed_files += 1
-            else:
-                try:
-                    r = _process_single_file(uploaded_file, filename, org, request.user, batch, request)
-                    results.append(r)
-                    batch.processed_files += 1
-                except Exception as e:
-                    logger.error(f"Failed processing {filename}: {e}")
-                    errors.append({"filename": filename, "error": str(e)})
-                    batch.failed_files += 1
-
-        # Finalize batch
-        batch.status = (
-            InvoiceBatch.BatchStatus.COMPLETED  if not errors else
-            InvoiceBatch.BatchStatus.PARTIAL    if results else
-            InvoiceBatch.BatchStatus.FAILED
-        )
-        batch.completed_at = timezone.now()
-        batch.processing_log = results + errors
-        batch.save()
-
-        log_action(request, AuditLog.Action.DOCUMENT_UPLOAD, "invoice_batch", str(batch.id),
-                   {"files": len(results), "errors": len(errors)})
-
-        return Response({
-            "batch_id":      str(batch.id),
-            "batch_name":    batch_name,
-            "total_files":   len(results) + len(errors),
-            "processed":     len(results),
-            "failed":        len(errors),
-            "status":        batch.status,
-            "results":       results,
-            "errors":        errors,
-        }, status=status.HTTP_201_CREATED)
+        orchestrator = InvoiceUploadOrchestrator(request)
+        data = orchestrator.process(uploaded_files, batch_name)
+        return Response(data, status=status.HTTP_201_CREATED)
 
 
 def _process_zip(zip_file, org, user, batch, request) -> tuple[list, list]:
-    """Extract and process all invoice files inside a ZIP archive."""
+    """
+    Extract and process all invoice files inside a ZIP archive.
+    Protected against:
+      - zip-slip path traversal (rejects members with '..' or absolute paths)
+      - oversized single members (>50 MB each)
+      - too many members (>500 files)
+    """
     results, errors = [], []
+    MAX_MEMBER_SIZE = 50 * 1024 * 1024  # 50 MB per file
+    MAX_MEMBERS = 500
+    ALLOWED_ZIP_EXT = {".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif", ".xlsx", ".xls", ".json", ".csv"}
+
     try:
         with zipfile.ZipFile(io.BytesIO(zip_file.read()), "r") as zf:
-            for member in zf.infolist():
-                if member.is_dir():
+            members = [m for m in zf.infolist() if not m.is_dir()]
+
+            # Security: cap member count
+            if len(members) > MAX_MEMBERS:
+                errors.append({"filename": zip_file.name, "error": f"ZIP contains too many files ({len(members)}). Max {MAX_MEMBERS}."})
+                return results, errors
+
+            for member in members:
+                # ── Zip-slip guard ─────────────────────────────────────────────
+                raw_path = member.filename
+                if ".." in raw_path or raw_path.startswith("/") or raw_path.startswith("\\"):
+                    logger.warning("[ZIP] Zip-slip attempt blocked: %s", raw_path)
+                    errors.append({"filename": raw_path, "error": "Path traversal attempt blocked."})
                     continue
-                name = os.path.basename(member.filename)
+
+                name = os.path.basename(raw_path)
+                if not name:
+                    continue
+
                 ext = os.path.splitext(name)[1].lower()
-                if ext not in {".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif", ".xlsx", ".xls", ".json"}:
+                if ext not in ALLOWED_ZIP_EXT:
                     continue
+
+                # ── Member size guard ──────────────────────────────────────────
+                if member.file_size > MAX_MEMBER_SIZE:
+                    errors.append({"filename": name, "error": f"File too large ({member.file_size // (1024*1024)}MB)."})
+                    batch.failed_files += 1
+                    continue
+
                 try:
                     data = zf.read(member)
                     file_like = io.BytesIO(data)
@@ -602,11 +549,14 @@ def _process_zip(zip_file, org, user, batch, request) -> tuple[list, list]:
                     results.append(r)
                     batch.processed_files += 1
                 except Exception as e:
-                    logger.error(f"ZIP member {name} failed: {e}")
+                    logger.error("ZIP member %s failed: %s", name, e)
                     errors.append({"filename": name, "error": str(e)})
                     batch.failed_files += 1
+
     except zipfile.BadZipFile:
-        errors.append({"filename": zip_file.name, "error": "Invalid ZIP file"})
+        errors.append({"filename": zip_file.name, "error": "Invalid or corrupted ZIP file."})
+    except Exception as e:
+        errors.append({"filename": zip_file.name, "error": f"ZIP processing error: {e}"})
     return results, errors
 
 

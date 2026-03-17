@@ -1,0 +1,58 @@
+# Monitoring stack — Prometheus + Grafana + Node Exporter
+# Usage:
+#   docker compose -f docker-compose.yml -f monitoring/docker-compose.monitoring.yml up -d
+#
+# Access:
+#   Prometheus  → http://localhost:9090
+#   Grafana     → http://localhost:3000  (admin / change-this-password)
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --web.enable-lifecycle
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - default
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-change-this-password}
+      GF_SECURITY_ADMIN_USER: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_DOMAIN: ${GRAFANA_DOMAIN:-localhost}
+      GF_SMTP_ENABLED: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - default
+
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host
+    network_mode: host
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+
+volumes:
+  prometheus_data:
+  grafana_data:

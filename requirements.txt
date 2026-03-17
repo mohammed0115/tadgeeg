@@ -3,15 +3,15 @@ djangorestframework>=3.15
 djangorestframework-simplejwt>=5.3
 django-cors-headers>=4.3
 drf-spectacular>=0.27
-channels==4.0.0
-channels-redis==4.1.0
+channels>=4.2.0
+channels-redis>=4.2.0
 celery>=5.3
 redis>=5.0
 openai>=1.35
 pytesseract>=0.3.10
-pillow==10.3.0
+pillow>=10.4.0
 qrcode==7.4.2
-google-auth==2.29.0
+google-auth>=2.35.0
 requests>=2.31
 PyMuPDF>=1.23           # PDF to image conversion
 psycopg2-binary>=2.9    # Optional PostgreSQL adapter for non-SQLite deployments

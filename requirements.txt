@@ -10,7 +10,7 @@ redis>=5.0
 openai>=1.35
 pytesseract>=0.3.10
 pillow>=10.4.0
-qrcode==7.4.2
+qrcode>=8.0
 google-auth>=2.35.0
 requests>=2.31
 PyMuPDF>=1.23           # PDF to image conversion

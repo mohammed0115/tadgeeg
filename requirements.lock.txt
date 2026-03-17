@@ -40,7 +40,7 @@ pandas==3.0.1
 pillow==12.1.1
 prompt_toolkit==3.0.52
 psycopg2-binary==2.9.11
-pyasn1==0.6.2
+pyasn1==0.6.3
 pyasn1_modules==0.4.2
 pydantic==2.12.5
 pydantic_core==2.41.5

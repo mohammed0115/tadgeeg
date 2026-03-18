@@ -103,8 +103,8 @@ function pageList() {
       if (this.filterRisk)   p.set('risk_level', this.filterRisk);
       try {
         const [r1, r2] = await Promise.all([
-          apiFetch('/documents/payroll/?' + p).then(r => r.json()),
-          apiFetch('/documents/stats/').then(r => r.json()),
+          apiFetch('/documents/payroll/?' + p),
+          apiFetch('/documents/stats/'),
         ]);
         this.rows  = r1.results ?? r1;
         this.stats = r2['payroll_sheets'] ?? {};

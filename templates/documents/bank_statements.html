@@ -120,8 +120,8 @@ function bankList() {
       if (this.filterStatus) p.set('status', this.filterStatus);
       try {
         const [r1, r2] = await Promise.all([
-          apiFetch('/documents/bank-statements/?' + p).then(r => r.json()),
-          apiFetch('/documents/stats/').then(r => r.json()),
+          apiFetch('/documents/bank-statements/?' + p),
+          apiFetch('/documents/stats/'),
         ]);
         this.rows  = r1.results ?? r1;
         this.stats = r2.bank_statements ?? {};

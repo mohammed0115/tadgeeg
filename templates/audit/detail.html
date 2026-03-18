@@ -263,8 +263,8 @@ function auditDetail() {
     async load() {
       try {
         const [c, users] = await Promise.all([
-          apiFetch(`/audit/${caseId}/`).then(r => r.json()),
-          apiFetch('/auth/users/?role=senior_auditor,junior_auditor,cao').then(r => r.json()).catch(()=>({results:[]})),
+          apiFetch(`/audit/${caseId}/`),
+          apiFetch('/auth/users/?role=senior_auditor,junior_auditor,cao').catch(()=>({results:[]})),
         ]);
         this.kase = c;
         this.resolutionNotes = c.resolution_notes || '';

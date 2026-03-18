@@ -158,11 +158,11 @@ function txList() {
       if (this.dateFrom)  p.set('date_from', this.dateFrom);
       if (this.dateTo)    p.set('date_to', this.dateTo);
       try {
-        const resp = await apiFetch('/transactions/?' + p).then(r => r.json());
+        const resp = await apiFetch('/transactions/?' + p);
         this.rows = resp.results ?? resp;
         this.totalCount = resp.count ?? this.rows.length;
         // Stats
-        const s = await apiFetch('/transactions/stats/').then(r => r.json()).catch(()=>({}));
+        const s = await apiFetch('/transactions/stats/').catch(()=>({}));
         this.stats = s;
       } catch(e) { notify('خطأ في تحميل البيانات', 'error'); }
       finally { this.loading = false; this.$nextTick(() => lucide.createIcons()); }

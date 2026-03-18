@@ -198,8 +198,21 @@ function reportsPage() {
       try {
         const token = localStorage.getItem('fin_token');
         const res = await fetch('/api/v1/reports/'+id+'/pdf/', {
-          headers: { 'Authorization': 'Bearer '+token }
+          credentials: 'same-origin',
+          headers: token ? { 'Authorization': 'Bearer '+token } : {}
         });
+        if (!res.ok) {
+          let message = 'فشل التنزيل ('+res.status+')';
+          const contentType = res.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            const payload = await res.json();
+            message = payload.error || payload.detail || message;
+          } else {
+            const text = (await res.text()).trim();
+            if (text) message = text;
+          }
+          throw new Error(message);
+        }
         if (!res.ok) throw new Error('فشل التنزيل ('+res.status+')');
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);

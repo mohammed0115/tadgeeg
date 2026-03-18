@@ -4,7 +4,7 @@ import logging
 import json
 from datetime import date
 from django.core.serializers.json import DjangoJSONEncoder
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,6 +21,12 @@ from apps.invoices.models import Invoice, InvoiceValidationResult, VendorProfile
 from .models import Report
 
 logger = logging.getLogger("finai")
+
+
+def _render_report_pdf_bytes(html_str: str, base_url: str) -> bytes:
+    from weasyprint import HTML as WP_HTML
+
+    return WP_HTML(string=html_str, base_url=base_url).write_pdf()
 
 
 def _json_safe(obj):
@@ -610,7 +616,6 @@ class ReportPDFView(APIView):
             return HttpResponse("التقرير غير موجود.", status=404)
 
         from django.template.loader import render_to_string
-        from weasyprint import HTML as WP_HTML
 
         html_str = render_to_string("reports/report_pdf.html", {
             "report": report,
@@ -619,7 +624,29 @@ class ReportPDFView(APIView):
             "org": request.user.organization,
         }, request=request)
 
-        pdf_bytes = WP_HTML(string=html_str, base_url=request.build_absolute_uri("/")).write_pdf()
+        try:
+            pdf_bytes = _render_report_pdf_bytes(
+                html_str,
+                request.build_absolute_uri("/"),
+            )
+        except ModuleNotFoundError:
+            logger.exception(
+                "Report PDF download failed because WeasyPrint is not installed",
+                extra={"report_id": str(report.id), "organization_id": str(request.user.organization_id)},
+            )
+            return JsonResponse(
+                {"error": "خدمة PDF غير مهيأة على الخادم حاليًا. أعد نشر الخدمة بعد تثبيت مكتبة PDF."},
+                status=503,
+            )
+        except Exception:
+            logger.exception(
+                "Report PDF generation failed",
+                extra={"report_id": str(report.id), "organization_id": str(request.user.organization_id)},
+            )
+            return JsonResponse(
+                {"error": "تعذر توليد ملف PDF لهذا التقرير حاليًا. راجع سجل الخادم ثم أعد المحاولة."},
+                status=500,
+            )
 
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         safe_title = (report.title or "report").replace(" ", "_").replace("/", "-")[:60]

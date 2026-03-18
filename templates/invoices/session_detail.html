@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% block title %}جلسة التدقيق{% endblock %}
+{% block page_title %}جلسة التدقيق{% endblock %}
+{% block nav_batches %}active{% endblock %}
+
+{% block content %}
+<div x-data="auditSessionDetail()" x-init="load()">
+  <a href="/invoices/batches/" class="mb-5 inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-primary-600 dark:hover:text-primary-400">
+    <i data-lucide="arrow-right" class="h-4 w-4"></i>
+    العودة إلى الدفعات
+  </a>
+
+  <template x-if="loading">
+    <div class="card p-12 text-center text-slate-400">
+      <i data-lucide="loader-2" class="mx-auto h-8 w-8 animate-spin"></i>
+    </div>
+  </template>
+
+  <template x-if="session && !loading">
+    <div class="space-y-5">
+      <div class="card p-6">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 class="mb-1 text-xl font-bold text-slate-800 dark:text-white" x-text="session.name || 'جلسة تدقيق ' + session.id.slice(0, 8)"></h1>
+            <p class="text-sm text-slate-400">
+              أُنشئت بواسطة <strong x-text="session.created_by_name || 'النظام'"></strong>
+              — <span x-text="fmtDate(session.created_at)"></span>
+            </p>
+          </div>
+          <span :class="statusBadge(session.status)" class="rounded-xl border px-3 py-1.5 text-sm font-bold" x-text="statusLabel(session.status)"></span>
+        </div>
+
+        <div class="mt-5">
+          <div class="mb-1.5 flex justify-between text-xs text-slate-500">
+            <span x-text="session.processed_count + ' من ' + session.total_count + ' مكتملة'"></span>
+            <span x-text="session.progress_percent + '%'"></span>
+          </div>
+          <div class="h-3 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+            <div class="h-3 rounded-full bg-gradient-to-l from-primary-600 to-blue-500 transition-all duration-500" :style="'width:' + Math.max(0, Math.min(100, session.progress_percent || 0)) + '%'"></div>
+          </div>
+        </div>
+
+        <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+          <div class="rounded-xl bg-slate-50 p-3 text-center dark:bg-slate-800">
+            <p class="mb-0.5 text-xs text-slate-400">الكل</p>
+            <p class="font-mono text-xl font-bold text-slate-800 dark:text-white" x-text="session.total_count"></p>
+          </div>
+          <div class="rounded-xl bg-green-50 p-3 text-center dark:bg-green-900/20">
+            <p class="mb-0.5 text-xs text-slate-400">نجحت</p>
+            <p class="font-mono text-xl font-bold text-green-600" x-text="session.success_count"></p>
+          </div>
+          <div class="rounded-xl bg-red-50 p-3 text-center dark:bg-red-900/20">
+            <p class="mb-0.5 text-xs text-slate-400">فشلت</p>
+            <p class="font-mono text-xl font-bold text-red-600" x-text="session.failed_count"></p>
+          </div>
+          <div class="rounded-xl bg-amber-50 p-3 text-center dark:bg-amber-900/20">
+            <p class="mb-0.5 text-xs text-slate-400">مراجعة</p>
+            <p class="font-mono text-xl font-bold text-amber-600" x-text="session.review_required_count"></p>
+          </div>
+          <div class="rounded-xl bg-primary-50 p-3 text-center dark:bg-primary-900/20">
+            <p class="mb-0.5 text-xs text-slate-400">مكررة</p>
+            <p class="font-mono text-xl font-bold text-primary-600" x-text="session.duplicate_count"></p>
+          </div>
+          <div class="rounded-xl bg-violet-50 p-3 text-center dark:bg-violet-900/20">
+            <p class="mb-0.5 text-xs text-slate-400">أعلى خطر</p>
+            <p class="font-mono text-xl font-bold text-violet-600" x-text="Number(session.max_risk_score || 0).toFixed(1)"></p>
+          </div>
+        </div>
+
+        <template x-if="session.last_error">
+          <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" x-text="session.last_error"></div>
+        </template>
+      </div>
+
+      <div class="card p-6" x-show="batch">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-bold text-slate-800 dark:text-white">الدفعة المرتبطة</h2>
+            <p class="mt-1 text-sm text-slate-400" x-text="batch?.batch_name || '—'"></p>
+          </div>
+          <a :href="'/invoices/batches/' + batch.id + '/'" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+            فتح تفاصيل الدفعة
+            <i data-lucide="arrow-left" class="h-4 w-4"></i>
+          </a>
+        </div>
+      </div>
+
+      <div class="grid gap-5 lg:grid-cols-[1.2fr,0.8fr]" x-show="summary">
+        <div class="card p-6">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-bold text-slate-800 dark:text-white">الملخص التنفيذي</h2>
+              <p class="mt-1 text-sm text-slate-400">ملخص مبني على بيانات الجلسة نفسها</p>
+            </div>
+            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500" x-text="summary?.source || 'deterministic'"></span>
+          </div>
+          <p class="mt-5 text-sm leading-7 text-slate-600 dark:text-slate-300" x-text="summary?.summary || '—'"></p>
+          <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div class="rounded-xl bg-red-50 p-3 text-center">
+              <p class="text-xs text-slate-400">حرجة</p>
+              <p class="font-mono text-lg font-bold text-red-600" x-text="findingTotals.critical || 0"></p>
+            </div>
+            <div class="rounded-xl bg-orange-50 p-3 text-center">
+              <p class="text-xs text-slate-400">عالية</p>
+              <p class="font-mono text-lg font-bold text-orange-600" x-text="findingTotals.high || 0"></p>
+            </div>
+            <div class="rounded-xl bg-amber-50 p-3 text-center">
+              <p class="text-xs text-slate-400">متوسطة</p>
+              <p class="font-mono text-lg font-bold text-amber-600" x-text="findingTotals.medium || 0"></p>
+            </div>
+            <div class="rounded-xl bg-blue-50 p-3 text-center">
+              <p class="text-xs text-slate-400">منخفضة</p>
+              <p class="font-mono text-lg font-bold text-blue-600" x-text="findingTotals.low || 0"></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card p-6">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-lg font-bold text-slate-800 dark:text-white">أبرز الملاحظات</h2>
+            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500" x-text="findings.length"></span>
+          </div>
+          <div class="mt-5 space-y-3">
+            <template x-if="!findings.length">
+              <div class="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-400">
+                لا توجد Findings مفتوحة حالياً
+              </div>
+            </template>
+            <template x-for="finding in findings.slice(0, 6)" :key="finding.id">
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="text-right">
+                    <p class="text-sm font-bold text-slate-800 dark:text-white" x-text="finding.rule_code"></p>
+                    <p class="mt-1 text-xs leading-6 text-slate-500" x-text="finding.message"></p>
+                  </div>
+                  <span class="rounded-full px-2.5 py-1 text-[11px] font-bold" :class="findingBadge(finding.severity)" x-text="riskLabel(finding.severity)"></span>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <div class="card overflow-hidden">
+        <div class="border-b border-slate-200 px-6 py-4 dark:border-slate-700">
+          <h2 class="text-lg font-bold text-slate-800 dark:text-white">الفواتير داخل الجلسة</h2>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-200 text-xs uppercase text-slate-500 dark:border-slate-700">
+                <th class="px-4 py-3 text-right font-semibold">رقم الفاتورة</th>
+                <th class="px-4 py-3 text-right font-semibold">المورد</th>
+                <th class="px-4 py-3 text-right font-semibold">المبلغ</th>
+                <th class="px-4 py-3 text-right font-semibold">الخطر</th>
+                <th class="px-4 py-3 text-right font-semibold">الحالة</th>
+                <th class="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-if="!invoices.length">
+                <tr><td colspan="6" class="py-10 text-center text-sm text-slate-400">لا توجد فواتير مرتبطة بهذه الجلسة</td></tr>
+              </template>
+              <template x-for="invoice in invoices" :key="invoice.id">
+                <tr class="border-b border-slate-100 transition-colors hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-slate-800/40">
+                  <td class="px-4 py-3 font-mono text-xs" x-text="invoice.invoice_number || '—'"></td>
+                  <td class="max-w-[220px] truncate px-4 py-3 text-xs font-medium text-slate-700 dark:text-slate-200" x-text="invoice.vendor_name || '—'"></td>
+                  <td class="px-4 py-3 font-mono text-xs" x-text="fmtCurrency(invoice.total_amount, invoice.currency)"></td>
+                  <td class="px-4 py-3">
+                    <span :class="riskBadge(invoice.risk_level)" class="rounded-full px-2.5 py-1 text-xs font-bold" x-text="riskLabel(invoice.risk_level)"></span>
+                  </td>
+                  <td class="px-4 py-3 text-xs text-slate-500" x-text="invoice.status || '—'"></td>
+                  <td class="px-4 py-3 text-left">
+                    <a :href="'/invoices/' + invoice.id + '/'" class="text-xs font-semibold text-primary-600 hover:text-primary-700">التفاصيل</a>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </template>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function auditSessionDetail() {
+  const sessionId = window.location.pathname.split('/').filter(Boolean).pop();
+  return {
+    loading: true,
+    session: null,
+    batch: null,
+    invoices: [],
+    summary: null,
+    findings: [],
+    findingTotals: {},
+    async load() {
+      this.loading = true;
+      try {
+        const response = await apiFetch(`/audit/sessions/${sessionId}/`);
+        this.session = response.session;
+        this.batch = response.batch;
+        this.invoices = response.invoices || [];
+        this.summary = response.summary || null;
+        this.findings = response.findings || [];
+        this.findingTotals = response.finding_totals || {};
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+    fmtDate(value) {
+      if (!value) return '—';
+      return new Date(value).toLocaleString('ar-SA');
+    },
+    fmtCurrency(value, currency) {
+      return `${currency || 'SAR'} ${Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+    },
+    riskLabel(level) {
+      return { critical: 'حرج', high: 'عالٍ', medium: 'متوسط', low: 'منخفض' }[level] || 'غير محدد';
+    },
+    riskBadge(level) {
+      return {
+        critical: 'bg-red-50 text-red-700',
+        high: 'bg-orange-50 text-orange-700',
+        medium: 'bg-amber-50 text-amber-700',
+        low: 'bg-green-50 text-green-700',
+      }[level] || 'bg-slate-100 text-slate-600';
+    },
+    statusLabel(status) {
+      return {
+        received: 'تم الاستلام',
+        extracting: 'استخراج',
+        normalizing: 'توحيد',
+        validating: 'تحقق',
+        review_required: 'مراجعة مطلوبة',
+        action_required: 'إجراء مطلوب',
+        completed: 'مكتملة',
+        failed: 'فشلت',
+      }[status] || status;
+    },
+    statusBadge(status) {
+      return {
+        received: 'bg-slate-50 text-slate-700 border-slate-200',
+        extracting: 'bg-blue-50 text-blue-700 border-blue-200',
+        normalizing: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+        validating: 'bg-violet-50 text-violet-700 border-violet-200',
+        review_required: 'bg-amber-50 text-amber-700 border-amber-200',
+        action_required: 'bg-red-50 text-red-700 border-red-200',
+        completed: 'bg-green-50 text-green-700 border-green-200',
+        failed: 'bg-red-50 text-red-700 border-red-200',
+      }[status] || 'bg-slate-50 text-slate-700 border-slate-200';
+    },
+    findingBadge(level) {
+      return {
+        critical: 'bg-red-50 text-red-700',
+        high: 'bg-orange-50 text-orange-700',
+        medium: 'bg-amber-50 text-amber-700',
+        low: 'bg-blue-50 text-blue-700',
+      }[level] || 'bg-slate-100 text-slate-600';
+    },
+  };
+}
+</script>
+{% endblock %}

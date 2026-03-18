@@ -397,7 +397,9 @@ def _build_invoice_display(invoice):
         "tesseract_fallback",
     )
     extraction_method_label = {
-        "openai_vision":    "استخراج ذكي (GPT-4o + OCR)",
+        "pdf_text_layer":  "طبقة نص PDF",
+        "openai_vision":   "رؤية ذكية (GPT-4o)",
+        "ocr_fallback":    "OCR احتياطي (Tesseract)",
         "openai_text":      "استخراج ذكي (GPT-4o نص)",
         "openai_ocr":       "تعرف ضوئي ذكي (GPT-4o)",
         "tesseract_fallback": "تعرف ضوئي (Tesseract)",
@@ -736,6 +738,11 @@ def batches(request):
 @login_required(login_url="/login/")
 def batch_detail(request, pk):
     return render(request, "invoices/batch_detail.html", _ctx(request, "batches", batch_id=str(pk)))
+
+
+@login_required(login_url="/login/")
+def audit_session_detail(request, pk):
+    return render(request, "invoices/session_detail.html", _ctx(request, "batches", audit_session_id=str(pk)))
 
 
 @login_required(login_url="/login/")

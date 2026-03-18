@@ -14,6 +14,9 @@ class UserManager(BaseUserManager):
         if not email:
             raise ValueError("Email is required")
         email = self.normalize_email(email)
+        legacy_username = extra_fields.pop("username", "").strip()
+        if legacy_username and not extra_fields.get("full_name"):
+            extra_fields["full_name"] = legacy_username
         extra_fields.setdefault("email_verified_at", timezone.now())
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
@@ -81,25 +84,53 @@ class User(AbstractBaseUser, PermissionsMixin):
         return False
 
     @property
+    def effective_role(self):
+        if self.is_superuser:
+            return "super_admin"
+        if self.role == self.Role.ADMIN:
+            return "organization_admin"
+        if self.role in [self.Role.CHIEF_AUDIT_OFFICER, self.Role.SENIOR_AUDITOR, self.Role.JUNIOR_AUDITOR]:
+            return "auditor"
+        if self.role == self.Role.FINANCE_MANAGER:
+            return "finance_manager"
+        if self.role == self.Role.COMPLIANCE_OFFICER:
+            return "compliance_officer"
+        if self.role == self.Role.EXTERNAL_AUDITOR:
+            return "read_only_executive"
+        return self.role
+
+    def has_role_capability(self, capability: str) -> bool:
+        capability_map = {
+            "manage_organization": {self.Role.ADMIN},
+            "approve_invoices": {self.Role.ADMIN, self.Role.CHIEF_AUDIT_OFFICER, self.Role.SENIOR_AUDITOR},
+            "review_findings": {self.Role.ADMIN, self.Role.CHIEF_AUDIT_OFFICER, self.Role.SENIOR_AUDITOR, self.Role.COMPLIANCE_OFFICER},
+            "view_executive_dashboard": {
+                self.Role.ADMIN,
+                self.Role.CHIEF_AUDIT_OFFICER,
+                self.Role.SENIOR_AUDITOR,
+                self.Role.FINANCE_MANAGER,
+                self.Role.EXTERNAL_AUDITOR,
+            },
+            "edit_invoice_data": {self.Role.ADMIN, self.Role.CHIEF_AUDIT_OFFICER, self.Role.SENIOR_AUDITOR, self.Role.JUNIOR_AUDITOR},
+        }
+        allowed_roles = capability_map.get(capability, set())
+        return self.is_superuser or self.role in allowed_roles
+
+    @property
     def is_email_verified(self):
         return self.email_verified_at is not None
 
     @property
     def can_manage_users(self):
-        return self.role == self.Role.ADMIN
+        return self.is_superuser or self.role == self.Role.ADMIN
 
     @property
     def can_generate_reports(self):
-        return self.role in [
-            self.Role.ADMIN,
-            self.Role.CHIEF_AUDIT_OFFICER,
-            self.Role.SENIOR_AUDITOR,
-            self.Role.COMPLIANCE_OFFICER,
-        ]
+        return self.has_role_capability("review_findings")
 
     @property
     def can_view_all_data(self):
-        return self.role in [
+        return self.is_superuser or self.role in [
             self.Role.ADMIN,
             self.Role.CHIEF_AUDIT_OFFICER,
             self.Role.SENIOR_AUDITOR,
@@ -182,6 +213,12 @@ class Organization(models.Model):
 
     class Meta:
         db_table = "organizations"
+
+    def __init__(self, *args, **kwargs):
+        legacy_registration = kwargs.pop("registration_number", None)
+        if legacy_registration is not None and "cr_number" not in kwargs:
+            kwargs["cr_number"] = legacy_registration
+        super().__init__(*args, **kwargs)
 
     def __str__(self):
         return self.name

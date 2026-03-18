@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" x-data="shell()" :class="dark ? 'dark' : ''">
+<html lang="ar" dir="rtl" x-data="shell()" x-init="init()" :class="dark ? 'dark' : ''">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -154,12 +154,19 @@ tailwind.config = {
   </template>
 </div>
 
+<div x-cloak
+     x-show="mobileNavOpen && !isDesktop"
+     x-transition.opacity
+     @click="closeMobileNav()"
+     class="fixed inset-0 z-20 bg-slate-950/55 backdrop-blur-sm lg:hidden"></div>
+
 <!-- ── App Layout ── -->
-<div class="flex h-screen overflow-hidden">
+<div class="relative flex h-screen overflow-hidden">
 
   <!-- ════════════ SIDEBAR ════════════ -->
-  <aside class="flex-shrink-0 flex flex-col transition-all duration-300 z-30 overflow-hidden"
-         :style="sidebarOpen ? 'width:256px' : 'width:64px'"
+  <aside class="fixed inset-y-0 right-0 z-30 flex w-[18.5rem] max-w-[86vw] flex-shrink-0 flex-col overflow-hidden transition-all duration-300 lg:relative lg:inset-auto lg:max-w-none lg:w-auto"
+         :class="mobileNavOpen || isDesktop ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'"
+         :style="sidebarStyle()"
          style="background: #0f1729; border-left: 1px solid rgba(255,255,255,0.06);">
 
     <!-- Brand -->
@@ -169,10 +176,16 @@ tailwind.config = {
         <div class="text-white font-bold text-base leading-none">Tadgeeg</div>
         <div class="text-cyan-400 text-[11px] mt-0.5 leading-none">التدقيق المالي الذكي</div>
       </div>
+      <button type="button"
+              @click="closeMobileNav()"
+              class="mr-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 hover:text-white lg:hidden">
+        <i data-lucide="x" class="h-4 w-4"></i>
+      </button>
     </div>
 
     <!-- Nav Groups -->
-    <nav class="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto overflow-x-hidden">
+    <nav @click="if (!isDesktop && $event.target.closest('a')) closeMobileNav()"
+         class="flex-1 py-3 px-2 space-y-0.5 overflow-y-auto overflow-x-hidden">
 
       <!-- Main -->
       <div x-show="sidebarOpen" class="px-2 pb-1 pt-1">
@@ -323,8 +336,8 @@ tailwind.config = {
         <i :data-lucide="dark ? 'sun' : 'moon'" class="w-[18px] h-[18px] flex-shrink-0"></i>
         <span x-show="sidebarOpen" x-text="dark ? 'الوضع النهاري' : 'الوضع الليلي'" class="whitespace-nowrap"></span>
       </button>
-      <button @click="sidebarOpen=!sidebarOpen; localStorage.setItem('fin_sidebar', sidebarOpen)"
-              class="nav-item w-full">
+      <button @click="toggleSidebar()"
+              class="nav-item hidden w-full lg:flex">
         <i :data-lucide="sidebarOpen ? 'panel-right-close' : 'panel-right-open'" class="w-[18px] h-[18px] flex-shrink-0"></i>
         <span x-show="sidebarOpen" class="whitespace-nowrap">طي القائمة</span>
       </button>
@@ -343,16 +356,25 @@ tailwind.config = {
   <div class="flex-1 flex flex-col overflow-hidden min-w-0">
 
     <!-- Top Bar -->
-    <header class="flex-shrink-0 h-16 flex items-center justify-between px-6
+    <header class="flex-shrink-0 h-16 flex items-center justify-between px-4 sm:px-6
                    bg-white dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/50 shadow-sm">
-      <div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-        <span class="font-semibold text-slate-800 dark:text-white text-base">{% block page_title %}{% endblock %}</span>
-        {% block breadcrumb %}{% endblock %}
+      <div class="min-w-0 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+        <button type="button"
+                @click="openMobileNav()"
+                class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+          <i data-lucide="menu" class="h-4.5 w-4.5"></i>
+        </button>
+        <div class="min-w-0 flex items-center gap-2 overflow-hidden">
+          <span class="truncate font-semibold text-slate-800 dark:text-white text-base">{% block page_title %}{% endblock %}</span>
+          <div class="hidden min-w-0 items-center gap-2 sm:flex">
+            {% block breadcrumb %}{% endblock %}
+          </div>
+        </div>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 sm:gap-3">
         {% block header_actions %}{% endblock %}
         {% block header_primary_action %}
-        <a href="{% url 'frontend:upload' %}" class="btn-blue text-xs py-2">
+        <a href="{% url 'frontend:upload' %}" class="btn-blue text-xs py-2 px-3 sm:px-4">
           <i data-lucide="plus" class="w-3.5 h-3.5"></i> فاتورة جديدة
         </a>
         {% endblock %}
@@ -360,7 +382,7 @@ tailwind.config = {
     </header>
 
     <!-- Content -->
-    <main class="flex-1 overflow-y-auto p-6 fade-in">
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 fade-in">
       {% block content %}{% endblock %}
     </main>
   </div>
@@ -370,8 +392,46 @@ tailwind.config = {
 <script>
 function shell() {
   return {
-    dark:        localStorage.getItem('fin_dark') === 'true',
-    sidebarOpen: localStorage.getItem('fin_sidebar') !== 'false',
+    dark: localStorage.getItem('fin_dark') === 'true',
+    desktopSidebarOpen: localStorage.getItem('fin_sidebar') !== 'false',
+    mobileNavOpen: false,
+    isDesktop: window.innerWidth >= 1024,
+    get sidebarOpen() {
+      return this.isDesktop ? this.desktopSidebarOpen : true;
+    },
+    init() {
+      this.handleResize();
+      window.addEventListener('resize', () => this.handleResize());
+    },
+    handleResize() {
+      const nextDesktop = window.innerWidth >= 1024;
+      if (nextDesktop !== this.isDesktop) {
+        this.isDesktop = nextDesktop;
+      }
+      if (this.isDesktop) {
+        this.mobileNavOpen = false;
+        document.body.classList.remove('overflow-hidden');
+      }
+    },
+    sidebarStyle() {
+      if (!this.isDesktop) return '';
+      return `width:${this.desktopSidebarOpen ? 256 : 72}px`;
+    },
+    openMobileNav() {
+      if (this.isDesktop) return;
+      this.mobileNavOpen = true;
+      document.body.classList.add('overflow-hidden');
+      this.$nextTick(() => lucide.createIcons());
+    },
+    closeMobileNav() {
+      this.mobileNavOpen = false;
+      document.body.classList.remove('overflow-hidden');
+    },
+    toggleSidebar() {
+      this.desktopSidebarOpen = !this.desktopSidebarOpen;
+      localStorage.setItem('fin_sidebar', this.desktopSidebarOpen);
+      this.$nextTick(() => lucide.createIcons());
+    },
   }
 }
 function toastStore() {
@@ -408,13 +468,25 @@ const TOKEN = () => localStorage.getItem('fin_token') || '';
 
 async function apiFetch(path, opts = {}) {
   const isFormData = typeof FormData !== 'undefined' && opts.body instanceof FormData;
-  const headers = {
+  const baseHeaders = {
     ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     'X-CSRFToken': CSRF(),
-    ...(TOKEN() ? { 'Authorization': 'Bearer ' + TOKEN() } : {}),
     ...(opts.headers || {}),
   };
-  const res = await fetch('/api/v1' + path, { ...opts, headers });
+  const url = path.startsWith('/api/') ? path : '/api/v1' + path;
+  const performFetch = (includeToken) => fetch(url, {
+    ...opts,
+    credentials: 'same-origin',
+    headers: {
+      ...baseHeaders,
+      ...(includeToken && TOKEN() ? { 'Authorization': 'Bearer ' + TOKEN() } : {}),
+    },
+  });
+
+  let res = await performFetch(true);
+  if (res.status === 401 && TOKEN() && !opts.headers?.Authorization) {
+    res = await performFetch(false);
+  }
   if (res.status === 204) return null;
   const contentType = res.headers.get('content-type') || '';
   const data = contentType.includes('application/json') ? await res.json() : await res.text();

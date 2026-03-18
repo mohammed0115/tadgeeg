@@ -9,23 +9,32 @@ import logging
 import os
 import time
 import zipfile
-from datetime import date
-from decimal import Decimal
+from datetime import date, datetime
+from decimal import Decimal, InvalidOperation
 
 from django.core.files.base import ContentFile
 from django.db.models import Avg, Count, Max, Min, Q, Sum
+from django.shortcuts import render
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import generics, status
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
+from apps.audit.services import AuditSessionService
+from apps.audit.serializers import AuditFindingSerializer
 from apps.authentication.permissions import IsSeniorAuditorOrAbove, IsOwnOrganization
 from core.services.invoice_ai_service import analyze_invoice_risk, extract_invoice_with_ai
-from core.services.invoice_validator import RULES, TOTAL_RULES, compute_file_hash, run_all_rules
+from core.services.invoice_validator import RULES, TOTAL_RULES, compute_file_hash
+from core.services.invoice_validator import run_all_rules as core_run_all_rules
+from core.services.normalization import NormalizationService
 from core.services.ocr_service import pdf_to_images
+from core.services.validation_pipeline import ValidationPipelineService
 from core.utils.audit import log_action
 from apps.authentication.models import AuditLog
 
@@ -33,12 +42,19 @@ from .models import (
     Invoice, InvoiceAuditEvent, InvoiceBatch, InvoiceValidationResult, VendorProfile
 )
 from .serializers import (
+    InvoiceAuditEventSerializer,
     InvoiceBatchSerializer, InvoiceDetailSerializer,
     InvoiceListSerializer, InvoiceValidationResultSerializer,
     VendorProfileSerializer,
 )
 
 logger = logging.getLogger("finai")
+normalizer = NormalizationService()
+
+
+def run_all_rules(invoice, organization=None, file_hash: str = "") -> dict:
+    """Backward-compatible validation entry point used by older callers and tests."""
+    return core_run_all_rules(invoice, organization=organization, file_hash=file_hash)
 
 ALLOWED_MIME = {"application/pdf", "image/jpeg", "image/png", "image/tiff",
                 "application/zip", "application/x-zip-compressed",
@@ -140,7 +156,136 @@ def _merge_risk_assessment(invoice, validation_result, risk_result):
     }
 
 
-def _process_single_file(file_obj, filename: str, org, user, batch=None, request=None) -> dict:
+REVIEW_FIELD_META = [
+    ("vendor_name", "اسم المورد", "text"),
+    ("vendor_vat_number", "الرقم الضريبي للمورد", "text"),
+    ("invoice_number", "رقم الفاتورة", "text"),
+    ("invoice_date", "تاريخ الفاتورة", "date"),
+    ("due_date", "تاريخ الاستحقاق", "date"),
+    ("subtotal", "المجموع الفرعي", "amount"),
+    ("vat_amount", "ضريبة القيمة", "amount"),
+    ("total_amount", "الإجمالي النهائي", "amount"),
+    ("currency", "العملة", "text"),
+    ("customer_name", "اسم العميل", "text"),
+    ("customer_vat_number", "الرقم الضريبي للعميل", "text"),
+    ("cost_center", "مركز التكلفة", "text"),
+    ("account_code", "رمز الحساب", "text"),
+    ("budget_code", "رمز الميزانية", "text"),
+]
+
+
+def _serialize_review_value(value):
+    if value is None:
+        return ""
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return format(value, "f")
+    return str(value)
+
+
+def _coerce_review_value(field_name: str, raw_value):
+    if raw_value in (None, ""):
+        return None
+
+    if field_name in {"invoice_date", "due_date"}:
+        if hasattr(raw_value, "isoformat"):
+            return raw_value
+        parsed = parse_date(str(raw_value).strip())
+        if parsed:
+            return parsed
+        for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%d/%m/%y", "%d-%m-%y"):
+            try:
+                return datetime.strptime(str(raw_value).strip(), fmt).date()
+            except ValueError:
+                continue
+        raise ValueError(f"Invalid date for {field_name}.")
+
+    if field_name in {"subtotal", "vat_amount", "total_amount"}:
+        try:
+            return Decimal(str(raw_value).replace(",", "").strip())
+        except (InvalidOperation, ValueError, TypeError, AttributeError) as exc:
+            raise ValueError(f"Invalid amount for {field_name}.") from exc
+
+    value = str(raw_value).strip()
+    return value or None
+
+
+def _build_review_payload(invoice):
+    extracted = dict(invoice.extracted_data or {})
+    normalized = dict(extracted.get("normalized") or {})
+    manual_review = dict(extracted.get("review") or {})
+    manual_corrections = dict(manual_review.get("corrections") or {})
+    ai_payload = {
+        key: value
+        for key, value in extracted.items()
+        if key not in {"normalized", "review"} and not str(key).startswith("_")
+    }
+
+    field_rows = []
+    for field_name, label, field_type in REVIEW_FIELD_META:
+        field_rows.append(
+            {
+                "field": field_name,
+                "label": label,
+                "type": field_type,
+                "current": _serialize_review_value(getattr(invoice, field_name, "")),
+                "normalized": _serialize_review_value(normalized.get(field_name)),
+                "ai": _serialize_review_value(ai_payload.get(field_name)),
+                "manual": _serialize_review_value(manual_corrections.get(field_name)),
+            }
+        )
+
+    review_events = invoice.audit_events.filter(
+        event_type=InvoiceAuditEvent.EventType.EDITED,
+        description__icontains="Manual review",
+    ).order_by("-timestamp")
+
+    return {
+        "fields": field_rows,
+        "raw_text": invoice.raw_text or "",
+        "normalized": normalized,
+        "ai_extracted": ai_payload,
+        "manual_review": manual_review,
+        "manual_corrections": manual_corrections,
+        "last_review_event": InvoiceAuditEventSerializer(review_events.first()).data if review_events.exists() else None,
+    }
+
+
+def _run_invoice_revalidation(invoice, acting_user, request=None):
+    file_hash = (invoice.extracted_data or {}).get("file_hash", "")
+    validation_result = run_all_rules(
+        invoice,
+        organization=invoice.organization,
+        file_hash=file_hash,
+    )
+    validation_result = ValidationPipelineService.persist_validation_result(
+        invoice=invoice,
+        validation_result=validation_result,
+        created_by=acting_user,
+    )
+    risk_result = {}
+    try:
+        risk_result = analyze_invoice_risk(
+            invoice.extracted_data or {},
+            _get_vendor_history(invoice.organization, invoice.vendor_name),
+        )
+    except Exception as exc:
+        logger.warning("AI risk re-analysis failed during manual review: %s", exc)
+
+    _merge_risk_assessment(invoice, validation_result, risk_result)
+    invoice.save(update_fields=["risk_score", "risk_level", "ai_recommendations", "ai_summary", "is_duplicate", "status", "updated_at"])
+    _save_audit_event(
+        invoice,
+        acting_user,
+        InvoiceAuditEvent.EventType.REPROCESSED,
+        f"Re-validated after manual review: score={validation_result['validation_score']}%",
+        request=request,
+    )
+    return validation_result
+
+
+def _process_single_file(file_obj, filename: str, org, user, batch=None, request=None, audit_session=None) -> dict:
     """
     Full invoice processing pipeline:
       1. Upload File        — save raw file, create Invoice record
@@ -167,9 +312,15 @@ def _process_single_file(file_obj, filename: str, org, user, batch=None, request
 
     # ── Step 1: Upload File — save raw bytes, create initial Invoice record ───
     file_hash = compute_file_hash(io.BytesIO(file_data))
+    if audit_session:
+        AuditSessionService.advance_to_extracting(audit_session)
+        if AuditSessionService.has_file_hash(audit_session, file_hash):
+            raise ValueError("Duplicate file already processed in this audit session.")
+
     invoice = Invoice.objects.create(
         organization=org,
         uploaded_by=user,
+        audit_session=audit_session,
         batch=batch,
         file=ContentFile(file_data, name=filename),
         original_filename=filename,
@@ -186,11 +337,14 @@ def _process_single_file(file_obj, filename: str, org, user, batch=None, request
     # MIME detection → routes to PDF / Image / Excel / JSON / CSV parser
     doc_engine = DocumentEngine(use_ai=True)
     ingestion = doc_engine.ingest(file_path)
+    if audit_session:
+        AuditSessionService.advance_to_normalizing(audit_session)
 
     if ingestion.fatal_error:
-        invoice.status = Invoice.Status.FAILED
+        invoice.status = Invoice.Status.FLAGGED
+        invoice.processing_error = ingestion.fatal_error
         invoice.extracted_data = {"file_hash": file_hash, "error": ingestion.fatal_error}
-        invoice.save()
+        invoice.save(update_fields=["status", "processing_error", "extracted_data", "updated_at"])
         return {
             "invoice_id": str(invoice.id), "filename": filename,
             "success": False, "error": ingestion.fatal_error, "risk_level": "high",
@@ -226,7 +380,22 @@ def _process_single_file(file_obj, filename: str, org, user, batch=None, request
         from core.services.invoice_ai_service import _fallback_extraction
         ai_data = _fallback_extraction(raw_text)
 
-    # Populate Invoice fields (ai_data ZATCA extraction takes priority)
+    normalized_ingestion = ingestion.normalized or {}
+    normalization = normalizer.normalize(
+        {
+            **normalized_ingestion,
+            **(ingestion.structured or {}),
+            **(ai_data or {}),
+            "raw_text": raw_text,
+            "extraction_method": ingestion.extraction_method,
+            "language": ai_data.get("language") or normalized_ingestion.get("language") or ingestion.metadata.get("language", "unknown"),
+        },
+        default_currency=getattr(org, "currency", "SAR") or "SAR",
+    )
+    normalized = normalization.normalized_data
+    serialized_normalized = normalization.to_serializable_dict()
+
+    # Populate Invoice fields (normalized canonical data takes priority)
     def _safe_decimal(val):
         try:
             return Decimal(str(val)) if val else Decimal("0")
@@ -248,37 +417,42 @@ def _process_single_file(file_obj, filename: str, org, user, batch=None, request
             pass
         return None
 
-    invoice.invoice_number    = str(_first_non_empty(ai_data.get("invoice_number"), filename) or "")
-    invoice.invoice_date      = _safe_date(ai_data.get("invoice_date"))
-    invoice.due_date          = _safe_date(ai_data.get("due_date"))
+    invoice.invoice_number    = str(_first_non_empty(normalized.get("invoice_number"), ai_data.get("invoice_number"), filename) or "")
+    invoice.invoice_date      = _safe_date(normalized.get("invoice_date") or ai_data.get("invoice_date"))
+    invoice.due_date          = _safe_date(normalized.get("due_date") or ai_data.get("due_date"))
     invoice.vendor_name       = str(_first_non_empty(
-        ai_data.get("vendor_name"), ai_data.get("vendor_name_ar"),
+        normalized.get("vendor_name"), ai_data.get("vendor_name"), ai_data.get("vendor_name_ar"),
         ai_data.get("supplier_name"), ai_data.get("merchant_name"),
     ) or "")
     invoice.vendor_name_ar    = str(_first_non_empty(ai_data.get("vendor_name_ar"), ai_data.get("vendor_name")) or "")
-    invoice.vendor_vat_number = str(ai_data.get("vendor_vat_number", "") or "")
+    invoice.vendor_vat_number = str(normalized.get("vendor_vat_number") or ai_data.get("vendor_vat_number", "") or "")
     invoice.vendor_cr_number  = str(ai_data.get("vendor_cr_number", "") or "")
     invoice.vendor_address    = str(ai_data.get("vendor_address", "") or "")
     invoice.vendor_phone      = str(ai_data.get("vendor_phone", "") or "")
-    invoice.customer_name     = str(ai_data.get("customer_name", "") or "")
-    invoice.customer_vat_number = str(ai_data.get("customer_vat_number", "") or "")
-    invoice.currency          = str(ai_data.get("currency", "SAR") or "SAR")
-    invoice.subtotal          = _safe_decimal(ai_data.get("subtotal", 0))
-    invoice.vat_rate          = _safe_decimal(ai_data.get("vat_rate", 15))
-    invoice.vat_amount        = _safe_decimal(ai_data.get("vat_amount", 0))
-    invoice.discount          = _safe_decimal(ai_data.get("discount", 0))
-    invoice.total_amount      = _safe_decimal(ai_data.get("total_amount", 0))
-    invoice.line_items        = ai_data.get("line_items", [])
-    invoice.has_qr_code       = bool(ai_data.get("has_qr_code", False))
+    invoice.customer_name     = str(normalized.get("customer_name") or ai_data.get("customer_name", "") or "")
+    invoice.customer_vat_number = str(normalized.get("customer_vat_number") or ai_data.get("customer_vat_number", "") or "")
+    invoice.currency          = str(normalized.get("currency") or ai_data.get("currency", "SAR") or "SAR")
+    invoice.subtotal          = _safe_decimal(normalized.get("subtotal"))
+    invoice.vat_rate          = _safe_decimal(normalized.get("vat_rate", 15))
+    invoice.vat_amount        = _safe_decimal(normalized.get("vat_amount"))
+    invoice.discount          = _safe_decimal(normalized.get("discount"))
+    invoice.total_amount      = _safe_decimal(normalized.get("total_amount"))
+    invoice.line_items        = serialized_normalized.get("line_items") or ai_data.get("line_items", [])
+    invoice.has_qr_code       = bool(normalized.get("has_qr_code", False))
     invoice.qr_code_valid     = bool(ai_data.get("qr_code_valid", False))
     invoice.is_handwritten    = bool(ai_data.get("is_handwritten") or ingestion.metadata.get("is_handwritten", False))
     invoice.is_clear          = bool(ai_data.get("is_clear", True))
     invoice.has_alterations   = bool(ai_data.get("has_alterations", False))
-    invoice.language          = str(ai_data.get("language", "unknown"))
+    invoice.language          = str(normalized.get("language") or ai_data.get("language", "unknown"))
     invoice.raw_text          = raw_text
     invoice.ocr_confidence    = ocr_confidence
     invoice.ai_summary        = str(ai_data.get("ai_summary", ""))
-    invoice.extracted_data    = {**ai_data, "file_hash": file_hash}
+    invoice.extracted_data    = {
+        **ai_data,
+        "file_hash": file_hash,
+        "_extraction_method": ingestion.extraction_method,
+        "normalized": serialized_normalized,
+    }
     invoice.status            = Invoice.Status.PROCESSING
     invoice.save()
 
@@ -300,48 +474,13 @@ def _process_single_file(file_obj, filename: str, org, user, batch=None, request
         logger.warning(f"Audit engine failed for {filename}: {e}")
 
     # ── Also run 30 ZATCA validation rules against the Invoice model fields ───
-    val_result = run_all_rules(invoice, organization=org, file_hash=file_hash)
-
-    InvoiceValidationResult.objects.update_or_create(
+    if audit_session:
+        AuditSessionService.advance_to_validating(audit_session)
+    val_result = ValidationPipelineService.validate_invoice(
         invoice=invoice,
-        defaults={
-            "has_invoice_number":          "INV-001" in val_result["passed_rule_codes"],
-            "has_invoice_date":            "INV-002" in val_result["passed_rule_codes"],
-            "has_vendor_name":             "INV-003" in val_result["passed_rule_codes"],
-            "has_vendor_vat":              "INV-004" in val_result["passed_rule_codes"],
-            "has_total_amount":            "INV-005" in val_result["passed_rule_codes"],
-            "has_currency":                "INV-006" in val_result["passed_rule_codes"],
-            "total_greater_zero":          "INV-007" in val_result["passed_rule_codes"],
-            "no_vat_without_base":         "INV-008" in val_result["passed_rule_codes"],
-            "duplicate_invoice_number":    "DUP-001" in val_result["failed_rule_codes"],
-            "duplicate_vendor_and_number": "DUP-002" in val_result["failed_rule_codes"],
-            "duplicate_vendor_amount_date":"DUP-003" in val_result["failed_rule_codes"],
-            "duplicate_file_hash":         "DUP-004" in val_result["failed_rule_codes"],
-            "duplicate_across_months":     "DUP-005" in val_result["failed_rule_codes"],
-            "vat_rate_correct":            "VAT-001" in val_result["passed_rule_codes"],
-            "vat_calculation_correct":     "VAT-002" in val_result["passed_rule_codes"],
-            "vat_subtotal_correct":        "VAT-003" in val_result["passed_rule_codes"],
-            "vat_number_present":          "VAT-004" in val_result["passed_rule_codes"],
-            "qr_code_valid":               "VAT-005" in val_result["passed_rule_codes"],
-            "amount_unusually_high":       "ANO-001" in val_result["failed_rule_codes"],
-            "new_unknown_vendor":          "ANO-002" in val_result["failed_rule_codes"],
-            "many_invoices_same_day":      "ANO-003" in val_result["failed_rule_codes"],
-            "sudden_price_change":         "ANO-004" in val_result["failed_rule_codes"],
-            "many_invoices_year_end":      "ANO-005" in val_result["failed_rule_codes"],
-            "vendor_dominates_invoices":   "ANO-006" in val_result["failed_rule_codes"],
-            "has_cost_center":             "CTL-001" in val_result["passed_rule_codes"],
-            "has_account_code":            "CTL-002" in val_result["passed_rule_codes"],
-            "has_approver":                "CTL-005" in val_result["passed_rule_codes"],
-            "document_is_clear":           "DOC-001" in val_result["passed_rule_codes"],
-            "appears_genuine":             "DOC-002" in val_result["passed_rule_codes"],
-            "no_alterations":              "DOC-003" in val_result["passed_rule_codes"],
-            "has_qr_code":                 "DOC-004" in val_result["passed_rule_codes"],
-            "rules_passed":                val_result["rules_passed"],
-            "rules_failed":                val_result["rules_failed"],
-            "validation_score":            val_result["validation_score"],
-            "failed_rule_codes":           val_result["failed_rule_codes"],
-            "validation_details":          val_result["rule_details"],
-        }
+        organization=org,
+        file_hash=file_hash,
+        created_by=user,
     )
 
     _save_audit_event(invoice, user, InvoiceAuditEvent.EventType.VALIDATED,
@@ -353,10 +492,7 @@ def _process_single_file(file_obj, filename: str, org, user, batch=None, request
     # FinancialAIEngine already ran its own Risk Engine; we take the max score
     vendor_hist = _get_vendor_history(org, invoice.vendor_name)
     try:
-        ai_risk = analyze_invoice_risk(
-            {k: v for k, v in ai_data.items() if not k.startswith("_")},
-            vendor_hist,
-        )
+        ai_risk = analyze_invoice_risk({k: v for k, v in invoice.extracted_data.items() if not k.startswith("_")}, vendor_hist)
     except Exception as e:
         logger.warning(f"AI risk analysis failed for {filename}: {e}")
         ai_risk = {}
@@ -380,6 +516,16 @@ def _process_single_file(file_obj, filename: str, org, user, batch=None, request
         filename, invoice.risk_level, val_result["validation_score"],
         invoice.is_duplicate, analysis.fraud_score, elapsed_ms,
     )
+    if audit_session:
+        AuditSessionService.record_success(
+            audit_session,
+            invoice,
+            review_required=bool(
+                getattr(analysis, "requires_review", False)
+                or invoice.status == Invoice.Status.FLAGGED
+                or bool(val_result.get("failed_rule_codes"))
+            ),
+        )
 
     return {
         "invoice_id":       str(invoice.id),
@@ -390,6 +536,7 @@ def _process_single_file(file_obj, filename: str, org, user, batch=None, request
         "risk_level":       invoice.risk_level,
         "is_duplicate":     invoice.is_duplicate,
         "fraud_score":      round(analysis.fraud_score, 2),
+        "findings_summary": val_result.get("findings_summary", {}),
         "status":           invoice.status,
         "processing_ms":    elapsed_ms,
     }
@@ -448,6 +595,19 @@ def _update_vendor_profile(org, invoice: Invoice):
         logger.warning(f"Vendor profile update failed: {e}")
 
 
+def _handle_processing_result(result: dict, filename: str, batch, results: list, errors: list, audit_session=None):
+    if result.get("success"):
+        results.append(result)
+        batch.processed_files += 1
+        return
+
+    message = result.get("error") or "Processing failed"
+    errors.append({"filename": filename, "error": message})
+    batch.failed_files += 1
+    if audit_session:
+        AuditSessionService.record_failure(audit_session, message)
+
+
 # ─── Views ────────────────────────────────────────────────────────────────────
 
 class InvoiceUploadView(APIView):
@@ -494,6 +654,15 @@ class InvoiceUploadView(APIView):
             batch_name=batch_name,
             total_files=len(uploaded_files),
         )
+        audit_session = AuditSessionService.create_session(
+            organization=org,
+            created_by=request.user,
+            name=batch_name,
+            total_count=len(uploaded_files),
+            context={"source": "invoice_upload"},
+        )
+        batch.audit_session = audit_session
+        batch.save(update_fields=["audit_session"])
 
         results = []
         errors  = []
@@ -505,56 +674,60 @@ class InvoiceUploadView(APIView):
             if ext not in ALLOWED_EXT:
                 errors.append({"filename": filename, "error": f"Unsupported file type: {ext}"})
                 batch.failed_files += 1
+                AuditSessionService.record_failure(audit_session, f"Unsupported file type: {ext}")
                 continue
 
             # ── ZIP: extract and process each file inside ─────────────────────
             if ext == ".zip":
-                zip_results, zip_errors = _process_zip(uploaded_file, org, request.user, batch, request)
+                zip_results, zip_errors = _process_zip(uploaded_file, org, request.user, batch, request, audit_session)
                 results.extend(zip_results)
                 errors.extend(zip_errors)
                 batch.total_files += len(zip_results) + len(zip_errors) - 1
+                AuditSessionService.sync_expected_total(audit_session, batch.total_files)
             # ── CSV/TSV: process each row as a separate invoice ───────────────
             elif ext in {".csv", ".tsv"}:
-                csv_results, csv_errors = _process_csv_rows(uploaded_file, filename, org, request.user, batch, request)
+                csv_results, csv_errors = _process_csv_rows(uploaded_file, filename, org, request.user, batch, request, audit_session)
                 if csv_results or csv_errors:
                     results.extend(csv_results)
                     errors.extend(csv_errors)
                     batch.total_files += len(csv_results) + len(csv_errors) - 1
+                    AuditSessionService.sync_expected_total(audit_session, batch.total_files)
                 else:
                     try:
-                        r = _process_single_file(uploaded_file, filename, org, request.user, batch, request)
-                        results.append(r)
-                        batch.processed_files += 1
+                        r = _process_single_file(uploaded_file, filename, org, request.user, batch, request, audit_session)
+                        _handle_processing_result(r, filename, batch, results, errors, audit_session)
                     except Exception as e:
                         logger.error(f"Failed processing {filename}: {e}")
                         errors.append({"filename": filename, "error": str(e)})
                         batch.failed_files += 1
+                        AuditSessionService.record_failure(audit_session, str(e))
             # ── JSON array: process each dict as a separate invoice ────────────
             elif ext == ".json":
-                json_results, json_errors = _process_json_list(uploaded_file, filename, org, request.user, batch, request)
+                json_results, json_errors = _process_json_list(uploaded_file, filename, org, request.user, batch, request, audit_session)
                 if json_results or json_errors:
                     results.extend(json_results)
                     errors.extend(json_errors)
                     batch.total_files += len(json_results) + len(json_errors) - 1
+                    AuditSessionService.sync_expected_total(audit_session, batch.total_files)
                 else:
                     # Not a list — process as single file
                     try:
-                        r = _process_single_file(uploaded_file, filename, org, request.user, batch, request)
-                        results.append(r)
-                        batch.processed_files += 1
+                        r = _process_single_file(uploaded_file, filename, org, request.user, batch, request, audit_session)
+                        _handle_processing_result(r, filename, batch, results, errors, audit_session)
                     except Exception as e:
                         logger.error(f"Failed processing {filename}: {e}")
                         errors.append({"filename": filename, "error": str(e)})
                         batch.failed_files += 1
+                        AuditSessionService.record_failure(audit_session, str(e))
             else:
                 try:
-                    r = _process_single_file(uploaded_file, filename, org, request.user, batch, request)
-                    results.append(r)
-                    batch.processed_files += 1
+                    r = _process_single_file(uploaded_file, filename, org, request.user, batch, request, audit_session)
+                    _handle_processing_result(r, filename, batch, results, errors, audit_session)
                 except Exception as e:
                     logger.error(f"Failed processing {filename}: {e}")
                     errors.append({"filename": filename, "error": str(e)})
                     batch.failed_files += 1
+                    AuditSessionService.record_failure(audit_session, str(e))
 
         # Finalize batch
         batch.status = (
@@ -565,12 +738,15 @@ class InvoiceUploadView(APIView):
         batch.completed_at = timezone.now()
         batch.processing_log = results + errors
         batch.save()
+        AuditSessionService.sync_expected_total(audit_session, batch.total_files)
+        AuditSessionService.finalize_if_ready(audit_session)
 
         log_action(request, AuditLog.Action.DOCUMENT_UPLOAD, "invoice_batch", str(batch.id),
                    {"files": len(results), "errors": len(errors)})
 
         return Response({
             "batch_id":      str(batch.id),
+            "audit_session_id": str(audit_session.id),
             "batch_name":    batch_name,
             "total_files":   len(results) + len(errors),
             "processed":     len(results),
@@ -581,7 +757,7 @@ class InvoiceUploadView(APIView):
         }, status=status.HTTP_201_CREATED)
 
 
-def _process_zip(zip_file, org, user, batch, request) -> tuple[list, list]:
+def _process_zip(zip_file, org, user, batch, request, audit_session=None) -> tuple[list, list]:
     """Extract and process all invoice files inside a ZIP archive."""
     results, errors = [], []
     try:
@@ -598,19 +774,22 @@ def _process_zip(zip_file, org, user, batch, request) -> tuple[list, list]:
                     file_like = io.BytesIO(data)
                     file_like.name = name
                     file_like.content_type = _guess_mime(ext)
-                    r = _process_single_file(file_like, name, org, user, batch, request)
-                    results.append(r)
-                    batch.processed_files += 1
+                    r = _process_single_file(file_like, name, org, user, batch, request, audit_session)
+                    _handle_processing_result(r, name, batch, results, errors, audit_session)
                 except Exception as e:
                     logger.error(f"ZIP member {name} failed: {e}")
                     errors.append({"filename": name, "error": str(e)})
                     batch.failed_files += 1
+                    if audit_session:
+                        AuditSessionService.record_failure(audit_session, str(e))
     except zipfile.BadZipFile:
         errors.append({"filename": zip_file.name, "error": "Invalid ZIP file"})
+        if audit_session:
+            AuditSessionService.record_failure(audit_session, "Invalid ZIP file")
     return results, errors
 
 
-def _process_csv_rows(csv_file, filename: str, org, user, batch, request) -> tuple[list, list]:
+def _process_csv_rows(csv_file, filename: str, org, user, batch, request, audit_session=None) -> tuple[list, list]:
     """
     Parse a CSV/TSV file and process each row as a separate invoice.
     Returns (results, errors). Returns ([], []) if the file has ≤1 data row (caller handles as single).
@@ -653,18 +832,19 @@ def _process_csv_rows(csv_file, filename: str, org, user, batch, request) -> tup
         file_like.name = row_name
         file_like.content_type = "application/json"
         try:
-            r = _process_single_file(file_like, row_name, org, user, batch, request)
-            results.append(r)
-            batch.processed_files += 1
+            r = _process_single_file(file_like, row_name, org, user, batch, request, audit_session)
+            _handle_processing_result(r, row_name, batch, results, errors, audit_session)
         except Exception as e:
             logger.error(f"CSV row {row_name} failed: {e}")
             errors.append({"filename": row_name, "error": str(e)})
             batch.failed_files += 1
+            if audit_session:
+                AuditSessionService.record_failure(audit_session, str(e))
 
     return results, errors
 
 
-def _process_json_list(json_file, filename: str, org, user, batch, request) -> tuple[list, list]:
+def _process_json_list(json_file, filename: str, org, user, batch, request, audit_session=None) -> tuple[list, list]:
     """
     If a JSON file contains a list[dict], process each dict as a separate invoice.
     Returns (results, errors). Returns ([], []) if the JSON is NOT a list (caller handles it).
@@ -691,13 +871,14 @@ def _process_json_list(json_file, filename: str, org, user, batch, request) -> t
         file_like.name = item_name
         file_like.content_type = "application/json"
         try:
-            r = _process_single_file(file_like, item_name, org, user, batch, request)
-            results.append(r)
-            batch.processed_files += 1
+            r = _process_single_file(file_like, item_name, org, user, batch, request, audit_session)
+            _handle_processing_result(r, item_name, batch, results, errors, audit_session)
         except Exception as e:
             logger.error(f"JSON item {item_name} failed: {e}")
             errors.append({"filename": item_name, "error": str(e)})
             batch.failed_files += 1
+            if audit_session:
+                AuditSessionService.record_failure(audit_session, str(e))
 
     return results, errors
 
@@ -760,20 +941,42 @@ class InvoiceListView(generics.ListAPIView):
 class InvoiceDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = InvoiceDetailSerializer
     permission_classes = [IsAuthenticated, IsOwnOrganization]
+    authentication_classes = [SessionAuthentication, JWTAuthentication]
 
     @extend_schema(tags=["Invoices"], summary="Get full invoice details with validation results")
     def get(self, request, *args, **kwargs):
         invoice = self.get_object()
+        if request.path.startswith("/invoices/") and "sessionid" in request.COOKIES:
+            from apps.frontend.page_views import _build_invoice_display, _ctx
+
+            audit_trail = invoice.audit_events.select_related("user").order_by("-timestamp")[:40]
+            return render(
+                request._request,
+                "invoices/detail_premium.html",
+                _ctx(
+                    request._request,
+                    "invoices",
+                    invoice=invoice,
+                    invoice_display=_build_invoice_display(invoice),
+                    audit_trail=audit_trail,
+                ),
+            )
+
         data = InvoiceDetailSerializer(invoice).data
         try:
             data["validation"] = InvoiceValidationResultSerializer(invoice.validation).data
         except InvoiceValidationResult.DoesNotExist:
             data["validation"] = None
+        data["findings"] = AuditFindingSerializer(
+            invoice.audit_findings.order_by("-last_detected_at")[:20],
+            many=True,
+        ).data
         data["audit_trail"] = list(
             invoice.audit_events.order_by("-timestamp").values(
                 "event_type", "description", "timestamp", "user__full_name", "ip_address"
             )[:20]
         )
+        data["review"] = _build_review_payload(invoice)
         return Response(data)
 
     def perform_update(self, serializer):
@@ -789,7 +992,11 @@ class InvoiceDetailView(generics.RetrieveUpdateAPIView):
                           request=self.request)
 
     def get_queryset(self):
-        return Invoice.objects.filter(organization=self.request.user.organization)
+        return Invoice.objects.filter(organization=self.request.user.organization).select_related(
+            "validation",
+            "approved_by",
+            "duplicate_of",
+        )
 
 
 class InvoiceApproveView(APIView):
@@ -848,30 +1055,100 @@ class InvoiceRevalidateView(APIView):
             invoice = Invoice.objects.get(pk=pk, organization=request.user.organization)
         except Invoice.DoesNotExist:
             return Response({"error": "Invoice not found."}, status=404)
-
-        file_hash = invoice.extracted_data.get("file_hash", "")
-        val_result = run_all_rules(invoice, organization=request.user.organization, file_hash=file_hash)
-
-        InvoiceValidationResult.objects.filter(invoice=invoice).update(
-            rules_passed=val_result["rules_passed"],
-            rules_failed=val_result["rules_failed"],
-            validation_score=val_result["validation_score"],
-            failed_rule_codes=val_result["failed_rule_codes"],
-            validation_details=val_result["rule_details"],
-        )
-        risk_result = {}
-        try:
-            risk_result = analyze_invoice_risk(invoice.extracted_data or {}, _get_vendor_history(request.user.organization, invoice.vendor_name))
-        except Exception as exc:
-            logger.warning(f"AI risk re-analysis failed: {exc}")
-
-        _merge_risk_assessment(invoice, val_result, risk_result)
-        invoice.save(update_fields=["risk_score", "risk_level", "ai_recommendations", "ai_summary", "is_duplicate", "status"])
-
-        _save_audit_event(invoice, request.user, InvoiceAuditEvent.EventType.REPROCESSED,
-                          f"Re-validated: score={val_result['validation_score']}%", request=request)
-
+        val_result = _run_invoice_revalidation(invoice, request.user, request=request)
         return Response(val_result)
+
+
+class InvoiceManualReviewView(APIView):
+    """Persist reviewer corrections and optional revalidation for an invoice."""
+
+    permission_classes = [IsAuthenticated, IsSeniorAuditorOrAbove]
+    authentication_classes = [SessionAuthentication, JWTAuthentication]
+
+    @extend_schema(
+        tags=["Invoices"],
+        summary="Save manual review corrections for an invoice",
+        request={
+            "type": "object",
+            "properties": {
+                "corrections": {"type": "object"},
+                "note": {"type": "string"},
+                "revalidate": {"type": "boolean"},
+            },
+        },
+    )
+    def post(self, request, pk):
+        try:
+            invoice = Invoice.objects.get(pk=pk, organization=request.user.organization)
+        except Invoice.DoesNotExist:
+            return Response({"error": "Invoice not found."}, status=404)
+
+        corrections = request.data.get("corrections") or {}
+        if not isinstance(corrections, dict):
+            return Response({"error": "corrections must be an object."}, status=400)
+
+        note = str(request.data.get("note", "") or "").strip()
+        should_revalidate = bool(request.data.get("revalidate"))
+
+        before = {field: _serialize_review_value(getattr(invoice, field, "")) for field, _, _ in REVIEW_FIELD_META}
+        applied = {}
+        validation_errors = {}
+
+        for field_name, _, _ in REVIEW_FIELD_META:
+            if field_name not in corrections:
+                continue
+            try:
+                coerced_value = _coerce_review_value(field_name, corrections.get(field_name))
+            except ValueError as exc:
+                validation_errors[field_name] = str(exc)
+                continue
+            if coerced_value is None and field_name in {"invoice_date", "due_date"}:
+                setattr(invoice, field_name, None)
+            elif coerced_value is None and field_name in {"subtotal", "vat_amount", "total_amount"}:
+                setattr(invoice, field_name, Decimal("0"))
+            else:
+                setattr(invoice, field_name, coerced_value if coerced_value is not None else "")
+            applied[field_name] = _serialize_review_value(coerced_value)
+
+        if validation_errors:
+            return Response({"errors": validation_errors}, status=400)
+
+        extracted_data = dict(invoice.extracted_data or {})
+        extracted_data["review"] = {
+            "corrections": {**(extracted_data.get("review", {}).get("corrections", {})), **applied},
+            "note": note,
+            "reviewed_by": str(request.user.id),
+            "reviewed_by_name": request.user.full_name,
+            "reviewed_at": timezone.now().isoformat(),
+        }
+        invoice.extracted_data = extracted_data
+        update_fields = [field for field in applied] + ["extracted_data", "updated_at"]
+        invoice.save(update_fields=list(dict.fromkeys(update_fields)))
+
+        after = {field: _serialize_review_value(getattr(invoice, field, "")) for field, _, _ in REVIEW_FIELD_META}
+        _save_audit_event(
+            invoice,
+            request.user,
+            InvoiceAuditEvent.EventType.EDITED,
+            "Manual review corrections applied",
+            before=before,
+            after={"fields": after, "note": note, "applied": applied},
+            request=request,
+        )
+
+        validation_result = None
+        if should_revalidate:
+            validation_result = _run_invoice_revalidation(invoice, request.user, request=request)
+
+        return Response(
+            {
+                "invoice_id": str(invoice.id),
+                "status": invoice.status,
+                "applied_fields": applied,
+                "review": _build_review_payload(invoice),
+                "validation": validation_result,
+            }
+        )
 
 
 class InvoiceBatchListView(generics.ListAPIView):
@@ -911,6 +1188,7 @@ class InvoiceBatchDetailView(APIView):
         )
         return Response({
             "batch": InvoiceBatchSerializer(batch).data,
+            "audit_session_id": str(batch.audit_session_id) if batch.audit_session_id else None,
             "stats": stats,
             "invoices": list(invoices),
         })

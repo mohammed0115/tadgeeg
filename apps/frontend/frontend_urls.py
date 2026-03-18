@@ -16,6 +16,7 @@ urlpatterns = [
     path('invoices/',               views.invoices,       name='invoices'),
     path('invoices/upload/',        views.upload,         name='upload'),
     path('invoices/batches/',       views.batches,        name='batches'),
+    path('invoices/sessions/<uuid:pk>/', views.audit_session_detail, name='audit_session_detail'),
     path('invoices/<uuid:pk>/',     views.invoice_detail, name='invoice_detail'),
     path('reports/',                views.reports,        name='reports'),
     path('vendors/',                views.vendors,        name='vendors'),

@@ -10,8 +10,6 @@ Provides:
 """
 
 import os
-import django
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
@@ -19,36 +17,19 @@ from django.conf import settings
 from django.test import Client
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
-from django_celery_beat.models import PeriodicTask
 
-# Configure Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'finai_backend.settings')
-django.setup()
-
-from apps.authentication.models import Organization, User
-from apps.documents.models import Document
-from apps.invoices.models import Invoice
-from apps.transactions.models import Transaction
-
-User = get_user_model()
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "finai_backend.settings")
 
 
 # ─── Test Database Configuration ──────────────────────────────────────────────
-
-@pytest.fixture(scope='session')
-def django_db_setup():
-    """Configure test database for entire test session"""
-    settings.DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',  # Use in-memory database for speed
-    }
-
 
 # ─── Organizations & Authentication ──────────────────────────────────────────
 
 @pytest.fixture
 def organization(db):
     """Create a test organization"""
+    from apps.authentication.models import Organization
+
     return Organization.objects.create(
         name="Test Organization",
         name_ar="منظمة الاختبار",
@@ -61,6 +42,8 @@ def organization(db):
 @pytest.fixture
 def admin_user(db, organization):
     """Create admin user"""
+    User = get_user_model()
+
     return User.objects.create_user(
         email="admin@test.finai",
         password="TestPass123!",
@@ -74,6 +57,8 @@ def admin_user(db, organization):
 @pytest.fixture
 def auditor_user(db, organization):
     """Create senior auditor user"""
+    User = get_user_model()
+
     return User.objects.create_user(
         email="auditor@test.finai",
         password="TestPass123!",
@@ -86,6 +71,8 @@ def auditor_user(db, organization):
 @pytest.fixture
 def junior_auditor(db, organization):
     """Create junior auditor user"""
+    User = get_user_model()
+
     return User.objects.create_user(
         email="junior@test.finai",
         password="TestPass123!",
@@ -98,6 +85,8 @@ def junior_auditor(db, organization):
 @pytest.fixture
 def finance_manager(db, organization):
     """Create finance manager user"""
+    User = get_user_model()
+
     return User.objects.create_user(
         email="finance@test.finai",
         password="TestPass123!",
@@ -140,6 +129,8 @@ def web_client():
 @pytest.fixture
 def document(db, organization, admin_user):
     """Create a test document"""
+    from apps.documents.models import Document
+
     return Document.objects.create(
         organization=organization,
         uploaded_by=admin_user,
@@ -157,6 +148,7 @@ def invoice(db, organization, admin_user):
     """Create a test invoice"""
     from decimal import Decimal
     from datetime import date
+    from apps.invoices.models import Invoice
     
     return Invoice.objects.create(
         organization=organization,
@@ -179,6 +171,7 @@ def transaction(db, organization):
     """Create a test transaction"""
     from decimal import Decimal
     from datetime import date
+    from apps.transactions.models import Transaction
     
     return Transaction.objects.create(
         organization=organization,
@@ -287,6 +280,7 @@ def invoice_factory(organization, admin_user):
     """Factory to create test invoices with custom data"""
     from decimal import Decimal
     from datetime import date
+    from apps.invoices.models import Invoice
     
     def _create_invoice(
         invoice_number="INV-001",

@@ -181,15 +181,43 @@ def _verified_login_payload(request, user):
     }
 
 
-def _first_error(errors):
+def _stringify_error(value):
+    if isinstance(value, list):
+        return str(value[0]) if value else ""
+    return str(value)
+
+
+def _first_error(errors, *, flow="generic"):
     if not errors:
         return "تعذر إكمال العملية حالياً."
 
     if isinstance(errors, dict):
+        if flow == "login":
+            if "email" in errors:
+                first_email_error = _stringify_error(errors["email"])
+                lowered = first_email_error.lower()
+                if "valid email" in lowered:
+                    return "البريد الإلكتروني غير صالح."
+                return "البريد الإلكتروني أو كلمة المرور غير صحيحة."
+            if "non_field_errors" in errors:
+                first_non_field_error = _stringify_error(errors["non_field_errors"])
+                lowered = first_non_field_error.lower()
+                if "locked" in lowered:
+                    return "تم إيقاف الحساب مؤقتًا. حاول مرة أخرى لاحقًا."
+                if "inactive" in lowered:
+                    return "هذا الحساب غير نشط حاليًا."
+                return "البريد الإلكتروني أو كلمة المرور غير صحيحة."
+        register_email_error = errors.get("email")
+        if register_email_error:
+            first_email_error = _stringify_error(register_email_error)
+            lowered = first_email_error.lower()
+            if "valid email" in lowered:
+                return "البريد الإلكتروني غير صالح."
+            return "هذا البريد الإلكتروني مستخدم بالفعل."
         if "email" in errors:
             return "هذا البريد الإلكتروني مستخدم بالفعل." if errors["email"] else "البريد الإلكتروني غير صالح."
         if "password" in errors:
-            first_password_error = errors["password"][0] if isinstance(errors["password"], list) else errors["password"]
+            first_password_error = _stringify_error(errors["password"])
             if "match" in str(first_password_error).lower():
                 return "كلمتا المرور غير متطابقتين."
             return "يرجى التحقق من كلمة المرور والمحاولة مرة أخرى."
@@ -198,9 +226,7 @@ def _first_error(errors):
 
         first_key = next(iter(errors))
         first_value = errors[first_key]
-        if isinstance(first_value, list) and first_value:
-            return str(first_value[0])
-        return str(first_value)
+        return _stringify_error(first_value)
 
     if isinstance(errors, list) and errors:
         return str(errors[0])
@@ -483,7 +509,7 @@ def login_view(request):
             }
         )
         if not serializer.is_valid():
-            return JsonResponse({"success": False, "error": _first_error(serializer.errors)}, status=400)
+            return JsonResponse({"success": False, "error": _first_error(serializer.errors, flow="login")}, status=400)
 
         user = serializer.validated_data["user"]
         if not user.is_email_verified:
@@ -526,7 +552,7 @@ def register_view(request):
 
         serializer = RegisterSerializer(data=payload)
         if not serializer.is_valid():
-            return JsonResponse({"success": False, "error": _first_error(serializer.errors)}, status=400)
+            return JsonResponse({"success": False, "error": _first_error(serializer.errors, flow="register")}, status=400)
 
         user = serializer.save()
         try:

@@ -226,6 +226,49 @@
           </template>
         </div>
       </div>
+
+      <div class="dashboard-surface p-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-2xl font-bold text-slate-900">الملخص التنفيذي</h2>
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500" x-text="latestSessionSummary?.source || 'deterministic'"></span>
+        </div>
+        <p class="mt-4 text-sm leading-7 text-slate-600" x-text="latestSessionSummary?.summary || 'لا توجد جلسات تدقيق حديثة لعرض ملخص تنفيذي.'"></p>
+        <div class="mt-5 grid grid-cols-2 gap-3">
+          <div class="dashboard-mini-stat">
+            <p class="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Critical</p>
+            <p class="mt-2 font-mono text-2xl font-bold text-red-600" x-text="formatInteger(findingTotals.critical)"></p>
+          </div>
+          <div class="dashboard-mini-stat">
+            <p class="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">High</p>
+            <p class="mt-2 font-mono text-2xl font-bold text-orange-600" x-text="formatInteger(findingTotals.high)"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-surface p-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-2xl font-bold text-slate-900">أحدث الجلسات</h2>
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500" x-text="formatInteger(recentSessions.length)"></span>
+        </div>
+        <div class="mt-5 space-y-3">
+          <template x-if="!recentSessions.length">
+            <div class="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-400">
+              لا توجد جلسات تدقيق حديثة.
+            </div>
+          </template>
+          <template x-for="session in recentSessions.slice(0, 3)" :key="session.id">
+            <a :href="'/invoices/sessions/' + session.id + '/'" class="block rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 transition hover:border-slate-300 hover:bg-white">
+              <div class="flex items-center justify-between gap-3">
+                <div class="text-right">
+                  <p class="text-sm font-bold text-slate-800" x-text="session.name || ('Session ' + session.id.slice(0, 8))"></p>
+                  <p class="mt-1 text-xs text-slate-500" x-text="sessionStatusLabel(session.status) + ' • ' + session.processed_count + '/' + session.total_count"></p>
+                </div>
+                <span class="rounded-full px-2.5 py-1 text-[11px] font-bold" :class="sessionStatusBadge(session.status)" x-text="sessionStatusLabel(session.status)"></span>
+              </div>
+            </a>
+          </template>
+        </div>
+      </div>
     </div>
 
     <div class="space-y-6 xl:col-span-9">
@@ -425,6 +468,9 @@ function dashboard() {
     riskDist: [],
     alerts: [],
     ruleGroups: [],
+    recentSessions: [],
+    latestSessionSummary: null,
+    findingTotals: { critical: 0, high: 0, medium: 0, low: 0 },
 
     get todayLabel() {
       return new Intl.DateTimeFormat('ar-SA', {
@@ -517,6 +563,32 @@ function dashboard() {
       }[level] || 'bg-slate-100 text-slate-600';
     },
 
+    sessionStatusLabel(status) {
+      return {
+        received: 'تم الاستلام',
+        extracting: 'استخراج',
+        normalizing: 'توحيد',
+        validating: 'تحقق',
+        review_required: 'مراجعة',
+        action_required: 'إجراء مطلوب',
+        completed: 'مكتملة',
+        failed: 'فشلت',
+      }[status] || status;
+    },
+
+    sessionStatusBadge(status) {
+      return {
+        received: 'bg-slate-50 text-slate-700',
+        extracting: 'bg-blue-50 text-blue-700',
+        normalizing: 'bg-indigo-50 text-indigo-700',
+        validating: 'bg-violet-50 text-violet-700',
+        review_required: 'bg-amber-50 text-amber-700',
+        action_required: 'bg-red-50 text-red-700',
+        completed: 'bg-green-50 text-green-700',
+        failed: 'bg-red-50 text-red-700',
+      }[status] || 'bg-slate-100 text-slate-600';
+    },
+
     alertIcon(type) {
       return {
         critical: 'triangle-alert',
@@ -557,7 +629,7 @@ function dashboard() {
 
     init() {
       this.initRuleGroups();
-      Promise.all([this.loadSpendReport(), this.loadReviewQueues()])
+      Promise.all([this.loadSpendReport(), this.loadReviewQueues(), this.loadAuditOverview()])
         .finally(() => this.$nextTick(() => lucide.createIcons()));
     },
 
@@ -644,6 +716,17 @@ function dashboard() {
         console.warn('dashboard queues', error);
       } finally {
         this.loadingFlagged = false;
+      }
+    },
+
+    async loadAuditOverview() {
+      try {
+        const response = await apiFetch('/audit/dashboard/overview/');
+        this.recentSessions = response.recent_sessions || [];
+        this.latestSessionSummary = response.latest_summary || null;
+        this.findingTotals = response.finding_totals || { critical: 0, high: 0, medium: 0, low: 0 };
+      } catch (error) {
+        console.warn('dashboard audit overview', error);
       }
     },
 
@@ -776,5 +859,36 @@ function dashboard() {
     },
   };
 }
+const originalDashboardFactory = dashboard;
+dashboard = function() {
+  const state = originalDashboardFactory();
+
+  state.initRuleGroups = function() {
+    this.ruleGroups = [
+      { code: 'INV', label: 'رأس الفاتورة', pct: 0, color: '#2563eb', passed: 0, failed: 0, total: 0 },
+      { code: 'DUP', label: 'التكرار', pct: 0, color: '#f59e0b', passed: 0, failed: 0, total: 0 },
+      { code: 'VAT', label: 'الضريبة', pct: 0, color: '#7c3aed', passed: 0, failed: 0, total: 0 },
+      { code: 'ANO', label: 'الشذوذ', pct: 0, color: '#ef4444', passed: 0, failed: 0, total: 0 },
+      { code: 'CTL', label: 'الرقابة', pct: 0, color: '#06b6d4', passed: 0, failed: 0, total: 0 },
+      { code: 'DOC', label: 'المستند', pct: 0, color: '#16a34a', passed: 0, failed: 0, total: 0 },
+    ];
+  };
+
+  state.loadAuditOverview = async function() {
+    try {
+      const response = await apiFetch('/audit/dashboard/overview/');
+      this.recentSessions = response.recent_sessions || [];
+      this.latestSessionSummary = response.latest_summary || null;
+      this.findingTotals = response.finding_totals || { critical: 0, high: 0, medium: 0, low: 0 };
+      if (Array.isArray(response.rule_groups) && response.rule_groups.length) {
+        this.ruleGroups = response.rule_groups;
+      }
+    } catch (error) {
+      console.warn('dashboard audit overview', error);
+    }
+  };
+
+  return state;
+};
 </script>
 {% endblock %}

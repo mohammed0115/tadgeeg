@@ -36,6 +36,13 @@ class Document(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="documents")
     uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="uploaded_documents")
+    audit_session = models.ForeignKey(
+        "audit.AuditSession",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="documents",
+    )
     file = models.FileField(upload_to="documents/%Y/%m/")
     original_filename = models.CharField(max_length=255)
     file_size = models.PositiveIntegerField(help_text="Size in bytes")

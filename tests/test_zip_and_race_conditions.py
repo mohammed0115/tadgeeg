@@ -15,13 +15,14 @@ import pytest
 import threading
 import time
 import queue
+import unittest
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from threading import Barrier, Condition, Lock, Event
 import random
 
 from django.test import TransactionTestCase, TestCase, override_settings
 from django.utils import timezone
-from django.db import transaction, IntegrityError
+from django.db import connection, transaction, IntegrityError
 from django.db.models import F, Q
 from django.core.cache import cache
 
@@ -30,6 +31,10 @@ from apps.audit.models import AuditSession, AuditFinding
 from apps.invoices.models import Invoice, InvoiceBatch
 from apps.analytics.analytics_service import AuditAnalyticsService
 from core.services.scoring.risk_optimization_service import RiskOptimizationService
+
+
+MYSQL_ONLY_REASON = "This concurrency test requires MySQL row-level locking semantics."
+mysql_only = unittest.skipUnless(connection.vendor == "mysql", MYSQL_ONLY_REASON)
 
 
 # ────────────────────────────────────────────────────────────────────────────────
@@ -193,6 +198,7 @@ class TestZIPBatchProcessing(TransactionTestCase):
 # ────────────────────────────────────────────────────────────────────────────────
 
 @pytest.mark.django_db(transaction=True)
+@mysql_only
 class TestPreciseRaceConditions(TransactionTestCase):
     """Fine-grained race condition tests with precise timing."""
 
@@ -558,6 +564,7 @@ class TestStressScenarios(TransactionTestCase):
         assert len(errors) == 0, f"Errors: {errors}"
         assert len(results) > 0
 
+    @mysql_only
     def test_rapid_batch_scoring_sequence(self):
         """Test rapid sequence of batch scoring operations."""
         session = AuditSession.objects.create(organization=self.org, created_by=self.user)

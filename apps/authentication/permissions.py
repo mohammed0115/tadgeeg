@@ -6,47 +6,41 @@ from .models import User
 
 class IsAdminUser(BasePermission):
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role == User.Role.ADMIN
+        return request.user.is_authenticated and request.user.can_manage_users
 
 
 class IsSameUserOrAdmin(BasePermission):
     def has_object_permission(self, request, view, obj):
         return request.user.is_authenticated and (
-            request.user == obj or request.user.role == User.Role.ADMIN
+            request.user == obj or request.user.can_manage_users
         )
 
 
 class IsSeniorAuditorOrAbove(BasePermission):
-    ALLOWED_ROLES = [
-        User.Role.ADMIN,
-        User.Role.CHIEF_AUDIT_OFFICER,
-        User.Role.SENIOR_AUDITOR,
-    ]
-
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role in self.ALLOWED_ROLES
+        return request.user.is_authenticated and request.user.has_role_capability("approve_invoices")
 
 
 class IsComplianceOrAbove(BasePermission):
-    ALLOWED_ROLES = [
-        User.Role.ADMIN,
-        User.Role.CHIEF_AUDIT_OFFICER,
-        User.Role.SENIOR_AUDITOR,
-        User.Role.COMPLIANCE_OFFICER,
-    ]
-
     def has_permission(self, request, view):
-        return request.user.is_authenticated and request.user.role in self.ALLOWED_ROLES
+        return request.user.is_authenticated and request.user.has_role_capability("review_findings")
 
 
 class IsOwnOrganization(BasePermission):
     """Only allows access to resources within the user's organization."""
 
     def has_object_permission(self, request, view, obj):
-        if request.user.role == User.Role.ADMIN:
+        if not request.user.is_authenticated:
+            return False
+        if request.user.can_manage_users:
             return True
         if hasattr(obj, "organization_id"):
             return obj.organization_id == request.user.organization_id
         if hasattr(obj, "organization"):
             return obj.organization == request.user.organization
         return False
+
+
+class CanViewExecutiveDashboard(BasePermission):
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.has_role_capability("view_executive_dashboard")

@@ -4,10 +4,12 @@ Django Settings
 """
 
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
+from core.utils.database import build_default_database, build_test_database
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
@@ -26,11 +28,6 @@ try:
     FILE_LOGGING_ENABLED = os.access(LOG_FILE, os.W_OK)
 except OSError:
     FILE_LOGGING_ENABLED = False
-SQLITE_NAME = os.environ.get("SQLITE_NAME", "db_runtime.sqlite3")
-SQLITE_PATH = Path(SQLITE_NAME)
-if not SQLITE_PATH.is_absolute():
-    SQLITE_PATH = BASE_DIR / SQLITE_PATH
-
 SECRET_KEY = os.environ.get(
     "SECRET_KEY",
     os.environ.get("DJANGO_SECRET_KEY", "change-me-in-production-use-long-random-string"),
@@ -129,30 +126,12 @@ CHANNEL_LAYERS = {
 }
 
 # ─── Database ─────────────────────────────────────────────────────────────────
-_db_engine = os.environ.get("DB_ENGINE", "")
-
-if _db_engine == "django.db.backends.mysql" or os.environ.get("DB_NAME"):
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.mysql",
-            "NAME": os.environ.get("DB_NAME", "finai_live"),
-            "USER": os.environ.get("DB_USER", "finai_live_user"),
-            "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-            "HOST": os.environ.get("DB_HOST", "127.0.0.1"),
-            "PORT": os.environ.get("DB_PORT", "3306"),
-            "OPTIONS": {
-                "charset": "utf8mb4",
-                "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-            },
-        }
-    }
+_RUNNING_PYTEST = "pytest" in Path(sys.argv[0]).name.lower() or "pytest" in sys.modules
+if _RUNNING_PYTEST:
+    DATABASE_BACKEND, _default_database = build_test_database(BASE_DIR, os.environ)
 else:
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": SQLITE_PATH,
-        }
-    }
+    DATABASE_BACKEND, _default_database = build_default_database(BASE_DIR, os.environ)
+DATABASES = {"default": _default_database}
 
 # ─── Auth ─────────────────────────────────────────────────────────────────────
 AUTH_USER_MODEL = "authentication.User"
@@ -215,6 +194,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ─── DRF ─────────────────────────────────────────────────────────────────────
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [

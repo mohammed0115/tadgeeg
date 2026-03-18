@@ -20,19 +20,20 @@ jobs:
     name: Lint, Test & Coverage
     
     services:
-      postgres:
-        image: postgres:15
+      mysql:
+        image: mysql:8.4
         env:
-          POSTGRES_DB: finai_test
-          POSTGRES_USER: finai_test
-          POSTGRES_PASSWORD: test_password
+          MYSQL_DATABASE: finai_test
+          MYSQL_USER: finai_test
+          MYSQL_PASSWORD: test_password
+          MYSQL_ROOT_PASSWORD: root_password
         options: >-
-          --health-cmd pg_isready
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot_password"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
         ports:
-          - 5432:5432
+          - 3306:3306
       
       redis:
         image: redis:7
@@ -56,7 +57,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libmagic1 tesseract-ocr
+          sudo apt-get install -y libmagic1 tesseract-ocr default-libmysqlclient-dev pkg-config
       
       - name: Install Python dependencies
         run: |
@@ -82,7 +83,13 @@ jobs:
         env:
           DJANGO_SETTINGS_MODULE: finai_backend.settings
           DEBUG: 'False'
-          DATABASE_URL: postgresql://finai_test:test_password@localhost:5432/finai_test
+          DB_BACKEND: mysql
+          TEST_DB_BACKEND: mysql
+          TEST_DB_NAME: finai_test
+          TEST_DB_USER: finai_test
+          TEST_DB_PASSWORD: test_password
+          TEST_DB_HOST: 127.0.0.1
+          TEST_DB_PORT: 3306
           REDIS_URL: redis://localhost:6379/0
           CELERY_ALWAYS_EAGER: 'True'
           SENTRY_DSN: ''
@@ -152,6 +159,22 @@ jobs:
   migrations-check:
     runs-on: ubuntu-latest
     name: Database Migrations Check
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: finai_test
+          MYSQL_USER: finai_test
+          MYSQL_PASSWORD: test_password
+          MYSQL_ROOT_PASSWORD: root_password
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot_password"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 3306:3306
     
     steps:
       - uses: actions/checkout@v3
@@ -164,18 +187,32 @@ jobs:
       
       - name: Install dependencies
         run: |
+          sudo apt-get update
+          sudo apt-get install -y default-libmysqlclient-dev pkg-config
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
       - name: Check for missing migrations
         env:
           DEBUG: 'False'
+          DB_BACKEND: mysql
+          DB_NAME: finai_test
+          DB_USER: finai_test
+          DB_PASSWORD: test_password
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
         run: |
           python manage.py makemigrations --check --dry-run
       
       - name: Run migrations
         env:
           DEBUG: 'False'
+          DB_BACKEND: mysql
+          DB_NAME: finai_test
+          DB_USER: finai_test
+          DB_PASSWORD: test_password
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
         run: |
           python manage.py migrate --run-syncdb
 

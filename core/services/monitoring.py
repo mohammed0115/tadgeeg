@@ -227,6 +227,30 @@ class PipelineHealthCheck:
         except Exception as e:
             return ComponentHealth("processing_rate", HealthStatus.DEGRADED, f"Failed: {str(e)}", 0)
 
+    def check_stuck_audit_sessions(self) -> ComponentHealth:
+        """Check for audit sessions stuck in workflow states."""
+        try:
+            from apps.audit.models import AuditSession
+
+            stuck_sessions = AuditSession.objects.filter(
+                status__in=[
+                    AuditSession.Status.EXTRACTING,
+                    AuditSession.Status.NORMALIZING,
+                    AuditSession.Status.VALIDATING,
+                ],
+                updated_at__lt=timezone.now() - timedelta(minutes=30),
+            ).count()
+
+            if stuck_sessions > 0:
+                status = HealthStatus.DEGRADED if stuck_sessions < 5 else HealthStatus.UNHEALTHY
+                message = f"{stuck_sessions} audit sessions stuck in workflow"
+            else:
+                status = HealthStatus.HEALTHY
+                message = "No stuck audit sessions"
+            return ComponentHealth("stuck_audit_sessions", status, message, 0)
+        except Exception as e:
+            return ComponentHealth("stuck_audit_sessions", HealthStatus.DEGRADED, f"Failed: {str(e)}", 0)
+
     def run_full_check(self, include_heavy_checks: bool = True) -> dict:
         """
         Run full health check across all components
@@ -245,6 +269,7 @@ class PipelineHealthCheck:
         self.components["database"] = self.check_database()
         self.components["tesseract"] = self.check_tesseract()
         self.components["stuck_documents"] = self.check_stuck_documents()
+        self.components["stuck_audit_sessions"] = self.check_stuck_audit_sessions()
 
         # Heavy checks (optional)
         if include_heavy_checks:

@@ -6,6 +6,162 @@ from apps.authentication.models import User, Organization
 from apps.transactions.models import Transaction
 
 
+class AuditSession(models.Model):
+    """Tracks the lifecycle and aggregate progress of a related audit upload."""
+
+    class Status(models.TextChoices):
+        RECEIVED = "received", "Received"
+        EXTRACTING = "extracting", "Extracting"
+        NORMALIZING = "normalizing", "Normalizing"
+        VALIDATING = "validating", "Validating"
+        REVIEW_REQUIRED = "review_required", "Review Required"
+        ACTION_REQUIRED = "action_required", "Action Required"
+        COMPLETED = "completed", "Completed"
+        FAILED = "failed", "Failed"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="audit_sessions",
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_audit_sessions",
+    )
+    name = models.CharField(max_length=255, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.RECEIVED,
+    )
+    total_count = models.PositiveIntegerField(default=0)
+    processed_count = models.PositiveIntegerField(default=0)
+    success_count = models.PositiveIntegerField(default=0)
+    failed_count = models.PositiveIntegerField(default=0)
+    review_required_count = models.PositiveIntegerField(default=0)
+    duplicate_count = models.PositiveIntegerField(default=0)
+    high_risk_count = models.PositiveIntegerField(default=0)
+    average_risk_score = models.FloatField(default=0.0)
+    max_risk_score = models.FloatField(default=0.0)
+    last_error = models.TextField(blank=True)
+    context = models.JSONField(default=dict, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    failed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "audit_sessions"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["organization", "status"]),
+            models.Index(fields=["created_at"]),
+        ]
+
+    def __str__(self):
+        label = self.name or str(self.id)
+        return f"AuditSession {label} ({self.status})"
+
+    @property
+    def progress_percent(self):
+        if not self.total_count:
+            return 0
+        return round((self.processed_count / self.total_count) * 100, 2)
+
+
+class AuditFinding(models.Model):
+    """Persisted user-facing findings generated from validation and review workflows."""
+
+    class Severity(models.TextChoices):
+        LOW = "low", "Low"
+        MEDIUM = "medium", "Medium"
+        HIGH = "high", "High"
+        CRITICAL = "critical", "Critical"
+
+    class Status(models.TextChoices):
+        OPEN = "open", "Open"
+        RESOLVED = "resolved", "Resolved"
+        IGNORED = "ignored", "Ignored"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.CASCADE,
+        related_name="audit_findings",
+    )
+    audit_session = models.ForeignKey(
+        AuditSession,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="findings",
+    )
+    document = models.ForeignKey(
+        "documents.Document",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_findings",
+    )
+    invoice = models.ForeignKey(
+        "invoices.Invoice",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="audit_findings",
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_audit_findings",
+    )
+    resolved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="resolved_audit_findings",
+    )
+    rule_code = models.CharField(max_length=20)
+    rule_name = models.CharField(max_length=255)
+    rule_group = models.CharField(max_length=10, blank=True)
+    severity = models.CharField(
+        max_length=10,
+        choices=Severity.choices,
+        default=Severity.MEDIUM,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.OPEN,
+    )
+    message = models.TextField()
+    details = models.JSONField(default=dict, blank=True)
+    source = models.CharField(max_length=50, default="validation_engine")
+    first_detected_at = models.DateTimeField(auto_now_add=True)
+    last_detected_at = models.DateTimeField(auto_now=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "audit_findings"
+        ordering = ["-last_detected_at"]
+        indexes = [
+            models.Index(fields=["organization", "status", "severity"]),
+            models.Index(fields=["audit_session", "status"]),
+            models.Index(fields=["invoice", "rule_code"]),
+        ]
+
+    def __str__(self):
+        return f"{self.rule_code} ({self.severity})"
+
+
 class AuditCase(models.Model):
     """An audit case created from an anomaly or manual finding."""
 

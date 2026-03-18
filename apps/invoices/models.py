@@ -44,6 +44,7 @@ class Invoice(models.Model):
     id                = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization      = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="invoices")
     uploaded_by       = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="uploaded_invoices")
+    audit_session     = models.ForeignKey("audit.AuditSession", on_delete=models.SET_NULL, null=True, blank=True, related_name="invoices")
     batch             = models.ForeignKey("InvoiceBatch", on_delete=models.SET_NULL, null=True, blank=True, related_name="invoices")
 
     # Source file
@@ -126,6 +127,17 @@ class Invoice(models.Model):
             models.Index(fields=["is_duplicate"]),
         ]
 
+    def save(self, *args, **kwargs):
+        # Keep uploads and tests resilient by inheriting ownership/session from the batch.
+        if self.batch_id:
+            if not self.organization_id and self.batch.organization_id:
+                self.organization = self.batch.organization
+            if not self.audit_session_id and self.batch.audit_session_id:
+                self.audit_session = self.batch.audit_session
+            if not self.uploaded_by_id and self.batch.uploaded_by_id:
+                self.uploaded_by = self.batch.uploaded_by
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"INV-{self.invoice_number or self.id} | {self.vendor_name} | {self.total_amount} {self.currency}"
 
@@ -164,6 +176,7 @@ class InvoiceBatch(models.Model):
     id              = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization    = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="invoice_batches")
     uploaded_by     = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="invoice_batches")
+    audit_session   = models.ForeignKey("audit.AuditSession", on_delete=models.SET_NULL, null=True, blank=True, related_name="invoice_batches")
     batch_name      = models.CharField(max_length=255, blank=True)
     status          = models.BatchStatus if False else models.CharField(max_length=15, choices=BatchStatus.choices, default=BatchStatus.PENDING)
     total_files     = models.PositiveIntegerField(default=0)
@@ -177,6 +190,28 @@ class InvoiceBatch(models.Model):
     class Meta:
         db_table = "invoice_batches"
         ordering = ["-created_at"]
+
+    def __init__(self, *args, **kwargs):
+        legacy_name = kwargs.pop("name", None)
+        if legacy_name is not None and "batch_name" not in kwargs:
+            kwargs["batch_name"] = legacy_name
+        super().__init__(*args, **kwargs)
+
+    @property
+    def name(self):
+        return self.batch_name
+
+    @name.setter
+    def name(self, value):
+        self.batch_name = value or ""
+
+    def save(self, *args, **kwargs):
+        # Allow callers to provide only an audit session and derive the organization safely.
+        if self.audit_session_id and not self.organization_id and self.audit_session.organization_id:
+            self.organization = self.audit_session.organization
+        if self.audit_session_id and not self.uploaded_by_id and self.audit_session.created_by_id:
+            self.uploaded_by = self.audit_session.created_by
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Batch {self.id} | {self.total_files} files | {self.status}"

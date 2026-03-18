@@ -41,9 +41,9 @@ def run_weekly_audit_summary():
             open_cases = AuditCase.objects.filter(
                 organization=org,
                 status__in=[
-                    AuditCase.Status.OPEN,
-                    AuditCase.Status.IN_PROGRESS,
-                    AuditCase.Status.UNDER_REVIEW,
+                    AuditCase.CaseStatus.OPEN,
+                    AuditCase.CaseStatus.IN_PROGRESS,
+                    AuditCase.CaseStatus.UNDER_REVIEW,
                 ],
             )
             breakdown = dict(
@@ -55,7 +55,7 @@ def run_weekly_audit_summary():
             ).count()
             resolved_this_week = AuditCase.objects.filter(
                 organization=org,
-                status=AuditCase.Status.RESOLVED,
+                status=AuditCase.CaseStatus.RESOLVED,
                 resolved_at__date__gte=week_ago,
             ).count()
 
@@ -144,3 +144,43 @@ def audit_high_risk_documents(self):
 
     logger.info("[Task:audit_high_risk] Complete. Audited %d high-risk documents.", audited)
     return {"audited": audited}
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=30, name="audit.generate_audit_session_summary")
+def generate_audit_session_summary(self, session_id: str, language: str = "ar", use_ai: bool = False):
+    """Generate and persist an executive summary for a specific audit session."""
+    from apps.audit.models import AuditSession
+    from apps.audit.services import AuditSessionSummaryService
+
+    try:
+        session = AuditSession.objects.get(pk=session_id)
+        summary = AuditSessionSummaryService.generate_summary(session, language=language, use_ai=use_ai)
+        context = dict(session.context or {})
+        context.setdefault("executive_summary", {})[language] = summary
+        session.context = context
+        session.save(update_fields=["context", "updated_at"])
+        return summary
+    except Exception as exc:
+        logger.error("[Task:audit_session_summary] session=%s failed: %s", session_id, exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(name="audit.monitor_stuck_audit_sessions")
+def monitor_stuck_audit_sessions():
+    """Lightweight periodic monitor for audit sessions stuck in processing states."""
+    from django.utils import timezone
+    from apps.audit.models import AuditSession
+
+    threshold = timezone.now() - datetime.timedelta(minutes=30)
+    stuck = AuditSession.objects.filter(
+        status__in=[
+            AuditSession.Status.EXTRACTING,
+            AuditSession.Status.NORMALIZING,
+            AuditSession.Status.VALIDATING,
+        ],
+        updated_at__lt=threshold,
+    )
+
+    count = stuck.count()
+    logger.info("[Task:audit_monitor] stuck_sessions=%d", count)
+    return {"stuck_sessions": count}

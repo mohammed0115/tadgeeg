@@ -7,6 +7,7 @@ from .models import Invoice, InvoiceBatch, InvoiceValidationResult, VendorProfil
 class InvoiceListSerializer(serializers.ModelSerializer):
     """Compact serializer for list views."""
     uploaded_by_name = serializers.CharField(source="uploaded_by.full_name", read_only=True, default="")
+    audit_session_id = serializers.UUIDField(read_only=True)
 
     class Meta:
         model = Invoice
@@ -14,7 +15,7 @@ class InvoiceListSerializer(serializers.ModelSerializer):
             "id", "invoice_number", "invoice_date", "vendor_name", "vendor_vat_number",
             "total_amount", "vat_amount", "currency", "status", "risk_level", "risk_score",
             "is_duplicate", "ocr_confidence", "language", "has_qr_code",
-            "uploaded_by_name", "original_filename", "created_at",
+            "uploaded_by_name", "original_filename", "created_at", "audit_session_id",
         ]
 
 
@@ -41,12 +42,15 @@ class InvoiceValidationResultSerializer(serializers.ModelSerializer):
 
 class InvoiceBatchSerializer(serializers.ModelSerializer):
     uploaded_by_name = serializers.CharField(source="uploaded_by.full_name", read_only=True, default="")
+    audit_session_id = serializers.UUIDField(read_only=True)
+    audit_session_status = serializers.CharField(source="audit_session.status", read_only=True, default="")
 
     class Meta:
         model = InvoiceBatch
         fields = [
             "id", "batch_name", "status", "total_files", "processed_files",
             "failed_files", "uploaded_by_name", "created_at", "completed_at",
+            "audit_session_id", "audit_session_status",
         ]
 
 

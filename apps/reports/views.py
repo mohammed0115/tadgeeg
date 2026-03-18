@@ -41,9 +41,11 @@ def _json_safe(obj):
 
 # ─── Helper: collect invoice section data ─────────────────────────────────────
 
-def _collect_invoice_data(org, date_from=None, date_to=None) -> dict:
+def _collect_invoice_data(org, date_from=None, date_to=None, audit_session_id=None) -> dict:
     """Aggregate all invoice audit data for reports."""
     inv_qs = Invoice.objects.filter(organization=org)
+    if audit_session_id:
+        inv_qs = inv_qs.filter(audit_session_id=audit_session_id)
     if date_from:
         inv_qs = inv_qs.filter(invoice_date__gte=date_from)
     if date_to:
@@ -278,6 +280,7 @@ class GenerateAuditReportView(APIView):
                 "date_from": {"type": "string", "format": "date"},
                 "date_to":   {"type": "string", "format": "date"},
                 "language":  {"type": "string", "enum": ["en", "ar"], "default": "en"},
+                "audit_session_id": {"type": "string", "format": "uuid"},
                 "include_invoices":     {"type": "boolean", "default": True},
                 "include_transactions": {"type": "boolean", "default": True},
             },
@@ -292,6 +295,7 @@ class GenerateAuditReportView(APIView):
         date_from         = request.data.get("date_from")
         date_to           = request.data.get("date_to") or str(date.today())
         language          = request.data.get("language", "en")
+        audit_session_id  = request.data.get("audit_session_id")
         include_invoices  = request.data.get("include_invoices", True)
         include_tx        = request.data.get("include_transactions", True)
 
@@ -305,11 +309,12 @@ class GenerateAuditReportView(APIView):
             },
             "audit_period": {"from": date_from, "to": date_to},
             "report_type":  report_type,
+            "audit_session_id": audit_session_id,
         }
 
         # ── Invoice Audit Section ──────────────────────────────────────────────
         if include_invoices:
-            audit_data["invoice_audit"] = _collect_invoice_data(org, date_from, date_to)
+            audit_data["invoice_audit"] = _collect_invoice_data(org, date_from, date_to, audit_session_id=audit_session_id)
 
         # ── Transaction Section ────────────────────────────────────────────────
         if include_tx:
@@ -354,6 +359,8 @@ class GenerateAuditReportView(APIView):
 
         # ── Audit Cases Section ────────────────────────────────────────────────
         cases_qs = AuditCase.objects.filter(organization=org)
+        if audit_session_id:
+            cases_qs = cases_qs.filter(invoice__audit_session_id=audit_session_id)
         if date_from:
             cases_qs = cases_qs.filter(created_at__date__gte=date_from)
         cases_qs = cases_qs.filter(created_at__date__lte=date_to)

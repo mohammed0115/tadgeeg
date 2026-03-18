@@ -39,6 +39,13 @@ LABEL description="FinAI Backend - Production optimized"
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     curl \
+    libcairo2 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libgdk-pixbuf-2.0-0 \
+    shared-mime-info \
+    fonts-dejavu-core \
+    fonts-noto-core \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

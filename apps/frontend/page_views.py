@@ -85,6 +85,8 @@ def _ctx(request, active="dashboard", **extra):
         "pending_count": pending_count,
         "active": active,
         "bootstrap_tokens": _consume_post_login_tokens(request),
+        "can_manage_users": getattr(request.user, "can_manage_users", False),
+        "can_generate_reports": getattr(request.user, "can_generate_reports", False),
         **extra,
     }
 
@@ -491,6 +493,141 @@ def landing(request):
     return render(request, "landing/index.html", _public_ctx(request))
 
 
+def _render_marketing_page(request, *, page_key, title, eyebrow, description, bullets):
+    return render(
+        request,
+        "landing/page.html",
+        _public_ctx(
+            request,
+            page_key=page_key,
+            page_title=title,
+            page_eyebrow=eyebrow,
+            page_description=description,
+            page_bullets=bullets,
+        ),
+    )
+
+
+def pricing(request):
+    return _render_marketing_page(
+        request,
+        page_key="pricing",
+        title="خطط مرنة تناسب فرق التدقيق والامتثال",
+        eyebrow="Pricing",
+        description="نساعدك على البدء سريعًا بخطة مناسبة لحجم الفريق، مع توسع واضح عند زيادة عدد المستندات وسير العمل.",
+        bullets=[
+            "خطة بداية لفرق التدقيق الصغيرة والمتوسطة.",
+            "خطة مؤسسية مع عزل منظمات وتدفقات مراجعة أوسع.",
+            "تفعيل تدريجي للمزايا المتقدمة مثل التقارير التنفيذية والتكاملات.",
+        ],
+    )
+
+
+def about(request):
+    return _render_marketing_page(
+        request,
+        page_key="about",
+        title="منصة تدقيق مالي مبنية لسوق الخليج",
+        eyebrow="About Tadgeeg",
+        description="Tadgeeg تركز على تدقيق الفواتير والمستندات المالية مع دعم الامتثال الضريبي والمالي في بيئات العمل الخليجية.",
+        bullets=[
+            "دعم اللغة العربية والإنجليزية في رحلة الاستخدام.",
+            "تركيز على ZATCA وضريبة القيمة المضافة ومراجعة المستندات.",
+            "تصميم عملي يناسب فرق المالية والمراجعة والامتثال.",
+        ],
+    )
+
+
+def contact(request):
+    return _render_marketing_page(
+        request,
+        page_key="contact",
+        title="تواصل مع فريق Tadgeeg",
+        eyebrow="Contact",
+        description="إذا كنت تريد عرضًا مخصصًا أو تهيئة مؤسسية أو دعمًا تقنيًا، يمكن لفريقنا ترتيب جلسة تعريفية وخطة تشغيل مناسبة.",
+        bullets=[
+            "استجابة مخصصة لفرق المالية والامتثال.",
+            "تهيئة للإطلاق التجريبي أو المؤسسي.",
+            "دعم فني وإرشاد أثناء الإعداد.",
+        ],
+    )
+
+
+def privacy(request):
+    return _render_marketing_page(
+        request,
+        page_key="privacy",
+        title="الخصوصية وحماية البيانات",
+        eyebrow="Privacy",
+        description="نلتزم بالتعامل مع بياناتك المالية بمستوى عالٍ من الحذر، مع عزل منظمات واضح وسجل تدقيق للأحداث الحساسة داخل النظام.",
+        bullets=[
+            "عزل البيانات على مستوى المنظمة.",
+            "سجلات تدقيق للعمليات الحساسة.",
+            "ضوابط وصول تعتمد على الدور التنظيمي.",
+        ],
+    )
+
+
+def blog(request):
+    return _render_marketing_page(
+        request,
+        page_key="blog",
+        title="رؤى التدقيق والامتثال",
+        eyebrow="Insights",
+        description="مساحة لمشاركة أدلة عملية ورؤى تشغيلية حول التدقيق المالي والامتثال الضريبي والتحول الرقمي لفرق المالية.",
+        bullets=[
+            "أفضل الممارسات في مراجعة الفواتير والموردين.",
+            "تحديثات متعلقة بمتطلبات الامتثال في الخليج.",
+            "أدلة تشغيلية لتفعيل الذكاء الاصطناعي داخل فرق المالية.",
+        ],
+    )
+
+
+def integrations(request):
+    return _render_marketing_page(
+        request,
+        page_key="integrations",
+        title="تكاملات جاهزة وقابلة للتوسع",
+        eyebrow="Integrations",
+        description="خطط التكامل تشمل البريد، مسارات الموافقة، وخدمات الربط مع بيئات العمل المالية الحالية داخل المؤسسة.",
+        bullets=[
+            "قابلية ربط تدريجية مع أنظمة الشركة الحالية.",
+            "واجهات API داخلية يمكن توسيعها للتكاملات.",
+            "تهيئة مخصصة للمؤسسات التي تحتاج سير عمل خاص.",
+        ],
+    )
+
+
+def api_page(request):
+    return _render_marketing_page(
+        request,
+        page_key="api",
+        title="واجهات برمجية قابلة للتكامل المؤسسي",
+        eyebrow="API",
+        description="توفر Tadgeeg واجهات آمنة ومقيدة بالمنظمة لرفع المستندات، متابعة الجلسات، والوصول إلى نتائج التدقيق والتقارير.",
+        bullets=[
+            "مصادقة API مع عزل واضح للمنظمات.",
+            "نقاط نهاية للرفع والمتابعة والتقارير.",
+            "قابلة للدمج مع أنظمة ERP أو بوابات العمل الداخلية.",
+        ],
+    )
+
+
+def careers(request):
+    return _render_marketing_page(
+        request,
+        page_key="careers",
+        title="العمل في Tadgeeg",
+        eyebrow="Careers",
+        description="نبني منتجًا ماليًا يحتاج دقة تنفيذ عالية، ونبحث عن فرق تجمع بين الحس التقني وفهم القطاع المالي والتنظيمي.",
+        bullets=[
+            "فرص في الهندسة والمنتج وتجربة المستخدم.",
+            "تركيز على منتجات B2B عالية الحساسية للثقة.",
+            "بيئة عمل عملية تبني منتجات تشغيلية حقيقية.",
+        ],
+    )
+
+
 @ensure_csrf_cookie
 def login_view(request):
     if request.user.is_authenticated:
@@ -813,6 +950,8 @@ def transactions(request):
 
 @login_required(login_url="/login/")
 def users(request):
+    if not getattr(request.user, "can_manage_users", False):
+        return redirect("frontend:dashboard")
     return render(request, "users/index.html", _ctx(request, "users"))
 
 

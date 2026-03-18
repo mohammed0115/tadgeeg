@@ -66,7 +66,11 @@ class PipelineHealthCheck:
             return ComponentHealth("redis", HealthStatus.HEALTHY, "Connected", elapsed)
         except Exception as e:
             elapsed = (time.time() - start) * 1000
-            return ComponentHealth("redis", HealthStatus.UNHEALTHY, f"Failed: {str(e)}", elapsed)
+            status = HealthStatus.UNHEALTHY if getattr(settings, "HEALTH_REDIS_REQUIRED", False) else HealthStatus.DEGRADED
+            message = f"Unavailable: {str(e)}"
+            if status == HealthStatus.DEGRADED:
+                message += " (running in degraded mode without Redis)"
+            return ComponentHealth("redis", status, message, elapsed)
 
     def check_tesseract(self) -> ComponentHealth:
         """Check Tesseract OCR installation"""

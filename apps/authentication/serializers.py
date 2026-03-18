@@ -1,12 +1,14 @@
 """Authentication Serializers"""
 
 from datetime import timedelta
+from django.db import transaction
 
 from django.contrib.auth import authenticate
 from django.utils import timezone
 from rest_framework import serializers
 
 from .models import User, Organization, OrganizationSettings
+from .services.organization_setup import ensure_user_organization
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
@@ -90,18 +92,20 @@ class RegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         org_name = validated_data.pop("organization_name", None)
         country = validated_data.pop("country", "SA")
+        validated_data["role"] = User.Role.ADMIN
 
-        organization = None
-        if org_name:
-            organization, _ = Organization.objects.get_or_create(
-                name=org_name, defaults={"country": country}
+        with transaction.atomic():
+            user = User.objects.create_user(
+                organization=None,
+                email_verified_at=None,
+                **validated_data,
             )
-
-        user = User.objects.create_user(
-            organization=organization,
-            email_verified_at=None,
-            **validated_data,
-        )
+            ensure_user_organization(
+                user,
+                organization_name=org_name or "",
+                country=country or Organization.Country.SAUDI_ARABIA,
+                promote_owner=True,
+            )
         return user
 
 

@@ -16,6 +16,7 @@ from django.utils import timezone
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.authentication.models import EmailOTPVerification, User
+from apps.authentication.services.organization_setup import ensure_user_organization
 
 PENDING_EMAIL_VERIFICATION_SESSION_KEY = "pending_email_verification_user_id"
 logger = logging.getLogger("finai")
@@ -155,6 +156,9 @@ def reset_login_failures(user: User) -> None:
 
 
 def complete_verified_login(request, user: User) -> dict:
+    if not user.organization_id:
+        ensure_user_organization(user, promote_owner=True)
+
     user.last_login_ip = request.META.get("REMOTE_ADDR")
     user.last_login = timezone.now()
     user.failed_login_attempts = 0

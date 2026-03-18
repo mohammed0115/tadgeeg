@@ -8,6 +8,14 @@ app_name = 'frontend'
 
 urlpatterns = [
     path('', views.landing, name='home'),
+    path('pricing/', views.pricing, name='pricing'),
+    path('about/', views.about, name='about'),
+    path('contact/', views.contact, name='contact'),
+    path('privacy/', views.privacy, name='privacy'),
+    path('blog/', views.blog, name='blog'),
+    path('integrations/', views.integrations, name='integrations'),
+    path('api/', views.api_page, name='api_page'),
+    path('careers/', views.careers, name='careers'),
 
     # Auth
     path('login/',   views.login_view,  name='login'),

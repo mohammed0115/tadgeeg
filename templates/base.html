@@ -6,7 +6,8 @@
 <title>{% block title %}Tadgeeg{% endblock %} — نظام التدقيق المالي الذكي</title>
 
 <!-- Tailwind -->
-<script src="https://cdn.tailwindcss.com"></script>
+{% load static %}
+<script src="{% static 'vendor/tailwind.browser.js' %}"></script>
 {% if bootstrap_tokens %}
 {{ bootstrap_tokens|json_script:"bootstrap-auth-tokens" }}
 {% endif %}
@@ -20,29 +21,25 @@ tailwind.config = {
       sidebar: '#0f1729',
     },
     fontFamily: {
-      sans: ['"IBM Plex Sans Arabic"', 'system-ui', 'sans-serif'],
-      mono: ['"JetBrains Mono"', 'monospace'],
+      sans: ['"Segoe UI"', 'Tahoma', 'Arial', 'system-ui', 'sans-serif'],
+      mono: ['Consolas', '"Courier New"', 'monospace'],
     },
   }}
 }
 </script>
 
-<!-- Fonts -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-
 <!-- Alpine -->
-<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+<script defer src="{% static 'vendor/alpine.min.js' %}"></script>
 
 <!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{% static 'vendor/chart.umd.min.js' %}"></script>
 
 <!-- Lucide Icons -->
-<script src="https://unpkg.com/lucide@0.445.0/dist/umd/lucide.min.js"></script>
+<script src="{% static 'vendor/lucide.min.js' %}"></script>
 
   <style type="text/tailwindcss">
-  * { font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif; }
-  .font-mono { font-family: 'JetBrains Mono', monospace; }
+  * { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
+  .font-mono { font-family: Consolas, 'Courier New', monospace; }
   [x-cloak] { display: none !important; }
 
   /* Sidebar link states */

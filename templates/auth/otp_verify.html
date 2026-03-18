@@ -1,14 +1,14 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>التحقق من البريد الإلكتروني — Tadgeeg</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="{% static 'vendor/tailwind.browser.js' %}"></script>
+<script defer src="{% static 'vendor/alpine.min.js' %}"></script>
   <style>
-    * { font-family: 'Cairo', sans-serif; }
+    * { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
     [x-cloak] { display: none !important; }
     body {
       background:

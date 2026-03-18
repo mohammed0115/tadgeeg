@@ -1,15 +1,15 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>تسجيل الدخول — Tadgeeg</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+<script src="{% static 'vendor/tailwind.browser.js' %}"></script>
+<script defer src="{% static 'vendor/alpine.min.js' %}"></script>
 
   <style>
-    *, *::before, *::after { font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif; }
+    *, *::before, *::after { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
 
     /* ── Grid dot background ── */
     .grid-bg {

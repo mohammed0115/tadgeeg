@@ -226,7 +226,7 @@ class AssignCaseView(APIView):
 
 class AuditSessionDetailView(APIView):
     permission_classes = [IsAuthenticated]
-    authentication_classes = [SessionAuthentication, JWTAuthentication]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
 
     @extend_schema(tags=["Audit"], summary="Get audit session detail with progress and invoice rollup")
     def get(self, request, pk):
@@ -282,7 +282,7 @@ class AuditSessionDetailView(APIView):
 
 class AuditSessionProgressView(APIView):
     permission_classes = [IsAuthenticated]
-    authentication_classes = [SessionAuthentication, JWTAuthentication]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
 
     @extend_schema(tags=["Audit"], summary="Get machine-readable audit session progress")
     def get(self, request, pk):
@@ -305,7 +305,7 @@ class AuditSessionProgressView(APIView):
 
 class AuditSessionFindingsView(APIView):
     permission_classes = [IsAuthenticated]
-    authentication_classes = [SessionAuthentication, JWTAuthentication]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
 
     @extend_schema(tags=["Audit"], summary="List findings for an audit session")
     def get(self, request, pk):
@@ -324,7 +324,7 @@ class AuditSessionFindingsView(APIView):
 
 class AuditDashboardOverviewView(APIView):
     permission_classes = [IsAuthenticated]
-    authentication_classes = [SessionAuthentication, JWTAuthentication]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
 
     @extend_schema(tags=["Audit"], summary="Dashboard overview of recent audit sessions and findings")
     def get(self, request):

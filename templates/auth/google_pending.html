@@ -1,13 +1,13 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>حسابك قيد المراجعة — Tadgeeg</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="{% static 'vendor/tailwind.browser.js' %}"></script>
   <style>
-    * { font-family: 'Cairo', 'Inter', sans-serif; }
+    * { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
     body {
       background:
         radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 28%),

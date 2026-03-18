@@ -941,7 +941,7 @@ class InvoiceListView(generics.ListAPIView):
 class InvoiceDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = InvoiceDetailSerializer
     permission_classes = [IsAuthenticated, IsOwnOrganization]
-    authentication_classes = [SessionAuthentication, JWTAuthentication]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
 
     @extend_schema(tags=["Invoices"], summary="Get full invoice details with validation results")
     def get(self, request, *args, **kwargs):
@@ -1063,7 +1063,7 @@ class InvoiceManualReviewView(APIView):
     """Persist reviewer corrections and optional revalidation for an invoice."""
 
     permission_classes = [IsAuthenticated, IsSeniorAuditorOrAbove]
-    authentication_classes = [SessionAuthentication, JWTAuthentication]
+    authentication_classes = [JWTAuthentication, SessionAuthentication]
 
     @extend_schema(
         tags=["Invoices"],
@@ -1269,6 +1269,23 @@ class VendorRiskReportView(APIView):
             "generated_at": timezone.now().isoformat(),
             "vendors": VendorProfileSerializer(vendors, many=True).data,
         })
+
+
+class VendorListView(APIView):
+    """Compatibility vendor list endpoint for dashboard consumers."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Invoices"], summary="List vendor profiles for the current organization")
+    def get(self, request):
+        org = request.user.organization
+        if not org:
+            return Response({"count": 0, "results": []})
+
+        vendors = VendorProfile.objects.filter(organization=org).order_by("-total_amount", "vendor_name")
+        if search := request.query_params.get("search"):
+            vendors = vendors.filter(vendor_name__icontains=search)
+        return Response({"count": vendors.count(), "results": VendorProfileSerializer(vendors[:100], many=True).data})
 
 
 class SpendAnalysisReportView(APIView):

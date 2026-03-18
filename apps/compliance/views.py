@@ -141,6 +141,67 @@ class ComplianceViolationListView(APIView):
         return Response(ComplianceViolationSerializer(qs.order_by("-created_at"), many=True).data)
 
 
+class ComplianceDashboardView(APIView):
+    """Top-level compliance dashboard summary for frontend and compatibility routes."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Compliance"], summary="Compliance dashboard summary")
+    def get(self, request):
+        org = request.user.organization
+        if not org:
+            return Response(
+                {
+                    "summary": {
+                        "total_rules": 0,
+                        "active_rules": 0,
+                        "violations_total": 0,
+                        "open_violations": 0,
+                        "resolved_violations": 0,
+                    },
+                    "severity_breakdown": {"critical": 0, "high": 0, "medium": 0, "low": 0},
+                    "standard_breakdown": [],
+                    "recent_violations": [],
+                }
+            )
+
+        violations = ComplianceViolation.objects.filter(organization=org)
+        summary = {
+            "total_rules": ComplianceRule.objects.filter(Q(organization=org) | Q(organization__isnull=True)).count(),
+            "active_rules": ComplianceRule.objects.filter(
+                Q(organization=org) | Q(organization__isnull=True),
+                is_active=True,
+            ).count(),
+            "violations_total": violations.count(),
+            "open_violations": violations.filter(is_resolved=False).count(),
+            "resolved_violations": violations.filter(is_resolved=True).count(),
+        }
+        severity_breakdown = violations.aggregate(
+            critical=Count("id", filter=Q(severity="critical")),
+            high=Count("id", filter=Q(severity="high")),
+            medium=Count("id", filter=Q(severity="medium")),
+            low=Count("id", filter=Q(severity="low")),
+        )
+        standard_breakdown = list(
+            violations.values("standard").annotate(
+                count=Count("id"),
+                open_count=Count("id", filter=Q(is_resolved=False)),
+            ).order_by("-count")
+        )
+        recent_violations = ComplianceViolationSerializer(
+            violations.select_related("transaction", "invoice").order_by("-created_at")[:10],
+            many=True,
+        ).data
+        return Response(
+            {
+                "summary": summary,
+                "severity_breakdown": severity_breakdown,
+                "standard_breakdown": standard_breakdown,
+                "recent_violations": recent_violations,
+            }
+        )
+
+
 class ResolveComplianceViolationView(APIView):
     permission_classes = [IsAuthenticated, IsComplianceOrAbove]
 

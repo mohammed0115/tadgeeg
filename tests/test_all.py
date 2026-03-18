@@ -204,12 +204,14 @@ class AuthenticationFlowTests(BaseFinAITestCase):
 
         payload = response.json()
         self.assertTrue(payload["is_new"])
-        self.assertTrue(payload["needs_org"])
+        self.assertFalse(payload["needs_org"])
         self.assertTrue(payload["verification_required"])
         self.assertEqual(payload["redirect"], "/verify-email/")
         self.assertNotIn("access", payload)
 
         created_user = User.objects.get(email="google.user@finai.sa")
+        self.assertIsNotNone(created_user.organization_id)
+        self.assertEqual(created_user.role, User.Role.ADMIN)
         self.assertIsNone(created_user.email_verified_at)
         self.assertEqual(self.web_client.session.get(PENDING_EMAIL_VERIFICATION_SESSION_KEY), str(created_user.id))
         self.assertIsNone(self.web_client.session.get("_auth_user_id"))
@@ -563,7 +565,8 @@ class FrontendRouteTests(BaseFinAITestCase):
         self.assertEqual(payload["redirect"], "/verify-email/")
 
         user = User.objects.get(email="new-auditor@finai.sa")
-        self.assertIsNone(user.organization_id)
+        self.assertIsNotNone(user.organization_id)
+        self.assertEqual(user.role, User.Role.ADMIN)
         self.assertIsNone(user.email_verified_at)
         self.assertEqual(self.web_client.session.get(PENDING_EMAIL_VERIFICATION_SESSION_KEY), str(user.id))
         self.assertIsNone(self.web_client.session.get("_auth_user_id"))

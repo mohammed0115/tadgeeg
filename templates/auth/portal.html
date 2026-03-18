@@ -6,13 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% if auth_mode == 'register' %}إنشاء حساب - Tadgeeg{% else %}تسجيل الدخول - Tadgeeg{% endif %}</title>
   <meta name="description" content="بوابة الدخول إلى Tadgeeg بنفس لغة صفحة الهبوط وصفحات استعادة كلمة المرور.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+<script src="{% static 'vendor/tailwind.browser.js' %}"></script>
+<script defer src="{% static 'vendor/alpine.min.js' %}"></script>
   <style>
-    * { font-family: 'Cairo', sans-serif; }
+    * { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
     [x-cloak] { display: none !important; }
     :root { color-scheme: light; }
     body {

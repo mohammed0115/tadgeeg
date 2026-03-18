@@ -10,6 +10,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from apps.authentication.models import User
+from apps.authentication.services.organization_setup import ensure_user_organization
 
 GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
 GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -171,11 +172,12 @@ def get_or_create_local_user_from_google_profile(profile: dict) -> tuple[User, b
             email=email,
             password=None,
             full_name=full_name,
-            role=User.Role.JUNIOR_AUDITOR,
+            role=User.Role.ADMIN,
             organization=None,
             is_active=True,
             email_verified_at=timezone.now(),
         )
+        ensure_user_organization(user, promote_owner=True)
         return user, True
 
     updated_fields = []
@@ -187,5 +189,8 @@ def get_or_create_local_user_from_google_profile(profile: dict) -> tuple[User, b
         updated_fields.append("email_verified_at")
     if updated_fields:
         user.save(update_fields=updated_fields)
+
+    if not user.organization_id:
+        ensure_user_organization(user, promote_owner=True)
 
     return user, False

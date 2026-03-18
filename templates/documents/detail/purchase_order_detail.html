@@ -172,7 +172,7 @@ function docDetail() {
 
     async load() {
       try {
-        this.doc = await apiFetch(apiPath + docId + '/').then(r => r.json());
+        this.doc = await apiFetch(apiPath + docId + '/');
         this.notes = this.doc.notes || '';
       } catch(e) { notify('خطأ في التحميل', 'error'); }
       finally { this.loading = false; this.$nextTick(() => lucide.createIcons()); }

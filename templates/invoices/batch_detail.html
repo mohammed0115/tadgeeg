@@ -159,12 +159,18 @@ function batchDetail() {
     async load() {
       try {
         const [b, invs] = await Promise.all([
-          apiFetch(`/invoices/batches/${batchId}/`).then(r => r.json()),
-          apiFetch(`/invoices/?batch=${batchId}&page_size=200`).then(r => r.json()),
+          apiFetch(`/invoices/batches/${batchId}/`),
+          apiFetch(`/invoices/?batch=${batchId}&page_size=200`),
         ]);
         this.batch = b;
         this.invoices = invs.results ?? invs;
-      } catch(e) { notify('خطأ في التحميل', 'error'); }
+      } catch(e) {
+        notify({
+          type: 'error',
+          title: 'تعذر تحميل تفاصيل الدفعة',
+          message: 'لم نتمكن من جلب بيانات هذه الدفعة الآن. حدّث الصفحة أو أعد المحاولة بعد قليل.',
+        });
+      }
       finally { this.loading = false; this.$nextTick(() => lucide.createIcons()); }
     },
 

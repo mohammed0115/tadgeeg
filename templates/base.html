@@ -132,7 +132,7 @@ tailwind.config = {
 
 <!-- ── Toast Container ── -->
 <div x-data="toastStore()" @notify.window="push($event.detail)"
-     class="fixed top-4 left-1/2 -translate-x-1/2 z-[999] flex flex-col gap-2 w-80 pointer-events-none">
+     class="fixed top-4 left-1/2 -translate-x-1/2 z-[999] flex flex-col gap-3 w-[min(92vw,34rem)] pointer-events-none">
   <template x-for="t in toasts" :key="t.id">
     <div x-show="t.visible"
          x-transition:enter="transition ease-out duration-300"
@@ -140,16 +140,50 @@ tailwind.config = {
          x-transition:enter-end="opacity-100 translate-y-0 scale-100"
          x-transition:leave="transition ease-in duration-200"
          x-transition:leave-end="opacity-0 -translate-y-2"
-         class="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium shadow-2xl"
+         role="alert"
+         aria-live="assertive"
+         class="pointer-events-auto overflow-hidden rounded-[24px] border shadow-[0_24px_60px_rgba(15,23,42,0.18)]"
          :class="{
-           'bg-emerald-600 text-white': t.type==='success',
-           'bg-red-600 text-white':     t.type==='error',
-           'bg-blue-600 text-white':    t.type==='info',
-           'bg-amber-500 text-white':   t.type==='warning',
-         }">
-      <span x-text="{'success':'✅','error':'❌','info':'ℹ️','warning':'⚠️'}[t.type]||'📢'"></span>
-      <span class="flex-1" x-text="t.message"></span>
-      <button @click="dismiss(t.id)" class="opacity-60 hover:opacity-100 ml-1">✕</button>
+           'border-emerald-200/80 bg-white/96': t.type==='success',
+           'border-red-200/90 bg-white/98':     t.type==='error',
+           'border-blue-200/85 bg-white/96':    t.type==='info',
+           'border-amber-200/90 bg-white/98':   t.type==='warning',
+          }">
+      <div class="flex items-start gap-4 p-5 sm:p-6">
+        <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] text-2xl font-black shadow-sm"
+             :class="{
+               'bg-emerald-50 text-emerald-600': t.type==='success',
+               'bg-red-50 text-red-600':         t.type==='error',
+               'bg-blue-50 text-blue-600':       t.type==='info',
+               'bg-amber-50 text-amber-600':     t.type==='warning',
+             }"
+             aria-hidden="true">
+          <span x-text="t.icon"></span>
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-start gap-3">
+            <div class="min-w-0 flex-1">
+              <p class="text-lg font-black leading-7 text-slate-900" x-text="t.title"></p>
+              <p x-show="t.message"
+                 class="mt-2 text-[15px] leading-7 text-slate-600 whitespace-pre-line"
+                 x-text="t.message"></p>
+            </div>
+            <button @click="dismiss(t.id)"
+                    type="button"
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                    aria-label="إغلاق التنبيه">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="h-1.5 w-full"
+           :class="{
+             'bg-emerald-500': t.type==='success',
+             'bg-red-500':     t.type==='error',
+             'bg-blue-500':    t.type==='info',
+             'bg-amber-500':   t.type==='warning',
+           }"></div>
     </div>
   </template>
 </div>
@@ -435,16 +469,45 @@ function shell() {
   }
 }
 function toastStore() {
+  const presets = {
+    success: { title: 'تمت العملية بنجاح', icon: '✓' },
+    error:   { title: 'تعذر إكمال العملية', icon: '!' },
+    info:    { title: 'تنبيه', icon: 'i' },
+    warning: { title: 'يرجى الانتباه', icon: '!' },
+  };
   return {
     toasts: [],
-    push({ message, type='info', duration=4000 }) {
-      const id = Date.now();
-      this.toasts.push({ id, message, type, visible: true });
+    push(payload) {
+      const detail = typeof payload === 'string' ? { message: payload } : (payload || {});
+      const type = detail.type || 'info';
+      const preset = presets[type] || presets.info;
+      const title = detail.title || preset.title;
+      const message = detail.message || detail.detail || detail.error || '';
+      const duration = Number.isFinite(detail.duration)
+        ? detail.duration
+        : (type === 'error' ? 7000 : 4500);
+      const id = Date.now() + Math.random();
+
+      this.toasts.push({
+        id,
+        title,
+        message,
+        type,
+        icon: detail.icon || preset.icon,
+        visible: true,
+      });
+
+      this.$nextTick(() => lucide.createIcons());
       setTimeout(() => this.dismiss(id), duration);
     },
     dismiss(id) {
       const t = this.toasts.find(t => t.id === id);
-      if (t) { t.visible = false; setTimeout(() => this.toasts = this.toasts.filter(t => t.id !== id), 300); }
+      if (t) {
+        t.visible = false;
+        setTimeout(() => {
+          this.toasts = this.toasts.filter(t => t.id !== id);
+        }, 300);
+      }
     }
   }
 }
@@ -499,8 +562,11 @@ function fmtNum(v, d = 0) {
   return Number(v || 0).toLocaleString('ar-SA', { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 function fmtSAR(v) { return fmtNum(v, 2) + ' ر.س'; }
-function notify(message, type = 'info') {
-  window.dispatchEvent(new CustomEvent('notify', { detail: { message, type } }));
+function notify(messageOrOptions, type = 'info') {
+  const detail = typeof messageOrOptions === 'string'
+    ? { message: messageOrOptions, type }
+    : { ...(messageOrOptions || {}), type: messageOrOptions?.type || type };
+  window.dispatchEvent(new CustomEvent('notify', { detail }));
 }
 
 // ── Init icons ──

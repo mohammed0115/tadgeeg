@@ -200,14 +200,14 @@
 function uploader() {
   return {
     i18n: {
-      sessionExpired: {{ _("Session expired — please sign in again.")|escapejs }},
-      uploadFailed: {{ _("Upload failed:")|escapejs }},
-      uploadSuccessPrefix: {{ _("Processed")|escapejs }},
-      invoicesWord: {{ _("invoices")|escapejs }},
-      riskCritical: {{ _("Critical")|escapejs }},
-      riskHigh: {{ _("High")|escapejs }},
-      riskMedium: {{ _("Medium")|escapejs }},
-      riskLow: {{ _("Low")|escapejs }},
+      sessionExpired: '{% trans "Session expired — please sign in again." %}',
+      uploadFailed: '{% trans "Upload failed:" %}',
+      uploadSuccessPrefix: '{% trans "Processed" %}',
+      invoicesWord: '{% trans "invoices" %}',
+      riskCritical: '{% trans "Critical" %}',
+      riskHigh: '{% trans "High" %}',
+      riskMedium: '{% trans "Medium" %}',
+      riskLow: '{% trans "Low" %}',
     },
     files: [], batchName: '', dragging: false,
     uploading: false, result: null,

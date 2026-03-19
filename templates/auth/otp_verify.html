@@ -231,7 +231,7 @@
         async submitOtp() {
           this.syncCode();
           if (document.getElementById('otp_code').value.length !== 6) {
-            this.showMessage('{{ _("Please enter the full verification code.")|escapejs }}', 'error');
+            this.showMessage('{% trans "Please enter the full verification code." %}', 'error');
             return;
           }
 
@@ -251,15 +251,15 @@
               if (typeof data.attempts_remaining !== 'undefined') {
                 this.attemptsRemaining = data.attempts_remaining;
               }
-              this.showMessage(data.error || '{{ _("Unable to verify the code right now.")|escapejs }}', 'error');
+              this.showMessage(data.error || '{% trans "Unable to verify the code right now." %}', 'error');
               return;
             }
 
             storeTokens(data);
-            this.showMessage(data.message || '{{ _("Verification completed successfully.")|escapejs }}', 'success');
+            this.showMessage(data.message || '{% trans "Verification completed successfully." %}', 'success');
             window.location.href = data.redirect || '{% url "frontend:dashboard" %}';
           } catch (error) {
-            this.showMessage('{{ _("A server connection error occurred.")|escapejs }}', 'error');
+            this.showMessage('{% trans "A server connection error occurred." %}', 'error');
           } finally {
             this.loading = false;
           }
@@ -286,7 +286,7 @@
                 this.countdown = Number(data.retry_after);
                 this.startTimer();
               }
-              this.showMessage(data.error || '{{ _("Unable to resend the code.")|escapejs }}', 'error');
+              this.showMessage(data.error || '{% trans "Unable to resend the code." %}', 'error');
               return;
             }
 
@@ -295,9 +295,9 @@
             this.attemptsRemaining = Number(data.attempts_remaining || this.attemptsRemaining);
             this.resendRemaining = Math.max(0, this.resendRemaining - 1);
             this.startTimer();
-            this.showMessage(data.message || '{{ _("A new code has been sent.")|escapejs }}', 'success');
+            this.showMessage(data.message || '{% trans "A new code has been sent." %}', 'success');
           } catch (error) {
-            this.showMessage('{{ _("An error occurred while resending the code.")|escapejs }}', 'error');
+            this.showMessage('{% trans "An error occurred while resending the code." %}', 'error');
           } finally {
             this.resendLoading = false;
           }

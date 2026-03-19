@@ -1280,3 +1280,7 @@ msgstr "متوسط درجة التدقيق"
 
 msgid "PDF"
 msgstr "PDF"
+
+msgid "Password updated successfully."
+msgstr "تم تغيير كلمة المرور بنجاح."
+

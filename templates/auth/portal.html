@@ -133,7 +133,7 @@
 
                 <button type="submit" class="btn-primary flex h-[68px] w-full items-center justify-center gap-3 rounded-[24px] px-6 text-lg font-black text-white shadow-lg shadow-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60" :disabled="loginLoading">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16m-6-6 6 6-6 6" /></svg>
-                  <span x-text="loading ? '{{ _('Signing in...')|escapejs }}' : '{{ _('Login')|escapejs }}'"></span>
+                  <span x-text="loading ? '{% trans "Signing in..." %}' : '{% trans "Login" %}'"></span>
                 </button>
               </form>
 
@@ -203,7 +203,7 @@
                 <div x-show="registerError" x-cloak class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" x-text="registerError"></div>
                 <button type="submit" class="btn-primary flex h-[68px] w-full items-center justify-center gap-3 rounded-[24px] px-6 text-lg font-black text-white shadow-lg shadow-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60" :disabled="loading">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16m-6-6 6 6-6 6" /></svg>
-                  <span x-text="loading ? '{{ _('Creating account...')|escapejs }}' : '{{ _('Create Account')|escapejs }}'"></span>
+                  <span x-text="loading ? '{% trans "Creating account..." %}' : '{% trans "Create Account" %}'"></span>
                 </button>
               </form>
 
@@ -349,21 +349,21 @@
         },
         async submitLogin() {
           this.clearErrors();
-          if (!this.login.email || !this.login.password) { this.error = '{{ _("Please enter your email address and password.")|escapejs }}'; return; }
+          if (!this.login.email || !this.login.password) { this.error = '{% trans "Please enter your email address and password." %}'; return; }
           this.loading = true;
           const formData = new FormData(); formData.append('email', this.login.email); formData.append('password', this.login.password);
           try {
             const response = await fetch('{% url "frontend:login" %}', { method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
             const data = await parseJson(response);
-            if (!response.ok || !data.success) { this.error = data.error || '{{ _("Unable to sign in. Please try again.")|escapejs }}'; return; }
+            if (!response.ok || !data.success) { this.error = data.error || '{% trans "Unable to sign in. Please try again." %}'; return; }
             storeTokens(data); window.location.href = data.redirect || '{% url "frontend:dashboard" %}';
-          } catch (error) { this.error = '{{ _("A server connection error occurred.")|escapejs }}'; } finally { this.loading = false; }
+          } catch (error) { this.error = '{% trans "A server connection error occurred." %}'; } finally { this.loading = false; }
         },
         async submitRegister() {
           this.error = '';
-          if (!this.register.full_name || !this.register.email || !this.register.password || !this.register.password_confirm) { this.error = '{{ _("Please complete all required fields.")|escapejs }}'; return; }
-          if (this.register.password.length < 8) { this.error = '{{ _("Password must be at least 8 characters long.")|escapejs }}'; return; }
-          if (this.register.password !== this.register.password_confirm) { this.error = '{{ _("Passwords do not match.")|escapejs }}'; return; }
+          if (!this.register.full_name || !this.register.email || !this.register.password || !this.register.password_confirm) { this.error = '{% trans "Please complete all required fields." %}'; return; }
+          if (this.register.password.length < 8) { this.error = '{% trans "Password must be at least 8 characters long." %}'; return; }
+          if (this.register.password !== this.register.password_confirm) { this.error = '{% trans "Passwords do not match." %}'; return; }
           this.loading = true;
           const formData = new FormData();
           formData.append('full_name', this.register.full_name); formData.append('email', this.register.email);
@@ -371,9 +371,9 @@
           try {
             const response = await fetch('{% url "frontend:register" %}', { method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
             const data = await parseJson(response);
-            if (!response.ok || !data.success) { this.error = data.error || '{{ _("Unable to create the account right now.")|escapejs }}'; return; }
+            if (!response.ok || !data.success) { this.error = data.error || '{% trans "Unable to create the account right now." %}'; return; }
             storeTokens(data); window.location.href = data.redirect || '{% url "frontend:google_pending" %}';
-          } catch (error) { this.error = '{{ _("A server connection error occurred.")|escapejs }}'; } finally { this.loading = false; }
+          } catch (error) { this.error = '{% trans "A server connection error occurred." %}'; } finally { this.loading = false; }
         },
       };
     }

@@ -775,7 +775,7 @@ def otp_verify(request):
     initial_error_message = ""
     if challenge is None:
         try:
-            challenge, _ = issue_email_otp(pending_user, request)
+            challenge, _sent = issue_email_otp(pending_user, request)
         except EmailOTPError as exc:
             initial_status = _otp_error_status(exc)
             initial_error_message = exc.message

@@ -126,12 +126,12 @@ function vendorsPage() {
     vendors: [], loading: true, search: '', riskFilter: '',
     stats: { total:0, high_risk:0, new_vendors:0, with_duplicates:0 },
     i18n: {
-      sar: "{{ _('SAR')|escapejs }}",
-      loadFailed: "{{ _('Failed to load vendors')|escapejs }}",
-      high: "{{ _('High')|escapejs }}",
-      medium: "{{ _('Medium')|escapejs }}",
-      low: "{{ _('Low')|escapejs }}",
-      blocked: "{{ _('Blocked')|escapejs }}",
+      sar: "{% trans 'SAR' %}",
+      loadFailed: "{% trans 'Failed to load vendors' %}",
+      high: "{% trans 'High' %}",
+      medium: "{% trans 'Medium' %}",
+      low: "{% trans 'Low' %}",
+      blocked: "{% trans 'Blocked' %}",
     },
 
     async init() {

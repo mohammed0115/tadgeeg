@@ -399,7 +399,7 @@ tailwind.config = {
       <button @click="dark=!dark; localStorage.setItem('fin_dark', dark)"
               class="nav-item w-full">
         <i :data-lucide="dark ? 'sun' : 'moon'" class="w-[18px] h-[18px] flex-shrink-0"></i>
-      <span x-show="sidebarOpen" x-text="dark ? '{{ _('Light mode')|escapejs }}' : '{{ _('Dark mode')|escapejs }}'" class="whitespace-nowrap"></span>
+      <span x-show="sidebarOpen" x-text="dark ? '{% trans "Light mode" %}' : '{% trans "Dark mode" %}'" class="whitespace-nowrap"></span>
       </button>
       <button @click="toggleSidebar()"
               class="nav-item hidden w-full lg:flex">
@@ -503,10 +503,10 @@ function shell() {
 }
 function toastStore() {
   const presets = {
-    success: { title: '{{ _("Operation completed successfully")|escapejs }}', icon: '✓' },
-    error:   { title: '{{ _("Unable to complete the operation")|escapejs }}', icon: '!' },
-    info:    { title: '{{ _("Notice")|escapejs }}', icon: 'i' },
-    warning: { title: '{{ _("Attention required")|escapejs }}', icon: '!' },
+    success: { title: '{% trans "Operation completed successfully" %}', icon: '✓' },
+    error:   { title: '{% trans "Unable to complete the operation" %}', icon: '!' },
+    info:    { title: '{% trans "Notice" %}', icon: 'i' },
+    warning: { title: '{% trans "Attention required" %}', icon: '!' },
   };
   return {
     toasts: [],
@@ -559,7 +559,7 @@ const APP_LOCALE = APP_LANG === 'ar' ? 'ar-SA' : 'en-US';
     if (tokens.access) localStorage.setItem('fin_token', tokens.access);
     if (tokens.refresh) localStorage.setItem('fin_refresh_token', tokens.refresh);
   } catch (error) {
-    console.warn('{{ _("Failed to bootstrap auth tokens")|escapejs }}', error);
+    console.warn('{% trans "Failed to bootstrap auth tokens" %}', error);
   }
 })();
 {% endif %}

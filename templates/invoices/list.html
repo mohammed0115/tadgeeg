@@ -200,17 +200,17 @@
 function invoiceList() {
   return {
     i18n: {
-      duplicate: {{ _("Duplicate")|escapejs }},
-      qrPresent: {{ _("QR available")|escapejs }},
-      unspecified: {{ _("Unspecified")|escapejs }},
-      view: {{ _("View")|escapejs }},
-      quickApprove: {{ _("Quick approve")|escapejs }},
-      loadFailed: {{ _("Failed to load invoices:")|escapejs }},
-      approvedSuccess: {{ _("Invoice approved successfully.")|escapejs }},
-      approveFailed: {{ _("Approval failed:")|escapejs }},
-      showing: {{ _("Showing")|escapejs }},
-      of: {{ _("of")|escapejs }},
-      invoices: {{ _("invoices")|escapejs }},
+      duplicate: '{% trans "Duplicate" %}',
+      qrPresent: '{% trans "QR available" %}',
+      unspecified: '{% trans "Unspecified" %}',
+      view: '{% trans "View" %}',
+      quickApprove: '{% trans "Quick approve" %}',
+      loadFailed: '{% trans "Failed to load invoices:" %}',
+      approvedSuccess: '{% trans "Invoice approved successfully." %}',
+      approveFailed: '{% trans "Approval failed:" %}',
+      showing: '{% trans "Showing" %}',
+      of: '{% trans "of" %}',
+      invoices: '{% trans "invoices" %}',
     },
     invoices: [], loading: true, total: 0, page: 1, pageSize: 25,
     quickStats: { total:0, flagged:0, duplicates:0, approved:0, pending:0 },
@@ -245,21 +245,21 @@ function invoiceList() {
 
     statusLabel(status) {
       return {
-        pending: {{ _("Pending")|escapejs }},
-        processing: {{ _("Processing")|escapejs }},
-        validated: {{ _("Validated")|escapejs }},
-        flagged: {{ _("Flagged")|escapejs }},
-        approved: {{ _("Approved")|escapejs }},
-        rejected: {{ _("Rejected")|escapejs }},
+        pending: '{% trans "Pending" %}',
+        processing: '{% trans "Processing" %}',
+        validated: '{% trans "Validated" %}',
+        flagged: '{% trans "Flagged" %}',
+        approved: '{% trans "Approved" %}',
+        rejected: '{% trans "Rejected" %}',
       }[status] || status;
     },
 
     riskLabel(level) {
       return {
-        critical: {{ _("Critical")|escapejs }},
-        high: {{ _("High")|escapejs }},
-        medium: {{ _("Medium")|escapejs }},
-        low: {{ _("Low")|escapejs }},
+        critical: '{% trans "Critical" %}',
+        high: '{% trans "High" %}',
+        medium: '{% trans "Medium" %}',
+        low: '{% trans "Low" %}',
       }[level] || level;
     },
 

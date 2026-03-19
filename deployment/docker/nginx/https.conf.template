@@ -5,6 +5,16 @@ proxy_headers_hash_bucket_size 128;
 
 resolver 127.0.0.11 ipv6=off valid=30s;
 
+# Default catch-all: redirect unknown domains to live
+server {
+    listen 80 default_server;
+    listen 443 ssl default_server;
+    server_name _;
+    ssl_certificate /etc/letsencrypt/live/{{LIVE_CERT_NAME}}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/{{LIVE_CERT_NAME}}/privkey.pem;
+    return 301 https://{{LIVE_PRIMARY_DOMAIN}}$request_uri;
+}
+
 server {
     listen 80;
     server_name {{LIVE_SERVER_NAMES}};

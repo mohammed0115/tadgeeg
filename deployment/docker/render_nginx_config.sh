@@ -39,18 +39,21 @@ load_env_file() {
 }
 
 load_env_file "$ENV_DIR/live.env"
-LIVE_SERVER_NAMES="$SERVER_NAMES"
-LIVE_CERT_NAME="$CERT_NAME"
+LIVE_SERVER_NAMES="${SERVER_NAMES:-tadgeeg.com www.tadgeeg.com}"
+LIVE_CERT_NAME="${CERT_NAME:-tadgeeg.com}"
+LIVE_PRIMARY_DOMAIN="$(echo "$LIVE_SERVER_NAMES" | awk '{print $1}')"
 
 load_env_file "$ENV_DIR/dev.env"
-DEV_SERVER_NAMES="$SERVER_NAMES"
-DEV_CERT_NAME="$CERT_NAME"
+DEV_SERVER_NAMES="${SERVER_NAMES:-dev.tadgeeg.com}"
+DEV_CERT_NAME="${CERT_NAME:-dev.tadgeeg.com}"
 
 load_env_file "$ENV_DIR/test.env"
-TEST_SERVER_NAMES="$SERVER_NAMES"
-TEST_CERT_NAME="$CERT_NAME"
+TEST_SERVER_NAMES="${SERVER_NAMES:-test.tadgeeg.com}"
+TEST_CERT_NAME="${CERT_NAME:-test.tadgeeg.com}"
 
-export LIVE_SERVER_NAMES LIVE_CERT_NAME DEV_SERVER_NAMES DEV_CERT_NAME TEST_SERVER_NAMES TEST_CERT_NAME
+export LIVE_SERVER_NAMES LIVE_CERT_NAME LIVE_PRIMARY_DOMAIN \
+       DEV_SERVER_NAMES DEV_CERT_NAME \
+       TEST_SERVER_NAMES TEST_CERT_NAME
 
 python3 - "$TEMPLATE_FILE" "$GENERATED_DIR/default.conf" <<'PY'
 from pathlib import Path
@@ -59,12 +62,13 @@ import sys
 
 template = Path(sys.argv[1]).read_text(encoding='utf-8')
 replacements = {
-    '{{LIVE_SERVER_NAMES}}': os.environ['LIVE_SERVER_NAMES'],
-    '{{LIVE_CERT_NAME}}': os.environ['LIVE_CERT_NAME'],
-    '{{DEV_SERVER_NAMES}}': os.environ['DEV_SERVER_NAMES'],
-    '{{DEV_CERT_NAME}}': os.environ['DEV_CERT_NAME'],
-    '{{TEST_SERVER_NAMES}}': os.environ['TEST_SERVER_NAMES'],
-    '{{TEST_CERT_NAME}}': os.environ['TEST_CERT_NAME'],
+    '{{LIVE_SERVER_NAMES}}':   os.environ['LIVE_SERVER_NAMES'],
+    '{{LIVE_CERT_NAME}}':      os.environ['LIVE_CERT_NAME'],
+    '{{LIVE_PRIMARY_DOMAIN}}': os.environ['LIVE_PRIMARY_DOMAIN'],
+    '{{DEV_SERVER_NAMES}}':    os.environ['DEV_SERVER_NAMES'],
+    '{{DEV_CERT_NAME}}':       os.environ['DEV_CERT_NAME'],
+    '{{TEST_SERVER_NAMES}}':   os.environ['TEST_SERVER_NAMES'],
+    '{{TEST_CERT_NAME}}':      os.environ['TEST_CERT_NAME'],
 }
 
 for old, new in replacements.items():
@@ -74,3 +78,6 @@ Path(sys.argv[2]).write_text(template, encoding='utf-8')
 PY
 
 echo "Generated: $GENERATED_DIR/default.conf ($MODE)"
+echo "  live  → $LIVE_SERVER_NAMES"
+echo "  dev   → $DEV_SERVER_NAMES"
+echo "  test  → $TEST_SERVER_NAMES"

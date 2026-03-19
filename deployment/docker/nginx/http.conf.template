@@ -5,6 +5,14 @@ proxy_headers_hash_bucket_size 128;
 
 resolver 127.0.0.11 ipv6=off valid=30s;
 
+# ── Default catch-all: redirect to live domain ──────────────────────────────
+server {
+    listen 80 default_server;
+    server_name _;
+    return 301 http://{{LIVE_PRIMARY_DOMAIN}}$request_uri;
+}
+
+# ── Live: {{LIVE_SERVER_NAMES}} ──────────────────────────────────────────────
 server {
     listen 80;
     server_name {{LIVE_SERVER_NAMES}};
@@ -39,10 +47,13 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Port $server_port;
-        proxy_read_timeout 300;
+        proxy_connect_timeout 10s;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 120s;
     }
 }
 
+# ── Dev: {{DEV_SERVER_NAMES}} ────────────────────────────────────────────────
 server {
     listen 80;
     server_name {{DEV_SERVER_NAMES}};
@@ -77,10 +88,13 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Port $server_port;
-        proxy_read_timeout 300;
+        proxy_connect_timeout 10s;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 120s;
     }
 }
 
+# ── Test: {{TEST_SERVER_NAMES}} ──────────────────────────────────────────────
 server {
     listen 80;
     server_name {{TEST_SERVER_NAMES}};
@@ -115,6 +129,8 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Port $server_port;
-        proxy_read_timeout 300;
+        proxy_connect_timeout 10s;
+        proxy_read_timeout 300s;
+        proxy_send_timeout 120s;
     }
 }

@@ -19,3 +19,23 @@ class TemplateApiFetchUsageTests(SimpleTestCase):
             "apiFetch() already returns parsed data. Remove '.then(r => r.json())' from:\n"
             + "\n".join(offenders),
         )
+
+    def test_invoice_upload_template_uses_shared_api_fetch_helper(self):
+        template_path = Path(__file__).resolve().parents[1] / "templates" / "invoices" / "upload.html"
+        content = template_path.read_text(encoding="utf-8")
+
+        self.assertIn(
+            "apiFetch('/invoices/upload/'",
+            content,
+            "Invoice upload must use the shared apiFetch() helper so session and JWT auth both work.",
+        )
+        self.assertNotIn(
+            "fetch('/api/v1/invoices/upload/'",
+            content,
+            "Invoice upload should not bypass apiFetch() with a direct fetch() call.",
+        )
+        self.assertNotIn(
+            "const token = TOKEN()",
+            content,
+            "Invoice upload should not depend on localStorage token presence to start uploading.",
+        )

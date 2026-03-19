@@ -95,7 +95,9 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 # ─── Middleware ───────────────────────────────────────────────────────────────
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
+    "core.utils.admin_security.AdminSecurityMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "core.utils.security_headers.SecurityHeadersMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
@@ -201,6 +203,12 @@ SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD", "True" if not DEBUG 
 SECURE_BROWSER_XSS_FILTER = True
 HEALTH_REDIS_REQUIRED = os.environ.get("HEALTH_REDIS_REQUIRED", "False") == "True"
 
+if not DEBUG:
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_REDIRECT = True
+
 cache_url = os.environ.get("CACHE_URL")
 use_redis_cache = os.environ.get("USE_REDIS_CACHE", "").strip().lower() in {"1", "true", "yes", "on"}
 
@@ -224,6 +232,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ─── DRF ─────────────────────────────────────────────────────────────────────
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        "core.utils.jwt_cookie_auth.JWTCookieAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
@@ -264,6 +273,16 @@ SIMPLE_JWT = {
     "ALGORITHM": "HS256",
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+# JWT Cookie settings
+JWT_AUTH_COOKIE = "fin_access"
+JWT_AUTH_REFRESH_COOKIE = "fin_refresh"
+JWT_AUTH_COOKIE_SAMESITE = "Lax"
+JWT_AUTH_COOKIE_SECURE = not DEBUG
+JWT_AUTH_COOKIE_HTTP_ONLY = True
+
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
 
 # ─── CORS ─────────────────────────────────────────────────────────────────────
 _default_cors = "http://localhost:3000,http://localhost:5173"
@@ -415,3 +434,10 @@ LOGGING = {
     },
 }
 LOGIN_URL = '/login/'
+
+ADMIN_URL = os.environ.get("DJANGO_ADMIN_URL", "admin/")
+ADMIN_IP_ALLOWLIST = [
+    ip.strip()
+    for ip in os.environ.get("ADMIN_IP_ALLOWLIST", "").split(",")
+    if ip.strip()
+]

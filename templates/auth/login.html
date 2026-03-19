@@ -164,7 +164,6 @@
           const data = await response.json();
 
           if (data.success) {
-            if (data.tokens) localStorage.setItem('fin_token', data.tokens.access);
             window.location.href = data.redirect || '/dashboard/';
             return;
           }
@@ -644,7 +643,6 @@
         });
         const data = await res.json();
         if (res.ok) {
-          localStorage.setItem('fin_token', data.access);
           window.location.href = data.redirect || '/verify-email/';
           return;
         }

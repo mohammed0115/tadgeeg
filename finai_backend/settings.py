@@ -36,12 +36,26 @@ try:
     FILE_LOGGING_ENABLED = os.access(LOG_FILE, os.W_OK)
 except OSError:
     FILE_LOGGING_ENABLED = False
+_SECRET_KEY_FALLBACK = "change-me-in-production-use-long-random-string"
 SECRET_KEY = os.environ.get(
     "SECRET_KEY",
-    os.environ.get("DJANGO_SECRET_KEY", "change-me-in-production-use-long-random-string"),
+    os.environ.get("DJANGO_SECRET_KEY", _SECRET_KEY_FALLBACK),
 )
 
 DEBUG = os.environ.get("DEBUG", "True") == "True"
+
+# ── Production safety guards ────────────────────────────────────────────────
+# Raise hard errors if dangerous defaults are used outside local development.
+_is_local = set(os.environ.get("ALLOWED_HOSTS", "localhost").split(",")) <= {
+    "localhost", "127.0.0.1", "testserver", ""
+}
+if not DEBUG and not _is_local:
+    if SECRET_KEY == _SECRET_KEY_FALLBACK:
+        raise RuntimeError(
+            "FATAL: SECRET_KEY is using the insecure default value. "
+            "Set a strong SECRET_KEY in your .env file before deploying."
+        )
+# ─────────────────────────────────────────────────────────────────────────────
 
 ALLOWED_HOSTS = [host.strip() for host in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if host.strip()]
 for default_host in ("testserver", "localhost", "127.0.0.1"):
@@ -108,7 +122,8 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.utils.middleware.AuditTrailMiddleware",
     "core.utils.middleware.RequestTimingMiddleware",
-    "core.utils.middleware.SecurityHeadersMiddleware",
+    # NOTE: SecurityHeadersMiddleware is already applied at position 4
+    # via core.utils.security_headers.SecurityHeadersMiddleware — removed duplicate here.
 ]
 
 ROOT_URLCONF = "finai_backend.urls"

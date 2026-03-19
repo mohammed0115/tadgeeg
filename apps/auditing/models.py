@@ -4,6 +4,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Case, IntegerField, Value, When
 
 
 class AuditDocument(models.Model):
@@ -100,6 +101,7 @@ class AuditFinding(models.Model):
         LOW = "low", "Low"
         MEDIUM = "medium", "Medium"
         HIGH = "high", "High"
+        CRITICAL = "critical", "Critical"
 
     document = models.ForeignKey(
         AuditDocument, on_delete=models.CASCADE, related_name="findings"
@@ -112,7 +114,17 @@ class AuditFinding(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["-severity", "finding_type"]
+        ordering = [
+            Case(
+                When(severity="critical", then=Value(0)),
+                When(severity="high", then=Value(1)),
+                When(severity="medium", then=Value(2)),
+                When(severity="low", then=Value(3)),
+                default=Value(4),
+                output_field=IntegerField(),
+            ),
+            "finding_type",
+        ]
 
     def __str__(self):
         return f"[{self.severity}] {self.title}"

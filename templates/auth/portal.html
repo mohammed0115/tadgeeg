@@ -302,10 +302,8 @@
       try { return JSON.parse(text); } catch (error) { return { error: text }; }
     }
     function storeTokens(payload) {
-      const accessToken = payload?.tokens?.access || payload?.access;
-      const refreshToken = payload?.tokens?.refresh || payload?.refresh;
-      if (accessToken) localStorage.setItem('fin_token', accessToken);
-      if (refreshToken) localStorage.setItem('fin_refresh_token', refreshToken);
+      // Tokens are stored in HttpOnly cookies by the server.
+      // No localStorage writes — prevents XSS token theft.
     }
     function authPortal(initialMode, googleEnabled, initialError) {
       return {

@@ -555,20 +555,8 @@ const CSRF = () => (document.cookie.match(/csrftoken=([^;]+)/)||[])[1] || '';
 const APP_LANG = '{{ LANGUAGE_CODE }}';
 const APP_DIR = '{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}';
 const APP_LOCALE = APP_LANG === 'ar' ? 'ar-SA' : 'en-US';
-{% if bootstrap_tokens %}
-(() => {
-  const node = document.getElementById('bootstrap-auth-tokens');
-  if (!node) return;
-  try {
-    const tokens = JSON.parse(node.textContent || '{}');
-    if (tokens.access) localStorage.setItem('fin_token', tokens.access);
-    if (tokens.refresh) localStorage.setItem('fin_refresh_token', tokens.refresh);
-  } catch (error) {
-    console.warn('{% trans "Failed to bootstrap auth tokens" %}', error);
-  }
-})();
-{% endif %}
-const TOKEN = () => localStorage.getItem('fin_token') || '';
+// Tokens live in HttpOnly cookies — no JS access needed.
+// apiFetch uses cookies automatically via credentials: 'same-origin'.
 
 async function apiFetch(path, opts = {}) {
   const isFormData = typeof FormData !== 'undefined' && opts.body instanceof FormData;
@@ -578,18 +566,19 @@ async function apiFetch(path, opts = {}) {
     ...(opts.headers || {}),
   };
   const url = path.startsWith('/api/') ? path : '/api/v1' + path;
-  const performFetch = (includeToken) => fetch(url, {
+  const res = await fetch(url, {
     ...opts,
     credentials: 'same-origin',
-    headers: {
-      ...baseHeaders,
-      ...(includeToken && TOKEN() ? { 'Authorization': 'Bearer ' + TOKEN() } : {}),
-    },
+    headers: baseHeaders,
   });
 
-  let res = await performFetch(true);
-  if (res.status === 401 && TOKEN() && !opts.headers?.Authorization) {
-    res = await performFetch(false);
+  if (res.status === 401) {
+    // Cookie expired or invalid — redirect to login
+    if (!window._authRedirecting) {
+      window._authRedirecting = true;
+      window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
+    }
+    return null;
   }
   if (res.status === 204) return null;
   const contentType = res.headers.get('content-type') || '';

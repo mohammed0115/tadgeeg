@@ -45,7 +45,7 @@ Respond ONLY with this JSON schema:
     {"check": "string", "status": "passed | warning | failed", "details": "string"}
   ],
   "anomalies": [
-    {"type": "string", "severity": "low | medium | high", "details": "string"}
+    {"type": "string", "severity": "low | medium | high | critical", "details": "string"}
   ],
   "compliance_review": {
     "audit_readiness": "low | medium | high",
@@ -55,7 +55,7 @@ Respond ONLY with this JSON schema:
     "notes": []
   },
   "recommendations": [],
-  "overall_risk_level": "low | medium | high"
+  "overall_risk_level": "low | medium | high | critical"
 }"""
 
 # Legacy alias used by existing AIAuditorService import

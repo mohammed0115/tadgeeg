@@ -214,10 +214,9 @@ function reportsPage() {
     async downloadPDF(id, title) {
       this.pdfLoading = true;
       try {
-        const token = localStorage.getItem('fin_token');
         const res = await fetch('/api/v1/reports/'+id+'/pdf/', {
           credentials: 'same-origin',
-          headers: token ? { 'Authorization': 'Bearer '+token } : {}
+          headers: { 'X-CSRFToken': CSRF() }
         });
         if (!res.ok) {
           let message = `${this.i18n.downloadFailed} (${res.status})`;

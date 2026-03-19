@@ -823,7 +823,7 @@ function dashboard() {
         : [this.i18n.january, this.i18n.february, this.i18n.march, this.i18n.april, this.i18n.may, this.i18n.june];
       const values = filtered.length
         ? filtered.map((item) => Number(item.total || 0))
-        : [320000, 380000, 420000, 390000, 470000, 530000];
+        : [0, 0, 0, 0, 0, 0];
 
       if (this.spendChartInst) {
         this.spendChartInst.destroy();

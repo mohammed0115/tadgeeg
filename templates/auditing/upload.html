@@ -34,7 +34,7 @@
     },
 
     setFile(file) {
-      const allowed = ['.pdf','.jpg','.jpeg','.png','.tiff','.tif','.xlsx','.xls','.csv','.json','.zip'];
+      const allowed = ['.pdf','.jpg','.jpeg','.png','.tiff','.tif','.bmp','.webp','.xlsx','.xls','.xlsm','.csv','.tsv','.json','.jsonl','.zip'];
       const ext = '.' + file.name.split('.').pop().toLowerCase();
       if (!allowed.includes(ext)) {
         this.error = 'نوع الملف غير مدعوم. الصيغ المقبولة: PDF، صور، Excel، CSV، JSON، ZIP';
@@ -139,7 +139,7 @@
         name="file"
         type="file"
         class="hidden"
-        accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif,.xlsx,.xls,.csv,.json,.zip"
+        accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif,.bmp,.webp,.xlsx,.xls,.xlsm,.csv,.tsv,.json,.jsonl,.zip"
         @change="onFileChange($event)"
       >
 

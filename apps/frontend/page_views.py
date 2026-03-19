@@ -1,4 +1,4 @@
-"""FinAI frontend page views."""
+"""Tadgeeg AI frontend page views."""
 
 import secrets
 from datetime import datetime
@@ -12,6 +12,7 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.dateparse import parse_date
+from django.utils.translation import gettext as _
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 from apps.authentication.forms import EmailOTPResendForm, EmailOTPVerifyForm
@@ -54,17 +55,17 @@ def _consume_post_login_tokens(request):
 
 def _google_auth_error_message(code: str) -> str:
     return {
-        "missing_code": "تعذر إكمال تسجيل الدخول عبر Google. حاول مرة أخرى.",
-        "token_exchange_failed": "تعذر التحقق من جلسة Google حالياً. حاول مرة أخرى بعد قليل.",
-        "invalid_client": "إعدادات Google OAuth غير صحيحة حالياً. تحقق من Client ID و Client Secret في الإعدادات.",
-        "invalid_grant": "رمز تسجيل الدخول من Google انتهت صلاحيته أو تم استخدامه بالفعل. ابدأ المحاولة من جديد.",
-        "redirect_uri_mismatch": "عنوان العودة من Google لا يطابق الإعداد الحالي. تحقق من GOOGLE_REDIRECT_URI في Google Cloud.",
-        "userinfo_failed": "تعذر جلب بيانات حساب Google. حاول مرة أخرى.",
-        "no_email": "حساب Google لا يحتوي على بريد إلكتروني متاح للتسجيل.",
-        "invalid_state": "انتهت جلسة تسجيل الدخول عبر Google. ابدأ المحاولة من جديد.",
-        "inactive_user": "هذا الحساب غير نشط حالياً. تواصل مع المسؤول.",
-        "oauth_not_configured": "تسجيل الدخول عبر Google غير مهيأ حالياً.",
-    }.get(code, "تعذر تسجيل الدخول عبر Google حالياً. حاول مرة أخرى.")
+        "missing_code": _("Unable to complete Google sign-in. Please try again."),
+        "token_exchange_failed": _("Unable to validate the Google session right now. Please try again shortly."),
+        "invalid_client": _("Google OAuth settings are currently invalid. Check the Client ID and Client Secret."),
+        "invalid_grant": _("The Google sign-in code has expired or was already used. Start the flow again."),
+        "redirect_uri_mismatch": _("The Google redirect URI does not match the current configuration. Verify GOOGLE_REDIRECT_URI."),
+        "userinfo_failed": _("Unable to fetch the Google account profile. Please try again."),
+        "no_email": _("The Google account does not provide an email address for registration."),
+        "invalid_state": _("The Google sign-in session has expired. Please start again."),
+        "inactive_user": _("This account is currently inactive. Contact your administrator."),
+        "oauth_not_configured": _("Google sign-in is not configured right now."),
+    }.get(code, _("Unable to sign in with Google right now. Please try again."))
 
 
 def _redirect_to_login_with_auth_error(code: str):
@@ -96,8 +97,8 @@ def _report_types():
         {
             "type": "invoice_audit",
             "lang": "ar",
-            "label": "تدقيق الفواتير",
-            "desc": "البنود الـ 30 + مخاطر + موردون",
+            "label": _("Invoice Audit"),
+            "desc": _("30 rules + risks + vendors"),
             "icon": "file-check-2",
             "bg": "bg-blue-100 dark:bg-blue-900/30",
             "color": "text-blue-600 dark:text-blue-400",
@@ -105,8 +106,8 @@ def _report_types():
         {
             "type": "executive_summary",
             "lang": "ar",
-            "label": "ملخص تنفيذي",
-            "desc": "نظرة عامة للإدارة العليا",
+            "label": _("Executive Summary"),
+            "desc": _("A concise view for leadership"),
             "icon": "bar-chart-3",
             "bg": "bg-violet-100 dark:bg-violet-900/30",
             "color": "text-violet-600 dark:text-violet-400",
@@ -114,8 +115,8 @@ def _report_types():
         {
             "type": "risk_assessment",
             "lang": "ar",
-            "label": "تقرير المخاطر",
-            "desc": "الفواتير والموردون الخطرون",
+            "label": _("Risk Assessment"),
+            "desc": _("High-risk invoices and vendors"),
             "icon": "shield-alert",
             "bg": "bg-red-100 dark:bg-red-900/30",
             "color": "text-red-600 dark:text-red-400",
@@ -123,8 +124,8 @@ def _report_types():
         {
             "type": "vendor_analysis",
             "lang": "ar",
-            "label": "تحليل الموردين",
-            "desc": "أنماط الإنفاق ومؤشرات الخطر",
+            "label": _("Vendor Analysis"),
+            "desc": _("Spending patterns and risk indicators"),
             "icon": "building-2",
             "bg": "bg-emerald-100 dark:bg-emerald-900/30",
             "color": "text-emerald-600 dark:text-emerald-400",
@@ -165,9 +166,9 @@ def _otp_pending_payload(user, challenge, *, sent: bool):
         "redirect": "/verify-email/",
         "masked_email": mask_email_address(user.email),
         "message": (
-            "تم إرسال رمز تحقق إلى بريدك الإلكتروني."
+            _("A verification code has been sent to your email address.")
             if sent
-            else "يوجد رمز تحقق نشط بالفعل. يرجى التحقق من بريدك الإلكتروني."
+            else _("An active verification code already exists. Please check your email.")
         ),
         "otp_expires_in_seconds": state["expires_in"],
         "resend_cooldown_seconds": state["resend_available_in"],
@@ -191,7 +192,7 @@ def _stringify_error(value):
 
 def _first_error(errors, *, flow="generic"):
     if not errors:
-        return "تعذر إكمال العملية حالياً."
+        return _("Unable to complete the request right now.")
 
     if isinstance(errors, dict):
         if flow == "login":
@@ -199,32 +200,32 @@ def _first_error(errors, *, flow="generic"):
                 first_email_error = _stringify_error(errors["email"])
                 lowered = first_email_error.lower()
                 if "valid email" in lowered:
-                    return "البريد الإلكتروني غير صالح."
-                return "البريد الإلكتروني أو كلمة المرور غير صحيحة."
+                    return _("The email address is invalid.")
+                return _("The email address or password is incorrect.")
             if "non_field_errors" in errors:
                 first_non_field_error = _stringify_error(errors["non_field_errors"])
                 lowered = first_non_field_error.lower()
                 if "locked" in lowered:
-                    return "تم إيقاف الحساب مؤقتًا. حاول مرة أخرى لاحقًا."
+                    return _("The account has been temporarily locked. Please try again later.")
                 if "inactive" in lowered:
-                    return "هذا الحساب غير نشط حاليًا."
-                return "البريد الإلكتروني أو كلمة المرور غير صحيحة."
+                    return _("This account is currently inactive.")
+                return _("The email address or password is incorrect.")
         register_email_error = errors.get("email")
         if register_email_error:
             first_email_error = _stringify_error(register_email_error)
             lowered = first_email_error.lower()
             if "valid email" in lowered:
-                return "البريد الإلكتروني غير صالح."
-            return "هذا البريد الإلكتروني مستخدم بالفعل."
+                return _("The email address is invalid.")
+            return _("This email address is already in use.")
         if "email" in errors:
-            return "هذا البريد الإلكتروني مستخدم بالفعل." if errors["email"] else "البريد الإلكتروني غير صالح."
+            return _("This email address is already in use.") if errors["email"] else _("The email address is invalid.")
         if "password" in errors:
             first_password_error = _stringify_error(errors["password"])
             if "match" in str(first_password_error).lower():
-                return "كلمتا المرور غير متطابقتين."
-            return "يرجى التحقق من كلمة المرور والمحاولة مرة أخرى."
+                return _("Passwords do not match.")
+            return _("Please review the password and try again.")
         if "full_name" in errors:
-            return "الاسم الكامل مطلوب."
+            return _("Full name is required.")
 
         first_key = next(iter(errors))
         first_value = errors[first_key]
@@ -300,7 +301,7 @@ def _clean_ai_summary(summary):
 
     lowered = cleaned.lower()
     if "openai unavailable" in lowered or "openai not configured" in lowered:
-        return "تم استخراج البيانات تلقائياً عبر OCR المحلي، وقد تحتاج بعض الحقول إلى مراجعة بشرية للتأكد."
+        return _("Data was extracted automatically using local OCR. Some fields may still need human review.")
     return cleaned
 
 
@@ -309,7 +310,7 @@ def _risk_band(score):
     if numeric_score >= 70:
         return {
             "key": "high",
-            "label_ar": "خطر مرتفع",
+            "label_ar": _("High Risk"),
             "label_en": "High Risk",
             "badge_class": "badge-high",
             "text_class": "text-red-600 dark:text-red-400",
@@ -318,7 +319,7 @@ def _risk_band(score):
     if numeric_score >= 40:
         return {
             "key": "medium",
-            "label_ar": "خطر متوسط",
+            "label_ar": _("Medium Risk"),
             "label_en": "Medium Risk",
             "badge_class": "badge-medium",
             "text_class": "text-amber-600 dark:text-amber-400",
@@ -326,7 +327,7 @@ def _risk_band(score):
         }
     return {
         "key": "low",
-        "label_ar": "خطر منخفض",
+        "label_ar": _("Low Risk"),
         "label_en": "Low Risk",
         "badge_class": "badge-low",
         "text_class": "text-emerald-600 dark:text-emerald-400",
@@ -336,14 +337,14 @@ def _risk_band(score):
 
 def _status_meta(status):
     mapping = {
-        "approved": ("معتمدة", "status-approved"),
-        "rejected": ("مرفوضة", "status-rejected"),
-        "flagged": ("تحتاج مراجعة", "status-flagged"),
-        "validated": ("مدققة", "status-validated"),
-        "processing": ("قيد المعالجة", "status-processing"),
-        "pending": ("قيد الانتظار", "status-pending"),
+        "approved": (_("Approved"), "status-approved"),
+        "rejected": (_("Rejected"), "status-rejected"),
+        "flagged": (_("Needs Review"), "status-flagged"),
+        "validated": (_("Validated"), "status-validated"),
+        "processing": (_("Processing"), "status-processing"),
+        "pending": (_("Pending"), "status-pending"),
     }
-    return mapping.get(status, (status or "غير معروف", "status-pending"))
+    return mapping.get(status, (status or _("Unknown"), "status-pending"))
 
 
 def _build_invoice_display(invoice):
@@ -379,7 +380,7 @@ def _build_invoice_display(invoice):
         extracted.get("merchant_name"),
         text_fallback.get("vendor_name"),
         text_fallback.get("vendor_name_ar"),
-        "غير محدد",
+        _("Unspecified"),
     )
     vendor_vat_number = _first_present(
         invoice.vendor_vat_number,
@@ -416,7 +417,7 @@ def _build_invoice_display(invoice):
         _clean_ai_summary(invoice.ai_summary),
         _clean_ai_summary(extracted.get("ai_summary")),
         _clean_ai_summary(text_fallback.get("ai_summary")),
-        "تم استخراج البيانات تلقائياً، ويُنصح بمراجعة الحقول الحساسة قبل الاعتماد النهائي.",
+        _("Data was extracted automatically. Review sensitive fields before final approval."),
     )
     extraction_method = _first_present(
         extracted.get("_extraction_method"),
@@ -425,20 +426,19 @@ def _build_invoice_display(invoice):
         "tesseract_fallback",
     )
     extraction_method_label = {
-        "pdf_text_layer":  "طبقة نص PDF",
-        "openai_vision":   "رؤية ذكية (GPT-4o)",
-        "ocr_fallback":    "OCR احتياطي (Tesseract)",
-        "openai_text":      "استخراج ذكي (GPT-4o نص)",
-        "openai_ocr":       "تعرف ضوئي ذكي (GPT-4o)",
-        "tesseract_fallback": "تعرف ضوئي (Tesseract)",
-        "ocr_fallback":     "تعرف ضوئي محلي",
-        "image_ai_vision":  "رؤية ذكية (GPT-4o)",
-        "image_ocr":        "تعرف ضوئي على صورة",
-        "pdf_ocr":          "تعرف ضوئي على PDF",
-        "excel_parser":     "تحليل ملف Excel",
-        "json_parser":      "تحليل ملف JSON",
-        "csv_parser":       "تحليل ملف CSV",
-    }.get(extraction_method, "استخراج تلقائي")
+        "pdf_text_layer": _("PDF Text Layer"),
+        "openai_vision": _("AI Vision (GPT-4o)"),
+        "ocr_fallback": _("OCR Fallback (Tesseract)"),
+        "openai_text": _("AI Text Extraction (GPT-4o)"),
+        "openai_ocr": _("AI OCR (GPT-4o)"),
+        "tesseract_fallback": _("OCR (Tesseract)"),
+        "image_ai_vision": _("AI Vision (GPT-4o)"),
+        "image_ocr": _("Image OCR"),
+        "pdf_ocr": _("PDF OCR"),
+        "excel_parser": _("Excel Parsing"),
+        "json_parser": _("JSON Parsing"),
+        "csv_parser": _("CSV Parsing"),
+    }.get(extraction_method, _("Automatic Extraction"))
 
     def _format_amount(amount):
         if amount is None:
@@ -512,13 +512,13 @@ def pricing(request):
     return _render_marketing_page(
         request,
         page_key="pricing",
-        title="خطط مرنة تناسب فرق التدقيق والامتثال",
-        eyebrow="Pricing",
-        description="نساعدك على البدء سريعًا بخطة مناسبة لحجم الفريق، مع توسع واضح عند زيادة عدد المستندات وسير العمل.",
+        title=_("Flexible plans for auditing and compliance teams"),
+        eyebrow=_("Pricing"),
+        description=_("Start quickly with a plan sized for your team, with a clear path to expand as document volume and workflows grow."),
         bullets=[
-            "خطة بداية لفرق التدقيق الصغيرة والمتوسطة.",
-            "خطة مؤسسية مع عزل منظمات وتدفقات مراجعة أوسع.",
-            "تفعيل تدريجي للمزايا المتقدمة مثل التقارير التنفيذية والتكاملات.",
+            _("Starter plan for small and mid-sized audit teams."),
+            _("Enterprise plan with stronger tenant isolation and broader review workflows."),
+            _("Gradual activation of advanced features such as executive reporting and integrations."),
         ],
     )
 
@@ -527,13 +527,13 @@ def about(request):
     return _render_marketing_page(
         request,
         page_key="about",
-        title="منصة تدقيق مالي مبنية لسوق الخليج",
-        eyebrow="About Tadgeeg",
-        description="Tadgeeg تركز على تدقيق الفواتير والمستندات المالية مع دعم الامتثال الضريبي والمالي في بيئات العمل الخليجية.",
+        title=_("A financial auditing platform built for the GCC market"),
+        eyebrow=_("About %(product)s") % {"product": django_settings.PRODUCT_NAME},
+        description=_("%(product)s focuses on auditing invoices and financial documents with tax and financial compliance support across GCC business environments.") % {"product": django_settings.PRODUCT_NAME},
         bullets=[
-            "دعم اللغة العربية والإنجليزية في رحلة الاستخدام.",
-            "تركيز على ZATCA وضريبة القيمة المضافة ومراجعة المستندات.",
-            "تصميم عملي يناسب فرق المالية والمراجعة والامتثال.",
+            _("Arabic and English support throughout the product journey."),
+            _("A focus on ZATCA, VAT, and document review."),
+            _("A practical experience for finance, audit, and compliance teams."),
         ],
     )
 
@@ -542,13 +542,13 @@ def contact(request):
     return _render_marketing_page(
         request,
         page_key="contact",
-        title="تواصل مع فريق Tadgeeg",
-        eyebrow="Contact",
-        description="إذا كنت تريد عرضًا مخصصًا أو تهيئة مؤسسية أو دعمًا تقنيًا، يمكن لفريقنا ترتيب جلسة تعريفية وخطة تشغيل مناسبة.",
+        title=_("Talk to the %(product)s team") % {"product": django_settings.PRODUCT_NAME},
+        eyebrow=_("Contact"),
+        description=_("If you need a tailored demo, enterprise onboarding, or technical guidance, our team can arrange an introductory session and rollout plan."),
         bullets=[
-            "استجابة مخصصة لفرق المالية والامتثال.",
-            "تهيئة للإطلاق التجريبي أو المؤسسي.",
-            "دعم فني وإرشاد أثناء الإعداد.",
+            _("Tailored responses for finance and compliance teams."),
+            _("Support for pilot and enterprise launches."),
+            _("Technical assistance and onboarding guidance."),
         ],
     )
 
@@ -557,13 +557,13 @@ def privacy(request):
     return _render_marketing_page(
         request,
         page_key="privacy",
-        title="الخصوصية وحماية البيانات",
-        eyebrow="Privacy",
-        description="نلتزم بالتعامل مع بياناتك المالية بمستوى عالٍ من الحذر، مع عزل منظمات واضح وسجل تدقيق للأحداث الحساسة داخل النظام.",
+        title=_("Privacy and data protection"),
+        eyebrow=_("Privacy"),
+        description=_("We handle financial data with a high standard of care, including clear tenant isolation and audit trails for sensitive actions."),
         bullets=[
-            "عزل البيانات على مستوى المنظمة.",
-            "سجلات تدقيق للعمليات الحساسة.",
-            "ضوابط وصول تعتمد على الدور التنظيمي.",
+            _("Organization-level data isolation."),
+            _("Audit logs for sensitive operations."),
+            _("Access controls based on organizational roles."),
         ],
     )
 
@@ -572,13 +572,13 @@ def blog(request):
     return _render_marketing_page(
         request,
         page_key="blog",
-        title="رؤى التدقيق والامتثال",
-        eyebrow="Insights",
-        description="مساحة لمشاركة أدلة عملية ورؤى تشغيلية حول التدقيق المالي والامتثال الضريبي والتحول الرقمي لفرق المالية.",
+        title=_("Audit and compliance insights"),
+        eyebrow=_("Insights"),
+        description=_("A place to share operating insights and practical guidance on financial auditing, tax compliance, and digital transformation for finance teams."),
         bullets=[
-            "أفضل الممارسات في مراجعة الفواتير والموردين.",
-            "تحديثات متعلقة بمتطلبات الامتثال في الخليج.",
-            "أدلة تشغيلية لتفعيل الذكاء الاصطناعي داخل فرق المالية.",
+            _("Best practices for reviewing invoices and vendors."),
+            _("Updates on GCC compliance requirements."),
+            _("Operational guides for enabling AI inside finance teams."),
         ],
     )
 
@@ -587,13 +587,13 @@ def integrations(request):
     return _render_marketing_page(
         request,
         page_key="integrations",
-        title="تكاملات جاهزة وقابلة للتوسع",
-        eyebrow="Integrations",
-        description="خطط التكامل تشمل البريد، مسارات الموافقة، وخدمات الربط مع بيئات العمل المالية الحالية داخل المؤسسة.",
+        title=_("Integrations that are ready and scalable"),
+        eyebrow=_("Integrations"),
+        description=_("Integration plans cover email, approval flows, and connectivity with your current finance operating environment."),
         bullets=[
-            "قابلية ربط تدريجية مع أنظمة الشركة الحالية.",
-            "واجهات API داخلية يمكن توسيعها للتكاملات.",
-            "تهيئة مخصصة للمؤسسات التي تحتاج سير عمل خاص.",
+            _("Gradual connectivity with your existing company systems."),
+            _("Internal APIs that can be extended for integrations."),
+            _("Tailored setup for organizations with specialized workflows."),
         ],
     )
 
@@ -602,13 +602,14 @@ def api_page(request):
     return _render_marketing_page(
         request,
         page_key="api",
-        title="واجهات برمجية قابلة للتكامل المؤسسي",
-        eyebrow="API",
-        description="توفر Tadgeeg واجهات آمنة ومقيدة بالمنظمة لرفع المستندات، متابعة الجلسات، والوصول إلى نتائج التدقيق والتقارير.",
+        title=_("APIs ready for enterprise integration"),
+        eyebrow=_("API"),
+        description=_("%(product)s provides secure, organization-scoped APIs for document upload, session tracking, and access to audit results and reports.")
+        % {"product": django_settings.PRODUCT_NAME},
         bullets=[
-            "مصادقة API مع عزل واضح للمنظمات.",
-            "نقاط نهاية للرفع والمتابعة والتقارير.",
-            "قابلة للدمج مع أنظمة ERP أو بوابات العمل الداخلية.",
+            _("API authentication with clear tenant isolation."),
+            _("Endpoints for uploads, tracking, and reports."),
+            _("Suitable for ERP systems and internal business portals."),
         ],
     )
 
@@ -617,13 +618,13 @@ def careers(request):
     return _render_marketing_page(
         request,
         page_key="careers",
-        title="العمل في Tadgeeg",
-        eyebrow="Careers",
-        description="نبني منتجًا ماليًا يحتاج دقة تنفيذ عالية، ونبحث عن فرق تجمع بين الحس التقني وفهم القطاع المالي والتنظيمي.",
+        title=_("Working at %(product)s") % {"product": django_settings.PRODUCT_NAME},
+        eyebrow=_("Careers"),
+        description=_("We are building a financial product that demands precise execution, and we look for teams that combine technical depth with financial and regulatory understanding."),
         bullets=[
-            "فرص في الهندسة والمنتج وتجربة المستخدم.",
-            "تركيز على منتجات B2B عالية الحساسية للثقة.",
-            "بيئة عمل عملية تبني منتجات تشغيلية حقيقية.",
+            _("Opportunities in engineering, product, and user experience."),
+            _("A focus on trust-sensitive B2B products."),
+            _("A practical environment for shipping real operational products."),
         ],
     )
 
@@ -660,7 +661,6 @@ def login_view(request):
             return JsonResponse(_otp_pending_payload(user, challenge, sent=sent))
 
         return JsonResponse(_verified_login_payload(request, user))
-        return JsonResponse({"success": False, "error": "البريد الإلكتروني أو كلمة المرور غير صحيحة"})
 
     return render(request, "auth/portal.html", _public_ctx(request, auth_mode="login"))
 
@@ -813,7 +813,7 @@ def otp_verify(request):
             return render(request, "auth/otp_verify.html", context, status=_otp_error_status(exc))
 
         payload = _verified_login_payload(request, pending_user)
-        payload["message"] = "تم التحقق من بريدك الإلكتروني بنجاح."
+        payload["message"] = _("Your email address has been verified successfully.")
         return JsonResponse(payload)
 
     return render(request, "auth/otp_verify.html", context, status=initial_status)
@@ -826,11 +826,11 @@ def otp_resend(request):
 
     pending_user = get_pending_verification_user(request)
     if pending_user is None:
-        return JsonResponse({"success": False, "error": "انتهت جلسة التحقق. سجّل الدخول مجدداً."}, status=400)
+        return JsonResponse({"success": False, "error": _("The verification session has expired. Please sign in again.")}, status=400)
 
     form = EmailOTPResendForm(request.POST)
     if not form.is_valid():
-        return JsonResponse({"success": False, "error": "تعذر إعادة إرسال الرمز حالياً."}, status=400)
+        return JsonResponse({"success": False, "error": _("Unable to resend the code right now.")}, status=400)
 
     try:
         challenge = resend_email_otp(pending_user, request)
@@ -848,7 +848,7 @@ def otp_resend(request):
     return JsonResponse(
         {
             "success": True,
-            "message": "تم إرسال رمز جديد إلى بريدك الإلكتروني.",
+            "message": _("A new verification code has been sent to your email address."),
             "masked_email": mask_email_address(pending_user.email),
             "resend_cooldown_seconds": state["resend_available_in"],
             "otp_expires_in_seconds": state["expires_in"],

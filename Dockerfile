@@ -9,6 +9,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
+    gettext \
     default-libmysqlclient-dev \
     tesseract-ocr \
     tesseract-ocr-ara \

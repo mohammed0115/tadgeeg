@@ -1,4 +1,5 @@
-"""FinAI Frontend URL Configuration"""
+"""Tadgeeg AI frontend URL configuration."""
+from django.conf import settings
 from django.contrib.auth import views as auth_views
 from django.urls import path, reverse_lazy
 
@@ -27,6 +28,11 @@ urlpatterns = [
             template_name='auth/password_reset_form.html',
             email_template_name='auth/emails/password_reset_email.txt',
             subject_template_name='auth/emails/password_reset_subject.txt',
+            extra_email_context={
+                "product_name": settings.PRODUCT_NAME,
+                "company_name": settings.COMPANY_NAME,
+                "company_name_ar": settings.COMPANY_NAME_AR,
+            },
             success_url=reverse_lazy('frontend:password_reset_done'),
         ),
         name='password_reset',

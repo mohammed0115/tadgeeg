@@ -13,10 +13,12 @@ from django.contrib.auth.hashers import check_password, make_password
 from django.core.mail import EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils import timezone
+from django.utils.translation import gettext as _, override
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.authentication.models import EmailOTPVerification, User
 from apps.authentication.services.organization_setup import ensure_user_organization
+from core.branding import get_branding_context
 
 PENDING_EMAIL_VERIFICATION_SESSION_KEY = "pending_email_verification_user_id"
 logger = logging.getLogger("finai")
@@ -182,7 +184,7 @@ def _invalidate_unused_challenges(user: User) -> None:
     )
 
 
-def _send_otp_email(user: User, otp_code: str, expires_at) -> None:
+def _send_otp_email(user: User, otp_code: str, expires_at, *, language: str | None = None) -> None:
     config = get_otp_config()
     if _is_async_email_requested():
         logger.warning(
@@ -197,26 +199,33 @@ def _send_otp_email(user: User, otp_code: str, expires_at) -> None:
         user.email,
         expires_at.isoformat(),
     )
-    context = {
-        "user": user,
-        "otp_code": otp_code,
-        "expires_minutes": config.expiry_minutes,
-        "expires_at": expires_at,
-        "product_name": "Tadgeeg",
-    }
-    html_body = render_to_string("auth/otp_email.html", context)
-    text_body = (
-        f"مرحباً {user.full_name or user.email}\n\n"
-        f"رمز التحقق الخاص بك هو: {otp_code}\n"
-        f"تنتهي صلاحية هذا الرمز خلال {config.expiry_minutes} دقائق.\n\n"
-        "إذا لم تطلب هذا الرمز، يمكنك تجاهل هذه الرسالة بأمان."
-    )
-    email = EmailMultiAlternatives(
-        subject="رمز التحقق من البريد الإلكتروني - Tadgeeg",
-        body=text_body,
-        from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@finai.sa"),
-        to=[user.email],
-    )
+    resolved_language = language or getattr(user, "preferred_language", None) or getattr(settings, "LANGUAGE_CODE", "ar")
+    with override(resolved_language):
+        branding = get_branding_context(resolved_language)
+        context = {
+            "user": user,
+            "otp_code": otp_code,
+            "expires_minutes": config.expiry_minutes,
+            "expires_at": expires_at,
+            **branding,
+        }
+        html_body = render_to_string("auth/otp_email.html", context)
+        text_body = _(
+            "Hello %(name)s,\n\n"
+            "Your verification code is: %(otp)s\n"
+            "This code will expire in %(minutes)s minutes.\n\n"
+            "If you did not request this code, you can safely ignore this message."
+        ) % {
+            "name": user.full_name or user.email,
+            "otp": otp_code,
+            "minutes": config.expiry_minutes,
+        }
+        email = EmailMultiAlternatives(
+            subject=_("Email Verification Code - %(product)s") % {"product": branding["product_name"]},
+            body=text_body,
+            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@tadgeeg.com"),
+            to=[user.email],
+        )
     email.attach_alternative(html_body, "text/html")
     sent_count = email.send(fail_silently=False)
     if sent_count < 1:
@@ -233,7 +242,7 @@ def _send_otp_email(user: User, otp_code: str, expires_at) -> None:
 def issue_email_otp(user: User, request, *, allow_recent_reuse: bool = True) -> tuple[EmailOTPVerification, bool]:
     if user.is_email_verified:
         clear_pending_verification(request)
-        raise EmailOTPError("تم التحقق من هذا البريد الإلكتروني بالفعل.", code="already_verified")
+        raise EmailOTPError(_("This email address has already been verified."), code="already_verified")
 
     config = get_otp_config()
     now = timezone.now()
@@ -280,7 +289,7 @@ def issue_email_otp(user: User, request, *, allow_recent_reuse: bool = True) -> 
     )
 
     try:
-        _send_otp_email(user, otp_code, challenge.expires_at)
+        _send_otp_email(user, otp_code, challenge.expires_at, language=getattr(request, "LANGUAGE_CODE", None))
     except Exception as exc:
         logger.exception(
             "OTP issue send failed for challenge_id=%s user_id=%s email=%s",
@@ -290,7 +299,7 @@ def issue_email_otp(user: User, request, *, allow_recent_reuse: bool = True) -> 
         )
         challenge.delete()
         raise EmailOTPError(
-            "تعذر إرسال رمز التحقق حالياً. يرجى المحاولة مرة أخرى بعد قليل.",
+            _("Unable to send the verification code right now. Please try again shortly."),
             code="send_failed",
         ) from exc
 
@@ -307,7 +316,7 @@ def issue_email_otp(user: User, request, *, allow_recent_reuse: bool = True) -> 
 def resend_email_otp(user: User, request) -> EmailOTPVerification:
     if user.is_email_verified:
         clear_pending_verification(request)
-        raise EmailOTPError("تم التحقق من البريد الإلكتروني بالفعل.", code="already_verified")
+        raise EmailOTPError(_("The email address has already been verified."), code="already_verified")
 
     config = get_otp_config()
     current = get_latest_pending_challenge(user)
@@ -322,7 +331,7 @@ def resend_email_otp(user: User, request) -> EmailOTPVerification:
 
     if resend_count >= config.max_resend_attempts:
         raise EmailOTPError(
-            "تم بلوغ الحد الأقصى لإعادة إرسال الرمز. حاول لاحقاً أو تواصل مع الدعم.",
+            _("You have reached the maximum resend limit. Please try again later or contact support."),
             code="resend_limit",
         )
 
@@ -333,7 +342,7 @@ def resend_email_otp(user: User, request) -> EmailOTPVerification:
         )
         if wait_seconds > 0:
             raise EmailOTPError(
-                f"يمكنك إعادة الإرسال بعد {wait_seconds} ثانية.",
+                _("You can resend after %(seconds)s seconds.") % {"seconds": wait_seconds},
                 code="resend_cooldown",
                 wait_seconds=wait_seconds,
             )
@@ -357,7 +366,7 @@ def resend_email_otp(user: User, request) -> EmailOTPVerification:
     )
 
     try:
-        _send_otp_email(user, otp_code, challenge.expires_at)
+        _send_otp_email(user, otp_code, challenge.expires_at, language=getattr(request, "LANGUAGE_CODE", None))
     except Exception as exc:
         logger.exception(
             "OTP resend send failed for challenge_id=%s user_id=%s email=%s",
@@ -367,7 +376,7 @@ def resend_email_otp(user: User, request) -> EmailOTPVerification:
         )
         challenge.delete()
         raise EmailOTPError(
-            "تعذر إعادة إرسال الرمز حالياً. يرجى المحاولة مرة أخرى بعد قليل.",
+            _("Unable to resend the verification code right now. Please try again shortly."),
             code="send_failed",
         ) from exc
 
@@ -389,7 +398,7 @@ def verify_email_otp(user: User, otp_code: str) -> User:
     challenge = get_latest_pending_challenge(user)
     if challenge is None:
         raise EmailOTPError(
-            "لا يوجد رمز تحقق نشط. أعد إرسال الرمز للمتابعة.",
+            _("There is no active verification code. Resend the code to continue."),
             code="missing_otp",
         )
 
@@ -398,7 +407,7 @@ def verify_email_otp(user: User, otp_code: str) -> User:
         challenge.used_at = timezone.now()
         challenge.save(update_fields=["is_used", "used_at"])
         raise EmailOTPError(
-            "انتهت صلاحية رمز التحقق. أعد إرسال رمز جديد للمتابعة.",
+            _("The verification code has expired. Resend a new code to continue."),
             code="otp_expired",
         )
 
@@ -407,7 +416,7 @@ def verify_email_otp(user: User, otp_code: str) -> User:
         challenge.used_at = timezone.now()
         challenge.save(update_fields=["is_used", "used_at"])
         raise EmailOTPError(
-            "تم تجاوز عدد المحاولات المسموح بها. أعد إرسال رمز جديد.",
+            _("You have exceeded the allowed number of attempts. Resend a new code."),
             code="attempts_exceeded",
         )
 
@@ -421,14 +430,14 @@ def verify_email_otp(user: User, otp_code: str) -> User:
             update_fields.extend(["is_used", "used_at"])
             challenge.save(update_fields=update_fields)
             raise EmailOTPError(
-                "الرمز غير صحيح وتم استنفاد جميع المحاولات. أعد إرسال رمز جديد.",
+                _("The code is incorrect and all attempts have been used. Resend a new code."),
                 code="attempts_exceeded",
             )
 
         challenge.save(update_fields=update_fields)
         remaining = config.max_verify_attempts - challenge.attempts_count
         raise EmailOTPError(
-            f"رمز التحقق غير صحيح. تبقى لديك {remaining} محاولات.",
+            _("The verification code is incorrect. You have %(remaining)s attempts left.") % {"remaining": remaining},
             code="otp_invalid",
         )
 

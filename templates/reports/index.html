@@ -1,6 +1,7 @@
 {% extends "base.html" %}
-{% block title %}التقارير{% endblock %}
-{% block page_title %}التقارير المالية{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Reports" %}{% endblock %}
+{% block page_title %}{% trans "Financial Reports" %}{% endblock %}
 {% block nav_reports %}active{% endblock %}
 
 {% block content %}
@@ -28,22 +29,22 @@
       <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="opacity-75"/>
     </svg>
     <div>
-      <p class="font-semibold text-primary-700 dark:text-primary-300">جارٍ توليد التقرير...</p>
-      <p class="text-sm text-primary-500">يحلل الذكاء الاصطناعي البيانات ويصيغ التقرير بالعربية</p>
+      <p class="font-semibold text-primary-700 dark:text-primary-300">{% trans "Generating report..." %}</p>
+      <p class="text-sm text-primary-500">{% trans "AI is analyzing your data and preparing the report." %}</p>
     </div>
   </div>
 
   <!-- Reports list -->
   <div class="card overflow-hidden">
     <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
-      <h3 class="font-semibold text-slate-800 dark:text-white">التقارير المُولَّدة</h3>
+      <h3 class="font-semibold text-slate-800 dark:text-white">{% trans "Generated Reports" %}</h3>
       <select x-model="filterType" @change="loadReports()" class="select text-xs py-1.5">
-        <option value="">كل الأنواع</option>
-        <option value="invoice_audit">تدقيق فواتير</option>
-        <option value="executive_summary">ملخص تنفيذي</option>
-        <option value="risk_assessment">تقييم مخاطر</option>
-        <option value="vendor_analysis">تحليل موردين</option>
-        <option value="spend_analysis">تحليل إنفاق</option>
+        <option value="">{% trans "All Types" %}</option>
+        <option value="invoice_audit">{% trans "Invoice Audit" %}</option>
+        <option value="executive_summary">{% trans "Executive Summary" %}</option>
+        <option value="risk_assessment">{% trans "Risk Assessment" %}</option>
+        <option value="vendor_analysis">{% trans "Vendor Analysis" %}</option>
+        <option value="spend_analysis">{% trans "Spend Analysis" %}</option>
       </select>
     </div>
 
@@ -59,15 +60,15 @@
         <div class="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors">
           <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-violet-500 flex items-center justify-center text-white text-lg flex-shrink-0">📊</div>
           <div class="flex-1 min-w-0">
-            <p class="font-semibold text-slate-800 dark:text-white truncate" x-text="rep.title||'تقرير بدون عنوان'"></p>
+            <p class="font-semibold text-slate-800 dark:text-white truncate" x-text="rep.title||i18n.untitledReport"></p>
             <p class="text-xs text-slate-400 mt-0.5">
-              <span x-text="{'invoice_audit':'تدقيق فواتير','executive_summary':'ملخص تنفيذي','risk_assessment':'تقييم مخاطر','vendor_analysis':'تحليل موردين','spend_analysis':'تحليل إنفاق'}[rep.report_type]||rep.report_type"></span>
-              · <span x-text="rep.language==='ar'?'عربي':'English'"></span>
+              <span x-text="reportTypeLabel(rep.report_type)"></span>
+              · <span x-text="rep.language==='ar' ? i18n.arabic : i18n.english"></span>
               · <span x-text="(rep.created_at||'').slice(0,10)"></span>
             </p>
           </div>
           <button @click="viewReport(rep.id)"
-                  class="btn-ghost text-xs py-1.5 px-3 flex-shrink-0">عرض</button>
+                  class="btn-ghost text-xs py-1.5 px-3 flex-shrink-0">{% trans "View" %}</button>
           <button @click="downloadPDF(rep.id, rep.title)"
                   class="btn-ghost text-xs py-1.5 px-3 flex-shrink-0 flex items-center gap-1 text-primary-600 dark:text-primary-400">
             <i data-lucide="download" class="w-3.5 h-3.5"></i>PDF
@@ -76,7 +77,7 @@
       </template>
       <div x-show="!reports.length && !loadingList" class="text-center py-16 text-slate-400">
         <i data-lucide="file-text" class="w-8 h-8 mx-auto mb-2"></i>
-        <p class="text-sm">لا توجد تقارير بعد — اضغط على أحد الأزرار أعلاه لتوليد تقرير</p>
+        <p class="text-sm">{% trans "No reports yet. Generate one using the actions above." %}</p>
       </div>
     </div>
   </div>
@@ -85,17 +86,17 @@
   <div x-show="activeReport" x-transition class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div @click.away="activeReport=null" class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[88vh] flex flex-col">
       <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
-        <h3 class="font-bold text-slate-800 dark:text-white" x-text="activeReport?.title||'التقرير'"></h3>
+        <h3 class="font-bold text-slate-800 dark:text-white" x-text="activeReport?.title||i18n.report"></h3>
         <div class="flex items-center gap-2">
           <button @click="downloadPDF(activeReport.id, activeReport.title)"
                   class="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5"
-                  :disabled="pdfLoading" title="تنزيل PDF">
+                  :disabled="pdfLoading" title="{% trans 'Download PDF' %}">
             <svg x-show="pdfLoading" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
               <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
             </svg>
             <i x-show="!pdfLoading" data-lucide="download" class="w-3.5 h-3.5"></i>
-            <span x-text="pdfLoading ? 'جارٍ التنزيل...' : 'تنزيل PDF'"></span>
+            <span x-text="pdfLoading ? i18n.downloading : i18n.downloadPdf"></span>
           </button>
           <button @click="activeReport=null" class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
             <i data-lucide="x" class="w-5 h-5"></i>
@@ -119,27 +120,27 @@
         <!-- Invoice Audit Stats -->
         <template x-if="activeReport?.data?.invoice_audit">
           <div class="border-t border-slate-200 dark:border-slate-700 pt-5">
-            <h4 class="font-semibold text-slate-700 dark:text-slate-200 mb-3">📊 إحصاءات تدقيق الفواتير</h4>
+            <h4 class="font-semibold text-slate-700 dark:text-slate-200 mb-3">📊 {% trans "Invoice Audit Statistics" %}</h4>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div class="bg-slate-50 dark:bg-slate-700/40 rounded-xl p-3 text-center">
                 <div class="text-2xl font-bold text-slate-800 dark:text-white"
                      x-text="activeReport.data.invoice_audit.overall_stats?.total_invoices||0"></div>
-                <div class="text-xs text-slate-400 mt-0.5">إجمالي الفواتير</div>
+                <div class="text-xs text-slate-400 mt-0.5">{% trans "Total Invoices" %}</div>
               </div>
               <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 text-center">
                 <div class="text-2xl font-bold text-red-600 dark:text-red-400"
                      x-text="activeReport.data.invoice_audit.overall_stats?.flagged_count||0"></div>
-                <div class="text-xs text-slate-400 mt-0.5">مُبلَّغ عنها</div>
+                <div class="text-xs text-slate-400 mt-0.5">{% trans "Flagged" %}</div>
               </div>
               <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 text-center">
                 <div class="text-2xl font-bold text-amber-600 dark:text-amber-400"
                      x-text="activeReport.data.invoice_audit.overall_stats?.duplicate_count||0"></div>
-                <div class="text-xs text-slate-400 mt-0.5">مكررة</div>
+                <div class="text-xs text-slate-400 mt-0.5">{% trans "Duplicates" %}</div>
               </div>
               <div class="bg-primary-50 dark:bg-primary-900/20 rounded-xl p-3 text-center">
                 <div class="text-2xl font-bold text-primary-600 dark:text-primary-400"
                      x-text="(activeReport.data.invoice_audit.validation_summary?.avg_score||0).toFixed(1)+'%'"></div>
-                <div class="text-xs text-slate-400 mt-0.5">متوسط التدقيق</div>
+                <div class="text-xs text-slate-400 mt-0.5">{% trans "Average Audit Score" %}</div>
               </div>
             </div>
           </div>
@@ -157,6 +158,23 @@ function reportsPage() {
   return {
     reports:[], loadingList:true, generating:false,
     filterType:'', activeReport:null, pdfLoading:false,
+    i18n: {
+      untitledReport: "{{ _('Untitled report')|escapejs }}",
+      report: "{{ _('Report')|escapejs }}",
+      arabic: "{{ _('Arabic')|escapejs }}",
+      english: "{{ _('English')|escapejs }}",
+      downloading: "{{ _('Downloading...')|escapejs }}",
+      downloadPdf: "{{ _('Download PDF')|escapejs }}",
+      reportGenerated: "{{ _('Report generated successfully')|escapejs }}",
+      reportGenerationFailed: "{{ _('Failed to generate report:')|escapejs }}",
+      loadingFailed: "{{ _('Loading failed')|escapejs }}",
+      downloadFailed: "{{ _('PDF download failed')|escapejs }}",
+      invoiceAudit: "{{ _('Invoice Audit')|escapejs }}",
+      executiveSummary: "{{ _('Executive Summary')|escapejs }}",
+      riskAssessment: "{{ _('Risk Assessment')|escapejs }}",
+      vendorAnalysis: "{{ _('Vendor Analysis')|escapejs }}",
+      spendAnalysis: "{{ _('Spend Analysis')|escapejs }}",
+    },
 
     async init() { await this.loadReports(); },
 
@@ -178,10 +196,10 @@ function reportsPage() {
           method:'POST',
           body: JSON.stringify({ report_type:type, language:lang, include_invoices:true })
         });
-        notify('تم توليد التقرير بنجاح', 'success');
+        notify(this.i18n.reportGenerated, 'success');
         await this.loadReports();
         this.activeReport = d;
-      } catch(e) { notify('فشل توليد التقرير: '+e.message, 'error'); }
+      } catch(e) { notify(this.i18n.reportGenerationFailed + ' ' + e.message, 'error'); }
       this.generating = false;
       this.$nextTick(() => lucide.createIcons());
     },
@@ -190,7 +208,7 @@ function reportsPage() {
       try {
         this.activeReport = await apiFetch('/reports/'+id+'/');
         this.$nextTick(() => lucide.createIcons());
-      } catch(e) { notify('فشل التحميل','error'); }
+      } catch(e) { notify(this.i18n.loadingFailed,'error'); }
     },
 
     async downloadPDF(id, title) {
@@ -202,7 +220,7 @@ function reportsPage() {
           headers: token ? { 'Authorization': 'Bearer '+token } : {}
         });
         if (!res.ok) {
-          let message = 'فشل التنزيل ('+res.status+')';
+          let message = `${this.i18n.downloadFailed} (${res.status})`;
           const contentType = res.headers.get('content-type') || '';
           if (contentType.includes('application/json')) {
             const payload = await res.json();
@@ -213,7 +231,7 @@ function reportsPage() {
           }
           throw new Error(message);
         }
-        if (!res.ok) throw new Error('فشل التنزيل ('+res.status+')');
+        if (!res.ok) throw new Error(`${this.i18n.downloadFailed} (${res.status})`);
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -223,10 +241,20 @@ function reportsPage() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-        notify('تم تنزيل التقرير بنجاح', 'success');
-      } catch(e) { notify('فشل تنزيل PDF: '+e.message, 'error'); }
+        notify(this.i18n.downloadPdf, 'success');
+      } catch(e) { notify(this.i18n.downloadFailed + ': ' + e.message, 'error'); }
       this.pdfLoading = false;
-    }
+    },
+
+    reportTypeLabel(type) {
+      return {
+        invoice_audit: this.i18n.invoiceAudit,
+        executive_summary: this.i18n.executiveSummary,
+        risk_assessment: this.i18n.riskAssessment,
+        vendor_analysis: this.i18n.vendorAnalysis,
+        spend_analysis: this.i18n.spendAnalysis,
+      }[type] || type;
+    },
   }
 }
 </script>

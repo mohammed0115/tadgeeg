@@ -6,7 +6,7 @@ Structured error handling with classification for retry logic.
 
 
 class BaseFiNAIException(Exception):
-    """Base exception for all FinAI services"""
+    """Base exception for all Tadgeeg AI services."""
 
     def __init__(self, message: str, code: str = "unknown_error", details: dict = None):
         super().__init__(message)

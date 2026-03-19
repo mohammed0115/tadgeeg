@@ -7,12 +7,13 @@ from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         if not email:
-            raise ValueError("Email is required")
+            raise ValueError(_("Email is required"))
         email = self.normalize_email(email)
         legacy_username = extra_fields.pop("username", "").strip()
         if legacy_username and not extra_fields.get("full_name"):
@@ -34,13 +35,13 @@ class User(AbstractBaseUser, PermissionsMixin):
     """Custom user model with role-based access control."""
 
     class Role(models.TextChoices):
-        ADMIN = "admin", "System Administrator"
-        CHIEF_AUDIT_OFFICER = "cao", "Chief Audit Officer"
-        SENIOR_AUDITOR = "senior_auditor", "Senior Auditor"
-        JUNIOR_AUDITOR = "junior_auditor", "Junior Auditor"
-        COMPLIANCE_OFFICER = "compliance_officer", "Compliance Officer"
-        FINANCE_MANAGER = "finance_manager", "Finance Manager"
-        EXTERNAL_AUDITOR = "external_auditor", "External Auditor"
+        ADMIN = "admin", _("System Administrator")
+        CHIEF_AUDIT_OFFICER = "cao", _("Chief Audit Officer")
+        SENIOR_AUDITOR = "senior_auditor", _("Senior Auditor")
+        JUNIOR_AUDITOR = "junior_auditor", _("Junior Auditor")
+        COMPLIANCE_OFFICER = "compliance_officer", _("Compliance Officer")
+        FINANCE_MANAGER = "finance_manager", _("Finance Manager")
+        EXTERNAL_AUDITOR = "external_auditor", _("External Auditor")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
@@ -180,20 +181,20 @@ class Organization(models.Model):
     """Multi-tenant organization entity."""
 
     class Country(models.TextChoices):
-        SAUDI_ARABIA = "SA", "Saudi Arabia"
-        UAE = "AE", "United Arab Emirates"
-        BAHRAIN = "BH", "Bahrain"
-        KUWAIT = "KW", "Kuwait"
-        OMAN = "OM", "Oman"
-        QATAR = "QA", "Qatar"
+        SAUDI_ARABIA = "SA", _("Saudi Arabia")
+        UAE = "AE", _("United Arab Emirates")
+        BAHRAIN = "BH", _("Bahrain")
+        KUWAIT = "KW", _("Kuwait")
+        OMAN = "OM", _("Oman")
+        QATAR = "QA", _("Qatar")
 
     class Currency(models.TextChoices):
-        SAR = "SAR", "Saudi Riyal"
-        AED = "AED", "UAE Dirham"
-        BHD = "BHD", "Bahraini Dinar"
-        KWD = "KWD", "Kuwaiti Dinar"
-        OMR = "OMR", "Omani Rial"
-        QAR = "QAR", "Qatari Riyal"
+        SAR = "SAR", _("Saudi Riyal")
+        AED = "AED", _("UAE Dirham")
+        BHD = "BHD", _("Bahraini Dinar")
+        KWD = "KWD", _("Kuwaiti Dinar")
+        OMR = "OMR", _("Omani Rial")
+        QAR = "QAR", _("Qatari Riyal")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=255)
@@ -201,9 +202,9 @@ class Organization(models.Model):
     country = models.CharField(max_length=2, choices=Country.choices, default=Country.SAUDI_ARABIA)
     currency = models.CharField(max_length=3, choices=Currency.choices, default=Currency.SAR)
     vat_number = models.CharField(max_length=50, blank=True)
-    cr_number = models.CharField(max_length=50, blank=True, help_text="Commercial Registration Number")
+    cr_number = models.CharField(max_length=50, blank=True, help_text=_("Commercial Registration Number"))
     vat_rate = models.DecimalField(max_digits=5, decimal_places=2, default=15.00)
-    fiscal_year_start = models.PositiveSmallIntegerField(default=1, help_text="Month (1-12)")
+    fiscal_year_start = models.PositiveSmallIntegerField(default=1, help_text=_("Month (1-12)"))
     address = models.TextField(blank=True)
     website = models.URLField(blank=True)
     industry = models.CharField(max_length=100, blank=True)
@@ -247,17 +248,17 @@ class AuditLog(models.Model):
     """Immutable audit trail for all system actions."""
 
     class Action(models.TextChoices):
-        LOGIN = "login", "User Login"
-        LOGOUT = "logout", "User Logout"
-        LOGIN_FAILED = "login_failed", "Failed Login"
-        DOCUMENT_UPLOAD = "document_upload", "Document Upload"
-        DOCUMENT_PROCESS = "document_process", "Document Processed"
-        TRANSACTION_CREATE = "transaction_create", "Transaction Created"
-        TRANSACTION_UPDATE = "transaction_update", "Transaction Updated"
-        ANOMALY_DETECTED = "anomaly_detected", "Anomaly Detected"
-        CASE_CREATED = "case_created", "Audit Case Created"
-        REPORT_GENERATED = "report_generated", "Report Generated"
-        USER_CREATED = "user_created", "User Created"
+        LOGIN = "login", _("User Login")
+        LOGOUT = "logout", _("User Logout")
+        LOGIN_FAILED = "login_failed", _("Failed Login")
+        DOCUMENT_UPLOAD = "document_upload", _("Document Upload")
+        DOCUMENT_PROCESS = "document_process", _("Document Processed")
+        TRANSACTION_CREATE = "transaction_create", _("Transaction Created")
+        TRANSACTION_UPDATE = "transaction_update", _("Transaction Updated")
+        ANOMALY_DETECTED = "anomaly_detected", _("Anomaly Detected")
+        CASE_CREATED = "case_created", _("Audit Case Created")
+        REPORT_GENERATED = "report_generated", _("Report Generated")
+        USER_CREATED = "user_created", _("User Created")
         USER_UPDATED = "user_updated", "User Updated"
         CONFIG_CHANGED = "config_changed", "Configuration Changed"
         DATA_EXPORT = "data_export", "Data Exported"

@@ -1,4 +1,4 @@
-name: FinAI CI/CD Pipeline
+name: Tadgeeg AI CI/CD Pipeline
 
 on:
   push:

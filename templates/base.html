@@ -1,12 +1,16 @@
+{% load static i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" x-data="shell()" x-init="init()" :class="dark ? 'dark' : ''">
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}" x-data="shell()" x-init="init()" :class="dark ? 'dark' : ''">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{% block title %}Tadgeeg{% endblock %} — نظام التدقيق المالي الذكي</title>
+<title>{% block title %}{{ product_name }}{% endblock %} — {{ product_tagline }}</title>
+<meta name="application-name" content="{{ product_name }}">
+<meta name="description" content="{{ product_description }}">
 
 <!-- Tailwind -->
-{% load static %}
 <script src="{% static 'vendor/tailwind.browser.js' %}"></script>
 {% if bootstrap_tokens %}
 {{ bootstrap_tokens|json_script:"bootstrap-auth-tokens" }}
@@ -122,6 +126,36 @@ tailwind.config = {
   /* Modal backdrop */
   .modal-backdrop { @apply fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4; }
   .modal-box { @apply bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg animate-[fadeIn_.25s_ease]; }
+
+  html[dir="ltr"] .nav-item.active {
+    box-shadow: inset -3px 0 0 #3b82f6;
+    border-radius: 12px 0 0 12px;
+    margin-right: 0;
+    margin-left: -8px;
+    padding-right: 12px;
+    padding-left: 11px;
+  }
+  html[dir="ltr"] .data-table th {
+    text-align: left;
+  }
+  html[dir="ltr"] .app-sidebar {
+    right: auto;
+    left: 0;
+    border-left: 0;
+    border-right: 1px solid rgba(255,255,255,0.06);
+  }
+  html[dir="ltr"] .sidebar-logo-copy,
+  html[dir="ltr"] .sidebar-section-label,
+  html[dir="ltr"] .sidebar-link-text,
+  html[dir="ltr"] .sidebar-link-meta,
+  html[dir="ltr"] .page-heading,
+  html[dir="ltr"] .text-directional {
+    text-align: left;
+  }
+  html[dir="ltr"] .sidebar-children {
+    padding-right: 0;
+    padding-left: 0.75rem;
+  }
 </style>
 </head>
 
@@ -168,7 +202,7 @@ tailwind.config = {
             <button @click="dismiss(t.id)"
                     type="button"
                     class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
-                    aria-label="إغلاق التنبيه">
+                    aria-label="{% trans 'Dismiss notification' %}">
               <i data-lucide="x" class="w-5 h-5"></i>
             </button>
           </div>
@@ -195,17 +229,17 @@ tailwind.config = {
 <div class="relative flex h-screen overflow-hidden">
 
   <!-- ════════════ SIDEBAR ════════════ -->
-  <aside class="fixed inset-y-0 right-0 z-30 flex w-[18.5rem] max-w-[86vw] flex-shrink-0 flex-col overflow-hidden transition-all duration-300 lg:relative lg:inset-auto lg:max-w-none lg:w-auto"
-         :class="mobileNavOpen || isDesktop ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'"
+  <aside class="app-sidebar fixed inset-y-0 right-0 z-30 flex w-[18.5rem] max-w-[86vw] flex-shrink-0 flex-col overflow-hidden transition-all duration-300 lg:relative lg:inset-auto lg:max-w-none lg:w-auto"
+         :class="mobileNavOpen || isDesktop ? 'translate-x-0' : (isRtl ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0')"
          :style="sidebarStyle()"
          style="background: #0f1729; border-left: 1px solid rgba(255,255,255,0.06);">
 
     <!-- Brand -->
     <div class="flex items-center gap-3 px-4 py-4 border-b border-white/[.06] min-h-[64px]">
-      <img src="/static/img/logo.png" alt="Tadgeeg Logo" class="w-9 h-9 flex-shrink-0 rounded-xl object-cover shadow-lg shadow-primary-600/30">
+      <img src="/static/img/logo.png" alt="{{ product_name }} logo" class="w-9 h-9 flex-shrink-0 rounded-xl object-cover shadow-lg shadow-primary-600/30">
       <div x-show="sidebarOpen" x-transition:enter="transition duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" class="overflow-hidden">
-        <div class="text-white font-bold text-base leading-none">Tadgeeg</div>
-        <div class="text-cyan-400 text-[11px] mt-0.5 leading-none">التدقيق المالي الذكي</div>
+        <div class="text-white font-bold text-base leading-none">{{ product_name }}</div>
+        <div class="text-cyan-400 text-[11px] mt-0.5 leading-none">{{ company_byline }}</div>
       </div>
       <button type="button"
               @click="closeMobileNav()"
@@ -220,86 +254,86 @@ tailwind.config = {
 
       <!-- Main -->
       <div x-show="sidebarOpen" class="px-2 pb-1 pt-1">
-        <p class="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">الرئيسية</p>
+        <p class="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">{% trans "Main" %}</p>
       </div>
 
       <a href="{% url 'frontend:dashboard' %}"
          class="nav-item {% block nav_dashboard %}{% endblock %}">
         <i data-lucide="layout-dashboard" class="w-[18px] h-[18px] flex-shrink-0"></i>
-        <span x-show="sidebarOpen" class="whitespace-nowrap">لوحة التحكم</span>
+        <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Dashboard" %}</span>
       </a>
 
       <!-- Invoices -->
       <div x-show="sidebarOpen" class="px-2 pb-1 pt-3">
-        <p class="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">الفواتير</p>
+        <p class="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">{% trans "Invoices" %}</p>
       </div>
 
       <a href="{% url 'frontend:upload' %}"
          class="nav-item {% block nav_upload %}{% endblock %}">
         <i data-lucide="upload-cloud" class="w-[18px] h-[18px] flex-shrink-0"></i>
-        <span x-show="sidebarOpen" class="whitespace-nowrap">رفع الفواتير</span>
+        <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Upload Invoices" %}</span>
       </a>
 
       <a href="{% url 'frontend:invoices' %}"
          class="nav-item {% block nav_invoices %}{% endblock %}">
         <i data-lucide="file-text" class="w-[18px] h-[18px] flex-shrink-0"></i>
-        <span x-show="sidebarOpen" class="whitespace-nowrap flex-1">الفواتير</span>
+        <span x-show="sidebarOpen" class="whitespace-nowrap flex-1">{% trans "Invoices" %}</span>
         {% if pending_count %}<span x-show="sidebarOpen" class="text-[10px] font-bold bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0">{{ pending_count }}</span>{% endif %}
       </a>
 
       <a href="{% url 'frontend:batches' %}"
          class="nav-item {% block nav_batches %}{% endblock %}">
         <i data-lucide="layers" class="w-[18px] h-[18px] flex-shrink-0"></i>
-        <span x-show="sidebarOpen" class="whitespace-nowrap">الدفعات</span>
+        <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Batches" %}</span>
       </a>
 
       <!-- Analytics -->
       <div x-show="sidebarOpen" class="px-2 pb-1 pt-3">
-        <p class="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">التحليل</p>
+        <p class="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">{% trans "Analysis" %}</p>
       </div>
 
       <a href="{% url 'frontend:reports' %}"
          class="nav-item {% block nav_reports %}{% endblock %}">
         <i data-lucide="bar-chart-3" class="w-[18px] h-[18px] flex-shrink-0"></i>
-        <span x-show="sidebarOpen" class="whitespace-nowrap">التقارير</span>
+        <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Reports" %}</span>
       </a>
 
       <a href="{% url 'frontend:vendors' %}"
          class="nav-item {% block nav_vendors %}{% endblock %}">
         <i data-lucide="building-2" class="w-[18px] h-[18px] flex-shrink-0"></i>
-        <span x-show="sidebarOpen" class="whitespace-nowrap">الموردون</span>
+        <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Vendors" %}</span>
       </a>
 
       <a href="{% url 'frontend:analytics' %}"
          class="nav-item {% block nav_analytics %}{% endblock %}">
         <i data-lucide="scan-search" class="w-[18px] h-[18px] flex-shrink-0"></i>
-        <span x-show="sidebarOpen" class="whitespace-nowrap">كشف الشذوذ</span>
+        <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Anomaly Detection" %}</span>
       </a>
 
       <a href="{% url 'frontend:audit' %}"
          class="nav-item {% block nav_audit %}{% endblock %}">
         <i data-lucide="shield-alert" class="w-[18px] h-[18px] flex-shrink-0"></i>
-        <span x-show="sidebarOpen" class="whitespace-nowrap">قضايا التدقيق</span>
+        <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Audit Cases" %}</span>
       </a>
 
       <a href="{% url 'frontend:compliance' %}"
          class="nav-item {% block nav_compliance %}{% endblock %}">
         <i data-lucide="shield-check" class="w-[18px] h-[18px] flex-shrink-0"></i>
-        <span x-show="sidebarOpen" class="whitespace-nowrap">الامتثال</span>
+        <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Compliance" %}</span>
       </a>
 
       <!-- Documents section — collapsible -->
       <a href="{% url 'frontend:transactions' %}"
          class="nav-item {% block nav_transactions %}{% endblock %}">
         <i data-lucide="wallet" class="w-[18px] h-[18px] flex-shrink-0"></i>
-        <span x-show="sidebarOpen" class="whitespace-nowrap">المعاملات</span>
+        <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Transactions" %}</span>
       </a>
 
       <div x-data="{ docsOpen: localStorage.getItem('fin_docs_open') === 'true' || {% if 'purchase_orders' in active or 'bank_statements' in active or 'payroll' in active or 'expense_reports' in active or 'vat_returns' in active or 'fixed_assets' in active or 'sales_receipts' in active or active == 'documents' %}true{% else %}false{% endif %} }">
         <button @click="docsOpen=!docsOpen; localStorage.setItem('fin_docs_open', docsOpen)"
                 class="nav-item w-full {% block nav_documents %}{% endblock %}">
           <i data-lucide="folder-open" class="w-[18px] h-[18px] flex-shrink-0"></i>
-          <span x-show="sidebarOpen" class="whitespace-nowrap flex-1 text-right">الوثائق المالية</span>
+        <span x-show="sidebarOpen" class="whitespace-nowrap flex-1 text-right">{% trans "Financial Documents" %}</span>
           <i x-show="sidebarOpen" :data-lucide="docsOpen ? 'chevron-up' : 'chevron-down'" class="w-3.5 h-3.5 flex-shrink-0"></i>
         </button>
         <div x-show="docsOpen && sidebarOpen" x-transition class="overflow-hidden">
@@ -307,42 +341,42 @@ tailwind.config = {
             <a href="{% url 'frontend:doc_upload' %}"
                class="nav-item text-xs {% block nav_doc_upload %}{% endblock %}">
               <i data-lucide="upload" class="w-3.5 h-3.5 flex-shrink-0"></i>
-              <span class="whitespace-nowrap">رفع وثيقة</span>
+          <span class="whitespace-nowrap">{% trans "Upload Document" %}</span>
             </a>
             <a href="{% url 'frontend:purchase_orders' %}"
                class="nav-item text-xs {% block nav_purchase_orders %}{% endblock %}">
               <i data-lucide="shopping-cart" class="w-3.5 h-3.5 flex-shrink-0"></i>
-              <span class="whitespace-nowrap">أوامر الشراء</span>
+          <span class="whitespace-nowrap">{% trans "Purchase Orders" %}</span>
             </a>
             <a href="{% url 'frontend:bank_statements' %}"
                class="nav-item text-xs {% block nav_bank_statements %}{% endblock %}">
               <i data-lucide="landmark" class="w-3.5 h-3.5 flex-shrink-0"></i>
-              <span class="whitespace-nowrap">كشوف الحساب</span>
+          <span class="whitespace-nowrap">{% trans "Bank Statements" %}</span>
             </a>
             <a href="{% url 'frontend:payroll' %}"
                class="nav-item text-xs {% block nav_payroll %}{% endblock %}">
               <i data-lucide="users" class="w-3.5 h-3.5 flex-shrink-0"></i>
-              <span class="whitespace-nowrap">كشوف الرواتب</span>
+          <span class="whitespace-nowrap">{% trans "Payroll" %}</span>
             </a>
             <a href="{% url 'frontend:expense_reports' %}"
                class="nav-item text-xs {% block nav_expense_reports %}{% endblock %}">
               <i data-lucide="receipt" class="w-3.5 h-3.5 flex-shrink-0"></i>
-              <span class="whitespace-nowrap">تقارير المصروفات</span>
+          <span class="whitespace-nowrap">{% trans "Expense Reports" %}</span>
             </a>
             <a href="{% url 'frontend:vat_returns' %}"
                class="nav-item text-xs {% block nav_vat_returns %}{% endblock %}">
               <i data-lucide="file-check-2" class="w-3.5 h-3.5 flex-shrink-0"></i>
-              <span class="whitespace-nowrap">الإقرارات الضريبية</span>
+          <span class="whitespace-nowrap">{% trans "VAT Returns" %}</span>
             </a>
             <a href="{% url 'frontend:fixed_assets' %}"
                class="nav-item text-xs {% block nav_fixed_assets %}{% endblock %}">
               <i data-lucide="building-2" class="w-3.5 h-3.5 flex-shrink-0"></i>
-              <span class="whitespace-nowrap">الأصول الثابتة</span>
+          <span class="whitespace-nowrap">{% trans "Fixed Assets" %}</span>
             </a>
             <a href="{% url 'frontend:sales_receipts' %}"
                class="nav-item text-xs {% block nav_sales_receipts %}{% endblock %}">
               <i data-lucide="scan-line" class="w-3.5 h-3.5 flex-shrink-0"></i>
-              <span class="whitespace-nowrap">إيصالات البيع</span>
+          <span class="whitespace-nowrap">{% trans "Sales Receipts" %}</span>
             </a>
           </div>
         </div>
@@ -350,13 +384,13 @@ tailwind.config = {
       <a href="{% url 'frontend:users' %}"
          class="nav-item {% block nav_users %}{% endblock %}">
         <i data-lucide="users" class="w-[18px] h-[18px] flex-shrink-0"></i>
-        <span x-show="sidebarOpen" class="whitespace-nowrap">المستخدمون</span>
+        <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Users" %}</span>
       </a>
 
       <a href="{% url 'frontend:settings' %}"
          class="nav-item {% block nav_settings %}{% endblock %}">
         <i data-lucide="settings" class="w-[18px] h-[18px] flex-shrink-0"></i>
-        <span x-show="sidebarOpen" class="whitespace-nowrap">الإعدادات</span>
+        <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Settings" %}</span>
       </a>
     </nav>
 
@@ -365,12 +399,12 @@ tailwind.config = {
       <button @click="dark=!dark; localStorage.setItem('fin_dark', dark)"
               class="nav-item w-full">
         <i :data-lucide="dark ? 'sun' : 'moon'" class="w-[18px] h-[18px] flex-shrink-0"></i>
-        <span x-show="sidebarOpen" x-text="dark ? 'الوضع النهاري' : 'الوضع الليلي'" class="whitespace-nowrap"></span>
+      <span x-show="sidebarOpen" x-text="dark ? '{{ _('Light mode')|escapejs }}' : '{{ _('Dark mode')|escapejs }}'" class="whitespace-nowrap"></span>
       </button>
       <button @click="toggleSidebar()"
               class="nav-item hidden w-full lg:flex">
         <i :data-lucide="sidebarOpen ? 'panel-right-close' : 'panel-right-open'" class="w-[18px] h-[18px] flex-shrink-0"></i>
-        <span x-show="sidebarOpen" class="whitespace-nowrap">طي القائمة</span>
+      <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Collapse sidebar" %}</span>
       </button>
       <a href="{% url 'frontend:logout' %}" class="nav-item">
         <div class="w-[18px] h-[18px] flex-shrink-0 rounded-full bg-gradient-to-br from-primary-500 to-violet-500 flex items-center justify-center text-white text-[9px] font-bold">
@@ -403,10 +437,11 @@ tailwind.config = {
         </div>
       </div>
       <div class="flex items-center gap-2 sm:gap-3">
+        {% include "partials/language_switcher.html" with extra_classes="hidden sm:inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/90 p-1 text-xs font-semibold text-slate-600 shadow-sm" %}
         {% block header_actions %}{% endblock %}
         {% block header_primary_action %}
         <a href="{% url 'frontend:upload' %}" class="btn-blue text-xs py-2 px-3 sm:px-4">
-          <i data-lucide="plus" class="w-3.5 h-3.5"></i> فاتورة جديدة
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i> {% trans "New Invoice" %}
         </a>
         {% endblock %}
       </div>
@@ -427,6 +462,7 @@ function shell() {
     desktopSidebarOpen: localStorage.getItem('fin_sidebar') !== 'false',
     mobileNavOpen: false,
     isDesktop: window.innerWidth >= 1024,
+    isRtl: document.documentElement.dir === 'rtl',
     get sidebarOpen() {
       return this.isDesktop ? this.desktopSidebarOpen : true;
     },
@@ -467,10 +503,10 @@ function shell() {
 }
 function toastStore() {
   const presets = {
-    success: { title: 'تمت العملية بنجاح', icon: '✓' },
-    error:   { title: 'تعذر إكمال العملية', icon: '!' },
-    info:    { title: 'تنبيه', icon: 'i' },
-    warning: { title: 'يرجى الانتباه', icon: '!' },
+    success: { title: '{{ _("Operation completed successfully")|escapejs }}', icon: '✓' },
+    error:   { title: '{{ _("Unable to complete the operation")|escapejs }}', icon: '!' },
+    info:    { title: '{{ _("Notice")|escapejs }}', icon: 'i' },
+    warning: { title: '{{ _("Attention required")|escapejs }}', icon: '!' },
   };
   return {
     toasts: [],
@@ -511,6 +547,9 @@ function toastStore() {
 
 // ── API helper ──
 const CSRF = () => (document.cookie.match(/csrftoken=([^;]+)/)||[])[1] || '';
+const APP_LANG = '{{ LANGUAGE_CODE }}';
+const APP_DIR = '{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}';
+const APP_LOCALE = APP_LANG === 'ar' ? 'ar-SA' : 'en-US';
 {% if bootstrap_tokens %}
 (() => {
   const node = document.getElementById('bootstrap-auth-tokens');
@@ -520,7 +559,7 @@ const CSRF = () => (document.cookie.match(/csrftoken=([^;]+)/)||[])[1] || '';
     if (tokens.access) localStorage.setItem('fin_token', tokens.access);
     if (tokens.refresh) localStorage.setItem('fin_refresh_token', tokens.refresh);
   } catch (error) {
-    console.warn('Failed to bootstrap auth tokens', error);
+    console.warn('{{ _("Failed to bootstrap auth tokens")|escapejs }}', error);
   }
 })();
 {% endif %}
@@ -556,9 +595,9 @@ async function apiFetch(path, opts = {}) {
 
 // ── Formatters ──
 function fmtNum(v, d = 0) {
-  return Number(v || 0).toLocaleString('ar-SA', { minimumFractionDigits: d, maximumFractionDigits: d });
+  return Number(v || 0).toLocaleString(APP_LOCALE, { minimumFractionDigits: d, maximumFractionDigits: d });
 }
-function fmtSAR(v) { return fmtNum(v, 2) + ' ر.س'; }
+function fmtSAR(v) { return fmtNum(v, 2) + ' ' + (APP_LANG === 'ar' ? 'ر.س' : 'SAR'); }
 function notify(messageOrOptions, type = 'info') {
   const detail = typeof messageOrOptions === 'string'
     ? { message: messageOrOptions, type }

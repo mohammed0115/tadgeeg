@@ -1,9 +1,10 @@
+{% load i18n %}
 <div @click="{{ toggle_model }} = !{{ toggle_model }}"
      class="flex cursor-pointer items-start justify-between gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/70 px-4 py-4 transition duration-200 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950/30 dark:hover:border-slate-700 dark:hover:bg-slate-950/50">
   <div class="space-y-1">
-    <p class="text-sm font-semibold text-slate-900 dark:text-white">{{ label }}</p>
+    <p class="text-sm font-semibold text-slate-900 dark:text-white">{% trans label %}</p>
     {% if description %}
-    <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">{{ description }}</p>
+    <p class="text-xs leading-6 text-slate-500 dark:text-slate-400">{% trans description %}</p>
     {% endif %}
   </div>
 

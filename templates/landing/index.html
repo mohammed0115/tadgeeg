@@ -1,11 +1,13 @@
-{% load static %}
+{% load static i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Tadgeeg — منصة الذكاء الاصطناعي للتدقيق المالي وامتثال ZATCA في منطقة الخليج العربي">
-  <title>Tadgeeg — التدقيق المالي بالذكاء الاصطناعي</title>
+  <meta name="description" content="{{ product_signature }}">
+  <title>{{ product_name }} — {{ product_tagline }}</title>
 
   <!-- Tailwind CSS CDN -->
   <script src="{% static 'vendor/tailwind.browser.js' %}"></script>
@@ -103,6 +105,26 @@
       transition: transform .3s cubic-bezier(.4,0,.2,1), box-shadow .3s ease;
     }
     .country-card:hover { transform: translateY(-6px) scale(1.03); box-shadow: 0 20px 40px rgba(139,92,246,.15); }
+    #countries .country-card .text-4xl.mb-3 { display: none; }
+    #countries .country-card::before {
+      content: "";
+      display: block;
+      width: 4rem;
+      height: 3rem;
+      margin: 0 auto .75rem;
+      border-radius: .85rem;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 8px 18px rgba(15, 23, 42, .08);
+      background-position: center;
+      background-repeat: no-repeat;
+      background-size: cover;
+    }
+    #countries .grid > .country-card:nth-child(1)::before { background-image: url("{% static 'img/flags/sa.svg' %}"); }
+    #countries .grid > .country-card:nth-child(2)::before { background-image: url("{% static 'img/flags/ae.svg' %}"); }
+    #countries .grid > .country-card:nth-child(3)::before { background-image: url("{% static 'img/flags/kw.svg' %}"); }
+    #countries .grid > .country-card:nth-child(4)::before { background-image: url("{% static 'img/flags/qa.svg' %}"); }
+    #countries .grid > .country-card:nth-child(5)::before { background-image: url("{% static 'img/flags/bh.svg' %}"); }
+    #countries .grid > .country-card:nth-child(6)::before { background-image: url("{% static 'img/flags/om.svg' %}"); }
 
     /* Metric card */
     .metric-card {
@@ -156,27 +178,28 @@
 
       <!-- Logo (Right in RTL) -->
       <a href="/" class="flex items-center gap-3 flex-shrink-0">
-        <img src="{% static 'img/logo.png' %}" alt="Tadgeeg Logo" class="w-10 h-10 rounded-xl object-cover shadow-lg">
-        <span class="text-xl font-extrabold text-gray-900 tracking-tight">Tadgeeg -<span class="text-grad">AI</span></span>
+        <img src="{% static 'img/logo.png' %}" alt="{{ product_name }} logo" class="w-10 h-10 rounded-xl object-cover shadow-lg">
+        <span class="text-xl font-extrabold text-gray-900 tracking-tight">{{ product_name }}</span>
       </a>
 
       <!-- Nav links (Center) -->
       <div class="hidden md:flex items-center gap-7">
-        <a href="#features"    class="text-sm font-medium text-gray-600 hover:text-violet-600 transition-colors">المميزات</a>
-        <a href="#compliance"  class="text-sm font-medium text-gray-600 hover:text-violet-600 transition-colors">الامتثال</a>
-        <a href="#countries"   class="text-sm font-medium text-gray-600 hover:text-violet-600 transition-colors">دول الخليج</a>
-        <a href="#cta"         class="text-sm font-medium text-gray-600 hover:text-violet-600 transition-colors">التسعير</a>
+        <a href="#features"    class="text-sm font-medium text-gray-600 hover:text-violet-600 transition-colors">{% trans "Features" %}</a>
+        <a href="#compliance"  class="text-sm font-medium text-gray-600 hover:text-violet-600 transition-colors">{% trans "Compliance" %}</a>
+        <a href="#countries"   class="text-sm font-medium text-gray-600 hover:text-violet-600 transition-colors">{% trans "GCC Countries" %}</a>
+        <a href="#cta"         class="text-sm font-medium text-gray-600 hover:text-violet-600 transition-colors">{% trans "Pricing" %}</a>
       </div>
 
       <!-- Auth buttons (Left in RTL) -->
       <div class="flex items-center gap-3">
+        {% include "partials/language_switcher.html" %}
         <a href="/login/"
            class="hidden sm:inline text-sm font-semibold text-gray-700 hover:text-violet-600 transition-colors px-3 py-2">
-          تسجيل الدخول
+          {% trans "Login" %}
         </a>
         <a href="/register/"
            class="btn-primary px-5 py-2.5 rounded-xl text-white text-sm font-bold shadow-md">
-          ابدأ مجانًا
+          {% trans "Start for free" %}
         </a>
       </div>
     </div>
@@ -196,26 +219,24 @@
           <!-- Trust pill -->
           <div class="inline-flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-full px-4 py-2 text-sm font-semibold text-violet-700">
             <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            معتمد من هيئة الزكاة والضريبة والجمارك
+            {% trans "Aligned with ZATCA requirements" %}
           </div>
 
           <!-- Headline -->
           <h1 class="text-5xl lg:text-[4.2rem] xl:text-7xl font-black leading-[1.12] text-gray-900">
-            التدقيق المالي<br>
-            <span class="text-grad">بالذكاء الاصطناعي</span>
+            {% trans "Financial auditing" %}<br><span class="text-grad">{% trans "powered by AI" %}</span>
           </h1>
 
           <!-- Subtext -->
           <p class="text-lg lg:text-xl text-gray-500 leading-relaxed max-w-lg">
-            منصة ذكية تجمع الدقة التحليلية بالامتثال الكامل لمتطلبات ZATCA.
-            أتمتة التدقيق، كشف الاحتيال، وتحليل المستندات المالية في ثوانٍ.
+            {% trans "An intelligent platform that combines analytical precision with end-to-end alignment to ZATCA requirements. Automate auditing, fraud detection, and financial document analysis in seconds." %}
           </p>
 
           <!-- CTA buttons -->
           <div class="flex flex-wrap gap-4 pt-1">
             <a href="/register/"
                class="btn-primary px-8 py-4 rounded-2xl text-white font-bold text-lg shadow-xl">
-              ابدأ تجربتك المجانية
+              {% trans "Start your free trial" %}
             </a>
             <a href="#features"
                class="flex items-center gap-2 px-7 py-4 rounded-2xl bg-white border-2 border-gray-200
@@ -225,7 +246,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664zM21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
               </svg>
-              شاهد العرض التجريبي
+              {% trans "Watch the demo" %}
             </a>
           </div>
 
@@ -233,15 +254,15 @@
           <div class="flex flex-wrap items-center gap-5 pt-1">
             <span class="flex items-center gap-1.5 text-sm text-gray-500">
               <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-              بدون عقد ملزم
+              {% trans "No long-term contract" %}
             </span>
             <span class="flex items-center gap-1.5 text-sm text-gray-500">
               <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-              إعداد خلال 5 دقائق
+              {% trans "Setup in 5 minutes" %}
             </span>
             <span class="flex items-center gap-1.5 text-sm text-gray-500">
               <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
-              دعم فني ٢٤/٧
+              {% trans "24/7 support" %}
             </span>
           </div>
         </div>
@@ -261,10 +282,10 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                   </svg>
                 </div>
-                <span class="text-xs text-gray-500 font-medium">الفواتير</span>
+                <span class="text-xs text-gray-500 font-medium">{% trans "الفواتير" %}</span>
               </div>
               <div class="text-2xl font-black text-grad">+2.5M</div>
-              <div class="text-xs text-gray-400 mt-0.5">فاتورة معالجة</div>
+              <div class="text-xs text-gray-400 mt-0.5">{% trans "فاتورة معالجة" %}</div>
             </div>
 
             <!-- Card 2 -->
@@ -275,10 +296,10 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                   </svg>
                 </div>
-                <span class="text-xs text-gray-500 font-medium">المنظمات</span>
+                <span class="text-xs text-gray-500 font-medium">{% trans "المنظمات" %}</span>
               </div>
               <div class="text-2xl font-black text-pink-500">+1,200</div>
-              <div class="text-xs text-gray-400 mt-0.5">منظمة نشطة</div>
+              <div class="text-xs text-gray-400 mt-0.5">{% trans "منظمة نشطة" %}</div>
             </div>
 
             <!-- Card 3 -->
@@ -289,10 +310,10 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                   </svg>
                 </div>
-                <span class="text-xs text-gray-500 font-medium">أتمتة التدقيق</span>
+                <span class="text-xs text-gray-500 font-medium">{% trans "أتمتة التدقيق" %}</span>
               </div>
               <div class="text-2xl font-black text-blue-500">95%</div>
-              <div class="text-xs text-gray-400 mt-0.5">تدقيق آلي</div>
+              <div class="text-xs text-gray-400 mt-0.5">{% trans "تدقيق آلي" %}</div>
             </div>
 
             <!-- Card 4 -->
@@ -303,10 +324,10 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                   </svg>
                 </div>
-                <span class="text-xs text-gray-500 font-medium">الدقة</span>
+                <span class="text-xs text-gray-500 font-medium">{% trans "الدقة" %}</span>
               </div>
               <div class="text-2xl font-black text-emerald-500">98%</div>
-              <div class="text-xs text-gray-400 mt-0.5">معدل الدقة</div>
+              <div class="text-xs text-gray-400 mt-0.5">{% trans "معدل الدقة" %}</div>
             </div>
 
           </div><!-- /grid -->
@@ -333,14 +354,14 @@
       <!-- Header -->
       <div class="text-center mb-14">
         <div class="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-full px-4 py-2 text-sm font-semibold text-blue-700 mb-5">
-          🌍 نغطي منطقة الخليج العربي بالكامل
+          {% trans "🌍 نغطي منطقة الخليج العربي بالكامل" %}
         </div>
         <h2 class="text-4xl lg:text-5xl font-black text-gray-900 mb-3">
-          امتثال ضريبي شامل في
-          <span class="text-grad">دول الخليج</span>
+          {% trans "امتثال ضريبي شامل في" %}
+          <span class="text-grad">{% trans "دول الخليج" %}</span>
         </h2>
         <p class="text-lg text-gray-500 max-w-xl mx-auto">
-          نظام مبني خصيصًا لمتطلبات الأنظمة الضريبية لكل دولة خليجية
+          {% trans "نظام مبني خصيصًا لمتطلبات الأنظمة الضريبية لكل دولة خليجية" %}
         </p>
       </div>
 
@@ -349,37 +370,37 @@
 
         <div class="country-card bg-white rounded-2xl p-5 text-center shadow-sm border border-gray-100">
           <div class="text-4xl mb-3">🇸🇦</div>
-          <div class="font-bold text-gray-800 text-sm leading-snug">المملكة العربية السعودية</div>
+          <div class="font-bold text-gray-800 text-sm leading-snug">{% trans "المملكة العربية السعودية" %}</div>
           <div class="text-xs text-violet-600 mt-1.5 font-semibold">ZATCA</div>
         </div>
 
         <div class="country-card bg-white rounded-2xl p-5 text-center shadow-sm border border-gray-100">
           <div class="text-4xl mb-3">🇦🇪</div>
-          <div class="font-bold text-gray-800 text-sm leading-snug">الإمارات العربية المتحدة</div>
+          <div class="font-bold text-gray-800 text-sm leading-snug">{% trans "الإمارات العربية المتحدة" %}</div>
           <div class="text-xs text-blue-600 mt-1.5 font-semibold">FTA</div>
         </div>
 
         <div class="country-card bg-white rounded-2xl p-5 text-center shadow-sm border border-gray-100">
           <div class="text-4xl mb-3">🇰🇼</div>
-          <div class="font-bold text-gray-800 text-sm leading-snug">الكويت</div>
+          <div class="font-bold text-gray-800 text-sm leading-snug">{% trans "الكويت" %}</div>
           <div class="text-xs text-emerald-600 mt-1.5 font-semibold">DGIT</div>
         </div>
 
         <div class="country-card bg-white rounded-2xl p-5 text-center shadow-sm border border-gray-100">
           <div class="text-4xl mb-3">🇶🇦</div>
-          <div class="font-bold text-gray-800 text-sm leading-snug">قطر</div>
+          <div class="font-bold text-gray-800 text-sm leading-snug">{% trans "قطر" %}</div>
           <div class="text-xs text-pink-600 mt-1.5 font-semibold">GTA</div>
         </div>
 
         <div class="country-card bg-white rounded-2xl p-5 text-center shadow-sm border border-gray-100">
           <div class="text-4xl mb-3">🇧🇭</div>
-          <div class="font-bold text-gray-800 text-sm leading-snug">البحرين</div>
+          <div class="font-bold text-gray-800 text-sm leading-snug">{% trans "البحرين" %}</div>
           <div class="text-xs text-orange-600 mt-1.5 font-semibold">NBR</div>
         </div>
 
         <div class="country-card bg-white rounded-2xl p-5 text-center shadow-sm border border-gray-100">
           <div class="text-4xl mb-3">🇴🇲</div>
-          <div class="font-bold text-gray-800 text-sm leading-snug">سلطنة عُمان</div>
+          <div class="font-bold text-gray-800 text-sm leading-snug">{% trans "سلطنة عُمان" %}</div>
           <div class="text-xs text-teal-600 mt-1.5 font-semibold">ROP</div>
         </div>
 
@@ -389,7 +410,7 @@
 
 
   <!-- ═══════════════════════════════════════════════════
-       SECTION 4 — WHY FINAI (Interactive Feature Cards)
+       SECTION 4 — WHY TADGEEG AI (Interactive Feature Cards)
        ═══════════════════════════════════════════════════ -->
   <section id="features" class="py-24 bg-white">
     <div class="max-w-7xl mx-auto px-5" x-data="{ active: null }">
@@ -398,14 +419,14 @@
       <div class="text-center mb-16">
         <div class="inline-flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-full px-4 py-2 text-sm font-semibold text-violet-700 mb-5">
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-          لماذا تختار Tadgeeg؟
+          {% blocktrans with product=product_name %}لماذا تختار {{ product }}؟{% endblocktrans %}
         </div>
         <h2 class="text-4xl lg:text-5xl font-black text-gray-900 mb-3">
-          قدرات لا مثيل لها في
-          <span class="text-grad">التدقيق المالي</span>
+          {% trans "قدرات لا مثيل لها في" %}
+          <span class="text-grad">{% trans "التدقيق المالي" %}</span>
         </h2>
         <p class="text-lg text-gray-500 max-w-xl mx-auto">
-          اضغط على أي ميزة لاستكشاف التفاصيل — نظام شامل لمؤسسات الخليج
+          {% trans "اضغط على أي ميزة لاستكشاف التفاصيل — نظام شامل لمؤسسات الخليج" %}
         </p>
       </div>
 
@@ -434,8 +455,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
               </svg>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">أتمتة بنسبة 95%</h3>
-            <p class="text-gray-500 text-sm leading-relaxed">تشغيل آلي كامل لعمليات التدقيق والمراجعة دون تدخل يدوي.</p>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">{% trans "أتمتة بنسبة 95%" %}</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">{% trans "تشغيل آلي كامل لعمليات التدقيق والمراجعة دون تدخل يدوي." %}</p>
             <!-- Expanded -->
             <div
               x-show="active === 1"
@@ -447,9 +468,9 @@
               x-transition:leave-end="opacity-0 -translate-y-2"
               class="mt-4 pt-4 border-t border-violet-100 space-y-2"
             >
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>معالجة آلاف الفواتير في ثوانٍ</p>
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>تقليل الأخطاء البشرية بنسبة 99%</p>
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>توفير 80% من وقت الفريق المالي</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>{% trans "معالجة آلاف الفواتير في ثوانٍ" %}</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>{% trans "تقليل الأخطاء البشرية بنسبة 99%" %}</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>{% trans "توفير 80% من وقت الفريق المالي" %}</p>
             </div>
           </div>
         </div>
@@ -474,8 +495,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
               </svg>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">امتثال كامل لـ ZATCA</h3>
-            <p class="text-gray-500 text-sm leading-relaxed">توافق تام مع متطلبات الفوترة الإلكترونية المرحلة الثانية.</p>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">{% trans "امتثال كامل لـ ZATCA" %}</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">{% trans "توافق تام مع متطلبات الفوترة الإلكترونية المرحلة الثانية." %}</p>
             <div
               x-show="active === 2"
               x-transition:enter="transition ease-out duration-350"
@@ -486,9 +507,9 @@
               x-transition:leave-end="opacity-0 -translate-y-2"
               class="mt-4 pt-4 border-t border-emerald-100 space-y-2"
             >
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></span>رمز QR وفق معيار TLV</p>
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></span>ربط مباشر مع بوابة فاتورة</p>
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></span>تحقق تلقائي من ضريبة القيمة المضافة</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></span>{% trans "رمز QR وفق معيار TLV" %}</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></span>{% trans "ربط مباشر مع بوابة فاتورة" %}</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></span>{% trans "تحقق تلقائي من ضريبة القيمة المضافة" %}</p>
             </div>
           </div>
         </div>
@@ -513,8 +534,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
               </svg>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">ذكاء اصطناعي متقدم</h3>
-            <p class="text-gray-500 text-sm leading-relaxed">نماذج GPT-4o وتعلم الآلة المتخصصة في البيانات المالية العربية.</p>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">{% trans "ذكاء اصطناعي متقدم" %}</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">{% trans "نماذج GPT-4o وتعلم الآلة المتخصصة في البيانات المالية العربية." %}</p>
             <div
               x-show="active === 3"
               x-transition:enter="transition ease-out duration-350"
@@ -525,9 +546,9 @@
               x-transition:leave-end="opacity-0 -translate-y-2"
               class="mt-4 pt-4 border-t border-blue-100 space-y-2"
             >
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>استخراج البيانات من PDF والصور</p>
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>معالجة اللغة العربية بدقة عالية</p>
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>OCR هجين متعدد المحركات</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>{% trans "استخراج البيانات من PDF والصور" %}</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>{% trans "معالجة اللغة العربية بدقة عالية" %}</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>{% trans "OCR هجين متعدد المحركات" %}</p>
             </div>
           </div>
         </div>
@@ -552,8 +573,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
               </svg>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">أمان عالي المستوى</h3>
-            <p class="text-gray-500 text-sm leading-relaxed">تشفير طرفي، إدارة هوية متعددة المستأجرين، وحماية بيانات حساسة.</p>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">{% trans "أمان عالي المستوى" %}</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">{% trans "تشفير طرفي، إدارة هوية متعددة المستأجرين، وحماية بيانات حساسة." %}</p>
             <div
               x-show="active === 4"
               x-transition:enter="transition ease-out duration-350"
@@ -564,9 +585,9 @@
               x-transition:leave-end="opacity-0 -translate-y-2"
               class="mt-4 pt-4 border-t border-orange-100 space-y-2"
             >
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>تشفير AES-256 للبيانات المخزنة</p>
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>مصادقة ثنائية العوامل (2FA)</p>
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>سجل تدقيق كامل لجميع العمليات</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>{% trans "تشفير AES-256 للبيانات المخزنة" %}</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>{% trans "مصادقة ثنائية العوامل (2FA)" %}</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>{% trans "سجل تدقيق كامل لجميع العمليات" %}</p>
             </div>
           </div>
         </div>
@@ -591,8 +612,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
               </svg>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">كشف الاحتيال</h3>
-            <p class="text-gray-500 text-sm leading-relaxed">10 خوارزميات متخصصة لاكتشاف مؤشرات الاحتيال والمعاملات المشبوهة.</p>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">{% trans "كشف الاحتيال" %}</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">{% trans "10 خوارزميات متخصصة لاكتشاف مؤشرات الاحتيال والمعاملات المشبوهة." %}</p>
             <div
               x-show="active === 5"
               x-transition:enter="transition ease-out duration-350"
@@ -603,9 +624,9 @@
               x-transition:leave-end="opacity-0 -translate-y-2"
               class="mt-4 pt-4 border-t border-red-100 space-y-2"
             >
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0"></span>تحليل قانون بنفورد للأرقام</p>
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0"></span>كشف الفواتير المكررة تلقائيًا</p>
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0"></span>تنبيهات فورية عند الاكتشاف</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0"></span>{% trans "تحليل قانون بنفورد للأرقام" %}</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0"></span>{% trans "كشف الفواتير المكررة تلقائيًا" %}</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0"></span>{% trans "تنبيهات فورية عند الاكتشاف" %}</p>
             </div>
           </div>
         </div>
@@ -630,8 +651,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
               </svg>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">تحليلات تنبؤية</h3>
-            <p class="text-gray-500 text-sm leading-relaxed">نماذج توقعية تستشرف الأداء المالي وتحدد المخاطر قبل وقوعها.</p>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">{% trans "تحليلات تنبؤية" %}</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">{% trans "نماذج توقعية تستشرف الأداء المالي وتحدد المخاطر قبل وقوعها." %}</p>
             <div
               x-show="active === 6"
               x-transition:enter="transition ease-out duration-350"
@@ -642,9 +663,9 @@
               x-transition:leave-end="opacity-0 -translate-y-2"
               class="mt-4 pt-4 border-t border-pink-100 space-y-2"
             >
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-pink-400 flex-shrink-0"></span>توقع التدفق النقدي للأشهر القادمة</p>
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-pink-400 flex-shrink-0"></span>تقييم مخاطر الموردين تلقائيًا</p>
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-pink-400 flex-shrink-0"></span>تقارير ذكية قابلة للتصدير</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-pink-400 flex-shrink-0"></span>{% trans "توقع التدفق النقدي للأشهر القادمة" %}</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-pink-400 flex-shrink-0"></span>{% trans "تقييم مخاطر الموردين تلقائيًا" %}</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-pink-400 flex-shrink-0"></span>{% trans "تقارير ذكية قابلة للتصدير" %}</p>
             </div>
           </div>
         </div>
@@ -667,14 +688,14 @@
         <div class="space-y-8">
           <div>
             <div class="inline-flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-full px-4 py-2 text-sm font-semibold text-violet-700 mb-6">
-              📊 نتائج موثقة وقابلة للقياس
+              {% trans "📊 نتائج موثقة وقابلة للقياس" %}
             </div>
             <h2 class="text-4xl lg:text-5xl font-black text-gray-900 leading-tight mb-4">
-              نتائج قابلة للقياس
-              <span class="text-grad">من اليوم الأول</span>
+              {% trans "نتائج قابلة للقياس" %}
+              <span class="text-grad">{% trans "من اليوم الأول" %}</span>
             </h2>
             <p class="text-lg text-gray-500 leading-relaxed">
-              لا تنتظر أشهرًا لرؤية الفرق. منصة Tadgeeg مصممة لتحقيق نتائج ملموسة فور التشغيل.
+              {% blocktrans with product=product_name %}لا تنتظر أشهرًا لرؤية الفرق. منصة {{ product }} مصممة لتحقيق نتائج ملموسة فور التشغيل.{% endblocktrans %}
             </p>
           </div>
 
@@ -685,8 +706,8 @@
                 <svg class="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
               </div>
               <div>
-                <div class="font-bold text-gray-900 mb-0.5">تقليل تكاليف التدقيق بنسبة 70%</div>
-                <div class="text-sm text-gray-500">عبر أتمتة المهام المتكررة والتحقق التلقائي</div>
+                <div class="font-bold text-gray-900 mb-0.5">{% trans "تقليل تكاليف التدقيق بنسبة 70%" %}</div>
+                <div class="text-sm text-gray-500">{% trans "عبر أتمتة المهام المتكررة والتحقق التلقائي" %}</div>
               </div>
             </div>
 
@@ -695,8 +716,8 @@
                 <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
               </div>
               <div>
-                <div class="font-bold text-gray-900 mb-0.5">من أسابيع إلى ساعات</div>
-                <div class="text-sm text-gray-500">معالجة آلاف المستندات في وقت قياسي</div>
+                <div class="font-bold text-gray-900 mb-0.5">{% trans "من أسابيع إلى ساعات" %}</div>
+                <div class="text-sm text-gray-500">{% trans "معالجة آلاف المستندات في وقت قياسي" %}</div>
               </div>
             </div>
 
@@ -705,8 +726,8 @@
                 <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
               </div>
               <div>
-                <div class="font-bold text-gray-900 mb-0.5">صفر مخالفات ضريبية</div>
-                <div class="text-sm text-gray-500">التحقق الآلي الكامل من متطلبات ZATCA</div>
+                <div class="font-bold text-gray-900 mb-0.5">{% trans "صفر مخالفات ضريبية" %}</div>
+                <div class="text-sm text-gray-500">{% trans "التحقق الآلي الكامل من متطلبات ZATCA" %}</div>
               </div>
             </div>
 
@@ -715,8 +736,8 @@
                 <svg class="w-5 h-5 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
               </div>
               <div>
-                <div class="font-bold text-gray-900 mb-0.5">اكتشاف 3× أكثر من الاحتيالات</div>
-                <div class="text-sm text-gray-500">مقارنةً بالأساليب التقليدية</div>
+                <div class="font-bold text-gray-900 mb-0.5">{% trans "اكتشاف 3× أكثر من الاحتيالات" %}</div>
+                <div class="text-sm text-gray-500">{% trans "مقارنةً بالأساليب التقليدية" %}</div>
               </div>
             </div>
 
@@ -743,15 +764,15 @@
                   </svg>
                 </div>
                 <div>
-                  <h3 class="text-white font-bold text-lg leading-tight">معتمد من ZATCA</h3>
-                  <p class="text-violet-200 text-xs mt-0.5">فحص متطلبات الامتثال الكاملة</p>
+                  <h3 class="text-white font-bold text-lg leading-tight">{% trans "معتمد من ZATCA" %}</h3>
+                  <p class="text-violet-200 text-xs mt-0.5">{% trans "فحص متطلبات الامتثال الكاملة" %}</p>
                 </div>
 
                 <!-- Replay button -->
                 <button
                   @click="replayChecklist()"
                   class="mr-auto w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center hover:bg-white/25 transition-colors"
-                  title="إعادة تشغيل الفحص"
+                  title="{% trans 'إعادة تشغيل الفحص' %}"
                 >
                   <svg class="w-4 h-4 text-white" :class="replaying ? 'animate-spin-once' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -762,7 +783,7 @@
               <!-- Progress bar -->
               <div class="relative mt-4">
                 <div class="flex justify-between text-xs text-violet-200 mb-1.5">
-                  <span>التقدم الكلي</span>
+                  <span>{% trans "التقدم الكلي" %}</span>
                   <span x-text="checklistItems.filter(i => i.done).length + ' / ' + checklistItems.length"></span>
                 </div>
                 <div class="h-1.5 bg-white/20 rounded-full overflow-hidden">
@@ -832,7 +853,7 @@
                     x-transition:enter-start="opacity-0 scale-75"
                     x-transition:enter-end="opacity-100 scale-100"
                     class="text-xs font-semibold text-violet-600 bg-violet-100 px-2.5 py-1 rounded-full flex-shrink-0"
-                  >مكتمل</span>
+                  >{% trans "مكتمل" %}</span>
 
                 </div>
               </template>
@@ -854,8 +875,8 @@
                   </svg>
                 </div>
                 <div>
-                  <div class="font-bold text-emerald-700 text-sm">اجتاز جميع متطلبات ZATCA</div>
-                  <div class="text-xs text-emerald-600 mt-0.5">جاهز للإرسال الرسمي للهيئة</div>
+                  <div class="font-bold text-emerald-700 text-sm">{% trans "اجتاز جميع متطلبات ZATCA" %}</div>
+                  <div class="text-xs text-emerald-600 mt-0.5">{% trans "جاهز للإرسال الرسمي للهيئة" %}</div>
                 </div>
               </div>
             </div>
@@ -896,33 +917,33 @@
 
       <div class="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 text-sm font-medium text-white/80 mb-8">
         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        ابدأ اليوم — الإعداد خلال 5 دقائق
+        {% trans "ابدأ اليوم — الإعداد خلال 5 دقائق" %}
       </div>
 
       <h2 class="text-4xl lg:text-6xl font-black text-white mb-5 leading-tight">
-        جاهز لتحويل<br>
+        {% trans "جاهز لتحويل" %}<br>
         <span class="bg-gradient-to-l from-violet-300 via-pink-300 to-blue-300 bg-clip-text text-transparent">
-          تدقيقك المالي؟
+          {% trans "تدقيقك المالي؟" %}
         </span>
       </h2>
 
       <p class="text-lg text-white/65 mb-10 max-w-xl mx-auto leading-relaxed">
-        انضم إلى أكثر من 1,200 منظمة في منطقة الخليج تستخدم Tadgeeg لأتمتة تدقيقها المالي والامتثال لمتطلبات ZATCA.
+        {% blocktrans with product=product_name %}انضم إلى أكثر من 1,200 منظمة في منطقة الخليج تستخدم {{ product }} لأتمتة تدقيقها المالي والامتثال لمتطلبات ZATCA.{% endblocktrans %}
       </p>
 
       <!-- Email + CTA -->
       <div class="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto mb-6">
         <input
           type="email"
-          placeholder="أدخل بريدك الإلكتروني"
+          placeholder="{% trans 'أدخل بريدك الإلكتروني' %}"
           class="flex-1 px-5 py-4 rounded-2xl bg-white/10 backdrop-blur border border-white/20 text-white placeholder-white/45 focus:outline-none focus:ring-2 focus:ring-white/30 focus:bg-white/15 transition-all text-right text-sm"
         >
         <button class="btn-primary px-7 py-4 rounded-2xl text-white font-bold text-base whitespace-nowrap shadow-xl hover:scale-105 transition-transform duration-200">
-          ابدأ مجانًا
+          {% trans "ابدأ مجانًا" %}
         </button>
       </div>
 
-      <p class="text-white/40 text-sm">لا يلزم بطاقة ائتمانية &middot; 14 يومًا تجريبيًا &middot; إلغاء في أي وقت</p>
+      <p class="text-white/40 text-sm">{% trans "لا يلزم بطاقة ائتمانية · 14 يومًا تجريبيًا · إلغاء في أي وقت" %}</p>
     </div>
   </section>
 
@@ -938,12 +959,14 @@
         <!-- Brand -->
         <div class="md:col-span-2 space-y-4">
           <div class="flex items-center gap-3">
-            <img src="{% static 'img/logo.png' %}" alt="Tadgeeg Logo" class="w-10 h-10 rounded-xl object-cover shadow-lg">
-            <span class="text-xl font-extrabold text-white">Tadgeeg -<span class="text-grad">AI</span></span>
+            <img src="{% static 'img/logo.png' %}" alt="{{ product_name }} logo" class="w-10 h-10 rounded-xl object-cover shadow-lg">
+            <div>
+              <div class="text-xl font-extrabold text-white">{{ product_name }}</div>
+              <div class="mt-1 text-xs text-gray-500">{{ company_byline }}</div>
+            </div>
           </div>
-          <p class="text-gray-500 text-sm leading-relaxed max-w-xs">
-            منصة الذكاء الاصطناعي الرائدة للتدقيق المالي وامتثال ZATCA في منطقة الخليج العربي.
-          </p>
+          <p class="text-gray-500 text-sm leading-relaxed max-w-xs">{{ product_description }}</p>
+          <p class="text-xs text-gray-600">{{ company_product_label }}</p>
           <div class="flex gap-2.5 pt-1">
             <a href="/contact/" class="w-9 h-9 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-violet-600 transition-colors">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84"/></svg>
@@ -956,25 +979,25 @@
 
         <!-- Product links -->
         <div>
-          <h4 class="text-white font-semibold mb-4 text-sm">المنتج</h4>
+          <h4 class="text-white font-semibold mb-4 text-sm">{% trans "المنتج" %}</h4>
           <ul class="space-y-2.5 text-sm">
-            <li><a href="#features"   class="hover:text-violet-400 transition-colors">المميزات</a></li>
-            <li><a href="#compliance" class="hover:text-violet-400 transition-colors">الامتثال ZATCA</a></li>
-            <li><a href="#cta"        class="hover:text-violet-400 transition-colors">التسعير</a></li>
-            <li><a href="/integrations/" class="hover:text-violet-400 transition-colors">التكاملات</a></li>
-            <li><a href="/api/" class="hover:text-violet-400 transition-colors">واجهة برمجة التطبيقات</a></li>
+            <li><a href="#features"   class="hover:text-violet-400 transition-colors">{% trans "المميزات" %}</a></li>
+            <li><a href="#compliance" class="hover:text-violet-400 transition-colors">{% trans "الامتثال ZATCA" %}</a></li>
+            <li><a href="#cta"        class="hover:text-violet-400 transition-colors">{% trans "التسعير" %}</a></li>
+            <li><a href="/integrations/" class="hover:text-violet-400 transition-colors">{% trans "التكاملات" %}</a></li>
+            <li><a href="/api/" class="hover:text-violet-400 transition-colors">{% trans "واجهة برمجة التطبيقات" %}</a></li>
           </ul>
         </div>
 
         <!-- Company links -->
         <div>
-          <h4 class="text-white font-semibold mb-4 text-sm">الشركة</h4>
+          <h4 class="text-white font-semibold mb-4 text-sm">{% trans "الشركة" %}</h4>
           <ul class="space-y-2.5 text-sm">
-            <li><a href="/about/" class="hover:text-violet-400 transition-colors">من نحن</a></li>
-            <li><a href="/careers/" class="hover:text-violet-400 transition-colors">الوظائف</a></li>
-            <li><a href="/blog/" class="hover:text-violet-400 transition-colors">المدونة</a></li>
-            <li><a href="/contact/" class="hover:text-violet-400 transition-colors">تواصل معنا</a></li>
-            <li><a href="/privacy/" class="hover:text-violet-400 transition-colors">سياسة الخصوصية</a></li>
+            <li><a href="/about/" class="hover:text-violet-400 transition-colors">{% trans "من نحن" %}</a></li>
+            <li><a href="/careers/" class="hover:text-violet-400 transition-colors">{% trans "الوظائف" %}</a></li>
+            <li><a href="/blog/" class="hover:text-violet-400 transition-colors">{% trans "المدونة" %}</a></li>
+            <li><a href="/contact/" class="hover:text-violet-400 transition-colors">{% trans "تواصل معنا" %}</a></li>
+            <li><a href="/privacy/" class="hover:text-violet-400 transition-colors">{% trans "سياسة الخصوصية" %}</a></li>
           </ul>
         </div>
 
@@ -982,7 +1005,7 @@
 
       <!-- Bottom bar -->
       <div class="border-t border-gray-800 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <p class="text-sm text-gray-600">© 2026 Tadgeeg. جميع الحقوق محفوظة.</p>
+        <p class="text-sm text-gray-600">{% blocktrans with product=product_name company=company_display_name %}© 2026 {{ product }}. A product by {{ company }}. All rights reserved.{% endblocktrans %}</p>
         <div class="flex items-center gap-2 text-xs text-gray-600">
          
       </div>
@@ -1003,11 +1026,11 @@
         checklistStarted: false,
 
         checklistItems: [
-          { id: 1, text: 'معالجة الفواتير الإلكترونية',    visible: false, done: false },
-          { id: 2, text: 'التحقق من الأرقام الضريبية',      visible: false, done: false },
-          { id: 3, text: 'حساب ضريبة القيمة المضافة',       visible: false, done: false },
-          { id: 4, text: 'تقارير امتثال شاملة',             visible: false, done: false },
-          { id: 5, text: 'حماية البيانات المحلية',           visible: false, done: false },
+          { id: 1, text: "{{ _('معالجة الفواتير الإلكترونية')|escapejs }}", visible: false, done: false },
+          { id: 2, text: "{{ _('التحقق من الأرقام الضريبية')|escapejs }}", visible: false, done: false },
+          { id: 3, text: "{{ _('حساب ضريبة القيمة المضافة')|escapejs }}", visible: false, done: false },
+          { id: 4, text: "{{ _('تقارير امتثال شاملة')|escapejs }}", visible: false, done: false },
+          { id: 5, text: "{{ _('حماية البيانات المحلية')|escapejs }}", visible: false, done: false },
         ],
 
         /* ── lifecycle ── */

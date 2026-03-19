@@ -1,4 +1,4 @@
-"""Reports Views — AI-generated audit and financial reports (including Invoice Audit)"""
+"""Tadgeeg AI report views."""
 
 import logging
 import json
@@ -601,7 +601,7 @@ class ReportExportView(APIView):
             json.dumps(payload, cls=DjangoJSONEncoder, ensure_ascii=False, indent=2),
             content_type="application/json; charset=utf-8",
         )
-        response["Content-Disposition"] = f'attachment; filename="tadgeeg-export-{org.id}.json"'
+        response["Content-Disposition"] = f'attachment; filename="tadgeeg-ai-export-{org.id}.json"'
         return response
 
 

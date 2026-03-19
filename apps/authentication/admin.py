@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
@@ -44,6 +45,6 @@ class AuditLogAdmin(admin.ModelAdmin):
     readonly_fields = ["timestamp"]
 
 
-admin.site.site_header = "Tadgeeg — نظام التدقيق المالي"
-admin.site.site_title = "Tadgeeg Admin"
+admin.site.site_header = f"{settings.PRODUCT_NAME} — من تطوير {settings.COMPANY_NAME_AR}"
+admin.site.site_title = f"{settings.PRODUCT_NAME} Admin"
 admin.site.index_title = "لوحة إدارة النظام"

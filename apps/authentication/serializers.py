@@ -5,6 +5,7 @@ from django.db import transaction
 
 from django.contrib.auth import authenticate
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from .models import User, Organization, OrganizationSettings
@@ -86,7 +87,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         if attrs["password"] != attrs.pop("password_confirm"):
-            raise serializers.ValidationError({"password": "Passwords do not match."})
+            raise serializers.ValidationError({"password": _("Passwords do not match.")})
         return attrs
 
     def create(self, validated_data):
@@ -120,11 +121,11 @@ class LoginSerializer(serializers.Serializer):
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            raise serializers.ValidationError({"email": "Invalid credentials."})
+            raise serializers.ValidationError({"email": _("Invalid credentials.")})
 
         if user.is_locked():
             raise serializers.ValidationError(
-                {"non_field_errors": "Account is temporarily locked. Please try again later."}
+                {"non_field_errors": _("Account is temporarily locked. Please try again later.")}
             )
 
         user_auth = authenticate(email=email, password=password)
@@ -134,10 +135,10 @@ class LoginSerializer(serializers.Serializer):
             if user.failed_login_attempts >= 5:
                 user.locked_until = timezone.now() + timedelta(minutes=30)
             user.save(update_fields=["failed_login_attempts", "locked_until"])
-            raise serializers.ValidationError({"non_field_errors": "Invalid credentials."})
+            raise serializers.ValidationError({"non_field_errors": _("Invalid credentials.")})
 
         if not user_auth.is_active:
-            raise serializers.ValidationError({"non_field_errors": "Account is inactive."})
+            raise serializers.ValidationError({"non_field_errors": _("Account is inactive.")})
 
         # Reset failed attempts on success
         user_auth.failed_login_attempts = 0
@@ -156,13 +157,13 @@ class ChangePasswordSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         if attrs["new_password"] != attrs["new_password_confirm"]:
-            raise serializers.ValidationError({"new_password": "Passwords do not match."})
+            raise serializers.ValidationError({"new_password": _("Passwords do not match.")})
         return attrs
 
     def validate_old_password(self, value):
         user = self.context["request"].user
         if not user.check_password(value):
-            raise serializers.ValidationError("Current password is incorrect.")
+            raise serializers.ValidationError(_("Current password is incorrect."))
         return value
 
 # Re-export for views

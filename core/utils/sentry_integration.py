@@ -1,5 +1,5 @@
 """
-Sentry Configuration for FinAI
+Sentry configuration for Tadgeeg AI
 Real-time error tracking and monitoring in production.
 
 Installation:

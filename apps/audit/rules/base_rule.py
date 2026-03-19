@@ -71,7 +71,7 @@ class RuleResult:
 
 class AuditRule(abc.ABC):
     """
-    Abstract base class for all FinAI audit rules.
+    Abstract base class for all Tadgeeg AI audit rules.
 
     Subclasses must set class-level attributes:
       rule_id:        Unique identifier (e.g. "R001")

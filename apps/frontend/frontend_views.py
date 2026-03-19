@@ -1,6 +1,6 @@
 """
-FinAI Frontend Views
-Django template-based UI for all API modules
+Tadgeeg AI frontend views.
+Django template-based UI for all API modules.
 """
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required

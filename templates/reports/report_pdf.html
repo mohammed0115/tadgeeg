@@ -1,5 +1,8 @@
+{% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
 <head>
 <meta charset="UTF-8">
 <title>{{ report.title }}</title>
@@ -11,7 +14,7 @@
     font-size: 11pt;
     color: #1e293b;
     background: #fff;
-    direction: rtl;
+    direction: {% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %};
     line-height: 1.7;
   }
 
@@ -20,7 +23,7 @@
     size: A4;
     margin: 18mm 15mm 18mm 15mm;
     @bottom-center {
-      content: "صفحة " counter(page) " من " counter(pages);
+      content: "{% trans 'Page' %} " counter(page) " {% trans 'of' %} " counter(pages);
       font-family: 'Noto Sans Arabic', 'DejaVu Sans', Arial, sans-serif;
       font-size: 8pt;
       color: #94a3b8;
@@ -40,15 +43,15 @@
   .cover-brand span { color: #93c5fd; }
   .cover-title { font-size: 17pt; font-weight: 700; margin-top: 10pt; }
   .cover-meta { font-size: 9pt; color: #bfdbfe; margin-top: 8pt; }
-  .cover-meta span { margin-left: 16pt; }
+  .cover-meta span { margin-left: {% if LANGUAGE_BIDI %}16pt{% else %}0{% endif %}; margin-right: {% if LANGUAGE_BIDI %}0{% else %}16pt{% endif %}; }
 
   /* ── Section headings ── */
   .section-title {
     font-size: 13pt;
     font-weight: 700;
     color: #1e40af;
-    border-right: 4pt solid #2563eb;
-    padding-right: 10pt;
+    border-{% if LANGUAGE_BIDI %}right{% else %}left{% endif %}: 4pt solid #2563eb;
+    padding-{% if LANGUAGE_BIDI %}right{% else %}left{% endif %}: 10pt;
     margin: 20pt 0 10pt;
     page-break-after: avoid;
   }
@@ -118,7 +121,7 @@
     color: #fff;
     font-weight: 700;
     padding: 7pt 8pt;
-    text-align: right;
+    text-align: {% if LANGUAGE_BIDI %}right{% else %}left{% endif %};
     font-size: 9pt;
   }
   td {
@@ -155,19 +158,20 @@
 
 <!-- ── Cover ── -->
 <div class="cover">
-  <div class="cover-brand">Tadgeeg <span>AI</span></div>
+  <div class="cover-brand">{{ product_name }}</div>
   <div class="cover-title">{{ report.title }}</div>
   <div class="cover-meta">
-    <span>المنشأة: {{ org.name }}</span>
-    <span>النوع: {{ report.get_report_type_display|default:report.report_type }}</span>
-    {% if report.period_from %}<span>الفترة: {{ report.period_from }} — {{ report.period_to }}</span>{% endif %}
-    <span>تاريخ الإنشاء: {{ report.created_at|date:"Y-m-d" }}</span>
+    <span>{{ company_byline }}</span>
+    <span>{% trans "Organization:" %} {{ org.name }}</span>
+    <span>{% trans "Type:" %} {{ report.get_report_type_display|default:report.report_type }}</span>
+    {% if report.period_from %}<span>{% trans "Period:" %} {{ report.period_from }} — {{ report.period_to }}</span>{% endif %}
+    <span>{% trans "Created on:" %} {{ report.created_at|date:"Y-m-d" }}</span>
   </div>
 </div>
 
 <!-- ── Narrative sections ── -->
 {% if narrative %}
-<div class="section-title">الملخص التحليلي</div>
+<div class="section-title">{% trans "Analytical Summary" %}</div>
 {% for key, content in narrative.items %}
 <div class="narrative-block">
   <div class="narrative-label">{{ key|capfirst }}</div>
@@ -179,41 +183,41 @@
 <!-- ── Invoice KPIs ── -->
 {% with stats=data.invoice_audit.overall_stats val=data.invoice_audit.validation_summary %}
 {% if stats %}
-<div class="section-title">إحصاءات تدقيق الفواتير</div>
+<div class="section-title">{% trans "Invoice Audit Statistics" %}</div>
 <div class="kpi-grid">
   <div class="kpi-card">
     <div class="kpi-value">{{ stats.total_invoices|default:0 }}</div>
-    <div class="kpi-label">إجمالي الفواتير</div>
+    <div class="kpi-label">{% trans "Total Invoices" %}</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-value red">{{ stats.flagged_count|default:0 }}</div>
-    <div class="kpi-label">مُبلَّغ عنها</div>
+    <div class="kpi-label">{% trans "Flagged" %}</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-value amber">{{ stats.duplicate_count|default:0 }}</div>
-    <div class="kpi-label">مكررة</div>
+    <div class="kpi-label">{% trans "Duplicates" %}</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-value {% if val.avg_score >= 80 %}green{% elif val.avg_score >= 50 %}amber{% else %}red{% endif %}">
       {{ val.avg_score|default:0|floatformat:1 }}%
     </div>
-    <div class="kpi-label">متوسط التدقيق</div>
+    <div class="kpi-label">{% trans "Average Audit Score" %}</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-value red">{{ stats.critical_count|default:0 }}</div>
-    <div class="kpi-label">حرجة</div>
+    <div class="kpi-label">{% trans "Critical" %}</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-value amber">{{ stats.high_count|default:0 }}</div>
-    <div class="kpi-label">عالية الخطورة</div>
+    <div class="kpi-label">{% trans "High Risk" %}</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-value">{{ stats.total_amount|default:0|floatformat:0 }}</div>
-    <div class="kpi-label">إجمالي المبالغ ({{ org.currency|default:"SAR" }})</div>
+    <div class="kpi-label">{% blocktrans with currency=org.currency|default:"SAR" %}Total Amount ({{ currency }}){% endblocktrans %}</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-value">{{ stats.avg_risk_score|default:0|floatformat:1 }}</div>
-    <div class="kpi-label">متوسط درجة المخاطر</div>
+    <div class="kpi-label">{% trans "Average Risk Score" %}</div>
   </div>
 </div>
 {% endif %}
@@ -221,16 +225,16 @@
 
 <!-- ── Top Risk Invoices ── -->
 {% if data.invoice_audit.top_risk_invoices %}
-<div class="section-title">أعلى الفواتير خطورة</div>
+<div class="section-title">{% trans "Highest-Risk Invoices" %}</div>
 <table>
   <thead>
     <tr>
-      <th>رقم الفاتورة</th>
-      <th>المورد</th>
-      <th>المبلغ</th>
-      <th>التاريخ</th>
-      <th>مستوى الخطر</th>
-      <th>درجة الخطر</th>
+      <th>{% trans "Invoice Number" %}</th>
+      <th>{% trans "Vendor" %}</th>
+      <th>{% trans "Amount" %}</th>
+      <th>{% trans "Date" %}</th>
+      <th>{% trans "Risk Level" %}</th>
+      <th>{% trans "Risk Score" %}</th>
     </tr>
   </thead>
   <tbody>
@@ -252,16 +256,16 @@
 
 <!-- ── Vendor Analysis ── -->
 {% if data.invoice_audit.vendor_analysis %}
-<div class="section-title">تحليل الموردين</div>
+<div class="section-title">{% trans "Vendor Analysis" %}</div>
 <table>
   <thead>
     <tr>
-      <th>المورد</th>
-      <th>عدد الفواتير</th>
-      <th>إجمالي الإنفاق</th>
-      <th>المتوسط</th>
-      <th>نسبة الإنفاق</th>
-      <th>مُبلَّغ عنها</th>
+      <th>{% trans "Vendor" %}</th>
+      <th>{% trans "Invoice Count" %}</th>
+      <th>{% trans "Total Spend" %}</th>
+      <th>{% trans "Average" %}</th>
+      <th>{% trans "Spend Share" %}</th>
+      <th>{% trans "Flagged" %}</th>
     </tr>
   </thead>
   <tbody>
@@ -281,13 +285,13 @@
 
 <!-- ── Top Failed Rules ── -->
 {% if data.invoice_audit.top_failed_rules %}
-<div class="section-title">أكثر بنود التدقيق إخفاقاً</div>
+<div class="section-title">{% trans "Most Failed Audit Rules" %}</div>
 <table>
   <thead>
     <tr>
-      <th>كود البند</th>
-      <th>الوصف</th>
-      <th>عدد الإخفاقات</th>
+      <th>{% trans "Rule Code" %}</th>
+      <th>{% trans "Description" %}</th>
+      <th>{% trans "Failure Count" %}</th>
     </tr>
   </thead>
   <tbody>
@@ -304,57 +308,57 @@
 
 <!-- ── Financial Summary ── -->
 {% if data.financial_summary %}
-<div class="section-title">الملخص المالي</div>
+<div class="section-title">{% trans "Financial Summary" %}</div>
 <div class="kpi-grid">
   <div class="kpi-card">
     <div class="kpi-value green">{{ data.financial_summary.total_income|floatformat:0|default:0 }}</div>
-    <div class="kpi-label">إجمالي الإيرادات</div>
+    <div class="kpi-label">{% trans "Total Income" %}</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-value red">{{ data.financial_summary.total_expense|floatformat:0|default:0 }}</div>
-    <div class="kpi-label">إجمالي المصروفات</div>
+    <div class="kpi-label">{% trans "Total Expense" %}</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-value {% if data.financial_summary.net_profit >= 0 %}green{% else %}red{% endif %}">
       {{ data.financial_summary.net_profit|floatformat:0|default:0 }}
     </div>
-    <div class="kpi-label">صافي الربح</div>
+    <div class="kpi-label">{% trans "Net Profit" %}</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-value amber">{{ data.financial_summary.flagged_transactions|default:0 }}</div>
-    <div class="kpi-label">معاملات مُبلَّغ عنها</div>
+    <div class="kpi-label">{% trans "Flagged Transactions" %}</div>
   </div>
 </div>
 {% endif %}
 
 <!-- ── Audit Cases ── -->
 {% if data.audit_cases %}
-<div class="section-title">قضايا التدقيق</div>
+<div class="section-title">{% trans "Audit Cases" %}</div>
 <div class="kpi-grid">
   <div class="kpi-card">
     <div class="kpi-value">{{ data.audit_cases.total|default:0 }}</div>
-    <div class="kpi-label">إجمالي القضايا</div>
+    <div class="kpi-label">{% trans "Total Cases" %}</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-value amber">{{ data.audit_cases.open|default:0 }}</div>
-    <div class="kpi-label">مفتوحة</div>
+    <div class="kpi-label">{% trans "Open" %}</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-value green">{{ data.audit_cases.resolved|default:0 }}</div>
-    <div class="kpi-label">محلولة</div>
+    <div class="kpi-label">{% trans "Resolved" %}</div>
   </div>
   <div class="kpi-card">
     <div class="kpi-value red">{{ data.audit_cases.critical|default:0 }}</div>
-    <div class="kpi-label">حرجة</div>
+    <div class="kpi-label">{% trans "Critical" %}</div>
   </div>
 </div>
 {% endif %}
 
 <!-- ── Footer ── -->
 <div class="footer">
-  Tadgeeg — نظام التدقيق المالي الذكي &nbsp;|&nbsp; {{ org.name }} &nbsp;|&nbsp;
-  صُدِر بتاريخ {{ report.created_at|date:"Y-m-d H:i" }} &nbsp;|&nbsp;
-  هذا التقرير سري ومُعدٌّ للاستخدام الداخلي فقط
+  {{ product_signature }} &nbsp;|&nbsp; {{ org.name }} &nbsp;|&nbsp;
+  {% blocktrans with generated_on=report.created_at|date:"Y-m-d H:i" %}Generated on {{ generated_on }}{% endblocktrans %} &nbsp;|&nbsp;
+  {% trans "This report is confidential and intended for internal use only." %}
 </div>
 
 </body>

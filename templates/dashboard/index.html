@@ -1,6 +1,7 @@
 {% extends "base.html" %}
-{% block title %}لوحة التحكم{% endblock %}
-{% block page_title %}لوحة التحكم{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Dashboard" %}{% endblock %}
+{% block page_title %}{% trans "Dashboard" %}{% endblock %}
 {% block nav_dashboard %}active{% endblock %}
 
 {% block header_actions %}{% endblock %}
@@ -76,14 +77,14 @@
         <div class="max-w-3xl space-y-5">
           <div class="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-primary-50/80 px-3 py-1 text-xs font-semibold text-primary-700">
             <i data-lucide="layout-dashboard" class="h-3.5 w-3.5"></i>
-            Tadgeeg Executive Dashboard
+            {% blocktrans with product=product_name %}{{ product }} Executive Dashboard{% endblocktrans %}
           </div>
 
           <div class="space-y-3 text-right">
             <p class="text-sm font-semibold text-primary-600" x-text="organizationName"></p>
-            <h1 class="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl xl:text-[2.6rem]">القيادة المالية والامتثال في شاشة واحدة</h1>
+            <h1 class="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl xl:text-[2.6rem]">{% trans "Financial leadership and compliance in one screen" %}</h1>
             <p class="max-w-2xl text-sm leading-8 text-slate-600 sm:text-base">
-              راقب الفواتير، المخاطر، التدفق المالي، ومؤشرات الامتثال من واجهة تنفيذية مصممة لتسريع القرار داخل فرق المالية والمراجعة.
+              {% trans "Monitor invoices, risk, cash flow, and compliance indicators from an executive workspace designed to accelerate decisions for finance and audit teams." %}
             </p>
           </div>
 
@@ -108,11 +109,11 @@
         <div class="flex flex-col items-stretch gap-3 sm:flex-row xl:justify-end">
           <a href="{% url 'frontend:invoices' %}?status=flagged" class="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50">
             <i data-lucide="triangle-alert" class="h-4 w-4"></i>
-            قائمة المراجعة
+            {% trans "Review queue" %}
           </a>
           <a href="{% url 'frontend:upload' %}" class="inline-flex h-12 min-w-[12rem] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-6 text-sm font-bold text-white shadow-[0_18px_40px_-18px_rgba(15,23,42,0.95)] transition hover:-translate-y-0.5 hover:bg-slate-800">
             <i data-lucide="file-plus-2" class="h-4 w-4"></i>
-            رفع فواتير جديدة
+            {% trans "Upload new invoices" %}
           </a>
         </div>
       </div>
@@ -122,8 +123,8 @@
           <div class="absolute inset-x-0 top-0 h-px bg-white/30"></div>
           <div class="flex items-start justify-between gap-3">
             <div>
-              <p class="text-lg font-bold">إجمالي الفواتير</p>
-              <p class="mt-2 text-sm text-white/80">نمو مستمر في حجم المعالجة</p>
+              <p class="text-lg font-bold">{% trans "Total invoices" %}</p>
+              <p class="mt-2 text-sm text-white/80">{% trans "Steady growth in processing volume" %}</p>
             </div>
             <i data-lucide="file-text" class="h-6 w-6 text-white/90"></i>
           </div>
@@ -137,14 +138,14 @@
           <div class="absolute inset-x-0 top-0 h-px bg-white/30"></div>
           <div class="flex items-start justify-between gap-3">
             <div>
-              <p class="text-lg font-bold">القيمة الإجمالية</p>
-              <p class="mt-2 text-sm text-white/80">لجميع الفواتير المعالجة</p>
+              <p class="text-lg font-bold">{% trans "Total value" %}</p>
+              <p class="mt-2 text-sm text-white/80">{% trans "Across all processed invoices" %}</p>
             </div>
             <i data-lucide="badge-dollar-sign" class="h-6 w-6 text-white/90"></i>
           </div>
           <div>
             <p class="font-mono text-[2.35rem] font-extrabold leading-tight" x-text="formatSar(stats.total_amount)"></p>
-            <p class="mt-3 text-base text-white/90">إجمالي القيمة المتداولة خلال الفترة</p>
+            <p class="mt-3 text-base text-white/90">{% trans "Total value handled during the period" %}</p>
           </div>
         </div>
 
@@ -152,8 +153,8 @@
           <div class="absolute inset-x-0 top-0 h-px bg-white/30"></div>
           <div class="flex items-start justify-between gap-3">
             <div>
-              <p class="text-lg font-bold">تحتاج مراجعة</p>
-              <p class="mt-2 text-sm text-white/80">فواتير عالية المخاطر والملاحظات</p>
+              <p class="text-lg font-bold">{% trans "Needs review" %}</p>
+              <p class="mt-2 text-sm text-white/80">{% trans "High-risk invoices and review notes" %}</p>
             </div>
             <i data-lucide="triangle-alert" class="h-6 w-6 text-white/90"></i>
           </div>
@@ -167,8 +168,8 @@
           <div class="absolute inset-x-0 top-0 h-px bg-white/30"></div>
           <div class="flex items-start justify-between gap-3">
             <div>
-              <p class="text-lg font-bold">معدل الامتثال</p>
-              <p class="mt-2 text-sm text-white/80">جودة الالتزام الضريبي والتدقيقي</p>
+              <p class="text-lg font-bold">{% trans "Compliance rate" %}</p>
+              <p class="mt-2 text-sm text-white/80">{% trans "Tax and audit compliance quality" %}</p>
             </div>
             <i data-lucide="badge-check" class="h-6 w-6 text-white/90"></i>
           </div>
@@ -184,29 +185,29 @@
     <div class="space-y-6 xl:col-span-3">
       <div class="dashboard-surface p-6">
         <div class="flex items-center justify-between">
-          <h2 class="text-2xl font-bold text-slate-900">إجراءات سريعة</h2>
-          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">تشغيل مباشر</span>
+          <h2 class="text-2xl font-bold text-slate-900">{% trans "Quick actions" %}</h2>
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">{% trans "Direct actions" %}</span>
         </div>
 
         <div class="mt-5 space-y-3">
           <a href="{% url 'frontend:upload' %}" class="dashboard-soft-button dashboard-soft-button-primary">
             <i data-lucide="file-plus-2" class="h-5 w-5"></i>
-            <span class="flex-1 text-right">رفع فواتير جديدة</span>
+            <span class="flex-1 text-right">{% trans "Upload new invoices" %}</span>
           </a>
           <a href="{% url 'frontend:invoices' %}?status=flagged" class="dashboard-soft-button">
             <i data-lucide="triangle-alert" class="h-5 w-5 text-orange-500"></i>
-            <span class="flex-1 text-right">مراجعة الفواتير المعلقة</span>
+            <span class="flex-1 text-right">{% trans "Review flagged invoices" %}</span>
           </a>
           <a href="{% url 'frontend:compliance' %}" class="dashboard-soft-button">
             <i data-lucide="shield-check" class="h-5 w-5 text-green-500"></i>
-            <span class="flex-1 text-right">تقرير الامتثال الضريبي</span>
+            <span class="flex-1 text-right">{% trans "Tax compliance report" %}</span>
           </a>
         </div>
       </div>
 
       <div class="dashboard-surface p-6">
         <div class="flex items-center justify-between">
-          <h2 class="text-2xl font-bold text-slate-900">التنبيهات الحديثة</h2>
+          <h2 class="text-2xl font-bold text-slate-900">{% trans "Recent alerts" %}</h2>
           <span class="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-600" x-text="formatInteger(alerts.length)"></span>
         </div>
 
@@ -229,17 +230,17 @@
 
       <div class="dashboard-surface p-6">
         <div class="flex items-center justify-between">
-          <h2 class="text-2xl font-bold text-slate-900">الملخص التنفيذي</h2>
-          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500" x-text="latestSessionSummary?.source || 'deterministic'"></span>
+          <h2 class="text-2xl font-bold text-slate-900">{% trans "Executive summary" %}</h2>
+          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500" x-text="latestSessionSummary?.source || i18n.deterministic"></span>
         </div>
-        <p class="mt-4 text-sm leading-7 text-slate-600" x-text="latestSessionSummary?.summary || 'لا توجد جلسات تدقيق حديثة لعرض ملخص تنفيذي.'"></p>
+        <p class="mt-4 text-sm leading-7 text-slate-600" x-text="latestSessionSummary?.summary || i18n.noExecutiveSummary"></p>
         <div class="mt-5 grid grid-cols-2 gap-3">
           <div class="dashboard-mini-stat">
-            <p class="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">Critical</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">{% trans "Critical" %}</p>
             <p class="mt-2 font-mono text-2xl font-bold text-red-600" x-text="formatInteger(findingTotals.critical)"></p>
           </div>
           <div class="dashboard-mini-stat">
-            <p class="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">High</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">{% trans "High" %}</p>
             <p class="mt-2 font-mono text-2xl font-bold text-orange-600" x-text="formatInteger(findingTotals.high)"></p>
           </div>
         </div>
@@ -247,13 +248,13 @@
 
       <div class="dashboard-surface p-6">
         <div class="flex items-center justify-between">
-          <h2 class="text-2xl font-bold text-slate-900">أحدث الجلسات</h2>
+          <h2 class="text-2xl font-bold text-slate-900">{% trans "Recent sessions" %}</h2>
           <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500" x-text="formatInteger(recentSessions.length)"></span>
         </div>
         <div class="mt-5 space-y-3">
           <template x-if="!recentSessions.length">
             <div class="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-400">
-              لا توجد جلسات تدقيق حديثة.
+              {% trans "No recent audit sessions." %}
             </div>
           </template>
           <template x-for="session in recentSessions.slice(0, 3)" :key="session.id">
@@ -447,13 +448,53 @@
 <script>
 function dashboard() {
   return {
+    i18n: {
+      thisMonth: {{ _("this month")|escapejs }},
+      noUrgentItems: {{ _("No urgent items need review.")|escapejs }},
+      highRiskItems: {{ _("high-risk items")|escapejs }},
+      zatcaCompliant: {{ _("Aligned with ZATCA")|escapejs }},
+      needsFollowUp: {{ _("Needs follow-up and improvement")|escapejs }},
+      statusHighRisk: {{ _("High-risk items under review")|escapejs }},
+      statusReviewActive: {{ _("Review queue is active")|escapejs }},
+      statusStable: {{ _("Financial landscape is stable")|escapejs }},
+      unknown: {{ _("Unspecified")|escapejs }},
+      received: {{ _("Received")|escapejs }},
+      extracting: {{ _("Extracting")|escapejs }},
+      normalizing: {{ _("Normalizing")|escapejs }},
+      validating: {{ _("Validating")|escapejs }},
+      reviewRequired: {{ _("Needs review")|escapejs }},
+      actionRequired: {{ _("Action required")|escapejs }},
+      completed: {{ _("Completed")|escapejs }},
+      failed: {{ _("Failed")|escapejs }},
+      invoicesDuplicate: {{ _("Duplicate invoices")|escapejs }},
+      invoicesDuplicateSubtitle: {{ _("invoices need duplicate verification")|escapejs }},
+      invoiceWithoutNumber: {{ _("Invoice without number")|escapejs }},
+      unspecifiedVendor: {{ _("Unspecified vendor")|escapejs }},
+      noCriticalAlerts: {{ _("No critical alerts")|escapejs }},
+      auditStable: {{ _("Audit and compliance are currently operating normally.")|escapejs }},
+      cashFlowTotal: {{ _("Total flow")|escapejs }},
+      noExecutiveSummary: {{ _("No recent audit sessions are available for an executive summary.")|escapejs }},
+      january: {{ _("January")|escapejs }},
+      february: {{ _("February")|escapejs }},
+      march: {{ _("March")|escapejs }},
+      april: {{ _("April")|escapejs }},
+      may: {{ _("May")|escapejs }},
+      june: {{ _("June")|escapejs }},
+      headerInvoice: {{ _("Invoice Header")|escapejs }},
+      duplicates: {{ _("Duplicates")|escapejs }},
+      vat: {{ _("VAT")|escapejs }},
+      anomalies: {{ _("Anomalies")|escapejs }},
+      controls: {{ _("Controls")|escapejs }},
+      document: {{ _("Document")|escapejs }},
+      deterministic: {{ _("Deterministic")|escapejs }},
+    },
     chartPeriod: 6,
     loadingChart: true,
     loadingFlagged: true,
     spendChartInst: null,
     growthOverride: Number('{{ monthly_growth|default:"0"|escapejs }}'),
     monthlyGrowth: Number('{{ monthly_growth|default:"0"|escapejs }}'),
-    organizationName: '{{ request.user.organization.name|default:"Tadgeeg"|escapejs }}',
+      organizationName: '{{ request.user.organization.name|default:product_name|escapejs }}',
     stats: {
       total_invoices: 0,
       total_amount: 0,
@@ -473,7 +514,7 @@ function dashboard() {
     findingTotals: { critical: 0, high: 0, medium: 0, low: 0 },
 
     get todayLabel() {
-      return new Intl.DateTimeFormat('ar-SA', {
+      return new Intl.DateTimeFormat(window.APP_LOCALE || document.documentElement.lang || 'en-US', {
         weekday: 'long',
         day: 'numeric',
         month: 'long',
@@ -493,22 +534,22 @@ function dashboard() {
     },
 
     get growthDescription() {
-      return `${this.growthPillText} هذا الشهر`;
+      return `${this.growthPillText} ${this.i18n.thisMonth}`;
     },
 
     get reviewDescription() {
-      if (!this.stats.flagged) return 'لا توجد عناصر عاجلة للمراجعة';
-      return `${this.formatInteger(this.stats.high_risk || this.stats.flagged)} عالية المخاطر`;
+      if (!this.stats.flagged) return this.i18n.noUrgentItems;
+      return `${this.formatInteger(this.stats.high_risk || this.stats.flagged)} ${this.i18n.highRiskItems}`;
     },
 
     get complianceDescription() {
-      return Number(this.stats.compliance_rate || 0) >= 90 ? 'متوافق مع ZATCA' : 'يتطلب متابعة وتحسين';
+      return Number(this.stats.compliance_rate || 0) >= 90 ? this.i18n.zatcaCompliant : this.i18n.needsFollowUp;
     },
 
     dashboardStatusMeta() {
       if (Number(this.stats.high_risk || 0) > 0) {
         return {
-          label: 'مخاطر عالية قيد المتابعة',
+          label: this.i18n.statusHighRisk,
           badgeClass: 'border-amber-200 bg-amber-50 text-amber-800',
           dotClass: 'bg-amber-500',
         };
@@ -516,21 +557,21 @@ function dashboard() {
 
       if (Number(this.stats.flagged || 0) > 0) {
         return {
-          label: 'قائمة مراجعة نشطة',
+          label: this.i18n.statusReviewActive,
           badgeClass: 'border-blue-200 bg-blue-50 text-blue-700',
           dotClass: 'bg-blue-500',
         };
       }
 
       return {
-        label: 'المشهد المالي مستقر',
+        label: this.i18n.statusStable,
         badgeClass: 'border-emerald-200 bg-emerald-50 text-emerald-700',
         dotClass: 'bg-emerald-500',
       };
     },
 
     formatInteger(value) {
-      return Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+      return Number(value || 0).toLocaleString(window.APP_LOCALE || document.documentElement.lang || 'en-US', { maximumFractionDigits: 0 });
     },
 
     formatPercent(value) {
@@ -538,11 +579,11 @@ function dashboard() {
     },
 
     formatSar(value) {
-      return `SAR ${Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 1 })}`;
+      return `${document.documentElement.lang === 'ar' ? 'ر.س' : 'SAR'} ${Number(value || 0).toLocaleString(window.APP_LOCALE || document.documentElement.lang || 'en-US', { maximumFractionDigits: 1 })}`;
     },
 
     formatAmount(value, currency) {
-      return `${currency || 'SAR'} ${Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
+      return `${currency || 'SAR'} ${Number(value || 0).toLocaleString(window.APP_LOCALE || document.documentElement.lang || 'en-US', { maximumFractionDigits: 2 })}`;
     },
 
     riskLabel(level) {
@@ -551,7 +592,7 @@ function dashboard() {
         high: 'عالي',
         medium: 'متوسط',
         low: 'منخفض',
-      }[level] || 'غير محدد';
+      }[level] || this.i18n.unknown;
     },
 
     riskBadge(level) {
@@ -565,14 +606,14 @@ function dashboard() {
 
     sessionStatusLabel(status) {
       return {
-        received: 'تم الاستلام',
-        extracting: 'استخراج',
-        normalizing: 'توحيد',
-        validating: 'تحقق',
-        review_required: 'مراجعة',
-        action_required: 'إجراء مطلوب',
-        completed: 'مكتملة',
-        failed: 'فشلت',
+        received: this.i18n.received,
+        extracting: this.i18n.extracting,
+        normalizing: this.i18n.normalizing,
+        validating: this.i18n.validating,
+        review_required: this.i18n.reviewRequired,
+        action_required: this.i18n.actionRequired,
+        completed: this.i18n.completed,
+        failed: this.i18n.failed,
       }[status] || status;
     },
 
@@ -618,12 +659,12 @@ function dashboard() {
 
     initRuleGroups() {
       this.ruleGroups = [
-        { code: 'INV', label: 'رأس الفاتورة', pct: 88, color: '#2563eb' },
-        { code: 'DUP', label: 'التكرار', pct: 94, color: '#f59e0b' },
-        { code: 'VAT', label: 'ضريبة القيمة', pct: 79, color: '#7c3aed' },
-        { code: 'ANO', label: 'الشذوذ', pct: 65, color: '#ef4444' },
-        { code: 'CTL', label: 'الرقابة', pct: 82, color: '#06b6d4' },
-        { code: 'DOC', label: 'المستند', pct: 91, color: '#16a34a' },
+        { code: 'INV', label: this.i18n.headerInvoice, pct: 88, color: '#2563eb' },
+        { code: 'DUP', label: this.i18n.duplicates, pct: 94, color: '#f59e0b' },
+        { code: 'VAT', label: this.i18n.vat, pct: 79, color: '#7c3aed' },
+        { code: 'ANO', label: this.i18n.anomalies, pct: 65, color: '#ef4444' },
+        { code: 'CTL', label: this.i18n.controls, pct: 82, color: '#06b6d4' },
+        { code: 'DOC', label: this.i18n.document, pct: 91, color: '#16a34a' },
       ];
     },
 
@@ -661,7 +702,7 @@ function dashboard() {
         const grandTotal = Number(overall.grand_total || 0) || 1;
         const palette = ['#2563eb', '#7c3aed', '#f97316', '#10b981', '#eab308'];
         this.topVendors = (report.by_vendor || []).slice(0, 5).map((vendor, index) => ({
-          vendor_name: vendor.vendor_name || 'غير مصنف',
+          vendor_name: vendor.vendor_name || this.i18n.unknown,
           total_amount: Number(vendor.total || 0),
           invoice_count: Number(vendor.count || 0),
           pct: Math.max(4, Math.min(100, Number(((vendor.total || 0) / grandTotal) * 100).toFixed(1))),
@@ -705,10 +746,10 @@ function dashboard() {
 
         const total = Object.values(counts).reduce((sum, value) => sum + value, 0) || Number(this.stats.total_invoices || 0) || 1;
         this.riskDist = [
-          { key: 'critical', label: 'حرج', count: counts.critical, pct: Number((counts.critical / total) * 100).toFixed(1), color: '#ef4444' },
-          { key: 'high', label: 'عالي', count: counts.high, pct: Number((counts.high / total) * 100).toFixed(1), color: '#f97316' },
-          { key: 'medium', label: 'متوسط', count: counts.medium, pct: Number((counts.medium / total) * 100).toFixed(1), color: '#eab308' },
-          { key: 'low', label: 'منخفض', count: counts.low, pct: Number((counts.low / total) * 100).toFixed(1), color: '#22c55e' },
+          { key: 'critical', label: this.riskLabel('critical'), count: counts.critical, pct: Number((counts.critical / total) * 100).toFixed(1), color: '#ef4444' },
+          { key: 'high', label: this.riskLabel('high'), count: counts.high, pct: Number((counts.high / total) * 100).toFixed(1), color: '#f97316' },
+          { key: 'medium', label: this.riskLabel('medium'), count: counts.medium, pct: Number((counts.medium / total) * 100).toFixed(1), color: '#eab308' },
+          { key: 'low', label: this.riskLabel('low'), count: counts.low, pct: Number((counts.low / total) * 100).toFixed(1), color: '#22c55e' },
         ];
 
         this.updateDerivedMetrics();
@@ -747,24 +788,24 @@ function dashboard() {
       if (this.stats.duplicates > 0) {
         items.push({
           type: 'warning',
-          title: 'فواتير مكررة',
-          subtitle: `${this.formatInteger(this.stats.duplicates)} فاتورة تحتاج إلى تحقق من التكرار`,
+          title: this.i18n.invoicesDuplicate,
+          subtitle: `${this.formatInteger(this.stats.duplicates)} ${this.i18n.invoicesDuplicateSubtitle}`,
         });
       }
 
       this.flaggedInvoices.slice(0, 3).forEach((invoice) => {
         items.push({
           type: invoice.risk_level === 'critical' ? 'critical' : 'info',
-          title: invoice.invoice_number || 'فاتورة بدون رقم',
-          subtitle: `${invoice.vendor_name || 'مورد غير محدد'} — ${this.formatAmount(invoice.total_amount, invoice.currency || 'SAR')}`,
+          title: invoice.invoice_number || this.i18n.invoiceWithoutNumber,
+          subtitle: `${invoice.vendor_name || this.i18n.unspecifiedVendor} — ${this.formatAmount(invoice.total_amount, invoice.currency || 'SAR')}`,
         });
       });
 
       if (!items.length) {
         items.push({
           type: 'success',
-          title: 'لا توجد تنبيهات حرجة',
-          subtitle: 'تسير دورة التدقيق والامتثال بشكل مستقر حالياً.',
+          title: this.i18n.noCriticalAlerts,
+          subtitle: this.i18n.auditStable,
         });
       }
 
@@ -779,7 +820,7 @@ function dashboard() {
       const filtered = series.length > this.chartPeriod ? series.slice(-this.chartPeriod) : series;
       const labels = filtered.length
         ? filtered.map((item) => this.formatMonth(item.month))
-        : ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'];
+        : [this.i18n.january, this.i18n.february, this.i18n.march, this.i18n.april, this.i18n.may, this.i18n.june];
       const values = filtered.length
         ? filtered.map((item) => Number(item.total || 0))
         : [320000, 380000, 420000, 390000, 470000, 530000];
@@ -798,7 +839,7 @@ function dashboard() {
         data: {
           labels,
           datasets: [{
-            label: 'إجمالي التدفق',
+            label: this.i18n.cashFlowTotal,
             data: values,
             borderColor: '#2563eb',
             backgroundColor: gradient,

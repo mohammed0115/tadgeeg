@@ -1,6 +1,7 @@
 """Audit Case Views"""
 
 from django.utils import timezone
+from django.utils.translation import gettext as _
 from rest_framework import generics, status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -24,12 +25,12 @@ from .services import AuditSessionSummaryService
 
 
 RULE_GROUP_META = {
-    "INV": {"label": "رأس الفاتورة", "color": "#2563eb"},
-    "DUP": {"label": "التكرار", "color": "#f59e0b"},
-    "VAT": {"label": "الضريبة", "color": "#7c3aed"},
-    "ANO": {"label": "الشذوذ", "color": "#ef4444"},
-    "CTL": {"label": "الرقابة", "color": "#06b6d4"},
-    "DOC": {"label": "المستند", "color": "#16a34a"},
+    "INV": {"label": _("Invoice Header"), "color": "#2563eb"},
+    "DUP": {"label": _("Duplicates"), "color": "#f59e0b"},
+    "VAT": {"label": _("VAT"), "color": "#7c3aed"},
+    "ANO": {"label": _("Anomalies"), "color": "#ef4444"},
+    "CTL": {"label": _("Controls"), "color": "#06b6d4"},
+    "DOC": {"label": _("Document"), "color": "#16a34a"},
 }
 
 
@@ -139,11 +140,11 @@ class UpdateCaseStatusView(APIView):
         try:
             case = AuditCase.objects.get(pk=pk, organization=request.user.organization)
         except AuditCase.DoesNotExist:
-            return Response({"error": "Case not found."}, status=404)
+            return Response({"error": _("Case not found.")}, status=404)
 
         new_status = request.data.get("status")
         if new_status not in AuditCase.CaseStatus.values:
-            return Response({"error": f"Invalid status. Choose from: {AuditCase.CaseStatus.values}"}, status=400)
+            return Response({"error": _("Invalid status. Choose from: %(statuses)s") % {"statuses": AuditCase.CaseStatus.values}}, status=400)
 
         case.status = new_status
         if notes := request.data.get("resolution_notes"):
@@ -164,7 +165,7 @@ class CaseCommentView(APIView):
         try:
             case = AuditCase.objects.get(pk=pk, organization=request.user.organization)
         except AuditCase.DoesNotExist:
-            return Response({"error": "Case not found."}, status=404)
+            return Response({"error": _("Case not found.")}, status=404)
         comments = case.comments.select_related("author").all()
         return Response(CaseCommentSerializer(comments, many=True).data)
 
@@ -173,7 +174,7 @@ class CaseCommentView(APIView):
         try:
             case = AuditCase.objects.get(pk=pk, organization=request.user.organization)
         except AuditCase.DoesNotExist:
-            return Response({"error": "Case not found."}, status=404)
+            return Response({"error": _("Case not found.")}, status=404)
 
         comment = CaseComment.objects.create(
             case=case,
@@ -198,11 +199,11 @@ class AssignCaseView(APIView):
         try:
             case = AuditCase.objects.get(pk=pk, organization=request.user.organization)
         except AuditCase.DoesNotExist:
-            return Response({"error": "Case not found."}, status=404)
+            return Response({"error": _("Case not found.")}, status=404)
 
         user_id = request.data.get("user_id")
         if not user_id:
-            return Response({"error": "user_id is required."}, status=400)
+            return Response({"error": _("user_id is required.")}, status=400)
 
         try:
             assignee = User.objects.get(
@@ -211,7 +212,7 @@ class AssignCaseView(APIView):
                 is_active=True,
             )
         except User.DoesNotExist:
-            return Response({"error": "Assignee not found."}, status=404)
+            return Response({"error": _("Assignee not found.")}, status=404)
 
         case.assigned_to = assignee
         case.save(update_fields=["assigned_to", "updated_at"])
@@ -233,7 +234,7 @@ class AuditSessionDetailView(APIView):
         try:
             session = AuditSession.objects.get(pk=pk, organization=request.user.organization)
         except AuditSession.DoesNotExist:
-            return Response({"error": "Audit session not found."}, status=404)
+            return Response({"error": _("Audit session not found.")}, status=404)
 
         invoices_qs = Invoice.objects.filter(audit_session=session).order_by("-created_at")
         stats = invoices_qs.aggregate(
@@ -289,7 +290,7 @@ class AuditSessionProgressView(APIView):
         try:
             session = AuditSession.objects.get(pk=pk, organization=request.user.organization)
         except AuditSession.DoesNotExist:
-            return Response({"error": "Audit session not found."}, status=404)
+            return Response({"error": _("Audit session not found.")}, status=404)
 
         data = AuditSessionSerializer(session).data
         data["ready_for_summary"] = (
@@ -312,7 +313,7 @@ class AuditSessionFindingsView(APIView):
         try:
             session = AuditSession.objects.get(pk=pk, organization=request.user.organization)
         except AuditSession.DoesNotExist:
-            return Response({"error": "Audit session not found."}, status=404)
+            return Response({"error": _("Audit session not found.")}, status=404)
 
         findings = session.findings.select_related("invoice").order_by("-last_detected_at")
         if severity := request.query_params.get("severity"):

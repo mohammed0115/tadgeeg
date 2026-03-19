@@ -1,4 +1,4 @@
-"""Celery application configuration for FinAI."""
+"""Celery application configuration for Tadgeeg AI."""
 
 import os
 from celery import Celery

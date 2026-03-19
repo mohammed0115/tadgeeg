@@ -1,0 +1,1282 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: tadgeeg\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-03-18 00:00+0300\n"
+"PO-Revision-Date: 2026-03-18 00:00+0300\n"
+"Last-Translator: Codex\n"
+"Language-Team: Arabic\n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5;\n"
+
+msgid "Arabic"
+msgstr "العربية"
+
+msgid "English"
+msgstr "الإنجليزية"
+
+msgid "Dashboard"
+msgstr "لوحة التحكم"
+
+msgid "Invoices"
+msgstr "الفواتير"
+
+msgid "Invoice Management"
+msgstr "إدارة الفواتير"
+
+msgid "Upload"
+msgstr "رفع"
+
+msgid "Upload Invoices"
+msgstr "رفع الفواتير"
+
+msgid "Upload Invoice Files"
+msgstr "رفع ملفات الفواتير"
+
+msgid "Upload new invoices"
+msgstr "رفع فواتير جديدة"
+
+msgid "Review queue"
+msgstr "قائمة المراجعة"
+
+msgid "Quick actions"
+msgstr "إجراءات سريعة"
+
+msgid "Direct actions"
+msgstr "تشغيل مباشر"
+
+msgid "Recent alerts"
+msgstr "التنبيهات الحديثة"
+
+msgid "Executive summary"
+msgstr "الملخص التنفيذي"
+
+msgid "Recent sessions"
+msgstr "أحدث الجلسات"
+
+msgid "No recent audit sessions."
+msgstr "لا توجد جلسات تدقيق حديثة."
+
+msgid "Tadgeeg Executive Dashboard"
+msgstr "لوحة Tadgeeg التنفيذية"
+
+msgid "Financial leadership and compliance in one screen"
+msgstr "القيادة المالية والامتثال في شاشة واحدة"
+
+msgid "Monitor invoices, risk, cash flow, and compliance indicators from an executive workspace designed to accelerate decisions for finance and audit teams."
+msgstr "راقب الفواتير والمخاطر والتدفق المالي ومؤشرات الامتثال من واجهة تنفيذية مصممة لتسريع القرار داخل فرق المالية والمراجعة."
+
+msgid "Total invoices"
+msgstr "إجمالي الفواتير"
+
+msgid "Steady growth in processing volume"
+msgstr "نمو مستمر في حجم المعالجة"
+
+msgid "Total value"
+msgstr "القيمة الإجمالية"
+
+msgid "Across all processed invoices"
+msgstr "لجميع الفواتير المعالجة"
+
+msgid "Total value handled during the period"
+msgstr "إجمالي القيمة المتداولة خلال الفترة"
+
+msgid "Needs review"
+msgstr "تحتاج مراجعة"
+
+msgid "High-risk invoices and review notes"
+msgstr "فواتير عالية المخاطر والملاحظات"
+
+msgid "Compliance rate"
+msgstr "معدل الامتثال"
+
+msgid "Tax and audit compliance quality"
+msgstr "جودة الالتزام الضريبي والتدقيقي"
+
+msgid "Review flagged invoices"
+msgstr "مراجعة الفواتير المعلقة"
+
+msgid "Tax compliance report"
+msgstr "تقرير الامتثال الضريبي"
+
+msgid "this month"
+msgstr "هذا الشهر"
+
+msgid "No urgent items need review."
+msgstr "لا توجد عناصر عاجلة للمراجعة"
+
+msgid "high-risk items"
+msgstr "عالية المخاطر"
+
+msgid "Aligned with ZATCA"
+msgstr "متوافق مع ZATCA"
+
+msgid "Needs follow-up and improvement"
+msgstr "يتطلب متابعة وتحسين"
+
+msgid "High-risk items under review"
+msgstr "مخاطر عالية قيد المتابعة"
+
+msgid "Review queue is active"
+msgstr "قائمة مراجعة نشطة"
+
+msgid "Financial landscape is stable"
+msgstr "المشهد المالي مستقر"
+
+msgid "Unspecified"
+msgstr "غير محدد"
+
+msgid "Received"
+msgstr "تم الاستلام"
+
+msgid "Extracting"
+msgstr "استخراج"
+
+msgid "Normalizing"
+msgstr "توحيد"
+
+msgid "Validating"
+msgstr "تحقق"
+
+msgid "Action required"
+msgstr "إجراء مطلوب"
+
+msgid "Completed"
+msgstr "مكتملة"
+
+msgid "Failed"
+msgstr "فشلت"
+
+msgid "Duplicate invoices"
+msgstr "فواتير مكررة"
+
+msgid "invoices need duplicate verification"
+msgstr "فاتورة تحتاج إلى تحقق من التكرار"
+
+msgid "Invoice without number"
+msgstr "فاتورة بدون رقم"
+
+msgid "Unspecified vendor"
+msgstr "مورد غير محدد"
+
+msgid "No critical alerts"
+msgstr "لا توجد تنبيهات حرجة"
+
+msgid "Audit and compliance are currently operating normally."
+msgstr "تسير دورة التدقيق والامتثال بشكل مستقر حالياً."
+
+msgid "Total flow"
+msgstr "إجمالي التدفق"
+
+msgid "No recent audit sessions are available for an executive summary."
+msgstr "لا توجد جلسات تدقيق حديثة لعرض ملخص تنفيذي."
+
+msgid "January"
+msgstr "يناير"
+
+msgid "February"
+msgstr "فبراير"
+
+msgid "March"
+msgstr "مارس"
+
+msgid "April"
+msgstr "أبريل"
+
+msgid "May"
+msgstr "مايو"
+
+msgid "June"
+msgstr "يونيو"
+
+msgid "Invoice Header"
+msgstr "رأس الفاتورة"
+
+msgid "Duplicates"
+msgstr "التكرار"
+
+msgid "VAT"
+msgstr "الضريبة"
+
+msgid "Anomalies"
+msgstr "الشذوذ"
+
+msgid "Controls"
+msgstr "الرقابة"
+
+msgid "Document"
+msgstr "المستند"
+
+msgid "All"
+msgstr "الكل"
+
+msgid "Flagged"
+msgstr "مُبلَّغة"
+
+msgid "Approved"
+msgstr "مُعتمدة"
+
+msgid "Pending"
+msgstr "انتظار"
+
+msgid "Search by vendor or invoice number..."
+msgstr "بحث بالمورد أو رقم الفاتورة..."
+
+msgid "All statuses"
+msgstr "كل الحالات"
+
+msgid "Processing"
+msgstr "معالجة"
+
+msgid "Validated"
+msgstr "مُدقَّقة"
+
+msgid "Rejected"
+msgstr "مرفوضة"
+
+msgid "All risk levels"
+msgstr "كل المخاطر"
+
+msgid "Critical"
+msgstr "حرج"
+
+msgid "High"
+msgstr "عالي"
+
+msgid "Medium"
+msgstr "متوسط"
+
+msgid "Low"
+msgstr "منخفض"
+
+msgid "Duplicates only"
+msgstr "مكررة فقط"
+
+msgid "Clear filters"
+msgstr "مسح الفلاتر"
+
+msgid "Invoice Number"
+msgstr "رقم الفاتورة"
+
+msgid "Vendor"
+msgstr "المورد"
+
+msgid "Date"
+msgstr "التاريخ"
+
+msgid "Total"
+msgstr "الإجمالي"
+
+msgid "VAT Amount"
+msgstr "ضريبة القيمة"
+
+msgid "Status"
+msgstr "الحالة"
+
+msgid "Risk Level"
+msgstr "مستوى الخطر"
+
+msgid "Audit Score"
+msgstr "نقاط التدقيق"
+
+msgid "Actions"
+msgstr "إجراءات"
+
+msgid "Duplicate"
+msgstr "مكررة"
+
+msgid "QR available"
+msgstr "QR موجود"
+
+msgid "View"
+msgstr "عرض"
+
+msgid "Quick approve"
+msgstr "اعتماد سريع"
+
+msgid "No invoices match the current filters."
+msgstr "لا توجد فواتير مطابقة للفلاتر"
+
+msgid "Previous"
+msgstr "السابق"
+
+msgid "Next"
+msgstr "التالي"
+
+msgid "Failed to load invoices:"
+msgstr "فشل تحميل الفواتير:"
+
+msgid "Invoice approved successfully."
+msgstr "تم اعتماد الفاتورة"
+
+msgid "Approval failed:"
+msgstr "فشل الاعتماد:"
+
+msgid "Showing"
+msgstr "عرض"
+
+msgid "of"
+msgstr "من"
+
+msgid "invoices"
+msgstr "فاتورة"
+
+msgid "The system supports PDF, image, Excel, JSON, CSV, and ZIP files."
+msgstr "يدعم النظام ملفات PDF والصور وملفات Excel وJSON وCSV وملفات ZIP المضغوطة"
+
+msgid "Drag and drop files here"
+msgstr "اسحب الملفات وأفلتها هنا"
+
+msgid "Or"
+msgstr "أو"
+
+msgid "click to choose files"
+msgstr "انقر لاختيار الملفات"
+
+msgid "PDF · JPG · PNG · TIFF · XLSX · JSON · CSV · ZIP — Max size 50 MB"
+msgstr "PDF · JPG · PNG · TIFF · XLSX · JSON · CSV · ZIP — حجم أقصى 50 ميجابايت"
+
+msgid "Batch name (optional)"
+msgstr "اسم الدفعة (اختياري)"
+
+msgid "Example: January 2025 invoices"
+msgstr "مثال: فواتير يناير 2025"
+
+msgid "Selected files:"
+msgstr "الملفات المحددة:"
+
+msgid "Clear all"
+msgstr "مسح الكل"
+
+msgid "Upload and run the 30 audit rules automatically"
+msgstr "رفع وتشغيل البنود الـ 30 تلقائياً"
+
+msgid "Analyzing with AI..."
+msgstr "جارٍ التحليل بالذكاء الاصطناعي..."
+
+msgid "Upload & Audit Results"
+msgstr "نتائج الرفع والتدقيق"
+
+msgid "Audit session"
+msgstr "جلسة التدقيق"
+
+msgid "View full batch"
+msgstr "عرض الدفعة الكاملة"
+
+msgid "Total files"
+msgstr "إجمالي الملفات"
+
+msgid "Processed"
+msgstr "تمت معالجتها"
+
+msgid "Per-file audit results"
+msgstr "نتائج التدقيق لكل ملف"
+
+msgid "out of 30 rules"
+msgstr "من أصل 30 بنداً"
+
+msgid "Details"
+msgstr "التفاصيل"
+
+msgid "Session expired — please sign in again."
+msgstr "انتهت الجلسة — يرجى تسجيل الدخول مجدداً"
+
+msgid "Upload failed:"
+msgstr "فشل الرفع:"
+
+msgid "User Management"
+msgstr "إدارة المستخدمين"
+
+msgid "Tadgeeg Identity & Access"
+msgstr "هوية Tadgeeg والوصول"
+
+msgid "Manage teams and enterprise permissions"
+msgstr "إدارة الفريق والصلاحيات المؤسسية"
+
+msgid "Control active accounts, access roles, and security readiness for the finance and audit team from one clearer workspace."
+msgstr "تحكم في الحسابات النشطة وأدوار الوصول واستعداد الأمان لفريق المالية والتدقيق من واجهة واحدة أوضح."
+
+msgid "MFA coverage:"
+msgstr "تغطية MFA:"
+
+msgid "Filters are applied"
+msgstr "توجد عوامل تصفية مفعلة"
+
+msgid "Full user directory view"
+msgstr "عرض كامل لدليل المستخدمين"
+
+msgid "Add new user"
+msgstr "إضافة مستخدم جديد"
+
+msgid "Total users"
+msgstr "إجمالي المستخدمين"
+
+msgid "Number of accounts currently linked to the organization across teams."
+msgstr "عدد الحسابات المرتبطة حالياً بالمؤسسة عبر الفرق المختلفة."
+
+msgid "Active accounts"
+msgstr "الحسابات النشطة"
+
+msgid "Accounts currently able to sign in and work inside the system."
+msgstr "الحسابات القادرة فعلياً على الدخول والعمل داخل النظام الآن."
+
+msgid "MFA coverage"
+msgstr "حماية MFA"
+
+msgid "Users who have an additional verification layer to protect access."
+msgstr "عدد المستخدمين الذين يملكون طبقة تحقق إضافية لحماية الوصول."
+
+msgid "Privileged roles"
+msgstr "أدوار إشرافية"
+
+msgid "Accounts with greater impact on governance, approvals, or system configuration."
+msgstr "حسابات ذات تأثير أعلى على الرقابة والموافقات أو تكوين النظام."
+
+msgid "Directory Controls"
+msgstr "التحكم بالدليل"
+
+msgid "Explore team access and permissions"
+msgstr "استكشاف الفريق والصلاحيات"
+
+msgid "Search for any user, filter by role or account state, and review the current result count instantly."
+msgstr "ابحث بسرعة عن أي مستخدم وصفِّ النتائج حسب الدور أو حالة الحساب وراجع عدد النتائج الحالية فوراً."
+
+msgid "Use filters to isolate sensitive roles or review suspended accounts before meetings or internal audits."
+msgstr "استخدم عوامل التصفية لتحديد الأدوار الحساسة أو مراجعة الحسابات الموقوفة قبل الاجتماعات أو التدقيق الداخلي."
+
+msgid "Search by name, email, department, or mobile number"
+msgstr "ابحث بالاسم أو البريد أو القسم أو رقم الجوال"
+
+msgid "All roles"
+msgstr "كل الأدوار"
+
+msgid "Active only"
+msgstr "نشطون فقط"
+
+msgid "Suspended only"
+msgstr "موقوفون فقط"
+
+msgid "Current results"
+msgstr "النتائج الحالية"
+
+msgid "No matching results"
+msgstr "لا توجد نتائج مطابقة"
+
+msgid "Try changing the filters or add the first user to start building your team inside Tadgeeg."
+msgstr "جرّب تغيير عوامل التصفية أو أضف أول مستخدم جديد لتبدأ بناء فريق العمل داخل Tadgeeg."
+
+msgid "Reset filters"
+msgstr "إعادة التصفية"
+
+msgid "Add user"
+msgstr "إضافة مستخدم"
+
+msgid "Active"
+msgstr "نشط"
+
+msgid "Suspended"
+msgstr "موقوف"
+
+msgid "MFA enabled"
+msgstr "MFA مفعّل"
+
+msgid "MFA disabled"
+msgstr "MFA غير مفعّل"
+
+msgid "No department specified"
+msgstr "بدون قسم محدد"
+
+msgid "No mobile number"
+msgstr "لا يوجد رقم جوال"
+
+msgid "Failed to load users."
+msgstr "خطأ في تحميل المستخدمين"
+
+msgid "Name and email are required."
+msgstr "الاسم والبريد الإلكتروني مطلوبان"
+
+msgid "The initial password must be at least 8 characters."
+msgstr "كلمة المرور الأولية يجب أن تكون 8 أحرف على الأقل"
+
+msgid "User updated successfully."
+msgstr "تم تحديث المستخدم بنجاح"
+
+msgid "User created successfully."
+msgstr "تم إنشاء المستخدم بنجاح"
+
+msgid "Save failed:"
+msgstr "خطأ في الحفظ:"
+
+msgid "User activated successfully."
+msgstr "تم تفعيل المستخدم"
+
+msgid "User suspended successfully."
+msgstr "تم إيقاف المستخدم"
+
+msgid "Unable to update user status."
+msgstr "تعذر تحديث حالة المستخدم"
+
+msgid "Enter a new password for"
+msgstr "كلمة المرور الجديدة للمستخدم"
+
+msgid "Password changed successfully."
+msgstr "تم تغيير كلمة المرور بنجاح"
+
+msgid "Password reset failed."
+msgstr "خطأ في تغيير كلمة المرور"
+
+msgid "No sign-in recorded yet."
+msgstr "لم يسجل دخول بعد"
+
+msgid "Last sign-in:"
+msgstr "آخر دخول:"
+
+msgid "Start building the team"
+msgstr "ابدأ ببناء الفريق"
+
+msgid "Security review required"
+msgstr "مراجعة الأمان مطلوبة"
+
+msgid "Some accounts are inactive"
+msgstr "بعض الحسابات غير فعالة"
+
+msgid "Strong access readiness"
+msgstr "جاهزية وصول قوية"
+
+msgid "System Admin"
+msgstr "مدير النظام"
+
+msgid "Chief Audit Officer"
+msgstr "كبير مدققين"
+
+msgid "Senior Auditor"
+msgstr "مدقق أول"
+
+msgid "Auditor"
+msgstr "مدقق"
+
+msgid "Compliance Officer"
+msgstr "مسؤول الامتثال"
+
+msgid "Finance Manager"
+msgstr "مدير مالي"
+
+msgid "External Auditor"
+msgstr "مدقق خارجي"
+
+msgid "Choose the role that best matches this user's current responsibilities."
+msgstr "اختر الدور الأقرب لمسؤوليات هذا المستخدم الحالية."
+
+msgid "Has broad access to settings, users, and overall system configuration. Reserve it for limited cases only."
+msgstr "يملك صلاحية واسعة على الإعدادات والمستخدمين والتكوين العام للنظام. استخدمه للحالات المحدودة فقط."
+
+msgid "Leads the audit track and oversees highly sensitive cases and major escalations."
+msgstr "يقود مسار التدقيق ويشرف على القضايا عالية الحساسية والتصعيدات الرئيسية."
+
+msgid "Performs deeper reviews, follows anomalies, and leads daily investigations."
+msgstr "يقوم بمراجعات أعمق ويتابع الأنماط الشاذة ويقود التحقيقات اليومية."
+
+msgid "Suitable for operational reviewers who need inspection and follow-up access without elevated privileges."
+msgstr "يناسب أعضاء المراجعة التشغيليين الذين يحتاجون إلى الوصول للفحص والمتابعة دون صلاحيات عليا."
+
+msgid "Focused on regulatory and tax requirements, compliance rules, and policy follow-up."
+msgstr "يركز على المتطلبات التنظيمية والضريبية ومتابعة قواعد الامتثال والسياسات."
+
+msgid "Suitable for finance leaders who need executive visibility, approvals, and spend-threshold oversight."
+msgstr "مناسب للقيادات المالية التي تحتاج رؤية تنفيذية ومتابعة الموافقات وحدود الصرف."
+
+msgid "Observer-oriented access for external reviews without broad editing permissions."
+msgstr "وصول مراقب وموجّه للمراجعات الخارجية دون توسيع صلاحيات التعديل."
+
+msgid "Organization Settings"
+msgstr "إعدادات المؤسسة"
+
+msgid "Tadgeeg Control Center"
+msgstr "مركز تحكم Tadgeeg"
+
+msgid "Manage the company profile, tax compliance, financial thresholds, and smart preferences from one unified control center."
+msgstr "أدِر الملف التعريفي والامتثال الضريبي والحدود المالية والتفضيلات الذكية من لوحة تحكم موحدة."
+
+msgid "Export"
+msgstr "تصدير"
+
+msgid "Profile"
+msgstr "الملف"
+
+msgid "Compliance"
+msgstr "امتثال"
+
+msgid "Control"
+msgstr "ضبط"
+
+msgid "AI"
+msgstr "ذكي"
+
+msgid "Identity"
+msgstr "هويّة"
+
+msgid "Organization profile"
+msgstr "الملف التعريفي للمؤسسة"
+
+msgid "Define the company information that appears in reports and generated outputs."
+msgstr "عرّف بيانات الشركة التي ستظهر في التقارير والمخرجات."
+
+msgid "Organization name"
+msgstr "اسم المؤسسة"
+
+msgid "Company name"
+msgstr "اسم الشركة"
+
+msgid "Industry"
+msgstr "القطاع"
+
+msgid "Financial technology"
+msgstr "التقنية المالية"
+
+msgid "Country"
+msgstr "الدولة"
+
+msgid "Currency"
+msgstr "العملة"
+
+msgid "Fiscal year start"
+msgstr "السنة المالية"
+
+msgid "Registered address"
+msgstr "العنوان القانوني"
+
+msgid "Registered office address"
+msgstr "الموقع الرسمي"
+
+msgid "Case not found."
+msgstr "الحالة غير موجودة."
+
+msgid "Invalid status. Choose from: %(statuses)s"
+msgstr "حالة غير صالحة. اختر من: %(statuses)s"
+
+msgid "user_id is required."
+msgstr "user_id مطلوب."
+
+msgid "Assignee not found."
+msgstr "المستخدم المعيّن غير موجود."
+
+msgid "Audit session not found."
+msgstr "جلسة التدقيق غير موجودة."
+
+msgid "Vendor Name"
+msgstr "اسم المورد"
+
+msgid "Vendor VAT Number"
+msgstr "الرقم الضريبي للمورد"
+
+msgid "Invoice Date"
+msgstr "تاريخ الفاتورة"
+
+msgid "Due Date"
+msgstr "تاريخ الاستحقاق"
+
+msgid "Subtotal"
+msgstr "المجموع الفرعي"
+
+msgid "Total Amount"
+msgstr "الإجمالي النهائي"
+
+msgid "Customer Name"
+msgstr "اسم العميل"
+
+msgid "Customer VAT Number"
+msgstr "الرقم الضريبي للعميل"
+
+msgid "Cost Center"
+msgstr "مركز التكلفة"
+
+msgid "Account Code"
+msgstr "رمز الحساب"
+
+msgid "Budget Code"
+msgstr "رمز الميزانية"
+
+msgid "Invalid date for %(field_name)s."
+msgstr "تاريخ غير صالح للحقل %(field_name)s."
+
+msgid "Invalid amount for %(field_name)s."
+msgstr "قيمة غير صالحة للحقل %(field_name)s."
+
+msgid "Duplicate file already processed in this audit session."
+msgstr "تمت معالجة الملف المكرر مسبقًا داخل جلسة التدقيق الحالية."
+
+msgid "User has no organization."
+msgstr "المستخدم غير مرتبط بمؤسسة."
+
+msgid "No files uploaded. Use 'files' or 'file' field."
+msgstr "لم يتم رفع أي ملفات. استخدم الحقل 'files' أو 'file'."
+
+msgid "Unsupported file type: %(ext)s"
+msgstr "نوع ملف غير مدعوم: %(ext)s"
+
+msgid "Invalid ZIP file"
+msgstr "ملف ZIP غير صالح"
+
+msgid "Invoice not found."
+msgstr "الفاتورة غير موجودة."
+
+msgid "action must be 'approve' or 'reject'"
+msgstr "يجب أن تكون قيمة action هي 'approve' أو 'reject'"
+
+msgid "reason is required for rejection."
+msgstr "سبب الرفض مطلوب."
+
+msgid "corrections must be an object."
+msgstr "يجب أن تكون corrections كائنًا."
+
+msgid "Batch not found."
+msgstr "الدفعة غير موجودة."
+
+msgid "Generated on %(generated_on)s"
+msgstr "تم الإنشاء في %(generated_on)s"
+
+msgid "Page"
+msgstr "صفحة"
+
+msgid "This report is confidential and intended for internal use only."
+msgstr "هذا التقرير سري ومخصص للاستخدام الداخلي فقط."
+
+msgid "The email address or password is incorrect."
+msgstr "البريد الإلكتروني أو كلمة المرور غير صحيحة."
+
+msgid "This email address is already in use."
+msgstr "هذا البريد الإلكتروني مستخدم بالفعل."
+
+msgid "Sign in"
+msgstr "تسجيل الدخول"
+
+msgid "Create account"
+msgstr "إنشاء حساب"
+
+msgid "Forgot your password?"
+msgstr "نسيت كلمة المرور؟"
+
+msgid "Send reset link"
+msgstr "إرسال رابط الاستعادة"
+
+msgid "Back to sign in"
+msgstr "الرجوع إلى تسجيل الدخول"
+
+msgid "Features"
+msgstr "المميزات"
+
+msgid "Pricing"
+msgstr "التسعير"
+
+msgid "Login"
+msgstr "تسجيل الدخول"
+
+msgid "Start for free"
+msgstr "ابدأ مجانًا"
+
+msgid "Start your free trial"
+msgstr "ابدأ تجربتك المجانية"
+
+msgid "Aligned with ZATCA requirements"
+msgstr "متوافق مع متطلبات ZATCA"
+
+msgid "Financial auditing"
+msgstr "التدقيق المالي"
+
+msgid "powered by AI"
+msgstr "المدعوم بالذكاء الاصطناعي"
+
+msgid "Watch the demo"
+msgstr "شاهد العرض"
+
+msgid "No long-term contract"
+msgstr "بدون عقد طويل الأجل"
+
+msgid "Setup in 5 minutes"
+msgstr "إعداد خلال 5 دقائق"
+
+msgid "24/7 support"
+msgstr "دعم على مدار الساعة"
+
+msgid "The same calm language as the landing and recovery pages"
+msgstr "نفس الهدوء البصري لصفحة الهبوط وصفحات الاستعادة"
+
+msgid "Welcome to the intelligent financial auditing platform"
+msgstr "أهلًا بك في منصة التدقيق المالي الذكية"
+
+msgid "An advanced platform powered by deep learning to improve financial and tax compliance accuracy for businesses across the GCC."
+msgstr "منصة متطورة تعتمد على التعلم العميق لرفع دقة الامتثال المالي والضريبي للشركات في دول الخليج."
+
+msgid "Enter your email or account details"
+msgstr "أدخل بريدك الإلكتروني أو بيانات الحساب"
+
+msgid "Email verification"
+msgstr "التحقق عبر البريد"
+
+msgid "Data protection"
+msgstr "حماية البيانات"
+
+msgid "Enterprise readiness"
+msgstr "جاهزية مؤسسية"
+
+msgid "A clear path from the public site to the auditing workspace"
+msgstr "مسار واضح من الموقع العام إلى مساحة عمل التدقيق"
+
+msgid "This page is now a real part of the product journey instead of broken links or placeholder pages that reduce enterprise trust."
+msgstr "هذه الصفحة أصبحت جزءًا فعليًا من رحلة المنتج بدل الروابط المكسورة أو الصفحات الشكلية التي تضعف الثقة المؤسسية."
+
+msgid "Access readiness"
+msgstr "جاهزية الوصول"
+
+msgid "Arabic support"
+msgstr "دعم العربية"
+
+msgid "Unified journey"
+msgstr "رحلة موحدة"
+
+msgid "Back to home"
+msgstr "العودة للرئيسية"
+
+msgid "Recover your account"
+msgstr "استعد حسابك"
+
+msgid "with clear steps"
+msgstr "بخطوات واضحة"
+
+msgid "Return to your account"
+msgstr "عد إلى حسابك"
+
+msgid "without confusion"
+msgstr "بدون ارتباك"
+
+msgid "The same calm identity as the main interface, with a simple and secure recovery experience that brings users back to the auditing platform without noise or confusion."
+msgstr "نفس الهوية الهادئة للواجهة الرئيسية، مع تجربة استعادة بسيطة وآمنة تعيد المستخدم إلى منصة التدقيق بدون تشويش أو ارتباك."
+
+msgid "Recover access"
+msgstr "استعد الوصول"
+
+msgid "without confusing steps"
+msgstr "بدون خطوات مربكة"
+
+msgid "Average recovery start time"
+msgstr "متوسط بدء الاستعادة"
+
+msgid "Keep access"
+msgstr "حافظ على الوصول"
+
+msgid "with a stronger password"
+msgstr "بكلمة مرور أقوى"
+
+msgid "The account is ready"
+msgstr "الحساب أصبح جاهزًا"
+
+msgid "to get back to work"
+msgstr "للعودة إلى العمل"
+
+msgid "Deterministic"
+msgstr "حتمي"
+
+msgid "User Workspace"
+msgstr "مساحة عمل المستخدم"
+
+msgid "Access Guidance"
+msgstr "إرشادات الوصول"
+
+msgid "AI and normalized"
+msgstr "الذكاء الاصطناعي والبيانات الموحّدة"
+
+msgid "Normalized"
+msgstr "موحّد"
+
+msgid "AI or manual"
+msgstr "ذكاء اصطناعي أو يدوي"
+
+msgid "AI extracted"
+msgstr "المستخرج بالذكاء الاصطناعي"
+
+msgid "Canonical"
+msgstr "النسخة القياسية"
+
+msgid "System"
+msgstr "النظام"
+
+msgid "Manual review corrections applied"
+msgstr "تم تطبيق تصحيحات المراجعة اليدوية"
+
+msgid "Saudi Arabia flag"
+msgstr "علم المملكة العربية السعودية"
+
+msgid "United Arab Emirates flag"
+msgstr "علم الإمارات العربية المتحدة"
+
+msgid "Kuwait flag"
+msgstr "علم الكويت"
+
+msgid "Qatar flag"
+msgstr "علم قطر"
+
+msgid "Bahrain flag"
+msgstr "علم البحرين"
+
+msgid "Oman flag"
+msgstr "علم سلطنة عمان"
+
+msgid "Your account is under review"
+msgstr "حسابك قيد المراجعة"
+
+msgid "You signed in successfully. Your account is currently being reviewed by a system administrator before it is linked to the appropriate organization."
+msgstr "تم تسجيل دخولك بنجاح. حسابك قيد المراجعة حاليًا من قبل مسؤول النظام قبل ربطه بالمؤسسة المناسبة."
+
+msgid "Your account will be linked to your organization shortly. You will receive an email once activation is complete so you can access the full dashboard."
+msgstr "سيتم ربط حسابك بمؤسستك قريبًا. ستصلك رسالة بريد إلكتروني عند اكتمال التفعيل لتتمكن من الوصول الكامل إلى لوحة التحكم."
+
+msgid "Home"
+msgstr "الرئيسية"
+
+msgid "Welcome, %(name)s"
+msgstr "أهلًا، %(name)s"
+
+msgid "AI-powered financial auditing"
+msgstr "التدقيق المالي المدعوم بالذكاء الاصطناعي"
+
+msgid "Create Account"
+msgstr "إنشاء حساب"
+
+msgid "Email Address"
+msgstr "عنوان البريد الإلكتروني"
+
+msgid "Password"
+msgstr "كلمة المرور"
+
+msgid "Forgot password?"
+msgstr "نسيت كلمة المرور؟"
+
+msgid "Show or hide password"
+msgstr "إظهار أو إخفاء كلمة المرور"
+
+msgid "You can recover your password from the link above whenever you need it."
+msgstr "يمكنك استعادة كلمة المرور من الرابط أعلاه في أي وقت تحتاج فيه إلى ذلك."
+
+msgid "Remember me"
+msgstr "تذكرني"
+
+msgid "A clear sign-in experience aligned with the recovery flow."
+msgstr "تجربة دخول واضحة ومتسقة مع رحلة الاستعادة."
+
+msgid "Continue with Google"
+msgstr "المتابعة عبر Google"
+
+msgid "Google Login is not configured in settings"
+msgstr "تسجيل الدخول عبر Google غير مُفعّل في الإعدادات"
+
+msgid "Sign in with a calm, clear flow"
+msgstr "سجّل الدخول عبر تجربة هادئة وواضحة"
+
+msgid "Enter your email address and password to return directly to the %(product)s workspace."
+msgstr "أدخل بريدك الإلكتروني وكلمة المرور للعودة مباشرة إلى مساحة عمل %(product)s."
+
+msgid "Create your account"
+msgstr "أنشئ حسابك"
+
+msgid "Enter your core details and we will send a verification code to your email before activation."
+msgstr "أدخل بياناتك الأساسية وسنرسل رمز تحقق إلى بريدك الإلكتروني قبل التفعيل."
+
+msgid "Full Name"
+msgstr "الاسم الكامل"
+
+msgid "A verification code will be sent to this email immediately after account creation."
+msgstr "سيتم إرسال رمز تحقق إلى هذا البريد الإلكتروني مباشرة بعد إنشاء الحساب."
+
+msgid "Use at least 8 characters with a password suitable for business use."
+msgstr "استخدم كلمة مرور لا تقل عن 8 أحرف ومناسبة للاستخدام المؤسسي."
+
+msgid "Confirm Password"
+msgstr "تأكيد كلمة المرور"
+
+msgid "Show confirm password"
+msgstr "إظهار تأكيد كلمة المرور"
+
+msgid "We will verify that both password fields match before completing registration."
+msgstr "سنتحقق من تطابق حقلي كلمة المرور قبل إكمال التسجيل."
+
+msgid "Creating account..."
+msgstr "جارٍ إنشاء الحساب..."
+
+msgid "Please enter your email address and password."
+msgstr "يرجى إدخال عنوان البريد الإلكتروني وكلمة المرور."
+
+msgid "Unable to sign in. Please try again."
+msgstr "تعذر تسجيل الدخول. يرجى المحاولة مرة أخرى."
+
+msgid "Please complete all required fields."
+msgstr "يرجى إكمال جميع الحقول المطلوبة."
+
+msgid "Password must be at least 8 characters long."
+msgstr "يجب أن تكون كلمة المرور 8 أحرف على الأقل."
+
+msgid "Passwords do not match."
+msgstr "كلمتا المرور غير متطابقتين."
+
+msgid "Unable to create the account right now."
+msgstr "تعذر إنشاء الحساب الآن."
+
+msgid "A server connection error occurred."
+msgstr "حدث خطأ في الاتصال بالخادم."
+
+msgid "Signing in..."
+msgstr "جارٍ تسجيل الدخول..."
+
+msgid "High Risk"
+msgstr "مخاطر عالية"
+
+msgid "High Risk Invoices"
+msgstr "الفواتير عالية المخاطر"
+
+msgid "High-risk invoices"
+msgstr "الفواتير عالية المخاطر"
+
+msgid "Highest-Risk Invoices"
+msgstr "الفواتير الأعلى خطورة"
+
+msgid "Forgot Password"
+msgstr "نسيت كلمة المرور"
+
+msgid "Password Recovery"
+msgstr "استعادة كلمة المرور"
+
+msgid "Linked account"
+msgstr "الحساب المرتبط"
+
+msgid "Enter the email address you use to sign in to the platform."
+msgstr "أدخل عنوان البريد الإلكتروني الذي تستخدمه لتسجيل الدخول إلى المنصة."
+
+msgid "We will send a reset link to this email if the account exists."
+msgstr "سنرسل رابط إعادة تعيين إلى هذا البريد الإلكتروني إذا كان الحساب موجودًا."
+
+msgid "If you remember your password now, you can return directly to the login page without waiting for the email."
+msgstr "إذا تذكرت كلمة المرور الآن، يمكنك العودة مباشرة إلى صفحة تسجيل الدخول دون انتظار الرسالة."
+
+msgid "Set a New Password"
+msgstr "تعيين كلمة مرور جديدة"
+
+msgid "New Password"
+msgstr "كلمة مرور جديدة"
+
+msgid "Create a new password"
+msgstr "أنشئ كلمة مرور جديدة"
+
+msgid "Invalid link"
+msgstr "رابط غير صالح"
+
+msgid "Choose a strong password for your next %(product)s sign-in."
+msgstr "اختر كلمة مرور قوية لتسجيل الدخول القادم إلى %(product)s."
+
+msgid "This link has expired or has already been used. Request a new link to continue."
+msgstr "انتهت صلاحية هذا الرابط أو تم استخدامه مسبقًا. اطلب رابطًا جديدًا للمتابعة."
+
+msgid "New password"
+msgstr "كلمة المرور الجديدة"
+
+msgid "Confirm new password"
+msgstr "تأكيد كلمة المرور الجديدة"
+
+msgid "Save new password"
+msgstr "حفظ كلمة المرور الجديدة"
+
+msgid "Password Updated"
+msgstr "تم تحديث كلمة المرور"
+
+msgid "Success"
+msgstr "تم بنجاح"
+
+msgid "Your password has been updated successfully"
+msgstr "تم تحديث كلمة المرور بنجاح"
+
+msgid "You can now sign in using the new password and return directly to the dashboard."
+msgstr "يمكنك الآن تسجيل الدخول باستخدام كلمة المرور الجديدة والعودة مباشرة إلى لوحة التحكم."
+
+msgid "The ending is as calm as the beginning: a clear success message and one decisive action that moves the user to the next step without distraction."
+msgstr "النهاية هادئة مثل البداية: رسالة نجاح واضحة وإجراء واحد حاسم ينقل المستخدم إلى الخطوة التالية دون تشتيت."
+
+msgid "Your new password is now active. Use it for your next sign-in to access %(product)s."
+msgstr "كلمة المرور الجديدة أصبحت فعالة الآن. استخدمها في تسجيل الدخول القادم للوصول إلى %(product)s."
+
+msgid "Go to login"
+msgstr "الانتقال إلى تسجيل الدخول"
+
+msgid "Password reset email sent"
+msgstr "تم إرسال رسالة إعادة تعيين كلمة المرور"
+
+msgid "Check your inbox"
+msgstr "تحقق من بريدك الوارد"
+
+msgid "If the email address belongs to an active account, you will receive a password reset message shortly."
+msgstr "إذا كان عنوان البريد الإلكتروني مرتبطًا بحساب نشط، فستتلقى رسالة إعادة تعيين كلمة المرور بعد قليل."
+
+msgid "Privacy note"
+msgstr "ملاحظة خصوصية"
+
+msgid "We always show the same result whether the account exists or not to protect user privacy."
+msgstr "نعرض دائمًا النتيجة نفسها سواء كان الحساب موجودًا أم لا، وذلك لحماية خصوصية المستخدمين."
+
+msgid "Need help?"
+msgstr "هل تحتاج إلى مساعدة؟"
+
+msgid "If you do not see the message, check your spam folder or try again with the correct email address."
+msgstr "إذا لم تجد الرسالة، فتحقق من مجلد الرسائل غير المرغوب فيها أو حاول مرة أخرى باستخدام البريد الإلكتروني الصحيح."
+
+msgid "Open your email app"
+msgstr "افتح تطبيق البريد الإلكتروني"
+
+msgid "Try another email"
+msgstr "جرّب بريدًا إلكترونيًا آخر"
+
+msgid "Open the message and click the reset link to create a new password."
+msgstr "افتح الرسالة واضغط على رابط إعادة التعيين لإنشاء كلمة مرور جديدة."
+
+msgid "Confirm the email address, then check spam or resend the link again."
+msgstr "تأكد من عنوان البريد الإلكتروني، ثم افحص الرسائل غير المرغوب فيها أو أعد إرسال الرابط مرة أخرى."
+
+msgid "Send a new link"
+msgstr "إرسال رابط جديد"
+
+msgid "Back to login"
+msgstr "العودة إلى تسجيل الدخول"
+
+msgid "Reset Link Sent"
+msgstr "تم إرسال رابط إعادة التعيين"
+
+msgid "Sent"
+msgstr "تم الإرسال"
+
+msgid "Check your email"
+msgstr "تحقق من بريدك الإلكتروني"
+
+msgid "Users"
+msgstr "المستخدمون"
+
+msgid "Settings"
+msgstr "الإعدادات"
+
+msgid "Reports"
+msgstr "التقارير"
+
+msgid "Upload Document"
+msgstr "رفع مستند"
+
+msgid "Expense Reports"
+msgstr "تقارير المصروفات"
+
+msgid "Payroll"
+msgstr "الرواتب"
+
+msgid "New Invoice"
+msgstr "فاتورة جديدة"
+
+msgid "Vendors"
+msgstr "الموردون"
+
+msgid "Anomaly Detection"
+msgstr "كشف الشذوذ"
+
+msgid "Audit Cases"
+msgstr "حالات التدقيق"
+
+msgid "Transactions"
+msgstr "الدفعات"
+
+msgid "Financial Documents"
+msgstr "المستندات المالية"
+
+msgid "Purchase Orders"
+msgstr "أوامر الشراء"
+
+msgid "Bank Statements"
+msgstr "كشوفات الحساب البنكي"
+
+msgid "VAT Returns"
+msgstr "إقرارات ضريبة القيمة المضافة"
+
+msgid "Fixed Assets"
+msgstr "الأصول الثابتة"
+
+msgid "Sales Receipts"
+msgstr "إيصالات المبيعات"
+
+msgid "Collapse sidebar"
+msgstr "طي الشريط الجانبي"
+
+msgid "Main"
+msgstr "الرئيسية"
+
+msgid "Batches"
+msgstr "الدفعات"
+
+msgid "Analysis"
+msgstr "التحليل"
+
+msgid "Tadgeeg AI Executive Dashboard"
+msgstr "لوحة Tadgeeg AI التنفيذية"
+
+msgid "Financial Reports"
+msgstr "التقارير المالية"
+
+msgid "Generating report..."
+msgstr "جارٍ إنشاء التقرير..."
+
+msgid "AI is analyzing your data and preparing the report."
+msgstr "يقوم الذكاء الاصطناعي بتحليل بياناتك وتجهيز التقرير."
+
+msgid "Generated Reports"
+msgstr "التقارير المُولّدة"
+
+msgid "All Types"
+msgstr "كل الأنواع"
+
+msgid "Invoice Audit"
+msgstr "تدقيق الفواتير"
+
+msgid "Risk Assessment"
+msgstr "تقييم المخاطر"
+
+msgid "Vendor Analysis"
+msgstr "تحليل الموردين"
+
+msgid "Spend Analysis"
+msgstr "تحليل الإنفاق"
+
+msgid "Executive Summary"
+msgstr "الملخص التنفيذي"
+
+msgid "%(product)s Executive Dashboard"
+msgstr "لوحة %(product)s التنفيذية"
+
+msgid "30 rules + risks + vendors"
+msgstr "30 قاعدة + مخاطر + موردون"
+
+msgid "A concise view for leadership"
+msgstr "عرض موجز للإدارة"
+
+msgid "High-risk invoices and vendors"
+msgstr "الفواتير والموردون عاليـو المخاطر"
+
+msgid "Spending patterns and risk indicators"
+msgstr "أنماط الإنفاق ومؤشرات المخاطر"
+
+msgid "No reports yet. Generate one using the actions above."
+msgstr "لا توجد تقارير بعد. أنشئ تقريرًا باستخدام الإجراءات أعلاه."
+
+msgid "Invoice Audit Statistics"
+msgstr "إحصاءات تدقيق الفواتير"
+
+msgid "Total Invoices"
+msgstr "إجمالي الفواتير"
+
+msgid "Average Audit Score"
+msgstr "متوسط درجة التدقيق"
+
+msgid "PDF"
+msgstr "PDF"

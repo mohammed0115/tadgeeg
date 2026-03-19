@@ -1,6 +1,7 @@
 {% extends "base.html" %}
-{% block title %}رفع الفواتير{% endblock %}
-{% block page_title %}رفع الفواتير{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Upload Invoices" %}{% endblock %}
+{% block page_title %}{% trans "Upload Invoices" %}{% endblock %}
 {% block nav_upload %}active{% endblock %}
 
 {% block content %}
@@ -8,8 +9,8 @@
 
   <!-- Upload Card -->
   <div class="card p-6">
-    <h2 class="font-bold text-slate-800 dark:text-white text-lg mb-1">رفع ملفات الفواتير</h2>
-    <p class="text-slate-400 text-sm mb-6">يدعم النظام ملفات PDF والصور وملفات Excel وJSON وCSV وملفات ZIP المضغوطة</p>
+    <h2 class="font-bold text-slate-800 dark:text-white text-lg mb-1">{% trans "Upload Invoice Files" %}</h2>
+    <p class="text-slate-400 text-sm mb-6">{% trans "The system supports PDF, image, Excel, JSON, CSV, and ZIP files." %}</p>
 
     <!-- Drop Zone -->
     <div @dragover.prevent="dragging=true"
@@ -26,11 +27,11 @@
           <i data-lucide="upload-cloud" class="w-8 h-8 text-primary-500"></i>
         </div>
         <div>
-          <p class="font-semibold text-slate-700 dark:text-slate-200 text-base">اسحب الملفات وأفلتها هنا</p>
-          <p class="text-slate-400 text-sm mt-1">أو <span class="text-primary-500 font-semibold">انقر لاختيار الملفات</span></p>
+          <p class="font-semibold text-slate-700 dark:text-slate-200 text-base">{% trans "Drag and drop files here" %}</p>
+          <p class="text-slate-400 text-sm mt-1">{% trans "Or" %} <span class="text-primary-500 font-semibold">{% trans "click to choose files" %}</span></p>
         </div>
         <p class="text-xs text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-3 py-1.5 rounded-lg">
-          PDF · JPG · PNG · TIFF · XLSX · JSON · CSV · ZIP — حجم أقصى 50 ميجابايت
+          {% trans "PDF · JPG · PNG · TIFF · XLSX · JSON · CSV · ZIP — Max size 50 MB" %}
         </p>
       </div>
     </div>
@@ -38,8 +39,8 @@
     <!-- Batch Name -->
     <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
       <div>
-        <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">اسم الدفعة (اختياري)</label>
-        <input x-model="batchName" type="text" class="input" placeholder="مثال: فواتير يناير 2025">
+        <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">{% trans "Batch name (optional)" %}</label>
+        <input x-model="batchName" type="text" class="input" placeholder="{% trans 'Example: January 2025 invoices' %}">
       </div>
     </div>
 
@@ -47,9 +48,9 @@
     <div x-show="files.length" x-transition class="mt-5">
       <div class="flex items-center justify-between mb-3">
         <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">
-          الملفات المحددة: <span class="text-primary-500" x-text="files.length"></span>
+          {% trans "Selected files:" %} <span class="text-primary-500" x-text="files.length"></span>
         </p>
-        <button @click="files=[]" class="text-xs text-red-500 hover:text-red-400 font-medium">مسح الكل</button>
+        <button @click="files=[]" class="text-xs text-red-500 hover:text-red-400 font-medium">{% trans "Clear all" %}</button>
       </div>
       <div class="space-y-2 max-h-56 overflow-y-auto">
         <template x-for="(f,i) in files" :key="i">
@@ -96,14 +97,14 @@
             class="btn-blue w-full mt-6 py-3 justify-center text-base">
       <span x-show="!uploading" class="flex items-center gap-2">
         <i data-lucide="cpu" class="w-5 h-5"></i>
-        رفع وتشغيل البنود الـ 30 تلقائياً
+        {% trans "Upload and run the 30 audit rules automatically" %}
       </span>
       <span x-show="uploading" class="flex items-center gap-2">
         <svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
           <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="opacity-75"/>
         </svg>
-        جارٍ التحليل بالذكاء الاصطناعي...
+        {% trans "Analyzing with AI..." %}
       </span>
     </button>
   </div>
@@ -114,32 +115,32 @@
     <!-- Summary -->
     <div class="card p-5">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="font-bold text-slate-800 dark:text-white">📊 نتائج الرفع والتدقيق</h3>
+        <h3 class="font-bold text-slate-800 dark:text-white">📊 {% trans "Upload & Audit Results" %}</h3>
         <div class="flex items-center gap-3">
           <a :href="'/invoices/sessions/' + (result?.audit_session_id||'') + '/'"
              x-show="result?.audit_session_id"
-             class="text-xs font-semibold text-slate-500 hover:text-slate-700">جلسة التدقيق ←</a>
+             class="text-xs font-semibold text-slate-500 hover:text-slate-700">{% trans "Audit session" %} ←</a>
           <a :href="'/invoices/batches/' + (result?.batch_id||'') + '/'"
-             class="text-xs text-primary-500 hover:text-primary-400 font-semibold">عرض الدفعة الكاملة ←</a>
+             class="text-xs text-primary-500 hover:text-primary-400 font-semibold">{% trans "View full batch" %} ←</a>
         </div>
       </div>
       <div class="grid grid-cols-4 gap-3 text-center">
         <div class="bg-slate-50 dark:bg-slate-700/40 rounded-xl py-4">
           <div class="text-2xl font-bold font-mono text-slate-800 dark:text-white" x-text="result?.total_files||0"></div>
-          <div class="text-xs text-slate-400 mt-1">إجمالي الملفات</div>
+          <div class="text-xs text-slate-400 mt-1">{% trans "Total files" %}</div>
         </div>
         <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl py-4">
           <div class="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400" x-text="result?.processed||0"></div>
-          <div class="text-xs text-slate-400 mt-1">تمت معالجتها</div>
+          <div class="text-xs text-slate-400 mt-1">{% trans "Processed" %}</div>
         </div>
         <div class="bg-red-50 dark:bg-red-900/20 rounded-xl py-4">
           <div class="text-2xl font-bold font-mono text-red-600 dark:text-red-400" x-text="result?.failed||0"></div>
-          <div class="text-xs text-slate-400 mt-1">فشلت</div>
+          <div class="text-xs text-slate-400 mt-1">{% trans "Failed" %}</div>
         </div>
         <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl py-4">
           <div class="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400"
                x-text="(result?.results||[]).filter(r=>['high','critical'].includes(r.risk_level)).length"></div>
-          <div class="text-xs text-slate-400 mt-1">تحتاج مراجعة</div>
+          <div class="text-xs text-slate-400 mt-1">{% trans "Needs review" %}</div>
         </div>
       </div>
     </div>
@@ -147,7 +148,7 @@
     <!-- Per-file results -->
     <div class="card overflow-hidden">
       <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
-        <h3 class="font-semibold text-slate-800 dark:text-white">نتائج التدقيق لكل ملف</h3>
+        <h3 class="font-semibold text-slate-800 dark:text-white">{% trans "Per-file audit results" %}</h3>
       </div>
       <div class="divide-y divide-slate-100 dark:divide-slate-700/20">
         <template x-for="r in (result?.results||[])" :key="r.invoice_id">
@@ -161,7 +162,7 @@
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate" x-text="r.filename"></p>
               <p class="text-xs text-slate-400 mt-0.5">
-                فشل <span class="text-red-500 font-bold" x-text="(r.rules_failed||[]).length"></span> من أصل 30 بنداً
+                {% trans "Failed" %} <span class="text-red-500 font-bold" x-text="(r.rules_failed||[]).length"></span> {% trans "out of 30 rules" %}
                 <span x-show="(r.rules_failed||[]).length" x-text="' — ' + (r.rules_failed||[]).slice(0,3).join(', ')"></span>
               </p>
             </div>
@@ -170,13 +171,13 @@
               <div class="text-lg font-bold font-mono"
                    :class="(r.validation_score||0)>=80 ? 'text-emerald-500' : (r.validation_score||0)>=60 ? 'text-amber-500' : 'text-red-500'"
                    x-text="(r.validation_score||0).toFixed(0)+'%'"></div>
-              <div class="text-[10px] text-slate-400">نقاط التدقيق</div>
+              <div class="text-[10px] text-slate-400">{% trans "Audit score" %}</div>
             </div>
             <span class="flex-shrink-0 text-xs font-semibold px-2.5 py-1 rounded-lg"
                   :class="'badge-'+r.risk_level"
-                  x-text="{'critical':'حرج','high':'عالي','medium':'متوسط','low':'منخفض'}[r.risk_level]||r.risk_level"></span>
+                  x-text="riskLabel(r.risk_level)"></span>
             <a :href="'/invoices/'+r.invoice_id+'/'"
-               class="flex-shrink-0 text-primary-500 hover:text-primary-400 text-xs font-semibold">التفاصيل →</a>
+               class="flex-shrink-0 text-primary-500 hover:text-primary-400 text-xs font-semibold">{% trans "Details" %} →</a>
           </div>
         </template>
         <template x-for="e in (result?.errors||[])" :key="e.filename">
@@ -198,6 +199,16 @@
 <script>
 function uploader() {
   return {
+    i18n: {
+      sessionExpired: {{ _("Session expired — please sign in again.")|escapejs }},
+      uploadFailed: {{ _("Upload failed:")|escapejs }},
+      uploadSuccessPrefix: {{ _("Processed")|escapejs }},
+      invoicesWord: {{ _("invoices")|escapejs }},
+      riskCritical: {{ _("Critical")|escapejs }},
+      riskHigh: {{ _("High")|escapejs }},
+      riskMedium: {{ _("Medium")|escapejs }},
+      riskLow: {{ _("Low")|escapejs }},
+    },
     files: [], batchName: '', dragging: false,
     uploading: false, result: null,
 
@@ -212,6 +223,14 @@ function uploader() {
     fmtSize(b) {
       return b > 1048576 ? (b/1048576).toFixed(1)+' MB' : (b/1024).toFixed(0)+' KB';
     },
+    riskLabel(level) {
+      return {
+        critical: this.i18n.riskCritical,
+        high: this.i18n.riskHigh,
+        medium: this.i18n.riskMedium,
+        low: this.i18n.riskLow,
+      }[level] || level;
+    },
     async upload() {
       if (!this.files.length) return;
       this.uploading = true; this.result = null;
@@ -222,7 +241,7 @@ function uploader() {
         // Attempt token refresh if token looks stale
         const token = TOKEN();
         if (!token) {
-          notify('انتهت الجلسة — يرجى تسجيل الدخول مجدداً', 'error');
+          notify(this.i18n.sessionExpired, 'error');
           setTimeout(() => window.location.href = '/login/', 1500);
           return;
         }
@@ -255,12 +274,12 @@ function uploader() {
               }
               this.result = await r2.json();
             } else {
-              notify('انتهت الجلسة — يرجى تسجيل الدخول مجدداً', 'error');
+              notify(this.i18n.sessionExpired, 'error');
               setTimeout(() => window.location.href = '/login/', 1500);
               return;
             }
           } else {
-            notify('انتهت الجلسة — يرجى تسجيل الدخول مجدداً', 'error');
+            notify(this.i18n.sessionExpired, 'error');
             setTimeout(() => window.location.href = '/login/', 1500);
             return;
           }
@@ -270,11 +289,11 @@ function uploader() {
         } else {
           this.result = await r.json();
         }
-        notify(`تمت معالجة ${this.result.processed||0} فاتورة`,
+        notify(`${this.i18n.uploadSuccessPrefix} ${this.result.processed||0} ${this.i18n.invoicesWord}`,
                this.result.failed ? 'warning' : 'success');
         this.files = [];
       } catch(e) {
-        notify('فشل الرفع: ' + e.message, 'error');
+        notify(`${this.i18n.uploadFailed} ${e.message}`, 'error');
       } finally {
         this.uploading = false;
         this.$nextTick(() => lucide.createIcons());

@@ -1,4 +1,4 @@
-"""FinAI Frontend URL Configuration"""
+"""Tadgeeg AI frontend URL configuration."""
 from django.urls import path
 from . import views
 

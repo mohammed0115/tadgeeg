@@ -17,6 +17,7 @@ from django.db.models import Avg, Count, Max, Min, Q, Sum
 from django.shortcuts import render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from django.utils.translation import gettext as _
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import generics, status
 from rest_framework.authentication import SessionAuthentication
@@ -157,20 +158,20 @@ def _merge_risk_assessment(invoice, validation_result, risk_result):
 
 
 REVIEW_FIELD_META = [
-    ("vendor_name", "اسم المورد", "text"),
-    ("vendor_vat_number", "الرقم الضريبي للمورد", "text"),
-    ("invoice_number", "رقم الفاتورة", "text"),
-    ("invoice_date", "تاريخ الفاتورة", "date"),
-    ("due_date", "تاريخ الاستحقاق", "date"),
-    ("subtotal", "المجموع الفرعي", "amount"),
-    ("vat_amount", "ضريبة القيمة", "amount"),
-    ("total_amount", "الإجمالي النهائي", "amount"),
-    ("currency", "العملة", "text"),
-    ("customer_name", "اسم العميل", "text"),
-    ("customer_vat_number", "الرقم الضريبي للعميل", "text"),
-    ("cost_center", "مركز التكلفة", "text"),
-    ("account_code", "رمز الحساب", "text"),
-    ("budget_code", "رمز الميزانية", "text"),
+    ("vendor_name", _("Vendor Name"), "text"),
+    ("vendor_vat_number", _("Vendor VAT Number"), "text"),
+    ("invoice_number", _("Invoice Number"), "text"),
+    ("invoice_date", _("Invoice Date"), "date"),
+    ("due_date", _("Due Date"), "date"),
+    ("subtotal", _("Subtotal"), "amount"),
+    ("vat_amount", _("VAT Amount"), "amount"),
+    ("total_amount", _("Total Amount"), "amount"),
+    ("currency", _("Currency"), "text"),
+    ("customer_name", _("Customer Name"), "text"),
+    ("customer_vat_number", _("Customer VAT Number"), "text"),
+    ("cost_center", _("Cost Center"), "text"),
+    ("account_code", _("Account Code"), "text"),
+    ("budget_code", _("Budget Code"), "text"),
 ]
 
 
@@ -199,13 +200,13 @@ def _coerce_review_value(field_name: str, raw_value):
                 return datetime.strptime(str(raw_value).strip(), fmt).date()
             except ValueError:
                 continue
-        raise ValueError(f"Invalid date for {field_name}.")
+        raise ValueError(_("Invalid date for %(field_name)s.") % {"field_name": field_name})
 
     if field_name in {"subtotal", "vat_amount", "total_amount"}:
         try:
             return Decimal(str(raw_value).replace(",", "").strip())
         except (InvalidOperation, ValueError, TypeError, AttributeError) as exc:
-            raise ValueError(f"Invalid amount for {field_name}.") from exc
+            raise ValueError(_("Invalid amount for %(field_name)s.") % {"field_name": field_name}) from exc
 
     value = str(raw_value).strip()
     return value or None
@@ -315,7 +316,7 @@ def _process_single_file(file_obj, filename: str, org, user, batch=None, request
     if audit_session:
         AuditSessionService.advance_to_extracting(audit_session)
         if AuditSessionService.has_file_hash(audit_session, file_hash):
-            raise ValueError("Duplicate file already processed in this audit session.")
+            raise ValueError(_("Duplicate file already processed in this audit session."))
 
     invoice = Invoice.objects.create(
         organization=org,
@@ -634,7 +635,7 @@ class InvoiceUploadView(APIView):
     def post(self, request):
         org = request.user.organization
         if not org:
-            return Response({"error": "User has no organization."}, status=400)
+            return Response({"error": _("User has no organization.")}, status=400)
 
         uploaded_files = request.FILES.getlist("files")
         if not uploaded_files:
@@ -643,7 +644,7 @@ class InvoiceUploadView(APIView):
             if single:
                 uploaded_files = [single]
             else:
-                return Response({"error": "No files uploaded. Use 'files' or 'file' field."}, status=400)
+                return Response({"error": _("No files uploaded. Use 'files' or 'file' field.")}, status=400)
 
         batch_name = request.data.get("batch_name", f"Batch {timezone.now().strftime('%Y-%m-%d %H:%M')}")
 
@@ -672,7 +673,7 @@ class InvoiceUploadView(APIView):
             ext = os.path.splitext(filename)[1].lower()
 
             if ext not in ALLOWED_EXT:
-                errors.append({"filename": filename, "error": f"Unsupported file type: {ext}"})
+                errors.append({"filename": filename, "error": _("Unsupported file type: %(ext)s") % {"ext": ext}})
                 batch.failed_files += 1
                 AuditSessionService.record_failure(audit_session, f"Unsupported file type: {ext}")
                 continue
@@ -783,7 +784,7 @@ def _process_zip(zip_file, org, user, batch, request, audit_session=None) -> tup
                     if audit_session:
                         AuditSessionService.record_failure(audit_session, str(e))
     except zipfile.BadZipFile:
-        errors.append({"filename": zip_file.name, "error": "Invalid ZIP file"})
+        errors.append({"filename": zip_file.name, "error": _("Invalid ZIP file")})
         if audit_session:
             AuditSessionService.record_failure(audit_session, "Invalid ZIP file")
     return results, errors
@@ -1015,11 +1016,11 @@ class InvoiceApproveView(APIView):
         try:
             invoice = Invoice.objects.get(pk=pk, organization=request.user.organization)
         except Invoice.DoesNotExist:
-            return Response({"error": "Invoice not found."}, status=404)
+            return Response({"error": _("Invoice not found.")}, status=404)
 
         action = request.data.get("action")
         if action not in ("approve", "reject"):
-            return Response({"error": "action must be 'approve' or 'reject'"}, status=400)
+            return Response({"error": _("action must be 'approve' or 'reject'")}, status=400)
 
         before = {"status": invoice.status}
 
@@ -1032,7 +1033,7 @@ class InvoiceApproveView(APIView):
         else:
             reason = request.data.get("reason", "")
             if not reason:
-                return Response({"error": "reason is required for rejection."}, status=400)
+                return Response({"error": _("reason is required for rejection.")}, status=400)
             invoice.status          = Invoice.Status.REJECTED
             invoice.rejected_reason = reason
             event_type              = InvoiceAuditEvent.EventType.REJECTED
@@ -1054,7 +1055,7 @@ class InvoiceRevalidateView(APIView):
         try:
             invoice = Invoice.objects.get(pk=pk, organization=request.user.organization)
         except Invoice.DoesNotExist:
-            return Response({"error": "Invoice not found."}, status=404)
+            return Response({"error": _("Invoice not found.")}, status=404)
         val_result = _run_invoice_revalidation(invoice, request.user, request=request)
         return Response(val_result)
 
@@ -1081,11 +1082,11 @@ class InvoiceManualReviewView(APIView):
         try:
             invoice = Invoice.objects.get(pk=pk, organization=request.user.organization)
         except Invoice.DoesNotExist:
-            return Response({"error": "Invoice not found."}, status=404)
+            return Response({"error": _("Invoice not found.")}, status=404)
 
         corrections = request.data.get("corrections") or {}
         if not isinstance(corrections, dict):
-            return Response({"error": "corrections must be an object."}, status=400)
+            return Response({"error": _("corrections must be an object.")}, status=400)
 
         note = str(request.data.get("note", "") or "").strip()
         should_revalidate = bool(request.data.get("revalidate"))
@@ -1172,7 +1173,7 @@ class InvoiceBatchDetailView(APIView):
         try:
             batch = InvoiceBatch.objects.get(pk=pk, organization=request.user.organization)
         except InvoiceBatch.DoesNotExist:
-            return Response({"error": "Batch not found."}, status=404)
+            return Response({"error": _("Batch not found.")}, status=404)
 
         invoices = Invoice.objects.filter(batch=batch).values(
             "id", "original_filename", "vendor_name", "total_amount", "currency",

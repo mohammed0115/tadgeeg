@@ -1,6 +1,7 @@
 {% extends "base.html" %}
-{% block title %}إعدادات المؤسسة{% endblock %}
-{% block page_title %}إعدادات المؤسسة{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Organization Settings" %}{% endblock %}
+{% block page_title %}{% trans "Organization Settings" %}{% endblock %}
 {% block nav_settings %}active{% endblock %}
 {% block header_actions %}{% endblock %}
 {% block header_primary_action %}{% endblock %}
@@ -73,15 +74,15 @@
               <div class="max-w-3xl space-y-6">
                 <div class="inline-flex items-center gap-2.5 rounded-full border border-primary-200/60 bg-primary-50/80 px-3.5 py-1.5 text-xs font-semibold text-primary-700 dark:border-primary-500/20 dark:bg-primary-500/10 dark:text-primary-300">
                   <span class="flex h-2 w-2 rounded-full bg-primary-600"></span>
-                  Tadgeeg Control Center
+                  {% blocktrans with product=product_name %}{{ product }} Control Center{% endblocktrans %}
                 </div>
 
                 <div class="space-y-3">
                   <h1 class="text-4xl font-bold tracking-tight text-slate-950 sm:text-5xl dark:text-white">
-                    إعدادات المؤسسة
+                    {% trans "Organization Settings" %}
                   </h1>
                   <p class="max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-400">
-                    أدِر الملف التعريفي، الامتثال الضريبي، الحدود المالية، والتفضيلات الذكية من لوحة تحكم موحدة.
+                    {% trans "Manage the company profile, tax compliance, financial thresholds, and smart preferences from one unified control center." %}
                   </p>
                 </div>
 
@@ -100,7 +101,7 @@
 
                   <span class="inline-flex items-center gap-2 rounded-full border border-slate-200/60 bg-slate-50/80 px-3.5 py-1.5 text-xs font-medium text-slate-600 dark:border-slate-700/60 dark:bg-slate-950/50 dark:text-slate-400">
                     <i data-lucide="zap" class="h-3.5 w-3.5"></i>
-                    Ctrl + S
+                    {% trans "Ctrl + S" %}
                   </span>
                 </div>
               </div>
@@ -111,7 +112,7 @@
                         @click="exportData()"
                         class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200/60 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300/80 hover:bg-slate-50 hover:shadow-md active:scale-95 dark:border-slate-700/60 dark:bg-slate-950/50 dark:text-slate-300 dark:hover:bg-slate-900">
                   <i data-lucide="download" class="h-4 w-4"></i>
-                  <span class="hidden sm:inline">تصدير</span>
+                  <span class="hidden sm:inline">{% trans "Export" %}</span>
                 </button>
 
                 <button type="submit"
@@ -137,7 +138,7 @@
             <div class="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-primary-500/20 blur-2xl opacity-0 transition-opacity group-hover:opacity-100"></div>
             <div class="relative space-y-3">
               <div class="flex items-center justify-between">
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">الملف</p>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{% trans "Profile" %}</p>
                 <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-300">
                   <i data-lucide="check-circle" class="h-4 w-4"></i>
                 </div>
@@ -151,7 +152,7 @@
                :class="complianceSummary().tone === 'success' ? 'border-emerald-200/60 bg-gradient-to-br from-emerald-50/80 to-white dark:border-emerald-500/20 dark:from-emerald-950/40' : 'border-amber-200/60 bg-gradient-to-br from-amber-50/80 to-white dark:border-amber-500/20 dark:from-amber-950/40'">
             <div class="relative space-y-3">
               <div class="flex items-center justify-between">
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">امتثال</p>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{% trans "Compliance" %}</p>
                 <div class="flex h-8 w-8 items-center justify-center rounded-lg"
                      :class="complianceSummary().tone === 'success' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'">
                   <i :data-lucide="complianceSummary().tone === 'success' ? 'shield-check' : 'alert-circle'" class="h-4 w-4"></i>
@@ -166,7 +167,7 @@
             <div class="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-violet-500/20 blur-2xl opacity-0 transition-opacity group-hover:opacity-100"></div>
             <div class="relative space-y-3">
               <div class="flex items-center justify-between">
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">ضبط</p>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{% trans "Control" %}</p>
                 <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300">
                   <i data-lucide="trending-up" class="h-4 w-4"></i>
                 </div>
@@ -180,7 +181,7 @@
             <div class="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-blue-500/20 blur-2xl opacity-0 transition-opacity group-hover:opacity-100"></div>
             <div class="relative space-y-3">
               <div class="flex items-center justify-between">
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">ذكي</p>
+                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{% trans "AI" %}</p>
                 <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
                   <i data-lucide="brain" class="h-4 w-4"></i>
                 </div>
@@ -204,27 +205,27 @@
                   <i data-lucide="building-2" class="h-5 w-5"></i>
                 </div>
                 <div>
-                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">هويّة</p>
-                  <h2 class="text-lg font-bold text-slate-950 dark:text-white">الملف التعريفي للمؤسسة</h2>
-                  <p class="mt-1 max-w-sm text-sm text-slate-600 dark:text-slate-400">عرّف بيانات الشركة التي ستظهر في التقارير والمخرجات.</p>
+                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{% trans "Identity" %}</p>
+                  <h2 class="text-lg font-bold text-slate-950 dark:text-white">{% trans "Organization profile" %}</h2>
+                  <p class="mt-1 max-w-sm text-sm text-slate-600 dark:text-slate-400">{% trans "Define the company information that appears in reports and generated outputs." %}</p>
                 </div>
               </div>
             </div>
 
             <div class="relative mt-6 space-y-4">
               <div class="space-y-2">
-                <label class="text-sm font-semibold text-slate-900 dark:text-white">اسم المؤسسة</label>
-                <input x-model="org.name" type="text" placeholder="اسم الشركة"
+                <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "Organization name" %}</label>
+                <input x-model="org.name" type="text" placeholder="{% trans 'Company name' %}"
                        class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white dark:focus:border-primary-400">
               </div>
               <div class="grid gap-3 sm:grid-cols-2">
                 <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">القطاع</label>
-                  <input x-model="org.industry" type="text" placeholder="التقنية المالية"
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "Industry" %}</label>
+                  <input x-model="org.industry" type="text" placeholder="{% trans 'Financial technology' %}"
                          class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
                 </div>
                 <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">الدولة</label>
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "Country" %}</label>
                   <select x-model="org.country"
                           class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
                     <template x-for="option in countryOptions" :key="option.value">
@@ -235,7 +236,7 @@
               </div>
               <div class="grid gap-3 sm:grid-cols-2">
                 <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">العملة</label>
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "Currency" %}</label>
                   <select x-model="org.currency"
                           class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
                     <template x-for="option in currencyOptions" :key="option.value">
@@ -244,7 +245,7 @@
                   </select>
                 </div>
                 <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">السنة المالية</label>
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "Fiscal year start" %}</label>
                   <select x-model="org.fiscal_year_start"
                           class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
                     <template x-for="month in fiscalMonthOptions" :key="month.value">
@@ -254,8 +255,8 @@
                 </div>
               </div>
               <div class="space-y-2">
-                <label class="text-sm font-semibold text-slate-900 dark:text-white">العنوان القانوني</label>
-                <textarea x-model="org.address" rows="3" placeholder="الموقع الرسمي"
+                <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "Registered address" %}</label>
+                <textarea x-model="org.address" rows="3" placeholder="{% trans 'Registered office address' %}"
                           class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white"></textarea>
               </div>
             </div>

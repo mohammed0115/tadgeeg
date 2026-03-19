@@ -1,7 +1,7 @@
 """
 Financial Intelligence Engine
 
-The central orchestrator for financial document analysis in FinAI.
+The central orchestrator for financial document analysis in Tadgeeg AI.
 
 This engine takes an ingested document and runs the complete intelligence
 pipeline:

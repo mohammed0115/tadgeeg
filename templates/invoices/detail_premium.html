@@ -30,7 +30,7 @@
       <div class="relative grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_330px]">
         <div class="space-y-6">
           <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
-            <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5"><i data-lucide="shield-check" class="h-3.5 w-3.5"></i><span>مراجعة Tadgeeg</span></span>
+            <span class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-3 py-1.5"><i data-lucide="shield-check" class="h-3.5 w-3.5"></i><span>{{ product_name }}</span></span>
             <span class="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">{{ invoice_display.risk_label_ar }}</span>
             <span class="rounded-full border border-white/10 bg-white/10 px-3 py-1.5">{{ invoice_display.status_label }}</span>
             {% if invoice.is_duplicate %}<span class="rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1.5 text-amber-100">مكرر</span>{% endif %}
@@ -123,15 +123,15 @@
               <div class="flex flex-wrap gap-2">
                 <button type="button" @click="reviewTab = 'comparison'" class="rounded-2xl border px-4 py-2 text-sm font-semibold transition" :class="reviewTab === 'comparison' ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-slate-200 bg-white text-slate-600'">مقارنة الحقول</button>
                 <button type="button" @click="reviewTab = 'raw'" class="rounded-2xl border px-4 py-2 text-sm font-semibold transition" :class="reviewTab === 'raw' ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-slate-200 bg-white text-slate-600'">النص الخام</button>
-                <button type="button" @click="reviewTab = 'structured'" class="rounded-2xl border px-4 py-2 text-sm font-semibold transition" :class="reviewTab === 'structured' ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-slate-200 bg-white text-slate-600'">AI / Normalized</button>
+                <button type="button" @click="reviewTab = 'structured'" class="rounded-2xl border px-4 py-2 text-sm font-semibold transition" :class="reviewTab === 'structured' ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-slate-200 bg-white text-slate-600'">{% trans "AI and normalized" %}</button>
               </div>
 
               <div x-show="reviewTab === 'comparison'" x-cloak class="overflow-hidden rounded-[26px] border border-slate-200/80">
                 <div class="grid grid-cols-[1.15fr_1fr_1fr_1fr] gap-px bg-slate-200/80 text-xs font-semibold text-slate-500">
                   <div class="bg-slate-50 px-4 py-3 text-right">الحقل</div>
                   <div class="bg-slate-50 px-4 py-3 text-right">الحالي</div>
-                  <div class="bg-slate-50 px-4 py-3 text-right">Normalized</div>
-                  <div class="bg-slate-50 px-4 py-3 text-right">AI / Manual</div>
+                  <div class="bg-slate-50 px-4 py-3 text-right">{% trans "Normalized" %}</div>
+                  <div class="bg-slate-50 px-4 py-3 text-right">{% trans "AI or manual" %}</div>
                 </div>
                 <template x-for="field in reviewFields" :key="field.field">
                   <div class="grid grid-cols-[1.15fr_1fr_1fr_1fr] gap-px border-t border-slate-200/70 bg-slate-200/70 text-sm">
@@ -150,15 +150,15 @@
               <div x-show="reviewTab === 'structured'" x-cloak class="grid gap-4 lg:grid-cols-2">
                 <div class="rounded-[26px] border border-slate-200/80 bg-slate-50/70 p-4">
                   <div class="mb-3 flex items-center justify-between">
-                    <h3 class="text-sm font-semibold text-slate-900">AI Extracted</h3>
+                    <h3 class="text-sm font-semibold text-slate-900">{% trans "AI extracted" %}</h3>
                     <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">JSON</span>
                   </div>
                   <pre class="max-h-80 overflow-auto rounded-2xl bg-white p-4 text-xs leading-6 text-slate-700" x-text="formattedJson(reviewAiPayload)"></pre>
                 </div>
                 <div class="rounded-[26px] border border-slate-200/80 bg-slate-50/70 p-4">
                   <div class="mb-3 flex items-center justify-between">
-                    <h3 class="text-sm font-semibold text-slate-900">Normalized</h3>
-                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">Canonical</span>
+                    <h3 class="text-sm font-semibold text-slate-900">{% trans "Normalized" %}</h3>
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">{% trans "Canonical" %}</span>
                   </div>
                   <pre class="max-h-80 overflow-auto rounded-2xl bg-white p-4 text-xs leading-6 text-slate-700" x-text="formattedJson(reviewNormalizedPayload)"></pre>
                 </div>
@@ -170,8 +170,8 @@
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">آخر مراجعة</p>
                 <template x-if="reviewLastEvent">
                   <div class="mt-3 space-y-2 text-sm text-slate-600">
-                    <p class="font-semibold text-slate-900" x-text="reviewLastEvent.user_name || 'System'"></p>
-                    <p x-text="reviewLastEvent.description || 'Manual review corrections applied'"></p>
+                    <p class="font-semibold text-slate-900" x-text="reviewLastEvent.user_name || '{{ _('System')|escapejs }}'"></p>
+                    <p x-text="reviewLastEvent.description || '{{ _('Manual review corrections applied')|escapejs }}'"></p>
                     <p class="font-mono text-xs text-slate-400" x-text="reviewLastEvent.timestamp || ''"></p>
                   </div>
                 </template>

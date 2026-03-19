@@ -1,11 +1,13 @@
-{% load static %}
+{% load static i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% if auth_mode == 'register' %}إنشاء حساب - Tadgeeg{% else %}تسجيل الدخول - Tadgeeg{% endif %}</title>
-  <meta name="description" content="بوابة الدخول إلى Tadgeeg بنفس لغة صفحة الهبوط وصفحات استعادة كلمة المرور.">
+  <title>{% if auth_mode == 'register' %}{% trans "Create Account" %} - {{ product_name }}{% else %}{% trans "Login" %} - {{ product_name }}{% endif %}</title>
+  <meta name="description" content="{{ product_signature }}">
 <script src="{% static 'vendor/tailwind.browser.js' %}"></script>
 <script defer src="{% static 'vendor/alpine.min.js' %}"></script>
   <style>
@@ -53,15 +55,15 @@
     <div class="mx-auto max-w-7xl">
       <div class="mb-6 flex items-center justify-between gap-4">
         <a href="{% url 'frontend:home' %}" class="flex items-center gap-3">
-          <img src="{% static 'img/logo.png' %}" alt="Tadgeeg Logo" class="h-12 w-12 rounded-2xl object-cover shadow-lg shadow-violet-900/10">
+          <img src="{% static 'img/logo.png' %}" alt="{{ product_name }} logo" class="h-12 w-12 rounded-2xl object-cover shadow-lg shadow-violet-900/10">
           <div>
-            <div class="text-lg font-extrabold text-slate-900">Tadgeeg - <span class="text-grad">AI</span></div>
-            <div class="text-sm text-slate-500">منصة التدقيق المالي الذكية</div>
+            <div class="text-lg font-extrabold text-slate-900">{{ product_name }}</div>
+            <div class="text-sm text-slate-500">{{ company_byline }}</div>
           </div>
         </a>
         <div class="flex items-center gap-3">
-          <a href="{% url 'frontend:home' %}" class="rounded-2xl px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-white/60 hover:text-slate-900">الواجهة الرئيسية</a>
-          <span class="rounded-2xl border border-white/80 bg-white/70 px-4 py-2 text-sm font-semibold text-slate-600">واجهة عربية</span>
+          {% include "partials/language_switcher.html" %}
+          <a href="{% url 'frontend:home' %}" class="rounded-2xl px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-white/60 hover:text-slate-900">{% trans "Home" %}</a>
         </div>
       </div>
 
@@ -73,16 +75,16 @@
             <div class="panel-topline absolute inset-x-10 top-0 h-1 rounded-full"></div>
 
             <div class="grid grid-cols-2 gap-1 rounded-[22px] border border-slate-200 bg-slate-100/95 p-1">
-              <a href="{% url 'frontend:register' %}" class="rounded-[16px] px-4 py-3.5 text-center text-sm font-bold transition-all" :class="mode === 'register' ? 'pill-active' : 'text-slate-500 hover:text-slate-800'">إنشاء حساب</a>
-              <a href="{% url 'frontend:login' %}" class="rounded-[16px] px-4 py-3.5 text-center text-sm font-bold transition-all" :class="mode === 'login' ? 'pill-active' : 'text-slate-500 hover:text-slate-800'">تسجيل الدخول</a>
+              <a href="{% url 'frontend:register' %}" class="rounded-[16px] px-4 py-3.5 text-center text-sm font-bold transition-all" :class="mode === 'register' ? 'pill-active' : 'text-slate-500 hover:text-slate-800'">{% trans "Create Account" %}</a>
+              <a href="{% url 'frontend:login' %}" class="rounded-[16px] px-4 py-3.5 text-center text-sm font-bold transition-all" :class="mode === 'login' ? 'pill-active' : 'text-slate-500 hover:text-slate-800'">{% trans "Login" %}</a>
             </div>
 
             <div class="mt-12" x-show="mode === 'login'" x-cloak>
               <div class="mb-10 flex items-start justify-between gap-4">
                 <div>
-                  <div class="mb-3 text-sm font-bold uppercase tracking-[0.3em] text-violet-500">تسجيل الدخول</div>
-                  <h1 class="max-w-[26rem] text-[2rem] font-black leading-[1.15] text-slate-900 sm:text-[2.35rem]">ادخل إلى حسابك بهدوء واضح</h1>
-                  <p class="mt-4 max-w-[28rem] text-base leading-7 text-slate-500">أدخل بريدك الإلكتروني وكلمة المرور للعودة مباشرة إلى لوحة Tadgeeg.</p>
+                  <div class="mb-3 text-sm font-bold uppercase tracking-[0.3em] text-violet-500">{% trans "Login" %}</div>
+                  <h1 class="max-w-[26rem] text-[2rem] font-black leading-[1.15] text-slate-900 sm:text-[2.35rem]">{% trans "Sign in with a calm, clear flow" %}</h1>
+                  <p class="mt-4 max-w-[28rem] text-base leading-7 text-slate-500">{% blocktrans with product=product_name %}Enter your email address and password to return directly to the {{ product }} workspace.{% endblocktrans %}</p>
                 </div>
                 <div class="hidden h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-gradient-to-br from-violet-600 via-fuchsia-500 to-blue-500 text-white shadow-lg shadow-violet-500/20 sm:flex">
                   <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -93,7 +95,7 @@
 
               <form class="space-y-6" method="post" action="{% url 'frontend:login' %}" @submit.prevent="submitLogin()">
                 <label class="block rounded-[28px] border border-violet-100 bg-gradient-to-br from-violet-50/80 to-white p-6">
-                  <span class="mb-3 block text-sm font-bold text-slate-700">عنوان البريد الإلكتروني</span>
+                  <span class="mb-3 block text-sm font-bold text-slate-700">{% trans "Email Address" %}</span>
                   <div class="relative">
                     <span class="pointer-events-none absolute inset-y-0 right-5 flex items-center text-slate-400">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
@@ -106,38 +108,38 @@
 
                 <label class="block rounded-[28px] border border-slate-200 bg-white/80 p-6">
                   <div class="mb-3 flex items-center justify-between gap-3">
-                    <span class="text-sm font-bold text-slate-700">كلمة المرور</span>
-                    <a href="{% url 'frontend:password_reset' %}" class="text-sm font-bold text-violet-600 transition hover:text-violet-800">نسيت كلمة المرور؟</a>
+                    <span class="text-sm font-bold text-slate-700">{% trans "Password" %}</span>
+                    <a href="{% url 'frontend:password_reset' %}" class="text-sm font-bold text-violet-600 transition hover:text-violet-800">{% trans "Forgot password?" %}</a>
                   </div>
                   <div class="relative">
-                    <button type="button" class="absolute inset-y-0 left-5 flex items-center text-slate-400 transition hover:text-slate-600" @click="showPassword = !showPassword" aria-label="إظهار أو إخفاء كلمة المرور">
+                    <button type="button" class="absolute inset-y-0 left-5 flex items-center text-slate-400 transition hover:text-slate-600" @click="showPassword = !showPassword" aria-label="{% trans 'Show or hide password' %}">
                       <svg x-show="!showPassword" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
                       <svg x-show="showPassword" x-cloak xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m3 3 18 18" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.584 10.587A2 2 0 0 0 12 14a2 2 0 0 0 1.414-.586" /><path stroke-linecap="round" stroke-linejoin="round" d="M9.88 5.09A10.936 10.936 0 0 1 12 5c4.478 0 8.268 2.943 9.542 7a10.97 10.97 0 0 1-4.337 5.486M6.228 6.228A10.958 10.958 0 0 0 2.458 12c1.274 4.057 5.065 7 9.542 7a10.96 10.96 0 0 0 5.772-1.772" /></svg>
                     </button>
                     <input :type="showPassword ? 'text' : 'password'" x-model="login.password" name="password" placeholder="••••••••" class="input-surface h-[62px] w-full rounded-[22px] px-5 pl-14 text-lg" autocomplete="current-password">
                   </div>
-                  <p class="mt-3 text-sm leading-6 text-slate-500">يمكنك استعادة كلمة المرور من الرابط أعلاه إذا احتجت ذلك لاحقًا.</p>
+                  <p class="mt-3 text-sm leading-6 text-slate-500">{% trans "You can recover your password from the link above whenever you need it." %}</p>
                 </label>
 
                 <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
                   <label class="inline-flex items-center gap-3">
                     <input x-model="login.remember" type="checkbox" class="h-5 w-5 rounded-md border-slate-300 text-violet-600 focus:ring-violet-500">
-                    <span class="font-bold">تذكرني</span>
+                    <span class="font-bold">{% trans "Remember me" %}</span>
                   </label>
-                  <span>دخول واضح ومتسق مع رحلة الاستعادة.</span>
+                  <span>{% trans "A clear sign-in experience aligned with the recovery flow." %}</span>
                 </div>
 
                 <div x-show="loginError" x-cloak class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" x-text="loginError"></div>
 
                 <button type="submit" class="btn-primary flex h-[68px] w-full items-center justify-center gap-3 rounded-[24px] px-6 text-lg font-black text-white shadow-lg shadow-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60" :disabled="loginLoading">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16m-6-6 6 6-6 6" /></svg>
-                  <span x-text="loading ? 'جارٍ تسجيل الدخول...' : 'تسجيل الدخول'"></span>
+                  <span x-text="loading ? '{{ _('Signing in...')|escapejs }}' : '{{ _('Login')|escapejs }}'"></span>
                 </button>
               </form>
 
               <div class="my-10 flex items-center gap-4 text-slate-400">
                 <div class="h-px flex-1 bg-slate-200"></div>
-                <span class="text-base font-medium">أو المتابعة عبر</span>
+                <span class="text-base font-medium">{% trans "Or continue with" %}</span>
                 <div class="h-px flex-1 bg-slate-200"></div>
               </div>
 
@@ -145,10 +147,10 @@
                 {% if google_oauth_enabled %}
                 <a href="{% url 'frontend:google_oauth_login' %}" class="flex h-14 items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-700 transition hover:border-violet-200 hover:bg-violet-50/40 hover:text-violet-700">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="h-6 w-6" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.4H42V20H24v8h11.3C33.6 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.6Z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.1 29.3 4 24 4c-7.7 0-14.3 4.3-17.7 10.7Z"/><path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.5-5.2l-6.2-5.2C29.3 35.1 26.8 36 24 36c-5.2 0-9.6-3.3-11.2-8l-6.5 5C9.7 39.6 16.3 44 24 44Z"/><path fill="#1976D2" d="M43.6 20.4H42V20H24v8h11.3c-1.1 3.1-3.3 5.5-6 7l6.2 5.2C39.4 36.6 44 30.9 44 24c0-1.3-.1-2.4-.4-3.6Z"/></svg>
-                  <span>المتابعة عبر Google</span>
+                  <span>{% trans "Continue with Google" %}</span>
                 </a>
                 {% else %}
-                <div class="flex h-14 items-center justify-center rounded-2xl bg-slate-50 text-base font-semibold text-slate-400">Google Login غير مهيأ في الإعدادات</div>
+                <div class="flex h-14 items-center justify-center rounded-2xl bg-slate-50 text-base font-semibold text-slate-400">{% trans "Google Login is not configured in settings" %}</div>
                 {% endif %}
               </div>
             </div>
@@ -156,9 +158,9 @@
             <div class="mt-12" x-show="mode === 'register'" x-cloak>
               <div class="mb-10 flex items-start justify-between gap-4">
                 <div>
-                  <div class="mb-3 text-sm font-bold uppercase tracking-[0.3em] text-violet-500">إنشاء حساب</div>
-                  <h1 class="max-w-[26rem] text-[2rem] font-black leading-[1.15] text-slate-900 sm:text-[2.35rem]">أنشئ حسابك</h1>
-                  <p class="mt-4 max-w-[28rem] text-base leading-7 text-slate-500">أدخل بياناتك الأساسية وسنرسل رمز التحقق إلى بريدك قبل تفعيل الحساب.</p>
+                  <div class="mb-3 text-sm font-bold uppercase tracking-[0.3em] text-violet-500">{% trans "Create Account" %}</div>
+                  <h1 class="max-w-[26rem] text-[2rem] font-black leading-[1.15] text-slate-900 sm:text-[2.35rem]">{% trans "Create your account" %}</h1>
+                  <p class="mt-4 max-w-[28rem] text-base leading-7 text-slate-500">{% trans "Enter your core details and we will send a verification code to your email before activation." %}</p>
                 </div>
                 <div class="hidden h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-gradient-to-br from-violet-600 via-fuchsia-500 to-blue-500 text-white shadow-lg shadow-violet-500/20 sm:flex">
                   <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -169,45 +171,45 @@
 
               <form class="space-y-6" method="post" action="{% url 'frontend:register' %}" @submit.prevent="submitRegister()">
                 <label class="block rounded-[28px] border border-slate-200 bg-white/80 p-6">
-                  <span class="mb-3 block text-sm font-bold text-slate-700">الاسم الكامل</span>
-                  <input x-model="register.full_name" type="text" name="full_name" placeholder="محمد أحمد" class="input-surface h-[62px] w-full rounded-[22px] px-5 text-lg" autocomplete="name">
+                  <span class="mb-3 block text-sm font-bold text-slate-700">{% trans "Full Name" %}</span>
+                  <input x-model="register.full_name" type="text" name="full_name" placeholder="{% trans 'Mohammed Ahmed' %}" class="input-surface h-[62px] w-full rounded-[22px] px-5 text-lg" autocomplete="name">
                 </label>
 
                 <label class="block rounded-[28px] border border-violet-100 bg-gradient-to-br from-violet-50/80 to-white p-6">
-                  <span class="mb-3 block text-sm font-bold text-slate-700">البريد الإلكتروني</span>
+                  <span class="mb-3 block text-sm font-bold text-slate-700">{% trans "Email Address" %}</span>
                   <input x-model="register.email" type="email" name="email" placeholder="name@company.sa" class="input-surface h-[62px] w-full rounded-[22px] px-5 text-lg" autocomplete="email">
-                  <p class="mt-3 text-sm leading-6 text-slate-500">سيصل رمز التحقق إلى هذا البريد بعد إنشاء الحساب مباشرة.</p>
+                  <p class="mt-3 text-sm leading-6 text-slate-500">{% trans "A verification code will be sent to this email immediately after account creation." %}</p>
                 </label>
 
                 <label class="block rounded-[28px] border border-slate-200 bg-white/80 p-6">
-                  <span class="mb-3 block text-sm font-bold text-slate-700">كلمة المرور</span>
+                  <span class="mb-3 block text-sm font-bold text-slate-700">{% trans "Password" %}</span>
                   <input :type="showPassword ? 'text' : 'password'" x-model="register.password" name="password" placeholder="••••••••" class="input-surface h-[62px] w-full rounded-[22px] px-5 text-lg" autocomplete="new-password">
-                  <p class="mt-3 text-sm leading-6 text-slate-500">استخدم 8 أحرف على الأقل مع صيغة مناسبة للاستخدام المؤسسي.</p>
+                  <p class="mt-3 text-sm leading-6 text-slate-500">{% trans "Use at least 8 characters with a password suitable for business use." %}</p>
                 </label>
 
                 <label class="block rounded-[28px] border border-slate-200 bg-white/80 p-6">
-                  <span class="mb-3 block text-sm font-bold text-slate-700">تأكيد كلمة المرور</span>
+                  <span class="mb-3 block text-sm font-bold text-slate-700">{% trans "Confirm Password" %}</span>
                   <input :type="showConfirm ? 'text' : 'password'" x-model="register.password_confirm" name="password_confirm" placeholder="••••••••" class="input-surface h-[62px] w-full rounded-[22px] px-5 text-lg" autocomplete="new-password">
                 </label>
 
                 <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
                   <label class="inline-flex items-center gap-3">
                     <input x-model="showConfirm" type="checkbox" class="h-5 w-5 rounded-md border-slate-300 text-violet-600 focus:ring-violet-500">
-                    <span class="font-bold">إظهار تأكيد كلمة المرور</span>
+                    <span class="font-bold">{% trans "Show confirm password" %}</span>
                   </label>
-                  <span>سنتأكد من تطابق الحقلين قبل متابعة التسجيل.</span>
+                  <span>{% trans "We will verify that both password fields match before completing registration." %}</span>
                 </div>
 
                 <div x-show="registerError" x-cloak class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" x-text="registerError"></div>
                 <button type="submit" class="btn-primary flex h-[68px] w-full items-center justify-center gap-3 rounded-[24px] px-6 text-lg font-black text-white shadow-lg shadow-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60" :disabled="loading">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16m-6-6 6 6-6 6" /></svg>
-                  <span x-text="loading ? 'جارٍ إنشاء الحساب...' : 'إنشاء الحساب'"></span>
+                  <span x-text="loading ? '{{ _('Creating account...')|escapejs }}' : '{{ _('Create Account')|escapejs }}'"></span>
                 </button>
               </form>
 
               <div class="my-10 flex items-center gap-4 text-slate-400">
                 <div class="h-px flex-1 bg-slate-200"></div>
-                <span class="text-base font-medium">أو المتابعة عبر</span>
+                <span class="text-base font-medium">{% trans "Or continue with" %}</span>
                 <div class="h-px flex-1 bg-slate-200"></div>
               </div>
 
@@ -215,15 +217,15 @@
                 {% if google_oauth_enabled %}
                 <a href="{% url 'frontend:google_oauth_login' %}" class="flex h-14 items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-700 transition hover:border-violet-200 hover:bg-violet-50/40 hover:text-violet-700">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="h-6 w-6" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.4H42V20H24v8h11.3C33.6 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.6Z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.1 29.3 4 24 4c-7.7 0-14.3 4.3-17.7 10.7Z"/><path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.5-5.2l-6.2-5.2C29.3 35.1 26.8 36 24 36c-5.2 0-9.6-3.3-11.2-8l-6.5 5C9.7 39.6 16.3 44 24 44Z"/><path fill="#1976D2" d="M43.6 20.4H42V20H24v8h11.3c-1.1 3.1-3.3 5.5-6 7l6.2 5.2C39.4 36.6 44 30.9 44 24c0-1.3-.1-2.4-.4-3.6Z"/></svg>
-                  <span>المتابعة عبر Google</span>
+                  <span>{% trans "Continue with Google" %}</span>
                 </a>
                 {% else %}
-                <div class="flex h-14 items-center justify-center rounded-2xl bg-slate-50 text-base font-semibold text-slate-400">Google Login غير مهيأ في الإعدادات</div>
+                <div class="flex h-14 items-center justify-center rounded-2xl bg-slate-50 text-base font-semibold text-slate-400">{% trans "Google Login is not configured in settings" %}</div>
                 {% endif %}
               </div>
             </div>
 
-            <div class="mt-8 border-t border-slate-200 pt-6 text-center text-sm text-slate-400">© 2026 GSC-Tadgeeg. All rights reserved.</div>
+            <div class="mt-8 border-t border-slate-200 pt-6 text-center text-sm text-slate-400">{% blocktrans with product=product_name company=company_display_name %}© 2026 {{ product }}. A product by {{ company }}. All rights reserved.{% endblocktrans %}</div>
           </div>
         </section>
 
@@ -232,23 +234,23 @@
             <div class="max-w-[35rem]">
               <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700">
                 <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
-                نفس هدوء صفحة الهبوط والاستعادة
+                {% trans "The same calm language as the landing and recovery pages" %}
               </div>
-              <h2 class="max-w-2xl text-[2.15rem] font-black leading-[1.08] tracking-tight text-slate-900 sm:text-[2.8rem] lg:text-[3.35rem]">اهلا وسهلا بك في منصة التدقيق المالي<span class="block text-grad">الذكية</span></h2>
-              <p class="mt-4 max-w-xl text-base leading-8 text-slate-500 sm:text-lg">نظام متطور يعتمد على تقنيات التعلم العميق لضمان دقة الامتثال المالي والضريبي لشركتك في دول الخليج.</p>
+              <h2 class="max-w-2xl text-[2.15rem] font-black leading-[1.08] tracking-tight text-slate-900 sm:text-[2.8rem] lg:text-[3.35rem]">{% trans "Welcome to the intelligent financial auditing platform" %}</h2>
+              <p class="mt-4 max-w-xl text-base leading-8 text-slate-500 sm:text-lg">{% trans "An advanced platform powered by deep learning to improve financial and tax compliance accuracy for businesses across the GCC." %}</p>
             </div>
 
             <div class="grid gap-3 sm:grid-cols-3">
-              <div class="metric-card soft-card rounded-[24px] px-4 py-5 text-center"><div class="text-[1.7rem] font-black text-slate-900">60ث</div><div class="mt-1.5 text-xs font-semibold text-slate-500 sm:text-sm">متوسط بدء الجلسة</div></div>
-              <div class="metric-card soft-card rounded-[24px] px-4 py-5 text-center"><div class="text-[1.7rem] font-black text-slate-900">OTP</div><div class="mt-1.5 text-xs font-semibold text-slate-500 sm:text-sm">التحقق عبر البريد</div></div>
-              <div class="metric-card soft-card rounded-[24px] px-4 py-5 text-center"><div class="text-[1.7rem] font-black text-slate-900">AES-256</div><div class="mt-1.5 text-xs font-semibold text-slate-500 sm:text-sm">حماية البيانات</div></div>
+              <div class="metric-card soft-card rounded-[24px] px-4 py-5 text-center"><div class="text-[1.7rem] font-black text-slate-900">60s</div><div class="mt-1.5 text-xs font-semibold text-slate-500 sm:text-sm">{% trans "Average session start time" %}</div></div>
+              <div class="metric-card soft-card rounded-[24px] px-4 py-5 text-center"><div class="text-[1.7rem] font-black text-slate-900">OTP</div><div class="mt-1.5 text-xs font-semibold text-slate-500 sm:text-sm">{% trans "Email verification" %}</div></div>
+              <div class="metric-card soft-card rounded-[24px] px-4 py-5 text-center"><div class="text-[1.7rem] font-black text-slate-900">AES-256</div><div class="mt-1.5 text-xs font-semibold text-slate-500 sm:text-sm">{% trans "Data protection" %}</div></div>
             </div>
 
             <div class="soft-card max-w-[34rem] rounded-[32px] p-5 sm:p-6 lg:mt-auto">
               <div class="flex items-start justify-between gap-4">
                 <div>
-                  <div class="text-xs font-black uppercase tracking-[0.24em] text-slate-400">معاينة الدخول</div>
-                  <div class="mt-2 text-xl font-black leading-tight text-slate-900 sm:text-[1.65rem]">تجربة أوضح وأهدأ للوصول إلى الحساب</div>
+                  <div class="text-xs font-black uppercase tracking-[0.24em] text-slate-400">{% trans "Access preview" %}</div>
+                  <div class="mt-2 text-xl font-black leading-tight text-slate-900 sm:text-[1.65rem]">{% trans "A clearer, calmer way to access your account" %}</div>
                 </div>
                 <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-gradient-to-br from-violet-600 via-fuchsia-500 to-blue-500 text-white shadow-lg shadow-violet-500/20">
                   <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -262,23 +264,23 @@
                 <div class="flex items-center justify-between rounded-[22px] border border-white/80 bg-white/70 px-4 py-3.5">
                   <div class="flex items-center gap-3">
                     <span class="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-sm font-black text-violet-700">01</span>
-                    <div class="text-sm font-semibold text-slate-700">إدخال البريد أو بيانات الحساب</div>
+                    <div class="text-sm font-semibold text-slate-700">{% trans "Enter your email or account details" %}</div>
                   </div>
-                  <span class="text-xs font-semibold text-slate-400">سريع</span>
+                  <span class="text-xs font-semibold text-slate-400">{% trans "Fast" %}</span>
                 </div>
                 <div class="flex items-center justify-between rounded-[22px] border border-white/80 bg-white/70 px-4 py-3.5">
                   <div class="flex items-center gap-3">
                     <span class="flex h-8 w-8 items-center justify-center rounded-full bg-pink-100 text-sm font-black text-pink-600">02</span>
-                    <div class="text-sm font-semibold text-slate-700">تحقق هادئ بدون تعقيد بصري</div>
+                    <div class="text-sm font-semibold text-slate-700">{% trans "Calm verification with no visual noise" %}</div>
                   </div>
-                  <span class="text-xs font-semibold text-slate-400">منظّم</span>
+                  <span class="text-xs font-semibold text-slate-400">{% trans "Organized" %}</span>
                 </div>
                 <div class="flex items-center justify-between rounded-[22px] border border-white/80 bg-white/70 px-4 py-3.5">
                   <div class="flex items-center gap-3">
                     <span class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-black text-blue-600">03</span>
-                    <div class="text-sm font-semibold text-slate-700">الانتقال مباشرة إلى لوحة Tadgeeg</div>
+                    <div class="text-sm font-semibold text-slate-700">{% blocktrans with product=product_name %}Move directly into the {{ product }} dashboard{% endblocktrans %}</div>
                   </div>
-                  <span class="text-xs font-semibold text-slate-400">مباشر</span>
+                  <span class="text-xs font-semibold text-slate-400">{% trans "Direct" %}</span>
                 </div>
               </div>
             </div>
@@ -347,21 +349,21 @@
         },
         async submitLogin() {
           this.clearErrors();
-          if (!this.login.email || !this.login.password) { this.error = 'يرجى إدخال البريد الإلكتروني وكلمة المرور.'; return; }
+          if (!this.login.email || !this.login.password) { this.error = '{{ _("Please enter your email address and password.")|escapejs }}'; return; }
           this.loading = true;
           const formData = new FormData(); formData.append('email', this.login.email); formData.append('password', this.login.password);
           try {
             const response = await fetch('{% url "frontend:login" %}', { method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
             const data = await parseJson(response);
-            if (!response.ok || !data.success) { this.error = data.error || 'تعذر تسجيل الدخول. حاول مرة أخرى.'; return; }
+            if (!response.ok || !data.success) { this.error = data.error || '{{ _("Unable to sign in. Please try again.")|escapejs }}'; return; }
             storeTokens(data); window.location.href = data.redirect || '{% url "frontend:dashboard" %}';
-          } catch (error) { this.error = 'حدث خطأ في الاتصال بالخادم.'; } finally { this.loading = false; }
+          } catch (error) { this.error = '{{ _("A server connection error occurred.")|escapejs }}'; } finally { this.loading = false; }
         },
         async submitRegister() {
           this.error = '';
-          if (!this.register.full_name || !this.register.email || !this.register.password || !this.register.password_confirm) { this.error = 'يرجى تعبئة جميع الحقول المطلوبة.'; return; }
-          if (this.register.password.length < 8) { this.error = 'كلمة المرور يجب أن تحتوي على 8 أحرف على الأقل.'; return; }
-          if (this.register.password !== this.register.password_confirm) { this.error = 'كلمتا المرور غير متطابقتين.'; return; }
+          if (!this.register.full_name || !this.register.email || !this.register.password || !this.register.password_confirm) { this.error = '{{ _("Please complete all required fields.")|escapejs }}'; return; }
+          if (this.register.password.length < 8) { this.error = '{{ _("Password must be at least 8 characters long.")|escapejs }}'; return; }
+          if (this.register.password !== this.register.password_confirm) { this.error = '{{ _("Passwords do not match.")|escapejs }}'; return; }
           this.loading = true;
           const formData = new FormData();
           formData.append('full_name', this.register.full_name); formData.append('email', this.register.email);
@@ -369,9 +371,9 @@
           try {
             const response = await fetch('{% url "frontend:register" %}', { method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
             const data = await parseJson(response);
-            if (!response.ok || !data.success) { this.error = data.error || 'تعذر إنشاء الحساب حاليًا.'; return; }
+            if (!response.ok || !data.success) { this.error = data.error || '{{ _("Unable to create the account right now.")|escapejs }}'; return; }
             storeTokens(data); window.location.href = data.redirect || '{% url "frontend:google_pending" %}';
-          } catch (error) { this.error = 'حدث خطأ في الاتصال بالخادم.'; } finally { this.loading = false; }
+          } catch (error) { this.error = '{{ _("A server connection error occurred.")|escapejs }}'; } finally { this.loading = false; }
         },
       };
     }

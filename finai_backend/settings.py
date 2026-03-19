@@ -1,5 +1,5 @@
 """
-FinAI - AI Financial Auditing Platform
+Tadgeeg AI by Get Solution Company
 Django Settings
 """
 
@@ -9,10 +9,19 @@ from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
+from django.utils.translation import gettext_lazy as _
 from core.utils.database import build_default_database, build_test_database
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
+
+PRODUCT_NAME = "Tadgeeg AI"
+COMPANY_NAME = "Get Solution Company"
+COMPANY_NAME_AR = "شركة Get Solution"
+PRODUCT_TAGLINE_AR = "منصة الذكاء الاصطناعي للتدقيق المالي والامتثال"
+PRODUCT_TAGLINE_EN = "AI platform for financial auditing and compliance"
+PRODUCT_DESCRIPTION_AR = "منصة الذكاء الاصطناعي الرائدة للتدقيق المالي والامتثال"
+PRODUCT_DESCRIPTION_EN = "Leading AI platform for financial auditing and compliance"
 
 LOG_DIR = Path(os.environ.get("DJANGO_LOG_DIR", BASE_DIR / "logs"))
 if not LOG_DIR.is_absolute():
@@ -89,6 +98,7 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -113,6 +123,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "django.template.context_processors.i18n",
+                "core.context_processors.branding",
             ],
         },
     },
@@ -148,10 +160,19 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # ─── Internationalization ─────────────────────────────────────────────────────
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = "ar"
+LANGUAGES = [
+    ("ar", _("Arabic")),
+    ("en", _("English")),
+]
+LOCALE_PATHS = [BASE_DIR / "locale"]
 TIME_ZONE = "Asia/Riyadh"
 USE_I18N = True
 USE_TZ = True
+LANGUAGE_COOKIE_NAME = "tadgeeg_language"
+LANGUAGE_COOKIE_AGE = 60 * 60 * 24 * 365
+LANGUAGE_COOKIE_SAMESITE = "Lax"
+LANGUAGE_COOKIE_SECURE = not DEBUG
 
 # ─── Static / Media ───────────────────────────────────────────────────────────
 STATIC_URL = "/static/"
@@ -260,11 +281,11 @@ CORS_ALLOW_CREDENTIALS = True
 
 # ─── OpenAPI / Spectacular ────────────────────────────────────────────────────
 SPECTACULAR_SETTINGS = {
-    "TITLE": "FinAI – AI Financial Auditing API",
-    "DESCRIPTION": "REST API for the AI-Powered Financial Auditing Platform (AIFAS)",
+    "TITLE": f"{PRODUCT_NAME} API",
+    "DESCRIPTION": f"REST API for {PRODUCT_NAME} by {COMPANY_NAME}",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
-    "CONTACT": {"email": "support@finai.example"},
+    "CONTACT": {"email": "support@tadgeeg.com"},
     "LICENSE": {"name": "Proprietary"},
     "TAGS": [
         {"name": "Auth", "description": "Authentication & user management"},

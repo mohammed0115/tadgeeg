@@ -9,8 +9,8 @@ from .models import AuditDocument, AuditFinding
 class AuditFindingInline(admin.TabularInline):
     model = AuditFinding
     extra = 0
-    readonly_fields = ("finding_type", "severity", "title", "details", "created_at")
-    fields = ("finding_type", "severity", "title", "details", "created_at")
+    readonly_fields = ("finding_type", "severity", "title", "details", "source", "created_at")
+    fields = ("finding_type", "severity", "title", "details", "source", "created_at")
     can_delete = False
     show_change_link = False
 
@@ -28,11 +28,10 @@ class AuditDocumentAdmin(admin.ModelAdmin):
         "overall_confidence_display",
         "language",
         "uploaded_by",
-        "organization",
         "created_at",
     )
     list_filter = ("status", "overall_risk_level", "detected_doc_type", "language", "created_at")
-    search_fields = ("original_name", "uploaded_by__email", "organization__name")
+    search_fields = ("original_name", "uploaded_by__email")
     readonly_fields = (
         "id",
         "created_at",
@@ -47,16 +46,16 @@ class AuditDocumentAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ("Document Info", {
-            "fields": ("id", "original_name", "file", "mime_type", "file_size"),
+            "fields": ("id", "original_name", "file", "mime_type"),
         }),
         ("Classification", {
             "fields": ("selected_doc_type", "detected_doc_type", "language"),
         }),
         ("Ownership", {
-            "fields": ("uploaded_by", "organization"),
+            "fields": ("uploaded_by",),
         }),
         ("Processing", {
-            "fields": ("status", "overall_confidence", "overall_risk_level", "processing_error"),
+            "fields": ("status", "overall_confidence", "overall_risk_level", "executive_summary", "processing_error"),
         }),
         ("AI Results", {
             "fields": ("ai_result",),
@@ -87,7 +86,10 @@ class AuditDocumentAdmin(admin.ModelAdmin):
     status_badge.short_description = "Status"
 
     def overall_confidence_display(self, obj):
-        pct = round(obj.overall_confidence * 100, 1) if obj.overall_confidence <= 1 else round(obj.overall_confidence, 1)
+        if obj.overall_confidence is None:
+            return format_html('<span style="color:#6b7280">—</span>')
+        val = obj.overall_confidence
+        pct = round(val * 100, 1) if val <= 1.0 else round(val, 1)
         color = "#10b981" if pct >= 75 else "#f59e0b" if pct >= 40 else "#ef4444"
         return format_html(
             '<span style="color:{};font-weight:600">{:.1f}%</span>',

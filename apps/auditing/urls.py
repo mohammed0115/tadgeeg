@@ -4,7 +4,7 @@ from django.urls import path
 
 from .views import AuditDocumentUploadView, AuditDocumentResultView, AuditDocumentHistoryView
 
-app_name = "auditing"
+app_name = "auditor"
 
 urlpatterns = [
     path("upload/", AuditDocumentUploadView.as_view(), name="upload"),

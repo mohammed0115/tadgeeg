@@ -1,0 +1,51 @@
+{# Validation results table — uses ai_result.validation_results (raw AI data) #}
+{% with vr_list=validation_results %}
+{% if vr_list %}
+<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm text-right">
+  <div class="border-b border-slate-100 px-6 py-4">
+    <h3 class="text-base font-bold text-slate-800 flex items-center justify-end gap-2">
+      <i data-lucide="list-checks" class="h-5 w-5 text-blue-500"></i>
+      نتائج التحقق المالي
+    </h3>
+  </div>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm text-right">
+      <thead class="bg-slate-50 text-xs text-slate-500">
+        <tr>
+          <th class="px-6 py-3 text-right font-semibold">التفاصيل</th>
+          <th class="px-4 py-3 text-center font-semibold">النتيجة</th>
+          <th class="px-6 py-3 text-right font-semibold">الفحص</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for vr in vr_list %}
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="px-6 py-3 text-xs text-slate-500 max-w-xs">{{ vr.details|default:"—" }}</td>
+          <td class="px-4 py-3 text-center">
+            {% with status=vr.status %}
+            {% if status == "passed" or status == "pass" %}
+              <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                <i data-lucide="check" class="h-3 w-3"></i> نجاح
+              </span>
+            {% elif status == "warning" %}
+              <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">
+                <i data-lucide="alert-circle" class="h-3 w-3"></i> تحذير
+              </span>
+            {% elif status == "failed" or status == "fail" %}
+              <span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
+                <i data-lucide="x" class="h-3 w-3"></i> فشل
+              </span>
+            {% else %}
+              <span class="inline-block rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-500">{{ status }}</span>
+            {% endif %}
+            {% endwith %}
+          </td>
+          <td class="px-6 py-3 text-sm font-medium text-slate-700">{{ vr.check }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endwith %}

@@ -1,0 +1,70 @@
+{# Summary stat cards: document type, language, confidence, risk level #}
+<div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
+
+  <!-- Document Type -->
+  <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-right">
+    <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">نوع المستند</p>
+    <p class="text-sm font-bold text-slate-800 leading-snug">{{ document.doc_type_display }}</p>
+    {% if document.detected_doc_type %}
+    <p class="text-xs text-slate-400 mt-1">مكتشف بالذكاء الاصطناعي</p>
+    {% else %}
+    <p class="text-xs text-slate-400 mt-1">حسب اختيار المستخدم</p>
+    {% endif %}
+  </div>
+
+  <!-- Language -->
+  <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-right">
+    <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">اللغة</p>
+    <p class="text-sm font-bold text-slate-800">
+      {% if document.language == "ar" %}عربي 🇸🇦
+      {% elif document.language == "en" %}English 🇺🇸
+      {% elif document.language == "ar-en" %}ثنائي 🔀
+      {% elif document.language %}{{ document.language }}
+      {% else %}—
+      {% endif %}
+    </p>
+    <p class="text-xs text-slate-400 mt-1">لغة المستند المكتشفة</p>
+  </div>
+
+  <!-- Confidence -->
+  <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-right">
+    <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">درجة الثقة</p>
+    <p class="text-2xl font-extrabold
+      {% if confidence_pct >= 75 %}text-emerald-600
+      {% elif confidence_pct >= 40 %}text-amber-600
+      {% else %}text-red-600{% endif %}">
+      {{ confidence_pct }}%
+    </p>
+    <div class="mt-2 h-1.5 w-full rounded-full bg-slate-100">
+      <div
+        class="h-1.5 rounded-full transition-all
+          {% if confidence_pct >= 75 %}bg-emerald-500{% elif confidence_pct >= 40 %}bg-amber-500{% else %}bg-red-500{% endif %}"
+        style="width: {{ confidence_pct }}%"
+      ></div>
+    </div>
+  </div>
+
+  <!-- Risk Level -->
+  <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-right">
+    <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">مستوى المخاطر</p>
+    {% if document.overall_risk_level == "high" %}
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-bold text-red-700">
+        <i data-lucide="alert-triangle" class="h-3.5 w-3.5"></i> مرتفع
+      </span>
+      <p class="mt-2 text-xs text-red-600">يتطلب مراجعة فورية</p>
+    {% elif document.overall_risk_level == "medium" %}
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-700">
+        <i data-lucide="alert-circle" class="h-3.5 w-3.5"></i> متوسط
+      </span>
+      <p class="mt-2 text-xs text-amber-600">يُنصح بالمراجعة</p>
+    {% elif document.overall_risk_level == "low" %}
+      <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-700">
+        <i data-lucide="shield-check" class="h-3.5 w-3.5"></i> منخفض
+      </span>
+      <p class="mt-2 text-xs text-emerald-600">لا توجد مخاطر بارزة</p>
+    {% else %}
+      <span class="text-sm font-bold text-slate-500">—</span>
+    {% endif %}
+  </div>
+
+</div>

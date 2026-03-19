@@ -1,0 +1,50 @@
+{# Anomalies list — uses ai_result.anomalies (raw AI data) + anomaly_findings (DB records) #}
+{% with all_anomalies=anomalies %}
+{% if all_anomalies %}
+<div class="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm text-right"
+     x-data="{ open: true }">
+  <button
+    type="button"
+    @click="open = !open"
+    class="flex w-full items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors"
+  >
+    <div class="flex items-center gap-2">
+      <i data-lucide="chevron-down" class="h-4 w-4 text-slate-400 transition-transform" :class="open ? '' : '-rotate-90'"></i>
+      <span class="text-xs text-slate-500">{{ all_anomalies|length }} شذوذ</span>
+    </div>
+    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+      <i data-lucide="alert-triangle" class="h-5 w-5 text-amber-500"></i>
+      الشذوذات المكتشفة
+    </h3>
+  </button>
+  <div x-show="open" x-cloak class="divide-y divide-slate-100">
+    {% for anomaly in all_anomalies %}
+    <div class="px-6 py-4 text-right">
+      <div class="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          {% with sev=anomaly.severity %}
+          {% if sev == "high" %}
+            <span class="inline-block rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-700">مرتفع</span>
+          {% elif sev == "medium" %}
+            <span class="inline-block rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-700">متوسط</span>
+          {% else %}
+            <span class="inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600">منخفض</span>
+          {% endif %}
+          {% endwith %}
+        </div>
+        <p class="text-sm font-semibold text-slate-800">
+          {% if anomaly.type %}{{ anomaly.type }}{% elif anomaly.title %}{{ anomaly.title }}{% endif %}
+        </p>
+      </div>
+      {% if anomaly.details %}
+      <p class="mt-1.5 text-xs text-slate-500 leading-relaxed">{{ anomaly.details }}</p>
+      {% endif %}
+      {% if anomaly.description %}
+      <p class="mt-1.5 text-xs text-slate-500 leading-relaxed">{{ anomaly.description }}</p>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+{% endwith %}

@@ -4,66 +4,50 @@ import os
 
 from django import forms
 
-from .models import DOC_TYPE_CHOICES
+from .models import AuditDocument
 
-
-LANGUAGE_CHOICES = [
-    ("auto", "Auto Detect / كشف تلقائي"),
-    ("ar", "Arabic / العربية"),
-    ("en", "English / الإنجليزية"),
-]
+ALLOWED_EXTENSIONS = {
+    ".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif",
+    ".xlsx", ".xls", ".csv", ".json", ".zip",
+}
+MAX_FILE_SIZE_MB = 50
 
 
 class AuditDocumentUploadForm(forms.Form):
-    """Form for uploading a financial document for AI auditing."""
-
-    ALLOWED_EXTENSIONS = {
-        ".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif",
-        ".xlsx", ".xls", ".csv", ".json", ".zip",
-    }
-    MAX_SIZE_MB = 50
-
     file = forms.FileField(
-        label="الملف",
-        widget=forms.ClearableFileInput(attrs={"class": "hidden", "id": "id_file"}),
-        help_text=f"الحد الأقصى {MAX_SIZE_MB} ميجابايت. الصيغ المدعومة: PDF، صور، Excel، CSV، JSON، ZIP",
+        label="File",
+        widget=forms.ClearableFileInput(
+            attrs={
+                "accept": ".pdf,.jpg,.jpeg,.png,.tiff,.xlsx,.xls,.csv,.json,.zip",
+            }
+        ),
     )
-
     selected_doc_type = forms.ChoiceField(
-        choices=DOC_TYPE_CHOICES,
-        initial="auto",
-        label="نوع المستند",
+        choices=[("", "Auto Detect")] + AuditDocument.DocumentType.choices,
         required=False,
-        widget=forms.Select(attrs={"class": "form-select"}),
+        label="Document Type",
     )
-
     language = forms.ChoiceField(
-        choices=LANGUAGE_CHOICES,
-        initial="auto",
-        label="اللغة",
+        choices=[
+            ("auto", "Auto"),
+            ("ar", "Arabic"),
+            ("en", "English"),
+            ("ar-en", "Bilingual"),
+        ],
         required=False,
-        widget=forms.Select(attrs={"class": "form-select"}),
+        initial="auto",
+        label="Language",
     )
 
     def clean_file(self):
-        uploaded_file = self.cleaned_data.get("file")
-        if not uploaded_file:
-            raise forms.ValidationError("يرجى اختيار ملف.")
-
-        # Validate extension
-        ext = os.path.splitext(uploaded_file.name)[1].lower()
-        if ext not in self.ALLOWED_EXTENSIONS:
-            allowed = ", ".join(sorted(self.ALLOWED_EXTENSIONS))
+        f = self.cleaned_data.get("file")
+        if not f:
+            return f
+        ext = os.path.splitext(f.name)[1].lower()
+        if ext not in ALLOWED_EXTENSIONS:
+            raise forms.ValidationError(f"File type '{ext}' is not supported.")
+        if f.size > MAX_FILE_SIZE_MB * 1024 * 1024:
             raise forms.ValidationError(
-                f"نوع الملف '{ext}' غير مدعوم. الصيغ المقبولة: {allowed}"
+                f"File size exceeds {MAX_FILE_SIZE_MB}MB limit."
             )
-
-        # Validate size
-        max_bytes = self.MAX_SIZE_MB * 1024 * 1024
-        if uploaded_file.size > max_bytes:
-            raise forms.ValidationError(
-                f"حجم الملف ({uploaded_file.size / (1024 * 1024):.1f} ميجابايت) "
-                f"يتجاوز الحد الأقصى المسموح به ({self.MAX_SIZE_MB} ميجابايت)."
-            )
-
-        return uploaded_file
+        return f

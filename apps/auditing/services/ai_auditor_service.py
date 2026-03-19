@@ -7,7 +7,7 @@ import re
 from django.conf import settings
 
 from apps.auditing.prompts.financial_auditor_prompt import (
-    FINANCIAL_AUDITOR_SYSTEM_PROMPT,
+    SYSTEM_PROMPT,
     build_user_message,
 )
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_MODEL = "gpt-4o"
 _MAX_TOKENS = 4096
-_TEMPERATURE = 0.1  # Low temperature for consistent financial output
+_TEMPERATURE = 0.1
 
 
 class AIAuditorService:
@@ -24,10 +24,14 @@ class AIAuditorService:
     def __init__(self):
         self._client = None  # lazy init
 
-    def audit(self, text: str, doc_type_hint: str = "auto") -> dict:
+    def audit(self, text: str, doc_type_hint: str = "auto", language: str = "auto") -> dict:
         """
         Call OpenAI with the financial auditor prompt.
         Returns parsed JSON dict. Never raises — returns error dict on failure.
+
+        Accepts both positional and keyword argument forms:
+          audit(text, "invoice")
+          audit(text, doc_type_hint="invoice", language="ar")
         """
         if not text or not text.strip():
             return self._fallback_result("Empty document text provided.")
@@ -37,7 +41,7 @@ class AIAuditorService:
             if client is None:
                 return self._fallback_result("OpenAI API key not configured.")
 
-            messages = self._build_messages(text, doc_type_hint)
+            messages = self._build_messages(text, doc_type_hint, language)
 
             response = client.chat.completions.create(
                 model=_DEFAULT_MODEL,
@@ -55,7 +59,6 @@ class AIAuditorService:
             return self._fallback_result(str(exc))
 
     def _get_client(self):
-        """Lazy initialize OpenAI client."""
         if self._client is not None:
             return self._client
 
@@ -76,25 +79,16 @@ class AIAuditorService:
             logger.error("openai package is not installed.")
             return None
 
-    def _build_messages(self, text: str, doc_type_hint: str) -> list:
-        """Build messages array with system prompt + user content."""
+    def _build_messages(self, text: str, doc_type_hint: str, language: str = "auto") -> list:
         return [
-            {
-                "role": "system",
-                "content": FINANCIAL_AUDITOR_SYSTEM_PROMPT,
-            },
-            {
-                "role": "user",
-                "content": build_user_message(text, doc_type_hint),
-            },
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": build_user_message(text, doc_type_hint, language)},
         ]
 
     def _parse_response(self, content: str) -> dict:
-        """Safely parse JSON from AI response, handle code fences."""
         if not content:
             return self._fallback_result("Empty response from AI.")
 
-        # Strip markdown code fences if present
         content = content.strip()
         fence_pattern = re.compile(r"^```(?:json)?\s*([\s\S]*?)\s*```$", re.MULTILINE)
         match = fence_pattern.search(content)
@@ -108,7 +102,6 @@ class AIAuditorService:
             return result
         except json.JSONDecodeError as exc:
             logger.warning("JSON decode failed for AI response: %s | Content: %.200s", exc, content)
-            # Attempt to extract JSON object from the content
             json_match = re.search(r"\{[\s\S]*\}", content)
             if json_match:
                 try:
@@ -118,28 +111,25 @@ class AIAuditorService:
             return self._fallback_result(f"JSON parse error: {exc}")
 
     def _fallback_result(self, error: str) -> dict:
-        """Return safe empty result on failure."""
         logger.warning("AIAuditorService fallback result: %s", error)
         return {
             "document_type": "other",
             "document_type_confidence": 0.0,
-            "language": "unknown",
+            "overall_confidence": 0.0,
+            "language_detected": "unknown",
             "executive_summary": f"لم يتمكن الذكاء الاصطناعي من معالجة المستند. الخطأ: {error}",
-            "confidence_score": 0.0,
             "extracted_data": {},
+            "field_confidence": {},
             "validation_results": [],
             "anomalies": [],
             "compliance_review": {
-                "overall_status": "not_assessed",
+                "audit_readiness": "low",
+                "traceability": "low",
+                "completeness": "low",
+                "key_missing_elements": [],
                 "notes": [error],
             },
-            "risk_assessment": {
-                "overall_risk": "medium",
-                "risk_factors": ["AI processing unavailable"],
-                "risk_score": 50,
-            },
-            "recommendations": [
-                "يرجى إعادة المحاولة أو مراجعة المستند يدوياً."
-            ],
+            "recommendations": ["يرجى إعادة المحاولة أو مراجعة المستند يدوياً."],
+            "overall_risk_level": "medium",
             "_error": error,
         }

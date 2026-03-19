@@ -1,7 +1,6 @@
 """Auditing Upload View."""
 
 import logging
-import os
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import redirect, render
@@ -12,8 +11,13 @@ from ..models import AuditDocument
 from ..repositories.document_repository import DocumentRepository
 from ..selectors.document_selector import DocumentSelector
 from ..services.audit_processing_service import AuditProcessingService
+from core.services.upload_router import DocumentUploadRouter
 
 logger = logging.getLogger(__name__)
+
+# Document types that must go through the invoice pipeline so they
+# appear in /invoices/ with full 30-rule validation + ZATCA compliance.
+INVOICE_TYPES = {"invoice"}
 
 
 class AuditDocumentUploadView(LoginRequiredMixin, View):
@@ -21,10 +25,8 @@ class AuditDocumentUploadView(LoginRequiredMixin, View):
     login_url = "/login/"
 
     def get(self, request):
-        initial = {}
         doc_type = request.GET.get("type", "")
-        if doc_type:
-            initial["selected_doc_type"] = doc_type
+        initial = {"selected_doc_type": doc_type} if doc_type else {}
         form = AuditDocumentUploadForm(initial=initial)
         recent = DocumentSelector.get_user_documents(request.user)[:5]
         return render(request, self.template_name, {
@@ -40,23 +42,19 @@ class AuditDocumentUploadView(LoginRequiredMixin, View):
             return render(request, self.template_name, {"form": form, "recent": recent})
 
         uploaded_file = form.cleaned_data["file"]
-        selected_type = (
-            form.cleaned_data.get("selected_doc_type") or AuditDocument.DocumentType.OTHER
-        )
+        selected_type = form.cleaned_data.get("selected_doc_type") or AuditDocument.DocumentType.OTHER
         language = form.cleaned_data.get("language") or "auto"
 
-        document = DocumentRepository.create(
-            uploaded_by=request.user,
-            file=uploaded_file,
-            original_name=uploaded_file.name,
-            selected_doc_type=selected_type,
+        # ── Route through DocumentUploadRouter ──────────────────────────────
+        # Invoice → invoice pipeline → /invoices/<pk>/
+        # Other typed docs → typed document pipeline → /documents/<type>/<pk>/
+        # Users without org → AI Auditor fallback → /auditor/result/<pk>/
+        router = DocumentUploadRouter()
+        result = router.route(
+            uploaded_file=uploaded_file,
+            document_type=selected_type,
+            user=request.user,
             language=language,
+            organization=getattr(request.user, "organization", None),
         )
-
-        try:
-            service = AuditProcessingService()
-            service.process(document)
-        except Exception as exc:
-            logger.exception("Audit processing failed for document %s", document.pk)
-
-        return redirect("auditor:result", pk=document.pk)
+        return redirect(result.result_url)

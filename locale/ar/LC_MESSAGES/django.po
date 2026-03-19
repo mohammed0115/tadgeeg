@@ -1284,3 +1284,306 @@ msgstr "PDF"
 msgid "Password updated successfully."
 msgstr "تم تغيير كلمة المرور بنجاح."
 
+
+msgid "Dismiss notification"
+msgstr "إغلاق الإشعار"
+
+
+msgid "Light mode"
+msgstr "الوضع الفاتح"
+
+
+msgid "Dark mode"
+msgstr "الوضع الداكن"
+
+
+msgid "Operation completed successfully"
+msgstr "تمت العملية بنجاح"
+
+
+msgid "Unable to complete the operation"
+msgstr "تعذّر إتمام العملية"
+
+
+msgid "Notice"
+msgstr "تنبيه"
+
+
+msgid "Attention required"
+msgstr "يتطلب انتباهاً"
+
+
+msgid "Failed to bootstrap auth tokens"
+msgstr "فشل تحميل رموز المصادقة"
+
+
+msgid "Analytics"
+msgstr "التحليلات"
+
+
+msgid "Documents"
+msgstr "المستندات"
+
+
+msgid "Audit"
+msgstr "التدقيق"
+
+
+msgid "Sign out"
+msgstr "تسجيل الخروج"
+
+
+msgid "Download PDF"
+msgstr "تنزيل PDF"
+
+
+msgid "Untitled report"
+msgstr "تقرير بلا عنوان"
+
+
+msgid "Report"
+msgstr "تقرير"
+
+
+msgid "Downloading..."
+msgstr "جارٍ التنزيل..."
+
+
+msgid "Report generated successfully"
+msgstr "تم إنشاء التقرير بنجاح"
+
+
+msgid "Failed to generate report:"
+msgstr "فشل إنشاء التقرير:"
+
+
+msgid "Loading failed"
+msgstr "فشل التحميل"
+
+
+msgid "PDF download failed"
+msgstr "فشل تنزيل PDF"
+
+
+msgid "Organization:"
+msgstr "المنظمة:"
+
+
+msgid "Type:"
+msgstr "النوع:"
+
+
+msgid "Period:"
+msgstr "الفترة:"
+
+
+msgid "Created on:"
+msgstr "تاريخ الإنشاء:"
+
+
+msgid "Analytical Summary"
+msgstr "الملخص التحليلي"
+
+
+msgid "Average Risk Score"
+msgstr "متوسط درجة المخاطر"
+
+
+msgid "Amount"
+msgstr "المبلغ"
+
+
+msgid "Risk Score"
+msgstr "درجة المخاطر"
+
+
+msgid "Invoice Count"
+msgstr "عدد الفواتير"
+
+
+msgid "Total Spend"
+msgstr "إجمالي الإنفاق"
+
+
+msgid "Average"
+msgstr "المتوسط"
+
+
+msgid "Spend Share"
+msgstr "حصة الإنفاق"
+
+
+msgid "Most Failed Audit Rules"
+msgstr "أكثر قواعد التدقيق فشلاً"
+
+
+msgid "Failure Rate"
+msgstr "معدل الفشل"
+
+
+msgid "Rule"
+msgstr "القاعدة"
+
+
+msgid "Count"
+msgstr "العدد"
+
+
+msgid "Pass Rate"
+msgstr "معدل النجاح"
+
+
+msgid "No vendor data available."
+msgstr "لا توجد بيانات موردين."
+
+
+msgid "No rule failure data available."
+msgstr "لا توجد بيانات لفشل القواعد."
+
+
+msgid "Confidential — For internal use only"
+msgstr "سري — للاستخدام الداخلي فقط"
+
+
+msgid "Invoice Audit Report"
+msgstr "تقرير تدقيق الفواتير"
+
+
+msgid "Invoices Analyzed"
+msgstr "الفواتير المحللة"
+
+
+msgid "Flagged Invoices"
+msgstr "الفواتير المُبلَّغ عنها"
+
+
+msgid "Compliance Rate"
+msgstr "معدل الامتثال"
+
+
+msgid "Risk"
+msgstr "المخاطر"
+
+
+msgid "Please enter the full verification code."
+msgstr "يرجى إدخال رمز التحقق كاملاً."
+
+
+msgid "Unable to verify the code right now."
+msgstr "تعذّر التحقق من الرمز الآن."
+
+
+msgid "Verification completed successfully."
+msgstr "تم التحقق بنجاح."
+
+
+msgid "Unable to resend the code."
+msgstr "تعذّر إعادة إرسال الرمز."
+
+
+msgid "A new code has been sent."
+msgstr "تم إرسال رمز جديد."
+
+
+msgid "An error occurred while resending the code."
+msgstr "حدث خطأ أثناء إعادة إرسال الرمز."
+
+
+msgid "SAR"
+msgstr "ريال سعودي"
+
+
+msgid "Failed to load vendors"
+msgstr "فشل تحميل الموردين"
+
+
+msgid "Blocked"
+msgstr "محظور"
+
+
+msgid "Email Verification"
+msgstr "التحقق من البريد الإلكتروني"
+
+
+msgid "Verification Code"
+msgstr "رمز التحقق"
+
+
+msgid "Verify your email"
+msgstr "تحقق من بريدك الإلكتروني"
+
+
+msgid "Enter the 6-digit verification code linked to this email:"
+msgstr "أدخل رمز التحقق المكون من 6 أرقام المرتبط بهذا البريد:"
+
+
+msgid "One final step to secure your account"
+msgstr "خطوة أخيرة لتأمين حسابك"
+
+
+msgid "Enter the code within 10 minutes. It can be used only once."
+msgstr "أدخل الرمز خلال 10 دقائق. يُستخدم مرة واحدة فقط."
+
+
+msgid "Verify code and sign in"
+msgstr "تحقق من الرمز وسجّل الدخول"
+
+
+msgid "Verifying..."
+msgstr "جارٍ التحقق..."
+
+
+msgid "Didn't receive the code?"
+msgstr "لم تستلم الرمز؟"
+
+
+msgid "You can resend after"
+msgstr "يمكنك إعادة الإرسال بعد"
+
+
+msgid "seconds."
+msgstr "ثانية."
+
+
+msgid "You can request a new code now."
+msgstr "يمكنك طلب رمز جديد الآن."
+
+
+msgid "Resend code"
+msgstr "إعادة إرسال الرمز"
+
+
+msgid "Sending..."
+msgstr "جارٍ الإرسال..."
+
+
+msgid "Remaining attempts:"
+msgstr "المحاولات المتبقية:"
+
+
+msgid "Remaining resends:"
+msgstr "عمليات الإعادة المتبقية:"
+
+
+msgid "Security"
+msgstr "الأمان"
+
+
+msgid "We will send the link only if the account exists and is active."
+msgstr "سنرسل الرابط فقط إذا كان الحساب موجوداً ونشطاً."
+
+
+msgid "Privacy"
+msgstr "الخصوصية"
+
+
+msgid "We received a request to verify your email address. Use the following code to complete sign-in or activate your account."
+msgstr "تلقينا طلباً للتحقق من بريدك الإلكتروني. استخدم الرمز التالي لإتمام تسجيل الدخول أو تفعيل حسابك."
+
+
+msgid "Too many login attempts. Try again in 15 minutes."
+msgstr "تجاوزت الحد الأقصى لمحاولات تسجيل الدخول. حاول مرة أخرى بعد 15 دقيقة."
+
+
+msgid "Google account email has not been verified."
+msgstr "لم يتم التحقق من بريد حساب Google."

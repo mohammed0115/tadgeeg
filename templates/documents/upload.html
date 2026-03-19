@@ -61,8 +61,8 @@
           </div>
 
           <template x-if="selectedMode === 'csvjson'">
-            <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
-              استيراد ملفات CSV / JSON سيُضاف لاحقًا. استخدم حاليًا ملفًا واحدًا أو ملفات متعددة أو دفعة ZIP.
+            <div class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700">
+              ادعم ملفات CSV وJSON وJSONL وXLSX وXLS. سيتم استخراج البيانات وتحليلها تلقائيًا.
             </div>
           </template>
         </div>
@@ -293,7 +293,7 @@ function docUploader() {
     },
 
     get allowsMultiple() {
-      return this.selectedMode === 'multiple';
+      return this.selectedMode === 'multiple' || this.selectedMode === 'csvjson';
     },
 
     get currentAccept() {
@@ -301,7 +301,7 @@ function docUploader() {
         single: '.pdf,.jpg,.jpeg,.png,.tif,.tiff',
         multiple: '.pdf,.jpg,.jpeg,.png,.tif,.tiff',
         zip: '.zip',
-        csvjson: '.csv,.json',
+        csvjson: '.csv,.json,.jsonl,.xlsx,.xls',
       }[this.selectedMode] || '.pdf,.jpg,.jpeg,.png,.tif,.tiff';
     },
 
@@ -310,7 +310,7 @@ function docUploader() {
         single: 'PDF، JPG، PNG، TIFF، TIF — الحد الأقصى 50MB لكل ملف',
         multiple: 'PDF، JPG، PNG، TIFF، TIF — حتى 50MB لكل ملف',
         zip: 'ملف ZIP واحد يحتوي على مستندات PDF أو صور — حتى 50MB',
-        csvjson: 'CSV أو JSON أو XLSX — ملفات البيانات المنظمة',
+        csvjson: 'CSV، JSON، JSONL، XLSX، XLS — ملفات البيانات المنظمة — حتى 50MB',
       }[this.selectedMode];
     },
 
@@ -319,7 +319,7 @@ function docUploader() {
         single: 'اضغط لاختيار ملف أو اسحب الملف هنا',
         multiple: 'اسحب عدة ملفات هنا أو اضغط للاختيار',
         zip: 'اسحب ملف ZIP هنا أو اضغط للاختيار',
-        csvjson: 'اختر ملف CSV أو JSON',
+        csvjson: 'اختر ملف CSV أو JSON أو XLSX',
       }[this.selectedMode];
     },
 
@@ -328,7 +328,7 @@ function docUploader() {
         single: 'مناسب لرفع مستند واحد ومعالجته مباشرة',
         multiple: 'لرفع مجموعة مستندات من نفس النوع مرة واحدة',
         zip: 'لمعالجة دفعة كاملة داخل ملف مضغوط',
-        csvjson: 'هذا الخيار ظاهريًا جاهز وسيتم تفعيل الربط الخلفي لاحقًا',
+        csvjson: 'لاستيراد بيانات منظمة من ملفات جداول البيانات',
       }[this.selectedMode];
     },
 
@@ -347,7 +347,7 @@ function docUploader() {
 
     get submitLabel() {
       if (this.uploading) return 'جاري رفع ومعالجة المستندات...';
-      if (this.selectedMode === 'csvjson') return 'استيراد CSV / JSON قريبًا';
+      if (this.selectedMode === 'csvjson') return 'استيراد البيانات المنظمة';
       if (this.selectedType === 'invoice') return 'الانتقال إلى رفع الفواتير';
       return 'رفع ومعالجة المستند';
     },
@@ -378,7 +378,7 @@ function docUploader() {
 
       if (!acceptedFiles.length) return;
 
-      if (this.selectedMode === 'multiple') {
+      if (this.selectedMode === 'multiple' || this.selectedMode === 'csvjson') {
         this.files = [...this.files, ...acceptedFiles];
       } else {
         this.files = [acceptedFiles[0]];
@@ -402,7 +402,8 @@ function docUploader() {
       if (extension === 'pdf') return 'file-type-pdf';
       if (['jpg', 'jpeg', 'png', 'tif', 'tiff'].includes(extension)) return 'image';
       if (extension === 'zip') return 'archive';
-      if (extension === 'csv' || extension === 'json') return 'file-json';
+      if (['csv', 'json', 'jsonl'].includes(extension)) return 'file-json';
+      if (['xlsx', 'xls'].includes(extension)) return 'table';
       return 'file';
     },
 
@@ -411,7 +412,8 @@ function docUploader() {
       if (extension === 'pdf') return 'bg-red-50 text-red-600';
       if (['jpg', 'jpeg', 'png', 'tif', 'tiff'].includes(extension)) return 'bg-blue-50 text-blue-600';
       if (extension === 'zip') return 'bg-amber-50 text-amber-600';
-      if (extension === 'csv' || extension === 'json') return 'bg-violet-50 text-violet-600';
+      if (['csv', 'json', 'jsonl'].includes(extension)) return 'bg-violet-50 text-violet-600';
+      if (['xlsx', 'xls'].includes(extension)) return 'bg-emerald-50 text-emerald-600';
       return 'bg-slate-100 text-slate-500';
     },
 

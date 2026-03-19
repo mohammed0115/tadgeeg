@@ -9,7 +9,6 @@ from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
-from django.utils.translation import gettext_lazy as _
 from core.utils.database import build_default_database, build_test_database
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -100,7 +99,6 @@ MIDDLEWARE = [
     "core.utils.security_headers.SecurityHeadersMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -164,17 +162,12 @@ AUTH_PASSWORD_VALIDATORS = [
 # ─── Internationalization ─────────────────────────────────────────────────────
 LANGUAGE_CODE = "ar"
 LANGUAGES = [
-    ("ar", _("Arabic")),
-    ("en", _("English")),
+    ("ar", "Arabic"),
 ]
 LOCALE_PATHS = [BASE_DIR / "locale"]
 TIME_ZONE = "Asia/Riyadh"
 USE_I18N = True
 USE_TZ = True
-LANGUAGE_COOKIE_NAME = "tadgeeg_language"
-LANGUAGE_COOKIE_AGE = 60 * 60 * 24 * 365
-LANGUAGE_COOKIE_SAMESITE = "Lax"
-LANGUAGE_COOKIE_SECURE = not DEBUG
 
 # ─── Static / Media ───────────────────────────────────────────────────────────
 STATIC_URL = "/static/"

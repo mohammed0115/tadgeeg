@@ -39,7 +39,6 @@
         </div>
       </a>
       <nav class="flex flex-wrap items-center gap-3 text-sm font-semibold text-slate-600">
-        {% include "partials/language_switcher.html" %}
         <a href="/pricing/" class="transition hover:text-violet-600">{% trans "Pricing" %}</a>
         <a href="/about/" class="transition hover:text-violet-600">{% blocktrans with product=product_name %}About {{ product }}{% endblocktrans %}</a>
         <a href="/contact/" class="transition hover:text-violet-600">{% trans "Contact Us" %}</a>

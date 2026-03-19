@@ -24,6 +24,31 @@
 - `deployment/docker/enable_https.sh`
 - `deployment/docker/renew_certs.sh`
 
+## نشر تحديث على السيرفر (الأمر اليومي)
+
+هذا هو الأمر الذي تشغّله في كل مرة تدفع كوداً جديداً لـ GitHub وتريد نشره على السيرفر:
+
+```bash
+cd ~/finai-deploy
+bash deployment/docker/deploy.sh update live
+```
+
+أو لتحديث كل البيئات دفعة واحدة:
+
+```bash
+bash deployment/docker/deploy.sh update all
+```
+
+**ماذا يفعل هذا الأمر تلقائيًا؟**
+1. `git pull` — يسحب أحدث كود من `origin/main`
+2. `docker build` — يبني image جديدة للكود المحدّث
+3. `docker compose up -d` — يعيد تشغيل الحاويات بالصورة الجديدة
+4. **`migrate`** — entrypoint.sh يشغّل المايغريشنز تلقائيًا عند الإقلاع
+5. **`collectstatic`** — entrypoint.sh يجمع الملفات الثابتة تلقائيًا
+6. يطبع آخر 20 سطر من logs للتأكد أن كل شيء يعمل
+
+---
+
 ## التشغيل لأول مرة
 
 إذا أردت أمراً واحداً فقط على السيرفر يثبت Docker ويشغّل `live` و`dev` و`test` تلقائيًا:

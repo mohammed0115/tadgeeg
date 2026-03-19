@@ -107,6 +107,10 @@ compose() {
 }
 
 case "$ACTION" in
+  update|deploy)
+    # Pull latest git + rebuild + restart  (main deploy command)
+    bash "$SCRIPT_DIR/update.sh" "$TARGET"
+    ;;
   init-env)
     init_env_files
     ;;
@@ -154,6 +158,8 @@ case "$ACTION" in
 Docker deployment helper
 
 Usage:
+  bash deployment/docker/deploy.sh update [live|dev|test|all]   ← git pull + rebuild + restart
+  bash deployment/docker/deploy.sh deploy [live|dev|test|all]   ← alias for update
   bash deployment/docker/deploy.sh init-env
   bash deployment/docker/deploy.sh build [all|live|dev|test]
   bash deployment/docker/deploy.sh up [all|live|dev|test]

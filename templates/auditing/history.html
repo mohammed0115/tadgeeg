@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}سجل التدقيق{% endblock %}
+{% block page_title %}سجل مستندات التدقيق{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-5" x-data x-init="$nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); })">
+
+  <!-- Header Row -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="text-sm text-slate-500">
+      إجمالي المستندات:
+      <span class="font-bold text-slate-800">{{ total_count }}</span>
+    </div>
+    <a href="{% url 'auditing:upload' %}"
+       class="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors">
+      <i data-lucide="plus" class="h-4 w-4"></i>
+      تدقيق مستند جديد
+    </a>
+  </div>
+
+  <!-- Table Card -->
+  <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+
+    {% if page_obj.object_list %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm text-right">
+        <thead class="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <tr>
+            <th class="px-4 py-4 text-center">الإجراء</th>
+            <th class="px-4 py-4 text-center">الثقة</th>
+            <th class="px-4 py-4 text-center">المخاطر</th>
+            <th class="px-4 py-4 text-center">الحالة</th>
+            <th class="px-4 py-4">نوع المستند</th>
+            <th class="px-4 py-4">التاريخ</th>
+            <th class="px-6 py-4">اسم الملف</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for doc in page_obj %}
+          <tr class="hover:bg-slate-50 transition-colors">
+
+            <!-- Filename -->
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-3">
+                <!-- File icon by type -->
+                {% with ext=doc.original_name|lower %}
+                <div class="flex-shrink-0 flex h-9 w-9 items-center justify-center rounded-xl
+                  {% if '.pdf' in ext %}bg-red-100 text-red-600
+                  {% elif '.xlsx' in ext or '.xls' in ext %}bg-emerald-100 text-emerald-600
+                  {% elif '.csv' in ext %}bg-blue-100 text-blue-600
+                  {% elif '.json' in ext %}bg-violet-100 text-violet-600
+                  {% elif '.zip' in ext %}bg-amber-100 text-amber-600
+                  {% else %}bg-slate-100 text-slate-500{% endif %}">
+                  <i data-lucide="file" class="h-4 w-4"></i>
+                </div>
+                {% endwith %}
+                <div>
+                  <p class="font-medium text-slate-800 truncate max-w-xs">{{ doc.original_name }}</p>
+                  <p class="text-xs text-slate-400">
+                    {% if doc.file_size %}{{ doc.file_size|filesizeformat }}{% endif %}
+                  </p>
+                </div>
+              </div>
+            </td>
+
+            <!-- Date -->
+            <td class="px-4 py-4 text-xs text-slate-500 whitespace-nowrap">
+              {{ doc.created_at|date:"Y/m/d" }}<br>
+              <span class="text-slate-400">{{ doc.created_at|date:"H:i" }}</span>
+            </td>
+
+            <!-- Doc type -->
+            <td class="px-4 py-4">
+              <span class="inline-block rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-600">
+                {{ doc.doc_type_display }}
+              </span>
+            </td>
+
+            <!-- Status -->
+            <td class="px-4 py-4 text-center">
+              {% if doc.status == "completed" %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                  <i data-lucide="check-circle-2" class="h-3 w-3"></i> مكتمل
+                </span>
+              {% elif doc.status == "processing" %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                  <i data-lucide="loader-2" class="h-3 w-3"></i> معالجة
+                </span>
+              {% elif doc.status == "failed" %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
+                  <i data-lucide="x-circle" class="h-3 w-3"></i> فشل
+                </span>
+              {% else %}
+                <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                  <i data-lucide="clock" class="h-3 w-3"></i> انتظار
+                </span>
+              {% endif %}
+            </td>
+
+            <!-- Risk -->
+            <td class="px-4 py-4 text-center">
+              {% if doc.overall_risk_level == "high" %}
+                <span class="inline-block rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">مرتفع</span>
+              {% elif doc.overall_risk_level == "medium" %}
+                <span class="inline-block rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">متوسط</span>
+              {% else %}
+                <span class="inline-block rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">منخفض</span>
+              {% endif %}
+            </td>
+
+            <!-- Confidence -->
+            <td class="px-4 py-4 text-center">
+              {% with pct=doc.overall_confidence %}
+              {% if pct <= 1.0 %}
+                {% widthratio pct 1 100 as pct_display %}
+              {% else %}
+                {% with pct_display=pct|floatformat:0 %}
+                <div class="flex items-center justify-center gap-1.5">
+                  <div class="w-12 h-1.5 rounded-full bg-slate-100">
+                    <div class="h-1.5 rounded-full
+                      {% if pct >= 75 %}bg-emerald-500{% elif pct >= 40 %}bg-amber-500{% else %}bg-red-500{% endif %}"
+                      style="width: {{ pct_display }}%"></div>
+                  </div>
+                  <span class="text-xs font-mono
+                    {% if pct >= 75 %}text-emerald-600{% elif pct >= 40 %}text-amber-600{% else %}text-red-600{% endif %}">
+                    {{ pct_display }}%
+                  </span>
+                </div>
+                {% endwith %}
+              {% endif %}
+              {% endwith %}
+            </td>
+
+            <!-- Action -->
+            <td class="px-4 py-4 text-center">
+              <a href="{% url 'auditing:result' doc.pk %}"
+                 class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all shadow-sm">
+                <i data-lucide="eye" class="h-3.5 w-3.5"></i>
+                عرض
+              </a>
+            </td>
+
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-6 py-4">
+      <div class="text-xs text-slate-500">
+        صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
+        &nbsp;·&nbsp;
+        {{ total_count }} مستند
+      </div>
+      <div class="flex items-center gap-2">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}"
+           class="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors shadow-sm">
+          <i data-lucide="chevron-right" class="h-3.5 w-3.5"></i>
+          السابق
+        </a>
+        {% endif %}
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}"
+           class="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors shadow-sm">
+          التالي
+          <i data-lucide="chevron-left" class="h-3.5 w-3.5"></i>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="flex flex-col items-center gap-4 py-20 text-center">
+      <div class="flex h-20 w-20 items-center justify-center rounded-3xl bg-slate-100 text-slate-400">
+        <i data-lucide="folder-open" class="h-10 w-10"></i>
+      </div>
+      <div>
+        <h3 class="text-lg font-semibold text-slate-700">لا توجد مستندات بعد</h3>
+        <p class="mt-1 text-sm text-slate-500">ارفع أول مستند مالي للبدء بالتدقيق الآلي</p>
+      </div>
+      <a href="{% url 'auditing:upload' %}"
+         class="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors">
+        <i data-lucide="upload-cloud" class="h-4 w-4"></i>
+        رفع أول مستند
+      </a>
+    </div>
+    {% endif %}
+
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  });
+</script>
+{% endblock %}

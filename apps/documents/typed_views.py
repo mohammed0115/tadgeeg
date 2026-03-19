@@ -105,7 +105,7 @@ def _run_ocr(file_path: str, ext: str) -> tuple[str, float]:
                     text = result.raw_text or ""
                     if result.structured:
                         import json
-                        text += "\n\n[STRUCTURED DATA]\n" + json.dumps(result.structured, ensure_ascii=False, indent=2)[:5000]
+                        text += "\n\n[STRUCTURED DATA]\n" + json.dumps(result.structured, ensure_ascii=False, indent=2)[:10000]
                     return text, 1.0  # 100% confidence for structured data
             return "", 0.0
         
@@ -137,6 +137,197 @@ def _safe_decimal(val):
         return Decimal(str(val)) if val else Decimal("0")
     except Exception:
         return Decimal("0")
+
+
+# ── Pandas direct extraction for XLSX / CSV / JSON ────────────────────────────
+
+_STRUCTURED_EXTS = {".xlsx", ".xls", ".csv", ".json", ".jsonl"}
+
+
+def _first_nonempty(series):
+    """Return first non-empty string value from a pandas Series, or ''."""
+    if series is None:
+        return ""
+    for v in series:
+        s = str(v).strip()
+        if s:
+            return s
+    return ""
+
+
+def _col(df, *candidates):
+    """Return the first matching column Series by case-insensitive name, or None."""
+    cols_lower = {c.lower(): c for c in df.columns}
+    for name in candidates:
+        real = cols_lower.get(name.lower())
+        if real is not None:
+            return df[real]
+    return None
+
+
+def _sum_col(df, *candidates):
+    """Sum the first matching numeric column."""
+    series = _col(df, *candidates)
+    if series is None:
+        return 0.0
+    total = 0.0
+    for v in series:
+        try:
+            total += float(str(v).replace(",", "").strip() or "0")
+        except Exception:
+            pass
+    return round(total, 2)
+
+
+def _load_dataframe(file_path: str, ext: str):
+    """Load file into a pandas DataFrame, normalising column names to lowercase."""
+    import pandas as pd
+    import json as _json
+
+    if ext in {".xlsx", ".xls"}:
+        df = pd.read_excel(file_path, sheet_name=0, dtype=str, keep_default_na=False)
+    elif ext == ".csv":
+        df = pd.read_csv(file_path, dtype=str, keep_default_na=False)
+    elif ext == ".jsonl":
+        with open(file_path, encoding="utf-8") as f:
+            rows = [_json.loads(line) for line in f if line.strip()]
+        df = pd.DataFrame(rows).astype(str)
+    else:  # .json
+        with open(file_path, encoding="utf-8") as f:
+            data = _json.load(f)
+        if isinstance(data, list):
+            df = pd.DataFrame(data).astype(str)
+        elif isinstance(data, dict):
+            rows = data.get("records", data.get("items", data.get("data", [data])))
+            df = pd.DataFrame(rows if isinstance(rows, list) else [rows]).astype(str)
+        else:
+            return None
+
+    df.columns = [str(c).lower().strip() for c in df.columns]
+    return df if not df.empty else None
+
+
+def _extract_from_pandas(file_path: str, ext: str, doc_type: str) -> dict:
+    """
+    Read XLSX/CSV/JSON with pandas and map columns directly to typed model fields.
+    Returns a partial ai_data dict — caller merges with OpenAI result.
+    """
+    try:
+        df = _load_dataframe(file_path, ext)
+        if df is None:
+            return {}
+
+        if doc_type == "purchase_order":
+            line_items = []
+            for _, row in df.iterrows():
+                item = {
+                    "description": str(row.get("description") or row.get("item") or row.get("الوصف") or ""),
+                    "qty":         float(_safe_decimal(row.get("qty") or row.get("quantity") or row.get("الكمية") or 0)),
+                    "unit_price":  float(_safe_decimal(row.get("unit_price") or row.get("price") or row.get("سعر_الوحدة") or 0)),
+                    "total":       float(_safe_decimal(row.get("total") or row.get("amount") or row.get("المبلغ") or 0)),
+                }
+                if any(v for v in item.values() if v):
+                    line_items.append(item)
+
+            total = _sum_col(df, "total", "amount", "total_amount", "المبلغ", "الإجمالي")
+            vat   = _sum_col(df, "vat", "tax", "vat_amount", "ضريبة")
+            return {
+                "po_number":    _first_nonempty(_col(df, "po_number", "reference", "ref", "رقم_الأمر", "المرجع")),
+                "po_date":      _first_nonempty(_col(df, "date", "po_date", "invoice_date", "تاريخ")),
+                "vendor_name":  _first_nonempty(_col(df, "vendor", "vendor_name", "supplier", "المورد")),
+                "currency":     _first_nonempty(_col(df, "currency", "ccy", "العملة")) or "SAR",
+                "total_amount": total,
+                "vat_amount":   vat,
+                "subtotal":     round(total - vat, 2),
+                "line_items":   line_items,
+                "ai_summary":   f"تم استيراد {len(df)} سجل من الملف المهيكل",
+            }
+
+        if doc_type == "bank_statement":
+            transactions = []
+            for _, row in df.iterrows():
+                debit  = float(_safe_decimal(row.get("debit") or row.get("withdrawals") or row.get("المدين") or 0))
+                credit = float(_safe_decimal(row.get("credit") or row.get("deposits") or row.get("الدائن") or 0))
+                amt    = float(_safe_decimal(row.get("amount") or row.get("المبلغ") or 0))
+                if not debit and not credit and amt:
+                    if amt < 0:
+                        debit = abs(amt)
+                    else:
+                        credit = amt
+                t = {
+                    "date":        str(row.get("date") or row.get("txn_date") or row.get("تاريخ") or ""),
+                    "description": str(row.get("description") or row.get("narration") or row.get("البيان") or ""),
+                    "debit":       debit,
+                    "credit":      credit,
+                    "balance":     float(_safe_decimal(row.get("balance") or row.get("الرصيد") or 0)),
+                    "ref":         str(row.get("reference") or row.get("ref") or row.get("المرجع") or ""),
+                }
+                transactions.append(t)
+            credits = sum(t["credit"] for t in transactions)
+            debits  = sum(t["debit"]  for t in transactions)
+            return {
+                "transaction_count": len(transactions),
+                "total_credits":     round(credits, 2),
+                "total_debits":      round(debits, 2),
+                "transactions":      transactions,
+                "currency":          _first_nonempty(_col(df, "currency", "العملة")) or "SAR",
+                "ai_summary":        f"تم استيراد {len(transactions)} معاملة من الملف المهيكل",
+            }
+
+        if doc_type == "payroll":
+            employees = []
+            for _, row in df.iterrows():
+                e = {
+                    "name":        str(row.get("name") or row.get("employee_name") or row.get("الاسم") or ""),
+                    "id":          str(row.get("id") or row.get("employee_id") or row.get("رقم_الموظف") or ""),
+                    "gross":       float(_safe_decimal(row.get("gross") or row.get("gross_salary") or row.get("الراتب_الأساسي") or 0)),
+                    "net":         float(_safe_decimal(row.get("net") or row.get("net_salary") or row.get("صافي_الراتب") or 0)),
+                    "allowances":  float(_safe_decimal(row.get("allowances") or row.get("البدلات") or 0)),
+                    "deductions":  float(_safe_decimal(row.get("deductions") or row.get("الخصومات") or 0)),
+                    "gosi":        float(_safe_decimal(row.get("gosi") or 0)),
+                    "bank_account": str(row.get("bank_account") or row.get("حساب_بنكي") or ""),
+                }
+                if e["name"] or e["gross"]:
+                    employees.append(e)
+            return {
+                "employee_count":     len(employees),
+                "total_gross_salary": _sum_col(df, "gross", "gross_salary", "الراتب_الأساسي"),
+                "total_net_salary":   _sum_col(df, "net", "net_salary", "صافي_الراتب"),
+                "total_allowances":   _sum_col(df, "allowances", "البدلات"),
+                "total_deductions":   _sum_col(df, "deductions", "الخصومات"),
+                "total_gosi":         _sum_col(df, "gosi"),
+                "employees":          employees,
+                "currency":           "SAR",
+                "ai_summary":         f"تم استيراد {len(employees)} موظف من الملف المهيكل",
+            }
+
+        if doc_type == "expense_report":
+            lines = []
+            for _, row in df.iterrows():
+                l = {
+                    "date":             str(row.get("date") or row.get("expense_date") or row.get("تاريخ") or ""),
+                    "description":      str(row.get("description") or row.get("purpose") or row.get("الوصف") or ""),
+                    "amount":           float(_safe_decimal(row.get("amount") or row.get("المبلغ") or 0)),
+                    "category":         str(row.get("category") or row.get("type") or row.get("الفئة") or "other"),
+                    "receipt_attached": True,
+                    "receipt_number":   str(row.get("receipt_number") or row.get("رقم_الإيصال") or ""),
+                }
+                if l["description"] or l["amount"]:
+                    lines.append(l)
+            return {
+                "total_claimed": _sum_col(df, "amount", "المبلغ"),
+                "expense_lines": lines,
+                "currency":      _first_nonempty(_col(df, "currency", "العملة")) or "SAR",
+                "ai_summary":    f"تم استيراد {len(lines)} مصروف من الملف المهيكل",
+            }
+
+        # Generic fallback: return first row as flat dict
+        first = df.iloc[0].to_dict() if len(df) > 0 else {}
+        return {"ai_summary": f"تم استيراد {len(df)} سجل", **{k: v for k, v in first.items() if v}}
+
+    except Exception as e:
+        logger.warning(f"[pandas extract] {e}")
+        return {}
 
 
 # ── Core processing pipeline ───────────────────────────────────────────────────
@@ -186,11 +377,26 @@ def _process_typed_document(file_obj, filename: str, doc_type: str, org, user, r
             img_path = imgs[0]
 
     # ── 3. AI Extraction ────────────────────────────────────────────────────
-    try:
-        ai_data = extract_document(doc_type, img_path, raw_text)
-    except Exception as e:
-        logger.warning(f"AI extraction failed for {filename}: {e}")
-        ai_data = {}
+    # For structured files: pandas direct extraction is primary; OpenAI supplements
+    if ext in _STRUCTURED_EXTS:
+        pandas_data = _extract_from_pandas(file_path, ext, doc_type)
+        try:
+            ai_data = extract_document(doc_type, img_path, raw_text)
+        except Exception as e:
+            logger.warning(f"AI extraction failed for {filename}: {e}")
+            ai_data = {}
+        # Merge: pandas wins for fields it found (non-empty), OpenAI fills the rest
+        merged = {**ai_data}
+        for k, v in pandas_data.items():
+            if v or v == 0:  # keep pandas value if non-empty (or zero for amounts)
+                merged[k] = v
+        ai_data = merged
+    else:
+        try:
+            ai_data = extract_document(doc_type, img_path, raw_text)
+        except Exception as e:
+            logger.warning(f"AI extraction failed for {filename}: {e}")
+            ai_data = {}
 
     # ── 4. Create typed model ───────────────────────────────────────────────
     typed_obj = _create_typed_record(doc_type, ai_data, base_doc, org, user)
@@ -198,16 +404,35 @@ def _process_typed_document(file_obj, filename: str, doc_type: str, org, user, r
     # ── 5. Validation ───────────────────────────────────────────────────────
     val_result = run_document_validation(doc_type, typed_obj)
 
+    # Merge OpenAI audit results into validation_details
+    ai_audit = {
+        "validation_results":  ai_data.get("_validation_results", []),
+        "anomalies":           ai_data.get("_anomalies", []),
+        "compliance_review":   ai_data.get("_compliance_review", {}),
+        "recommendations":     ai_data.get("_recommendations", []),
+        "field_confidence":    ai_data.get("_field_confidence", {}),
+        "overall_confidence":  ai_data.get("_overall_confidence", 1.0),
+        "language_detected":   ai_data.get("_language_detected", ""),
+        "ai_risk_level":       ai_data.get("_overall_risk_level", ""),
+        "rule_details":        val_result["rule_details"],
+    }
+
+    # Use the higher risk level between AI audit and rule engine
+    ai_risk   = ai_data.get("_overall_risk_level", "low")
+    rule_risk = val_result["risk_level"]
+    _risk_rank = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+    final_risk = ai_risk if _risk_rank.get(ai_risk, 0) >= _risk_rank.get(rule_risk, 0) else rule_risk
+
     # Update typed object with validation results
     typed_obj.validation_score  = val_result["validation_score"]
-    typed_obj.risk_level        = val_result["risk_level"]
+    typed_obj.risk_level        = final_risk
     typed_obj.rules_passed      = val_result["rules_passed"]
     typed_obj.rules_failed      = val_result["rules_failed"]
     typed_obj.failed_rule_codes = val_result["failed_rule_codes"]
-    typed_obj.validation_details= val_result["rule_details"]
+    typed_obj.validation_details= ai_audit
     typed_obj.ai_summary        = ai_data.get("ai_summary", "")
     typed_obj.audit_status      = (
-        "flagged" if val_result["risk_level"] in ["high", "critical"] else "validated"
+        "flagged" if final_risk in ["high", "critical"] else "validated"
     )
     typed_obj.save()
 

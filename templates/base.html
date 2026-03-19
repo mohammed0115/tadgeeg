@@ -316,6 +316,12 @@ tailwind.config = {
         <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Audit Cases" %}</span>
       </a>
 
+      <a href="{% url 'auditing:upload' %}"
+         class="nav-item {% block nav_ai_auditor %}{% endblock %}">
+        <i data-lucide="scan-search" class="w-[18px] h-[18px] flex-shrink-0"></i>
+        <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "AI Auditor" %}</span>
+      </a>
+
       <a href="{% url 'frontend:compliance' %}"
          class="nav-item {% block nav_compliance %}{% endblock %}">
         <i data-lucide="shield-check" class="w-[18px] h-[18px] flex-shrink-0"></i>

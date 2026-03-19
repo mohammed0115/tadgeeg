@@ -25,10 +25,10 @@ ensure_nginx_config() {
 
 services_for_target() {
   case "$1" in
-    live) echo "db_live web_live nginx" ;;
-    dev) echo "db_dev web_dev nginx" ;;
-    test) echo "db_test web_test nginx" ;;
-    all) echo "db_live web_live db_dev web_dev db_test web_test nginx" ;;
+    live) echo "redis db_live web_live celery_live nginx" ;;
+    dev)  echo "redis db_dev web_dev nginx" ;;
+    test) echo "redis db_test web_test nginx" ;;
+    all)  echo "redis db_live web_live celery_live db_dev web_dev db_test web_test nginx" ;;
     *)
       echo "Unknown target: $1" >&2
       exit 1
@@ -38,10 +38,10 @@ services_for_target() {
 
 runtime_services_for_target() {
   case "$1" in
-    live) echo "db_live web_live" ;;
-    dev) echo "db_dev web_dev" ;;
-    test) echo "db_test web_test" ;;
-    all) echo "db_live web_live db_dev web_dev db_test web_test nginx" ;;
+    live) echo "redis db_live web_live celery_live" ;;
+    dev)  echo "redis db_dev web_dev" ;;
+    test) echo "redis db_test web_test" ;;
+    all)  echo "redis db_live web_live celery_live db_dev web_dev db_test web_test nginx" ;;
     *)
       echo "Unknown target: $1" >&2
       exit 1
@@ -51,10 +51,10 @@ runtime_services_for_target() {
 
 build_services_for_target() {
   case "$1" in
-    live) echo "web_live" ;;
-    dev) echo "web_dev" ;;
+    live) echo "web_live celery_live" ;;
+    dev)  echo "web_dev" ;;
     test) echo "web_test" ;;
-    all) echo "web_live web_dev web_test" ;;
+    all)  echo "web_live celery_live web_dev web_test" ;;
     *)
       echo "Unknown target: $1" >&2
       exit 1

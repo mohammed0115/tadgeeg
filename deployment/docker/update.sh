@@ -33,20 +33,20 @@ compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
 
 web_services_for_target() {
   case "$1" in
-    live) echo "web_live" ;;
+    live) echo "web_live celery_live" ;;
     dev)  echo "web_dev" ;;
     test) echo "web_test" ;;
-    all)  echo "web_live web_dev web_test" ;;
+    all)  echo "web_live celery_live web_dev web_test" ;;
     *)    err "Unknown target: $1 (live|dev|test|all)"; exit 1 ;;
   esac
 }
 
 all_services_for_target() {
   case "$1" in
-    live) echo "db_live web_live nginx" ;;
-    dev)  echo "db_dev web_dev nginx" ;;
-    test) echo "db_test web_test nginx" ;;
-    all)  echo "db_live web_live db_dev web_dev db_test web_test nginx" ;;
+    live) echo "redis db_live web_live celery_live nginx" ;;
+    dev)  echo "redis db_dev web_dev nginx" ;;
+    test) echo "redis db_test web_test nginx" ;;
+    all)  echo "redis db_live web_live celery_live db_dev web_dev db_test web_test nginx" ;;
     *)    err "Unknown target: $1"; exit 1 ;;
   esac
 }

@@ -1,6 +1,21 @@
 name: finai-multi-env
 
 services:
+
+  # ── Shared Redis (used by all environments) ──────────────────────────────────
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Live environment ─────────────────────────────────────────────────────────
   db_live:
     image: mysql:8.4
     restart: unless-stopped
@@ -25,8 +40,12 @@ services:
     restart: unless-stopped
     env_file:
       - ./env/live.env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
       db_live:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     command: >
       sh -c "gunicorn finai_backend.wsgi:application
@@ -42,6 +61,26 @@ services:
       - media_live:/app/media
       - logs_live:/app/logs
 
+  celery_live:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./env/live.env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      db_live:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A finai_backend worker --loglevel=info --concurrency=2
+    volumes:
+      - media_live:/app/media
+      - logs_live:/app/logs
+
+  # ── Dev environment ──────────────────────────────────────────────────────────
   db_dev:
     image: mysql:8.4
     restart: unless-stopped
@@ -66,8 +105,12 @@ services:
     restart: unless-stopped
     env_file:
       - ./env/dev.env
+    environment:
+      - REDIS_URL=redis://redis:6379/1
     depends_on:
       db_dev:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     command: >
       sh -c "gunicorn finai_backend.wsgi:application
@@ -83,6 +126,7 @@ services:
       - media_dev:/app/media
       - logs_dev:/app/logs
 
+  # ── Test environment ─────────────────────────────────────────────────────────
   db_test:
     image: mysql:8.4
     restart: unless-stopped
@@ -107,8 +151,12 @@ services:
     restart: unless-stopped
     env_file:
       - ./env/test.env
+    environment:
+      - REDIS_URL=redis://redis:6379/2
     depends_on:
       db_test:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     command: >
       sh -c "gunicorn finai_backend.wsgi:application
@@ -124,12 +172,15 @@ services:
       - media_test:/app/media
       - logs_test:/app/logs
 
+  # ── Nginx reverse proxy ──────────────────────────────────────────────────────
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
+    depends_on:
+      - web_live
     volumes:
       - static_live:/vol/live/static:ro
       - media_live:/vol/live/media:ro
@@ -149,6 +200,7 @@ services:
       - ./certbot/conf:/etc/letsencrypt
 
 volumes:
+  redis_data:
   mysql_live_data:
   mysql_dev_data:
   mysql_test_data:

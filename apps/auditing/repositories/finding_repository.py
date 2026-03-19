@@ -10,7 +10,11 @@ logger = logging.getLogger(__name__)
 
 class FindingRepository:
     @staticmethod
-    def bulk_create_from_ai_result(doc: AuditDocument, ai_result: dict) -> None:
+    def bulk_create_from_ai_result(
+        doc: AuditDocument,
+        ai_result: dict,
+        validation_findings: list = None,
+    ) -> None:
         findings = []
 
         for anomaly in ai_result.get("anomalies") or []:
@@ -42,8 +46,24 @@ class FindingRepository:
                     )
                 )
 
+        # Add rule-based validation findings from ValidationService
+        for vf in (validation_findings or []):
+            if not isinstance(vf, dict):
+                continue
+            if vf.get("status") in ("warning", "failed"):
+                findings.append(
+                    AuditFinding(
+                        document=doc,
+                        finding_type=AuditFinding.FindingType.VALIDATION,
+                        severity="high" if vf.get("status") == "failed" else "medium",
+                        title=str(vf.get("check", "Validation"))[:255],
+                        details=vf.get("details", ""),
+                        source="validator",
+                    )
+                )
+
         if findings:
-            AuditFinding.objects.bulk_create(findings)
+            AuditFinding.objects.bulk_create(findings, ignore_conflicts=True)
             logger.info(
                 "FindingRepository: created %d findings for document %s",
                 len(findings),

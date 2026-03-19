@@ -21,9 +21,17 @@ class AuditDocumentUploadView(LoginRequiredMixin, View):
     login_url = "/login/"
 
     def get(self, request):
-        form = AuditDocumentUploadForm()
+        initial = {}
+        doc_type = request.GET.get("type", "")
+        if doc_type:
+            initial["selected_doc_type"] = doc_type
+        form = AuditDocumentUploadForm(initial=initial)
         recent = DocumentSelector.get_user_documents(request.user)[:5]
-        return render(request, self.template_name, {"form": form, "recent": recent})
+        return render(request, self.template_name, {
+            "form": form,
+            "recent": recent,
+            "preselected_type": doc_type,
+        })
 
     def post(self, request):
         form = AuditDocumentUploadForm(request.POST, request.FILES)

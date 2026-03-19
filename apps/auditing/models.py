@@ -28,6 +28,7 @@ class AuditDocument(models.Model):
         LOW = "low", "Low"
         MEDIUM = "medium", "Medium"
         HIGH = "high", "High"
+        CRITICAL = "critical", "Critical"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     uploaded_by = models.ForeignKey(
@@ -83,6 +84,7 @@ class AuditDocument(models.Model):
             "low": "green",
             "medium": "amber",
             "high": "red",
+            "critical": "rose",
         }
         return colors.get(self.overall_risk_level, "slate")
 

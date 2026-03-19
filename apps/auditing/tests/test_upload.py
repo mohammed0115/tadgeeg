@@ -33,7 +33,7 @@ class AuditDocumentUploadViewTests(TestCase):
             password="Str0ngP@ssw0rd!",
             full_name="Test Auditor",
         )
-        self.upload_url = reverse("auditing:upload")
+        self.upload_url = reverse("auditor:upload")
 
     def test_unauthenticated_get_redirects_to_login(self):
         response = self.client.get(self.upload_url)
@@ -131,7 +131,7 @@ class AuditDocumentUploadViewTests(TestCase):
         self.assertEqual(doc.selected_doc_type, "bank_statement")
 
         # Verify redirect goes to result page
-        result_url = reverse("auditing:result", kwargs={"pk": doc.pk})
+        result_url = reverse("auditor:result", kwargs={"pk": doc.pk})
         self.assertIn(str(doc.pk), response["Location"])
 
         # Clean up uploaded file
@@ -189,7 +189,7 @@ class AuditDocumentHistoryViewTests(TestCase):
             password="Str0ngP@ssw0rd!",
             full_name="History Tester",
         )
-        self.history_url = reverse("auditing:history")
+        self.history_url = reverse("auditor:history")
 
     def test_unauthenticated_redirects(self):
         response = self.client.get(self.history_url)
@@ -271,20 +271,20 @@ class AuditDocumentResultViewTests(TestCase):
         )
 
     def test_unauthenticated_redirects(self):
-        url = reverse("auditing:result", kwargs={"pk": self.doc.pk})
+        url = reverse("auditor:result", kwargs={"pk": self.doc.pk})
         response = self.client.get(url)
         self.assertIn(response.status_code, [301, 302])
 
     def test_authenticated_owner_can_view(self):
         self.client.force_login(self.user)
-        url = reverse("auditing:result", kwargs={"pk": self.doc.pk})
+        url = reverse("auditor:result", kwargs={"pk": self.doc.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "auditing/result.html")
 
     def test_doc_in_context(self):
         self.client.force_login(self.user)
-        url = reverse("auditing:result", kwargs={"pk": self.doc.pk})
+        url = reverse("auditor:result", kwargs={"pk": self.doc.pk})
         response = self.client.get(url)
         self.assertEqual(response.context["doc"].pk, self.doc.pk)
 
@@ -295,20 +295,20 @@ class AuditDocumentResultViewTests(TestCase):
             full_name="Attacker",
         )
         self.client.force_login(other_user)
-        url = reverse("auditing:result", kwargs={"pk": self.doc.pk})
+        url = reverse("auditor:result", kwargs={"pk": self.doc.pk})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
     def test_nonexistent_document_returns_404(self):
         import uuid
         self.client.force_login(self.user)
-        url = reverse("auditing:result", kwargs={"pk": uuid.uuid4()})
+        url = reverse("auditor:result", kwargs={"pk": uuid.uuid4()})
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
     def test_confidence_pct_in_context(self):
         self.client.force_login(self.user)
-        url = reverse("auditing:result", kwargs={"pk": self.doc.pk})
+        url = reverse("auditor:result", kwargs={"pk": self.doc.pk})
         response = self.client.get(url)
         confidence_pct = response.context.get("confidence_pct")
         self.assertIsNotNone(confidence_pct)

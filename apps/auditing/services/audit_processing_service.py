@@ -13,6 +13,7 @@ from .normalization_service import TextNormalizationService
 from .document_detection_service import DocumentDetectionService
 from .ai_auditor_service import AIAuditorService
 from .risk_service import RiskAssessmentService
+from .validation_service import ValidationService
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,7 @@ class AuditProcessingService:
         self.detector = DocumentDetectionService()
         self.ai = AIAuditorService()
         self.risk = RiskAssessmentService()
+        self.validator = ValidationService()
 
     def process(self, doc: AuditDocument) -> AuditDocument:
         DocumentRepository.set_processing(doc)
@@ -90,12 +92,20 @@ class AuditProcessingService:
         else:
             final_type = detected_type
 
-        # Step 5: Risk assessment (pass empty validation list for compatibility)
+        # Step 5a: Rule-based validation
+        extracted_data = ai_result.get("extracted_data") or {}
+        try:
+            validation_findings = self.validator.validate(detected_type, extracted_data)
+        except Exception as exc:
+            logger.warning("ValidationService.validate failed: %s", exc)
+            validation_findings = []
+
+        # Step 5b: Risk assessment — now uses real validation findings
         if hasattr(self.risk, "assess"):
             import inspect
             sig = inspect.signature(self.risk.assess)
             if len(sig.parameters) >= 2:
-                risk_level = self.risk.assess(ai_result, [])
+                risk_level = self.risk.assess(ai_result, validation_findings)
             else:
                 risk_level = self.risk.assess(ai_result)
         else:
@@ -125,8 +135,8 @@ class AuditProcessingService:
             executive_summary=summary,
         )
 
-        # Step 9: Save findings
-        FindingRepository.bulk_create_from_ai_result(doc, ai_result)
+        # Step 9: Save findings (AI + validation)
+        FindingRepository.bulk_create_from_ai_result(doc, ai_result, validation_findings)
 
         logger.info(
             "AuditProcessingService: completed document %s | risk=%s | confidence=%s",

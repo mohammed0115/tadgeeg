@@ -268,10 +268,10 @@ tailwind.config = {
         <p class="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">{% trans "Invoices" %}</p>
       </div>
 
-      <a href="{% url 'frontend:upload' %}"
+      <a href="{% url 'auditor:upload' %}"
          class="nav-item {% block nav_upload %}{% endblock %}">
         <i data-lucide="upload-cloud" class="w-[18px] h-[18px] flex-shrink-0"></i>
-        <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Upload Invoices" %}</span>
+        <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Upload Document" %}</span>
       </a>
 
       <a href="{% url 'frontend:invoices' %}"
@@ -344,7 +344,7 @@ tailwind.config = {
         </button>
         <div x-show="docsOpen && sidebarOpen" x-transition class="overflow-hidden">
           <div class="pr-3 pt-0.5 space-y-0.5">
-            <a href="{% url 'frontend:doc_upload' %}"
+            <a href="{% url 'auditor:upload' %}"
                class="nav-item text-xs {% block nav_doc_upload %}{% endblock %}">
               <i data-lucide="upload" class="w-3.5 h-3.5 flex-shrink-0"></i>
           <span class="whitespace-nowrap">{% trans "Upload Document" %}</span>

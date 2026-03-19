@@ -106,7 +106,8 @@ def dashboard(request):
 
 @login_required(login_url='/login/')
 def upload(request):
-    return render(request, 'invoices/upload.html', _ctx(request, 'upload'))
+    # Redirect to unified upload with invoice pre-selected
+    return redirect('/auditor/upload/?type=invoice')
 
 
 @login_required(login_url='/login/')
@@ -182,8 +183,12 @@ def documents(request):
 
 @login_required(login_url='/login/')
 def doc_upload(request):
+    # Redirect to unified upload, preserving any ?type= hint
     doc_type = request.GET.get('type', '')
-    return render(request, 'documents/upload.html', _ctx(request, 'documents', selected_type=doc_type))
+    target = '/auditor/upload/'
+    if doc_type:
+        target = f'/auditor/upload/?type={doc_type}'
+    return redirect(target)
 
 @login_required(login_url='/login/')
 def purchase_orders(request):

@@ -44,3 +44,19 @@ class IsOwnOrganization(BasePermission):
 class CanViewExecutiveDashboard(BasePermission):
     def has_permission(self, request, view):
         return request.user.is_authenticated and request.user.has_role_capability("view_executive_dashboard")
+
+
+class RequiresOrganization(BasePermission):
+    """
+    Blocks authenticated users who have no organization from accessing tenant-scoped data.
+    Superusers bypass this check (they operate across all tenants).
+    Apply this alongside IsAuthenticated on any view that scopes data by organization.
+    """
+    message = "Your account is not linked to an organization. Contact your administrator."
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return True  # Let IsAuthenticated handle unauthenticated users
+        if getattr(request.user, "is_superuser", False):
+            return True  # Superusers are not tenant-scoped
+        return bool(getattr(request.user, "organization_id", None))

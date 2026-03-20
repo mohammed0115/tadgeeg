@@ -396,6 +396,7 @@ class GenerateAuditReportView(APIView):
         )
 
         return Response({
+            "id":           str(report.id),
             "report_id":    str(report.id),
             "title":        report.title,
             "report_type":  report_type,
@@ -454,6 +455,7 @@ class InvoiceAuditReportView(APIView):
         )
 
         return Response({
+            "id":           str(report.id),
             "report_id":    str(report.id),
             "title":        report.title,
             "generated_at": report.created_at.isoformat(),
@@ -624,31 +626,29 @@ class ReportPDFView(APIView):
             "org": request.user.organization,
         }, request=request)
 
+        safe_title = (report.title or "report").replace(" ", "_").replace("/", "-")[:60]
+
         try:
             pdf_bytes = _render_report_pdf_bytes(
                 html_str,
                 request.build_absolute_uri("/"),
             )
+            response = HttpResponse(pdf_bytes, content_type="application/pdf")
+            response["Content-Disposition"] = f'attachment; filename="{safe_title}.pdf"'
+            return response
         except ModuleNotFoundError:
-            logger.exception(
-                "Report PDF download failed because WeasyPrint is not installed",
-                extra={"report_id": str(report.id), "organization_id": str(request.user.organization_id)},
-            )
-            return JsonResponse(
-                {"error": "خدمة PDF غير مهيأة على الخادم حاليًا. أعد نشر الخدمة بعد تثبيت مكتبة PDF."},
-                status=503,
-            )
+            logger.warning("WeasyPrint not installed — serving HTML fallback", extra={"report_id": str(report.id)})
+        except OSError as e:
+            # GTK libraries missing (common on Windows dev machines) — serve HTML fallback
+            logger.warning("WeasyPrint OSError (missing GTK?) — serving HTML fallback: %s", e, extra={"report_id": str(report.id)})
         except Exception:
-            logger.exception(
-                "Report PDF generation failed",
-                extra={"report_id": str(report.id), "organization_id": str(request.user.organization_id)},
-            )
+            logger.exception("Report PDF generation failed", extra={"report_id": str(report.id)})
             return JsonResponse(
                 {"error": "تعذر توليد ملف PDF لهذا التقرير حاليًا. راجع سجل الخادم ثم أعد المحاولة."},
                 status=500,
             )
 
-        response = HttpResponse(pdf_bytes, content_type="application/pdf")
-        safe_title = (report.title or "report").replace(" ", "_").replace("/", "-")[:60]
-        response["Content-Disposition"] = f'attachment; filename="{safe_title}.pdf"'
+        # HTML fallback: browser can use Ctrl+P → Save as PDF
+        response = HttpResponse(html_str, content_type="text/html; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="{safe_title}.html"'
         return response

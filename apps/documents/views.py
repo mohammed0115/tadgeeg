@@ -26,7 +26,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.authentication.models import AuditLog
-from apps.authentication.permissions import IsOwnOrganization
+from apps.authentication.permissions import IsOwnOrganization, RequiresOrganization
 from core.utils.audit import log_action
 
 from .models import Document, ExtractedData, DocumentPageResult, DocumentAnalysisResult
@@ -57,7 +57,7 @@ class DocumentUploadView(APIView):
       pending → processing → completed | needs_review | failed
     """
     parser_classes     = [MultiPartParser, FormParser]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RequiresOrganization]
 
     @extend_schema(
         tags=["Documents"],
@@ -103,7 +103,7 @@ class DocumentUploadView(APIView):
 class DocumentListView(generics.ListAPIView):
     """List documents for the authenticated user's organisation."""
     serializer_class   = DocumentListSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RequiresOrganization]
 
     @extend_schema(
         tags=["Documents"],
@@ -148,7 +148,7 @@ class DocumentListView(generics.ListAPIView):
 class DocumentDetailView(generics.RetrieveDestroyAPIView):
     """Full document detail including extraction summary and analysis."""
     serializer_class   = DocumentSerializer
-    permission_classes = [IsAuthenticated, IsOwnOrganization]
+    permission_classes = [IsAuthenticated, RequiresOrganization, IsOwnOrganization]
 
     @extend_schema(
         tags=["Documents"],
@@ -189,7 +189,7 @@ class DocumentProcessView(APIView):
     For most use cases, prefer POST /api/documents/{pk}/analyse/ which runs
     the full v2.0 pipeline (OCR → FinancialAIEngine → AuditEngine).
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RequiresOrganization]
 
     @extend_schema(
         tags=["Documents"],
@@ -233,7 +233,7 @@ class DocumentAnalyseView(APIView):
       2. FinancialAIEngine.analyse()  — classification, extraction, fraud/dup/risk/compliance
       3. AuditEngine.evaluate()       — modular rule evaluation (R001–R006)
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RequiresOrganization]
 
     @extend_schema(
         tags=["Documents"],
@@ -303,7 +303,7 @@ class DocumentAnalysisResultView(APIView):
       - Compliance score + issues
       - Audit rule results (R001–R006)
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RequiresOrganization]
 
     @extend_schema(
         tags=["Documents"],
@@ -350,7 +350,7 @@ class DocumentValidateView(APIView):
         "validation_status":  "validated" | "rejected"
       }
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, RequiresOrganization]
 
     @extend_schema(
         tags=["Documents"],

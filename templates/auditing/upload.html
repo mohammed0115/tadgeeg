@@ -73,7 +73,7 @@
       </div>
       <div class="flex-1 min-w-0">
         <h1 class="text-xl font-extrabold tracking-tight">مدقق المستندات المالي الموحد</h1>
-        <p class="text-sm text-blue-100 mt-0.5">Unified AI Financial Document Auditor</p>
+        <p class="text-sm text-blue-100 mt-0.5">المدقق المالي الذكي — تحليل شامل لجميع أنواع المستندات المالية</p>
         <p class="mt-2 text-sm text-blue-200 leading-relaxed">
           ارفع أي مستند مالي — فواتير، أوامر شراء، كشوف بنك، مسيرات رواتب، إقرارات ضريبية، والمزيد —
           ليقوم الذكاء الاصطناعي بالتحليل الكامل، استخراج البيانات، كشف الشذوذات، وتقييم الامتثال مع ZATCA.
@@ -91,25 +91,21 @@
           <i data-lucide="upload-cloud" class="h-5 w-5"></i>
         </div>
         <p class="text-xs font-bold text-slate-700">رفع الملف</p>
-        <p class="text-[10px] text-slate-400 mt-0.5">Upload</p>
       {% elif forloop.counter == 2 %}
         <div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
           <i data-lucide="file-search" class="h-5 w-5"></i>
         </div>
         <p class="text-xs font-bold text-slate-700">استخراج النص</p>
-        <p class="text-[10px] text-slate-400 mt-0.5">Extract &amp; OCR</p>
       {% elif forloop.counter == 3 %}
         <div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
           <i data-lucide="brain-circuit" class="h-5 w-5"></i>
         </div>
         <p class="text-xs font-bold text-slate-700">تحليل الذكاء الاصطناعي</p>
-        <p class="text-[10px] text-slate-400 mt-0.5">AI Audit (GPT-4o)</p>
       {% else %}
         <div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
           <i data-lucide="file-bar-chart" class="h-5 w-5"></i>
         </div>
         <p class="text-xs font-bold text-slate-700">تقرير النتائج</p>
-        <p class="text-[10px] text-slate-400 mt-0.5">Audit Report</p>
       {% endif %}
     </div>
     {% endfor %}

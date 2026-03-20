@@ -1536,6 +1536,9 @@ msgstr "جارٍ التحقق..."
 msgid "Didn't receive the code?"
 msgstr "لم تستلم الرمز؟"
 
+msgid "Didn’t receive the code?"
+msgstr "لم تستلم الرمز؟"
+
 
 msgid "You can resend after"
 msgstr "يمكنك إعادة الإرسال بعد"
@@ -1587,3 +1590,219 @@ msgstr "تجاوزت الحد الأقصى لمحاولات تسجيل الدخ�
 
 msgid "Google account email has not been verified."
 msgstr "لم يتم التحقق من بريد حساب Google."
+
+msgid "AI Auditor"
+msgstr "المدقق الذكي"
+
+msgid "Description"
+msgstr "الوصف"
+
+msgid "Audit score"
+msgstr "درجة التدقيق"
+
+msgid "Ctrl + S"
+msgstr "Ctrl + S"
+
+msgid "GCC Countries"
+msgstr "دول مجلس التعاون الخليجي"
+
+msgid "An intelligent platform that combines analytical precision with end-to-end alignment to ZATCA requirements. Automate auditing, fraud detection, and financial document analysis in seconds."
+msgstr "منصة ذكية تجمع بين الدقة التحليلية والتوافق الكامل مع متطلبات هيئة الزكاة والضريبة والجمارك. أتمتة التدقيق وكشف الاحتيال وتحليل المستندات المالية في ثوانٍ."
+
+msgid "Email Verification Code"
+msgstr "رمز التحقق بالبريد الإلكتروني"
+
+msgid "If you did not request account creation or a sign-in attempt, please ignore this message. No access will be granted without this code."
+msgstr "إذا لم تطلب إنشاء حساب أو محاولة تسجيل دخول، فيُرجى تجاهل هذه الرسالة. لن يُمنح أي وصول بدون هذا الرمز."
+
+msgid "To keep your account secure, never share this code with anyone, even if they claim to be from support."
+msgstr "للحفاظ على أمان حسابك، لا تشارك هذا الرمز مع أي شخص حتى لو ادّعى أنه من فريق الدعم."
+
+msgid "We do not reveal whether the email is registered, to protect privacy."
+msgstr "لا نكشف ما إذا كان البريد الإلكتروني مسجلاً، حمايةً للخصوصية."
+
+msgid "Don't have an account? Create a new one"
+msgstr "ليس لديك حساب؟ أنشئ حسابًا جديدًا"
+msgid "Don’t have an account? Create a new one"
+msgstr "ليس لديك حساب؟ أنشئ حسابًا جديدًا"
+
+
+msgid "Don\u2019t have an account? Create a new one"
+msgstr "ليس لديك حساب؟ أنشئ حسابًا جديدًا"
+
+msgid "A secure path to recover access"
+msgstr "مسار آمن لاستعادة الوصول"
+
+msgid "Recovery journey"
+msgstr "رحلة الاستعادة"
+
+msgid "Clear from the very first step"
+msgstr "واضح من الخطوة الأولى"
+
+msgid "Enter the email address linked to the account."
+msgstr "أدخل عنوان البريد الإلكتروني المرتبط بالحساب."
+
+msgid "Receive a secure link to create a new password."
+msgstr "احصل على رابط آمن لإنشاء كلمة مرور جديدة."
+
+msgid "Recover Access"
+msgstr "استعادة الوصول"
+
+msgid "Enter your email address and we will send you a secure password reset link."
+msgstr "أدخل عنوان بريدك الإلكتروني وسنرسل لك رابطًا آمنًا لإعادة تعيين كلمة المرور."
+
+msgid "Or continue with"
+msgstr "أو تابع عبر"
+
+msgid "Mohammed Ahmed"
+msgstr "محمد أحمد"
+
+msgid "Average session start time"
+msgstr "متوسط وقت بدء الجلسة"
+
+msgid "Access preview"
+msgstr "معاينة الوصول"
+
+msgid "A clearer, calmer way to access your account"
+msgstr "طريقة أوضح وأهدأ للوصول إلى حسابك"
+
+msgid "Fast"
+msgstr "سريع"
+
+msgid "Calm verification with no visual noise"
+msgstr "تحقق هادئ بلا تشويش بصري"
+
+msgid "Organized"
+msgstr "منظم"
+
+msgid "Direct"
+msgstr "مباشر"
+
+msgid "Use at least 8 characters, ideally mixing uppercase, lowercase, numbers, and symbols."
+msgstr "استخدم 8 أحرف على الأقل، ويُفضل الجمع بين الأحرف الكبيرة والصغيرة والأرقام والرموز."
+
+msgid "This link can no longer be used. Request a new recovery email and open the most recent link sent to you."
+msgstr "لا يمكن استخدام هذا الرابط بعد الآن. اطلب بريد استعادة جديدًا وافتح أحدث رابط أُرسل إليك."
+
+msgid "We sent recovery instructions to your inbox"
+msgstr "أرسلنا تعليمات الاستعادة إلى بريدك الوارد"
+
+msgid "Next step"
+msgstr "الخطوة التالية"
+
+msgid "If the message did not arrive"
+msgstr "إذا لم تصل الرسالة"
+
+msgid "Development environment"
+msgstr "بيئة التطوير"
+
+msgid "The message may appear in the console if the real email settings are not enabled."
+msgstr "قد تظهر الرسالة في وحدة التحكم إذا لم تكن إعدادات البريد الحقيقية مفعّلة."
+
+msgid "Logout"
+msgstr "تسجيل الخروج"
+
+msgid "Didn't receive the code?"
+msgstr "لم تستلم الرمز؟"
+
+msgid "If you did not request this account or a sign-in attempt, you can ignore this step and your account will remain inactive."
+msgstr "إذا لم تطلب هذا الحساب أو محاولة تسجيل الدخول، يمكنك تجاهل هذه الخطوة وسيبقى حسابك غير نشط."
+
+msgid "Choose the role that best matches this user"
+msgstr "اختر الدور الأنسب لهذا المستخدم"
+
+msgid "Total Vendors"
+msgstr "إجمالي الموردين"
+
+msgid "New Vendors"
+msgstr "موردون جدد"
+
+msgid "With Duplicates"
+msgstr "مع تكرارات"
+
+msgid "Vendor List"
+msgstr "قائمة الموردين"
+
+msgid "Search by name..."
+msgstr "بحث بالاسم..."
+
+msgid "All Levels"
+msgstr "جميع المستويات"
+
+msgid "VAT Number"
+msgstr "الرقم الضريبي"
+
+msgid "Average Invoice"
+msgstr "متوسط الفاتورة"
+
+msgid "New?"
+msgstr "جديد؟"
+
+msgid "New"
+msgstr "جديد"
+
+msgid "No vendors found"
+msgstr "لا يوجد موردون"
+
+msgid "Instructions sent"
+msgstr "تم إرسال التعليمات"
+
+msgid "Send the link again"
+msgstr "إعادة إرسال الرابط"
+
+msgid "Send recovery link"
+msgstr "إرسال رابط الاستعادة"
+
+msgid "Request a new link"
+msgstr "طلب رابط جديد"
+
+msgid "Financial Summary"
+msgstr "الملخص المالي"
+
+msgid "Total Income"
+msgstr "إجمالي الإيرادات"
+
+msgid "Total Expense"
+msgstr "إجمالي المصروفات"
+
+msgid "Net Profit"
+msgstr "صافي الربح"
+
+msgid "Flagged Transactions"
+msgstr "المعاملات المُبلَّغ عنها"
+
+msgid "Total Cases"
+msgstr "إجمالي الحالات"
+
+msgid "Open"
+msgstr "مفتوح"
+
+msgid "Resolved"
+msgstr "محلول"
+
+msgid "Invoice Count"
+msgstr "عدد الفواتير"
+
+msgid "Total Spend"
+msgstr "إجمالي الإنفاق"
+
+msgid "Spend Share"
+msgstr "حصة الإنفاق"
+
+msgid "Rule Code"
+msgstr "رمز القاعدة"
+
+msgid "Failure Count"
+msgstr "عدد الإخفاقات"
+
+msgid "Contact Us"
+msgstr "تواصل معنا"
+
+msgid "About %(product)s"
+msgstr "عن %(product)s"
+
+msgid "Flexible plans for auditing and compliance teams"
+msgstr "خطط مرنة لفرق التدقيق والامتثال"
+
+msgid "A financial auditing platform built for the GCC market"
+msgstr "منصة تدقيق مالي مصممة لسوق مجلس التعاون الخليجي"

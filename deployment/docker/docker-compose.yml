@@ -126,6 +126,25 @@ services:
       - media_dev:/app/media
       - logs_dev:/app/logs
 
+  celery_dev:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./env/dev.env
+    environment:
+      - REDIS_URL=redis://redis:6379/1
+    depends_on:
+      db_dev:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A finai_backend worker --loglevel=info --concurrency=2
+    volumes:
+      - media_dev:/app/media
+      - logs_dev:/app/logs
+
   # ── Test environment ─────────────────────────────────────────────────────────
   db_test:
     image: mysql:8.4
@@ -179,8 +198,6 @@ services:
     ports:
       - "80:80"
       - "443:443"
-    depends_on:
-      - web_live
     volumes:
       - static_live:/vol/live/static:ro
       - media_live:/vol/live/media:ro

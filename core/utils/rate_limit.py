@@ -26,7 +26,7 @@ DEFAULT_LIMITS = {
     "default": (300, 60),
 }
 
-UPLOAD_PATHS = {"/api/v1/invoices/upload/", "/api/v1/documents/upload/typed/"}
+UPLOAD_PATHS = {"/api/v1/invoices/upload/", "/api/v1/documents/upload/typed/", "/api/v1/documents/upload/"}
 AI_PATHS     = {"/api/v1/analytics/", "/api/v1/reports/generate/"}
 
 

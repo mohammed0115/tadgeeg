@@ -439,6 +439,94 @@
           </template>
         </div>
       </div>
+
+      {# Big Four Compliance Panel #}
+      <div class="dashboard-surface p-6" x-show="bigFourFirms.length">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div class="text-right">
+            <h2 class="text-2xl font-bold text-slate-900">معايير Big Four للتدقيق</h2>
+            <p class="mt-1 text-sm text-slate-500">معدل الامتثال وفق منهجيات KPMG و Deloitte و PwC و EY</p>
+          </div>
+          <span class="rounded-full px-4 py-2 text-sm font-bold"
+                :class="bigFourOverall >= 90 ? 'bg-green-50 text-green-700' : bigFourOverall >= 70 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'"
+                x-text="bigFourOverall + '% إجمالي'"></span>
+        </div>
+
+        <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <template x-for="firm in bigFourFirms" :key="firm.firm">
+            <div class="rounded-2xl border bg-slate-50 p-5"
+                 :class="firm.status === 'compliant' ? 'border-green-200' : firm.status === 'at_risk' ? 'border-amber-200' : 'border-red-200'">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex-1 text-right">
+                  <p class="text-sm font-extrabold text-slate-900" x-text="firm.firm"></p>
+                  <p class="mt-0.5 text-xs leading-5 text-slate-500" x-text="firm.description"></p>
+                  <p class="mt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400" x-text="firm.standard"></p>
+                </div>
+                <div class="flex flex-col items-end gap-1">
+                  <span class="font-mono text-2xl font-extrabold"
+                        :class="firm.status === 'compliant' ? 'text-green-600' : firm.status === 'at_risk' ? 'text-amber-600' : 'text-red-600'"
+                        x-text="firm.pass_rate + '%'"></span>
+                  <span class="rounded-full px-2.5 py-0.5 text-[10px] font-bold"
+                        :class="firm.status === 'compliant' ? 'bg-green-100 text-green-700' : firm.status === 'at_risk' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'"
+                        x-text="firm.status === 'compliant' ? 'ملتزم' : firm.status === 'at_risk' ? 'في خطر' : 'غير ملتزم'"></span>
+                </div>
+              </div>
+              <div class="mt-4 h-2 overflow-hidden rounded-full bg-white">
+                <div class="h-full rounded-full transition-all duration-700"
+                     :style="'width:' + firm.pass_rate + '%; background:' + (firm.status === 'compliant' ? '#16a34a' : firm.status === 'at_risk' ? '#d97706' : '#dc2626')"></div>
+              </div>
+              <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                <span>اجتاز: <span class="font-bold text-slate-700" x-text="firm.passed"></span></span>
+                <span>فشل: <span class="font-bold text-red-600" x-text="firm.failed"></span></span>
+                <span>الإجمالي: <span class="font-bold text-slate-700" x-text="firm.total"></span></span>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      {# Industry Benchmark Panel #}
+      <div class="dashboard-surface p-6" x-show="benchmarkMetrics.length">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div class="text-right">
+            <h2 class="text-2xl font-bold text-slate-900">المقارنة بمعايير القطاع</h2>
+            <p class="mt-1 text-sm text-slate-500" x-text="'المقارنة مع قطاع: ' + benchmarkIndustryLabel"></p>
+          </div>
+          <span class="rounded-full px-4 py-2 text-sm font-bold"
+                :class="benchmarkPosition === 'above_average' ? 'bg-green-50 text-green-700' : benchmarkPosition === 'below_average' ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-600'"
+                x-text="benchmarkPosition === 'above_average' ? 'فوق المتوسط ✓' : benchmarkPosition === 'below_average' ? 'دون المتوسط ↓' : 'في المتوسط'"></span>
+        </div>
+
+        <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <template x-for="metric in benchmarkMetrics" :key="metric.key">
+            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div class="flex items-center justify-between text-sm">
+                <span class="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                      :class="metric.status === 'above' ? 'bg-green-100 text-green-700' : metric.status === 'below' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'"
+                      x-text="metric.status === 'above' ? '↑ أفضل' : metric.status === 'below' ? '↓ دون' : '= متساوٍ'"></span>
+                <span class="font-semibold text-slate-700" x-text="metric.label"></span>
+              </div>
+              <div class="mt-3 flex items-end justify-between gap-3">
+                <div class="text-left">
+                  <p class="text-[10px] text-slate-400">معيار القطاع</p>
+                  <p class="font-mono text-sm font-bold text-slate-500" x-text="metric.benchmark + metric.unit"></p>
+                </div>
+                <div class="text-right">
+                  <p class="text-[10px] text-slate-400">مؤسستك</p>
+                  <p class="font-mono text-lg font-extrabold"
+                     :class="metric.status === 'above' ? 'text-green-600' : metric.status === 'below' ? 'text-red-600' : 'text-slate-700'"
+                     x-text="metric.value + metric.unit"></p>
+                </div>
+              </div>
+              <div class="mt-3 h-2 overflow-hidden rounded-full bg-white">
+                <div class="h-full rounded-full transition-all duration-700"
+                     :style="'width:' + Math.min(100, metric.value) + '%; background:' + (metric.status === 'above' ? '#16a34a' : metric.status === 'below' ? '#dc2626' : '#64748b')"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -927,6 +1015,58 @@ dashboard = function() {
     } catch (error) {
       console.warn('dashboard audit overview', error);
     }
+  };
+
+  // ── Big Four state ────────────────────────────────────────────────────────
+  state.bigFourFirms = [];
+  state.bigFourOverall = 0;
+
+  state.loadBigFour = async function() {
+    try {
+      const response = await apiFetch('/audit/big-four/');
+      this.bigFourFirms = response.firms || [];
+      this.bigFourOverall = response.overall_pass_rate || 0;
+    } catch (error) {
+      console.warn('dashboard big-four', error);
+    }
+  };
+
+  // ── Industry Benchmark state ──────────────────────────────────────────────
+  state.benchmarkMetrics = [];
+  state.benchmarkIndustryLabel = '';
+  state.benchmarkPosition = '';
+
+  state.loadBenchmark = async function() {
+    try {
+      const response = await apiFetch('/analytics/benchmark/');
+      this.benchmarkIndustryLabel = response.industry_label || '';
+      this.benchmarkPosition = response.summary?.overall_position || '';
+      const metaMap = {
+        compliance_rate_pct:    { label: 'معدل الامتثال',       unit: '%' },
+        duplicate_rate_pct:     { label: 'معدل الفواتير المكررة', unit: '%' },
+        avg_risk_score:         { label: 'متوسط درجة المخاطر',  unit: '' },
+        vat_compliance_rate_pct:{ label: 'امتثال ضريبة القيمة المضافة', unit: '%' },
+      };
+      this.benchmarkMetrics = Object.entries(response.metrics || {}).map(([key, data]) => ({
+        key,
+        label:     metaMap[key]?.label || key,
+        unit:      metaMap[key]?.unit || '',
+        value:     Number(data.value  || 0).toFixed(1),
+        benchmark: Number(data.benchmark || 0).toFixed(1),
+        delta:     Number(data.delta  || 0).toFixed(1),
+        status:    data.status || 'at',
+      }));
+    } catch (error) {
+      console.warn('dashboard benchmark', error);
+    }
+  };
+
+  // Override init to also load new panels
+  const _origInit = state.init.bind(state);
+  state.init = function() {
+    _origInit();
+    this.loadBigFour();
+    this.loadBenchmark();
   };
 
   return state;

@@ -275,6 +275,10 @@ class AuditLog(models.Model):
     user_agent = models.TextField(blank=True)
     details = models.JSONField(default=dict)
     timestamp = models.DateTimeField(auto_now_add=True)
+    retain_until = models.DateTimeField(
+        null=True, blank=True, db_index=True,
+        help_text="Records are retained until this date (7-year minimum per regulatory requirements)."
+    )
 
     class Meta:
         db_table = "audit_logs"

@@ -23,3 +23,5 @@ python-dotenv>=1.0
 mysqlclient>=2.2
 gunicorn>=21.0
 whitenoise>=6.6         # Static file serving
+openpyxl>=3.1           # Excel (.xlsx) export
+pyotp>=2.9              # TOTP / MFA support

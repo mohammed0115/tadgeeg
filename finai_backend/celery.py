@@ -27,5 +27,9 @@ app.conf.beat_schedule = {
         "task": "notifications.weekly_summary",
         "schedule": crontab(hour=9, minute=0, day_of_week=1),
     },
+    "prune-audit-logs": {
+        "task": "apps.authentication.tasks.prune_audit_logs",
+        "schedule": crontab(hour=3, minute=0, day_of_week="sunday"),  # weekly Sunday 3 AM
+    },
 }
 app.conf.beat_schedule.update(getattr(settings, "CELERY_BEAT_SCHEDULE", {}))

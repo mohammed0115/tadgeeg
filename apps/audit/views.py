@@ -369,3 +369,71 @@ class AuditDashboardOverviewView(APIView):
                 "rule_groups": rule_groups,
             }
         )
+
+
+class BulkCaseActionView(APIView):
+    """
+    Bulk remediation endpoint (FR-4 gap fix).
+    POST /api/v1/audit/cases/bulk/
+    Body: {"ids": ["uuid", ...], "action": "resolve|close|archive|assign", "note": "", "assigned_to": "uuid"}
+    """
+    permission_classes = [IsAuthenticated, IsSeniorAuditorOrAbove]
+
+    @extend_schema(
+        tags=["Audit"],
+        summary="Bulk update audit case status",
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "ids": {"type": "array", "items": {"type": "string"}},
+                    "action": {"type": "string", "enum": ["resolve", "close", "archive", "assign"]},
+                    "note": {"type": "string"},
+                    "assigned_to": {"type": "string"},
+                },
+                "required": ["ids", "action"],
+            }
+        },
+    )
+    def post(self, request):
+        ids = request.data.get("ids", [])
+        action = request.data.get("action", "")
+        note = request.data.get("note", "")
+        assigned_to_id = request.data.get("assigned_to")
+
+        if not ids or not action:
+            return Response({"error": "ids and action are required."}, status=400)
+
+        allowed_actions = {"resolve", "close", "archive", "assign"}
+        if action not in allowed_actions:
+            return Response({"error": f"Invalid action. Choose from: {', '.join(allowed_actions)}"}, status=400)
+
+        qs = AuditCase.objects.filter(
+            id__in=ids, organization=request.user.organization
+        )
+        count = qs.count()
+        if count == 0:
+            return Response({"error": "No matching cases found."}, status=404)
+
+        now = timezone.now()
+        if action == "resolve":
+            qs.update(
+                status=AuditCase.Status.RESOLVED,
+                resolved_by=request.user,
+                resolved_at=now,
+                resolution_notes=note or "Bulk resolved",
+            )
+        elif action == "close":
+            qs.update(status=AuditCase.Status.CLOSED)
+        elif action == "archive":
+            qs.update(status=AuditCase.Status.CLOSED)
+        elif action == "assign":
+            if not assigned_to_id:
+                return Response({"error": "assigned_to is required for assign action."}, status=400)
+            try:
+                assignee = User.objects.get(id=assigned_to_id, organization=request.user.organization)
+            except User.DoesNotExist:
+                return Response({"error": "Assignee not found in organization."}, status=404)
+            qs.update(assigned_to=assignee, status=AuditCase.Status.IN_PROGRESS)
+
+        return Response({"updated": count, "action": action})

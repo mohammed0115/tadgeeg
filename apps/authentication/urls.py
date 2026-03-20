@@ -22,4 +22,7 @@ urlpatterns = [
     path("organization/", views.CurrentOrganizationView.as_view(), name="current-organization"),
     path("organization/settings/", views.OrganizationSettingsView.as_view(), name="current-organization-settings"),
     path("audit-logs/", views.AuditLogListView.as_view(), name="audit-log-list"),
+    path("mfa/setup/", views.MFASetupView.as_view(), name="mfa-setup"),
+    path("mfa/verify/", views.MFAVerifyView.as_view(), name="mfa-verify"),
+    path("mfa/disable/", views.MFADisableView.as_view(), name="mfa-disable"),
 ]

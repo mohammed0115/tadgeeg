@@ -67,6 +67,6 @@ fi
 
 python manage.py migrate --noinput
 python manage.py compilemessages --ignore=.venv || echo "compilemessages skipped (gettext not available)"
-python manage.py collectstatic --noinput --clear
+python manage.py collectstatic --noinput
 
 exec "$@"

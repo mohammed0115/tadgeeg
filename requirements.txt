@@ -25,3 +25,5 @@ gunicorn>=21.0
 whitenoise>=6.6         # Static file serving
 openpyxl>=3.1           # Excel (.xlsx) export
 pyotp>=2.9              # TOTP / MFA support
+django-storages[s3]>=1.14  # S3 / cloud media storage (NFR-2)
+boto3>=1.34             # AWS SDK required by django-storages S3

@@ -14,12 +14,13 @@ from apps.authentication.models import User
 from apps.authentication.permissions import IsSeniorAuditorOrAbove
 from apps.invoices.models import Invoice, InvoiceValidationResult
 from apps.invoices.serializers import InvoiceBatchSerializer
-from .models import AuditCase, AuditFinding, AuditSession, CaseComment
+from .models import AuditCase, AuditFinding, AuditSession, CaseComment, CustomRuleDefinition
 from .serializers import (
     AuditCaseSerializer,
     AuditFindingSerializer,
     AuditSessionSerializer,
     CaseCommentSerializer,
+    CustomRuleDefinitionSerializer,
 )
 from .services import AuditSessionSummaryService
 
@@ -371,6 +372,97 @@ class AuditDashboardOverviewView(APIView):
         )
 
 
+class BigFourComplianceView(APIView):
+    """
+    FR-2 gap fix: Big Four standards compliance breakdown.
+    Maps existing rule groups to KPMG / Deloitte / PwC / EY methodologies
+    and returns per-firm pass rates.
+    """
+    permission_classes = [IsAuthenticated]
+
+    # Design decision: map rule group codes → Big Four firm
+    BIG_FOUR_MAPPING = {
+        "KPMG": {
+            "label": "KPMG — Invoice Completeness & Accuracy",
+            "description": "KPMG audit procedures validate that all mandatory invoice fields are present and accurate.",
+            "groups": ["INV"],
+            "standard": "ISA 500 — Audit Evidence",
+        },
+        "Deloitte": {
+            "label": "Deloitte — Risk Assessment & Anomaly Detection",
+            "description": "Deloitte risk assessment methodology focuses on amount anomalies and unusual transaction patterns.",
+            "groups": ["ANO", "DUP"],
+            "standard": "ISA 315 — Identifying and Assessing Risks",
+        },
+        "PwC": {
+            "label": "PwC — Internal Control Testing",
+            "description": "PwC control testing frameworks verify that financial controls are operating effectively.",
+            "groups": ["CTL"],
+            "standard": "ISA 330 — Auditor's Responses to Assessed Risks",
+        },
+        "EY": {
+            "label": "EY — Compliance Verification",
+            "description": "EY compliance procedures verify adherence to ZATCA e-invoicing and documentation standards.",
+            "groups": ["VAT", "DOC"],
+            "standard": "ISA 250 — Consideration of Laws and Regulations",
+        },
+    }
+
+    @extend_schema(tags=["Audit"], summary="Big Four standards compliance breakdown (FR-2)")
+    def get(self, request):
+        from apps.invoices.models import InvoiceValidationResult
+        org = request.user.organization
+        if not org:
+            return Response({"error": "No organization."}, status=400)
+
+        validation_qs = InvoiceValidationResult.objects.filter(invoice__organization=org)
+        rule_groups = _build_rule_group_summary(validation_qs)
+
+        # Index rule groups by code for quick lookup
+        group_by_code = {g["code"]: g for g in rule_groups}
+
+        results = []
+        for firm, meta in self.BIG_FOUR_MAPPING.items():
+            firm_passed = firm_failed = firm_total = 0
+            group_details = []
+            for code in meta["groups"]:
+                g = group_by_code.get(code, {"passed": 0, "failed": 0, "total": 0, "pct": 0.0})
+                firm_passed += g["passed"]
+                firm_failed += g["failed"]
+                firm_total += g["total"]
+                group_details.append({
+                    "code": code,
+                    "passed": g["passed"],
+                    "failed": g["failed"],
+                    "total": g["total"],
+                    "pass_rate": g["pct"],
+                })
+            firm_pass_rate = round((firm_passed / firm_total) * 100, 1) if firm_total else 0.0
+            status = "compliant" if firm_pass_rate >= 90 else "at_risk" if firm_pass_rate >= 70 else "non_compliant"
+            results.append({
+                "firm": firm,
+                "label": meta["label"],
+                "description": meta["description"],
+                "standard": meta["standard"],
+                "pass_rate": firm_pass_rate,
+                "passed": firm_passed,
+                "failed": firm_failed,
+                "total": firm_total,
+                "status": status,
+                "groups": group_details,
+            })
+
+        overall_passed = sum(r["passed"] for r in results)
+        overall_total = sum(r["total"] for r in results)
+        overall_rate = round((overall_passed / overall_total) * 100, 1) if overall_total else 0.0
+
+        return Response({
+            "overall_pass_rate": overall_rate,
+            "overall_status": "compliant" if overall_rate >= 90 else "at_risk" if overall_rate >= 70 else "non_compliant",
+            "firms": results,
+        })
+
+
 class BulkCaseActionView(APIView):
     """
     Bulk remediation endpoint (FR-4 gap fix).
@@ -437,3 +529,92 @@ class BulkCaseActionView(APIView):
             qs.update(assigned_to=assignee, status=AuditCase.Status.IN_PROGRESS)
 
         return Response({"updated": count, "action": action})
+
+
+# ── FR-9: Custom Rule Definitions CRUD ───────────────────────────────────────
+
+class CustomRuleListCreateView(generics.ListCreateAPIView):
+    """
+    GET  /api/v1/audit/rules/        — list all active custom rules for the org
+    POST /api/v1/audit/rules/        — create a new custom rule
+    """
+    serializer_class = CustomRuleDefinitionSerializer
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Audit"], summary="List custom audit rules (FR-9)")
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    @extend_schema(tags=["Audit"], summary="Create a custom audit rule (FR-9)")
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
+    def get_queryset(self):
+        qs = CustomRuleDefinition.objects.filter(organization=self.request.user.organization)
+        if self.request.query_params.get("active_only", "true").lower() != "false":
+            qs = qs.filter(is_active=True)
+        if standard := self.request.query_params.get("standard"):
+            qs = qs.filter(standard=standard)
+        return qs
+
+    def perform_create(self, serializer):
+        serializer.save(
+            organization=self.request.user.organization,
+            created_by=self.request.user,
+        )
+
+
+class CustomRuleDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET    /api/v1/audit/rules/<uuid>/  — retrieve a rule
+    PATCH  /api/v1/audit/rules/<uuid>/  — update a rule (auto-increments version)
+    DELETE /api/v1/audit/rules/<uuid>/  — delete a rule
+    """
+    serializer_class = CustomRuleDefinitionSerializer
+    permission_classes = [IsAuthenticated, IsSeniorAuditorOrAbove]
+
+    @extend_schema(tags=["Audit"], summary="Get / update / delete a custom rule (FR-9)")
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return CustomRuleDefinition.objects.filter(organization=self.request.user.organization)
+
+
+class CustomRuleTestView(APIView):
+    """
+    POST /api/v1/audit/rules/<uuid>/test/
+    Test a custom rule against a sample invoice payload.
+    Body: {"invoice": {...invoice fields...}}
+    """
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Audit"],
+        summary="Test a custom rule against a sample invoice (FR-9)",
+        request={
+            "application/json": {
+                "type": "object",
+                "properties": {
+                    "invoice": {"type": "object", "description": "Invoice data to test against"},
+                },
+                "required": ["invoice"],
+            }
+        },
+    )
+    def post(self, request, pk):
+        try:
+            rule = CustomRuleDefinition.objects.get(pk=pk, organization=request.user.organization)
+        except CustomRuleDefinition.DoesNotExist:
+            return Response({"error": "Rule not found."}, status=404)
+
+        invoice = request.data.get("invoice", {})
+        if not isinstance(invoice, dict):
+            return Response({"error": "invoice must be a JSON object."}, status=400)
+
+        result = rule.evaluate(invoice)
+        return Response({
+            "rule": {"id": str(rule.id), "name": rule.name, "severity": rule.severity},
+            "invoice_tested": invoice,
+            "result": result,
+        })

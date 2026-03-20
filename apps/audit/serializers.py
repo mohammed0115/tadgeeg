@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import AuditCase, AuditFinding, AuditSession, CaseComment
+from .models import AuditCase, AuditFinding, AuditSession, CaseComment, CustomRuleDefinition
 
 class CaseCommentSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(source="author.full_name", read_only=True)
@@ -74,3 +74,18 @@ class AuditFindingSerializer(serializers.ModelSerializer):
             "last_detected_at",
             "resolved_at",
         ]
+
+
+class CustomRuleDefinitionSerializer(serializers.ModelSerializer):
+    created_by_name = serializers.CharField(source="created_by.full_name", read_only=True, default="")
+
+    class Meta:
+        model = CustomRuleDefinition
+        fields = [
+            "id", "name", "description", "standard", "severity",
+            "condition_type", "condition_params", "remediation_suggestion",
+            "is_active", "version", "created_by", "created_by_name",
+            "created_at", "updated_at",
+        ]
+        read_only_fields = ["id", "version", "created_by", "created_at", "updated_at"]
+

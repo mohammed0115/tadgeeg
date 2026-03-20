@@ -2,6 +2,10 @@ from django.urls import path
 from . import views
 urlpatterns = [
     path("dashboard/overview/", views.AuditDashboardOverviewView.as_view(), name="dashboard-overview"),
+    path("big-four/", views.BigFourComplianceView.as_view(), name="big-four-compliance"),
+    path("rules/", views.CustomRuleListCreateView.as_view(), name="custom-rule-list"),
+    path("rules/<uuid:pk>/", views.CustomRuleDetailView.as_view(), name="custom-rule-detail"),
+    path("rules/<uuid:pk>/test/", views.CustomRuleTestView.as_view(), name="custom-rule-test"),
     path("sessions/<uuid:pk>/", views.AuditSessionDetailView.as_view(), name="session-detail"),
     path("sessions/<uuid:pk>/progress/", views.AuditSessionProgressView.as_view(), name="session-progress"),
     path("sessions/<uuid:pk>/findings/", views.AuditSessionFindingsView.as_view(), name="session-findings"),

@@ -11,4 +11,5 @@ urlpatterns = [
     path("benford/", views.BenfordAnalysisView.as_view(), name="benford"),
     path("forecast/cashflow/", views.CashFlowForecastView.as_view(), name="cashflow-forecast"),
     path("kpis/", views.FinancialKPIsView.as_view(), name="kpis"),
+    path("benchmark/", views.IndustryBenchmarkView.as_view(), name="industry-benchmark"),
 ]

@@ -10,13 +10,9 @@
 <meta name="application-name" content="{{ product_name }}">
 <meta name="description" content="{{ product_description }}">
 
-<!-- Tailwind -->
-<script src="{% static 'vendor/tailwind.browser.js' %}"></script>
-{% if bootstrap_tokens %}
-{{ bootstrap_tokens|json_script:"bootstrap-auth-tokens" }}
-{% endif %}
+<!-- Tailwind config MUST be set before the script loads -->
 <script>
-tailwind.config = {
+window.tailwind = { config: {
   darkMode: 'class',
   theme: { extend: {
     colors: {
@@ -30,8 +26,13 @@ tailwind.config = {
       mono: ['Consolas', '"Courier New"', 'monospace'],
     },
   }}
-}
+}};
 </script>
+<!-- Tailwind -->
+<script src="{% static 'vendor/tailwind.browser.js' %}"></script>
+{% if bootstrap_tokens %}
+{{ bootstrap_tokens|json_script:"bootstrap-auth-tokens" }}
+{% endif %}
 
 <!-- Alpine -->
 <script defer src="{% static 'vendor/alpine.min.js' %}"></script>

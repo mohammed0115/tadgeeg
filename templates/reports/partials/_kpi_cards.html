@@ -1,0 +1,37 @@
+<div class="grid grid-cols-2 lg:grid-cols-6 gap-3">
+  <div class="rounded-2xl border border-slate-200 bg-white p-4">
+    <p class="text-xs text-slate-500">إجمالي الفواتير</p>
+    <p class="text-2xl font-black text-slate-900 mt-1">{{ report.summary.total_invoices }}</p>
+    <p class="text-xs text-slate-500 mt-1">حجم العينة المعتمدة بالتقرير</p>
+  </div>
+
+  <div class="rounded-2xl border border-slate-200 bg-white p-4">
+    <p class="text-xs text-slate-500">إجمالي المبلغ</p>
+    <p class="text-2xl font-black text-slate-900 mt-1">{{ report.summary.total_amount|floatformat:2 }}</p>
+    <p class="text-xs text-slate-500 mt-1">إجمالي الإنفاق للفواتير المدخلة</p>
+  </div>
+
+  <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+    <p class="text-xs text-emerald-700">نسبة الامتثال</p>
+    <p class="text-2xl font-black text-emerald-700 mt-1">{{ report.summary.compliance_rate|floatformat:1 }}%</p>
+    <p class="text-xs text-emerald-700/80 mt-1">الامتثال الرقابي العام</p>
+  </div>
+
+  <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+    <p class="text-xs text-amber-700">متوسط درجة المخاطر</p>
+    <p class="text-2xl font-black text-amber-700 mt-1">{{ report.summary.avg_risk_score|floatformat:1 }}</p>
+    <p class="text-xs text-amber-700/80 mt-1">كلما ارتفع الرقم زادت الخطورة</p>
+  </div>
+
+  <div class="rounded-2xl border border-red-200 bg-red-50 p-4">
+    <p class="text-xs text-red-700">فواتير عالية المخاطر</p>
+    <p class="text-2xl font-black text-red-700 mt-1">{{ report.summary.high_risk_invoices }}</p>
+    <p class="text-xs text-red-700/80 mt-1">تحتاج تدخل تدقيقي مباشر</p>
+  </div>
+
+  <div class="rounded-2xl border border-violet-200 bg-violet-50 p-4">
+    <p class="text-xs text-violet-700">عدد التكرارات</p>
+    <p class="text-2xl font-black text-violet-700 mt-1">{{ report.summary.duplicate_count }}</p>
+    <p class="text-xs text-violet-700/80 mt-1">حالات مشتبه بها بالتكرار</p>
+  </div>
+</div>

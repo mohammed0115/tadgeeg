@@ -17,6 +17,7 @@ import logging
 import time
 
 from django.conf import settings
+from django.http import FileResponse
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import generics, status
@@ -393,3 +394,21 @@ class DocumentValidateView(APIView):
                    {"action": "validate", "corrections_count": len(corrections)})
 
         return Response(ExtractedDataSerializer(extracted).data)
+
+
+class DocumentDownloadView(APIView):
+    """Securely download a document file for the current organization."""
+    permission_classes = [IsAuthenticated, RequiresOrganization]
+
+    @extend_schema(tags=["Documents"], summary="Download a document file")
+    def get(self, request, pk):
+        try:
+            doc = Document.objects.get(pk=pk, organization=request.user.organization)
+        except Document.DoesNotExist:
+            return Response({"error": "Document not found."}, status=404)
+
+        if not doc.file:
+            return Response({"error": "Document file is unavailable."}, status=404)
+
+        filename = doc.original_filename or os.path.basename(doc.file.name)
+        return FileResponse(doc.file.open("rb"), as_attachment=True, filename=filename)

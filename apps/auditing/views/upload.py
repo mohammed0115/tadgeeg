@@ -1,6 +1,9 @@
 """Auditing Upload View."""
 
+import io
 import logging
+import os
+import zipfile
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import redirect, render
@@ -12,6 +15,7 @@ from ..repositories.document_repository import DocumentRepository
 from ..selectors.document_selector import DocumentSelector
 from ..services.audit_processing_service import AuditProcessingService
 from core.services.upload_router import DocumentUploadRouter
+from core.services.zip_validator import validate_zip_bomb_silent
 
 logger = logging.getLogger(__name__)
 
@@ -41,20 +45,84 @@ class AuditDocumentUploadView(LoginRequiredMixin, View):
             recent = DocumentSelector.get_user_documents(request.user)[:5]
             return render(request, self.template_name, {"form": form, "recent": recent})
 
-        uploaded_file = form.cleaned_data["file"]
+        uploaded_files = form.cleaned_data["file"]  # Now a list of files
         selected_type = form.cleaned_data.get("selected_doc_type") or AuditDocument.DocumentType.OTHER
         language = form.cleaned_data.get("language") or "auto"
 
-        # ── Route through DocumentUploadRouter ──────────────────────────────
-        # Invoice → invoice pipeline → /invoices/<pk>/
-        # Other typed docs → typed document pipeline → /documents/<type>/<pk>/
-        # Users without org → AI Auditor fallback → /auditor/result/<pk>/
         router = DocumentUploadRouter()
-        result = router.route(
-            uploaded_file=uploaded_file,
-            document_type=selected_type,
-            user=request.user,
-            language=language,
-            organization=getattr(request.user, "organization", None),
-        )
-        return redirect(result.result_url)
+        results = []
+        
+        # Process each file (including extracting ZIPs)
+        for f in uploaded_files:
+            ext = os.path.splitext(f.name)[1].lower()
+            
+            # If ZIP, extract and process each file
+            if ext == '.zip':
+                results.extend(self._process_zip_upload(
+                    f, selected_type, language, request.user, router
+                ))
+            else:
+                # Single file processing
+                f.seek(0)
+                result = router.route(
+                    uploaded_file=f,
+                    document_type=selected_type,
+                    user=request.user,
+                    language=language,
+                    organization=getattr(request.user, "organization", None),
+                )
+                results.append(result)
+        
+        # Redirect to first result, or upload page if all failed
+        if results and results[0].success:
+            return redirect(results[0].result_url)
+        else:
+            recent = DocumentSelector.get_user_documents(request.user)[:5]
+            return render(request, self.template_name, {
+                "form": form,
+                "recent": recent,
+                "error": "Upload failed. Please try again."
+            })
+    
+    def _process_zip_upload(self, zip_file, doc_type, language, user, router):
+        """Extract ZIP and process each contained file."""
+        results = []
+        try:
+            zip_file.seek(0)
+            # ZIP was already validated in form.clean_file()
+            with zipfile.ZipFile(io.BytesIO(zip_file.read()), "r") as zf:
+                for member in zf.infolist():
+                    if member.is_dir():
+                        continue
+                    
+                    name = os.path.basename(member.filename)
+                    ext = os.path.splitext(name)[1].lower()
+                    
+                    # Skip unsupported file types inside ZIP
+                    if ext not in {".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif", 
+                                   ".xlsx", ".xls", ".csv", ".json"}:
+                        continue
+                    
+                    try:
+                        data = zf.read(member)
+                        file_like = io.BytesIO(data)
+                        file_like.name = name
+                        file_like.size = len(data)
+                        
+                        result = router.route(
+                            uploaded_file=file_like,
+                            document_type=doc_type,
+                            user=user,
+                            language=language,
+                            organization=getattr(user, "organization", None),
+                        )
+                        results.append(result)
+                    except Exception as e:
+                        logger.error(f"Failed to process ZIP member {name}: {e}")
+                        continue
+        except zipfile.BadZipFile as e:
+            logger.error(f"Bad ZIP file {zip_file.name}: {e}")
+        except Exception as e:
+            logger.error(f"ZIP extraction failed: {e}")
+        
+        return results

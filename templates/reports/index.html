@@ -67,8 +67,13 @@
               · <span x-text="(rep.created_at||'').slice(0,10)"></span>
             </p>
           </div>
-          <button @click="viewReport(rep.id)"
+            <button @click="viewReport(rep.id, rep.report_type)"
                   class="btn-ghost text-xs py-1.5 px-3 flex-shrink-0">{% trans "View" %}</button>
+            <a x-show="rep.report_type === 'invoice_audit'"
+               :href="fullReportUrl(rep.id, rep.report_type)"
+               class="btn-ghost text-xs py-1.5 px-3 flex-shrink-0 text-red-600 dark:text-red-400">
+              {% trans "Open Full Report" %}
+            </a>
           <button @click="downloadPDF(rep.id, rep.title)"
                   class="btn-ghost text-xs py-1.5 px-3 flex-shrink-0 flex items-center gap-1 text-primary-600 dark:text-primary-400">
             <i data-lucide="download" class="w-3.5 h-3.5"></i>PDF
@@ -88,6 +93,11 @@
       <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
         <h3 class="font-bold text-slate-800 dark:text-white" x-text="activeReport?.title||i18n.report"></h3>
         <div class="flex items-center gap-2">
+          <a x-show="activeReport?.report_type === 'invoice_audit'"
+             :href="fullReportUrl(activeReport.id, activeReport.report_type)"
+             class="btn-ghost text-xs py-1.5 px-3 border border-slate-200 dark:border-slate-600">
+            {% trans "Open Full Report" %}
+          </a>
           <button @click="downloadPDF(activeReport.id, activeReport.title)"
                   class="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5"
                   :disabled="pdfLoading" title="{% trans 'Download PDF' %}">
@@ -198,13 +208,21 @@ function reportsPage() {
         });
         notify(this.i18n.reportGenerated, 'success');
         await this.loadReports();
+        if (type === 'invoice_audit' && d?.id) {
+          window.location.href = this.fullReportUrl(d.id, type);
+          return;
+        }
         this.activeReport = d;
       } catch(e) { notify(this.i18n.reportGenerationFailed + ' ' + e.message, 'error'); }
       this.generating = false;
       this.$nextTick(() => lucide.createIcons());
     },
 
-    async viewReport(id) {
+    async viewReport(id, type=null) {
+      if (type === 'invoice_audit') {
+        window.location.href = this.fullReportUrl(id, type);
+        return;
+      }
       try {
         this.activeReport = await apiFetch('/reports/'+id+'/');
         this.$nextTick(() => lucide.createIcons());
@@ -253,6 +271,11 @@ function reportsPage() {
         vendor_analysis: this.i18n.vendorAnalysis,
         spend_analysis: this.i18n.spendAnalysis,
       }[type] || type;
+    },
+
+    fullReportUrl(id, type) {
+      if (type === 'invoice_audit') return `/reports/invoice-audit/?report_id=${id}`;
+      return `/reports/`;
     },
   }
 }

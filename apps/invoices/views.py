@@ -14,6 +14,7 @@ from decimal import Decimal, InvalidOperation
 
 from django.core.files.base import ContentFile
 from django.db.models import Avg, Count, Max, Min, Q, Sum
+from django.http import FileResponse
 from django.shortcuts import render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
@@ -36,6 +37,7 @@ from core.services.invoice_validator import run_all_rules as core_run_all_rules
 from core.services.normalization import NormalizationService
 from core.services.ocr_service import pdf_to_images
 from core.services.validation_pipeline import ValidationPipelineService
+from core.services.zip_validator import validate_zip_bomb, ZipValidationError
 from core.utils.audit import log_action
 from apps.authentication.models import AuditLog
 
@@ -762,6 +764,17 @@ def _process_zip(zip_file, org, user, batch, request, audit_session=None) -> tup
     """Extract and process all invoice files inside a ZIP archive."""
     results, errors = [], []
     try:
+        # Validate ZIP before extraction (bomb detection)
+        zip_file.seek(0)
+        try:
+            validate_zip_bomb(zip_file)
+        except ZipValidationError as e:
+            errors.append({"filename": zip_file.name, "error": str(e)})
+            if audit_session:
+                AuditSessionService.record_failure(audit_session, str(e))
+            return results, errors
+        
+        zip_file.seek(0)
         with zipfile.ZipFile(io.BytesIO(zip_file.read()), "r") as zf:
             for member in zf.infolist():
                 if member.is_dir():
@@ -787,6 +800,10 @@ def _process_zip(zip_file, org, user, batch, request, audit_session=None) -> tup
         errors.append({"filename": zip_file.name, "error": _("Invalid ZIP file")})
         if audit_session:
             AuditSessionService.record_failure(audit_session, "Invalid ZIP file")
+    except ZipValidationError as e:
+        errors.append({"filename": zip_file.name, "error": str(e)})
+        if audit_session:
+            AuditSessionService.record_failure(audit_session, str(e))
     return results, errors
 
 
@@ -1193,6 +1210,24 @@ class InvoiceBatchDetailView(APIView):
             "stats": stats,
             "invoices": list(invoices),
         })
+
+
+class InvoiceDownloadView(APIView):
+    """Securely download an invoice file for the current organization."""
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Invoices"], summary="Download an invoice file")
+    def get(self, request, pk):
+        try:
+            invoice = Invoice.objects.get(pk=pk, organization=request.user.organization)
+        except Invoice.DoesNotExist:
+            return Response({"error": _("Invoice not found.")}, status=404)
+
+        if not invoice.file:
+            return Response({"error": _("Invoice file is unavailable.")}, status=404)
+
+        filename = invoice.original_filename or os.path.basename(invoice.file.name)
+        return FileResponse(invoice.file.open("rb"), as_attachment=True, filename=filename)
 
 
 # ─── Reports ─────────────────────────────────────────────────────────────────

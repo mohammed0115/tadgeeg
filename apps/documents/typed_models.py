@@ -43,7 +43,7 @@ class AuditMixin(models.Model):
 
     id              = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization    = models.ForeignKey(Organization, on_delete=models.CASCADE)
-    document        = models.OneToOneField(Document, on_delete=models.CASCADE, null=True, blank=True)
+    document        = models.OneToOneField(Document, on_delete=models.CASCADE, null=False, blank=False)
     uploaded_by     = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="+")
     audit_status    = models.CharField(max_length=20, choices=AuditStatus.choices, default=AuditStatus.PENDING)
     risk_level      = models.CharField(max_length=20, choices=RiskLevel.choices, default=RiskLevel.LOW)

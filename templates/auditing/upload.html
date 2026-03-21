@@ -9,10 +9,9 @@
   dir="rtl"
   x-data="{
     dragging: false,
-    selectedFile: null,
-    fileName: '',
-    fileSize: '',
-    fileExt: '',
+    selectedFiles: [],
+    fileNames: '',
+    totalSize: '',
     submitting: false,
     error: '',
     selectedType: '',
@@ -26,36 +25,42 @@
     onDrop(e) {
       this.dragging = false;
       const files = e.dataTransfer.files;
-      if (files.length) this.setFile(files[0]);
+      if (files.length) this.setFiles(files);
     },
 
     onFileChange(e) {
-      if (e.target.files.length) this.setFile(e.target.files[0]);
+      if (e.target.files.length) this.setFiles(e.target.files);
     },
 
-    setFile(file) {
+    setFiles(files) {
       const allowed = ['.pdf','.jpg','.jpeg','.png','.tiff','.tif','.bmp','.webp','.xlsx','.xls','.xlsm','.csv','.tsv','.json','.jsonl','.zip'];
-      const ext = '.' + file.name.split('.').pop().toLowerCase();
-      if (!allowed.includes(ext)) {
-        this.error = 'نوع الملف غير مدعوم. الصيغ المقبولة: PDF، صور، Excel، CSV، JSON، ZIP';
-        this.selectedFile = null;
-        return;
+      this.selectedFiles = [];
+      let totalBytes = 0;
+      let names = [];
+      
+      for (let f of files) {
+        const ext = '.' + f.name.split('.').pop().toLowerCase();
+        if (!allowed.includes(ext)) {
+          this.error = 'نوع ملف غير مدعوم: ' + ext + '. الصيغ المقبولة: PDF، صور، Excel، CSV، JSON، ZIP';
+          return;
+        }
+        if (f.size > 52428800) {
+          this.error = 'حجم الملف يتجاوز الحد الأقصى (50 ميجابايت): ' + f.name;
+          return;
+        }
+        this.selectedFiles.push(f);
+        totalBytes += f.size;
+        names.push(f.name);
       }
-      if (file.size > 52428800) {
-        this.error = 'حجم الملف يتجاوز الحد الأقصى (50 ميجابايت).';
-        this.selectedFile = null;
-        return;
-      }
+      
       this.error = '';
-      this.selectedFile = file;
-      this.fileName = file.name;
-      this.fileSize = this.formatSize(file.size);
-      this.fileExt = ext.replace('.', '').toUpperCase();
+      this.fileNames = names.length === 1 ? names[0] : names.length + ' ملفات';
+      this.totalSize = this.formatSize(totalBytes);
     },
 
     submitForm(e) {
-      if (!this.selectedFile) {
-        this.error = 'يرجى اختيار ملف أولاً.';
+      if (!this.selectedFiles || this.selectedFiles.length === 0) {
+        this.error = 'يرجى اختيار ملف أو أكثر أولاً.';
         e.preventDefault();
         return;
       }
@@ -137,35 +142,36 @@
         class="hidden"
         accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif,.bmp,.webp,.xlsx,.xls,.xlsm,.csv,.tsv,.json,.jsonl,.zip"
         @change="onFileChange($event)"
+        multiple
       >
 
       <div class="flex flex-col items-center gap-3 px-6 py-12 text-center">
 
-        <template x-if="!selectedFile">
+        <template x-if="!selectedFiles || selectedFiles.length === 0">
           <div class="flex h-20 w-20 items-center justify-center rounded-3xl bg-slate-100 text-slate-400">
             <i data-lucide="upload-cloud" class="h-10 w-10"></i>
           </div>
         </template>
-        <template x-if="selectedFile">
+        <template x-if="selectedFiles && selectedFiles.length > 0">
           <div class="flex h-20 w-20 items-center justify-center rounded-3xl bg-emerald-100 text-emerald-600 shadow-sm">
             <i data-lucide="file-check-2" class="h-10 w-10"></i>
           </div>
         </template>
 
-        <template x-if="!selectedFile">
+        <template x-if="!selectedFiles || selectedFiles.length === 0">
           <div class="space-y-1.5">
-            <h3 class="text-xl font-bold text-slate-800">اسحب الملف هنا أو انقر للاختيار</h3>
-            <p class="text-sm text-slate-500">PDF، صور، Excel، CSV، JSON، ZIP — بحد أقصى 50 ميجابايت</p>
+            <h3 class="text-xl font-bold text-slate-800">اسحب ملف أو عدة ملفات هنا أو انقر للاختيار</h3>
+            <p class="text-sm text-slate-500">PDF، صور، Excel، CSV، JSON، ZIP — بحد أقصى 50 ميجابايت لكل ملف</p>
           </div>
         </template>
-        <template x-if="selectedFile">
+        <template x-if="selectedFiles && selectedFiles.length > 0">
           <div class="space-y-1">
-            <p class="text-lg font-bold text-slate-800" x-text="fileName"></p>
+            <p class="text-lg font-bold text-slate-800" x-text="fileNames"></p>
             <p class="text-sm text-slate-500">
-              <span class="font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg" x-text="fileExt"></span>
-              · <span x-text="fileSize"></span>
+              <span class="font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg" x-text="selectedFiles.length + ' ملف'"></span>
+              · <span x-text="totalSize"></span>
             </p>
-            <p class="text-xs font-semibold text-emerald-600">✓ تم اختيار الملف</p>
+            <p class="text-xs font-semibold text-emerald-600">✓ تم اختيار الملفات</p>
           </div>
         </template>
 

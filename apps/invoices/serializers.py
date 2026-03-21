@@ -1,5 +1,6 @@
 """Invoice Serializers"""
 
+from django.urls import reverse
 from rest_framework import serializers
 from .models import Invoice, InvoiceBatch, InvoiceValidationResult, VendorProfile, InvoiceAuditEvent
 
@@ -21,6 +22,7 @@ class InvoiceListSerializer(serializers.ModelSerializer):
 
 class InvoiceDetailSerializer(serializers.ModelSerializer):
     """Full serializer including all fields."""
+    file = serializers.SerializerMethodField()
     uploaded_by_name = serializers.CharField(source="uploaded_by.full_name", read_only=True, default="")
     approved_by_name = serializers.CharField(source="approved_by.full_name", read_only=True, default="")
 
@@ -32,6 +34,13 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
             "risk_score", "risk_level", "is_duplicate", "ocr_confidence",
             "raw_text", "extracted_data", "ai_summary",
         ]
+
+    def get_file(self, obj):
+        if not obj.file:
+            return None
+        request = self.context.get("request")
+        path = reverse("invoice-download", kwargs={"pk": obj.pk})
+        return request.build_absolute_uri(path) if request else path
 
 
 class InvoiceValidationResultSerializer(serializers.ModelSerializer):

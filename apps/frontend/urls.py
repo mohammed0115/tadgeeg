@@ -80,6 +80,7 @@ urlpatterns = [
 
     # Reports
     path('reports/', views.reports, name='reports'),
+    path('reports/invoice-audit/', views.invoice_audit_report, name='invoice_audit_report'),
 
     # Vendors
     path('vendors/', views.vendors, name='vendors'),

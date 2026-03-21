@@ -93,7 +93,7 @@
               <i data-lucide="refresh-cw" class="h-4.5 w-4.5" :class="revalidating ? 'animate-spin' : ''"></i>
               <span x-text="revalidating ? 'جاري التدقيق...' : 'إعادة التدقيق'"></span>
             </button>
-            {% if invoice.file %}<a href="{{ invoice.file.url }}" target="_blank" rel="noopener" class="btn-ghost w-full justify-center rounded-2xl border border-white/10 bg-white/8 py-3.5 text-sm text-white hover:bg-white/12"><i data-lucide="download" class="h-4.5 w-4.5"></i><span>تنزيل المستند</span></a>{% endif %}
+            {% if invoice.file %}<a href="{% url 'invoice-download' invoice.id %}" target="_blank" rel="noopener" class="btn-ghost w-full justify-center rounded-2xl border border-white/10 bg-white/8 py-3.5 text-sm text-white hover:bg-white/12"><i data-lucide="download" class="h-4.5 w-4.5"></i><span>تنزيل المستند</span></a>{% endif %}
           </div>
         </aside>
       </div>

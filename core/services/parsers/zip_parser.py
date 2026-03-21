@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Optional
 
 from .base_parser import DocumentParser, ParseResult
+from core.services.zip_validator import validate_zip_bomb, ZipValidationError
 
 logger = logging.getLogger("finai")
 
@@ -115,35 +116,18 @@ class ZIPParser(DocumentParser):
     # ── Security ──────────────────────────────────────────────────────────────
 
     def _is_safe_zip(self, file_path: str, result: ParseResult) -> bool:
+        """Validate ZIP using comprehensive bomb detection."""
         try:
-            with zipfile.ZipFile(file_path, "r") as zf:
-                if zf.testzip() is not None:
-                    result.add_error("ZIP archive is corrupted.")
-                    return False
-
-                total_size = 0
-                names = zf.namelist()
-
-                if len(names) > MAX_FILE_COUNT:
-                    result.add_error(
-                        f"ZIP contains {len(names)} files (max {MAX_FILE_COUNT})."
-                    )
-                    return False
-
-                for info in zf.infolist():
-                    # Path-traversal guard
-                    if ".." in info.filename or info.filename.startswith("/"):
-                        result.add_error(
-                            f"Path-traversal attempt detected: {info.filename}"
-                        )
-                        return False
-
-                    total_size += info.file_size
-                    if total_size > MAX_UNCOMPRESSED_BYTES:
-                        result.add_error("ZIP would expand beyond the 500 MB limit.")
-                        return False
-
+            validate_zip_bomb(
+                file_path,
+                max_file_size=MAX_UNCOMPRESSED_BYTES,
+                max_total_size=MAX_UNCOMPRESSED_BYTES,
+                max_files=MAX_FILE_COUNT,
+            )
             return True
+        except ZipValidationError as exc:
+            result.add_error(str(exc))
+            return False
         except zipfile.BadZipFile as exc:
             result.add_error(f"Bad ZIP file: {exc}")
             return False

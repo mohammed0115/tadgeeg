@@ -19,6 +19,7 @@ from core.services.financial_ai_engine import FinancialAIEngine, FinancialAnalys
 from apps.audit.audit_engine import AuditEngine
 from core.services.parsers.pdf_parser import PDFParser
 from core.utils.file_validation import validate_uploaded_file, ValidationError
+from core.services.upload_router import DocumentUploadRouter, UploadRouterResult
 
 
 def _make_ingestion_result(raw_text: str = "") -> IngestionResult:
@@ -316,6 +317,132 @@ class TestFullPipeline:
     def test_pipeline_with_real_files(self):
         """Should handle real-world document scenarios"""
         pass
+
+
+@pytest.mark.unit
+class TestDocumentUploadRouter:
+    def test_route_dispatches_invoice_type(self):
+        router = DocumentUploadRouter()
+        file_obj = Mock()
+        file_obj.name = "inv.pdf"
+        user = Mock()
+
+        with patch.object(router, "_route_invoice", return_value=UploadRouterResult(
+            success=True,
+            pipeline="invoice",
+            object_id="123",
+            result_url="/invoices/123/",
+        )) as mock_invoice:
+            result = router.route(
+                uploaded_file=file_obj,
+                document_type="invoice",
+                user=user,
+                language="auto",
+                organization=None,
+            )
+
+        mock_invoice.assert_called_once()
+        assert result.pipeline == "invoice"
+
+    def test_route_dispatches_non_invoice_type(self):
+        router = DocumentUploadRouter()
+        file_obj = Mock()
+        file_obj.name = "po.pdf"
+        user = Mock()
+
+        with patch.object(router, "_route_document", return_value=UploadRouterResult(
+            success=True,
+            pipeline="document",
+            object_id="abc",
+            result_url="/documents/purchase-orders/abc/",
+        )) as mock_doc:
+            result = router.route(
+                uploaded_file=file_obj,
+                document_type="purchase_order",
+                user=user,
+                language="auto",
+                organization=None,
+            )
+
+        mock_doc.assert_called_once()
+        assert result.pipeline == "document"
+
+    def test_route_invoice_returns_error_when_user_has_no_org(self):
+        router = DocumentUploadRouter()
+        file_obj = Mock()
+        file_obj.name = "inv.pdf"
+        user = Mock()
+        user.organization = None
+
+        result = router._route_invoice(file_obj, user, "auto", None)
+
+        assert result.success is False
+        assert result.pipeline == "invoice"
+        assert "no organization" in (result.error or "").lower()
+
+    def test_route_invoice_success_path(self):
+        router = DocumentUploadRouter()
+        file_obj = Mock()
+        file_obj.name = "inv.pdf"
+        user = Mock()
+        user.organization = Mock()
+
+        mock_batch = Mock()
+        with patch("apps.invoices.models.InvoiceBatch.objects.create", return_value=mock_batch), \
+             patch("apps.audit.services.AuditSessionService.create_session", return_value=Mock()), \
+             patch("apps.invoices.views._process_single_file", return_value={"invoice_id": "id-1", "success": True}):
+            result = router._route_invoice(file_obj, user, "auto", user.organization)
+
+        assert result.success is True
+        assert result.object_id == "id-1"
+        assert result.result_url.endswith("/invoices/id-1/")
+
+    def test_route_document_uses_fallback_without_org(self):
+        router = DocumentUploadRouter()
+        file_obj = Mock()
+        file_obj.name = "doc.pdf"
+        user = Mock()
+        user.organization = None
+
+        fallback_result = UploadRouterResult(
+            success=True,
+            pipeline="document_fallback",
+            object_id="fb-1",
+            result_url="/auditor/result/fb-1/",
+        )
+        with patch.object(router, "_route_document_fallback", return_value=fallback_result) as mock_fallback:
+            result = router._route_document(file_obj, "expense_report", user, "auto")
+
+        mock_fallback.assert_called_once()
+        assert result.pipeline == "document_fallback"
+
+    def test_route_document_success_builds_detail_url(self):
+        router = DocumentUploadRouter()
+        file_obj = Mock()
+        file_obj.name = "po.pdf"
+        user = Mock()
+        user.organization = Mock()
+
+        with patch("apps.documents.typed_views._process_typed_document", return_value={"success": True, "document_id": "typed-1"}):
+            result = router._route_document(file_obj, "purchase_order", user, "auto")
+
+        assert result.success is True
+        assert result.object_id == "typed-1"
+        assert result.result_url.endswith("/documents/purchase-orders/typed-1/")
+
+    def test_route_document_exception_returns_failure_result(self):
+        router = DocumentUploadRouter()
+        file_obj = Mock()
+        file_obj.name = "doc.pdf"
+        user = Mock()
+        user.organization = Mock()
+
+        with patch("apps.documents.typed_views._process_typed_document", side_effect=RuntimeError("boom")):
+            result = router._route_document(file_obj, "bank_statement", user, "auto")
+
+        assert result.success is False
+        assert result.pipeline == "document"
+        assert result.result_url == "/documents/bank-statements/"
 
 
 # ─── Performance Tests ──────────────────────────────────────────────────────

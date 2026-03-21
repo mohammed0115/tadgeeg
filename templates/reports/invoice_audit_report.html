@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}تقرير تدقيق الفواتير{% endblock %}
+{% block page_title %}تقرير تدقيق الفواتير{% endblock %}
+{% block nav_reports %}active{% endblock %}
+
+{% block content %}
+<div class="max-w-screen-2xl mx-auto space-y-6 print:space-y-4" dir="rtl">
+  <style>
+    @media print {
+      .app-sidebar, .print-hidden, header, nav { display: none !important; }
+      main { margin: 0 !important; padding: 0 !important; }
+      .card { box-shadow: none !important; border-color: #d1d5db !important; }
+      .print-break-avoid { break-inside: avoid; page-break-inside: avoid; }
+      .print-compact { padding: 0.75rem !important; }
+    }
+  </style>
+
+  {% include "reports/partials/_report_header.html" %}
+
+  <section class="card p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-5 print-break-avoid">
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-extrabold text-slate-900">الملخص التنفيذي</h2>
+      <span class="text-xs px-3 py-1 rounded-full bg-slate-100 text-slate-600">Executive Summary</span>
+    </div>
+
+    {% include "reports/partials/_kpi_cards.html" %}
+
+    <article class="rounded-2xl border border-slate-200 bg-slate-50/80 p-5 space-y-4">
+      <div>
+        <h3 class="text-sm font-bold text-slate-900 mb-1">الخلاصة</h3>
+        <p class="text-sm leading-7 text-slate-700">{{ report.executive_summary.conclusion }}</p>
+      </div>
+
+      <div>
+        <h3 class="text-sm font-bold text-slate-900 mb-2">النتائج الرئيسية</h3>
+        <ul class="space-y-2 text-sm text-slate-700">
+          {% for finding in report.executive_summary.key_findings %}
+            <li class="rounded-xl bg-white border border-slate-200 px-3 py-2">{{ finding }}</li>
+          {% empty %}
+            <li class="text-slate-500">لا توجد نتائج متاحة.</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <div>
+        <h3 class="text-sm font-bold text-slate-900 mb-2">التوصيات</h3>
+        <ul class="space-y-2 text-sm text-slate-700">
+          {% for item in report.executive_summary.recommendations %}
+            <li class="rounded-xl bg-white border border-slate-200 px-3 py-2">{{ item }}</li>
+          {% empty %}
+            <li class="text-slate-500">لا توجد توصيات متاحة.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </article>
+  </section>
+
+  <section class="card p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-5 print-break-avoid">
+    <div class="flex items-center justify-between">
+      <h2 class="text-xl font-extrabold text-slate-900">محرك الامتثال والقواعد الرقابية</h2>
+      <span class="text-xs px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+        نسبة الامتثال {{ report.compliance_engine.compliance_rate|floatformat:1 }}%
+      </span>
+    </div>
+
+    <p class="text-sm leading-7 text-slate-700">
+      يتم تقييم كل فاتورة عبر قواعد رقابية متعددة تشمل صحة البيانات، ضريبة القيمة المضافة، التكرار، وجودة المستند، ثم يتم حساب درجة الامتثال وتصنيف المخاطر.
+    </p>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <p class="text-xs text-slate-500">عدد القواعد المطبقة</p>
+        <p class="text-2xl font-black text-slate-900 mt-1">{{ report.compliance_engine.rules_applied }}</p>
+      </div>
+      <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+        <p class="text-xs text-emerald-700">قواعد ممتثلة</p>
+        <p class="text-2xl font-black text-emerald-700 mt-1">{{ report.compliance_engine.rules_passed }}</p>
+      </div>
+      <div class="rounded-xl border border-red-200 bg-red-50 p-4">
+        <p class="text-xs text-red-700">قواعد مخالفة</p>
+        <p class="text-2xl font-black text-red-700 mt-1">{{ report.compliance_engine.rules_failed }}</p>
+      </div>
+      <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <p class="text-xs text-amber-700">الامتثال العام</p>
+        <p class="text-2xl font-black text-amber-700 mt-1">{{ report.compliance_engine.compliance_rate|floatformat:1 }}%</p>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto rounded-2xl border border-slate-200">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-900 text-white">
+          <tr>
+            <th class="px-4 py-3 text-right">القاعدة</th>
+            <th class="px-4 py-3 text-right">الحالة</th>
+            <th class="px-4 py-3 text-right">الوزن</th>
+            <th class="px-4 py-3 text-right">الملاحظة</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200 bg-white">
+          {% for rule in report.compliance_engine.rules_matrix %}
+            <tr>
+              <td class="px-4 py-3 font-semibold text-slate-800">{{ rule.rule_code }}</td>
+              <td class="px-4 py-3">
+                {% if rule.status == "ممتثل" %}
+                  <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2.5 py-1 text-xs font-bold">✅ ممتثل</span>
+                {% else %}
+                  <span class="inline-flex items-center gap-1 rounded-full bg-red-100 text-red-700 px-2.5 py-1 text-xs font-bold">❌ مخالف</span>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3 text-slate-700">{{ rule.weight }}</td>
+              <td class="px-4 py-3 text-slate-600">{{ rule.note }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="4" class="px-4 py-4 text-center text-slate-500">لا توجد بيانات قواعد متاحة.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {% include "reports/partials/_high_risk_invoices_table.html" %}
+  {% include "reports/partials/_failed_rules_table.html" %}
+
+  <section class="card p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-5 print-break-avoid">
+    <h2 class="text-xl font-extrabold text-slate-900">تحليل المخاطر</h2>
+
+    <div class="grid md:grid-cols-4 gap-4">
+      <div class="rounded-2xl border border-slate-200 bg-white p-4">
+        <p class="text-xs text-slate-500">متوسط درجة المخاطر</p>
+        <p class="text-3xl font-black text-slate-900 mt-2">{{ report.risk_analysis.avg_risk_score|floatformat:1 }}</p>
+      </div>
+      <div class="rounded-2xl border border-red-200 bg-red-50 p-4">
+        <p class="text-xs text-red-700">عالية المخاطر</p>
+        <p class="text-3xl font-black text-red-700 mt-2">{{ report.risk_analysis.high }}</p>
+      </div>
+      <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+        <p class="text-xs text-amber-700">تحتاج مراجعة</p>
+        <p class="text-3xl font-black text-amber-700 mt-2">{{ report.risk_analysis.review }}</p>
+      </div>
+      <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+        <p class="text-xs text-emerald-700">آمنة</p>
+        <p class="text-3xl font-black text-emerald-700 mt-2">{{ report.risk_analysis.safe }}</p>
+      </div>
+    </div>
+
+    {% with total=report.summary.total_invoices|default:0 %}
+      <div class="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+        <div>
+          <div class="flex justify-between text-xs text-slate-600 mb-1"><span>عالية المخاطر</span><span>{{ report.risk_analysis.high }}</span></div>
+          <progress class="w-full h-2 rounded-full accent-red-500" value="{{ report.risk_analysis.high|default:0 }}" max="{{ total|default:1 }}"></progress>
+        </div>
+        <div>
+          <div class="flex justify-between text-xs text-slate-600 mb-1"><span>تحتاج مراجعة</span><span>{{ report.risk_analysis.review }}</span></div>
+          <progress class="w-full h-2 rounded-full accent-amber-500" value="{{ report.risk_analysis.review|default:0 }}" max="{{ total|default:1 }}"></progress>
+        </div>
+        <div>
+          <div class="flex justify-between text-xs text-slate-600 mb-1"><span>آمنة</span><span>{{ report.risk_analysis.safe }}</span></div>
+          <progress class="w-full h-2 rounded-full accent-emerald-500" value="{{ report.risk_analysis.safe|default:0 }}" max="{{ total|default:1 }}"></progress>
+        </div>
+      </div>
+    {% endwith %}
+  </section>
+
+  <section class="card p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-5 print-break-avoid">
+    <h2 class="text-xl font-extrabold text-slate-900">كشف التكرار والشذوذ</h2>
+
+    <div class="grid md:grid-cols-3 gap-4">
+      <div class="rounded-2xl border border-red-200 bg-red-50 p-4">
+        <p class="text-xs text-red-700">عدد الفواتير المكررة</p>
+        <p class="text-3xl font-black text-red-700 mt-2">{{ report.duplicates_anomalies.duplicates }}</p>
+      </div>
+      <div class="rounded-2xl border border-slate-200 bg-white p-4">
+        <p class="text-xs text-slate-500">المورد المهيمن</p>
+        <p class="text-xl font-extrabold text-slate-900 mt-2">{{ report.duplicates_anomalies.dominant_vendor }}</p>
+      </div>
+      <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+        <p class="text-xs text-amber-700">نسبة الاعتماد على المورد</p>
+        <p class="text-3xl font-black text-amber-700 mt-2">{{ report.duplicates_anomalies.vendor_dependency_pct|floatformat:1 }}%</p>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-3">
+      {% for pattern in report.duplicates_anomalies.patterns %}
+        <div class="rounded-xl border p-4 {% if pattern.severity == 'high' %}border-red-200 bg-red-50{% elif pattern.severity == 'review' %}border-amber-200 bg-amber-50{% else %}border-emerald-200 bg-emerald-50{% endif %}">
+          <p class="text-sm font-bold text-slate-800">{{ pattern.label }}</p>
+          <p class="text-2xl font-black mt-1 {% if pattern.severity == 'high' %}text-red-700{% elif pattern.severity == 'review' %}text-amber-700{% else %}text-emerald-700{% endif %}">
+            {{ pattern.count }}
+          </p>
+        </div>
+      {% empty %}
+        <p class="text-slate-500">لا توجد أنماط شذوذ متاحة.</p>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="card p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-5 print-break-avoid">
+    <h2 class="text-xl font-extrabold text-slate-900">تحليل الموردين</h2>
+
+    <div class="overflow-x-auto rounded-2xl border border-slate-200">
+      <table class="min-w-full text-sm">
+        <thead class="bg-slate-100 text-slate-700">
+          <tr>
+            <th class="px-4 py-3 text-right">اسم المورد</th>
+            <th class="px-4 py-3 text-right">عدد الفواتير</th>
+            <th class="px-4 py-3 text-right">إجمالي الإنفاق</th>
+            <th class="px-4 py-3 text-right">متوسط الفاتورة</th>
+            <th class="px-4 py-3 text-right">حصة الإنفاق</th>
+            <th class="px-4 py-3 text-right">فواتير مبلّغ عنها</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200 bg-white">
+          {% for vendor in report.vendor_analysis %}
+            <tr>
+              <td class="px-4 py-3 font-semibold text-slate-900">{{ vendor.vendor_name|default:"-" }}</td>
+              <td class="px-4 py-3 text-slate-700">{{ vendor.invoice_count }}</td>
+              <td class="px-4 py-3 text-slate-700">{{ vendor.total_amount|floatformat:2 }}</td>
+              <td class="px-4 py-3 text-slate-700">{{ vendor.avg_amount|floatformat:2 }}</td>
+              <td class="px-4 py-3">
+                <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold bg-slate-100 text-slate-700">
+                  {{ vendor.spend_share_pct|floatformat:1 }}%
+                </span>
+              </td>
+              <td class="px-4 py-3 text-red-700 font-bold">{{ vendor.flagged_invoices }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6" class="px-4 py-4 text-center text-slate-500">لا توجد بيانات موردين متاحة.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  {% include "reports/partials/_recommendations.html" %}
+</div>
+{% endblock %}

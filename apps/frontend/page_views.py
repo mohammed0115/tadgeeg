@@ -1,7 +1,7 @@
 """Tadgeeg AI frontend page views."""
 
 import secrets
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from urllib.parse import urlencode
 
@@ -911,6 +911,234 @@ def audit_session_detail(request, pk):
 @login_required(login_url="/login/")
 def reports(request):
     return render(request, "reports/index.html", _ctx(request, "reports", report_types=_report_types()))
+
+
+def _weight_for_rule(rule_code):
+    prefix = (rule_code or "").split("-", 1)[0]
+    if prefix in {"DUP", "VAT", "ANO"}:
+        return "مرتفع"
+    if prefix in {"INV", "CTL"}:
+        return "متوسط"
+    return "منخفض"
+
+
+def _failed_rules_with_invoice_refs(top_failed_rules, validations):
+    top_codes = [r.get("rule_code") for r in (top_failed_rules or []) if r.get("rule_code")]
+    top_codes_set = set(top_codes)
+    buckets = {code: [] for code in top_codes}
+
+    for vr in validations:
+        inv_no = vr.invoice.invoice_number or str(vr.invoice_id)[:8]
+        for code in (vr.failed_rule_codes or []):
+            if code not in top_codes_set:
+                continue
+            if inv_no not in buckets[code]:
+                buckets[code].append(inv_no)
+
+    enriched = []
+    for rule in (top_failed_rules or []):
+        code = rule.get("rule_code")
+        invoice_numbers = buckets.get(code, [])
+        enriched.append({
+            "rule_code": code,
+            "description": rule.get("description") or code,
+            "failure_count": int(rule.get("failures") or 0),
+            "invoice_numbers": invoice_numbers,
+            "invoice_count": len(invoice_numbers),
+        })
+    return enriched
+
+
+def _build_high_risk_violations(invoice_rows, validation_map, rule_catalog):
+    rows = []
+    for row in (invoice_rows or []):
+        inv_id = row.get("id")
+        vr = validation_map.get(inv_id)
+        violations = []
+
+        if vr:
+            details = vr.validation_details or {}
+            for code in (vr.failed_rule_codes or [])[:4]:
+                detail = details.get(code, {}) if isinstance(details, dict) else {}
+                reason = (
+                    detail.get("reason")
+                    or detail.get("message")
+                    or detail.get("note")
+                    or "تم رصد مخالفة لهذه القاعدة وتحتاج مراجعة تفصيلية."
+                )
+                violations.append({
+                    "rule_code": code,
+                    "description": rule_catalog.get(code, code),
+                    "reason": reason,
+                })
+
+        score = float(row.get("risk_score") or 0)
+        rows.append({
+            "id": inv_id,
+            "invoice_number": row.get("invoice_number") or "-",
+            "amount": row.get("total_amount") or 0,
+            "date": row.get("invoice_date") or "-",
+            "risk_level": row.get("risk_level") or "low",
+            "risk_score": score,
+            "violations": violations,
+        })
+
+    return rows
+
+
+@login_required(login_url="/login/")
+def invoice_audit_report(request):
+    from django.db.models import Avg, Count, Sum
+    from apps.reports.models import Report
+    from apps.invoices.models import InvoiceValidationResult
+    from core.services.invoice_validator import RULES
+
+    org = getattr(request.user, "organization", None)
+    if not org:
+        return redirect("frontend:reports")
+
+    report_id = request.GET.get("report_id")
+    report_obj = None
+    base_qs = Report.objects.filter(organization=org, report_type="invoice_audit").order_by("-created_at")
+
+    if report_id:
+        report_obj = base_qs.filter(id=report_id).first()
+    if not report_obj:
+        report_obj = base_qs.first()
+
+    raw_data = (report_obj.data or {}) if report_obj else {}
+    source_data = raw_data.get("invoice_audit") if isinstance(raw_data.get("invoice_audit"), dict) else raw_data
+    narrative = (report_obj.narrative or {}) if report_obj else {}
+
+    validations = list(
+        InvoiceValidationResult.objects.filter(invoice__organization=org)
+        .select_related("invoice")
+        .only("invoice_id", "invoice__invoice_number", "failed_rule_codes", "validation_details")
+    )
+    validation_map = {str(vr.invoice_id): vr for vr in validations}
+
+    overall = source_data.get("overall_stats", {})
+    validation_summary = source_data.get("validation_summary", {})
+    top_risk = source_data.get("top_risk_invoices", [])
+    vendor_rows = source_data.get("vendor_analysis", [])
+    top_failed = source_data.get("top_failed_rules", [])
+
+    compliance_agg = InvoiceValidationResult.objects.filter(invoice__organization=org).aggregate(
+        invoices=Count("id"),
+        rules_applied=Sum("total_rules"),
+        rules_passed=Sum("rules_passed"),
+        rules_failed=Sum("rules_failed"),
+        avg_score=Avg("validation_score"),
+    )
+    rules_applied = int(compliance_agg.get("rules_applied") or 0)
+    rules_passed = int(compliance_agg.get("rules_passed") or 0)
+    rules_failed = int(compliance_agg.get("rules_failed") or 0)
+    compliance_pct = round((rules_passed / rules_applied) * 100, 1) if rules_applied else 0
+
+    risk_avg = float(overall.get("avg_risk_score") or 0)
+    high_risk_count = int((overall.get("critical_count") or 0) + (overall.get("high_count") or 0))
+    report_status = "عالي المخاطر" if risk_avg >= 70 or high_risk_count > 0 else "يحتاج مراجعة" if risk_avg >= 40 else "متوافق"
+
+    failed_rules = _failed_rules_with_invoice_refs(top_failed, validations)
+    high_risk_invoices = _build_high_risk_violations(top_risk, validation_map, RULES)
+
+    dominant_vendor = vendor_rows[0] if vendor_rows else {}
+    duplicate_count = int(overall.get("duplicate_count") or 0)
+    missing_qr_count = int(overall.get("missing_qr_count") or 0)
+    handwritten_count = int(overall.get("handwritten_count") or 0)
+    new_vendor_count = int(overall.get("new_vendor_count") or 0)
+
+    compliance_matrix = []
+    for row in top_failed[:6]:
+        compliance_matrix.append({
+            "rule_code": row.get("rule_code"),
+            "status": "مخالف",
+            "weight": _weight_for_rule(row.get("rule_code")),
+            "note": row.get("description") or "فشل متكرر يتطلب إجراء فوري.",
+        })
+
+    if not compliance_matrix:
+        compliance_matrix = [
+            {"rule_code": "INV-001", "status": "ممتثل", "weight": "متوسط", "note": "توفر رقم الفاتورة في معظم العينات."},
+            {"rule_code": "VAT-002", "status": "ممتثل", "weight": "مرتفع", "note": "نسبة جيدة من صحة حساب الضريبة."},
+            {"rule_code": "DUP-001", "status": "مخالف", "weight": "مرتفع", "note": "ظهرت حالات تكرار تحتاج تحقيق."},
+        ]
+
+    report_payload = {
+        "title": "تقرير تدقيق الفواتير",
+        "organization_name": getattr(org, "name", "-") or "-",
+        "generated_at": report_obj.created_at if report_obj else datetime.now(),
+        "report_type": "Invoice Audit Report",
+        "status": report_status,
+        "summary": {
+            "total_invoices": int(overall.get("total_invoices") or 0),
+            "total_amount": float(overall.get("total_amount") or 0),
+            "compliance_rate": float(validation_summary.get("vat_compliance_pct") or compliance_pct),
+            "avg_risk_score": risk_avg,
+            "high_risk_invoices": high_risk_count,
+            "duplicate_count": duplicate_count,
+        },
+        "executive_summary": {
+            "conclusion": narrative.get("executive_summary") or "الصورة العامة تشير إلى ارتفاع نسبي في مخاطر الامتثال وتحتاج تدخل رقابي سريع.",
+            "key_findings": [
+                f"عدد الفواتير عالية المخاطر: {high_risk_count}",
+                f"عدد الفواتير المكررة: {duplicate_count}",
+                f"متوسط درجة المخاطر: {risk_avg:.1f}",
+            ],
+            "recommendations": [
+                "إغلاق المخالفات ذات الأولوية العالية خلال دورة المراجعة الحالية.",
+                "تفعيل مراجعة استباقية على قواعد التكرار وضريبة القيمة المضافة.",
+                "رفع جودة بيانات الموردين لتقليل الإخفاقات المتكررة.",
+            ],
+        },
+        "compliance_engine": {
+            "rules_applied": rules_applied,
+            "rules_passed": rules_passed,
+            "rules_failed": rules_failed,
+            "compliance_rate": compliance_pct,
+            "rules_matrix": compliance_matrix,
+        },
+        "high_risk_invoices": high_risk_invoices,
+        "failed_rules": failed_rules,
+        "risk_analysis": {
+            "avg_risk_score": risk_avg,
+            "high": int((overall.get("critical_count") or 0) + (overall.get("high_count") or 0)),
+            "review": int(overall.get("medium_count") or 0),
+            "safe": int(overall.get("low_count") or 0),
+        },
+        "duplicates_anomalies": {
+            "duplicates": duplicate_count,
+            "dominant_vendor": dominant_vendor.get("vendor_name") or "-",
+            "vendor_dependency_pct": float(dominant_vendor.get("spend_share_pct") or 0),
+            "patterns": [
+                {"label": "غياب رمز QR", "count": missing_qr_count, "severity": "high" if missing_qr_count else "low"},
+                {"label": "فواتير بخط يدوي", "count": handwritten_count, "severity": "review" if handwritten_count else "low"},
+                {"label": "موردون جدد غير معروفين", "count": new_vendor_count, "severity": "review" if new_vendor_count else "low"},
+            ],
+        },
+        "vendor_analysis": vendor_rows,
+        "recommendations": {
+            "immediate": [
+                "تصحيح فواتير QR غير المتوافقة قبل الإقفال المالي.",
+                "مراجعة المورد المسيطر وتدقيق معاملات العينة عالية القيمة.",
+                "التحقق من الرقم الضريبي للفواتير المرفوضة رقابيا.",
+            ],
+            "future": [
+                "تطبيق مراقبة لحظية لقواعد التكرار قبل اعتماد الفاتورة.",
+                "تحسين جودة الإدخال وتدريب الفريق على متطلبات الامتثال.",
+                "إضافة حدود تنبيه تلقائية عند ارتفاع تركز الإنفاق على مورد واحد.",
+            ],
+        },
+    }
+
+    context = _ctx(
+        request,
+        "reports",
+        report=report_payload,
+        report_record=report_obj,
+        today=date.today(),
+    )
+    return render(request, "reports/invoice_audit_report.html", context)
 
 
 @login_required(login_url="/login/")

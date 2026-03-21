@@ -1,0 +1,64 @@
+<section class="card p-6 rounded-2xl shadow-sm border-2 border-amber-200 bg-gradient-to-b from-amber-50/60 to-white space-y-4 print-break-avoid">
+  <div class="flex items-center justify-between">
+    <h2 class="text-xl font-extrabold text-slate-900">أكثر قواعد التدقيق فشلًا</h2>
+    <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200">
+      Rule Failure Focus
+    </span>
+  </div>
+
+  <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-900 text-white">
+        <tr>
+          <th class="px-4 py-3 text-right">رمز القاعدة</th>
+          <th class="px-4 py-3 text-right">الوصف</th>
+          <th class="px-4 py-3 text-right">عدد الإخفاقات</th>
+          <th class="px-4 py-3 text-right">أرقام الفواتير المتأثرة</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-200">
+        {% for rule in report.failed_rules %}
+          <tr x-data="{ expanded: false }" class="bg-white">
+            <td class="px-4 py-3">
+              <span class="inline-flex rounded-lg px-2.5 py-1 text-xs font-extrabold bg-slate-100 text-slate-800 border border-slate-200">{{ rule.rule_code }}</span>
+            </td>
+            <td class="px-4 py-3 text-slate-700">{{ rule.description }}</td>
+            <td class="px-4 py-3">
+              <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold bg-red-100 text-red-700 border border-red-200">{{ rule.failure_count }}</span>
+            </td>
+            <td class="px-4 py-3">
+              <div class="flex flex-wrap gap-1.5">
+                {% for inv in rule.invoice_numbers %}
+                  {% if forloop.counter <= 6 %}
+                    <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">{{ inv }}</span>
+                  {% endif %}
+                {% empty %}
+                  <span class="text-xs text-slate-500">لا توجد أرقام فواتير.</span>
+                {% endfor %}
+
+                {% if rule.invoice_numbers|length > 6 %}
+                  <button @click="expanded = !expanded" class="print-hidden inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-primary-100 text-primary-700 border border-primary-200">
+                    <span x-show="!expanded">عرض المزيد</span>
+                    <span x-show="expanded">إخفاء</span>
+                  </button>
+                {% endif %}
+              </div>
+
+              {% if rule.invoice_numbers|length > 6 %}
+                <div x-show="expanded" x-transition class="mt-2 flex flex-wrap gap-1.5 print:hidden">
+                  {% for inv in rule.invoice_numbers %}
+                    {% if forloop.counter > 6 %}
+                      <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">{{ inv }}</span>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4" class="px-4 py-6 text-center text-slate-500">لا توجد بيانات لإخفاقات القواعد.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>

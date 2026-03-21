@@ -23,6 +23,14 @@ class UserAdmin(BaseUserAdmin):
         (None, {"classes": ("wide",), "fields": ("email", "full_name", "password1", "password2", "organization", "role")}),
     )
 
+    def get_queryset(self, request):
+        """Filter users by organization for non-superusers."""
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        # Staff users can only see users in their organization
+        return qs.filter(organization=request.user.organization)
+
 
 @admin.register(Organization)
 class OrganizationAdmin(admin.ModelAdmin):
@@ -36,6 +44,13 @@ class OrganizationSettingsAdmin(admin.ModelAdmin):
     list_display = ["organization", "updated_at"]
     search_fields = ["organization__name", "organization__vat_number"]
 
+    def get_queryset(self, request):
+        """Filter organization settings by user's organization."""
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(organization=request.user.organization)
+
 
 @admin.register(AuditLog)
 class AuditLogAdmin(admin.ModelAdmin):
@@ -43,6 +58,14 @@ class AuditLogAdmin(admin.ModelAdmin):
     list_filter = ["action", "organization", "timestamp"]
     search_fields = ["resource_type", "resource_id", "user__email", "organization__name"]
     readonly_fields = ["timestamp"]
+
+    def get_queryset(self, request):
+        """Filter audit logs by organization for non-superusers."""
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        # Staff users can only see audit logs from their organization
+        return qs.filter(organization=request.user.organization)
 
 
 admin.site.site_header = f"{settings.PRODUCT_NAME} — من تطوير {settings.COMPANY_NAME_AR}"

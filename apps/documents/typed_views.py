@@ -44,6 +44,7 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 from core.services.ocr_service import extract_text_tesseract, pdf_to_images
 from core.services.doc_ai_service import extract_document
 from core.services.doc_validators import run_document_validation
+from core.services.zip_validator import validate_zip_bomb, ZipValidationError
 from core.utils.audit import log_action
 from apps.authentication.models import AuditLog
 from apps.authentication.permissions import IsSeniorAuditorOrAbove
@@ -687,6 +688,15 @@ class TypedDocumentUploadView(APIView):
 def _process_zip_typed(zip_file, doc_type, org, user, request):
     results, errors = [], []
     try:
+        # Validate ZIP before extraction (bomb detection)
+        zip_file.seek(0)
+        try:
+            validate_zip_bomb(zip_file)
+        except ZipValidationError as e:
+            errors.append({"filename": zip_file.name, "error": f"فشل التحقق من ZIP: {str(e)}"})
+            return results, errors
+        
+        zip_file.seek(0)
         with zipfile.ZipFile(io.BytesIO(zip_file.read()), "r") as zf:
             for member in zf.infolist():
                 if member.is_dir(): continue
@@ -702,6 +712,8 @@ def _process_zip_typed(zip_file, doc_type, org, user, request):
                     errors.append({"filename": name, "error": str(e)})
     except zipfile.BadZipFile:
         errors.append({"filename": zip_file.name, "error": "ملف ZIP غير صالح"})
+    except ZipValidationError as e:
+        errors.append({"filename": zip_file.name, "error": str(e)})
     return results, errors
 
 

@@ -6,6 +6,15 @@ from django.utils.html import format_html
 from .models import AuditDocument, AuditFinding
 
 
+class TenantAwareModelAdmin(admin.ModelAdmin):
+    """Filters by organization for multi-tenant isolation."""
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        return qs.filter(organization=request.user.organization)
+
+
 class AuditFindingInline(admin.TabularInline):
     model = AuditFinding
     extra = 0
@@ -19,7 +28,7 @@ class AuditFindingInline(admin.TabularInline):
 
 
 @admin.register(AuditDocument)
-class AuditDocumentAdmin(admin.ModelAdmin):
+class AuditDocumentAdmin(TenantAwareModelAdmin):
     list_display = (
         "original_name",
         "status_badge",

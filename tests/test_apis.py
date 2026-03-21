@@ -11,6 +11,7 @@ Tests validate:
 
 import pytest
 from django.urls import reverse
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 from rest_framework.test import APIClient
 from decimal import Decimal
@@ -18,7 +19,7 @@ from datetime import date
 from unittest.mock import patch, Mock
 import json
 
-from apps.authentication.models import User
+from apps.authentication.models import Organization, User
 from apps.documents.models import Document
 from apps.invoices.models import Invoice
 
@@ -368,3 +369,131 @@ class TestAsyncTaskStatus:
         assert response.data['processing_status'] in [
             'pending', 'processing', 'completed', 'failed', 'needs_review'
         ]
+
+
+@pytest.mark.security
+@pytest.mark.django_db
+class TestSecureDownloadIsolation:
+    def test_document_download_owner_allowed(self, organization):
+        owner = User.objects.create_user(
+            email="doc-owner@test.finai",
+            password="TestPass123!",
+            organization=organization,
+        )
+        doc = Document.objects.create(
+            organization=organization,
+            uploaded_by=owner,
+            original_filename="owner-doc.pdf",
+            file=SimpleUploadedFile("owner-doc.pdf", b"%PDF-1.4 owner"),
+            file_size=14,
+            mime_type="application/pdf",
+            document_type=Document.DocumentType.INVOICE,
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=owner)
+        response = client.get(reverse("document-download", args=[doc.id]))
+
+        assert response.status_code == status.HTTP_200_OK
+        assert "attachment" in response.headers.get("Content-Disposition", "")
+
+    def test_document_download_cross_tenant_returns_404(self, organization):
+        owner = User.objects.create_user(
+            email="doc-org-a@test.finai",
+            password="TestPass123!",
+            organization=organization,
+        )
+        other_org = Organization.objects.create(
+            name="Other Organization",
+            name_ar="منظمة أخرى",
+            country=Organization.Country.SAUDI_ARABIA,
+            currency=Organization.Currency.SAR,
+            vat_number="300000000000099",
+        )
+        intruder = User.objects.create_user(
+            email="doc-org-b@test.finai",
+            password="TestPass123!",
+            organization=other_org,
+        )
+        doc = Document.objects.create(
+            organization=organization,
+            uploaded_by=owner,
+            original_filename="org-a-doc.pdf",
+            file=SimpleUploadedFile("org-a-doc.pdf", b"%PDF-1.4 org-a"),
+            file_size=14,
+            mime_type="application/pdf",
+            document_type=Document.DocumentType.INVOICE,
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=intruder)
+        response = client.get(reverse("document-download", args=[doc.id]))
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    def test_invoice_download_owner_allowed(self, organization):
+        owner = User.objects.create_user(
+            email="inv-owner@test.finai",
+            password="TestPass123!",
+            organization=organization,
+        )
+        invoice = Invoice.objects.create(
+            organization=organization,
+            uploaded_by=owner,
+            original_filename="owner-invoice.pdf",
+            file=SimpleUploadedFile("owner-invoice.pdf", b"%PDF-1.4 invoice"),
+            invoice_number="INV-OWNER-001",
+            invoice_date=date(2026, 3, 15),
+            vendor_name="Owner Vendor",
+            currency=Invoice.Currency.SAR,
+            subtotal=Decimal("100.00"),
+            vat_amount=Decimal("15.00"),
+            total_amount=Decimal("115.00"),
+            status=Invoice.Status.PENDING,
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=owner)
+        response = client.get(reverse("invoice-download", args=[invoice.id]))
+
+        assert response.status_code == status.HTTP_200_OK
+        assert "attachment" in response.headers.get("Content-Disposition", "")
+
+    def test_invoice_download_cross_tenant_returns_404(self, organization):
+        owner = User.objects.create_user(
+            email="inv-org-a@test.finai",
+            password="TestPass123!",
+            organization=organization,
+        )
+        other_org = Organization.objects.create(
+            name="Other Org Invoice",
+            name_ar="منظمة فواتير أخرى",
+            country=Organization.Country.SAUDI_ARABIA,
+            currency=Organization.Currency.SAR,
+            vat_number="300000000000098",
+        )
+        intruder = User.objects.create_user(
+            email="inv-org-b@test.finai",
+            password="TestPass123!",
+            organization=other_org,
+        )
+        invoice = Invoice.objects.create(
+            organization=organization,
+            uploaded_by=owner,
+            original_filename="org-a-invoice.pdf",
+            file=SimpleUploadedFile("org-a-invoice.pdf", b"%PDF-1.4 inv-a"),
+            invoice_number="INV-A-001",
+            invoice_date=date(2026, 3, 15),
+            vendor_name="Org A Vendor",
+            currency=Invoice.Currency.SAR,
+            subtotal=Decimal("100.00"),
+            vat_amount=Decimal("15.00"),
+            total_amount=Decimal("115.00"),
+            status=Invoice.Status.PENDING,
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=intruder)
+        response = client.get(reverse("invoice-download", args=[invoice.id]))
+
+        assert response.status_code == status.HTTP_404_NOT_FOUND

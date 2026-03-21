@@ -12,6 +12,8 @@ Task hierarchy:
 """
 
 import logging
+from django.core.mail import send_mail
+from django.conf import settings
 
 from celery import shared_task
 
@@ -46,35 +48,68 @@ def process_document_task(self, document_id: str) -> dict:
         result = run_full_pipeline(document_id=document_id)
 
         if result.get("success"):
+            # Success — mark document as COMPLETED
+            _safe_mark_completed(document_id)
             logger.info(
-                "[Task:process_document] DONE document=%s risk=%s time=%dms",
+                "[Task:process_document] COMPLETED document=%s risk=%s time=%dms",
                 document_id,
                 result.get("risk_level", "?"),
                 result.get("processing_time_ms", 0),
             )
+            return {
+                "document_id": document_id,
+                "success": True,
+                "risk_level": result.get("risk_level"),
+                "risk_score": result.get("risk_score"),
+                "processing_time_ms": result.get("processing_time_ms"),
+            }
         else:
+            # Pipeline returned failure (not an exception, but processing failed)
+            error_msg = result.get("error", "Unknown pipeline error")
             logger.warning(
-                "[Task:process_document] FAILED document=%s error=%s",
+                "[Task:process_document] Pipeline failed for document=%s error=%s",
                 document_id,
-                result.get("error", "unknown"),
+                error_msg,
             )
-
-        return {
-            "document_id": document_id,
-            "success": result.get("success", False),
-            "risk_level": result.get("risk_level"),
-            "risk_score": result.get("risk_score"),
-            "processing_time_ms": result.get("processing_time_ms"),
-        }
+            # Treat as transient and retry
+            raise Exception(f"Pipeline error: {error_msg}")
 
     except Exception as exc:
-        logger.error("[Task:process_document] Exception for %s: %s", document_id, exc)
+        logger.error(
+            "[Task:process_document] Exception for %s (retry %d/%d): %s",
+            document_id,
+            self.request.retries,
+            self.max_retries,
+            exc,
+        )
 
-        # Mark as failed immediately if it's a permanent error
-        _safe_mark_failed(document_id, str(exc))
-
-        # Retry for transient errors (OpenAI timeouts, network blips)
-        raise self.retry(exc=exc)
+        # Only mark as FAILED if this is the final attempt (no retries left)
+        if self.request.retries >= self.max_retries:
+            # FINAL FAILURE — mark document as failed and notify user
+            _safe_mark_failed(document_id, str(exc))
+            _send_processing_failed_email(document_id, str(exc))
+            logger.error(
+                "[Task:process_document] FINAL FAILURE for document %s after %d retries: %s",
+                document_id,
+                self.max_retries,
+                exc,
+            )
+            # Return failure result instead of re-raising
+            return {
+                "document_id": document_id,
+                "success": False,
+                "error": str(exc)[:500],
+                "retries_exhausted": True,
+            }
+        else:
+            # Transient failure — retry without marking as failed yet
+            logger.warning(
+                "[Task:process_document] Retrying document %s (attempt %d/%d)",
+                document_id,
+                self.request.retries + 1,
+                self.max_retries,
+            )
+            raise self.retry(exc=exc)
 
 
 @shared_task(
@@ -209,6 +244,19 @@ def generate_weekly_kpi_report():
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
+def _safe_mark_completed(document_id: str):
+    """Mark a document as COMPLETED after successful processing."""
+    try:
+        from apps.documents.models import Document
+        Document.objects.filter(pk=document_id).update(
+            processing_status=Document.ProcessingStatus.COMPLETED,
+            processing_error="",  # Clear any previous errors
+        )
+        logger.info("[Task] Marked document %s as COMPLETED", document_id)
+    except Exception as exc:
+        logger.warning("[Task] Could not mark document %s as completed: %s", document_id, exc)
+
+
 def _safe_mark_failed(document_id: str, error: str):
     """Mark a document as FAILED without raising."""
     try:
@@ -217,5 +265,58 @@ def _safe_mark_failed(document_id: str, error: str):
             processing_status=Document.ProcessingStatus.FAILED,
             processing_error=error[:2000],
         )
+        logger.info("[Task] Marked document %s as FAILED with error: %s", document_id, error[:100])
     except Exception as exc:
         logger.warning("[Task] Could not mark document %s as failed: %s", document_id, exc)
+
+
+def _send_processing_failed_email(document_id: str, error: str):
+    """
+    Send email notification to document uploader when processing fails finally.
+    Only called on final failure (retries exhausted).
+    Failures in email sending do NOT impact document processing state.
+    """
+    try:
+        from apps.documents.models import Document
+        
+        # Fetch document and uploader
+        doc = Document.objects.select_related('uploaded_by').get(pk=document_id)
+        user_email = doc.uploaded_by.email if doc.uploaded_by else None
+        
+        if not user_email:
+            logger.info("[Task] Document %s has no uploader email, skipping notification", document_id)
+            return
+        
+        # Build error message (truncate for readability)
+        error_display = error[:300] if error else "Unknown error occurred"
+        
+        subject = f"Document Processing Failed: {doc.original_filename}"
+        message = f"""Hello,
+
+Your document "{doc.original_filename}" could not be processed after multiple attempts.
+
+Error details: {error_display}
+
+Please try uploading the document again. If the problem persists, please contact support.
+
+---
+Tadgeeg Financial Auditing System
+"""
+        
+        # Send email without crashing if it fails
+        try:
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user_email],
+                fail_silently=False,  # Do raise to catch, but we catch below
+            )
+            logger.info("[Task] Sent failure email to %s for document %s", user_email, document_id)
+        except Exception as email_exc:
+            logger.warning("[Task] Email delivery failed for document %s: %s (not critical)", document_id, email_exc)
+        
+    except Document.DoesNotExist:
+        logger.warning("[Task] Document %s not found, skipping email notification", document_id)
+    except Exception as exc:
+        logger.error("[Task] Unexpected error sending email for document %s: %s", document_id, exc)

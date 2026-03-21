@@ -10,6 +10,7 @@ urlpatterns = [
     # ── Invoice CRUD ───────────────────────────────────────────────────────────
     path("",                            views.InvoiceListView.as_view(),             name="invoice-list"),
     path("<uuid:pk>/",                  views.InvoiceDetailView.as_view(),           name="invoice-detail"),
+    path("<uuid:pk>/download/",         views.InvoiceDownloadView.as_view(),         name="invoice-download"),
     path("<uuid:pk>/review/",           views.InvoiceManualReviewView.as_view(),     name="invoice-review"),
     path("<uuid:pk>/approve/",          views.InvoiceApproveView.as_view(),          name="invoice-approve"),
     path("<uuid:pk>/revalidate/",       views.InvoiceRevalidateView.as_view(),       name="invoice-revalidate"),

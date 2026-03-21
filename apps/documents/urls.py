@@ -16,6 +16,7 @@ urlpatterns = [
     path("",        views.DocumentListView.as_view(),    name="document-list"),
     path("upload/", views.DocumentUploadView.as_view(),  name="document-upload"),
     path("<uuid:pk>/",          views.DocumentDetailView.as_view(),        name="document-detail"),
+    path("<uuid:pk>/download/", views.DocumentDownloadView.as_view(),      name="document-download"),
     path("<uuid:pk>/process/",  views.DocumentProcessView.as_view(),       name="document-process"),
     path("<uuid:pk>/analyse/",  views.DocumentAnalyseView.as_view(),       name="document-analyse"),
     path("<uuid:pk>/analysis/", views.DocumentAnalysisResultView.as_view(),name="document-analysis-result"),

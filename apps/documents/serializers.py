@@ -9,6 +9,7 @@ Provides DRF serializers for:
   - DocumentAnalysisResult (full Financial AI + Audit pipeline output)
 """
 
+from django.urls import reverse
 from rest_framework import serializers
 from .models import Document, ExtractedData, DocumentPageResult, DocumentAnalysisResult
 
@@ -147,6 +148,7 @@ class DocumentListSerializer(serializers.ModelSerializer):
 
 class DocumentSerializer(serializers.ModelSerializer):
     """Full document detail including extracted data and analysis summary."""
+    file = serializers.SerializerMethodField()
     uploaded_by_name = serializers.SerializerMethodField()
     analysis_summary = serializers.SerializerMethodField()
 
@@ -169,6 +171,13 @@ class DocumentSerializer(serializers.ModelSerializer):
         if obj.uploaded_by:
             return getattr(obj.uploaded_by, "full_name", None) or obj.uploaded_by.email
         return None
+
+    def get_file(self, obj):
+        if not obj.file:
+            return None
+        request = self.context.get("request")
+        path = reverse("document-download", kwargs={"pk": obj.pk})
+        return request.build_absolute_uri(path) if request else path
 
     def get_analysis_summary(self, obj):
         """Lightweight summary from DocumentAnalysisResult (no heavy JSON fields)."""

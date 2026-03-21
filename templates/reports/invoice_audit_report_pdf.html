@@ -1,0 +1,477 @@
+{% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
+<head>
+<meta charset="UTF-8">
+<title>{{ report.title }}</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: 'Noto Sans Arabic', 'DejaVu Sans', Arial, sans-serif;
+    color: #0f172a;
+    background: #ffffff;
+    font-size: 10.5pt;
+    line-height: 1.6;
+  }
+  @page {
+    size: A4;
+    margin: 14mm 12mm 16mm;
+    @bottom-center {
+      content: "{% trans 'Page' %} " counter(page) " / " counter(pages);
+      font-size: 8pt;
+      color: #64748b;
+    }
+  }
+  .page { width: 100%; }
+  .hero {
+    border: 1pt solid #dbe5ef;
+    border-radius: 14pt;
+    padding: 18pt;
+    background: linear-gradient(180deg, #f8fbff 0%, #ffffff 62%, #f7fdf9 100%);
+    margin-bottom: 14pt;
+    page-break-inside: avoid;
+  }
+  .eyebrow {
+    display: inline-block;
+    padding: 4pt 8pt;
+    border-radius: 999pt;
+    font-size: 8pt;
+    font-weight: 700;
+    background: #e2e8f0;
+    color: #334155;
+    margin-left: 4pt;
+  }
+  .badge {
+    display: inline-block;
+    padding: 4pt 8pt;
+    border-radius: 999pt;
+    font-size: 8pt;
+    font-weight: 700;
+  }
+  .badge-high { background: #fee2e2; color: #b91c1c; }
+  .badge-review { background: #fef3c7; color: #b45309; }
+  .badge-safe { background: #dcfce7; color: #15803d; }
+  .title {
+    margin: 10pt 0 12pt;
+    font-size: 22pt;
+    font-weight: 900;
+    color: #0f172a;
+  }
+  .meta-grid {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 8pt;
+    margin: 0 -8pt;
+  }
+  .meta-card {
+    border: 1pt solid #e2e8f0;
+    border-radius: 10pt;
+    padding: 10pt;
+    background: #ffffff;
+  }
+  .meta-label { font-size: 8pt; color: #64748b; }
+  .meta-value { font-size: 10pt; font-weight: 700; color: #0f172a; margin-top: 3pt; }
+  .section {
+    border: 1pt solid #e2e8f0;
+    border-radius: 14pt;
+    padding: 14pt;
+    margin-bottom: 12pt;
+    page-break-inside: avoid;
+  }
+  .section-title {
+    font-size: 14pt;
+    font-weight: 900;
+    color: #0f172a;
+    margin: 0 0 10pt;
+  }
+  .section-kicker {
+    font-size: 8pt;
+    color: #64748b;
+    margin-bottom: 8pt;
+  }
+  .kpi-table, .summary-grid {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 8pt;
+    margin: 0 -8pt;
+  }
+  .kpi-card {
+    border: 1pt solid #e2e8f0;
+    border-radius: 10pt;
+    padding: 10pt;
+    background: #ffffff;
+    vertical-align: top;
+  }
+  .kpi-card.compliance { background: #f0fdf4; border-color: #bbf7d0; }
+  .kpi-card.risk { background: #fffbeb; border-color: #fde68a; }
+  .kpi-card.alert { background: #fef2f2; border-color: #fecaca; }
+  .kpi-card.duplicate { background: #f5f3ff; border-color: #ddd6fe; }
+  .kpi-label { font-size: 8pt; color: #64748b; }
+  .kpi-value { font-size: 18pt; font-weight: 900; margin-top: 4pt; color: #0f172a; }
+  .kpi-note { font-size: 8pt; color: #64748b; margin-top: 2pt; }
+  .summary-box {
+    border: 1pt solid #e2e8f0;
+    border-radius: 10pt;
+    padding: 10pt;
+    background: #f8fafc;
+    margin-top: 10pt;
+  }
+  .summary-heading { font-size: 9pt; font-weight: 800; color: #0f172a; margin-bottom: 4pt; }
+  .summary-list { margin: 0; padding: 0 14pt 0 0; }
+  .summary-list li { margin-bottom: 4pt; }
+  table.data {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8pt;
+    font-size: 9pt;
+  }
+  table.data th {
+    background: #0f172a;
+    color: #ffffff;
+    padding: 7pt 8pt;
+    text-align: right;
+    font-weight: 700;
+  }
+  table.data td {
+    padding: 7pt 8pt;
+    border-bottom: 0.5pt solid #e2e8f0;
+    vertical-align: top;
+  }
+  table.data tr:nth-child(even) td { background: #f8fafc; }
+  .risk-row td { background: #fff5f5; }
+  .pill {
+    display: inline-block;
+    padding: 3pt 7pt;
+    border-radius: 999pt;
+    font-size: 7.8pt;
+    font-weight: 700;
+    margin: 0 0 2pt 2pt;
+    border: 1pt solid #e2e8f0;
+    background: #ffffff;
+    color: #334155;
+  }
+  .rule-chip {
+    display: inline-block;
+    padding: 3pt 6pt;
+    border-radius: 6pt;
+    font-size: 7.8pt;
+    font-weight: 800;
+    background: #f1f5f9;
+    color: #0f172a;
+    margin-bottom: 4pt;
+  }
+  .small { font-size: 8pt; color: #64748b; }
+  .insight-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 8pt;
+    margin: 0 -8pt;
+  }
+  .insight-card {
+    border-radius: 10pt;
+    padding: 10pt;
+    border: 1pt solid #e2e8f0;
+    background: #ffffff;
+  }
+  .insight-card.high { background: #fef2f2; border-color: #fecaca; }
+  .insight-card.review { background: #fffbeb; border-color: #fde68a; }
+  .insight-card.safe { background: #f0fdf4; border-color: #bbf7d0; }
+  .split-table { width: 100%; border-collapse: separate; border-spacing: 8pt; margin: 0 -8pt; }
+  .action-box { border-radius: 10pt; padding: 10pt; border: 1pt solid #e2e8f0; }
+  .action-box.immediate { background: #fef2f2; border-color: #fecaca; }
+  .action-box.future { background: #f0fdf4; border-color: #bbf7d0; }
+  .footer {
+    margin-top: 12pt;
+    padding-top: 8pt;
+    border-top: 1pt solid #e2e8f0;
+    text-align: center;
+    color: #64748b;
+    font-size: 8pt;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <section class="hero">
+    <div>
+      <span class="eyebrow">Invoice Audit Report</span>
+      {% if invoice_audit_ui.status == "عالي المخاطر" %}
+        <span class="badge badge-high">عالي المخاطر</span>
+      {% elif invoice_audit_ui.status == "يحتاج مراجعة" %}
+        <span class="badge badge-review">يحتاج مراجعة</span>
+      {% else %}
+        <span class="badge badge-safe">متوافق</span>
+      {% endif %}
+    </div>
+    <h1 class="title">تقرير تدقيق الفواتير</h1>
+
+    <table class="meta-grid">
+      <tr>
+        <td width="33.33%"><div class="meta-card"><div class="meta-label">اسم المنظمة</div><div class="meta-value">{{ invoice_audit_ui.organization_name }}</div></div></td>
+        <td width="33.33%"><div class="meta-card"><div class="meta-label">تاريخ الإنشاء</div><div class="meta-value">{{ invoice_audit_ui.generated_at|date:"Y-m-d H:i" }}</div></div></td>
+        <td width="33.33%"><div class="meta-card"><div class="meta-label">نوع التقرير</div><div class="meta-value">{{ invoice_audit_ui.report_type }}</div></div></td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="section">
+    <div class="section-title">الملخص التنفيذي</div>
+    <table class="kpi-table">
+      <tr>
+        <td width="16.66%"><div class="kpi-card"><div class="kpi-label">إجمالي الفواتير</div><div class="kpi-value">{{ invoice_audit_ui.summary.total_invoices }}</div><div class="kpi-note">حجم العينة</div></div></td>
+        <td width="16.66%"><div class="kpi-card"><div class="kpi-label">إجمالي المبلغ</div><div class="kpi-value">{{ invoice_audit_ui.summary.total_amount|floatformat:2 }}</div><div class="kpi-note">إجمالي الإنفاق</div></div></td>
+        <td width="16.66%"><div class="kpi-card compliance"><div class="kpi-label">نسبة الامتثال</div><div class="kpi-value">{{ invoice_audit_ui.summary.compliance_rate|floatformat:1 }}%</div><div class="kpi-note">المؤشر الرقابي</div></div></td>
+        <td width="16.66%"><div class="kpi-card risk"><div class="kpi-label">متوسط المخاطر</div><div class="kpi-value">{{ invoice_audit_ui.summary.avg_risk_score|floatformat:1 }}</div><div class="kpi-note">Risk Score</div></div></td>
+        <td width="16.66%"><div class="kpi-card alert"><div class="kpi-label">عالية المخاطر</div><div class="kpi-value">{{ invoice_audit_ui.summary.high_risk_invoices }}</div><div class="kpi-note">تحتاج تدخل فوري</div></div></td>
+        <td width="16.66%"><div class="kpi-card duplicate"><div class="kpi-label">عدد التكرارات</div><div class="kpi-value">{{ invoice_audit_ui.summary.duplicate_count }}</div><div class="kpi-note">حالات مشتبه بها</div></div></td>
+      </tr>
+    </table>
+
+    <div class="summary-box">
+      <div class="summary-heading">الخلاصة</div>
+      <div>{{ invoice_audit_ui.executive_summary.conclusion }}</div>
+    </div>
+    <table class="summary-grid">
+      <tr>
+        <td width="50%">
+          <div class="summary-box">
+            <div class="summary-heading">النتائج الرئيسية</div>
+            <ul class="summary-list">
+              {% for finding in invoice_audit_ui.executive_summary.key_findings %}
+                <li>{{ finding }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </td>
+        <td width="50%">
+          <div class="summary-box">
+            <div class="summary-heading">التوصيات الرئيسية</div>
+            <ul class="summary-list">
+              {% for item in invoice_audit_ui.executive_summary.recommendations %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="section">
+    <div class="section-title">محرك الامتثال والقواعد الرقابية</div>
+    <div class="section-kicker">يتم فحص كل فاتورة عبر مجموعة من القواعد الرقابية لتحديد درجة الامتثال وتصنيف المخاطر.</div>
+    <table class="kpi-table">
+      <tr>
+        <td width="25%"><div class="kpi-card"><div class="kpi-label">عدد القواعد المطبقة</div><div class="kpi-value">{{ invoice_audit_ui.compliance_engine.rules_applied }}</div></div></td>
+        <td width="25%"><div class="kpi-card compliance"><div class="kpi-label">قواعد ممتثلة</div><div class="kpi-value">{{ invoice_audit_ui.compliance_engine.rules_passed }}</div></div></td>
+        <td width="25%"><div class="kpi-card alert"><div class="kpi-label">قواعد مخالفة</div><div class="kpi-value">{{ invoice_audit_ui.compliance_engine.rules_failed }}</div></div></td>
+        <td width="25%"><div class="kpi-card risk"><div class="kpi-label">الامتثال العام</div><div class="kpi-value">{{ invoice_audit_ui.compliance_engine.compliance_rate|floatformat:1 }}%</div></div></td>
+      </tr>
+    </table>
+    <table class="data">
+      <thead>
+        <tr>
+          <th>القاعدة</th>
+          <th>الحالة</th>
+          <th>الوزن</th>
+          <th>الملاحظة</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rule in invoice_audit_ui.compliance_engine.rules_matrix %}
+          <tr>
+            <td><strong>{{ rule.rule_code }}</strong></td>
+            <td>{% if rule.status == "ممتثل" %}<span class="badge badge-safe">ممتثل</span>{% else %}<span class="badge badge-high">مخالف</span>{% endif %}</td>
+            <td>{{ rule.weight }}</td>
+            <td>{{ rule.note }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <div class="section-title">الفواتير الأعلى خطورة</div>
+    <table class="data">
+      <thead>
+        <tr>
+          <th>رقم الفاتورة</th>
+          <th>المبلغ</th>
+          <th>التاريخ</th>
+          <th>مستوى الخطر</th>
+          <th>درجة المخاطر</th>
+          <th>المخالفات</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for invoice in invoice_audit_ui.high_risk_invoices %}
+          <tr class="{% if invoice.risk_level == 'critical' or invoice.risk_level == 'high' %}risk-row{% endif %}">
+            <td><strong>{{ invoice.invoice_number }}</strong></td>
+            <td>{{ invoice.amount|floatformat:2 }}</td>
+            <td>{{ invoice.date }}</td>
+            <td>
+              {% if invoice.risk_level == 'critical' or invoice.risk_level == 'high' %}
+                <span class="badge badge-high">High Risk</span>
+              {% elif invoice.risk_level == 'medium' %}
+                <span class="badge badge-review">Review</span>
+              {% else %}
+                <span class="badge badge-safe">Safe</span>
+              {% endif %}
+            </td>
+            <td>{{ invoice.risk_score|floatformat:0 }}/100</td>
+            <td>
+              {% for violation in invoice.violations %}
+                <div style="margin-bottom:5pt;">
+                  <div class="rule-chip">{{ violation.rule_code }}</div>
+                  <div><strong>{{ violation.description }}</strong></div>
+                  <div class="small">السبب: {{ violation.reason }}</div>
+                </div>
+              {% empty %}
+                <span class="small">لا توجد تفاصيل مخالفات.</span>
+              {% endfor %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">لا توجد فواتير عالية المخاطر.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <div class="section-title">أكثر قواعد التدقيق فشلًا</div>
+    <table class="data">
+      <thead>
+        <tr>
+          <th>رمز القاعدة</th>
+          <th>الوصف</th>
+          <th>عدد الإخفاقات</th>
+          <th>الفواتير المتأثرة</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rule in invoice_audit_ui.failed_rules %}
+          <tr>
+            <td><span class="rule-chip">{{ rule.rule_code }}</span></td>
+            <td>{{ rule.description }}</td>
+            <td><span class="badge badge-high">{{ rule.failure_count }}</span></td>
+            <td>
+              {% for inv in rule.invoice_numbers %}
+                {% if forloop.counter <= 8 %}
+                  <span class="pill">{{ inv }}</span>
+                {% endif %}
+              {% empty %}
+                <span class="small">لا توجد أرقام فواتير.</span>
+              {% endfor %}
+              {% if rule.invoice_numbers|length > 8 %}
+                <span class="small">+ {{ rule.invoice_numbers|length|add:'-8' }} أخرى</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="4">لا توجد بيانات إخفاقات متاحة.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <div class="section-title">تحليل المخاطر</div>
+    <table class="kpi-table">
+      <tr>
+        <td width="25%"><div class="kpi-card"><div class="kpi-label">متوسط درجة المخاطر</div><div class="kpi-value">{{ invoice_audit_ui.risk_analysis.avg_risk_score|floatformat:1 }}</div></div></td>
+        <td width="25%"><div class="kpi-card alert"><div class="kpi-label">عالية المخاطر</div><div class="kpi-value">{{ invoice_audit_ui.risk_analysis.high }}</div></div></td>
+        <td width="25%"><div class="kpi-card risk"><div class="kpi-label">تحتاج مراجعة</div><div class="kpi-value">{{ invoice_audit_ui.risk_analysis.review }}</div></div></td>
+        <td width="25%"><div class="kpi-card compliance"><div class="kpi-label">آمنة</div><div class="kpi-value">{{ invoice_audit_ui.risk_analysis.safe }}</div></div></td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="section">
+    <div class="section-title">كشف التكرار والشذوذ</div>
+    <table class="insight-table">
+      <tr>
+        <td width="33.33%"><div class="insight-card high"><div class="kpi-label">عدد الفواتير المكررة</div><div class="kpi-value">{{ invoice_audit_ui.duplicates_anomalies.duplicates }}</div></div></td>
+        <td width="33.33%"><div class="insight-card"><div class="kpi-label">المورد المهيمن</div><div class="kpi-value" style="font-size:14pt;">{{ invoice_audit_ui.duplicates_anomalies.dominant_vendor }}</div></div></td>
+        <td width="33.33%"><div class="insight-card review"><div class="kpi-label">نسبة الاعتماد على المورد</div><div class="kpi-value">{{ invoice_audit_ui.duplicates_anomalies.vendor_dependency_pct|floatformat:1 }}%</div></div></td>
+      </tr>
+    </table>
+    <table class="insight-table">
+      <tr>
+        {% for pattern in invoice_audit_ui.duplicates_anomalies.patterns %}
+          <td width="33.33%">
+            <div class="insight-card {% if pattern.severity == 'high' %}high{% elif pattern.severity == 'review' %}review{% else %}safe{% endif %}">
+              <div class="kpi-label">{{ pattern.label }}</div>
+              <div class="kpi-value">{{ pattern.count }}</div>
+            </div>
+          </td>
+        {% endfor %}
+      </tr>
+    </table>
+  </section>
+
+  <section class="section">
+    <div class="section-title">تحليل الموردين</div>
+    <table class="data">
+      <thead>
+        <tr>
+          <th>اسم المورد</th>
+          <th>عدد الفواتير</th>
+          <th>إجمالي الإنفاق</th>
+          <th>متوسط الفاتورة</th>
+          <th>حصة الإنفاق</th>
+          <th>فواتير مبلّغ عنها</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for vendor in invoice_audit_ui.vendor_analysis %}
+          <tr>
+            <td><strong>{{ vendor.vendor_name|default:"-" }}</strong></td>
+            <td>{{ vendor.invoice_count }}</td>
+            <td>{{ vendor.total_amount|floatformat:2 }}</td>
+            <td>{{ vendor.avg_amount|floatformat:2 }}</td>
+            <td>{{ vendor.spend_share_pct|floatformat:1 }}%</td>
+            <td>{{ vendor.flagged_invoices }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6">لا توجد بيانات موردين متاحة.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <div class="section-title">التوصيات والإجراءات</div>
+    <table class="split-table">
+      <tr>
+        <td width="50%">
+          <div class="action-box immediate">
+            <div class="summary-heading">إجراءات فورية</div>
+            <ul class="summary-list">
+              {% for item in invoice_audit_ui.recommendations.immediate %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </td>
+        <td width="50%">
+          <div class="action-box future">
+            <div class="summary-heading">تحسينات مستقبلية</div>
+            <ul class="summary-list">
+              {% for item in invoice_audit_ui.recommendations.future %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </td>
+      </tr>
+    </table>
+  </section>
+
+  <div class="footer">{{ product_name }} — {{ company_byline }}</div>
+</div>
+</body>
+</html>

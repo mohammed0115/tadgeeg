@@ -378,6 +378,210 @@ def _collect_invoice_data(org, date_from=None, date_to=None, audit_session_id=No
     }
 
 
+def _extract_invoice_audit_section(report_data) -> dict:
+    if isinstance(report_data, dict) and isinstance(report_data.get("invoice_audit"), dict):
+        return report_data.get("invoice_audit") or {}
+    return report_data or {}
+
+
+def _weight_for_rule(rule_code):
+    prefix = str(rule_code or "").split("-", 1)[0]
+    if prefix in {"DUP", "VAT", "ANO"}:
+        return "مرتفع"
+    if prefix in {"INV", "CTL"}:
+        return "متوسط"
+    return "منخفض"
+
+
+def _failed_rules_with_invoice_refs(top_failed_rules, validations):
+    top_codes = [r.get("rule_code") for r in (top_failed_rules or []) if r.get("rule_code")]
+    top_codes_set = set(top_codes)
+    buckets = {code: [] for code in top_codes}
+
+    for vr in validations:
+        inv_no = vr.invoice.invoice_number or str(vr.invoice_id)[:8]
+        for code in (vr.failed_rule_codes or []):
+            if code not in top_codes_set:
+                continue
+            if inv_no not in buckets[code]:
+                buckets[code].append(inv_no)
+
+    enriched = []
+    for rule in (top_failed_rules or []):
+        code = rule.get("rule_code")
+        invoice_numbers = buckets.get(code, [])
+        enriched.append({
+            "rule_code": code,
+            "description": rule.get("description") or code,
+            "failure_count": int(rule.get("failures") or 0),
+            "invoice_numbers": invoice_numbers,
+        })
+    return enriched
+
+
+def _build_high_risk_violations(invoice_rows, validation_map, rule_catalog):
+    rows = []
+    for row in (invoice_rows or []):
+        inv_id = row.get("id")
+        vr = validation_map.get(str(inv_id))
+        violations = []
+
+        if vr:
+            details = vr.validation_details or {}
+            for code in (vr.failed_rule_codes or [])[:4]:
+                detail = details.get(code, {}) if isinstance(details, dict) else {}
+                reason = (
+                    detail.get("reason")
+                    or detail.get("message")
+                    or detail.get("note")
+                    or "تم رصد مخالفة لهذه القاعدة وتحتاج مراجعة تفصيلية."
+                )
+                violations.append({
+                    "rule_code": code,
+                    "description": rule_catalog.get(code, code),
+                    "reason": reason,
+                })
+
+        rows.append({
+            "invoice_number": row.get("invoice_number") or "-",
+            "amount": float(row.get("total_amount") or 0),
+            "date": row.get("invoice_date") or "-",
+            "risk_level": row.get("risk_level") or "low",
+            "risk_score": float(row.get("risk_score") or 0),
+            "violations": violations,
+        })
+    return rows
+
+
+def _build_invoice_audit_report_ui(report, org):
+    from apps.invoices.models import InvoiceValidationResult
+    from core.services.invoice_validator import RULES
+
+    source_data = _extract_invoice_audit_section(report.data or {})
+    if not isinstance(source_data, dict):
+        return None
+
+    validation_qs = InvoiceValidationResult.objects.filter(invoice__organization=org).select_related("invoice")
+    if report.period_from:
+        validation_qs = validation_qs.filter(invoice__invoice_date__gte=report.period_from)
+    if report.period_to:
+        validation_qs = validation_qs.filter(invoice__invoice_date__lte=report.period_to)
+    validations = list(validation_qs.only("invoice_id", "invoice__invoice_number", "failed_rule_codes", "validation_details"))
+    validation_map = {str(vr.invoice_id): vr for vr in validations}
+
+    overall = source_data.get("overall_stats", {})
+    validation_summary = source_data.get("validation_summary", {})
+    top_risk = source_data.get("top_risk_invoices", [])
+    vendor_rows = source_data.get("vendor_analysis", [])
+    top_failed = source_data.get("top_failed_rules", [])
+    narrative = report.narrative or {}
+
+    compliance_agg = validation_qs.aggregate(
+        rules_applied=Sum("total_rules"),
+        rules_passed=Sum("rules_passed"),
+        rules_failed=Sum("rules_failed"),
+    )
+    rules_applied = int(compliance_agg.get("rules_applied") or 0)
+    rules_passed = int(compliance_agg.get("rules_passed") or 0)
+    rules_failed = int(compliance_agg.get("rules_failed") or 0)
+    compliance_pct = round((rules_passed / rules_applied) * 100, 1) if rules_applied else 0
+
+    risk_avg = float(overall.get("avg_risk_score") or 0)
+    high_risk_count = int((overall.get("critical_count") or 0) + (overall.get("high_count") or 0))
+    report_status = "عالي المخاطر" if risk_avg >= 70 or high_risk_count > 0 else "يحتاج مراجعة" if risk_avg >= 40 else "متوافق"
+
+    failed_rules = _failed_rules_with_invoice_refs(top_failed, validations)
+    high_risk_invoices = _build_high_risk_violations(top_risk, validation_map, RULES)
+    dominant_vendor = vendor_rows[0] if vendor_rows else {}
+    duplicate_count = int(overall.get("duplicate_count") or 0)
+    missing_qr_count = int(overall.get("missing_qr_count") or 0)
+    handwritten_count = int(overall.get("handwritten_count") or 0)
+    new_vendor_count = int(overall.get("new_vendor_count") or 0)
+
+    compliance_matrix = [
+        {
+            "rule_code": row.get("rule_code"),
+            "status": "مخالف",
+            "weight": _weight_for_rule(row.get("rule_code")),
+            "note": row.get("description") or "فشل متكرر يتطلب إجراء فوري.",
+        }
+        for row in top_failed[:6]
+    ]
+    if not compliance_matrix:
+        compliance_matrix = [
+            {"rule_code": "INV-001", "status": "ممتثل", "weight": "متوسط", "note": "توفر رقم الفاتورة في معظم العينات."},
+            {"rule_code": "VAT-002", "status": "ممتثل", "weight": "مرتفع", "note": "نسبة جيدة من صحة حساب الضريبة."},
+            {"rule_code": "DUP-001", "status": "مخالف", "weight": "مرتفع", "note": "ظهرت حالات تكرار تحتاج تحقيق."},
+        ]
+
+    return {
+        "title": report.title or "تقرير تدقيق الفواتير",
+        "organization_name": getattr(org, "name", "-") or "-",
+        "generated_at": report.created_at,
+        "report_type": "Invoice Audit Report",
+        "status": report_status,
+        "summary": {
+            "total_invoices": int(overall.get("total_invoices") or 0),
+            "total_amount": float(overall.get("total_amount") or 0),
+            "compliance_rate": float(validation_summary.get("vat_compliance_pct") or compliance_pct),
+            "avg_risk_score": risk_avg,
+            "high_risk_invoices": high_risk_count,
+            "duplicate_count": duplicate_count,
+        },
+        "executive_summary": {
+            "conclusion": narrative.get("executive_summary") or "الصورة العامة تشير إلى ارتفاع نسبي في مخاطر الامتثال وتحتاج تدخل رقابي سريع.",
+            "key_findings": [
+                f"عدد الفواتير عالية المخاطر: {high_risk_count}",
+                f"عدد الفواتير المكررة: {duplicate_count}",
+                f"متوسط درجة المخاطر: {risk_avg:.1f}",
+            ],
+            "recommendations": [
+                "إغلاق المخالفات ذات الأولوية العالية خلال دورة المراجعة الحالية.",
+                "تفعيل مراجعة استباقية على قواعد التكرار وضريبة القيمة المضافة.",
+                "رفع جودة بيانات الموردين لتقليل الإخفاقات المتكررة.",
+            ],
+        },
+        "compliance_engine": {
+            "rules_applied": rules_applied,
+            "rules_passed": rules_passed,
+            "rules_failed": rules_failed,
+            "compliance_rate": compliance_pct,
+            "rules_matrix": compliance_matrix,
+        },
+        "high_risk_invoices": high_risk_invoices,
+        "failed_rules": failed_rules,
+        "risk_analysis": {
+            "avg_risk_score": risk_avg,
+            "high": int((overall.get("critical_count") or 0) + (overall.get("high_count") or 0)),
+            "review": int(overall.get("medium_count") or 0),
+            "safe": int(overall.get("low_count") or 0),
+        },
+        "duplicates_anomalies": {
+            "duplicates": duplicate_count,
+            "dominant_vendor": dominant_vendor.get("vendor_name") or "-",
+            "vendor_dependency_pct": float(dominant_vendor.get("spend_share_pct") or 0),
+            "patterns": [
+                {"label": "غياب رمز QR", "count": missing_qr_count, "severity": "high" if missing_qr_count else "low"},
+                {"label": "فواتير بخط يدوي", "count": handwritten_count, "severity": "review" if handwritten_count else "low"},
+                {"label": "موردون جدد غير معروفين", "count": new_vendor_count, "severity": "review" if new_vendor_count else "low"},
+            ],
+        },
+        "vendor_analysis": vendor_rows,
+        "recommendations": {
+            "immediate": [
+                "تصحيح فواتير QR غير المتوافقة قبل الإقفال المالي.",
+                "مراجعة المورد المسيطر وتدقيق معاملات العينة عالية القيمة.",
+                "التحقق من الرقم الضريبي للفواتير المرفوضة رقابيا.",
+            ],
+            "future": [
+                "تطبيق مراقبة لحظية لقواعد التكرار قبل اعتماد الفاتورة.",
+                "تحسين جودة الإدخال وتدريب الفريق على متطلبات الامتثال.",
+                "إضافة حدود تنبيه تلقائية عند ارتفاع تركز الإنفاق على مورد واحد.",
+            ],
+        },
+    }
+
+
 # ─── Views ────────────────────────────────────────────────────────────────────
 
 class GenerateAuditReportView(APIView):
@@ -738,12 +942,13 @@ class ReportPDFView(APIView):
             return HttpResponse("التقرير غير موجود.", status=404)
 
         from django.template.loader import render_to_string
-
-        html_str = render_to_string("reports/report_pdf.html", {
+        template_name = "reports/invoice_audit_report_pdf.html" if report.report_type == "invoice_audit" else "reports/report_pdf.html"
+        html_str = render_to_string(template_name, {
             "report": report,
             "narrative": report.narrative or {},
             "data": report.data or {},
             "org": request.user.organization,
+            "invoice_audit_ui": _build_invoice_audit_report_ui(report, request.user.organization) if report.report_type == "invoice_audit" else None,
         }, request=request)
 
         safe_title = (report.title or "report").replace(" ", "_").replace("/", "-")[:60]
@@ -757,7 +962,11 @@ class ReportPDFView(APIView):
             response["Content-Disposition"] = f'attachment; filename="{safe_title}.pdf"'
             return response
         except ModuleNotFoundError:
-            logger.warning("WeasyPrint not installed — serving HTML fallback", extra={"report_id": str(report.id)})
+            logger.warning("WeasyPrint not installed", extra={"report_id": str(report.id)})
+            return JsonResponse(
+                {"error": "خدمة PDF غير مهيأة على الخادم حاليًا. أعد نشر الخدمة بعد تثبيت مكتبة PDF."},
+                status=503,
+            )
         except OSError as e:
             # GTK libraries missing (common on Windows dev machines) — serve HTML fallback
             logger.warning("WeasyPrint OSError (missing GTK?) — serving HTML fallback: %s", e, extra={"report_id": str(report.id)})
@@ -930,11 +1139,13 @@ class ReportEmailView(APIView):
         from django.template.loader import render_to_string
         from django.conf import settings as django_settings
 
-        html_str = render_to_string("reports/report_pdf.html", {
+        template_name = "reports/invoice_audit_report_pdf.html" if report.report_type == "invoice_audit" else "reports/report_pdf.html"
+        html_str = render_to_string(template_name, {
             "report": report,
             "narrative": report.narrative or {},
             "data": report.data or {},
             "org": request.user.organization,
+            "invoice_audit_ui": _build_invoice_audit_report_ui(report, request.user.organization) if report.report_type == "invoice_audit" else None,
         }, request=request)
 
         safe_title = (report.title or "report").replace(" ", "_").replace("/", "-")[:60]

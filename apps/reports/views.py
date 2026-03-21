@@ -137,7 +137,7 @@ def _compute_benchmark(org, inv_qs) -> dict:
 
     vat_qs    = _IVR.objects.filter(invoice__in=inv_qs)
     vat_total = vat_qs.count() or 1
-    org_vat   = round(vat_qs.filter(overall_status="passed").count() / vat_total * 100, 1)
+    org_vat   = round(vat_qs.filter(vat_rate_correct=True, vat_calculation_correct=True, vat_subtotal_correct=True).count() / vat_total * 100, 1)
 
     def _delta(org_val, bench_val, higher_is_better=True):
         diff = round(org_val - bench_val, 1)

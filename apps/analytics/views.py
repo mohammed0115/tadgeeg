@@ -616,7 +616,7 @@ class IndustryBenchmarkView(APIView):
 
         vat_qs = InvoiceValidationResult.objects.filter(invoice__organization=org)
         vat_total = vat_qs.count() or 1
-        vat_passed = vat_qs.filter(overall_status="passed").count()
+        vat_passed = vat_qs.filter(vat_rate_correct=True, vat_calculation_correct=True, vat_subtotal_correct=True).count()
         org_vat = round(vat_passed / vat_total * 100, 1)
 
         def _delta(org_val, bench_val, higher_is_better=True):

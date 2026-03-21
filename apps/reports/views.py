@@ -378,6 +378,116 @@ def _collect_invoice_data(org, date_from=None, date_to=None, audit_session_id=No
     }
 
 
+def _collect_rule_engine_data(org, date_from=None, date_to=None) -> dict:
+    """
+    Collect aggregated statistics from the new rule engine (AuditRun / AuditResult).
+    Returns an empty dict if no runs exist yet, so the caller can skip gracefully.
+    """
+    try:
+        from apps.rule_engine.models.audit_execution import AuditRun, AuditResult
+        from apps.rule_engine.models.rule_definition import RuleDefinitionTranslation
+    except ImportError:
+        return {}
+
+    runs_qs = AuditRun.objects.filter(
+        organization=org,
+        status=AuditRun.Status.COMPLETED,
+    )
+    if date_from:
+        runs_qs = runs_qs.filter(completed_at__date__gte=date_from)
+    if date_to:
+        runs_qs = runs_qs.filter(completed_at__date__lte=date_to)
+
+    if not runs_qs.exists():
+        return {}
+
+    stats = runs_qs.aggregate(
+        total_runs=Count("id"),
+        avg_risk=Avg("risk_score"),
+        blocking_count=Count("id", filter=Q(blocks_approval=True)),
+        manual_review_count=Count("id", filter=Q(requires_manual_review=True)),
+        total_passed=Sum("passed_rules"),
+        total_failed=Sum("failed_rules"),
+        total_warnings=Sum("warning_rules"),
+        total_rules=Sum("total_rules"),
+        critical_count=Count("id", filter=Q(risk_level="critical")),
+        high_count=Count("id", filter=Q(risk_level="high")),
+        medium_count=Count("id", filter=Q(risk_level="medium")),
+        low_count=Count("id", filter=Q(risk_level="low")),
+    )
+
+    total_applied = int(stats["total_rules"] or 0)
+    total_passed = int(stats["total_passed"] or 0)
+    total_failed = int(stats["total_failed"] or 0)
+    total_warnings = int(stats["total_warnings"] or 0)
+    compliance_pct = round(total_passed / total_applied * 100, 1) if total_applied else 0.0
+
+    # Top failed rules with Arabic names
+    top_failures_qs = (
+        AuditResult.objects.filter(audit_run__in=runs_qs, status="fail")
+        .values("rule_code")
+        .annotate(
+            fail_count=Count("id"),
+            avg_risk=Avg("risk_contribution"),
+        )
+        .order_by("-fail_count")[:10]
+    )
+
+    # Fetch Arabic translations for the top rule codes
+    top_codes = [r["rule_code"] for r in top_failures_qs]
+    translations = {
+        t.rule.rule_code: {"ar": t.name_ar, "en": t.name_en}
+        for t in RuleDefinitionTranslation.objects.filter(
+            rule__rule_code__in=top_codes, language="ar"
+        ).select_related("rule")
+    }
+
+    top_failed_rules = [
+        {
+            "rule_code": r["rule_code"],
+            "fail_count": r["fail_count"],
+            "avg_risk_contribution": round(float(r["avg_risk"] or 0), 2),
+            "name_ar": translations.get(r["rule_code"], {}).get("ar", r["rule_code"]),
+            "name_en": translations.get(r["rule_code"], {}).get("en", r["rule_code"]),
+        }
+        for r in top_failures_qs
+    ]
+
+    # Breakdown by document type
+    by_doc_type = list(
+        runs_qs.values("document_type")
+        .annotate(
+            run_count=Count("id"),
+            avg_risk=Avg("risk_score"),
+            blocking=Count("id", filter=Q(blocks_approval=True)),
+            failed_rules_sum=Sum("failed_rules"),
+        )
+        .order_by("-run_count")
+    )
+    for row in by_doc_type:
+        row["avg_risk"] = round(float(row["avg_risk"] or 0), 1)
+
+    return {
+        "total_runs": int(stats["total_runs"] or 0),
+        "avg_risk_score": round(float(stats["avg_risk"] or 0), 1),
+        "blocking_failures": int(stats["blocking_count"] or 0),
+        "manual_review_required": int(stats["manual_review_count"] or 0),
+        "total_rules_applied": total_applied,
+        "total_passed": total_passed,
+        "total_failed": total_failed,
+        "total_warnings": total_warnings,
+        "compliance_pct": compliance_pct,
+        "risk_distribution": {
+            "critical": int(stats["critical_count"] or 0),
+            "high":     int(stats["high_count"]     or 0),
+            "medium":   int(stats["medium_count"]   or 0),
+            "low":      int(stats["low_count"]      or 0),
+        },
+        "top_failed_rules": top_failed_rules,
+        "by_document_type": by_doc_type,
+    }
+
+
 def _extract_invoice_audit_section(report_data) -> dict:
     if isinstance(report_data, dict) and isinstance(report_data.get("invoice_audit"), dict):
         return report_data.get("invoice_audit") or {}
@@ -514,6 +624,61 @@ def _build_invoice_audit_report_ui(report, org):
             {"rule_code": "DUP-001", "status": "مخالف", "weight": "مرتفع", "note": "ظهرت حالات تكرار تحتاج تحقيق."},
         ]
 
+    # ── Rule engine enrichment (if data exists in report) ─────────────────────
+    from django.conf import settings as _settings
+    re_raw = (report.data or {}).get("rule_engine") or {}
+    if not re_raw and getattr(_settings, "USE_NEW_RULE_ENGINE", False):
+        re_raw = _collect_rule_engine_data(org, report.period_from or None, report.period_to or None)
+
+    re_runs        = int(re_raw.get("total_runs", 0))
+    re_compliance  = float(re_raw.get("compliance_pct", compliance_pct))
+    re_avg_risk    = float(re_raw.get("avg_risk_score", risk_avg))
+    re_blocking    = int(re_raw.get("blocking_failures", 0))
+    re_dist        = re_raw.get("risk_distribution", {})
+    re_top_rules   = re_raw.get("top_failed_rules", [])
+    re_by_doc      = re_raw.get("by_document_type", [])
+
+    # Build human-readable key findings that incorporate rule engine data
+    key_findings = [
+        f"عدد الفواتير عالية المخاطر: {high_risk_count}",
+        f"عدد الفواتير المكررة: {duplicate_count}",
+        f"متوسط درجة المخاطر: {risk_avg:.1f}",
+    ]
+    if re_runs:
+        key_findings += [
+            f"إجمالي المستندات المدقوقة بمحرك القواعد الذكي: {re_runs}",
+            f"القواعد المطبقة الإجمالية: {re_raw.get('total_rules_applied', 0)} — امتثال {re_compliance:.1f}%",
+            f"حالات تعطيل الاعتماد: {re_blocking}",
+        ]
+        if re_top_rules:
+            top_name = re_top_rules[0].get("name_ar") or re_top_rules[0].get("rule_code")
+            key_findings.append(f"القاعدة الأكثر إخفاقًا: {top_name} ({re_top_rules[0]['fail_count']} إخفاق)")
+
+    # Determine effective compliance rate — prefer rule engine if available
+    effective_compliance = re_compliance if re_runs else float(validation_summary.get("vat_compliance_pct") or compliance_pct)
+
+    rule_engine_section = None
+    if re_runs:
+        rule_engine_section = {
+            "total_runs":        re_runs,
+            "compliance_pct":    re_compliance,
+            "avg_risk_score":    re_avg_risk,
+            "blocking_failures": re_blocking,
+            "manual_review":     int(re_raw.get("manual_review_required", 0)),
+            "total_rules_applied": int(re_raw.get("total_rules_applied", 0)),
+            "total_passed":      int(re_raw.get("total_passed", 0)),
+            "total_failed":      int(re_raw.get("total_failed", 0)),
+            "total_warnings":    int(re_raw.get("total_warnings", 0)),
+            "risk_distribution": {
+                "critical": int(re_dist.get("critical", 0)),
+                "high":     int(re_dist.get("high", 0)),
+                "medium":   int(re_dist.get("medium", 0)),
+                "low":      int(re_dist.get("low", 0)),
+            },
+            "top_failed_rules": re_top_rules,
+            "by_document_type": re_by_doc,
+        }
+
     return {
         "title": report.title or "تقرير تدقيق الفواتير",
         "organization_name": getattr(org, "name", "-") or "-",
@@ -523,18 +688,14 @@ def _build_invoice_audit_report_ui(report, org):
         "summary": {
             "total_invoices": int(overall.get("total_invoices") or 0),
             "total_amount": float(overall.get("total_amount") or 0),
-            "compliance_rate": float(validation_summary.get("vat_compliance_pct") or compliance_pct),
+            "compliance_rate": effective_compliance,
             "avg_risk_score": risk_avg,
             "high_risk_invoices": high_risk_count,
             "duplicate_count": duplicate_count,
         },
         "executive_summary": {
             "conclusion": narrative.get("executive_summary") or "الصورة العامة تشير إلى ارتفاع نسبي في مخاطر الامتثال وتحتاج تدخل رقابي سريع.",
-            "key_findings": [
-                f"عدد الفواتير عالية المخاطر: {high_risk_count}",
-                f"عدد الفواتير المكررة: {duplicate_count}",
-                f"متوسط درجة المخاطر: {risk_avg:.1f}",
-            ],
+            "key_findings": key_findings,
             "recommendations": [
                 "إغلاق المخالفات ذات الأولوية العالية خلال دورة المراجعة الحالية.",
                 "تفعيل مراجعة استباقية على قواعد التكرار وضريبة القيمة المضافة.",
@@ -548,6 +709,7 @@ def _build_invoice_audit_report_ui(report, org):
             "compliance_rate": compliance_pct,
             "rules_matrix": compliance_matrix,
         },
+        "rule_engine": rule_engine_section,
         "high_risk_invoices": high_risk_invoices,
         "failed_rules": failed_rules,
         "risk_analysis": {
@@ -645,6 +807,13 @@ class GenerateAuditReportView(APIView):
         # ── Invoice Audit Section ──────────────────────────────────────────────
         if include_invoices:
             audit_data["invoice_audit"] = _collect_invoice_data(org, date_from, date_to, audit_session_id=audit_session_id)
+
+        # ── Rule Engine Section (40-rule smart audit) ──────────────────────────
+        from django.conf import settings as _settings
+        if getattr(_settings, "USE_NEW_RULE_ENGINE", False):
+            re_data = _collect_rule_engine_data(org, date_from, date_to)
+            if re_data:
+                audit_data["rule_engine"] = re_data
 
         # ── Transaction Section ────────────────────────────────────────────────
         if include_tx:

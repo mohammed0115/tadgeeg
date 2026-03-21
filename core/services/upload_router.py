@@ -11,7 +11,44 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
+from django.conf import settings
+
 logger = logging.getLogger(__name__)
+
+
+# Map upload-router document type names → SupportedDocumentType values used by rule engine
+_UPLOAD_TYPE_TO_RE_TYPE = {
+    "invoice":         "sales_invoice",
+    "purchase_order":  "purchase_order",
+    "bank_statement":  "bank_statement",
+    "payroll":         "payroll",
+    "expense_report":  "expense",
+    "tax_declaration": "tax_return",
+    "fixed_asset":     "fixed_asset",
+    "sales_receipt":   "sales_receipt",
+}
+
+
+def _trigger_rule_engine(document_id: str, document_type: str, organization_id: str, triggered_by: str = "upload") -> None:
+    """
+    Fire the asynchronous audit task if the new rule engine is enabled.
+    Never raises — failures are logged and swallowed so the upload result
+    is not affected.
+    """
+    if not getattr(settings, "USE_NEW_RULE_ENGINE", False):
+        return
+    re_type = _UPLOAD_TYPE_TO_RE_TYPE.get(document_type, "other")
+    try:
+        from apps.rule_engine.tasks.audit_tasks import run_audit_task
+        run_audit_task.delay(
+            document_id=str(document_id),
+            document_type=re_type,
+            organization_id=str(organization_id),
+            triggered_by=triggered_by,
+        )
+        logger.info("[RuleEngine] Queued audit: doc=%s type=%s", document_id, re_type)
+    except Exception as exc:
+        logger.warning("[RuleEngine] Could not queue audit task for %s: %s", document_id, exc)
 
 
 class UploadRouterResult:
@@ -125,6 +162,9 @@ class DocumentUploadRouter:
             else:
                 result_url = "/invoices/"
 
+            if invoice_id and org:
+                _trigger_rule_engine(invoice_id, "invoice", org.id)
+
             return UploadRouterResult(
                 success=result.get("success", True),
                 pipeline="invoice",
@@ -202,6 +242,9 @@ class DocumentUploadRouter:
                 result_url = detail_pattern.format(pk=typed_id)
             else:
                 result_url = list_url
+
+            if typed_id and org:
+                _trigger_rule_engine(typed_id, document_type, org.id)
 
             return UploadRouterResult(
                 success=result.get("success", True),

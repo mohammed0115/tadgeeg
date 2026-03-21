@@ -102,7 +102,12 @@ LOCAL_APPS = [
     "apps.invoices",
     "apps.frontend",
     "apps.auditing",
+    "apps.rule_engine",
 ]
+
+# ─── Rule Engine Settings ──────────────────────────────────────────────────────
+ALLOWED_RULE_MODULES = ["apps.rule_engine.rules"]
+USE_NEW_RULE_ENGINE = True  # Feature flag: False = old AuditEngine, True = new AuditPipeline
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 

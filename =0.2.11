@@ -1,0 +1,117 @@
+Collecting xhtml2pdf
+  Downloading xhtml2pdf-0.2.17-py3-none-any.whl.metadata (22 kB)
+Collecting arabic-reshaper>=3.0.0 (from xhtml2pdf)
+  Using cached arabic_reshaper-3.0.0-py3-none-any.whl.metadata (12 kB)
+Collecting html5lib>=1.1 (from xhtml2pdf)
+  Downloading html5lib-1.1-py2.py3-none-any.whl.metadata (16 kB)
+Requirement already satisfied: Pillow>=8.1.1 in /home/mohamed/Desktop/tadgeeg/.venv/lib/python3.12/site-packages (from xhtml2pdf) (10.3.0)
+Collecting pyHanko>=0.12.1 (from xhtml2pdf)
+  Downloading pyhanko-0.34.1-py3-none-any.whl.metadata (3.3 kB)
+Collecting pyhanko-certvalidator>=0.19.5 (from xhtml2pdf)
+  Downloading pyhanko_certvalidator-0.30.1-py3-none-any.whl.metadata (4.9 kB)
+Collecting pypdf>=3.1.0 (from xhtml2pdf)
+  Downloading pypdf-6.9.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting python-bidi>=0.5.0 (from xhtml2pdf)
+  Using cached python_bidi-0.6.7-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.9 kB)
+Collecting reportlab<5,>=4.0.4 (from xhtml2pdf)
+  Downloading reportlab-4.4.10-py3-none-any.whl.metadata (1.7 kB)
+Collecting svglib>=1.2.1 (from xhtml2pdf)
+  Downloading svglib-1.6.0-py3-none-any.whl.metadata (11 kB)
+Requirement already satisfied: charset-normalizer in /home/mohamed/Desktop/tadgeeg/.venv/lib/python3.12/site-packages (from reportlab<5,>=4.0.4->xhtml2pdf) (3.4.5)
+Requirement already satisfied: six>=1.9 in /home/mohamed/Desktop/tadgeeg/.venv/lib/python3.12/site-packages (from html5lib>=1.1->xhtml2pdf) (1.17.0)
+Requirement already satisfied: webencodings in /home/mohamed/Desktop/tadgeeg/.venv/lib/python3.12/site-packages (from html5lib>=1.1->xhtml2pdf) (0.5.1)
+Collecting asn1crypto>=1.5.1 (from pyHanko>=0.12.1->xhtml2pdf)
+  Downloading asn1crypto-1.5.1-py2.py3-none-any.whl.metadata (13 kB)
+Requirement already satisfied: tzlocal>=4.3 in /home/mohamed/Desktop/tadgeeg/.venv/lib/python3.12/site-packages (from pyHanko>=0.12.1->xhtml2pdf) (5.3.1)
+Requirement already satisfied: requests>=2.31.0 in /home/mohamed/Desktop/tadgeeg/.venv/lib/python3.12/site-packages (from pyHanko>=0.12.1->xhtml2pdf) (2.32.5)
+Requirement already satisfied: pyyaml>=6.0 in /home/mohamed/Desktop/tadgeeg/.venv/lib/python3.12/site-packages (from pyHanko>=0.12.1->xhtml2pdf) (6.0.3)
+Requirement already satisfied: cryptography>=43.0.3 in /home/mohamed/Desktop/tadgeeg/.venv/lib/python3.12/site-packages (from pyHanko>=0.12.1->xhtml2pdf) (46.0.5)
+Collecting lxml>=5.4.0 (from pyHanko>=0.12.1->xhtml2pdf)
+  Using cached lxml-6.0.2-cp312-cp312-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl.metadata (3.6 kB)
+Collecting oscrypto>=1.1.0 (from pyhanko-certvalidator>=0.19.5->xhtml2pdf)
+  Downloading oscrypto-1.3.0-py2.py3-none-any.whl.metadata (15 kB)
+Collecting uritools>=3.0.1 (from pyhanko-certvalidator>=0.19.5->xhtml2pdf)
+  Downloading uritools-6.0.1-py3-none-any.whl.metadata (5.1 kB)
+Requirement already satisfied: cffi>=2.0.0 in /home/mohamed/Desktop/tadgeeg/.venv/lib/python3.12/site-packages (from cryptography>=43.0.3->pyHanko>=0.12.1->xhtml2pdf) (2.0.0)
+Requirement already satisfied: pycparser in /home/mohamed/Desktop/tadgeeg/.venv/lib/python3.12/site-packages (from cffi>=2.0.0->cryptography>=43.0.3->pyHanko>=0.12.1->xhtml2pdf) (3.0)
+Requirement already satisfied: idna<4,>=2.5 in /home/mohamed/Desktop/tadgeeg/.venv/lib/python3.12/site-packages (from requests>=2.31.0->pyHanko>=0.12.1->xhtml2pdf) (3.11)
+Requirement already satisfied: urllib3<3,>=1.21.1 in /home/mohamed/Desktop/tadgeeg/.venv/lib/python3.12/site-packages (from requests>=2.31.0->pyHanko>=0.12.1->xhtml2pdf) (2.6.3)
+Requirement already satisfied: certifi>=2017.4.17 in /home/mohamed/Desktop/tadgeeg/.venv/lib/python3.12/site-packages (from requests>=2.31.0->pyHanko>=0.12.1->xhtml2pdf) (2026.2.25)
+Requirement already satisfied: cssselect2>=0.2.0 in /home/mohamed/Desktop/tadgeeg/.venv/lib/python3.12/site-packages (from svglib>=1.2.1->xhtml2pdf) (0.9.0)
+Collecting rlpycairo>=0.4.0 (from svglib>=1.2.1->xhtml2pdf)
+  Downloading rlpycairo-0.4.0-py3-none-any.whl.metadata (4.9 kB)
+Requirement already satisfied: tinycss2>=0.6.0 in /home/mohamed/Desktop/tadgeeg/.venv/lib/python3.12/site-packages (from svglib>=1.2.1->xhtml2pdf) (1.5.1)
+Collecting pycairo>=1.20.0 (from rlpycairo>=0.4.0->svglib>=1.2.1->xhtml2pdf)
+  Downloading pycairo-1.29.0.tar.gz (665 kB)
+     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 665.9/665.9 kB 302.3 kB/s  0:00:01
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Installing backend dependencies: started
+  Installing backend dependencies: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'error'
+  error: subprocess-exited-with-error
+  
+  × Preparing metadata (pyproject.toml) did not run successfully.
+  │ exit code: 1
+  ╰─> [48 lines of output]
+      + meson setup /tmp/pip-install-wlemdnho/pycairo_8b47329af80f4ac389bfc09930220893 /tmp/pip-install-wlemdnho/pycairo_8b47329af80f4ac389bfc09930220893/.mesonpy-ehiqoyrp -Dbuildtype=release -Db_ndebug=if-release -Db_vscrt=md -Dwheel=true -Dtests=false --native-file=/tmp/pip-install-wlemdnho/pycairo_8b47329af80f4ac389bfc09930220893/.mesonpy-ehiqoyrp/meson-python-native-file.ini
+      The Meson build system
+      Version: 1.10.2
+      Source dir: /tmp/pip-install-wlemdnho/pycairo_8b47329af80f4ac389bfc09930220893
+      Build dir: /tmp/pip-install-wlemdnho/pycairo_8b47329af80f4ac389bfc09930220893/.mesonpy-ehiqoyrp
+      Build type: native build
+      Project name: pycairo
+      Project version: 1.29.0
+      C compiler for the host machine: cc (gcc 13.3.0 "cc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0")
+      C linker for the host machine: cc ld.bfd 2.42
+      Host machine cpu family: x86_64
+      Host machine cpu: x86_64
+      Program python3 found: YES (/home/mohamed/Desktop/tadgeeg/.venv/bin/python)
+      Compiler for C supports arguments -Wall: YES
+      Compiler for C supports arguments -Warray-bounds: YES
+      Compiler for C supports arguments -Wcast-align: YES
+      Compiler for C supports arguments -Wconversion: YES
+      Compiler for C supports arguments -Wextra: YES
+      Compiler for C supports arguments -Wformat=2: YES
+      Compiler for C supports arguments -Wformat-nonliteral: YES
+      Compiler for C supports arguments -Wformat-security: YES
+      Compiler for C supports arguments -Wimplicit-function-declaration: YES
+      Compiler for C supports arguments -Winit-self: YES
+      Compiler for C supports arguments -Wmissing-format-attribute: YES
+      Compiler for C supports arguments -Wmissing-noreturn: YES
+      Compiler for C supports arguments -Wnested-externs: YES
+      Compiler for C supports arguments -Wold-style-definition: YES
+      Compiler for C supports arguments -Wpacked: YES
+      Compiler for C supports arguments -Wpointer-arith: YES
+      Compiler for C supports arguments -Wreturn-type: YES
+      Compiler for C supports arguments -Wshadow: YES
+      Compiler for C supports arguments -Wsign-compare: YES
+      Compiler for C supports arguments -Wstrict-aliasing: YES
+      Compiler for C supports arguments -Wundef: YES
+      Compiler for C supports arguments -Wunused-but-set-variable: YES
+      Compiler for C supports arguments -Wswitch-default: YES
+      Compiler for C supports arguments -Wno-missing-field-initializers: YES
+      Compiler for C supports arguments -Wno-unused-parameter: YES
+      Compiler for C supports arguments -fno-strict-aliasing: YES
+      Compiler for C supports arguments -fvisibility=hidden: YES
+      Found pkg-config: YES (/usr/bin/pkg-config) 1.8.1
+      Did not find CMake 'cmake'
+      Found CMake: NO
+      Run-time dependency cairo found: NO (tried pkgconfig)
+      
+      ../cairo/meson.build:31:12: ERROR: Dependency "cairo" not found, tried pkgconfig
+      
+      A full log can be found at /tmp/pip-install-wlemdnho/pycairo_8b47329af80f4ac389bfc09930220893/.mesonpy-ehiqoyrp/meson-logs/meson-log.txt
+      [end of output]
+  
+  note: This error originates from a subprocess, and is likely not a problem with pip.
+error: metadata-generation-failed
+
+× Encountered error while generating package metadata.
+╰─> pycairo
+
+note: This is an issue with the package mentioned above, not pip.
+hint: See above for details.

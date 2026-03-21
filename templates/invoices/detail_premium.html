@@ -478,7 +478,7 @@ function invoiceDetail(invoiceId, initialScore, initialPassed, initialFailed) {
         notify(revalidateAfterSave ? 'تم حفظ التصحيحات وإعادة التدقيق.' : 'تم حفظ التصحيحات اليدوية.', 'success');
         this.$nextTick(() => lucide.createIcons());
       } catch (error) {
-        notify('فشل حفظ المراجعة: ' + error.message, 'error');
+        notify('تعذّر حفظ المراجعة. حاول مرة أخرى.', 'error');
       } finally {
         this.savingReview = false;
       }
@@ -502,7 +502,7 @@ function invoiceDetail(invoiceId, initialScore, initialPassed, initialFailed) {
         notify(this.decisionModal.action === 'approve' ? 'تم اعتماد الفاتورة' : 'تم رفض الفاتورة', this.decisionModal.action === 'approve' ? 'success' : 'info');
         setTimeout(() => location.reload(), 800);
       } catch (error) {
-        notify('فشل: ' + error.message, 'error');
+        notify('تعذّر تنفيذ القرار. حاول مرة أخرى.', 'error');
       } finally {
         this.decisionModal.submitting = false;
       }
@@ -515,7 +515,7 @@ function invoiceDetail(invoiceId, initialScore, initialPassed, initialFailed) {
         notify('تمت إعادة تشغيل التدقيق وسيتم تحديث الصفحة الآن.', 'success');
         setTimeout(() => location.reload(), 1000);
       } catch (error) {
-        notify('فشل: ' + error.message, 'error');
+        notify('تعذّر إعادة التدقيق. حاول مرة أخرى.', 'error');
       } finally {
         this.revalidating = false;
       }

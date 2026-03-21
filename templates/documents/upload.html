@@ -525,7 +525,7 @@ function docUploader() {
           data.failed ? 'warning' : 'success'
         );
       } catch (error) {
-        notify('فشل رفع المستندات: ' + error.message, 'error');
+        notify('تعذّر رفع المستندات. تحقق من الملفات وحاول مرة أخرى.', 'error');
       } finally {
         this.uploading = false;
         this.$nextTick(() => lucide.createIcons());

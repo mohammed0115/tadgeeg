@@ -354,6 +354,103 @@
 </div>
 {% endif %}
 
+<!-- ── Big Four Standards Compliance ── -->
+{% if data.invoice_audit.big_four.firms %}
+<div class="section-title">{% trans "Big Four Standards Compliance" %}</div>
+<div class="kpi-grid">
+  {% for firm in data.invoice_audit.big_four.firms %}
+  <div class="kpi-card">
+    <div class="kpi-value {% if firm.status == 'compliant' %}green{% elif firm.status == 'at_risk' %}amber{% else %}red{% endif %}">
+      {{ firm.pass_rate }}%
+    </div>
+    <div class="kpi-label" style="font-weight:700; margin-top:4pt;">{{ firm.firm }}</div>
+    <div class="kpi-label">{{ firm.standard }}</div>
+    <div class="kpi-label" style="margin-top:4pt;">
+      <span class="badge {% if firm.status == 'compliant' %}badge-low{% elif firm.status == 'at_risk' %}badge-medium{% else %}badge-critical{% endif %}">
+        {% if firm.status == 'compliant' %}{% trans "Compliant" %}{% elif firm.status == 'at_risk' %}{% trans "At Risk" %}{% else %}{% trans "Non-Compliant" %}{% endif %}
+      </span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<table style="margin-bottom:14pt;">
+  <thead>
+    <tr>
+      <th>{% trans "Firm" %}</th>
+      <th>{% trans "Standard" %}</th>
+      <th>{% trans "Rule Groups" %}</th>
+      <th>{% trans "Passed" %}</th>
+      <th>{% trans "Failed" %}</th>
+      <th>{% trans "Pass Rate" %}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for firm in data.invoice_audit.big_four.firms %}
+    <tr>
+      <td><strong>{{ firm.firm }}</strong></td>
+      <td>{{ firm.standard }}</td>
+      <td>{{ firm.label }}</td>
+      <td>{{ firm.passed }}</td>
+      <td>{{ firm.failed }}</td>
+      <td>
+        <span class="badge {% if firm.status == 'compliant' %}badge-low{% elif firm.status == 'at_risk' %}badge-medium{% else %}badge-critical{% endif %}">
+          {{ firm.pass_rate }}%
+        </span>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<!-- ── Industry Benchmark Comparison ── -->
+{% if data.invoice_audit.benchmark.metrics %}
+<div class="section-title">{% trans "Industry Benchmark Comparison" %} — {{ data.invoice_audit.benchmark.industry_label }}</div>
+<table>
+  <thead>
+    <tr>
+      <th>{% trans "Metric" %}</th>
+      <th>{% trans "Your Score" %}</th>
+      <th>{% trans "Industry Benchmark" %}</th>
+      <th>{% trans "Delta" %}</th>
+      <th>{% trans "Position" %}</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% with m=data.invoice_audit.benchmark.metrics %}
+    <tr>
+      <td>{% trans "Compliance Rate" %}</td>
+      <td>{{ m.compliance_rate_pct.value }}%</td>
+      <td>{{ m.compliance_rate_pct.benchmark }}%</td>
+      <td>{% if m.compliance_rate_pct.delta >= 0 %}+{% endif %}{{ m.compliance_rate_pct.delta }}%</td>
+      <td><span class="badge {% if m.compliance_rate_pct.status == 'above' %}badge-low{% elif m.compliance_rate_pct.status == 'below' %}badge-critical{% else %}badge-medium{% endif %}">{{ m.compliance_rate_pct.status }}</span></td>
+    </tr>
+    <tr>
+      <td>{% trans "Duplicate Rate" %}</td>
+      <td>{{ m.duplicate_rate_pct.value }}%</td>
+      <td>{{ m.duplicate_rate_pct.benchmark }}%</td>
+      <td>{% if m.duplicate_rate_pct.delta >= 0 %}+{% endif %}{{ m.duplicate_rate_pct.delta }}%</td>
+      <td><span class="badge {% if m.duplicate_rate_pct.status == 'above' %}badge-low{% elif m.duplicate_rate_pct.status == 'below' %}badge-critical{% else %}badge-medium{% endif %}">{{ m.duplicate_rate_pct.status }}</span></td>
+    </tr>
+    <tr>
+      <td>{% trans "Average Risk Score" %}</td>
+      <td>{{ m.avg_risk_score.value }}</td>
+      <td>{{ m.avg_risk_score.benchmark }}</td>
+      <td>{% if m.avg_risk_score.delta >= 0 %}+{% endif %}{{ m.avg_risk_score.delta }}</td>
+      <td><span class="badge {% if m.avg_risk_score.status == 'above' %}badge-low{% elif m.avg_risk_score.status == 'below' %}badge-critical{% else %}badge-medium{% endif %}">{{ m.avg_risk_score.status }}</span></td>
+    </tr>
+    <tr>
+      <td>{% trans "VAT Compliance Rate" %}</td>
+      <td>{{ m.vat_compliance_rate_pct.value }}%</td>
+      <td>{{ m.vat_compliance_rate_pct.benchmark }}%</td>
+      <td>{% if m.vat_compliance_rate_pct.delta >= 0 %}+{% endif %}{{ m.vat_compliance_rate_pct.delta }}%</td>
+      <td><span class="badge {% if m.vat_compliance_rate_pct.status == 'above' %}badge-low{% elif m.vat_compliance_rate_pct.status == 'below' %}badge-critical{% else %}badge-medium{% endif %}">{{ m.vat_compliance_rate_pct.status }}</span></td>
+    </tr>
+    {% endwith %}
+  </tbody>
+</table>
+{% endif %}
+
 <!-- ── Footer ── -->
 <div class="footer">
   {{ product_signature }} &nbsp;|&nbsp; {{ org.name }} &nbsp;|&nbsp;

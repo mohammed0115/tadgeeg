@@ -45,6 +45,124 @@ def _json_safe(obj):
     return obj
 
 
+# ─── Big Four & benchmark constants (mirrors audit/analytics views) ───────────
+
+_BIG_FOUR_MAPPING = {
+    "KPMG":     {"label": "KPMG — Invoice Completeness",       "groups": ["INV"],       "standard": "ISA 500"},
+    "Deloitte": {"label": "Deloitte — Risk & Anomaly Detection","groups": ["ANO", "DUP"],"standard": "ISA 315"},
+    "PwC":      {"label": "PwC — Internal Control Testing",    "groups": ["CTL"],       "standard": "ISA 330"},
+    "EY":       {"label": "EY — Compliance Verification",      "groups": ["VAT", "DOC"],"standard": "ISA 250"},
+}
+
+_INDUSTRY_BENCHMARKS = {
+    "finance":      {"label": "Financial Services & Banking",      "compliance_rate_pct": 94.2, "duplicate_rate_pct": 0.8, "avg_risk_score": 18.5, "vat_compliance_rate_pct": 97.8},
+    "retail":       {"label": "Retail & E-Commerce",               "compliance_rate_pct": 88.7, "duplicate_rate_pct": 1.9, "avg_risk_score": 24.1, "vat_compliance_rate_pct": 93.4},
+    "construction": {"label": "Construction & Real Estate",         "compliance_rate_pct": 85.3, "duplicate_rate_pct": 2.7, "avg_risk_score": 31.4, "vat_compliance_rate_pct": 89.2},
+    "healthcare":   {"label": "Healthcare & Pharmaceuticals",       "compliance_rate_pct": 91.6, "duplicate_rate_pct": 1.1, "avg_risk_score": 20.8, "vat_compliance_rate_pct": 95.1},
+    "manufacturing":{"label": "Manufacturing & Industry",           "compliance_rate_pct": 87.9, "duplicate_rate_pct": 2.3, "avg_risk_score": 27.6, "vat_compliance_rate_pct": 91.7},
+    "services":     {"label": "Professional & Business Services",   "compliance_rate_pct": 90.1, "duplicate_rate_pct": 1.5, "avg_risk_score": 22.3, "vat_compliance_rate_pct": 94.0},
+}
+
+
+def _compute_big_four(vr_qs) -> dict:
+    """Build Big Four compliance breakdown from a validation result queryset."""
+    GROUP_CODES = ["INV", "DUP", "VAT", "ANO", "CTL", "DOC"]
+    counters = {code: {"passed": 0, "failed": 0, "total": 0} for code in GROUP_CODES}
+    for detail_payload in vr_qs.values_list("validation_details", flat=True):
+        if not isinstance(detail_payload, dict):
+            continue
+        for rule_code, detail in detail_payload.items():
+            group_code = str(rule_code or "").split("-", 1)[0]
+            if group_code not in counters:
+                continue
+            counters[group_code]["total"] += 1
+            if detail.get("passed") is True:
+                counters[group_code]["passed"] += 1
+            elif detail.get("passed") is False:
+                counters[group_code]["failed"] += 1
+
+    results = []
+    for firm, meta in _BIG_FOUR_MAPPING.items():
+        fp = ff = ft = 0
+        for code in meta["groups"]:
+            g = counters[code]
+            fp += g["passed"]
+            ff += g["failed"]
+            ft += g["total"]
+        rate = round(fp / ft * 100, 1) if ft else 0.0
+        results.append({
+            "firm": firm,
+            "label": meta["label"],
+            "standard": meta["standard"],
+            "pass_rate": rate,
+            "passed": fp,
+            "failed": ff,
+            "total": ft,
+            "status": "compliant" if rate >= 90 else "at_risk" if rate >= 70 else "non_compliant",
+        })
+
+    overall_p = sum(r["passed"] for r in results)
+    overall_t = sum(r["total"] for r in results)
+    overall_rate = round(overall_p / overall_t * 100, 1) if overall_t else 0.0
+    return {
+        "overall_pass_rate": overall_rate,
+        "overall_status": "compliant" if overall_rate >= 90 else "at_risk" if overall_rate >= 70 else "non_compliant",
+        "firms": results,
+    }
+
+
+def _compute_benchmark(org, inv_qs) -> dict:
+    """Compare org invoice metrics against Saudi industry benchmarks."""
+    from django.db.models import Count, Avg, Q as _Q
+    from apps.invoices.models import InvoiceValidationResult as _IVR
+
+    industry_key = "services"
+    org_industry = (org.industry or "").lower()
+    for key in _INDUSTRY_BENCHMARKS:
+        if key in org_industry:
+            industry_key = key
+            break
+    benchmark = _INDUSTRY_BENCHMARKS[industry_key]
+
+    inv_stats = inv_qs.aggregate(
+        total=Count("id"),
+        compliant=Count("id", filter=_Q(compliance_status="compliant")),
+        duplicate=Count("id", filter=_Q(is_duplicate=True)),
+        avg_risk=Avg("risk_score"),
+    )
+    total = inv_stats["total"] or 1
+    org_compliance = round((inv_stats["compliant"] or 0) / total * 100, 1)
+    org_duplicate  = round((inv_stats["duplicate"]  or 0) / total * 100, 1)
+    org_risk       = round(float(inv_stats["avg_risk"] or 0), 1)
+
+    vat_qs    = _IVR.objects.filter(invoice__in=inv_qs)
+    vat_total = vat_qs.count() or 1
+    org_vat   = round(vat_qs.filter(overall_status="passed").count() / vat_total * 100, 1)
+
+    def _delta(org_val, bench_val, higher_is_better=True):
+        diff = round(org_val - bench_val, 1)
+        if higher_is_better:
+            st = "above" if diff > 0 else "below" if diff < 0 else "at"
+        else:
+            st = "below" if diff > 0 else "above" if diff < 0 else "at"
+        return {"value": org_val, "benchmark": bench_val, "delta": diff, "status": st}
+
+    metrics = {
+        "compliance_rate_pct":     _delta(org_compliance, benchmark["compliance_rate_pct"]),
+        "duplicate_rate_pct":      _delta(org_duplicate,  benchmark["duplicate_rate_pct"],  higher_is_better=False),
+        "avg_risk_score":          _delta(org_risk,       benchmark["avg_risk_score"],       higher_is_better=False),
+        "vat_compliance_rate_pct": _delta(org_vat,        benchmark["vat_compliance_rate_pct"]),
+    }
+    above = sum(1 for m in metrics.values() if m["status"] == "above")
+    below = sum(1 for m in metrics.values() if m["status"] == "below")
+    return {
+        "industry": industry_key,
+        "industry_label": benchmark["label"],
+        "metrics": metrics,
+        "overall_position": "above_average" if above > below else "below_average" if below > above else "average",
+    }
+
+
 # ─── Helper: collect invoice section data ─────────────────────────────────────
 
 def _collect_invoice_data(org, date_from=None, date_to=None, audit_session_id=None) -> dict:
@@ -255,6 +373,8 @@ def _collect_invoice_data(org, date_from=None, date_to=None, audit_session_id=No
         "duplicate_invoices":  duplicates,
         "vendor_analysis":     vendor_list,
         "monthly_trend":       monthly_clean,
+        "big_four":            _compute_big_four(vr_qs),
+        "benchmark":           _compute_benchmark(org, inv_qs),
     }
 
 

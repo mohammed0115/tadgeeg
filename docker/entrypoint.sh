@@ -67,6 +67,6 @@ fi
 
 python manage.py migrate --noinput
 python manage.py compilemessages --ignore=.venv || echo "compilemessages skipped (gettext not available)"
-python manage.py collectstatic --noinput
+python manage.py collectstatic --noinput || echo "WARNING: collectstatic failed — new static files may not be served. Fix with: docker volume rm <project>_static_dev && docker compose up -d"
 
 exec "$@"

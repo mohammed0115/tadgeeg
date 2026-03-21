@@ -496,7 +496,7 @@ function invoiceDetail(invoiceId, initialScore, initialPassed, initialFailed) {
         notify('تمت إعادة تشغيل التدقيق وسيتم تحديث الصفحة الآن.', 'success');
         setTimeout(() => location.reload(), 1000);
       } catch (error) {
-        notify('فشل: ' + error.message, 'error');
+        notify('تعذّر إعادة التدقيق. حاول مرة أخرى.', 'error');
       }
     },
   };

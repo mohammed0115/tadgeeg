@@ -744,7 +744,7 @@ function organizationSettingsPage() {
         notify('تم الحفظ بنجاح', 'success');
         this.$nextTick(() => lucide.createIcons());
       } catch (error) {
-        notify(error.message || 'تعذر الحفظ', 'error');
+        notify('تعذّر حفظ الإعدادات. حاول مرة أخرى.', 'error');
       } finally {
         this.saving = false;
       }

@@ -9,61 +9,35 @@
 {% block header_primary_action %}{% endblock %}
 
 {% block content %}
-<style type="text/tailwindcss">
+<style>
   .dashboard-page .dashboard-surface {
-    @apply rounded-[2rem] border border-slate-200/80 bg-white/90 shadow-[0_20px_55px_-30px_rgba(15,23,42,0.3)];
+    border-radius: 2rem; border: 1px solid rgba(226,232,240,.8);
+    background: rgba(255,255,255,.9); box-shadow: 0 20px 55px -30px rgba(15,23,42,.3);
   }
-
   .dashboard-page .dashboard-gradient-card {
-    border-radius: 28px;
-    color: #ffffff;
-    padding: 24px;
-    min-height: 196px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    box-shadow: 0 24px 60px -24px rgba(15, 23, 42, 0.45);
-    position: relative;
-    overflow: hidden;
+    border-radius: 28px; color: #fff; padding: 24px; min-height: 196px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    box-shadow: 0 24px 60px -24px rgba(15,23,42,.45); position: relative; overflow: hidden;
   }
-
-  .dashboard-page .dashboard-gradient-blue {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  }
-
-  .dashboard-page .dashboard-gradient-violet {
-    background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
-  }
-
-  .dashboard-page .dashboard-gradient-orange {
-    background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
-  }
-
-  .dashboard-page .dashboard-gradient-green {
-    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-  }
-
+  .dashboard-page .dashboard-gradient-blue  { background: linear-gradient(135deg,#3b82f6 0%,#2563eb 100%); }
+  .dashboard-page .dashboard-gradient-violet { background: linear-gradient(135deg,#a855f7 0%,#7c3aed 100%); }
+  .dashboard-page .dashboard-gradient-orange { background: linear-gradient(135deg,#fb923c 0%,#f97316 100%); }
+  .dashboard-page .dashboard-gradient-green  { background: linear-gradient(135deg,#22c55e 0%,#16a34a 100%); }
   .dashboard-page .dashboard-soft-button {
-    @apply flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 text-sm font-semibold text-slate-800 shadow-sm transition;
+    display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 0.75rem;
+    border-radius: 1rem; border: 1px solid #e2e8f0; background: #fff;
+    padding: 1rem; font-size: 0.875rem; font-weight: 600; color: #1e293b;
+    box-shadow: 0 1px 2px 0 rgba(0,0,0,.05); transition: all 0.15s ease; cursor: pointer;
   }
-
-  .dashboard-page .dashboard-soft-button:hover {
-    @apply border-slate-300 bg-slate-50;
-  }
-
+  .dashboard-page .dashboard-soft-button:hover { border-color: #cbd5e1; background: #f8fafc; }
   .dashboard-page .dashboard-soft-button-primary {
     border-color: transparent;
-    background: linear-gradient(135deg, #2563eb 0%, #9333ea 100%);
-    color: #ffffff;
-    box-shadow: 0 14px 30px rgba(99, 102, 241, 0.25);
+    background: linear-gradient(135deg,#2563eb 0%,#9333ea 100%);
+    color: #fff; box-shadow: 0 14px 30px rgba(99,102,241,.25);
   }
-
-  .dashboard-page .dashboard-alert-item {
-    @apply rounded-2xl border px-4 py-4;
-  }
-
+  .dashboard-page .dashboard-alert-item { border-radius: 1rem; border: 1px solid; padding: 1rem; }
   .dashboard-page .dashboard-mini-stat {
-    @apply rounded-3xl border border-slate-200 bg-slate-50/80 p-4;
+    border-radius: 1.5rem; border: 1px solid #e2e8f0; background: rgba(248,250,252,.8); padding: 1rem;
   }
 </style>
 

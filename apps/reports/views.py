@@ -126,7 +126,7 @@ def _compute_benchmark(org, inv_qs) -> dict:
 
     inv_stats = inv_qs.aggregate(
         total=Count("id"),
-        compliant=Count("id", filter=_Q(compliance_status="compliant")),
+        compliant=Count("id", filter=_Q(status="approved")),
         duplicate=Count("id", filter=_Q(is_duplicate=True)),
         avg_risk=Avg("risk_score"),
     )

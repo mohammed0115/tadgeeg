@@ -605,7 +605,7 @@ class IndustryBenchmarkView(APIView):
         inv_qs = Invoice.objects.filter(organization=org)
         inv_stats = inv_qs.aggregate(
             total=Count("id"),
-            compliant=Count("id", filter=Q(compliance_status="compliant")),
+            compliant=Count("id", filter=Q(status="approved")),
             duplicate=Count("id", filter=Q(is_duplicate=True)),
             avg_risk=Avg("risk_score"),
         )

@@ -39,7 +39,8 @@ RUN chmod +x /entrypoint.sh
 
 COPY . .
 
-RUN mkdir -p /app/staticfiles /app/media /app/logs
+RUN mkdir -p /app/staticfiles /app/media /app/logs && \
+    chmod 777 /app/staticfiles /app/media /app/logs
 
 # Transfer ownership to non-root user so entrypoint can write migrations, collectstatic, and logs
 RUN chown -R appuser:appgroup /app /entrypoint.sh

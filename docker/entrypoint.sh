@@ -67,6 +67,6 @@ fi
 
 python manage.py migrate --noinput
 python manage.py compilemessages --ignore=.venv || echo "compilemessages skipped (gettext not available)"
-python manage.py collectstatic --noinput || { echo "ERROR: collectstatic failed. Check volume permissions: docker compose exec -u root web_live chown -R appuser:appgroup /app/staticfiles"; exit 1; }
+python manage.py collectstatic --noinput || { echo "ERROR: collectstatic failed. Check volume permissions: docker compose exec -u root web_live chown -R www-data:www-data /app/staticfiles"; exit 1; }
 
 exec "$@"

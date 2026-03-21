@@ -6,9 +6,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Create non-root service user before any file operations
-RUN addgroup --system appgroup && adduser --system --ingroup appgroup --no-create-home appuser
-
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     pkg-config \
@@ -40,12 +37,9 @@ RUN chmod +x /entrypoint.sh
 COPY . .
 
 RUN mkdir -p /app/staticfiles /app/media /app/logs && \
-    chmod 777 /app/staticfiles /app/media /app/logs
+    chown -R www-data:www-data /app /entrypoint.sh
 
-# Transfer ownership to non-root user so entrypoint can write migrations, collectstatic, and logs
-RUN chown -R appuser:appgroup /app /entrypoint.sh
-
-USER appuser
+USER www-data
 
 EXPOSE 8000
 

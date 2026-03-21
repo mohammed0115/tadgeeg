@@ -47,6 +47,34 @@ tailwind.config = {
   .font-mono { font-family: Consolas, 'Courier New', monospace; }
   [x-cloak] { display: none !important; }
 
+  /* ── Critical layout (fallback if Tailwind CDN fails) ── */
+  body { background-color: #f1f5f9; color: #1e293b; }
+  .flex { display: flex; }
+  .flex-col { flex-direction: column; }
+  .flex-1 { flex: 1 1 0%; }
+  .flex-shrink-0 { flex-shrink: 0; }
+  .min-w-0 { min-width: 0; }
+  .h-screen { height: 100vh; }
+  .h-16 { height: 4rem; }
+  .overflow-hidden { overflow: hidden; }
+  .overflow-y-auto { overflow-y: auto; }
+  .fixed { position: fixed; }
+  .relative { position: relative; }
+  .inset-y-0 { top: 0; bottom: 0; }
+  .right-0 { right: 0; }
+  .z-30 { z-index: 30; }
+  .z-20 { z-index: 20; }
+  .items-center { align-items: center; }
+  .justify-between { justify-content: space-between; }
+  .hidden { display: none; }
+  .w-full { width: 100%; }
+
+  /* ── Sidebar background (CSS class so Alpine :style cannot overwrite it) ── */
+  .app-sidebar {
+    background: #0f1729;
+    border-left: 1px solid rgba(255,255,255,0.06);
+  }
+
   /* Sidebar link states */
   .nav-item {
     display: flex; align-items: center; gap: 0.75rem;
@@ -283,8 +311,7 @@ tailwind.config = {
   <!-- ════════════ SIDEBAR ════════════ -->
   <aside class="app-sidebar fixed inset-y-0 right-0 z-30 flex w-[18.5rem] max-w-[86vw] flex-shrink-0 flex-col overflow-hidden transition-all duration-300 lg:relative lg:inset-auto lg:max-w-none lg:w-auto"
          :class="mobileNavOpen || isDesktop ? 'translate-x-0' : (isRtl ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0')"
-         :style="sidebarStyle()"
-         style="background: #0f1729; border-left: 1px solid rgba(255,255,255,0.06);">
+         :style="sidebarStyle()">
 
     <!-- Brand -->
     <div class="flex items-center gap-3 px-4 py-4 border-b border-white/[.06] min-h-[64px]">

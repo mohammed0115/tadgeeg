@@ -228,11 +228,12 @@ SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD", "True" if not DEBUG 
 SECURE_BROWSER_XSS_FILTER = True
 HEALTH_REDIS_REQUIRED = os.environ.get("HEALTH_REDIS_REQUIRED", "False") == "True"
 
+SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "True" if not DEBUG else "False") == "True"
+
 if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
-    SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "True") == "True"
 
 cache_url = os.environ.get("CACHE_URL")
 use_redis_cache = os.environ.get("USE_REDIS_CACHE", "").strip().lower() in {"1", "true", "yes", "on"}

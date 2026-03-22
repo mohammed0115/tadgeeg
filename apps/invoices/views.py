@@ -581,6 +581,7 @@ def _update_vendor_profile(org, invoice: Invoice):
             vendor_name=invoice.vendor_name,
             defaults={
                 "vendor_vat_number": invoice.vendor_vat_number or "",
+                "vendor_cr_number":  invoice.vendor_cr_number or "",
                 "invoice_count":    stats["cnt"] or 0,
                 "total_amount":     stats["total"] or 0,
                 "avg_invoice_amount": stats["avg"] or 0,

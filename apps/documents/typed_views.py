@@ -464,34 +464,38 @@ def _create_typed_record(doc_type: str, ai_data: dict, base_doc, org, user):
 
     common = dict(organization=org, document=base_doc, uploaded_by=user)
 
+    def _s(key, default=""):
+        """Get string from ai_data, converting None to default."""
+        return ai_data.get(key) or default
+
     if doc_type == "purchase_order":
         return PurchaseOrder.objects.create(
             **common,
-            po_number         = ai_data.get("po_number", ""),
+            po_number         = _s("po_number"),
             po_date           = _save_date(ai_data.get("po_date")),
             delivery_date     = _save_date(ai_data.get("delivery_date")),
-            vendor_name       = ai_data.get("vendor_name", ""),
-            vendor_vat_number = ai_data.get("vendor_vat_number", ""),
-            vendor_cr_number  = ai_data.get("vendor_cr_number", ""),
-            requester_name    = ai_data.get("requester_name", ""),
-            department        = ai_data.get("department", ""),
-            cost_center       = ai_data.get("cost_center", ""),
-            account_code      = ai_data.get("account_code", ""),
-            currency          = ai_data.get("currency", "SAR"),
+            vendor_name       = _s("vendor_name"),
+            vendor_vat_number = _s("vendor_vat_number"),
+            vendor_cr_number  = _s("vendor_cr_number"),
+            requester_name    = _s("requester_name"),
+            department        = _s("department"),
+            cost_center       = _s("cost_center"),
+            account_code      = _s("account_code"),
+            currency          = _s("currency", "SAR"),
             subtotal          = _safe_decimal(ai_data.get("subtotal")),
             vat_amount        = _safe_decimal(ai_data.get("vat_amount")),
             total_amount      = _safe_decimal(ai_data.get("total_amount")),
-            line_items        = ai_data.get("line_items", []),
+            line_items        = ai_data.get("line_items") or [],
         )
 
     if doc_type == "bank_statement":
         return BankStatement.objects.create(
             **common,
-            bank_name              = ai_data.get("bank_name", ""),
-            account_number         = ai_data.get("account_number", ""),
-            account_name           = ai_data.get("account_name", ""),
-            iban                   = ai_data.get("iban", ""),
-            currency               = ai_data.get("currency", "SAR"),
+            bank_name              = _s("bank_name"),
+            account_number         = _s("account_number"),
+            account_name           = _s("account_name"),
+            iban                   = _s("iban"),
+            currency               = _s("currency", "SAR"),
             statement_period_from  = _save_date(ai_data.get("statement_period_from")),
             statement_period_to    = _save_date(ai_data.get("statement_period_to")),
             opening_balance        = _safe_decimal(ai_data.get("opening_balance")),
@@ -501,7 +505,7 @@ def _create_typed_record(doc_type: str, ai_data: dict, base_doc, org, user):
             calculated_closing     = _safe_decimal(ai_data.get("calculated_closing")),
             balance_matches        = bool(ai_data.get("balance_matches", True)),
             transaction_count      = int(ai_data.get("transaction_count") or 0),
-            transactions           = ai_data.get("transactions", []),
+            transactions           = ai_data.get("transactions") or [],
         )
 
     if doc_type == "payroll":
@@ -510,49 +514,49 @@ def _create_typed_record(doc_type: str, ai_data: dict, base_doc, org, user):
             payroll_period_from   = _save_date(ai_data.get("payroll_period_from")),
             payroll_period_to     = _save_date(ai_data.get("payroll_period_to")),
             payment_date          = _save_date(ai_data.get("payment_date")),
-            department            = ai_data.get("department", ""),
-            company_name          = ai_data.get("company_name", ""),
-            currency              = ai_data.get("currency", "SAR"),
+            department            = _s("department"),
+            company_name          = _s("company_name"),
+            currency              = _s("currency", "SAR"),
             employee_count        = int(ai_data.get("employee_count") or 0),
             total_gross_salary    = _safe_decimal(ai_data.get("total_gross_salary")),
             total_allowances      = _safe_decimal(ai_data.get("total_allowances")),
             total_deductions      = _safe_decimal(ai_data.get("total_deductions")),
             total_gosi            = _safe_decimal(ai_data.get("total_gosi")),
             total_net_salary      = _safe_decimal(ai_data.get("total_net_salary")),
-            employees             = ai_data.get("employees", []),
-            duplicate_employee_ids= ai_data.get("duplicate_employee_ids", []),
-            calculation_errors    = ai_data.get("calculation_errors", []),
+            employees             = ai_data.get("employees") or [],
+            duplicate_employee_ids= ai_data.get("duplicate_employee_ids") or [],
+            calculation_errors    = ai_data.get("calculation_errors") or [],
         )
 
     if doc_type == "expense_report":
         return ExpenseReport.objects.create(
             **common,
-            report_number        = ai_data.get("report_number", ""),
-            employee_name        = ai_data.get("employee_name", ""),
-            employee_id          = ai_data.get("employee_id", ""),
-            department           = ai_data.get("department", ""),
+            report_number        = _s("report_number"),
+            employee_name        = _s("employee_name"),
+            employee_id          = _s("employee_id"),
+            department           = _s("department"),
             report_period_from   = _save_date(ai_data.get("report_period_from")),
             report_period_to     = _save_date(ai_data.get("report_period_to")),
             submitted_date       = _save_date(ai_data.get("submitted_date")),
-            currency             = ai_data.get("currency", "SAR"),
-            purpose              = ai_data.get("purpose", ""),
+            currency             = _s("currency", "SAR"),
+            purpose              = _s("purpose"),
             total_claimed        = _safe_decimal(ai_data.get("total_claimed")),
             vat_included         = _safe_decimal(ai_data.get("vat_included")),
-            expense_lines        = ai_data.get("expense_lines", []),
+            expense_lines        = ai_data.get("expense_lines") or [],
             missing_receipts_count = int(ai_data.get("missing_receipts_count") or 0),
         )
 
-    if doc_type == "vat_return":
+    if doc_type in ("vat_return", "tax_declaration"):
         return VATReturn.objects.create(
             **common,
-            taxpayer_name            = ai_data.get("taxpayer_name", ""),
-            vat_number               = ai_data.get("vat_number", ""),
-            cr_number                = ai_data.get("cr_number", ""),
+            taxpayer_name            = _s("taxpayer_name"),
+            vat_number               = _s("vat_number"),
+            cr_number                = _s("cr_number"),
             period_from              = _save_date(ai_data.get("period_from")),
             period_to                = _save_date(ai_data.get("period_to")),
             filing_date              = _save_date(ai_data.get("filing_date")),
             due_date                 = _save_date(ai_data.get("due_date")),
-            zatca_reference          = ai_data.get("zatca_reference", ""),
+            zatca_reference          = _s("zatca_reference"),
             standard_rated_sales     = _safe_decimal(ai_data.get("standard_rated_sales")),
             zero_rated_sales         = _safe_decimal(ai_data.get("zero_rated_sales")),
             exempt_sales             = _safe_decimal(ai_data.get("exempt_sales")),
@@ -573,14 +577,14 @@ def _create_typed_record(doc_type: str, ai_data: dict, base_doc, org, user):
         return FixedAsset.objects.create(
             **common,
             register_date                    = _save_date(ai_data.get("register_date")),
-            company_name                     = ai_data.get("company_name", ""),
-            department                       = ai_data.get("department", ""),
-            fiscal_year                      = ai_data.get("fiscal_year", ""),
+            company_name                     = _s("company_name"),
+            department                       = _s("department"),
+            fiscal_year                      = _s("fiscal_year"),
             total_cost                       = _safe_decimal(ai_data.get("total_cost")),
             total_accumulated_depreciation   = _safe_decimal(ai_data.get("total_accumulated_depreciation")),
             total_book_value                 = _safe_decimal(ai_data.get("total_book_value")),
             asset_count                      = int(ai_data.get("asset_count") or 0),
-            assets                           = ai_data.get("assets", []),
+            assets                           = ai_data.get("assets") or [],
             negative_book_value_count        = int(ai_data.get("negative_book_value_count") or 0),
             over_depreciated_count           = int(ai_data.get("over_depreciated_count") or 0),
             missing_asset_id_count           = int(ai_data.get("missing_asset_id_count") or 0),
@@ -590,23 +594,23 @@ def _create_typed_record(doc_type: str, ai_data: dict, base_doc, org, user):
     if doc_type == "sales_receipt":
         return SalesReceipt.objects.create(
             **common,
-            receipt_number      = ai_data.get("receipt_number", ""),
+            receipt_number      = _s("receipt_number"),
             receipt_date        = _save_date(ai_data.get("receipt_date")),
-            receipt_type        = ai_data.get("receipt_type", "simplified"),
-            seller_name         = ai_data.get("seller_name", ""),
-            seller_vat_number   = ai_data.get("seller_vat_number", ""),
-            customer_name       = ai_data.get("customer_name", ""),
-            customer_vat_number = ai_data.get("customer_vat_number", ""),
-            currency            = ai_data.get("currency", "SAR"),
+            receipt_type        = _s("receipt_type", "simplified"),
+            seller_name         = _s("seller_name"),
+            seller_vat_number   = _s("seller_vat_number"),
+            customer_name       = _s("customer_name"),
+            customer_vat_number = _s("customer_vat_number"),
+            currency            = _s("currency", "SAR"),
             subtotal            = _safe_decimal(ai_data.get("subtotal")),
             vat_rate            = _safe_decimal(ai_data.get("vat_rate", 15)),
             vat_amount          = _safe_decimal(ai_data.get("vat_amount")),
             total_amount        = _safe_decimal(ai_data.get("total_amount")),
-            line_items          = ai_data.get("line_items", []),
+            line_items          = ai_data.get("line_items") or [],
             has_qr_code         = bool(ai_data.get("has_qr_code")),
             qr_code_valid       = bool(ai_data.get("qr_code_valid")),
-            zatca_uuid          = ai_data.get("zatca_uuid", ""),
-            file_hash           = ai_data.get("file_hash", ""),
+            zatca_uuid          = _s("zatca_uuid"),
+            file_hash           = _s("file_hash"),
         )
 
     raise ValueError(f"Unknown document type: {doc_type}")

@@ -78,3 +78,36 @@ try:
     admin.site.register(SalesReceipt, SalesReceiptAdmin)
 except ImportError:
     pass
+
+try:
+    from .canonical_models import (
+        CanonicalFieldDefinition,
+        DocumentTypeFieldMapping,
+        DocumentCanonicalData,
+    )
+
+    @admin.register(CanonicalFieldDefinition)
+    class CanonicalFieldDefinitionAdmin(admin.ModelAdmin):
+        list_display = ["field_code", "label_en", "data_type", "field_group", "is_nullable", "is_active"]
+        search_fields = ["field_code", "label_en", "label_ar"]
+        list_filter = ["field_group", "data_type", "is_nullable", "is_active",
+                       "required_for_storage", "required_for_rule_execution"]
+        ordering = ["field_group", "sort_order"]
+
+    @admin.register(DocumentTypeFieldMapping)
+    class DocumentTypeFieldMappingAdmin(admin.ModelAdmin):
+        list_display = ["document_type", "source_column", "canonical_field", "transform", "priority", "is_active"]
+        search_fields = ["source_column", "source_column_ar", "canonical_field__field_code"]
+        list_filter = ["document_type", "transform", "is_active"]
+        ordering = ["document_type", "-priority"]
+
+    @admin.register(DocumentCanonicalData)
+    class DocumentCanonicalDataAdmin(admin.ModelAdmin):
+        list_display = ["document_type", "typed_model_name", "typed_object_id", "version", "created_at"]
+        search_fields = ["typed_model_name", "typed_object_id"]
+        list_filter = ["document_type", "typed_model_name"]
+        readonly_fields = ["raw_ai_output", "canonical_data", "extraction_confidence",
+                           "extraction_source", "created_at", "updated_at"]
+
+except ImportError:
+    pass

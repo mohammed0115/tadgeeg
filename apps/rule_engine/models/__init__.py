@@ -28,6 +28,7 @@ from apps.rule_engine.models.audit_execution import (  # noqa: F401
 from apps.rule_engine.models.risk import RiskScoreSummary  # noqa: F401
 from apps.rule_engine.models.review import ManualReviewDecision  # noqa: F401
 from apps.rule_engine.models.cross_document import CrossDocumentLink  # noqa: F401
+from apps.rule_engine.models.rule_field_dependency import RuleFieldDependency  # noqa: F401
 
 __all__ = [
     # rule_definition
@@ -53,4 +54,6 @@ __all__ = [
     "ManualReviewDecision",
     # cross_document
     "CrossDocumentLink",
+    # rule_field_dependency
+    "RuleFieldDependency",
 ]

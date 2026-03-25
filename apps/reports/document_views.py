@@ -201,19 +201,20 @@ class DocumentReportPDFView(APIView):
     @staticmethod
     def _build_context(data: dict, request) -> dict:
         return {
-            "report":      data,
-            "meta":        data.get("report_meta", {}),
-            "summary":     data.get("summary", {}),
-            "key_fields":  data.get("key_fields", {}),
-            "rules":       data.get("rule_evaluation", []),
-            "violations":  data.get("violations", []),
-            "compliance":  data.get("compliance", {}),
-            "ai":          data.get("ai_insights", {}),
-            "recs":        data.get("recommendations", []),
-            "trail":       data.get("audit_trail", {}),
-            "specific":    data.get("document_specific", {}),
-            "is_rtl":      data.get("report_meta", {}).get("language", "ar") == "ar",
-            "request":     request,
+            "report":             data,
+            "meta":               data.get("report_meta", {}),
+            "summary":            data.get("summary", {}),
+            "key_fields":         data.get("key_fields", {}),
+            "rules":              data.get("rule_evaluation", []),
+            "violations":         data.get("violations", []),
+            "compliance":         data.get("compliance", {}),
+            "ai":                 data.get("ai_insights", {}),
+            "recs":               data.get("recommendations", []),
+            "trail":              data.get("audit_trail", {}),
+            "specific":           data.get("document_specific", {}),
+            "narrative":          data.get("narrative_sections", {}),
+            "is_rtl":             data.get("report_meta", {}).get("language", "ar") == "ar",
+            "request":            request,
         }
 
 

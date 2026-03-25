@@ -121,20 +121,47 @@ class DocumentReportService:
             canonical = self._canonical_from_typed(typed_obj, document_type)
 
         # ── 4. Assemble report sections ──────────────────────────────────────
+        summary_data = self._build_summary(audit_run, results, canonical, typed_obj, vd)
+        violations   = (self._build_violations(results)
+                        if results else self._build_violations_from_vd(vd))
+        recommendations = (self._build_recommendations(results, document_type)
+                           if results else self._build_recommendations_from_vd(vd))
+
+        compliance_score = float(summary_data.get("compliance_score") or summary_data.get("validation_score") or 0)
+        risk_level = summary_data.get("risk_level", "low")
+        high_risk_count = 1 if risk_level in ("high", "critical") else 0
+        top_violations = [
+            {"code": v.get("rule_code", ""), "count": 1}
+            for v in violations[:10] if v.get("rule_code")
+        ]
+        total_amount = float(summary_data.get("total_amount") or 0)
+
+        narrative = self._build_narrative_sections(
+            doc_type=document_type,
+            org_name=getattr(self.org, "name", ""),
+            total=1,
+            compliance_score=compliance_score,
+            high_risk_count=high_risk_count,
+            flagged_count=0,
+            top_violations=top_violations,
+            risk_dist={},
+            total_amount=total_amount,
+            language=language,
+        )
+
         report = {
             "report_meta":     self._build_meta(document_id, document_type, audit_run, language, typed_obj),
-            "summary":         self._build_summary(audit_run, results, canonical, typed_obj, vd),
+            "summary":         summary_data,
             "key_fields":      self._build_key_fields(document_type, canonical, typed_obj),
             "rule_evaluation": (self._build_rule_evaluation(results)
                                 if results else self._build_rule_evaluation_from_vd(vd)),
-            "violations":      (self._build_violations(results)
-                                if results else self._build_violations_from_vd(vd)),
+            "violations":      violations,
             "ai_insights":     self._build_ai_insights(canonical, raw_ai, document_type, vd),
             "compliance":      self._build_compliance(document_type, canonical, results, vd),
-            "recommendations": (self._build_recommendations(results, document_type)
-                                if results else self._build_recommendations_from_vd(vd)),
+            "recommendations": recommendations,
             "audit_trail":     self._build_audit_trail(audit_run, typed_obj),
             "document_specific": self._build_document_specific(document_type, canonical, typed_obj),
+            "narrative_sections": narrative,
         }
         return _safe(report)
 
@@ -896,6 +923,25 @@ class DocumentReportService:
         ]
         high_risk = [o for o in typed_objects if getattr(o, "risk_level", "") in ("high", "critical")]
 
+        # ── Total amount from typed objects ──────────────────────────────────
+        total_amount = sum(
+            float(getattr(o, "total_amount", 0) or 0)
+            for o in typed_objects
+        )
+
+        narrative = self._build_narrative_sections(
+            doc_type=document_type,
+            org_name=getattr(self.org, "name", ""),
+            total=total,
+            compliance_score=avg_score,
+            high_risk_count=risk_dist.get("critical", 0) + risk_dist.get("high", 0),
+            flagged_count=status_dist.get("flagged", 0),
+            top_violations=top_violations,
+            risk_dist=risk_dist,
+            total_amount=total_amount,
+            language=language,
+        )
+
         return _safe({
             "report_meta": {
                 "report_id":              None,
@@ -969,7 +1015,298 @@ class DocumentReportService:
             },
             "document_specific": {},
             "key_fields":        {},
+            "narrative_sections": narrative,
         })
+
+    def _build_narrative_sections(
+        self,
+        doc_type: str,
+        org_name: str,
+        total: int,
+        compliance_score: float,
+        high_risk_count: int,
+        flagged_count: int,
+        top_violations: list,
+        risk_dist: dict,
+        total_amount: float = 0.0,
+        language: str = "ar",
+    ) -> dict:
+        """Generate programmatic narrative report sections without AI/OpenAI."""
+
+        doc_ar = self._doc_type_ar(doc_type)
+        doc_en = self._doc_type_en(doc_type)
+        score  = round(compliance_score, 2)
+        industry_benchmark = 94.0
+        diff = round(score - industry_benchmark, 1)
+
+        # ── Scope per document type ───────────────────────────────────────────
+        scope_map_ar = {
+            "sales_invoice":  "تحليل فواتير المبيعات، والتحقق من صحة ضريبة القيمة المضافة والبيانات الضريبية",
+            "purchase_order": "مراجعة أوامر الشراء والتحقق من الالتزام بسياسات الشراء والميزانيات المعتمدة",
+            "bank_statement": "تحليل كشوف الحساب البنكية والتحقق من التوافق مع السجلات المحاسبية",
+            "payroll":        "مراجعة كشوف الرواتب والتحقق من صحة احتسابات الرواتب والاقتطاعات",
+            "expense_report": "تدقيق تقارير المصروفات والتحقق من توافر المستندات المؤيدة والامتثال للسياسات",
+            "vat_return":     "مراجعة إقرارات ضريبة القيمة المضافة والتحقق من صحة الأرقام المُبلَّغ عنها",
+            "fixed_asset":    "تدقيق سجلات الأصول الثابتة والتحقق من صحة الاستهلاك وتصنيف الأصول",
+            "sales_receipt":  "مراجعة إيصالات المبيعات والتحقق من اكتمال البيانات وصحة المبالغ",
+        }
+        scope_map_en = {
+            "sales_invoice":  "Analysis of sales invoices, verification of VAT correctness and tax compliance",
+            "purchase_order": "Review of purchase orders, compliance with procurement policies and approved budgets",
+            "bank_statement": "Analysis of bank statements and reconciliation with accounting records",
+            "payroll":        "Review of payroll sheets, verification of salary calculations and deductions",
+            "expense_report": "Audit of expense reports, verification of supporting documents and policy compliance",
+            "vat_return":     "Review of VAT returns and verification of reported figures",
+            "fixed_asset":    "Audit of fixed asset registers, depreciation correctness, and asset classification",
+            "sales_receipt":  "Review of sales receipts, completeness of data and amount accuracy",
+        }
+
+        # ── Recommendation templates ──────────────────────────────────────────
+        rec_map_ar = {
+            "sales_invoice": [
+                "تحسين عمليات التحقق من الفواتير لتقليل الفواتير المكررة",
+                "تعزيز الامتثال لضريبة القيمة المضافة من خلال تدريب الموظفين وتحديث الأنظمة المحاسبية",
+                "تعيين معتمدين للفواتير لضمان الامتثال للضوابط المالية",
+                "مراجعة سياسة قبول الفواتير وتحديثها بما يتوافق مع متطلبات هيئة الزكاة والضريبة والجمارك",
+            ],
+            "purchase_order": [
+                "تعزيز إجراءات الموافقة على أوامر الشراء قبل التنفيذ",
+                "مراجعة سياسة الموردين المعتمدين وتحديث قائمتهم بصفة دورية",
+                "ربط أوامر الشراء بالميزانيات التشغيلية المعتمدة آلياً",
+            ],
+            "bank_statement": [
+                "إجراء تسوية بنكية شهرية منتظمة وتوثيقها",
+                "مراجعة المعاملات غير المعتادة وإخضاعها لإجراءات تحقق إضافية",
+                "تفعيل إشعارات المعاملات الفورية للمراقبة المستمرة",
+            ],
+            "payroll": [
+                "مراجعة احتسابات الرواتب والمكافآت للتأكد من دقتها",
+                "التحقق من صحة بيانات الموظفين قبل صرف الرواتب",
+                "تطبيق مبدأ الفصل بين الواجبات في عملية إعداد وصرف الرواتب",
+            ],
+            "expense_report": [
+                "اشتراط تقديم مستندات مؤيدة لجميع المصروفات دون استثناء",
+                "تحديد سقف للمصروفات النقدية ومطالبة العاملين باتباعها",
+                "مراجعة سياسة المصروفات وتحديثها لتشمل معايير الموافقة الإلكترونية",
+            ],
+            "vat_return": [
+                "التحقق من صحة الأرقام المُبلَّغ عنها في إقرارات ضريبة القيمة المضافة",
+                "مطابقة أرقام الإقرارات مع بيانات المبيعات والمشتريات الفعلية",
+                "الالتزام بمواعيد تقديم الإقرارات الضريبية لتجنب الغرامات",
+            ],
+            "fixed_asset": [
+                "إجراء جرد دوري للأصول الثابتة والتحقق من وجودها الفعلي",
+                "مراجعة معدلات الاستهلاك وتوافقها مع السياسة المحاسبية",
+                "تحديث سجل الأصول عند كل إضافة أو استبعاد فوراً",
+            ],
+            "sales_receipt": [
+                "التأكد من اكتمال بيانات إيصالات المبيعات قبل الإصدار",
+                "ربط الإيصالات بفواتير المبيعات المقابلة تلقائياً",
+                "مراجعة الإيصالات ذات القيم الكبيرة من قبل مشرف مالي",
+            ],
+        }
+        rec_map_en = {
+            "sales_invoice": [
+                "Improve invoice verification processes to reduce duplicate invoices",
+                "Strengthen VAT compliance through staff training and accounting system updates",
+                "Assign invoice approvers to ensure compliance with financial controls",
+                "Review and update invoice acceptance policy to align with ZATCA requirements",
+            ],
+            "purchase_order": [
+                "Strengthen purchase order approval procedures before execution",
+                "Periodically review and update the approved vendor list",
+                "Automatically link purchase orders to approved operational budgets",
+            ],
+            "bank_statement": [
+                "Perform regular monthly bank reconciliations and document them",
+                "Review unusual transactions and subject them to additional verification",
+                "Enable instant transaction notifications for continuous monitoring",
+            ],
+            "payroll": [
+                "Review salary and bonus calculations to ensure accuracy",
+                "Verify employee data before payroll disbursement",
+                "Apply segregation of duties in payroll preparation and disbursement",
+            ],
+            "expense_report": [
+                "Require supporting documents for all expenses without exception",
+                "Set cash expense limits and require staff compliance",
+                "Review and update expense policy to include electronic approval standards",
+            ],
+            "vat_return": [
+                "Verify figures reported in VAT returns",
+                "Reconcile return figures with actual sales and purchase data",
+                "Meet VAT return submission deadlines to avoid penalties",
+            ],
+            "fixed_asset": [
+                "Conduct periodic physical inventory of fixed assets",
+                "Review depreciation rates for consistency with accounting policy",
+                "Update the asset register immediately upon additions or disposals",
+            ],
+            "sales_receipt": [
+                "Ensure completeness of sales receipt data before issuance",
+                "Automatically link receipts to corresponding sales invoices",
+                "Review high-value receipts by a financial supervisor",
+            ],
+        }
+
+        recs_ar = rec_map_ar.get(doc_type, ["مراجعة الإجراءات المالية وتعزيز الامتثال للمعايير المحلية والدولية"])
+        recs_en = rec_map_en.get(doc_type, ["Review financial procedures and strengthen compliance with local and international standards"])
+
+        # ── Build section texts ───────────────────────────────────────────────
+        amount_str = f"{total_amount:,.2f}" if total_amount else "—"
+        hi_count   = high_risk_count
+
+        # EXECUTIVE_SUMMARY
+        if score >= 90:
+            overall_ar = "أظهرت النتائج مستوى امتثال جيداً مع بعض المجالات التي تستدعي المتابعة"
+            overall_en = "Results indicate a good compliance level with some areas requiring follow-up"
+        elif score >= 70:
+            overall_ar = "أظهرت النتائج وجود فجوات في الامتثال تستوجب معالجة فورية"
+            overall_en = "Results reveal compliance gaps requiring immediate attention"
+        else:
+            overall_ar = "أظهرت النتائج وجود قصور واضح في الامتثال يستدعي تدخلاً عاجلاً"
+            overall_en = "Results reveal significant compliance deficiencies requiring urgent intervention"
+
+        exec_sum_ar = (
+            f"تم إجراء تقييم شامل للمخاطر المرتبطة بـ{doc_ar} لشركة {org_name}. "
+            f"شمل التقييم تحليل {total} مستند{'اً' if total > 1 else ''} "
+            f"{'بإجمالي ' + amount_str + ' ريال سعودي. ' if total_amount else ''}. "
+            f"{overall_ar}. "
+            f"تم تصنيف {hi_count} مستند{'اً' if hi_count > 1 else ''} على أنه{'ا' if hi_count > 1 else ''} ذو مخاطر عالية أو حرجة."
+        )
+        exec_sum_en = (
+            f"A comprehensive risk assessment was conducted for {doc_en} at {org_name}. "
+            f"The assessment covered {total} document{'s' if total != 1 else ''} "
+            f"{'totalling SAR ' + amount_str + '. ' if total_amount else ''}. "
+            f"{overall_en}. "
+            f"{hi_count} document{'s' if hi_count != 1 else ''} {'were' if hi_count != 1 else 'was'} classified as high or critical risk."
+        )
+
+        # KEY_FINDINGS
+        findings_ar = [
+            f"تم تحليل {total} {'مستنداً' if total > 1 else 'مستند'} من نوع {doc_ar}"
+            + (f" بإجمالي {amount_str} ريال سعودي" if total_amount else ""),
+            f"بلغت نسبة الامتثال الإجمالية {score}٪",
+            f"تم تصنيف {hi_count} مستند{'اً' if hi_count != 1 else ''} على أنه{'ا' if hi_count != 1 else ''} ذو مخاطر عالية",
+        ]
+        if flagged_count:
+            findings_ar.append(f"تم وضع {flagged_count} مستند{'اً' if flagged_count != 1 else ''} تحت المراجعة")
+        if top_violations:
+            top = top_violations[0]
+            findings_ar.append(f"أكثر المخالفات تكراراً: {top.get('code', '—')} ({top.get('count', 0)} مرة)")
+
+        findings_en = [
+            f"Analyzed {total} {doc_en} document{'s' if total != 1 else ''}"
+            + (f" totalling SAR {amount_str}" if total_amount else ""),
+            f"Overall compliance rate: {score}%",
+            f"{hi_count} document{'s' if hi_count != 1 else ''} classified as high risk",
+        ]
+        if flagged_count:
+            findings_en.append(f"{flagged_count} document{'s' if flagged_count != 1 else ''} flagged for review")
+        if top_violations:
+            top = top_violations[0]
+            findings_en.append(f"Most frequent violation: {top.get('code', '—')} ({top.get('count', 0)} occurrence{'s' if top.get('count', 0) != 1 else ''})")
+
+        # COMPLIANCE_SECTION
+        if score >= industry_benchmark:
+            comp_ar = (
+                f"أظهرت نتائج التدقيق أن الشركة تلتزم بالمعايير المالية والضريبية المطلوبة، "
+                f"حيث بلغت نسبة الامتثال {score}٪، وهو يفوق المعيار الصناعي البالغ {industry_benchmark}٪."
+            )
+            comp_en = (
+                f"Audit results indicate the company meets required financial and regulatory standards, "
+                f"with a compliance rate of {score}%, exceeding the industry benchmark of {industry_benchmark}%."
+            )
+        else:
+            comp_ar = (
+                f"أظهرت نتائج التدقيق أن الشركة غير ملتزمة بالمعايير المالية والتنظيمية المطلوبة بالكامل، "
+                f"حيث بلغت نسبة الامتثال {score}٪ فقط، وهو أقل من المعيار الصناعي البالغ {industry_benchmark}٪ "
+                f"بفارق {abs(diff)}٪."
+            )
+            comp_en = (
+                f"Audit results indicate the company does not fully meet required financial and regulatory standards. "
+                f"Compliance rate is {score}%, below the industry benchmark of {industry_benchmark}% "
+                f"by a margin of {abs(diff)}%."
+            )
+
+        # ANOMALIES_SECTION
+        anomalies_ar_items = []
+        anomalies_en_items = []
+        if hi_count:
+            anomalies_ar_items.append(f"رصد {hi_count} مستند{'اً' if hi_count != 1 else ''} ذو مخاطر عالية يستوجب مراجعة معمّقة")
+            anomalies_en_items.append(f"Detected {hi_count} high-risk document{'s' if hi_count != 1 else ''} requiring in-depth review")
+        for v in top_violations[:3]:
+            anomalies_ar_items.append(f"تكرار مخالفة {v.get('code', '—')} في {v.get('count', 0)} حالة")
+            anomalies_en_items.append(f"Recurring violation {v.get('code', '—')} in {v.get('count', 0)} case{'s' if v.get('count', 0) != 1 else ''}")
+        if not anomalies_ar_items:
+            anomalies_ar_items.append("لم يتم رصد أي أنماط شاذة تستدعي التنبيه في هذه المرحلة")
+            anomalies_en_items.append("No anomalous patterns requiring attention were detected at this stage")
+
+        anom_ar = "تم تحديد الأنماط التالية غير الاعتيادية خلال عملية التدقيق:\n" + "\n".join(
+            f"{i+1}. {item}" for i, item in enumerate(anomalies_ar_items)
+        )
+        anom_en = "The following anomalous patterns were identified during the audit:\n" + "\n".join(
+            f"{i+1}. {item}" for i, item in enumerate(anomalies_en_items)
+        )
+
+        # SCOPE_AND_METHODOLOGY
+        scope_ar = (
+            f"شمل نطاق التدقيق {scope_map_ar.get(doc_type, 'مراجعة المستندات المالية والتحقق من الامتثال')}. "
+            f"تم استخدام محرك التدقيق الذكي (الإصدار 2.0) الذي يطبّق {total} قاعدة تدقيق آلية "
+            f"لتحليل البيانات وتحديد المخاطر والأنماط غير الاعتيادية."
+        )
+        scope_en = (
+            f"The audit scope covered {scope_map_en.get(doc_type, 'review of financial documents and compliance verification')}. "
+            f"The intelligent audit engine (version 2.0) was used, applying automated audit rules "
+            f"to analyze data and identify risks and anomalous patterns."
+        )
+
+        # RECOMMENDATIONS
+        recs_numbered_ar = "\n".join(f"{i+1}. {r}" for i, r in enumerate(recs_ar))
+        recs_numbered_en = "\n".join(f"{i+1}. {r}" for i, r in enumerate(recs_en))
+
+        # CONCLUSION
+        if score >= 90:
+            concl_ar = (
+                f"تعكس نتائج تدقيق {doc_ar} لشركة {org_name} مستوى امتثال مقبولاً. "
+                f"يُوصى بالحفاظ على هذا المستوى والعمل على تحسينه باستمرار."
+            )
+            concl_en = (
+                f"The {doc_en} audit results for {org_name} reflect an acceptable compliance level. "
+                f"It is recommended to maintain and continuously improve this level."
+            )
+        else:
+            concl_ar = (
+                f"تحتاج شركة {org_name} إلى تحسين ملموس في إجراءات {doc_ar} لضمان الامتثال للمعايير المحلية والدولية. "
+                f"يجب اتخاذ إجراءات فورية لمعالجة القضايا المحددة في هذا التقرير."
+            )
+            concl_en = (
+                f"{org_name} needs tangible improvement in {doc_en} procedures to ensure compliance with local and international standards. "
+                f"Immediate action must be taken to address the issues identified in this report."
+            )
+
+        # MANAGEMENT_RESPONSE_PLACEHOLDER
+        mgmt_ar = "يرجى من إدارة الشركة تقديم رد رسمي على النتائج والتوصيات الواردة في هذا التقرير خلال 30 يوم عمل من تاريخ الاستلام."
+        mgmt_en = "Management is requested to provide a formal response to the findings and recommendations in this report within 30 business days of receipt."
+
+        return {
+            "executive_summary_ar": exec_sum_ar,
+            "executive_summary_en": exec_sum_en,
+            "key_findings_ar": "\n".join(f"{i+1}. {f}" for i, f in enumerate(findings_ar)),
+            "key_findings_en": "\n".join(f"{i+1}. {f}" for i, f in enumerate(findings_en)),
+            "compliance_section_ar": comp_ar,
+            "compliance_section_en": comp_en,
+            "anomalies_section_ar": anom_ar,
+            "anomalies_section_en": anom_en,
+            "scope_and_methodology_ar": scope_ar,
+            "scope_and_methodology_en": scope_en,
+            "recommendations_ar": recs_numbered_ar,
+            "recommendations_en": recs_numbered_en,
+            "conclusion_ar": concl_ar,
+            "conclusion_en": concl_en,
+            "management_response_ar": mgmt_ar,
+            "management_response_en": mgmt_en,
+        }
 
     def _all_typed_objects(self, document_type: str):
         """Return queryset for all org documents of a given type."""

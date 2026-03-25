@@ -47,6 +47,9 @@ def build_default_database(base_dir: Path, env: os._Environ | dict | None = None
     return "sqlite", {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": sqlite_path,
+        "OPTIONS": {
+            "timeout": 30,  # Prevent connection hangs on long-running queries
+        },
     }
 
 
@@ -73,4 +76,7 @@ def build_test_database(base_dir: Path, env: os._Environ | dict | None = None) -
     return "sqlite", {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": ":memory:",
+        "OPTIONS": {
+            "timeout": 30,  # Prevent connection hangs during testing
+        },
     }

@@ -16,6 +16,7 @@ from django.core.files.base import ContentFile
 from django.db.models import Avg, Count, Max, Min, Q, Sum
 from django.http import FileResponse
 from django.shortcuts import render
+from rest_framework import mixins
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.utils.translation import gettext as _
@@ -980,7 +981,10 @@ class InvoiceListView(generics.ListAPIView):
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        qs = Invoice.objects.filter(organization=self.request.user.organization).select_related(
+        qs = Invoice.objects.filter(
+            organization=self.request.user.organization,
+            is_deleted=False  # Exclude soft-deleted invoices
+        ).select_related(
             "uploaded_by", "approved_by", "batch"
         )
         p = self.request.query_params
@@ -1002,7 +1006,7 @@ class InvoiceListView(generics.ListAPIView):
         return qs.order_by("-created_at")
 
 
-class InvoiceDetailView(generics.RetrieveUpdateAPIView):
+class InvoiceDetailView(mixins.DestroyModelMixin, generics.RetrieveUpdateAPIView):
     serializer_class = InvoiceDetailSerializer
     permission_classes = [IsAuthenticated, IsOwnOrganization]
     authentication_classes = [JWTAuthentication, SessionAuthentication]
@@ -1010,6 +1014,16 @@ class InvoiceDetailView(generics.RetrieveUpdateAPIView):
     @extend_schema(tags=["Invoices"], summary="Get full invoice details with validation results")
     def get(self, request, *args, **kwargs):
         invoice = self.get_object()
+        
+        # Generate ZATCA QR code if not already present and invoice has required fields
+        if not invoice.qr_code_image and invoice.vendor_vat_number and invoice.total_amount:
+            try:
+                invoice.generate_zatca_qr()
+                invoice.save(update_fields=['qr_code_image', 'qr_code_data', 'has_qr_code', 'qr_code_valid'])
+            except Exception as e:
+                import logging
+                logging.warning(f"Failed to generate QR code for invoice {invoice.id}: {str(e)}")
+        
         if request.path.startswith("/invoices/") and "sessionid" in request.COOKIES:
             from apps.frontend.page_views import _build_invoice_display, _ctx
 
@@ -1055,8 +1069,27 @@ class InvoiceDetailView(generics.RetrieveUpdateAPIView):
                           after=InvoiceDetailSerializer(updated).data,
                           request=self.request)
 
+    def perform_destroy(self, instance):
+        """Soft delete: mark as deleted with audit trail (GDPR Article 17)."""
+        instance.is_deleted = True
+        instance.deleted_at = timezone.now()
+        instance.deleted_by = self.request.user
+        instance.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by', 'updated_at'])
+        
+        # Log deletion in audit trail
+        _save_audit_event(
+            instance, 
+            self.request.user, 
+            InvoiceAuditEvent.EventType.DELETED,
+            f"Invoice soft-deleted by {self.request.user.full_name} (GDPR Article 17)",
+            request=self.request
+        )
+
     def get_queryset(self):
-        return Invoice.objects.filter(organization=self.request.user.organization).select_related(
+        return Invoice.objects.filter(
+            organization=self.request.user.organization,
+            is_deleted=False
+        ).select_related(
             "validation",
             "approved_by",
             "duplicate_of",
@@ -1238,11 +1271,11 @@ class InvoiceBatchDetailView(APIView):
         except InvoiceBatch.DoesNotExist:
             return Response({"error": _("Batch not found.")}, status=404)
 
-        invoices = Invoice.objects.filter(batch=batch).values(
+        invoices = Invoice.objects.filter(batch=batch, is_deleted=False).values(
             "id", "original_filename", "vendor_name", "total_amount", "currency",
             "invoice_date", "status", "risk_level", "is_duplicate", "ocr_confidence",
         )
-        stats = Invoice.objects.filter(batch=batch).aggregate(
+        stats = Invoice.objects.filter(batch=batch, is_deleted=False).aggregate(
             total_amount=Sum("total_amount"),
             avg_score=Avg("ocr_confidence"),
             flagged=Count("id", filter=Q(status="flagged")),
@@ -1265,7 +1298,11 @@ class InvoiceDownloadView(APIView):
     @extend_schema(tags=["Invoices"], summary="Download an invoice file")
     def get(self, request, pk):
         try:
-            invoice = Invoice.objects.get(pk=pk, organization=request.user.organization)
+            invoice = Invoice.objects.get(
+                pk=pk,
+                organization=request.user.organization,
+                is_deleted=False  # Exclude soft-deleted invoices
+            )
         except Invoice.DoesNotExist:
             return Response({"error": _("Invoice not found.")}, status=404)
 

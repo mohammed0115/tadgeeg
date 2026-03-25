@@ -240,6 +240,25 @@ class InvoiceAuditReportService:
             language=language,
         )
 
+        # ISA 700 Opinion — Comprehensive auditor opinion report
+        from apps.reports.services.isa700_opinion_service import ISA700OpinionService
+        isa700_service = ISA700OpinionService(self.org, self.user)
+        isa700_opinion_report = isa700_service.generate_opinion(
+            summary=summary,
+            validations=validations,
+            invoices=invoices,
+            kams_list=kams.get("kams", []) if isinstance(kams, dict) else [],
+            compliance_engine=compliance_engine,
+            anomalies=anomalies,
+            scope_limitations=None,  # Can be customized per engagement
+        )
+
+        # IAS 7 Cash Flow Classification — Classify invoices per IAS 7:2017
+        from apps.analytics.ias7_cashflow_service import IAS7CashFlowService
+        ias7_service = IAS7CashFlowService(self.org, self.user)
+        ias7_classifications = ias7_service.classify_invoices(invoices)
+        ias7_cashflow_statement = ias7_service.build_cashflow_statement(invoices)
+
         report = {
             "report_header":               self._build_header(date_from, date_to, language, summary),
             "summary":                     summary,
@@ -252,6 +271,9 @@ class InvoiceAuditReportService:
             "anomalies":                   anomalies,
             "root_cause_analysis":         self._build_root_cause_analysis(validations),
             "key_audit_matters":           kams,          # ISA 701
+            "isa700_auditor_opinion":      isa700_opinion_report,  # ISA 700 comprehensive report
+            "ias7_cashflow_classification": ias7_classifications,   # IAS 7 cash flow statement
+            "ias7_cashflow_statement":     ias7_cashflow_statement, # IAS 7:2017 structure
             "actions_and_recommendations": self._build_recommendations(summary, validations),
         }
         return _safe(report)

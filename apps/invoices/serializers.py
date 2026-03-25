@@ -33,6 +33,7 @@ class InvoiceDetailSerializer(serializers.ModelSerializer):
             "id", "organization", "uploaded_by", "created_at", "updated_at",
             "risk_score", "risk_level", "is_duplicate", "ocr_confidence",
             "raw_text", "extracted_data", "ai_summary",
+            "qr_code_image", "qr_code_data",  # ZATCA QR code (generated server-side)
         ]
 
     def get_file(self, obj):

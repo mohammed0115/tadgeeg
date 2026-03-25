@@ -128,3 +128,93 @@ class AuditFinding(models.Model):
 
     def __str__(self):
         return f"[{self.severity}] {self.title}"
+
+
+class AccountingRuleEvaluation(models.Model):
+    """Persisted accounting rule evaluation results (GAAP/IFRS compliance checks)."""
+
+    class Standard(models.TextChoices):
+        GAAP = "gaap", "GAAP"
+        IFRS = "ifrs", "IFRS"
+
+    class RuleCategory(models.TextChoices):
+        RECOGNITION = "recognition", "Recognition"
+        CLASSIFICATION = "classification", "Classification"
+        COMPLETENESS = "completeness", "Completeness"
+        CONSISTENCY = "consistency", "Consistency"
+        CUTOFF = "cutoff", "Cutoff"
+        DOCUMENTATION = "documentation", "Documentation"
+        ANOMALY = "anomaly", "Anomaly"
+        DISCLOSURE = "disclosure", "Disclosure"
+
+    class RuleStatus(models.TextChoices):
+        PASSED = "passed", "Passed"
+        FAILED = "failed", "Failed"
+        WARNING = "warning", "Warning"
+        NOT_APPLICABLE = "not_applicable", "Not Applicable"
+        INSUFFICIENT_DATA = "insufficient_data", "Insufficient Data"
+
+    class RuleSeverity(models.TextChoices):
+        CRITICAL = "critical", "Critical"
+        HIGH = "high", "High"
+        MEDIUM = "medium", "Medium"
+        LOW = "low", "Low"
+        INFO = "info", "Info"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        "authentication.Organization",
+        on_delete=models.CASCADE,
+        related_name="accounting_rule_evaluations",
+    )
+    report = models.ForeignKey(
+        "reports.Report",
+        on_delete=models.CASCADE,
+        related_name="accounting_rule_evaluations",
+        null=True,
+        blank=True,
+    )
+    invoice = models.ForeignKey(
+        "invoices.Invoice",
+        on_delete=models.CASCADE,
+        related_name="accounting_rule_evaluations",
+        null=True,
+        blank=True,
+    )
+    audit_document = models.ForeignKey(
+        AuditDocument,
+        on_delete=models.SET_NULL,
+        related_name="accounting_rule_evaluations",
+        null=True,
+        blank=True,
+    )
+    standard = models.CharField(max_length=10, choices=Standard.choices)
+    rule_code = models.CharField(max_length=50, db_index=True)
+    rule_title = models.CharField(max_length=255)
+    rule_category = models.CharField(max_length=30, choices=RuleCategory.choices)
+    rule_status = models.CharField(max_length=20, choices=RuleStatus.choices)
+    rule_severity = models.CharField(max_length=10, choices=RuleSeverity.choices)
+    observation = models.TextField(blank=True)
+    failure_reason = models.TextField(blank=True)
+    recommendation = models.TextField(blank=True)
+    score_impact = models.FloatField(default=0.0)
+    confidence = models.FloatField(default=1.0)
+    related_fields = models.JSONField(default=list, blank=True)
+    metadata_json = models.JSONField(default=dict, blank=True)
+    evaluated_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "accounting_rule_evaluations"
+        ordering = ["-evaluated_at"]
+        indexes = [
+            models.Index(fields=["organization", "standard"]),
+            models.Index(fields=["organization", "rule_code"]),
+            models.Index(fields=["organization", "report"]),
+            models.Index(fields=["organization", "invoice"]),
+            models.Index(fields=["rule_status"]),
+        ]
+
+    def __str__(self):
+        return f"[{self.standard}] {self.rule_code}: {self.rule_status}"

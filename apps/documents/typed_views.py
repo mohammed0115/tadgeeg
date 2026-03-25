@@ -39,6 +39,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.filters import SearchFilter, OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 from core.services.ocr_service import extract_text_tesseract, pdf_to_images
@@ -1095,6 +1097,11 @@ class _TypedListView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
     model = None
     list_serializer_class = None
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['audit_status', 'risk_level', 'created_at']
+    search_fields = ['original_filename', 'vendor_name', 'ocr_text']
+    ordering_fields = ['created_at', 'risk_level', 'audit_status']
+    ordering = ['-created_at']
 
     def get_serializer_class(self):
         return self.list_serializer_class

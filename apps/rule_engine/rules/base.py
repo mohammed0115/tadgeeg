@@ -68,6 +68,7 @@ class RuleResult:
             "risk_contribution": float(self.risk_contribution),
             "evidence_count": len(self.evidence),
             "evidence": [e.to_dict() if hasattr(e, 'to_dict') else e for e in self.evidence],
+            "raw_data": self.raw_data,
         }
 
     @property

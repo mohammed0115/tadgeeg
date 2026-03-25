@@ -35,9 +35,16 @@
     background: linear-gradient(135deg,#2563eb 0%,#9333ea 100%);
     color: #fff; box-shadow: 0 14px 30px rgba(99,102,241,.25);
   }
-  .dashboard-page .dashboard-alert-item { border-radius: 1rem; border: 1px solid; padding: 1rem; }
+  .dashboard-page .dashboard-alert-item { border-radius: 1rem; border: 1px solid; padding: 1rem; transition: all 0.15s ease; }
+  .dashboard-page .dashboard-alert-item.bg-red-50 {
+    border-width: 2px;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.12);
+  }
   .dashboard-page .dashboard-mini-stat {
     border-radius: 1.5rem; border: 1px solid #e2e8f0; background: rgba(248,250,252,.8); padding: 1rem;
+  }
+  [dir="rtl"] i[data-lucide="arrow-left"] {
+    transform: scaleX(-1);
   }
 </style>
 
@@ -63,20 +70,21 @@
           </div>
 
           <div class="flex flex-wrap items-center gap-3">
-            <span class="inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-semibold" :class="dashboardStatusMeta().badgeClass">
-              <span class="h-2 w-2 rounded-full" :class="dashboardStatusMeta().dotClass"></span>
+            <span class="inline-flex items-center gap-3 rounded-full border-2 px-4 py-2 text-sm font-bold" :class="dashboardStatusMeta().badgeClass">
+              <span class="h-3 w-3 rounded-full animate-pulse" :class="dashboardStatusMeta().dotClass"></span>
               <span x-text="dashboardStatusMeta().label"></span>
             </span>
 
-            <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-3.5 py-1.5 text-xs text-slate-500 shadow-sm">
-              <i data-lucide="calendar-days" class="h-3.5 w-3.5"></i>
-              <span x-text="todayLabel"></span>
-            </span>
-
-            <span class="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50/80 px-3.5 py-1.5 text-xs text-slate-500">
-              <i data-lucide="badge-check" class="h-3.5 w-3.5"></i>
-              <span x-text="complianceDescription"></span>
-            </span>
+            <div class="flex items-center gap-4 text-xs text-slate-500">
+              <span class="flex items-center gap-1">
+                <i data-lucide="calendar-days" class="h-4 w-4"></i>
+                <span x-text="todayLabel"></span>
+              </span>
+              <span class="flex items-center gap-1">
+                <i data-lucide="badge-check" class="h-4 w-4"></i>
+                <span x-text="complianceDescription"></span>
+              </span>
+            </div>
           </div>
         </div>
 
@@ -187,9 +195,17 @@
 
         <div class="mt-5 space-y-3">
           <template x-for="(alert, index) in alerts" :key="alert.title + '-' + index">
-            <div class="dashboard-alert-item" :class="alertClass(alert.type)">
+            <div class="dashboard-alert-item transition-all" 
+                 :class="[
+                   alertClass(alert.type),
+                   alert.type === 'critical' ? 'ring-2 ring-offset-2 ring-red-300 border-red-300' : ''
+                 ]">
               <div class="flex items-start gap-3">
-                <div class="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl" :class="alertIconWrapClass(alert.type)">
+                <div class="mt-0.5 flex items-center justify-center rounded-xl" 
+                     :class="[
+                       alert.type === 'critical' ? 'h-10 w-10' : 'h-9 w-9',
+                       alertIconWrapClass(alert.type)
+                     ]">
                   <i :data-lucide="alertIcon(alert.type)" class="h-4 w-4"></i>
                 </div>
                 <div class="min-w-0 flex-1 text-right">
@@ -227,8 +243,13 @@
         </div>
         <div class="mt-5 space-y-3">
           <template x-if="!recentSessions.length">
-            <div class="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-400">
-              {% trans "No recent audit sessions." %}
+            <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 px-6 py-8 text-center">
+              <i data-lucide="file-text" class="mx-auto h-8 w-8 text-slate-300 mb-2"></i>
+              <p class="text-sm font-semibold text-slate-700">{% trans "No recent audit sessions" %}</p>
+              <p class="mt-1 text-xs text-slate-500">{% trans "Upload invoices to start an audit session" %}</p>
+              <a href="{% url 'frontend:upload' %}" class="mt-3 inline-flex text-xs font-semibold text-blue-600 hover:text-blue-700">
+                {% trans "Start your first audit" %} →
+              </a>
             </div>
           </template>
           <template x-for="session in recentSessions.slice(0, 3)" :key="session.id">
@@ -250,24 +271,39 @@
       <div class="dashboard-surface p-6 lg:p-7">
         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div class="text-right">
-            <h2 class="text-3xl font-bold text-slate-900">التدفق المالي الشهري</h2>
-            <p class="mt-2 text-sm text-slate-500">منحنى الفواتير والقيمة الإجمالية خلال الأشهر الأخيرة</p>
+            <h2 class="text-3xl font-bold text-slate-900">{% trans "Monthly Cash Flow" %}</h2>
+            <p class="mt-2 text-sm text-slate-500">{% trans "Monthly invoice trends and total value over recent months" %}</p>
           </div>
 
           <div class="flex flex-wrap items-center gap-3 self-start">
             <span class="rounded-full px-4 py-2 text-sm font-bold" :class="growthPillClass" x-text="growthPillText"></span>
             <select x-model.number="chartPeriod" @change="buildCashFlowChart()" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
-              <option :value="12">آخر 12 شهرًا</option>
-              <option :value="6">آخر 6 أشهر</option>
-              <option :value="3">آخر 3 أشهر</option>
+              <option :value="12">{% trans "Last 12 months" %}</option>
+              <option :value="6">{% trans "Last 6 months" %}</option>
+              <option :value="3">{% trans "Last 3 months" %}</option>
             </select>
           </div>
         </div>
 
         <div class="relative mt-6 h-[360px] lg:h-[420px]">
-          <canvas id="cashFlowChart"></canvas>
-          <div x-show="loadingChart" class="absolute inset-0 flex items-center justify-center rounded-3xl bg-white/70 backdrop-blur-sm">
-            <svg class="h-8 w-8 animate-spin text-blue-500" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-20"></circle><path fill="currentColor" d="M12 2a10 10 0 0 1 10 10h-4a6 6 0 0 0-6-6V2z"></path></svg>
+          <canvas id="cashFlowChart" x-show="!loadingChart"></canvas>
+          <!-- Skeleton placeholder while chart loads -->
+          <div x-show="loadingChart" class="absolute inset-0 rounded-3xl bg-gradient-to-b from-slate-100 to-slate-50 p-6">
+            <div class="flex flex-col gap-4 h-full justify-center">
+              <!-- Animated skeleton bars -->
+              <div class="flex items-end gap-2 justify-center h-40">
+                <template x-for="i in 6">
+                  <div class="w-12 bg-slate-300 rounded-t-lg animate-pulse"
+                       :style="'height: ' + (40 + Math.random() * 80) + 'px'"></div>
+                </template>
+              </div>
+              <!-- Skeleton legend -->
+              <div class="flex justify-center gap-6">
+                <template x-for="i in 4">
+                  <div class="h-3 w-24 bg-slate-200 rounded animate-pulse"></div>
+                </template>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -276,12 +312,12 @@
         <div class="dashboard-surface p-6 2xl:col-span-8">
           <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div class="text-right">
-              <h2 class="text-2xl font-bold text-slate-900">قائمة المراجعة</h2>
-              <p class="mt-1 text-sm text-slate-500">الفواتير التي تحتاج تدقيقًا يدويًا أو متابعة فورية</p>
+              <h2 class="text-2xl font-bold text-slate-900">{% trans "Review Queue" %}</h2>
+              <p class="mt-1 text-sm text-slate-500">{% trans "Invoices requiring manual audit or immediate follow-up" %}</p>
             </div>
             <a href="{% url 'frontend:invoices' %}?status=flagged" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
               <i data-lucide="arrow-left" class="h-4 w-4"></i>
-              عرض الكل
+              {% trans "View all" %}
             </a>
           </div>
 
@@ -293,60 +329,112 @@
             </template>
 
             <template x-if="!loadingFlagged && !flaggedInvoices.length">
-              <div class="rounded-2xl border border-dashed border-green-200 bg-green-50 px-5 py-10 text-center text-green-700">
-                <i data-lucide="badge-check" class="mx-auto h-8 w-8"></i>
-                <p class="mt-3 text-sm font-semibold">لا توجد فواتير حرجة في قائمة المراجعة</p>
+              <div class="rounded-2xl border border-2 border-emerald-200 bg-emerald-50 px-5 py-10 text-center">
+                <i data-lucide="badge-check" class="mx-auto h-8 w-8 text-emerald-600"></i>
+                <p class="mt-3 text-sm font-bold text-emerald-900">{% trans "All invoices passed review" %}</p>
+                <p class="mt-1 text-xs text-emerald-700">{% trans "No high-risk items or critical issues detected" %}</p>
               </div>
             </template>
 
-            <template x-for="invoice in flaggedInvoices" :key="invoice.id">
-              <a :href="'/invoices/' + invoice.id + '/'" class="block rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 transition hover:border-slate-300 hover:bg-white">
-                <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                  <div class="flex items-start gap-4">
-                    <div class="flex h-11 w-11 items-center justify-center rounded-2xl" :class="invoice.risk_level === 'critical' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'">
-                      <i data-lucide="file-warning" class="h-5 w-5"></i>
+            <!-- Mobile/Tablet: Cards -->
+            <div class="lg:hidden space-y-3">
+              <template x-for="invoice in flaggedInvoices" :key="invoice.id">
+                <a :href="'/invoices/' + invoice.id + '/'" class="block rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 transition hover:border-slate-300 hover:bg-white">
+                  <div class="flex flex-col gap-3">
+                    <div class="flex items-start gap-4">
+                      <div class="flex h-11 w-11 items-center justify-center rounded-2xl" :class="invoice.risk_level === 'critical' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'">
+                        <i data-lucide="file-warning" class="h-5 w-5"></i>
+                      </div>
+                      <div class="text-right">
+                        <p class="text-sm font-bold text-slate-900" x-text="invoice.vendor_name || i18n.unspecifiedSupplier"></p>
+                        <p class="mt-1 text-xs text-slate-500" x-text="invoice.invoice_number || i18n.invoiceNoNumber"></p>
+                      </div>
                     </div>
-                    <div class="text-right">
-                      <p class="text-sm font-bold text-slate-900" x-text="invoice.vendor_name || 'مورد غير محدد'"></p>
-                      <p class="mt-1 text-xs text-slate-500" x-text="invoice.invoice_number || 'بدون رقم فاتورة'"></p>
-                    </div>
-                  </div>
 
-                  <div class="flex flex-wrap items-center gap-3 lg:justify-end">
-                    <span class="rounded-full px-3 py-1 text-xs font-bold" :class="riskBadge(invoice.risk_level)" x-text="riskLabel(invoice.risk_level)"></span>
-                    <span class="font-mono text-sm font-bold text-slate-700" x-text="formatAmount(invoice.total_amount, invoice.currency || 'SAR')"></span>
-                    <span class="text-xs text-slate-400" x-text="invoice.invoice_date || '—'"></span>
+                    <div class="flex flex-wrap items-center gap-3 justify-end">
+                      <span class="rounded-full px-3 py-1 text-xs font-bold" :class="riskBadge(invoice.risk_level)" x-text="riskLabel(invoice.risk_level)"></span>
+                      <span class="font-mono text-sm font-bold text-slate-700" x-text="formatAmount(invoice.total_amount, invoice.currency || 'SAR')"></span>
+                      <span class="text-xs text-slate-400" x-text="invoice.invoice_date || '—'"></span>
+                    </div>
                   </div>
-                </div>
-              </a>
-            </template>
+                </a>
+              </template>
+            </div>
+
+            <!-- Desktop: Table -->
+            <div class="hidden lg:block">
+              <div class="overflow-x-auto">
+                <table class="w-full">
+                  <thead>
+                    <tr class="border-b-2 border-slate-200 text-xs font-bold text-slate-500 uppercase">
+                      <th class="text-right pb-3 px-4">{% trans "Vendor" %}</th>
+                      <th class="text-right pb-3 px-4">{% trans "Invoice Number" %}</th>
+                      <th class="text-right pb-3 px-4">{% trans "Amount" %}</th>
+                      <th class="text-right pb-3 px-4">{% trans "Date" %}</th>
+                      <th class="text-right pb-3 px-4">{% trans "Risk Level" %}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <template x-for="invoice in flaggedInvoices" :key="invoice.id">
+                      <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                        <td class="text-right py-4 px-4 text-sm font-semibold text-slate-900">
+                          <a :href="'/invoices/' + invoice.id + '/'" class="text-blue-600 hover:text-blue-700">
+                            <span x-text="invoice.vendor_name || i18n.unspecifiedSupplier"></span>
+                          </a>
+                        </td>
+                        <td class="text-right py-4 px-4 text-sm text-slate-600 font-mono">
+                          <span x-text="invoice.invoice_number || '—'"></span>
+                        </td>
+                        <td class="text-right py-4 px-4 text-sm font-semibold text-slate-900">
+                          <span x-text="formatAmount(invoice.total_amount, invoice.currency || 'SAR')"></span>
+                        </td>
+                        <td class="text-right py-4 px-4 text-sm text-slate-600">
+                          <span x-text="invoice.invoice_date || '—'"></span>
+                        </td>
+                        <td class="text-right py-4 px-4 text-center">
+                          <span class="rounded-full px-3 py-1 text-xs font-bold" 
+                                :class="riskBadge(invoice.risk_level)" 
+                                x-text="riskLabel(invoice.risk_level)"></span>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
 
         <div class="space-y-6 2xl:col-span-4">
           <div class="dashboard-surface p-6">
             <div class="flex items-center justify-between">
-              <h2 class="text-2xl font-bold text-slate-900">مؤشرات المخاطر</h2>
+              <h2 class="text-2xl font-bold text-slate-900">{% trans "Risk Indicators" %}</h2>
               <i data-lucide="shield-alert" class="h-5 w-5 text-slate-400"></i>
             </div>
 
             <div class="mt-5 grid grid-cols-2 gap-3">
               <div class="dashboard-mini-stat">
-                <p class="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">المكررة</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">{% trans "Duplicates" %}</p>
                 <p class="mt-2 font-mono text-2xl font-bold text-amber-600" x-text="formatInteger(stats.duplicates)"></p>
               </div>
               <div class="dashboard-mini-stat">
-                <p class="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">عالية المخاطر</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">{% trans "High risk" %}</p>
                 <p class="mt-2 font-mono text-2xl font-bold text-red-600" x-text="formatInteger(stats.high_risk)"></p>
               </div>
             </div>
 
             <div class="mt-5 space-y-4">
-              <template x-for="item in riskDist" :key="item.key">
+              <p class="text-xs font-semibold uppercase text-slate-400 mb-3">
+                {% trans "Risk distribution (% of total invoices)" %}
+              </p>
+              <template x-for="item in riskDist.filter(i => i.count > 0)" :key="item.key">
                 <div>
                   <div class="mb-2 flex items-center justify-between text-sm">
                     <span class="font-semibold text-slate-700" x-text="item.label"></span>
-                    <span class="font-mono font-bold text-slate-500" x-text="item.count"></span>
+                    <span class="font-mono font-bold text-slate-700">
+                      <span x-text="item.count"></span>
+                      <span class="text-xs text-slate-500 ml-1">(<span x-text="item.pct"></span>%)</span>
+                    </span>
                   </div>
                   <div class="h-2 overflow-hidden rounded-full bg-slate-100">
                     <div class="h-full rounded-full transition-all duration-500" :style="'width:' + item.pct + '%; background:' + item.color"></div>
@@ -358,27 +446,31 @@
 
           <div class="dashboard-surface p-6">
             <div class="flex items-center justify-between">
-              <h2 class="text-2xl font-bold text-slate-900">أكبر الموردين</h2>
-              <a href="{% url 'frontend:vendors' %}" class="text-sm font-semibold text-blue-600">عرض الكل</a>
+              <h2 class="text-2xl font-bold text-slate-900">{% trans "Top Vendors" %}</h2>
+              <a href="{% url 'frontend:vendors' %}" class="text-sm font-semibold text-blue-600 hover:text-blue-700">{% trans "View all" %} →</a>
             </div>
 
             <div class="mt-5 space-y-4">
               <template x-if="!topVendors.length">
-                <p class="text-sm text-slate-400">لا توجد بيانات كافية لعرض الموردين.</p>
+                <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 px-6 py-8 text-center">
+                  <i data-lucide="inbox" class="mx-auto h-8 w-8 text-slate-300 mb-2"></i>
+                  <p class="text-sm font-semibold text-slate-700">{% trans "No vendor data available" %}</p>
+                  <p class="mt-1 text-xs text-slate-500">{% trans "Upload invoices to see top vendors" %}</p>
+                </div>
               </template>
 
               <template x-for="(vendor, index) in topVendors" :key="vendor.vendor_name + '-' + index">
                 <div>
                   <div class="mb-2 flex items-center justify-between gap-3 text-sm">
-                    <span class="truncate font-semibold text-slate-700" x-text="vendor.vendor_name || 'غير مصنف'"></span>
+                    <span class="truncate font-semibold text-slate-700" x-text="vendor.vendor_name || i18n.unclassified"></span>
                     <span class="font-mono font-bold text-slate-900" x-text="formatSar(vendor.total_amount)"></span>
                   </div>
                   <div class="h-2 overflow-hidden rounded-full bg-slate-100">
                     <div class="h-full rounded-full transition-all duration-500" :style="'width:' + vendor.pct + '%; background:' + vendor.color"></div>
                   </div>
                   <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
-                    <span x-text="vendor.invoice_count + ' فاتورة'"></span>
-                    <span x-text="vendor.pct + '% من الإجمالي'"></span>
+                    <span><span x-text="vendor.invoice_count"></span> <span x-text="i18n.invoices"></span></span>
+                    <span><span x-text="vendor.pct"></span>% <span x-text="i18n.ofTotal"></span></span>
                   </div>
                 </div>
               </template>
@@ -390,10 +482,10 @@
       <div class="dashboard-surface p-6">
         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div class="text-right">
-            <h2 class="text-2xl font-bold text-slate-900">جودة بنود التدقيق</h2>
-            <p class="mt-1 text-sm text-slate-500">معدل اجتياز مجموعات القواعد الرئيسية عبر دورة المراجعة</p>
+            <h2 class="text-2xl font-bold text-slate-900">{% trans "Audit Rule Quality" %}</h2>
+            <p class="mt-1 text-sm text-slate-500">{% trans "Pass rate of key rule groups across the review cycle" %}</p>
           </div>
-          <span class="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-500">30 قاعدة تدقيق</span>
+          <span class="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-500" x-text="ruleGroups.length + ' ' + i18n.auditRules"></span>
         </div>
 
         <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
@@ -418,12 +510,12 @@
       <div class="dashboard-surface p-6" x-show="bigFourFirms.length">
         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div class="text-right">
-            <h2 class="text-2xl font-bold text-slate-900">معايير Big Four للتدقيق</h2>
-            <p class="mt-1 text-sm text-slate-500">معدل الامتثال وفق منهجيات KPMG و Deloitte و PwC و EY</p>
+            <h2 class="text-2xl font-bold text-slate-900">{% trans "Big Four Audit Standards" %}</h2>
+            <p class="mt-1 text-sm text-slate-500">{% trans "Compliance rate per KPMG, Deloitte, PwC, and EY methodologies" %}</p>
           </div>
           <span class="rounded-full px-4 py-2 text-sm font-bold"
                 :class="bigFourOverall >= 90 ? 'bg-green-50 text-green-700' : bigFourOverall >= 70 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'"
-                x-text="bigFourOverall + '% إجمالي'"></span>
+                x-text="bigFourOverall + '% ' + i18n.overall"></span>
         </div>
 
         <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -442,7 +534,7 @@
                         x-text="firm.pass_rate + '%'"></span>
                   <span class="rounded-full px-2.5 py-0.5 text-[10px] font-bold"
                         :class="firm.status === 'compliant' ? 'bg-green-100 text-green-700' : firm.status === 'at_risk' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'"
-                        x-text="firm.status === 'compliant' ? 'ملتزم' : firm.status === 'at_risk' ? 'في خطر' : 'غير ملتزم'"></span>
+                        x-text="firm.status === 'compliant' ? i18n.compliant : firm.status === 'at_risk' ? i18n.atRisk : i18n.nonCompliant"></span>
                 </div>
               </div>
               <div class="mt-4 h-2 overflow-hidden rounded-full bg-white">
@@ -450,9 +542,9 @@
                      :style="'width:' + firm.pass_rate + '%; background:' + (firm.status === 'compliant' ? '#16a34a' : firm.status === 'at_risk' ? '#d97706' : '#dc2626')"></div>
               </div>
               <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                <span>اجتاز: <span class="font-bold text-slate-700" x-text="firm.passed"></span></span>
-                <span>فشل: <span class="font-bold text-red-600" x-text="firm.failed"></span></span>
-                <span>الإجمالي: <span class="font-bold text-slate-700" x-text="firm.total"></span></span>
+                <span>{% trans "Passed" %}: <span class="font-bold text-slate-700" x-text="firm.passed"></span></span>
+                <span>{% trans "Failed" %}: <span class="font-bold text-red-600" x-text="firm.failed"></span></span>
+                <span>{% trans "Total" %}: <span class="font-bold text-slate-700" x-text="firm.total"></span></span>
               </div>
             </div>
           </template>
@@ -463,12 +555,12 @@
       <div class="dashboard-surface p-6" x-show="benchmarkMetrics.length">
         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div class="text-right">
-            <h2 class="text-2xl font-bold text-slate-900">المقارنة بمعايير القطاع</h2>
-            <p class="mt-1 text-sm text-slate-500" x-text="'المقارنة مع قطاع: ' + benchmarkIndustryLabel"></p>
+            <h2 class="text-2xl font-bold text-slate-900">{% trans "Industry Benchmark" %}</h2>
+            <p class="mt-1 text-sm text-slate-500" x-text="i18n.comparedTo + ': ' + benchmarkIndustryLabel"></p>
           </div>
           <span class="rounded-full px-4 py-2 text-sm font-bold"
                 :class="benchmarkPosition === 'above_average' ? 'bg-green-50 text-green-700' : benchmarkPosition === 'below_average' ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-600'"
-                x-text="benchmarkPosition === 'above_average' ? 'فوق المتوسط ✓' : benchmarkPosition === 'below_average' ? 'دون المتوسط ↓' : 'في المتوسط'"></span>
+                x-text="benchmarkPosition === 'above_average' ? i18n.aboveAverage + ' ✓' : benchmarkPosition === 'below_average' ? i18n.belowAverage + ' ↓' : i18n.atAverage"></span>
         </div>
 
         <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -477,16 +569,16 @@
               <div class="flex items-center justify-between text-sm">
                 <span class="rounded-full px-2 py-0.5 text-[10px] font-bold"
                       :class="metric.status === 'above' ? 'bg-green-100 text-green-700' : metric.status === 'below' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'"
-                      x-text="metric.status === 'above' ? '↑ أفضل' : metric.status === 'below' ? '↓ دون' : '= متساوٍ'"></span>
+                      x-text="metric.status === 'above' ? '↑ ' + i18n.better : metric.status === 'below' ? '↓ ' + i18n.below : '= ' + i18n.equal"></span>
                 <span class="font-semibold text-slate-700" x-text="metric.label"></span>
               </div>
               <div class="mt-3 flex items-end justify-between gap-3">
                 <div class="text-left">
-                  <p class="text-[10px] text-slate-400">معيار القطاع</p>
+                  <p class="text-[10px] text-slate-400">{% trans "Industry standard" %}</p>
                   <p class="font-mono text-sm font-bold text-slate-500" x-text="metric.benchmark + metric.unit"></p>
                 </div>
                 <div class="text-right">
-                  <p class="text-[10px] text-slate-400">مؤسستك</p>
+                  <p class="text-[10px] text-slate-400">{% trans "Your organization" %}</p>
                   <p class="font-mono text-lg font-extrabold"
                      :class="metric.status === 'above' ? 'text-green-600' : metric.status === 'below' ? 'text-red-600' : 'text-slate-700'"
                      x-text="metric.value + metric.unit"></p>
@@ -532,6 +624,23 @@ function dashboard() {
       invoicesDuplicateSubtitle: '{% trans "invoices need duplicate verification" %}',
       invoiceWithoutNumber: '{% trans "Invoice without number" %}',
       unspecifiedVendor: '{% trans "Unspecified vendor" %}',
+      unspecifiedSupplier: '{% trans "Unspecified supplier" %}',
+      invoiceNoNumber: '{% trans "Invoice with no number" %}',
+      unclassified: '{% trans "Unclassified" %}',
+      invoices: '{% trans "invoices" %}',
+      ofTotal: '{% trans "of total" %}',
+      auditRules: '{% trans "audit rules" %}',
+      overall: '{% trans "overall" %}',
+      compliant: '{% trans "Compliant" %}',
+      atRisk: '{% trans "At risk" %}',
+      nonCompliant: '{% trans "Non-compliant" %}',
+      comparedTo: '{% trans "Compared to" %}',
+      aboveAverage: '{% trans "Above average" %}',
+      belowAverage: '{% trans "Below average" %}',
+      atAverage: '{% trans "At average" %}',
+      better: '{% trans "Better" %}',
+      below: '{% trans "Below" %}',
+      equal: '{% trans "Equal" %}',
       noCriticalAlerts: '{% trans "No critical alerts" %}',
       auditStable: '{% trans "Audit and compliance are currently operating normally." %}',
       cashFlowTotal: '{% trans "Total flow" %}',
@@ -650,10 +759,10 @@ function dashboard() {
 
     riskLabel(level) {
       return {
-        critical: 'حرج',
-        high: 'عالي',
-        medium: 'متوسط',
-        low: 'منخفض',
+        critical: '{% trans "Critical" %}',
+        high: '{% trans "High" %}',
+        medium: '{% trans "Medium" %}',
+        low: '{% trans "Low" %}',
       }[level] || this.i18n.unknown;
     },
 
@@ -968,12 +1077,12 @@ dashboard = function() {
 
   state.initRuleGroups = function() {
     this.ruleGroups = [
-      { code: 'INV', label: 'رأس الفاتورة', pct: 0, color: '#2563eb', passed: 0, failed: 0, total: 0 },
-      { code: 'DUP', label: 'التكرار', pct: 0, color: '#f59e0b', passed: 0, failed: 0, total: 0 },
-      { code: 'VAT', label: 'الضريبة', pct: 0, color: '#7c3aed', passed: 0, failed: 0, total: 0 },
-      { code: 'ANO', label: 'الشذوذ', pct: 0, color: '#ef4444', passed: 0, failed: 0, total: 0 },
-      { code: 'CTL', label: 'الرقابة', pct: 0, color: '#06b6d4', passed: 0, failed: 0, total: 0 },
-      { code: 'DOC', label: 'المستند', pct: 0, color: '#16a34a', passed: 0, failed: 0, total: 0 },
+      { code: 'INV', label: this.i18n.headerInvoice, pct: 0, color: '#2563eb', passed: 0, failed: 0, total: 0 },
+      { code: 'DUP', label: this.i18n.duplicates, pct: 0, color: '#f59e0b', passed: 0, failed: 0, total: 0 },
+      { code: 'VAT', label: this.i18n.vat, pct: 0, color: '#7c3aed', passed: 0, failed: 0, total: 0 },
+      { code: 'ANO', label: this.i18n.anomalies, pct: 0, color: '#ef4444', passed: 0, failed: 0, total: 0 },
+      { code: 'CTL', label: this.i18n.controls, pct: 0, color: '#06b6d4', passed: 0, failed: 0, total: 0 },
+      { code: 'DOC', label: this.i18n.document, pct: 0, color: '#16a34a', passed: 0, failed: 0, total: 0 },
     ];
   };
 

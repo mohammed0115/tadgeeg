@@ -54,6 +54,13 @@ class AuditSession(models.Model):
     failed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    # ── Soft Delete (GDPR Compliance) ─────────────────────────────────────────
+    is_deleted = models.BooleanField(default=False, db_index=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="deleted_audit_sessions"
+    )
 
     class Meta:
         db_table = "audit_sessions"
@@ -72,6 +79,24 @@ class AuditSession(models.Model):
         if not self.total_count:
             return 0
         return round((self.processed_count / self.total_count) * 100, 2)
+
+    def get_descendants_soft_deleted_count(self) -> int:
+        """Count invoices and findings that would be affected by soft delete."""
+        from apps.invoices.models import Invoice
+        count = (
+            Invoice.objects.filter(audit_session=self, is_deleted=False).count() +
+            self.audit_findings.filter(is_deleted=False).count()
+        )
+        return count
+
+    def delete(self, *args, **kwargs):
+        """Override delete() to perform soft delete (GDPR Article 17)."""
+        from django.utils import timezone
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        if 'user' in kwargs:
+            self.deleted_by = kwargs.pop('user')
+        self.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by', 'updated_at'])
 
 
 class AuditFinding(models.Model):
@@ -224,6 +249,13 @@ class AuditCase(models.Model):
     attachments = models.JSONField(default=list)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    # ── Soft Delete (GDPR Compliance) ─────────────────────────────────────────
+    is_deleted = models.BooleanField(default=False, db_index=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="deleted_audit_cases"
+    )
 
     class Meta:
         db_table = "audit_cases"
@@ -244,6 +276,15 @@ class AuditCase(models.Model):
             year = datetime.datetime.now().year
             self.case_number = f"CASE-{year}-{count + 1:04d}"
         super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """Override delete() to perform soft delete (GDPR Article 17)."""
+        from django.utils import timezone
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        if 'user' in kwargs:
+            self.deleted_by = kwargs.pop('user')
+        self.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by', 'updated_at'])
 
 
 class CaseComment(models.Model):

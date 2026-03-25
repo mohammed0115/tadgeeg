@@ -14,6 +14,27 @@ from core.utils.database import build_default_database, build_test_database
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
+# ─── Sentry Error Tracking ───────────────────────────────────────────────────
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
+
+    sentry_dsn = os.environ.get("SENTRY_DSN", "").strip()
+    if sentry_dsn:
+        sentry_sdk.init(
+            dsn=sentry_dsn,
+            integrations=[
+                DjangoIntegration(),
+                CeleryIntegration(),
+            ],
+            traces_sample_rate=0.1,  # 10% transaction sampling
+            send_default_pii=False,  # Don't send user email in errors
+            environment=os.environ.get("ENVIRONMENT", "development"),
+        )
+except ImportError:
+    pass  # Sentry not installed, error tracking disabled
+
 PRODUCT_NAME = "Tadgeeg AI"
 COMPANY_NAME = "Get Solution Company"
 COMPANY_NAME_AR = "شركة Get Solution"
@@ -284,6 +305,10 @@ REST_FRAMEWORK = {
         "anon": "100/day",
         "user": "1000/day",
     },
+    "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.AcceptHeaderVersioning",
+    "ALLOWED_VERSIONS": ["1.0", "1.1", "2.0"],
+    "VERSION_PARAM": "version",
+    "DEFAULT_VERSION": "1.0",
     "EXCEPTION_HANDLER": "core.utils.exceptions.custom_exception_handler",
 }
 

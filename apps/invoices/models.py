@@ -80,6 +80,8 @@ class Invoice(models.Model):
     # ── Document quality fields ────────────────────────────────────────────────
     has_qr_code       = models.BooleanField(default=False)       # Rule 7.4 - ZATCA QR
     qr_code_valid     = models.BooleanField(default=False)
+    qr_code_image     = models.TextField(blank=True)             # Base64-encoded QR code image (data:image/png;base64,...)
+    qr_code_data      = models.TextField(blank=True)             # Base64-encoded TLV data for the QR
     is_handwritten    = models.BooleanField(default=False)
     is_clear          = models.BooleanField(default=True)        # Rule 7.1
     has_alterations   = models.BooleanField(default=False)       # Rule 7.3 - tampered
@@ -113,7 +115,75 @@ class Invoice(models.Model):
     tags              = models.JSONField(default=list)
     notes             = models.TextField(blank=True)
     created_at        = models.DateTimeField(auto_now_add=True)
-    updated_at        = models.DateTimeField(auto_now=True)
+    updated_at        = models.DateTimeField(auto_now=True)    
+    # ── Soft Delete (GDPR Compliance) ───────────────────────────────────────────────────
+    is_deleted        = models.BooleanField(default=False, db_index=True)  # Soft delete flag
+    deleted_at        = models.DateTimeField(null=True, blank=True)        # When deleted
+    deleted_by        = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="deleted_invoices")  # Who deleted
+
+    # ── IAS 7 Cash Flow Classification (Statement of Cash Flows) ────────────────
+    class CashFlowClass(models.TextChoices):
+        OPERATING  = "operating",  "Operating Activities (IAS 7 §15)"
+        INVESTING  = "investing",  "Investing Activities (IAS 7 §16)"
+        FINANCING  = "financing",  "Financing Activities (IAS 7 §17)"
+        UNCLASSIFIED = "unclassified", "Unclassified (Pending Manual Review)"
+
+    class CashFlowSubCategory(models.TextChoices):
+        # Operating
+        OP_REVENUE         = "op_revenue",         "Sales Revenue"
+        OP_SUPPLIES        = "op_supplies",        "Supplies & Materials"
+        OP_UTILITIES       = "op_utilities",       "Utilities (Water, Electricity, Gas)"
+        OP_RENT            = "op_rent",            "Rent & Leasing"
+        OP_SALARY          = "op_salary",          "Salaries & Wages"
+        OP_PROFESSIONAL    = "op_professional",    "Professional Services (Legal, Consulting)"
+        OP_MAINTENANCE     = "op_maintenance",     "Repairs & Maintenance"
+        OP_INSURANCE       = "op_insurance",       "Insurance"
+        OP_TRAVEL          = "op_travel",          "Travel & Transportation"
+        OP_OTHER           = "op_other",           "Other Operating Expenses"
+        
+        # Investing
+        INV_EQUIPMENT      = "inv_equipment",      "Equipment & Machinery"
+        INV_PROPERTY       = "inv_property",       "Property (Real Estate)"
+        INV_INTANGIBLE     = "inv_intangible",     "Intangible Assets (Software, Patents)"
+        INV_INVESTMENTS    = "inv_investments",    "Investment Securities"
+        INV_OTHER          = "inv_other",          "Other Investing Activities"
+        
+        # Financing
+        FIN_LOAN_PROCEEDS  = "fin_loan",           "Loan Proceeds"
+        FIN_DEBT_REPAY     = "fin_debt_repay",     "Debt Repayment"
+        FIN_EQUITY         = "fin_equity",         "Equity Financing"
+        FIN_DIVIDENDS      = "fin_dividends",      "Dividend Payments"
+        FIN_OTHER          = "fin_other",          "Other Financing Activities"
+
+    cash_flow_class      = models.CharField(
+        max_length=20, 
+        choices=CashFlowClass.choices,
+        default=CashFlowClass.UNCLASSIFIED,
+        db_index=True,
+        help_text="IAS 7 cash flow statement classification per operating/investing/financing"
+    )
+    cash_flow_subcategory = models.CharField(
+        max_length=30,
+        choices=CashFlowSubCategory.choices,
+        blank=True,
+        help_text="Detailed subcategory for cash flow reporting"
+    )
+    cash_flow_confidence  = models.FloatField(
+        default=0.0,
+        help_text="Auto-classification confidence (0.0-1.0); manually set invoices have 1.0"
+    )
+    cash_flow_verified    = models.BooleanField(
+        default=False,
+        help_text="Whether cash flow classification was manually verified by accounting"
+    )
+    cash_flow_verified_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="verified_invoices_cashflow"
+    )
+    cash_flow_verified_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         db_table = "invoices"
@@ -159,6 +229,34 @@ class Invoice(models.Model):
             return True
         actual_rate = float(self.vat_amount) / float(self.subtotal) * 100
         return abs(actual_rate - float(self.vat_rate)) < 0.5
+
+    def generate_zatca_qr(self):
+        """
+        Generate ZATCA Phase 2 QR code for this invoice.
+        Stores the QR code image and data in the model.
+        
+        Returns:
+            Dict with keys: status, message, qr_base64, qr_hash
+        """
+        from apps.compliance.zatca_qr_service import generate_invoice_qr
+        
+        # Generate QR code
+        result = generate_invoice_qr(
+            self,
+            previous_invoice_hash=self.extracted_data.get('file_hash') if self.extracted_data else None
+        )
+        
+        # Update invoice with QR data
+        if result['status'] == 'success':
+            self.qr_code_image = result['qr_base64']
+            self.qr_code_data = result['tlv_data']
+            self.has_qr_code = True
+            self.qr_code_valid = True
+        else:
+            self.has_qr_code = False
+            self.qr_code_valid = False
+        
+        return result
 
 
 # ─── Invoice Batch ────────────────────────────────────────────────────────────

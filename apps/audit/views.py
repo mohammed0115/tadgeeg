@@ -91,7 +91,10 @@ class AuditCaseListCreateView(generics.ListCreateAPIView):
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        qs = AuditCase.objects.filter(organization=self.request.user.organization).select_related(
+        qs = AuditCase.objects.filter(
+            organization=self.request.user.organization,
+            is_deleted=False  # Exclude soft-deleted cases
+        ).select_related(
             "assigned_to", "created_by", "transaction", "invoice"
         )
         p = self.request.query_params
@@ -121,7 +124,10 @@ class AuditCaseDetailView(generics.RetrieveUpdateAPIView):
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        return AuditCase.objects.filter(organization=self.request.user.organization).select_related(
+        return AuditCase.objects.filter(
+            organization=self.request.user.organization,
+            is_deleted=False  # Exclude soft-deleted cases
+        ).select_related(
             "assigned_to", "created_by", "resolved_by", "transaction", "invoice"
         ).prefetch_related("comments")
 
@@ -233,7 +239,11 @@ class AuditSessionDetailView(APIView):
     @extend_schema(tags=["Audit"], summary="Get audit session detail with progress and invoice rollup")
     def get(self, request, pk):
         try:
-            session = AuditSession.objects.get(pk=pk, organization=request.user.organization)
+            session = AuditSession.objects.get(
+                pk=pk,
+                organization=request.user.organization,
+                is_deleted=False  # Exclude soft-deleted sessions
+            )
         except AuditSession.DoesNotExist:
             return Response({"error": _("Audit session not found.")}, status=404)
 
@@ -289,7 +299,11 @@ class AuditSessionProgressView(APIView):
     @extend_schema(tags=["Audit"], summary="Get machine-readable audit session progress")
     def get(self, request, pk):
         try:
-            session = AuditSession.objects.get(pk=pk, organization=request.user.organization)
+            session = AuditSession.objects.get(
+                pk=pk,
+                organization=request.user.organization,
+                is_deleted=False  # Exclude soft-deleted sessions
+            )
         except AuditSession.DoesNotExist:
             return Response({"error": _("Audit session not found.")}, status=404)
 

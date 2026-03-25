@@ -148,6 +148,7 @@ class AuditRuleBase(abc.ABC):
     Subclasses may:
     - Override check_preconditions() to skip rule when data is insufficient
     - Override __init__ to add initialization logic (must call super().__init__(config))
+    - Set field_dependencies to list canonical field codes this rule reads
     """
 
     # Override in each rule class
@@ -156,6 +157,11 @@ class AuditRuleBase(abc.ABC):
     rule_name_ar: str = ""
     default_severity: str = "medium"
     rule_type: str = "validation"  # validation, compliance, anomaly, reconciliation, risk
+
+    # List of canonical field_codes this rule requires.
+    # If set, the pipeline skips the rule when ANY listed field is absent from
+    # the document's DocumentCanonicalData record.
+    field_dependencies: list = []
 
     def __init__(self, config: Optional[dict] = None):
         self.config = config or {}
@@ -250,6 +256,24 @@ class AuditRuleBase(abc.ABC):
             explanation_ar="فشل تنفيذ القاعدة بسبب خطأ تقني",
             risk_contribution=0.0,
         )
+
+    def get_canonical_field(self, doc: NormalizedDocument, field_code: str, default: Any = None) -> Any:
+        """
+        Read a field from the DocumentCanonicalData record for this document.
+        Returns `default` if the record or field is absent.
+        Use this when a rule needs authoritative canonical data rather than
+        the in-memory NormalizedDocument (e.g. for cross-rule consistency).
+        """
+        try:
+            from apps.documents.canonical_models import DocumentCanonicalData
+            rec = DocumentCanonicalData.objects.filter(
+                typed_object_id=str(doc.document_id)
+            ).first()
+            if rec:
+                return rec.canonical_data.get(field_code, default)
+        except Exception as exc:
+            logger.debug("get_canonical_field(%s, %s) failed: %s", doc.document_id, field_code, exc)
+        return default
 
     def safe_decimal(self, value: Any, default: Decimal = Decimal("0")) -> Decimal:
         """Safely convert any value to Decimal."""

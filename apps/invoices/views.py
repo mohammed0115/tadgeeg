@@ -511,6 +511,7 @@ def _process_single_file(file_obj, filename: str, org, user, batch=None, request
     invoice.is_duplicate = invoice.is_duplicate or analysis.is_duplicate
     invoice.save()
 
+    _save_canonical_invoice(invoice)
     _update_vendor_profile(org, invoice)
 
     elapsed_ms = int((time.time() - start) * 1000)
@@ -559,6 +560,50 @@ def _get_vendor_history(org, vendor_name: str) -> dict:
         }
     except VendorProfile.DoesNotExist:
         return {"is_new": True, "invoice_count": 0}
+
+
+def _save_canonical_invoice(invoice: Invoice) -> None:
+    """
+    Persist a DocumentCanonicalData record for an invoice after it is saved.
+    Builds raw_data from invoice model fields so the mapper gets clean values
+    (normalized data already took priority over raw AI output at this point).
+    Never raises — failure is logged and silently swallowed.
+    """
+    try:
+        from core.services.canonical_mapper import CanonicalMapper
+        ed = invoice.extracted_data or {}
+        raw_data = {
+            # Identity
+            "invoice_number":      invoice.invoice_number,
+            "invoice_date":        str(invoice.invoice_date) if invoice.invoice_date else None,
+            "due_date":            str(invoice.due_date)     if invoice.due_date     else None,
+            # Counterparty
+            "vendor_name":         invoice.vendor_name,
+            "vendor_vat_number":   invoice.vendor_vat_number,
+            "vendor_cr_number":    invoice.vendor_cr_number,
+            "customer_name":       invoice.customer_name,
+            "customer_vat_number": invoice.customer_vat_number,
+            # Financial
+            "currency":            invoice.currency,
+            "subtotal":            float(invoice.subtotal    or 0),
+            "vat_rate":            float(invoice.vat_rate    or 15),
+            "vat_amount":          float(invoice.vat_amount  or 0),
+            "discount":            float(invoice.discount    or 0),
+            "total_amount":        float(invoice.total_amount or 0),
+            # Compliance
+            "qr_code_valid":       invoice.qr_code_valid,
+            "cost_center":         ed.get("cost_center", ""),
+            "department":          ed.get("department",  ""),
+            "account_code":        ed.get("account_code",""),
+        }
+        CanonicalMapper().save_canonical(
+            raw_data        = raw_data,
+            document_type   = "invoice",
+            typed_model_name= "Invoice",
+            typed_object_id = invoice.id,
+        )
+    except Exception as exc:
+        logger.warning("[canonical] invoice save failed for %s: %s", invoice.id, exc)
 
 
 def _update_vendor_profile(org, invoice: Invoice):

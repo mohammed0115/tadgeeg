@@ -1,0 +1,1201 @@
+{% load static report_filters %}
+<!DOCTYPE html>
+<html lang="{{ meta.language|default:'ar' }}" dir="{{ is_rtl|yesno:'rtl,ltr' }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+  {% if is_rtl %}تقرير تدقيق — {{ meta.document_type_label_ar }}{% else %}Audit Report — {{ meta.document_type_label_en }}{% endif %}
+</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  /* ── Print styles ─────────────────────────────── */
+  @media print {
+    .no-print { display: none !important; }
+    .page-break { page-break-before: always; }
+    body { font-size: 11px; }
+    .shadow-lg { box-shadow: none !important; }
+  }
+
+  /* ── RTL overrides ────────────────────────────── */
+  [dir="rtl"] .text-left { text-align: right; }
+  [dir="rtl"] .text-right { text-align: left; }
+  [dir="rtl"] .ml-auto { margin-left: unset; margin-right: auto; }
+  [dir="rtl"] .mr-auto { margin-right: unset; margin-left: auto; }
+  [dir="rtl"] table { direction: rtl; }
+
+  /* ── Color palette ────────────────────────────── */
+  :root {
+    --brand:      #1e40af;
+    --brand-dark: #1e3a8a;
+    --pass:       #16a34a;
+    --fail:       #dc2626;
+    --warn:       #d97706;
+    --skip:       #6b7280;
+    --critical:   #7c3aed;
+  }
+
+  body { font-family: 'Segoe UI', 'Arial', sans-serif; background: #f8fafc; color: #1e293b; }
+
+  /* ── Status badge ─────────────────────────────── */
+  .badge-pass     { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
+  .badge-fail     { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; }
+  .badge-warning  { background:#fef9c3; color:#854d0e; border:1px solid #fef08a; }
+  .badge-skipped  { background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; }
+  .badge-clean    { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
+  .badge-issues   { background:#fef3c7; color:#92400e; border:1px solid #fcd34d; }
+  .badge-critical { background:#fce7f3; color:#9d174d; border:1px solid #fbcfe8; }
+
+  /* ── Risk level bars ──────────────────────────── */
+  .risk-bar { height: 8px; border-radius: 4px; background: #e2e8f0; position: relative; overflow: hidden; }
+  .risk-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+  .risk-low      .risk-fill { background: #22c55e; }
+  .risk-medium   .risk-fill { background: #f59e0b; }
+  .risk-high     .risk-fill { background: #ef4444; }
+  .risk-critical .risk-fill { background: #7c3aed; }
+
+  /* ── Section card ─────────────────────────────── */
+  .section-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+  }
+  .section-header {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #f1f5f9;
+    background: #f8fafc;
+  }
+  .section-header .icon {
+    width: 2rem; height: 2rem; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+  }
+  .section-body { padding: 1.5rem; }
+
+  /* ── KPI card ─────────────────────────────────── */
+  .kpi-card {
+    background: white; border-radius: 10px;
+    padding: 1.25rem;
+    border: 1px solid #e2e8f0;
+    text-align: center;
+  }
+  .kpi-value { font-size: 2rem; font-weight: 700; line-height: 1; }
+  .kpi-label { font-size: 0.75rem; color: #64748b; margin-top: 0.4rem; }
+
+  /* ── Rule table ───────────────────────────────── */
+  .rule-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .rule-table th {
+    background: #f8fafc; padding: 0.6rem 0.8rem;
+    font-weight: 600; color: #475569;
+    border-bottom: 2px solid #e2e8f0;
+    white-space: nowrap;
+  }
+  .rule-table td { padding: 0.6rem 0.8rem; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  .rule-table tr:last-child td { border-bottom: none; }
+  .rule-table tr:hover td { background: #f8fafc; }
+
+  /* ── Severity pill ────────────────────────────── */
+  .pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 99px; font-size: 0.7rem; font-weight: 600; }
+  .pill-critical { background:#f3e8ff; color:#6b21a8; }
+  .pill-high     { background:#fee2e2; color:#991b1b; }
+  .pill-medium   { background:#fef3c7; color:#92400e; }
+  .pill-low      { background:#f0fdf4; color:#166534; }
+  .pill-pass     { background:#dcfce7; color:#166534; }
+  .pill-fail     { background:#fee2e2; color:#991b1b; }
+  .pill-warning  { background:#fef9c3; color:#854d0e; }
+  .pill-skipped  { background:#f1f5f9; color:#475569; }
+
+  /* ── Score ring ───────────────────────────────── */
+  .score-ring { position: relative; display: inline-block; }
+  .score-ring svg { transform: rotate(-90deg); }
+  .score-ring .score-text {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+
+  /* ── Evidence block ───────────────────────────── */
+  .evidence-block {
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    border-radius: 6px; padding: 0.5rem 0.75rem;
+    font-size: 0.75rem; margin-top: 0.25rem;
+  }
+
+  /* ── Violation card ───────────────────────────── */
+  .violation-card {
+    border-left: 4px solid #e2e8f0;
+    padding: 1rem 1.25rem;
+    border-radius: 0 8px 8px 0;
+    background: white;
+    margin-bottom: 0.75rem;
+  }
+  [dir="rtl"] .violation-card { border-left: none; border-right: 4px solid #e2e8f0; border-radius: 8px 0 0 8px; }
+  .violation-card.critical { border-color: #7c3aed; }
+  .violation-card.high     { border-color: #dc2626; }
+  .violation-card.medium   { border-color: #d97706; }
+  .violation-card.low      { border-color: #16a34a; }
+
+  /* ── Recommendation card ──────────────────────── */
+  .rec-card {
+    display: flex; gap: 1rem; align-items: flex-start;
+    padding: 0.9rem 1rem; border-radius: 8px;
+    background: #f8fafc; border: 1px solid #e2e8f0;
+    margin-bottom: 0.6rem;
+  }
+  .rec-number {
+    width: 2rem; height: 2rem; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.85rem;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body class="min-h-screen bg-slate-50">
+
+<!-- ══════════════════════════════════════════════════════════
+  Print / Export Controls (hidden on print)
+══════════════════════════════════════════════════════════ -->
+<div class="no-print sticky top-0 z-50 bg-white border-b border-slate-200 shadow-sm px-6 py-3 flex items-center justify-between">
+  <div class="flex items-center gap-3">
+    <div class="w-8 h-8 bg-blue-800 rounded-lg flex items-center justify-center">
+      <span class="text-white text-sm font-bold">T</span>
+    </div>
+    <span class="font-semibold text-slate-700 text-sm">
+      {% if is_rtl %}منصة تدقيق — تقرير مستند{% else %}Tadgeeg — Document Audit Report{% endif %}
+    </span>
+  </div>
+  <div class="flex items-center gap-2">
+    <button onclick="window.print()"
+      class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-800 text-white text-sm hover:bg-blue-900 transition">
+      🖨️ {% if is_rtl %}طباعة / PDF{% else %}Print / PDF{% endif %}
+    </button>
+    <button onclick="window.history.back()"
+      class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm hover:bg-slate-50 transition">
+      ← {% if is_rtl %}رجوع{% else %}Back{% endif %}
+    </button>
+  </div>
+</div>
+
+<div class="max-w-5xl mx-auto px-4 py-8">
+
+<!-- ══════════════════════════════════════════════════════════
+  SECTION 1 — HEADER
+══════════════════════════════════════════════════════════ -->
+<div class="section-card">
+  <div class="bg-gradient-to-br from-blue-900 to-blue-700 text-white p-8">
+    <div class="flex items-start justify-between flex-wrap gap-4">
+
+      <!-- Org & Doc info -->
+      <div>
+        <div class="text-blue-200 text-xs font-medium uppercase tracking-widest mb-1">
+          {% if is_rtl %}{{ meta.document_type_label_ar }}{% else %}{{ meta.document_type_label_en }}{% endif %}
+        </div>
+        <h1 class="text-2xl font-bold mb-1">{{ meta.organization_name }}</h1>
+        <div class="text-blue-100 text-sm space-y-0.5">
+          <div>
+            {% if is_rtl %}رقم المستند:{% else %}Document #:{% endif %}
+            <span class="font-mono font-semibold">{{ key_fields.document_number|default:"—" }}</span>
+          </div>
+          <div>
+            {% if is_rtl %}التاريخ:{% else %}Date:{% endif %}
+            {{ key_fields.document_date|default:"—" }}
+          </div>
+          <div>
+            {% if is_rtl %}تم التوليد:{% else %}Generated:{% endif %}
+            {{ meta.generated_at }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Status badge + score -->
+      <div class="text-right" {% if is_rtl %}style="text-align:left"{% endif %}>
+        <!-- Status -->
+        <div class="mb-3">
+          {% if meta.status == "clean" %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-100 text-green-800 font-semibold text-sm">
+              ✅ {% if is_rtl %}نظيف{% else %}Clean{% endif %}
+            </span>
+          {% elif meta.status == "critical" %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-100 text-purple-800 font-semibold text-sm">
+              🚨 {% if is_rtl %}حرج{% else %}Critical{% endif %}
+            </span>
+          {% elif meta.status == "issues_found" %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow-100 text-yellow-800 font-semibold text-sm">
+              ⚠️ {% if is_rtl %}يحتوي على مشاكل{% else %}Issues Found{% endif %}
+            </span>
+          {% else %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 font-semibold text-sm">
+              ⏳ {% if is_rtl %}لم يُدقَّق{% else %}Not Audited{% endif %}
+            </span>
+          {% endif %}
+        </div>
+        <!-- Risk Level -->
+        {% if summary.risk_level %}
+        <div class="text-blue-100 text-xs">
+          {% if is_rtl %}مستوى المخاطر:{% else %}Risk Level:{% endif %}
+          <span class="font-bold text-white">
+            {% if is_rtl %}{{ summary.risk_level_ar }}{% else %}{{ summary.risk_level|upper }}{% endif %}
+          </span>
+        </div>
+        <div class="text-blue-100 text-xs mt-0.5">
+          {% if is_rtl %}درجة المخاطرة:{% else %}Risk Score:{% endif %}
+          <span class="font-bold text-white">{{ summary.risk_score|floatformat:1 }} / 100</span>
+        </div>
+        {% endif %}
+        <div class="text-blue-200 text-xs mt-2">
+          {% if is_rtl %}المدقق:{% else %}Auditor:{% endif %}
+          {{ trail.auditor|default:"System" }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick compliance bar -->
+  {% if summary.total_rules %}
+  <div class="px-8 py-3 bg-blue-50 border-t border-blue-100 flex items-center gap-4 text-sm flex-wrap">
+    <span class="text-slate-500 text-xs">{% if is_rtl %}الامتثال الإجمالي{% else %}Overall Compliance{% endif %}</span>
+    <div class="flex-1 min-w-[120px] risk-bar risk-{{ summary.risk_level|default:'low' }}">
+      <div class="risk-fill" style="width: {{ summary.pass_rate }}%"></div>
+    </div>
+    <span class="font-semibold text-blue-900 text-xs">{{ summary.pass_rate|floatformat:1 }}%</span>
+    {% if summary.blocks_approval %}
+    <span class="pill pill-fail">🔒 {% if is_rtl %}يمنع الاعتماد{% else %}Blocks Approval{% endif %}</span>
+    {% endif %}
+    {% if summary.requires_manual_review %}
+    <span class="pill pill-warning">👁 {% if is_rtl %}يحتاج مراجعة يدوية{% else %}Manual Review Required{% endif %}</span>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+  SECTION 2 — SUMMARY KPIs
+══════════════════════════════════════════════════════════ -->
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-blue-100 text-blue-700">📊</div>
+    <h2 class="font-semibold text-slate-800">{% if is_rtl %}الملخص التنفيذي{% else %}Executive Summary{% endif %}</h2>
+  </div>
+  <div class="section-body">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+
+      <div class="kpi-card border-blue-100">
+        <div class="kpi-value text-blue-800">{{ summary.total_amount|floatformat:0|default:"—" }}</div>
+        <div class="kpi-label">
+          {% if is_rtl %}الإجمالي ({{ summary.currency }}){% else %}Total ({{ summary.currency }}){% endif %}
+        </div>
+      </div>
+
+      <div class="kpi-card border-green-100">
+        <div class="kpi-value text-green-600">{{ summary.rules_passed|default:0 }}</div>
+        <div class="kpi-label">{% if is_rtl %}قواعد ناجحة{% else %}Rules Passed{% endif %}</div>
+      </div>
+
+      <div class="kpi-card border-red-100">
+        <div class="kpi-value text-red-600">{{ summary.rules_failed|default:0 }}</div>
+        <div class="kpi-label">{% if is_rtl %}قواعد فاشلة{% else %}Rules Failed{% endif %}</div>
+      </div>
+
+      <div class="kpi-card border-yellow-100">
+        <div class="kpi-value text-yellow-600">{{ summary.rules_warning|default:0 }}</div>
+        <div class="kpi-label">{% if is_rtl %}تحذيرات{% else %}Warnings{% endif %}</div>
+      </div>
+
+      <div class="kpi-card border-purple-100">
+        <div class="kpi-value text-purple-600">{{ summary.blocking_failures|default:0 }}</div>
+        <div class="kpi-label">{% if is_rtl %}تمنع الاعتماد{% else %}Block Approval{% endif %}</div>
+      </div>
+
+      <div class="kpi-card {% if summary.error_rate > 20 %}border-red-200{% elif summary.error_rate > 5 %}border-yellow-200{% else %}border-green-200{% endif %}">
+        <div class="kpi-value {% if summary.error_rate > 20 %}text-red-600{% elif summary.error_rate > 5 %}text-yellow-600{% else %}text-green-600{% endif %}">
+          {{ summary.error_rate|floatformat:1 }}%
+        </div>
+        <div class="kpi-label">{% if is_rtl %}نسبة الأخطاء{% else %}Error Rate{% endif %}</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+  SECTION 3 — KEY FIELDS
+══════════════════════════════════════════════════════════ -->
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-slate-100 text-slate-600">📋</div>
+    <h2 class="font-semibold text-slate-800">{% if is_rtl %}الحقول الأساسية{% else %}Key Fields{% endif %}</h2>
+  </div>
+  <div class="section-body">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+      {% if key_fields.counterparty %}
+      <div class="flex justify-between py-1.5 border-b border-slate-50">
+        <span class="text-slate-500">{% if is_rtl %}المورد / العميل{% else %}Vendor / Customer{% endif %}</span>
+        <span class="font-medium text-slate-800">{{ key_fields.counterparty }}</span>
+      </div>
+      {% endif %}
+      {% if key_fields.tax_id %}
+      <div class="flex justify-between py-1.5 border-b border-slate-50">
+        <span class="text-slate-500">{% if is_rtl %}الرقم الضريبي{% else %}VAT Number{% endif %}</span>
+        <span class="font-mono font-medium text-slate-800">{{ key_fields.tax_id }}</span>
+      </div>
+      {% endif %}
+      {% if key_fields.document_date %}
+      <div class="flex justify-between py-1.5 border-b border-slate-50">
+        <span class="text-slate-500">{% if is_rtl %}التاريخ{% else %}Date{% endif %}</span>
+        <span class="font-medium">{{ key_fields.document_date }}</span>
+      </div>
+      {% endif %}
+      {% if key_fields.currency %}
+      <div class="flex justify-between py-1.5 border-b border-slate-50">
+        <span class="text-slate-500">{% if is_rtl %}العملة{% else %}Currency{% endif %}</span>
+        <span class="font-medium">{{ key_fields.currency }}</span>
+      </div>
+      {% endif %}
+      {% if key_fields.subtotal %}
+      <div class="flex justify-between py-1.5 border-b border-slate-50">
+        <span class="text-slate-500">{% if is_rtl %}الأساس قبل الضريبة{% else %}Subtotal{% endif %}</span>
+        <span class="font-semibold text-slate-800">{{ key_fields.subtotal|floatformat:2 }} {{ key_fields.currency }}</span>
+      </div>
+      {% endif %}
+      {% if key_fields.vat_amount %}
+      <div class="flex justify-between py-1.5 border-b border-slate-50">
+        <span class="text-slate-500">{% if is_rtl %}ضريبة القيمة المضافة{% else %}VAT Amount{% endif %}</span>
+        <span class="font-semibold">{{ key_fields.vat_amount|floatformat:2 }} {{ key_fields.currency }}</span>
+      </div>
+      {% endif %}
+      {% if key_fields.total_amount %}
+      <div class="flex justify-between py-1.5 border-b border-slate-50">
+        <span class="text-slate-500">{% if is_rtl %}الإجمالي الكلي{% else %}Total Amount{% endif %}</span>
+        <span class="font-bold text-blue-800 text-base">{{ key_fields.total_amount|floatformat:2 }} {{ key_fields.currency }}</span>
+      </div>
+      {% endif %}
+      {% if key_fields.cost_center %}
+      <div class="flex justify-between py-1.5 border-b border-slate-50">
+        <span class="text-slate-500">{% if is_rtl %}مركز التكلفة{% else %}Cost Center{% endif %}</span>
+        <span class="font-medium">{{ key_fields.cost_center }}</span>
+      </div>
+      {% endif %}
+
+      <!-- Bank Statement extras -->
+      {% if key_fields.opening_balance is not None %}
+      <div class="flex justify-between py-1.5 border-b border-slate-50">
+        <span class="text-slate-500">{% if is_rtl %}رصيد الافتتاح{% else %}Opening Balance{% endif %}</span>
+        <span class="font-medium">{{ key_fields.opening_balance|floatformat:2 }}</span>
+      </div>
+      {% endif %}
+      {% if key_fields.closing_balance is not None %}
+      <div class="flex justify-between py-1.5 border-b border-slate-50">
+        <span class="text-slate-500">{% if is_rtl %}رصيد الإغلاق{% else %}Closing Balance{% endif %}</span>
+        <span class="font-medium">{{ key_fields.closing_balance|floatformat:2 }}</span>
+      </div>
+      {% endif %}
+
+      <!-- Payroll extras -->
+      {% if key_fields.employee_count %}
+      <div class="flex justify-between py-1.5 border-b border-slate-50">
+        <span class="text-slate-500">{% if is_rtl %}عدد الموظفين{% else %}Employee Count{% endif %}</span>
+        <span class="font-medium">{{ key_fields.employee_count }}</span>
+      </div>
+      {% endif %}
+
+      <!-- VAT extras -->
+      {% if key_fields.net_vat_payable is not None %}
+      <div class="flex justify-between py-1.5 border-b border-slate-50">
+        <span class="text-slate-500">{% if is_rtl %}صافي الضريبة المستحقة{% else %}Net VAT Payable{% endif %}</span>
+        <span class="font-bold text-blue-800">{{ key_fields.net_vat_payable|floatformat:2 }} SAR</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- QR Code badges for invoices/receipts -->
+    {% if key_fields.has_qr_code is not None %}
+    <div class="mt-3 flex gap-2 flex-wrap">
+      {% if key_fields.has_qr_code %}
+        {% if key_fields.qr_code_valid %}
+        <span class="pill pill-pass">✅ {% if is_rtl %}رمز QR صالح{% else %}QR Code Valid{% endif %}</span>
+        {% else %}
+        <span class="pill pill-fail">❌ {% if is_rtl %}رمز QR غير صالح{% else %}QR Code Invalid{% endif %}</span>
+        {% endif %}
+      {% else %}
+        <span class="pill pill-warning">⚠️ {% if is_rtl %}رمز QR مفقود{% else %}QR Code Missing{% endif %}</span>
+      {% endif %}
+      {% if key_fields.is_duplicate %}
+      <span class="pill pill-fail">🔁 {% if is_rtl %}فاتورة مكررة{% else %}Duplicate{% endif %}</span>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+  SECTION 4 — RULE EVALUATION TABLE
+══════════════════════════════════════════════════════════ -->
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-indigo-100 text-indigo-700">⚖️</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}نتائج تقييم القواعد ({{ rules|length }} قاعدة)
+      {% else %}Rule Evaluation Results ({{ rules|length }} rules){% endif %}
+    </h2>
+    <div class="ms-auto flex gap-2 text-xs">
+      <span class="pill pill-pass">✓ {{ summary.rules_passed }}</span>
+      <span class="pill pill-fail">✗ {{ summary.rules_failed }}</span>
+      <span class="pill pill-warning">⚠ {{ summary.rules_warning }}</span>
+    </div>
+  </div>
+  <div class="section-body p-0 overflow-x-auto">
+    <table class="rule-table">
+      <thead>
+        <tr>
+          <th>{% if is_rtl %}الكود{% else %}Code{% endif %}</th>
+          <th>{% if is_rtl %}اسم القاعدة{% else %}Rule Name{% endif %}</th>
+          <th>{% if is_rtl %}الحالة{% else %}Status{% endif %}</th>
+          <th>{% if is_rtl %}الخطورة{% else %}Severity{% endif %}</th>
+          <th>{% if is_rtl %}الوصف{% else %}Description{% endif %}</th>
+          <th>{% if is_rtl %}يمنع الاعتماد{% else %}Blocks{% endif %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rule in rules %}
+        <tr>
+          <td>
+            <span class="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded">{{ rule.rule_code }}</span>
+          </td>
+          <td>
+            <div class="font-medium text-slate-800">
+              {% if is_rtl %}{{ rule.rule_name_ar }}{% else %}{{ rule.rule_name_en }}{% endif %}
+            </div>
+            {% if not is_rtl %}
+            <div class="text-slate-400 text-xs">{{ rule.rule_name_ar }}</div>
+            {% endif %}
+          </td>
+          <td>
+            <span class="pill pill-{{ rule.status|lower }}">
+              {% if rule.status == "pass" %}✓{% elif rule.status == "fail" %}✗{% elif rule.status == "warning" %}⚠{% else %}—{% endif %}
+              {% if is_rtl %}{{ rule.status_ar }}{% else %}{{ rule.status|upper }}{% endif %}
+            </span>
+          </td>
+          <td>
+            <span class="pill pill-{{ rule.severity|lower }}">
+              {% if is_rtl %}{{ rule.severity_ar }}{% else %}{{ rule.severity|upper }}{% endif %}
+            </span>
+          </td>
+          <td class="max-w-xs">
+            <div class="text-slate-700 text-xs leading-relaxed">
+              {% if is_rtl %}{{ rule.explanation_ar|default:rule.explanation_en }}
+              {% else %}{{ rule.explanation_en|default:rule.explanation_ar }}{% endif %}
+            </div>
+            {% for ev in rule.evidence %}
+            <div class="evidence-block mt-1">
+              <span class="font-semibold text-slate-600">
+                {% if is_rtl %}{{ ev.field_name_ar|default:ev.field_name }}{% else %}{{ ev.field_name }}{% endif %}:
+              </span>
+              {% if is_rtl %}المتوقع{% else %}Expected{% endif %} <code class="text-green-700">{{ ev.expected }}</code>
+              → {% if is_rtl %}الفعلي{% else %}Actual{% endif %} <code class="text-red-700">{{ ev.actual }}</code>
+            </div>
+            {% endfor %}
+          </td>
+          <td class="text-center">
+            {% if rule.blocks_approval %}
+            <span class="text-red-600 font-bold text-sm">🔒</span>
+            {% else %}
+            <span class="text-slate-300">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-slate-400 py-8">
+            {% if is_rtl %}لا توجد نتائج تدقيق متاحة{% else %}No audit results available{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+  SECTION 5 — VIOLATIONS
+══════════════════════════════════════════════════════════ -->
+{% if violations %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-red-100 text-red-700">🚨</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}المخالفات ({{ violations|length }}){% else %}Violations ({{ violations|length }}){% endif %}
+    </h2>
+  </div>
+  <div class="section-body">
+    {% for v in violations %}
+    <div class="violation-card {{ v.severity }}">
+      <div class="flex items-start justify-between gap-3 flex-wrap">
+        <div class="flex items-center gap-2">
+          <span class="pill pill-{{ v.severity }}">
+            {% if is_rtl %}{{ v.severity_ar }}{% else %}{{ v.severity|upper }}{% endif %}
+          </span>
+          <span class="font-mono text-xs text-slate-400">{{ v.rule_code }}</span>
+          {% if v.blocks_approval %}
+          <span class="pill pill-fail text-xs">🔒 {% if is_rtl %}يمنع الاعتماد{% else %}Blocks Approval{% endif %}</span>
+          {% endif %}
+        </div>
+        {% if v.financial_impact %}
+        <span class="text-xs text-slate-500">
+          {% if is_rtl %}التأثير المالي:{% else %}Financial Impact:{% endif %}
+          <strong>{{ v.financial_impact|floatformat:2 }} SAR</strong>
+        </span>
+        {% endif %}
+      </div>
+
+      <div class="mt-2 font-semibold text-slate-800 text-sm">
+        {% if is_rtl %}{{ v.title_ar }}{% else %}{{ v.title_en }}{% endif %}
+      </div>
+
+      {% if v.recommendation_ar or v.recommendation_en %}
+      <div class="mt-1.5 text-xs text-slate-600 flex items-start gap-1.5">
+        <span class="text-blue-600">💡</span>
+        <span>
+          {% if is_rtl %}{{ v.recommendation_ar }}{% else %}{{ v.recommendation_en }}{% endif %}
+        </span>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+
+<!-- ══════════════════════════════════════════════════════════
+  SECTION 6 — AI INSIGHTS
+══════════════════════════════════════════════════════════ -->
+{% if ai.has_insights or ai.ai_summary_ar or ai.ai_summary_en %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-purple-100 text-purple-700">🤖</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}رؤى الذكاء الاصطناعي{% else %}AI Insights{% endif %}
+    </h2>
+  </div>
+  <div class="section-body space-y-4">
+
+    {% if ai.ai_summary_ar or ai.ai_summary_en %}
+    <div class="bg-purple-50 border border-purple-100 rounded-lg p-4 text-sm text-slate-700 leading-relaxed">
+      {% if is_rtl %}{{ ai.ai_summary_ar }}{% else %}{{ ai.ai_summary_en }}{% endif %}
+    </div>
+    {% endif %}
+
+    {% if ai.anomalies %}
+    <div>
+      <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+        {% if is_rtl %}الشذوذات المكتشفة{% else %}Detected Anomalies{% endif %}
+      </h3>
+      <div class="space-y-1.5">
+        {% for anomaly in ai.anomalies %}
+        <div class="flex items-start gap-2 text-sm">
+          <span class="text-orange-500 mt-0.5">⚡</span>
+          <span class="text-slate-700">
+            {% if is_rtl %}{{ anomaly.message_ar }}{% else %}{{ anomaly.message_en }}{% endif %}
+            {% if anomaly.value %} — <code class="text-slate-500 text-xs">{{ anomaly.value }}</code>{% endif %}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% if ai.risk_factors %}
+    <div>
+      <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+        {% if is_rtl %}عوامل الخطر{% else %}Risk Factors{% endif %}
+      </h3>
+      {% for rf in ai.risk_factors %}
+      <div class="flex items-start gap-2 text-sm">
+        <span class="text-red-500 mt-0.5">⚠</span>
+        <span>{% if is_rtl %}{{ rf.ar }}{% else %}{{ rf.en }}{% endif %}</span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+
+<!-- ══════════════════════════════════════════════════════════
+  SECTION 7 — COMPLIANCE (ZATCA)
+══════════════════════════════════════════════════════════ -->
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-green-100 text-green-700">🏛️</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}الامتثال للوائح الزكاة والضريبة (ZATCA){% else %}ZATCA Compliance{% endif %}
+    </h2>
+    <div class="ms-auto">
+      <span class="font-bold text-lg {% if compliance.compliance_score >= 80 %}text-green-600{% elif compliance.compliance_score >= 60 %}text-yellow-600{% else %}text-red-600{% endif %}">
+        {{ compliance.compliance_score|floatformat:1 }}%
+      </span>
+    </div>
+  </div>
+  <div class="section-body">
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+      {% for check_key, check_val in compliance.checks.items %}
+      {% if check_val is not None %}
+      <div class="flex items-center gap-2 text-sm p-2 rounded-lg {% if check_val %}bg-green-50 border border-green-100{% else %}bg-red-50 border border-red-100{% endif %}">
+        <span>{% if check_val %}✅{% else %}❌{% endif %}</span>
+        <span class="{% if check_val %}text-green-800{% else %}text-red-800{% endif %} text-xs font-medium">
+          {{ check_key|replace:"_"|title }}
+        </span>
+      </div>
+      {% endif %}
+      {% endfor %}
+    </div>
+
+    {% if compliance.missing_fields %}
+    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+      <div class="text-amber-800 font-semibold text-xs mb-1.5">
+        ⚠️ {% if is_rtl %}حقول مطلوبة مفقودة{% else %}Required Fields Missing{% endif %}
+      </div>
+      <div class="flex flex-wrap gap-2">
+        {% for mf in compliance.missing_fields %}
+        <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs">
+          {% if is_rtl %}{{ mf.label_ar }}{% else %}{{ mf.field }}{% endif %}
+        </span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+  SECTION 8 — DOCUMENT-SPECIFIC SECTIONS
+══════════════════════════════════════════════════════════ -->
+
+<!-- Invoice: VAT Breakdown -->
+{% if specific.vat_breakdown %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-blue-100 text-blue-700">🧾</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}تفصيل الضريبة المضافة{% else %}VAT Breakdown{% endif %}
+    </h2>
+  </div>
+  <div class="section-body">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+      <div class="bg-slate-50 rounded-lg p-3">
+        <div class="text-lg font-bold text-slate-800">{{ specific.vat_breakdown.subtotal|floatformat:2 }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}الأساس الخاضع{% else %}Subtotal{% endif %}</div>
+      </div>
+      <div class="bg-slate-50 rounded-lg p-3">
+        <div class="text-lg font-bold text-blue-700">{{ specific.vat_breakdown.vat_rate }}%</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}نسبة الضريبة{% else %}VAT Rate{% endif %}</div>
+      </div>
+      <div class="bg-slate-50 rounded-lg p-3">
+        <div class="text-lg font-bold text-slate-800">{{ specific.vat_breakdown.vat_amount|floatformat:2 }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}مبلغ الضريبة{% else %}VAT Amount{% endif %}</div>
+      </div>
+      <div class="bg-blue-50 rounded-lg p-3 border border-blue-100">
+        <div class="text-lg font-bold text-blue-800">{{ specific.vat_breakdown.total|floatformat:2 }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}الإجمالي{% else %}Total{% endif %}</div>
+      </div>
+    </div>
+    {% if specific.vat_breakdown.expected_vat != specific.vat_breakdown.vat_amount %}
+    <div class="mt-3 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+      ⚠️ {% if is_rtl %}الضريبة المتوقعة:{% else %}Expected VAT:{% endif %}
+      <strong>{{ specific.vat_breakdown.expected_vat|floatformat:2 }} SAR</strong>
+      {% if is_rtl %}— الفارق قد يشير إلى خطأ في الحساب{% else %}— Discrepancy may indicate calculation error{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Bank: Reconciliation -->
+{% if specific.reconciliation %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-teal-100 text-teal-700">🏦</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}مطابقة الرصيد{% else %}Balance Reconciliation{% endif %}
+    </h2>
+  </div>
+  <div class="section-body">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center mb-3">
+      <div class="bg-slate-50 rounded-lg p-3">
+        <div class="font-bold text-slate-800">{{ specific.reconciliation.opening_balance|floatformat:2 }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}رصيد الافتتاح{% else %}Opening{% endif %}</div>
+      </div>
+      <div class="bg-green-50 rounded-lg p-3">
+        <div class="font-bold text-green-700">+{{ specific.reconciliation.total_credits|floatformat:2 }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}الإيداعات{% else %}Credits{% endif %}</div>
+      </div>
+      <div class="bg-red-50 rounded-lg p-3">
+        <div class="font-bold text-red-700">-{{ specific.reconciliation.total_debits|floatformat:2 }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}السحوبات{% else %}Debits{% endif %}</div>
+      </div>
+      <div class="bg-blue-50 rounded-lg p-3 border border-blue-100">
+        <div class="font-bold text-blue-800">{{ specific.reconciliation.closing_balance|floatformat:2 }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}رصيد الإغلاق{% else %}Closing{% endif %}</div>
+      </div>
+    </div>
+    {% if specific.suspicious_transactions > 0 %}
+    <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm text-orange-800">
+      🔍 {% if is_rtl %}{{ specific.suspicious_transactions }} معاملة مشبوهة قرب حد الإبلاغ AML
+      {% else %}{{ specific.suspicious_transactions }} suspicious transactions near AML reporting threshold{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Payroll: Salary Breakdown -->
+{% if specific.salary_breakdown %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-emerald-100 text-emerald-700">👥</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}تفصيل الرواتب{% else %}Payroll Breakdown{% endif %}
+    </h2>
+  </div>
+  <div class="section-body">
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-center mb-4">
+      <div class="bg-slate-50 rounded-lg p-3">
+        <div class="font-bold text-slate-800">{{ specific.salary_breakdown.total_gross|floatformat:2 }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}إجمالي الرواتب الأساسية{% else %}Total Gross{% endif %}</div>
+      </div>
+      <div class="bg-red-50 rounded-lg p-3">
+        <div class="font-bold text-red-700">{{ specific.salary_breakdown.total_deductions|floatformat:2 }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}إجمالي الاستقطاعات{% else %}Total Deductions{% endif %}</div>
+      </div>
+      <div class="bg-green-50 rounded-lg p-3">
+        <div class="font-bold text-green-700">{{ specific.salary_breakdown.total_net|floatformat:2 }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}إجمالي الصافي{% else %}Total Net{% endif %}</div>
+      </div>
+    </div>
+    {% if specific.employee_validation.ghost_flags > 0 or specific.employee_validation.duplicate_ids > 0 %}
+    <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+      🚨 {% if is_rtl %}
+        {{ specific.employee_validation.ghost_flags }} موظف وهمي محتمل |
+        {{ specific.employee_validation.duplicate_ids }} معرّف مكرر
+      {% else %}
+        {{ specific.employee_validation.ghost_flags }} potential ghost employees |
+        {{ specific.employee_validation.duplicate_ids }} duplicate IDs
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- VAT Return: Net calculation -->
+{% if specific.vat_calculation %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-blue-100 text-blue-700">📊</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}حساب صافي الضريبة{% else %}VAT Net Calculation{% endif %}
+    </h2>
+  </div>
+  <div class="section-body">
+    <div class="grid grid-cols-3 gap-4 text-center mb-4">
+      <div class="bg-red-50 rounded-lg p-3">
+        <div class="font-bold text-red-700">{{ specific.vat_calculation.output_vat|floatformat:2 }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}ضريبة المخرجات{% else %}Output VAT{% endif %}</div>
+      </div>
+      <div class="bg-green-50 rounded-lg p-3">
+        <div class="font-bold text-green-700">{{ specific.vat_calculation.input_vat|floatformat:2 }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}ضريبة المدخلات{% else %}Input VAT{% endif %}</div>
+      </div>
+      <div class="bg-blue-50 rounded-lg p-3 border border-blue-100">
+        <div class="font-bold text-blue-800">{{ specific.vat_calculation.declared_net|floatformat:2 }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}صافي الضريبة المستحقة{% else %}Net VAT Payable{% endif %}</div>
+      </div>
+    </div>
+    {% if not specific.vat_calculation.arithmetic_ok %}
+    <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
+      ❌ {% if is_rtl %}خطأ في الحساب — الفارق: {{ specific.vat_calculation.discrepancy|floatformat:2 }} ريال
+      {% else %}Arithmetic error — discrepancy: {{ specific.vat_calculation.discrepancy|floatformat:2 }} SAR{% endif %}
+    </div>
+    {% else %}
+    <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
+      ✅ {% if is_rtl %}الحساب صحيح{% else %}Calculation correct{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Fixed Assets: Depreciation -->
+{% if specific.depreciation_summary %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-amber-100 text-amber-700">🏗️</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}ملخص الإهلاك{% else %}Depreciation Summary{% endif %}
+    </h2>
+  </div>
+  <div class="section-body">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+      <div class="bg-slate-50 rounded-lg p-3">
+        <div class="font-bold text-slate-800">{{ specific.depreciation_summary.total_cost|floatformat:2 }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}إجمالي التكلفة{% else %}Total Cost{% endif %}</div>
+      </div>
+      <div class="bg-orange-50 rounded-lg p-3">
+        <div class="font-bold text-orange-700">{{ specific.depreciation_summary.total_accumulated|floatformat:2 }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}الإهلاك المتراكم{% else %}Accumulated Dep.{% endif %}</div>
+      </div>
+      <div class="bg-blue-50 rounded-lg p-3">
+        <div class="font-bold text-blue-700">{{ specific.depreciation_summary.total_book_value|floatformat:2 }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}القيمة الدفترية{% else %}Book Value{% endif %}</div>
+      </div>
+      <div class="bg-{% if specific.depreciation_summary.negative_book_value_count > 0 %}red{% else %}green{% endif %}-50 rounded-lg p-3">
+        <div class="font-bold text-{% if specific.depreciation_summary.negative_book_value_count > 0 %}red{% else %}green{% endif %}-700">
+          {{ specific.depreciation_summary.negative_book_value_count }}
+        </div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}قيم دفترية سالبة{% else %}Negative BV{% endif %}</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Purchase Order: Vendor Validation + Budget + Approval Workflow -->
+{% if specific.vendor_validation %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-violet-100 text-violet-700">🏢</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}التحقق من المورد{% else %}Vendor Validation{% endif %}
+    </h2>
+  </div>
+  <div class="section-body">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+      <div class="bg-slate-50 rounded-lg p-3">
+        <div class="text-xs text-slate-400 mb-1">{% if is_rtl %}اسم المورد{% else %}Vendor Name{% endif %}</div>
+        <div class="font-semibold text-slate-800">{{ specific.vendor_validation.vendor_name|default:"—" }}</div>
+      </div>
+      <div class="bg-slate-50 rounded-lg p-3">
+        <div class="text-xs text-slate-400 mb-1">{% if is_rtl %}الرقم الضريبي{% else %}VAT Number{% endif %}</div>
+        <div class="font-mono font-medium text-slate-700">{{ specific.vendor_validation.vendor_vat|default:"—" }}</div>
+      </div>
+      <div class="bg-slate-50 rounded-lg p-3">
+        <div class="text-xs text-slate-400 mb-1">{% if is_rtl %}رقم السجل التجاري{% else %}CR Number{% endif %}</div>
+        <div class="font-mono font-medium text-slate-700">{{ specific.vendor_validation.vendor_cr|default:"—" }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if specific.budget_check %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-orange-100 text-orange-700">💰</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}التحقق من الميزانية{% else %}Budget Validation{% endif %}
+    </h2>
+  </div>
+  <div class="section-body">
+    <div class="grid grid-cols-3 gap-4 text-center mb-3">
+      <div class="bg-slate-50 rounded-lg p-3">
+        <div class="font-bold text-slate-800">{{ specific.budget_check.budget_limit|floatformat:2|default:"غير محدد" }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}حد الميزانية{% else %}Budget Limit{% endif %}</div>
+      </div>
+      <div class="bg-blue-50 rounded-lg p-3">
+        <div class="font-bold text-blue-800">{{ specific.budget_check.total_amount|floatformat:2 }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}قيمة أمر الشراء{% else %}PO Amount{% endif %}</div>
+      </div>
+      <div class="rounded-lg p-3 {% if specific.budget_check.within_budget %}bg-green-50{% else %}bg-red-50{% endif %}">
+        <div class="font-bold {% if specific.budget_check.within_budget %}text-green-700{% else %}text-red-700{% endif %}">
+          {% if specific.budget_check.within_budget %}
+            {% if is_rtl %}ضمن الميزانية ✓{% else %}Within Budget ✓{% endif %}
+          {% else %}
+            {% if is_rtl %}تجاوز الميزانية ✗{% else %}Over Budget ✗{% endif %}
+          {% endif %}
+        </div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}الحالة{% else %}Status{% endif %}</div>
+      </div>
+    </div>
+    {% if specific.approval_workflow.approved_by %}
+    <div class="border-t border-slate-100 pt-3 text-sm text-slate-600">
+      <span class="font-medium">{% if is_rtl %}اعتمده:{% else %}Approved by:{% endif %}</span>
+      {{ specific.approval_workflow.approved_by }}
+      {% if specific.approval_workflow.approved_at %}
+        <span class="text-slate-400 ms-2">{{ specific.approval_workflow.approved_at }}</span>
+      {% endif %}
+      {% if specific.approval_workflow.cost_center %}
+        | <span class="font-medium">{% if is_rtl %}مركز التكلفة:{% else %}Cost Center:{% endif %}</span>
+        {{ specific.approval_workflow.cost_center }}
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Expense Report: Receipt Validation + Category Breakdown + Policy Violations -->
+{% if specific.receipt_validation %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-pink-100 text-pink-700">🧾</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}التحقق من الإيصالات{% else %}Receipt Validation{% endif %}
+    </h2>
+  </div>
+  <div class="section-body">
+    <div class="grid grid-cols-3 gap-4 text-center mb-4">
+      <div class="bg-slate-50 rounded-lg p-3">
+        <div class="font-bold text-slate-800">{{ specific.receipt_validation.total_lines }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}إجمالي البنود{% else %}Total Lines{% endif %}</div>
+      </div>
+      <div class="bg-green-50 rounded-lg p-3">
+        <div class="font-bold text-green-700">{{ specific.receipt_validation.with_receipt }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}بإيصال مرفق{% else %}With Receipt{% endif %}</div>
+      </div>
+      <div class="rounded-lg p-3 {% if specific.receipt_validation.without_receipt > 0 %}bg-red-50{% else %}bg-green-50{% endif %}">
+        <div class="font-bold {% if specific.receipt_validation.without_receipt > 0 %}text-red-700{% else %}text-green-700{% endif %}">
+          {{ specific.receipt_validation.without_receipt }}
+        </div>
+        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}بدون إيصال{% else %}Missing Receipt{% endif %}</div>
+      </div>
+    </div>
+
+    {% if specific.policy_violations.over_limit_count > 0 or specific.policy_violations.self_approval %}
+    <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800 mb-3">
+      🚨
+      {% if specific.policy_violations.over_limit_count > 0 %}
+        {% if is_rtl %}{{ specific.policy_violations.over_limit_count }} بند تجاوز حد السياسة{% else %}{{ specific.policy_violations.over_limit_count }} line(s) exceeded policy limit{% endif %}
+      {% endif %}
+      {% if specific.policy_violations.self_approval %}
+        {% if is_rtl %} | موافقة ذاتية مكتشفة{% else %} | Self-approval detected{% endif %}
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if specific.category_breakdown %}
+    <div class="mt-2">
+      <div class="text-xs text-slate-500 mb-2 font-semibold uppercase tracking-wide">
+        {% if is_rtl %}توزيع المصروفات حسب الفئة{% else %}Expense Category Breakdown{% endif %}
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        {% for cat in specific.category_breakdown %}
+        <div class="bg-slate-50 rounded px-3 py-2 flex justify-between text-sm">
+          <span class="text-slate-600 capitalize">{{ cat.category }}</span>
+          <span class="font-semibold text-slate-800">{{ cat.total|floatformat:2 }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Sales Receipt: Payment Validation + ZATCA Reference -->
+{% if specific.payment_validation %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-cyan-100 text-cyan-700">💳</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}التحقق من طريقة الدفع{% else %}Payment Validation{% endif %}
+    </h2>
+  </div>
+  <div class="section-body">
+    <div class="grid grid-cols-2 gap-4 mb-3 text-sm">
+      <div class="bg-slate-50 rounded-lg p-3">
+        <div class="text-xs text-slate-400 mb-1">{% if is_rtl %}طريقة الدفع{% else %}Payment Method{% endif %}</div>
+        <div class="font-semibold text-slate-800 capitalize">{{ specific.payment_validation.payment_method|default:"—" }}</div>
+      </div>
+      <div class="rounded-lg p-3 {% if specific.payment_validation.within_cash_limit %}bg-green-50{% else %}bg-red-50{% endif %}">
+        <div class="text-xs text-slate-400 mb-1">{% if is_rtl %}حد النقد AML{% else %}AML Cash Limit{% endif %}</div>
+        <div class="font-bold {% if specific.payment_validation.within_cash_limit %}text-green-700{% else %}text-red-700{% endif %}">
+          {% if specific.payment_validation.within_cash_limit %}
+            {% if is_rtl %}ضمن الحد{% else %}Within Limit{% endif %} ✓
+          {% else %}
+            {% if is_rtl %}تجاوز الحد{% else %}Exceeds Limit{% endif %} ✗
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% with zr=specific.zatca_reference %}
+    {% if zr %}
+    <div class="border-t border-slate-100 pt-3 grid grid-cols-2 gap-3 text-sm">
+      {% if zr.receipt_number %}
+      <div>
+        <span class="text-slate-500">{% if is_rtl %}رقم الإيصال:{% else %}Receipt No.:{% endif %}</span>
+        <span class="font-mono font-medium ms-1">{{ zr.receipt_number }}</span>
+      </div>
+      {% endif %}
+      {% if zr.zatca_invoice_ref %}
+      <div>
+        <span class="text-slate-500">{% if is_rtl %}مرجع ZATCA:{% else %}ZATCA Ref.:{% endif %}</span>
+        <span class="font-mono font-medium ms-1 text-blue-700">{{ zr.zatca_invoice_ref }}</span>
+      </div>
+      {% endif %}
+      <div class="col-span-2 flex gap-2 mt-1">
+        {% if zr.has_qr %}
+          {% if zr.qr_valid %}
+          <span class="pill pill-pass">✅ {% if is_rtl %}رمز QR صالح{% else %}QR Valid{% endif %}</span>
+          {% else %}
+          <span class="pill pill-fail">❌ {% if is_rtl %}رمز QR غير صالح{% else %}QR Invalid{% endif %}</span>
+          {% endif %}
+        {% else %}
+          <span class="pill pill-warning">⚠️ {% if is_rtl %}رمز QR مفقود{% else %}QR Missing{% endif %}</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% endwith %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Line Items Table (Invoice / PO / Receipt) -->
+{% if specific.line_items %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-slate-100 text-slate-600">📑</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}بنود المستند ({{ specific.line_items|length }}){% else %}Line Items ({{ specific.line_items|length }}){% endif %}
+    </h2>
+  </div>
+  <div class="section-body p-0 overflow-x-auto">
+    <table class="rule-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>{% if is_rtl %}الوصف{% else %}Description{% endif %}</th>
+          <th>{% if is_rtl %}الكمية{% else %}Qty{% endif %}</th>
+          <th>{% if is_rtl %}سعر الوحدة{% else %}Unit Price{% endif %}</th>
+          <th>{% if is_rtl %}الضريبة%{% else %}VAT %{% endif %}</th>
+          <th>{% if is_rtl %}الإجمالي{% else %}Total{% endif %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in specific.line_items %}
+        <tr>
+          <td class="text-slate-400 text-xs">{{ forloop.counter }}</td>
+          <td>
+            <div class="font-medium text-slate-800">{{ item.description|default:"—" }}</div>
+            {% if item.item_code %}<div class="text-xs text-slate-400 font-mono">{{ item.item_code }}</div>{% endif %}
+          </td>
+          <td class="text-center">{{ item.quantity|default:"—" }}</td>
+          <td class="text-right font-mono">{{ item.unit_price|floatformat:2|default:"—" }}</td>
+          <td class="text-center">{{ item.vat_rate|default:"15" }}%</td>
+          <td class="text-right font-semibold text-slate-800">{{ item.total|floatformat:2|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-slate-400 py-4">—</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+
+<!-- ══════════════════════════════════════════════════════════
+  SECTION 9 — RECOMMENDATIONS
+══════════════════════════════════════════════════════════ -->
+{% if recs %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-yellow-100 text-yellow-700">💡</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}التوصيات وخطة الإصلاح{% else %}Recommendations & Action Plan{% endif %}
+    </h2>
+  </div>
+  <div class="section-body">
+    {% for rec in recs %}
+    <div class="rec-card">
+      <div class="rec-number
+        {% if rec.priority == 'critical' %}bg-purple-100 text-purple-700
+        {% elif rec.priority == 'high' %}bg-red-100 text-red-700
+        {% elif rec.priority == 'medium' %}bg-yellow-100 text-yellow-700
+        {% else %}bg-green-100 text-green-700{% endif %}">
+        {{ forloop.counter }}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap mb-1">
+          <span class="pill pill-{{ rec.priority }}">
+            {% if is_rtl %}{{ rec.priority|capfirst }}{% else %}{{ rec.priority|upper }}{% endif %}
+          </span>
+          <span class="font-mono text-xs text-slate-400">{{ rec.rule_code }}</span>
+        </div>
+        <div class="text-sm font-medium text-slate-800">
+          {% if is_rtl %}{{ rec.action_ar }}{% else %}{{ rec.action_en }}{% endif %}
+        </div>
+        {% if rec.impact_ar or rec.impact_en %}
+        <div class="text-xs text-slate-500 mt-0.5">
+          {% if is_rtl %}{{ rec.impact_ar }}{% else %}{{ rec.impact_en }}{% endif %}
+        </div>
+        {% endif %}
+        {% if rec.financial_impact %}
+        <div class="text-xs text-blue-600 mt-1 font-medium">
+          {% if is_rtl %}التأثير المالي المقدّر:{% else %}Est. Financial Impact:{% endif %}
+          {{ rec.financial_impact|floatformat:2 }} SAR
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+
+<!-- ══════════════════════════════════════════════════════════
+  SECTION 10 — AUDIT TRAIL
+══════════════════════════════════════════════════════════ -->
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-slate-100 text-slate-500">🔎</div>
+    <h2 class="font-semibold text-slate-800">{% if is_rtl %}سجل المراجعة{% else %}Audit Trail{% endif %}</h2>
+  </div>
+  <div class="section-body">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+      <div>
+        <div class="text-slate-400 text-xs mb-0.5">{% if is_rtl %}المدقق{% else %}Auditor{% endif %}</div>
+        <div class="font-medium">{{ trail.auditor|default:"System" }}</div>
+      </div>
+      <div>
+        <div class="text-slate-400 text-xs mb-0.5">{% if is_rtl %}تاريخ التدقيق{% else %}Audit Date{% endif %}</div>
+        <div class="font-medium">{{ trail.audit_date|default:"—" }}</div>
+      </div>
+      <div>
+        <div class="text-slate-400 text-xs mb-0.5">{% if is_rtl %}نوع التدقيق{% else %}Audit Type{% endif %}</div>
+        <div class="font-medium">
+          {% if trail.audit_type == "automatic" %}
+          🤖 {% if is_rtl %}آلي{% else %}Automatic{% endif %}
+          {% else %}
+          👤 {% if is_rtl %}يدوي{% else %}Manual{% endif %}
+          {% endif %}
+        </div>
+      </div>
+      <div>
+        <div class="text-slate-400 text-xs mb-0.5">{% if is_rtl %}إصدار المحرك{% else %}Engine Version{% endif %}</div>
+        <div class="font-medium font-mono">{{ trail.engine_version|default:"2.0" }}</div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 flex-wrap gap-2">
+      <span>
+        {% if is_rtl %}منصة تدقيق تدقيق — نظام الذكاء الاصطناعي للتدقيق المالي{% else %}Tadgeeg Audit Platform — AI-Powered Financial Auditing{% endif %}
+      </span>
+      <span>{{ meta.generated_at }}</span>
+    </div>
+  </div>
+</div>
+
+</div><!-- /max-w-5xl -->
+</body>
+</html>

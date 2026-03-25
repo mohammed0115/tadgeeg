@@ -159,6 +159,18 @@ class RiskScoreSummarySerializer(serializers.ModelSerializer):
         ]
 
 
+class DocumentCanonicalDataSerializer(serializers.Serializer):
+    """Read-only view of a DocumentCanonicalData record."""
+    document_type    = serializers.CharField()
+    typed_model_name = serializers.CharField()
+    typed_object_id  = serializers.UUIDField()
+    canonical_data   = serializers.DictField()
+    raw_ai_output    = serializers.DictField()
+    version          = serializers.IntegerField()
+    created_at       = serializers.DateTimeField()
+    updated_at       = serializers.DateTimeField()
+
+
 class TriggerAuditSerializer(serializers.Serializer):
     document_id = serializers.UUIDField()
     document_type = serializers.ChoiceField(choices=[

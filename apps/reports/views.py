@@ -435,12 +435,14 @@ def _collect_rule_engine_data(org, date_from=None, date_to=None) -> dict:
 
     # Fetch Arabic translations for the top rule codes
     top_codes = [r["rule_code"] for r in top_failures_qs]
-    translations = {
-        t.rule.rule_code: {"ar": t.name_ar, "en": t.name_en}
-        for t in RuleDefinitionTranslation.objects.filter(
-            rule__rule_code__in=top_codes, language="ar"
-        ).select_related("rule")
-    }
+    translations: dict = {}
+    for t in RuleDefinitionTranslation.objects.filter(
+        rule__rule_code__in=top_codes
+    ).select_related("rule"):
+        code = t.rule.rule_code
+        if code not in translations:
+            translations[code] = {}
+        translations[code][t.language] = t.name
 
     top_failed_rules = [
         {

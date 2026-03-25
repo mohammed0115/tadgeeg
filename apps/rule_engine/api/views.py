@@ -14,7 +14,8 @@ from apps.rule_engine.models import (
 )
 from apps.rule_engine.serializers.audit_run_serializers import (
     RuleDefinitionSerializer, AuditRunSummarySerializer,
-    RiskScoreSummarySerializer, TriggerAuditSerializer
+    RiskScoreSummarySerializer, TriggerAuditSerializer,
+    DocumentCanonicalDataSerializer,
 )
 
 logger = logging.getLogger("rule_engine")
@@ -149,6 +150,113 @@ def trigger_audit(request):
             {"error": f"Audit pipeline failed: {str(e)}"},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def canonical_data_view(request, document_id):
+    """
+    GET /api/rule-engine/canonical/<document_id>/
+    Returns the canonical data snapshot for any document by its typed_object_id (UUID).
+    Organization isolation is enforced via RiskScoreSummary lookup.
+    """
+    org = get_organization(request)
+    if not org:
+        return Response({"error": "No organization found for user."}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        from apps.documents.canonical_models import DocumentCanonicalData
+
+        # Verify the document belongs to this org by checking RiskScoreSummary
+        if not RiskScoreSummary.objects.filter(
+            organization=org, document_id=str(document_id)
+        ).exists():
+            return Response(
+                {"error": "Document not found or not accessible."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        rec = DocumentCanonicalData.objects.filter(
+            typed_object_id=str(document_id)
+        ).first()
+
+        if rec is None:
+            return Response(
+                {"error": "Canonical data has not been generated for this document yet."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = DocumentCanonicalDataSerializer({
+            "document_type":    rec.document_type,
+            "typed_model_name": rec.typed_model_name,
+            "typed_object_id":  rec.typed_object_id,
+            "canonical_data":   rec.canonical_data,
+            "raw_ai_output":    rec.raw_ai_output,
+            "version":          rec.version,
+            "created_at":       rec.created_at,
+            "updated_at":       rec.updated_at,
+        })
+        return Response(serializer.data)
+
+    except Exception as e:
+        logger.exception(f"canonical_data_view error for {document_id}: {e}")
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def canonical_cross_query(request):
+    """
+    GET /api/rule-engine/canonical/?field=<field_code>&value=<value>&doc_type=<type>
+    Find all documents in the org where canonical_data[field] == value.
+    Useful for cross-document reconciliation queries.
+    """
+    org = get_organization(request)
+    if not org:
+        return Response({"error": "No organization."}, status=status.HTTP_403_FORBIDDEN)
+
+    field_code = request.query_params.get("field")
+    value      = request.query_params.get("value")
+    doc_type   = request.query_params.get("doc_type", "")
+
+    if not field_code or value is None:
+        return Response(
+            {"error": "Query params 'field' and 'value' are required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        from apps.documents.canonical_models import DocumentCanonicalData
+
+        # Get document_ids that belong to this org via RiskScoreSummary
+        org_doc_ids = list(
+            RiskScoreSummary.objects.filter(organization=org)
+            .values_list("document_id", flat=True)
+        )
+
+        qs = DocumentCanonicalData.objects.filter(
+            typed_object_id__in=org_doc_ids
+        )
+        if doc_type:
+            qs = qs.filter(document_type=doc_type)
+
+        # JSONField filter: canonical_data[field] == value
+        matches = [
+            {
+                "typed_object_id": str(rec.typed_object_id),
+                "document_type":   rec.document_type,
+                "field_value":     rec.canonical_data.get(field_code),
+                "version":         rec.version,
+            }
+            for rec in qs
+            if str(rec.canonical_data.get(field_code, "")) == str(value)
+        ]
+
+        return Response({"field": field_code, "value": value, "matches": matches})
+
+    except Exception as e:
+        logger.exception(f"canonical_cross_query error: {e}")
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(["GET"])

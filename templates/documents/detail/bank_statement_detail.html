@@ -112,6 +112,44 @@
               <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed" x-text="doc.ai_summary"></p>
             </div>
           </template>
+
+          <!-- Detailed Audit Results -->
+          <template x-if="ruleDetails.length > 0">
+            <div class="card p-5">
+              <h3 class="font-bold text-slate-800 dark:text-white mb-4 text-sm flex items-center gap-2">
+                <i data-lucide="shield-check" class="w-4 h-4 text-primary-500"></i>
+                نتائج التدقيق
+              </h3>
+              <div class="space-y-2">
+                <template x-for="rule in ruleDetails" :key="rule.code">
+                  <div class="flex items-start gap-3 p-3 rounded-xl border"
+                       :class="rule.passed ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800/30' : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/30'">
+                    <div class="flex-shrink-0 mt-0.5">
+                      <template x-if="rule.passed"><i data-lucide="check-circle" class="w-4 h-4 text-green-500"></i></template>
+                      <template x-if="!rule.passed"><i data-lucide="x-circle" class="w-4 h-4 text-red-500"></i></template>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs font-mono bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded" x-text="rule.code"></span>
+                        <span class="text-sm font-medium text-slate-700 dark:text-slate-200" x-text="rule.name"></span>
+                        <span class="text-xs px-2 py-0.5 rounded-full font-semibold"
+                              :class="{
+                                'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400': rule.severity==='critical',
+                                'bg-orange-100 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400': rule.severity==='high',
+                                'bg-amber-100 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400': rule.severity==='medium',
+                                'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400': rule.severity==='low'
+                              }"
+                              x-text="severityLabel(rule.severity)"></span>
+                      </div>
+                      <template x-if="!rule.passed && rule.message">
+                        <p class="text-xs text-red-600 dark:text-red-400 mt-1" x-text="rule.message"></p>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
         </div>
 
         <!-- Sidebar: validation -->
@@ -217,6 +255,8 @@ function docDetail() {
       finally { this.saving = false; }
     },
 
+    get ruleDetails() { return this.doc?.validation_details?.rule_details || []; },
+    severityLabel(s) { return {critical:'حرج',high:'عالي',medium:'متوسط',low:'منخفض'}[s]??s; },
     fmtDate(d) { return d ? new Date(d).toLocaleString('ar-SA') : '—'; },
     fmtNum(v) { return v ? Number(v).toLocaleString('ar-SA', {maximumFractionDigits:2}) : '—'; },
     scoreColor(s) { return s>=85?'bg-green-500':s>=70?'bg-amber-400':s>=50?'bg-orange-500':'bg-red-500'; },

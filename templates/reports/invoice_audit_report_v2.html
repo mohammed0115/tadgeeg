@@ -1,0 +1,722 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="{{ header.language|default:'ar' }}" dir="{{ is_rtl|yesno:'rtl,ltr' }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>
+  {% if is_rtl %}{{ header.title|default:"تقرير تدقيق الفواتير" }}{% else %}{{ header.title|default:"Invoice Audit Report" }}{% endif %}
+</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @media print {
+    .no-print { display: none !important; }
+    .page-break { page-break-before: always; }
+    body { font-size: 11px; background: white !important; }
+    .shadow-lg, .shadow { box-shadow: none !important; }
+    .section-card { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
+  }
+  [dir="rtl"] table { direction: rtl; }
+  [dir="rtl"] .text-left { text-align: right; }
+  [dir="rtl"] .text-right { text-align: left; }
+  body { font-family: 'Segoe UI', 'Arial', sans-serif; background: #f8fafc; color: #1e293b; }
+  :root {
+    --brand: #1e40af; --brand-dark: #1e3a8a;
+    --pass: #16a34a; --fail: #dc2626; --warn: #d97706;
+    --safe: #16a34a; --review: #f59e0b; --high: #ef4444;
+  }
+  .section-card {
+    background: white; border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+    margin-bottom: 1.5rem; overflow: hidden;
+  }
+  .section-header {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.875rem 1.5rem; border-bottom: 1px solid #f1f5f9;
+    background: #f8fafc;
+  }
+  .section-header .icon {
+    width: 2rem; height: 2rem; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; font-size: 1rem;
+  }
+  .section-body { padding: 1.5rem; }
+  .kpi-card {
+    background: white; border-radius: 10px; padding: 1.25rem;
+    border: 1px solid #e2e8f0; text-align: center;
+  }
+  .kpi-value { font-size: 2rem; font-weight: 800; line-height: 1; }
+  .kpi-label { font-size: 0.72rem; color: #64748b; margin-top: 0.4rem; }
+  .pill {
+    display: inline-flex; align-items: center; padding: 2px 10px;
+    border-radius: 99px; font-size: 0.7rem; font-weight: 600;
+  }
+  .pill-critical { background:#f3e8ff; color:#6b21a8; }
+  .pill-high     { background:#fee2e2; color:#991b1b; }
+  .pill-medium   { background:#fef3c7; color:#92400e; }
+  .pill-low      { background:#f0fdf4; color:#166534; }
+  .pill-safe     { background:#dcfce7; color:#166534; }
+  .pill-review   { background:#fef9c3; color:#854d0e; }
+  .pill-risky    { background:#fee2e2; color:#991b1b; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+  .data-table th {
+    background: #f8fafc; padding: 0.6rem 0.9rem;
+    font-weight: 600; color: #475569;
+    border-bottom: 2px solid #e2e8f0; white-space: nowrap;
+    text-align: inherit;
+  }
+  .data-table td { padding: 0.6rem 0.9rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: #f8fafc; }
+  .progress-bar { height: 8px; border-radius: 4px; background: #e2e8f0; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; }
+  .btn-toolbar {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.45rem 1rem; border-radius: 8px; font-size: 0.82rem;
+    font-weight: 600; cursor: pointer; text-decoration: none; border: none;
+    transition: opacity .15s;
+  }
+  .btn-toolbar:hover { opacity: .85; }
+  .btn-primary { background: var(--brand); color: white; }
+  .btn-ghost   { background: #f1f5f9; color: #475569; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     TOOLBAR (hidden on print)
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="no-print sticky top-0 z-50 bg-white border-b border-slate-200 px-6 py-2 flex items-center justify-between shadow-sm">
+  <div class="flex items-center gap-3">
+    <span class="text-base font-bold text-slate-800">
+      {% if is_rtl %}تقرير تدقيق الفواتير{% else %}Invoice Audit Report{% endif %}
+    </span>
+    <span class="text-xs text-slate-500">{{ header.organization_name }}</span>
+  </div>
+  <div class="flex gap-2">
+    {% if header.report_id %}
+    <a href="/api/v1/reports/invoice-audit/{{ header.report_id }}/pdf/"
+       class="btn-toolbar btn-primary">
+      🖨️ {% if is_rtl %}تحميل PDF{% else %}Download PDF{% endif %}
+    </a>
+    {% endif %}
+    <button onclick="window.print()" class="btn-toolbar btn-ghost">
+      📄 {% if is_rtl %}طباعة{% else %}Print{% endif %}
+    </button>
+  </div>
+</div>
+
+<div class="max-w-5xl mx-auto px-4 py-8">
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 1 — REPORT HEADER
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="section-card" style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 60%, #1d4ed8 100%); color: white; border-radius: 16px; margin-bottom: 1.5rem;">
+  <div class="p-8">
+    <div class="flex items-start justify-between flex-wrap gap-4">
+      <div>
+        <div class="text-blue-200 text-xs font-semibold uppercase tracking-widest mb-2">
+          {% if is_rtl %}نظام تدقيق المالي - تدقيق{% else %}FinAI Audit System — Tadgeeg{% endif %}
+        </div>
+        <h1 class="text-3xl font-black mb-1">
+          {% if is_rtl %}{{ header.title|default:"تقرير تدقيق الفواتير" }}{% else %}{{ header.title|default:"Invoice Audit Report" }}{% endif %}
+        </h1>
+        <p class="text-blue-200 text-sm">{{ header.organization_name }}</p>
+      </div>
+      <!-- Overall Status badge -->
+      <div class="text-right{% if is_rtl %} text-left{% endif %}">
+        <div class="inline-block px-5 py-2 rounded-full text-sm font-bold
+          {% if summary.compliance_score >= 85 %}bg-green-500{% elif summary.compliance_score >= 60 %}bg-yellow-500{% else %}bg-red-500{% endif %}
+          text-white mb-2">
+          {% if is_rtl %}{{ summary.risk_level_ar }}{% else %}{{ summary.risk_level_en }}{% endif %}
+        </div>
+        <div class="text-blue-200 text-xs">
+          {% if is_rtl %}درجة الامتثال{% else %}Compliance Score{% endif %}
+        </div>
+        <div class="text-4xl font-black text-white">{{ summary.compliance_score|floatformat:1 }}%</div>
+      </div>
+    </div>
+
+    <!-- Meta row -->
+    <div class="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+      <div>
+        <div class="text-blue-300 text-xs">{% if is_rtl %}تاريخ الإنشاء{% else %}Generated{% endif %}</div>
+        <div class="text-white font-medium">{{ header.created_at|date:"Y-m-d" }}</div>
+      </div>
+      <div>
+        <div class="text-blue-300 text-xs">{% if is_rtl %}أنشأه{% else %}By{% endif %}</div>
+        <div class="text-white font-medium">{{ header.created_by|default:"—" }}</div>
+      </div>
+      <div>
+        <div class="text-blue-300 text-xs">{% if is_rtl %}الفترة من{% else %}From{% endif %}</div>
+        <div class="text-white font-medium">{{ header.period_from|default:"—" }}</div>
+      </div>
+      <div>
+        <div class="text-blue-300 text-xs">{% if is_rtl %}الفترة إلى{% else %}To{% endif %}</div>
+        <div class="text-white font-medium">{{ header.period_to|default:"—" }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 2 — KPI SUMMARY CARDS
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+
+  <div class="kpi-card">
+    <div class="kpi-value text-blue-700">{{ summary.total_invoices }}</div>
+    <div class="kpi-label">{% if is_rtl %}إجمالي الفواتير{% else %}Total Invoices{% endif %}</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-value text-slate-800" style="font-size:1.4rem">
+      {{ summary.total_amount|floatformat:0 }}
+    </div>
+    <div class="kpi-label">{% if is_rtl %}إجمالي المبالغ ({{ summary.currency }}){% else %}Total Amount ({{ summary.currency }}){% endif %}</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-value {% if summary.compliance_score >= 85 %}text-green-600{% elif summary.compliance_score >= 60 %}text-yellow-600{% else %}text-red-600{% endif %}">
+      {{ summary.compliance_score|floatformat:1 }}%
+    </div>
+    <div class="kpi-label">{% if is_rtl %}درجة الامتثال{% else %}Compliance Score{% endif %}</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-value text-red-600">{{ summary.high_risk_count }}</div>
+    <div class="kpi-label">{% if is_rtl %}عالي المخاطر{% else %}High Risk{% endif %}</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-value text-purple-600">{{ summary.duplicate_count }}</div>
+    <div class="kpi-label">{% if is_rtl %}مكررة{% else %}Duplicates{% endif %}</div>
+  </div>
+
+  <div class="kpi-card">
+    <div class="kpi-value text-orange-500">{{ summary.flagged_count }}</div>
+    <div class="kpi-label">{% if is_rtl %}مُعلَّمة{% else %}Flagged{% endif %}</div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 3 — EXECUTIVE SUMMARY
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-blue-100">📋</div>
+    <h2 class="text-base font-bold text-slate-800">
+      {% if is_rtl %}الملخص التنفيذي{% else %}Executive Summary{% endif %}
+    </h2>
+  </div>
+  <div class="section-body">
+    <p class="text-sm text-slate-700 leading-7 mb-5">{{ executive.conclusion }}</p>
+
+    {% if executive.key_findings %}
+    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">
+      {% if is_rtl %}النتائج الرئيسية{% else %}Key Findings{% endif %}
+    </h3>
+    <div class="grid sm:grid-cols-2 gap-3">
+      {% for finding in executive.key_findings %}
+      <div class="flex items-start gap-2 p-3 rounded-lg border
+        {% if finding.severity == 'critical' %}border-purple-200 bg-purple-50
+        {% elif finding.severity == 'high' %}border-red-200 bg-red-50
+        {% elif finding.severity == 'medium' %}border-yellow-200 bg-yellow-50
+        {% else %}border-slate-200 bg-slate-50{% endif %}">
+        <span class="pill pill-{{ finding.severity }} mt-0.5">{{ finding.severity|upper }}</span>
+        <div>
+          <div class="text-xs font-semibold text-slate-700">
+            {% if is_rtl %}{{ finding.title_ar }}{% else %}{{ finding.title_en }}{% endif %}
+          </div>
+          <div class="text-xs text-slate-500">{{ finding.code }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 4 — RISK DISTRIBUTION
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-orange-100">⚖️</div>
+    <h2 class="text-base font-bold text-slate-800">
+      {% if is_rtl %}توزيع المخاطر{% else %}Risk Distribution{% endif %}
+    </h2>
+  </div>
+  <div class="section-body">
+    <div class="grid sm:grid-cols-3 gap-4 mb-6">
+      <!-- Safe -->
+      <div class="p-4 rounded-xl bg-green-50 border border-green-100 text-center">
+        <div class="text-3xl font-black text-green-600">{{ risk.safe_count }}</div>
+        <div class="text-xs text-green-700 font-semibold mt-1">
+          {% if is_rtl %}آمن{% else %}Safe{% endif %}
+        </div>
+        <div class="text-xs text-slate-500 mt-0.5">{{ risk.safe_pct|floatformat:1 }}%</div>
+      </div>
+      <!-- Review -->
+      <div class="p-4 rounded-xl bg-yellow-50 border border-yellow-100 text-center">
+        <div class="text-3xl font-black text-yellow-600">{{ risk.review_count }}</div>
+        <div class="text-xs text-yellow-700 font-semibold mt-1">
+          {% if is_rtl %}مراجعة{% else %}Review{% endif %}
+        </div>
+        <div class="text-xs text-slate-500 mt-0.5">{{ risk.review_pct|floatformat:1 }}%</div>
+      </div>
+      <!-- High Risk -->
+      <div class="p-4 rounded-xl bg-red-50 border border-red-100 text-center">
+        <div class="text-3xl font-black text-red-600">{{ risk.high_risk_count }}</div>
+        <div class="text-xs text-red-700 font-semibold mt-1">
+          {% if is_rtl %}عالي المخاطر{% else %}High Risk{% endif %}
+        </div>
+        <div class="text-xs text-slate-500 mt-0.5">{{ risk.high_risk_pct|floatformat:1 }}%</div>
+      </div>
+    </div>
+
+    <!-- Stacked bar -->
+    <div class="relative h-5 rounded-full overflow-hidden bg-slate-100 flex">
+      {% if risk.safe_pct %}
+      <div class="h-full bg-green-500 transition-all" style="width:{{ risk.safe_pct|floatformat:0 }}%"
+           title="Safe {{ risk.safe_pct|floatformat:1 }}%"></div>
+      {% endif %}
+      {% if risk.review_pct %}
+      <div class="h-full bg-yellow-400 transition-all" style="width:{{ risk.review_pct|floatformat:0 }}%"
+           title="Review {{ risk.review_pct|floatformat:1 }}%"></div>
+      {% endif %}
+      {% if risk.high_risk_pct %}
+      <div class="h-full bg-red-500 transition-all" style="width:{{ risk.high_risk_pct|floatformat:0 }}%"
+           title="High Risk {{ risk.high_risk_pct|floatformat:1 }}%"></div>
+      {% endif %}
+    </div>
+    <div class="flex gap-4 mt-2 text-xs text-slate-500">
+      <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span>
+        {% if is_rtl %}آمن{% else %}Safe{% endif %}</span>
+      <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span>
+        {% if is_rtl %}مراجعة{% else %}Review{% endif %}</span>
+      <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+        {% if is_rtl %}عالي{% else %}High Risk{% endif %}</span>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 5 — COMPLIANCE ENGINE
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-teal-100">🛡️</div>
+    <h2 class="text-base font-bold text-slate-800">
+      {% if is_rtl %}محرك الامتثال{% else %}Compliance Engine{% endif %}
+    </h2>
+    <span class="ms-auto text-xs text-slate-500">
+      {{ compliance.passed_rules }}/{{ compliance.total_checks }}
+      {% if is_rtl %}فحص ناجح{% else %}checks passed{% endif %}
+    </span>
+  </div>
+  <div class="section-body">
+
+    <!-- Overall score bar -->
+    <div class="flex items-center gap-4 mb-5">
+      <div class="flex-1">
+        <div class="flex justify-between text-xs text-slate-500 mb-1">
+          <span>{% if is_rtl %}الدرجة الكلية{% else %}Overall Score{% endif %}</span>
+          <span class="font-bold text-slate-700">{{ compliance.overall_score|floatformat:1 }}%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill {% if compliance.overall_score >= 85 %}bg-green-500{% elif compliance.overall_score >= 60 %}bg-yellow-400{% else %}bg-red-500{% endif %}"
+               style="width: {{ compliance.overall_score|floatformat:0 }}%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category breakdown -->
+    <div class="grid sm:grid-cols-2 gap-3">
+      {% for cat_key, cat_val in compliance.by_category.items %}
+      <div class="p-3 rounded-lg bg-slate-50 border border-slate-100">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-xs font-semibold text-slate-700 capitalize">
+            {% if cat_key == "header" %}{% if is_rtl %}رأس الفاتورة{% else %}Header{% endif %}
+            {% elif cat_key == "duplicate" %}{% if is_rtl %}التكرار{% else %}Duplicate{% endif %}
+            {% elif cat_key == "vat" %}{% if is_rtl %}ضريبة القيمة المضافة{% else %}VAT{% endif %}
+            {% elif cat_key == "anomaly" %}{% if is_rtl %}الشذوذات{% else %}Anomalies{% endif %}
+            {% elif cat_key == "control" %}{% if is_rtl %}الرقابة المالية{% else %}Financial Control{% endif %}
+            {% elif cat_key == "document" %}{% if is_rtl %}جودة المستند{% else %}Document Quality{% endif %}
+            {% else %}{{ cat_key }}{% endif %}
+          </span>
+          <span class="text-xs font-bold {% if cat_val.score >= 85 %}text-green-600{% elif cat_val.score >= 60 %}text-yellow-600{% else %}text-red-600{% endif %}">
+            {{ cat_val.score|floatformat:0 }}%
+          </span>
+        </div>
+        <div class="progress-bar mb-1">
+          <div class="progress-fill {% if cat_val.score >= 85 %}bg-green-500{% elif cat_val.score >= 60 %}bg-yellow-400{% else %}bg-red-500{% endif %}"
+               style="width: {{ cat_val.score|floatformat:0 }}%"></div>
+        </div>
+        <div class="text-xs text-slate-500">
+          {{ cat_val.passed }}✓ / {{ cat_val.failed }}✗
+          {% if is_rtl %}من {{ cat_val.rule_count }} قاعدة{% else %}of {{ cat_val.rule_count }} rules{% endif %}
+        </div>
+      </div>
+      {% empty %}
+      <div class="col-span-2 text-center text-slate-400 py-4 text-sm">
+        {% if is_rtl %}لا توجد بيانات امتثال{% else %}No compliance data{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 6 — HIGH-RISK INVOICES
+     ═══════════════════════════════════════════════════════════════════════════ -->
+{% if high_risk %}
+<div class="section-card page-break">
+  <div class="section-header">
+    <div class="icon bg-red-100">🚨</div>
+    <h2 class="text-base font-bold text-slate-800">
+      {% if is_rtl %}الفواتير عالية المخاطر{% else %}High-Risk Invoices{% endif %}
+    </h2>
+    <span class="ms-auto text-xs text-slate-500">
+      {{ high_risk|length }} {% if is_rtl %}فاتورة{% else %}invoices{% endif %}
+    </span>
+  </div>
+  <div class="section-body p-0">
+    <div class="overflow-x-auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>{% if is_rtl %}رقم الفاتورة{% else %}Invoice #{% endif %}</th>
+            <th>{% if is_rtl %}المورد{% else %}Supplier{% endif %}</th>
+            <th>{% if is_rtl %}التاريخ{% else %}Date{% endif %}</th>
+            <th>{% if is_rtl %}المبلغ{% else %}Amount{% endif %}</th>
+            <th>{% if is_rtl %}درجة المخاطرة{% else %}Risk Score{% endif %}</th>
+            <th>{% if is_rtl %}المخالفات{% else %}Violations{% endif %}</th>
+            <th>{% if is_rtl %}حالة{% else %}Status{% endif %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inv in high_risk %}
+          <tr>
+            <td class="font-mono font-semibold text-slate-700 text-xs">{{ inv.invoice_number|default:"—" }}</td>
+            <td class="text-xs text-slate-700">{{ inv.supplier_name|default:"—"|truncatechars:30 }}</td>
+            <td class="text-xs text-slate-500 whitespace-nowrap">{{ inv.invoice_date|default:"—" }}</td>
+            <td class="text-xs font-semibold text-slate-700 whitespace-nowrap">
+              {{ inv.amount|floatformat:2 }} {{ inv.currency }}
+            </td>
+            <td>
+              <div class="flex items-center gap-2">
+                <div class="progress-bar flex-1" style="min-width:50px">
+                  <div class="progress-fill bg-red-500" style="width:{{ inv.risk_score|floatformat:0 }}%"></div>
+                </div>
+                <span class="text-xs font-bold text-red-600">{{ inv.risk_score|floatformat:0 }}</span>
+              </div>
+            </td>
+            <td class="text-xs text-red-700 font-semibold">{{ inv.violation_count }}</td>
+            <td>
+              <div class="flex gap-1 flex-wrap">
+                {% if inv.is_duplicate %}<span class="pill pill-critical">DUP</span>{% endif %}
+                {% if inv.is_flagged %}<span class="pill pill-high">FLAG</span>{% endif %}
+                {% if not inv.is_duplicate and not inv.is_flagged %}
+                  <span class="pill pill-review">{% if is_rtl %}مراجعة{% else %}REVIEW{% endif %}</span>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          <!-- Violations detail row -->
+          {% if inv.violations %}
+          <tr class="bg-red-50">
+            <td colspan="7" class="px-4 py-2">
+              <div class="flex flex-wrap gap-1">
+                {% for v in inv.violations %}
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-red-200 text-xs text-red-700">
+                  <span class="font-mono text-red-400">{{ v.rule_code }}</span>
+                  {% if is_rtl %}{{ v.title_ar }}{% else %}{{ v.title_en }}{% endif %}
+                </span>
+                {% endfor %}
+              </div>
+            </td>
+          </tr>
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 7 — FAILED RULES ANALYSIS
+     ═══════════════════════════════════════════════════════════════════════════ -->
+{% if failed_rules %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-yellow-100">📊</div>
+    <h2 class="text-base font-bold text-slate-800">
+      {% if is_rtl %}تحليل القواعد الفاشلة{% else %}Failed Rules Analysis{% endif %}
+    </h2>
+    <span class="ms-auto text-xs text-slate-500">
+      {{ failed_rules|length }} {% if is_rtl %}قاعدة{% else %}rules{% endif %}
+    </span>
+  </div>
+  <div class="section-body p-0">
+    <div class="overflow-x-auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>{% if is_rtl %}الكود{% else %}Code{% endif %}</th>
+            <th>{% if is_rtl %}القاعدة{% else %}Rule{% endif %}</th>
+            <th>{% if is_rtl %}الفئة{% else %}Category{% endif %}</th>
+            <th>{% if is_rtl %}الخطورة{% else %}Severity{% endif %}</th>
+            <th>{% if is_rtl %}عدد الفشل{% else %}Failures{% endif %}</th>
+            <th>{% if is_rtl %}معدل الفشل{% else %}Fail Rate{% endif %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for rule in failed_rules %}
+          <tr>
+            <td class="font-mono text-xs text-slate-500 font-semibold">{{ rule.rule_code }}</td>
+            <td class="text-xs font-medium text-slate-700">
+              {% if is_rtl %}{{ rule.title_ar }}{% else %}{{ rule.title_en }}{% endif %}
+            </td>
+            <td class="text-xs text-slate-500 capitalize">{{ rule.category }}</td>
+            <td>
+              <span class="pill pill-{{ rule.severity }}">{{ rule.severity|upper }}</span>
+            </td>
+            <td class="text-xs font-bold text-red-600">{{ rule.failure_count }}</td>
+            <td>
+              <div class="flex items-center gap-2">
+                <div class="progress-bar" style="width:80px">
+                  <div class="progress-fill {% if rule.failure_rate >= 50 %}bg-red-500{% elif rule.failure_rate >= 20 %}bg-yellow-400{% else %}bg-orange-400{% endif %}"
+                       style="width:{{ rule.failure_rate|floatformat:0 }}%"></div>
+                </div>
+                <span class="text-xs text-slate-600">{{ rule.failure_rate|floatformat:1 }}%</span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 8 — SUPPLIER ANALYSIS
+     ═══════════════════════════════════════════════════════════════════════════ -->
+{% if suppliers %}
+<div class="section-card page-break">
+  <div class="section-header">
+    <div class="icon bg-indigo-100">🏢</div>
+    <h2 class="text-base font-bold text-slate-800">
+      {% if is_rtl %}تحليل الموردين{% else %}Supplier Analysis{% endif %}
+    </h2>
+    <span class="ms-auto text-xs text-slate-500">
+      {{ suppliers|length }} {% if is_rtl %}مورد{% else %}suppliers{% endif %}
+    </span>
+  </div>
+  <div class="section-body p-0">
+    <div class="overflow-x-auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>{% if is_rtl %}المورد{% else %}Supplier{% endif %}</th>
+            <th>{% if is_rtl %}عدد الفواتير{% else %}Invoices{% endif %}</th>
+            <th>{% if is_rtl %}إجمالي الإنفاق{% else %}Total Spend{% endif %}</th>
+            <th>{% if is_rtl %}متوسط الفاتورة{% else %}Avg Invoice{% endif %}</th>
+            <th>{% if is_rtl %}الحصة %{% else %}Share %{% endif %}</th>
+            <th>{% if is_rtl %}مستوى المخاطر{% else %}Risk Tier{% endif %}</th>
+            <th>{% if is_rtl %}تنبيهات{% else %}Flags{% endif %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sup in suppliers %}
+          <tr>
+            <td class="text-xs font-semibold text-slate-700">
+              {{ sup.supplier_name|truncatechars:35 }}
+              {% if sup.is_new_vendor %}
+              <span class="pill pill-medium ms-1">{% if is_rtl %}جديد{% else %}NEW{% endif %}</span>
+              {% endif %}
+            </td>
+            <td class="text-xs text-center font-bold text-slate-700">{{ sup.invoice_count }}</td>
+            <td class="text-xs font-semibold text-slate-700">{{ sup.total_spend|floatformat:0 }}</td>
+            <td class="text-xs text-slate-600">{{ sup.average_invoice|floatformat:0 }}</td>
+            <td>
+              <div class="flex items-center gap-2">
+                <div class="progress-bar" style="width:60px">
+                  <div class="progress-fill bg-indigo-400"
+                       style="width:{{ sup.spend_share_percent|floatformat:0 }}%"></div>
+                </div>
+                <span class="text-xs text-slate-600">{{ sup.spend_share_percent|floatformat:1 }}%</span>
+              </div>
+            </td>
+            <td>
+              <span class="pill
+                {% if sup.risk_tier == 'high_risk' %}pill-high
+                {% elif sup.risk_tier == 'review' %}pill-review
+                {% else %}pill-safe{% endif %}">
+                {% if sup.risk_tier == 'high_risk' %}{% if is_rtl %}مرتفع{% else %}High{% endif %}
+                {% elif sup.risk_tier == 'review' %}{% if is_rtl %}مراجعة{% else %}Review{% endif %}
+                {% else %}{% if is_rtl %}آمن{% else %}Safe{% endif %}{% endif %}
+              </span>
+            </td>
+            <td>
+              <div class="flex gap-1">
+                {% if sup.flagged_count %}<span class="pill pill-high">{{ sup.flagged_count }}F</span>{% endif %}
+                {% if sup.duplicate_count %}<span class="pill pill-critical">{{ sup.duplicate_count }}D</span>{% endif %}
+                {% if sup.is_suspicious %}<span class="pill pill-medium">⚠</span>{% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 9 — ANOMALIES
+     ═══════════════════════════════════════════════════════════════════════════ -->
+{% if anomalies %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-amber-100">🔍</div>
+    <h2 class="text-base font-bold text-slate-800">
+      {% if is_rtl %}الشذوذات المكتشفة{% else %}Detected Anomalies{% endif %}
+    </h2>
+  </div>
+  <div class="section-body">
+    <div class="grid sm:grid-cols-3 gap-4 mb-4">
+      {% if anomalies.duplicate_rate_pct is not None %}
+      <div class="p-4 rounded-xl bg-purple-50 border border-purple-100 text-center">
+        <div class="text-2xl font-black text-purple-700">{{ anomalies.duplicate_rate_pct|floatformat:1 }}%</div>
+        <div class="text-xs text-purple-600 mt-1">{% if is_rtl %}معدل التكرار{% else %}Duplicate Rate{% endif %}</div>
+      </div>
+      {% endif %}
+      {% if anomalies.dominant_supplier %}
+      <div class="col-span-2 p-4 rounded-xl bg-amber-50 border border-amber-100">
+        <div class="text-xs font-bold text-amber-700 mb-1">
+          ⚠️ {% if is_rtl %}مورد مهيمن{% else %}Dominant Supplier{% endif %}
+        </div>
+        <div class="text-sm font-semibold text-slate-800">
+          {{ anomalies.dominant_supplier.supplier_name }}
+        </div>
+        <div class="text-xs text-slate-500 mt-1">
+          {% if is_rtl %}يمثل{% else %}Represents{% endif %}
+          {{ anomalies.dominant_supplier.spend_share_percent|floatformat:1 }}%
+          {% if is_rtl %}من إجمالي الإنفاق{% else %}of total spend{% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if anomalies.top_anomalies %}
+    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-3">
+      {% if is_rtl %}أهم الشذوذات{% else %}Top Anomaly Patterns{% endif %}
+    </h3>
+    <div class="space-y-2">
+      {% for item in anomalies.top_anomalies %}
+      <div class="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100">
+        <div class="text-xs font-medium text-slate-700">
+          {% if is_rtl %}{{ item.rule_ar }}{% else %}{{ item.rule_en }}{% endif %}
+        </div>
+        <span class="text-xs font-bold text-slate-600">
+          {{ item.invoice_count }} {% if is_rtl %}فاتورة{% else %}invoices{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     SECTION 10 — RECOMMENDATIONS
+     ═══════════════════════════════════════════════════════════════════════════ -->
+{% if recs %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-green-100">✅</div>
+    <h2 class="text-base font-bold text-slate-800">
+      {% if is_rtl %}الإجراءات والتوصيات{% else %}Actions & Recommendations{% endif %}
+    </h2>
+  </div>
+  <div class="section-body">
+
+    {% if recs.immediate_actions %}
+    <h3 class="text-xs font-bold text-red-700 uppercase tracking-wide mb-3">
+      🔴 {% if is_rtl %}إجراءات فورية{% else %}Immediate Actions{% endif %}
+    </h3>
+    <div class="space-y-2 mb-5">
+      {% for action in recs.immediate_actions %}
+      <div class="flex items-start gap-3 p-3 rounded-lg border border-red-100 bg-red-50">
+        <span class="pill pill-high mt-0.5">{{ action.priority|upper }}</span>
+        <div>
+          <div class="text-xs font-semibold text-slate-800">
+            {% if is_rtl %}{{ action.action_ar }}{% else %}{{ action.action_en }}{% endif %}
+          </div>
+          <div class="text-xs text-slate-400 font-mono">{{ action.code }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if recs.future_improvements %}
+    <h3 class="text-xs font-bold text-blue-700 uppercase tracking-wide mb-3">
+      🔵 {% if is_rtl %}تحسينات مستقبلية{% else %}Future Improvements{% endif %}
+    </h3>
+    <div class="space-y-2">
+      {% for action in recs.future_improvements %}
+      <div class="flex items-start gap-3 p-3 rounded-lg border border-blue-100 bg-blue-50">
+        <span class="pill pill-medium mt-0.5">{{ action.priority|upper }}</span>
+        <div>
+          <div class="text-xs font-semibold text-slate-800">
+            {% if is_rtl %}{{ action.action_ar }}{% else %}{{ action.action_en }}{% endif %}
+          </div>
+          <div class="text-xs text-slate-400 font-mono">{{ action.code }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endif %}
+
+
+<!-- ═══════════════════════════════════════════════════════════════════════════
+     FOOTER
+     ═══════════════════════════════════════════════════════════════════════════ -->
+<div class="text-center text-xs text-slate-400 py-6 border-t border-slate-100 mt-4">
+  {% if is_rtl %}
+    تم إنشاء هذا التقرير بواسطة نظام تدقيق المالي — تدقيق
+    {% if header.created_at %} | {{ header.created_at|date:"Y-m-d H:i" }}{% endif %}
+  {% else %}
+    Generated by FinAI Audit System — Tadgeeg
+    {% if header.created_at %} | {{ header.created_at|date:"Y-m-d H:i" }}{% endif %}
+  {% endif %}
+  {% if header.report_id %}
+   | ID: {{ header.report_id }}
+  {% endif %}
+</div>
+
+</div><!-- /max-w-5xl -->
+</body>
+</html>

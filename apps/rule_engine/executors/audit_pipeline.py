@@ -142,6 +142,20 @@ class AuditPipeline:
             rule_class = self.registry.get_class(assignment.rule.implementation_class)
             rule_instance = rule_class(config=assignment.effective_config)
 
+            # Check canonical field dependencies (Day 4 — RuleDependencyChecker)
+            missing_fields = self._check_field_dependencies(rule_instance, normalized_doc)
+            if missing_fields:
+                result.status = AuditResult.Status.SKIPPED
+                result.explanation = (
+                    f"Skipped: required canonical fields not available: {', '.join(missing_fields)}"
+                )
+                result.explanation_ar = (
+                    f"تم التخطي: الحقول المطلوبة غير متوفرة في البيانات القانونية: {', '.join(missing_fields)}"
+                )
+                result.execution_time_ms = int((time.monotonic() - start_ms) * 1000)
+                result.save()
+                return result
+
             # Check preconditions
             if not rule_instance.check_preconditions(normalized_doc):
                 result.status = AuditResult.Status.SKIPPED
@@ -220,6 +234,30 @@ class AuditPipeline:
             )
         except Exception as e:
             logger.error(f"Failed to upsert RiskScoreSummary for doc {audit_run.document_id}: {e}")
+
+    @staticmethod
+    def _check_field_dependencies(rule_instance, normalized_doc) -> list:
+        """
+        RuleDependencyChecker: returns a list of missing field codes.
+        If field_dependencies is empty, always passes (returns []).
+        Checks the DocumentCanonicalData record for this document.
+        """
+        deps = getattr(rule_instance, "field_dependencies", [])
+        if not deps:
+            return []
+        try:
+            from apps.documents.canonical_models import DocumentCanonicalData
+            rec = DocumentCanonicalData.objects.filter(
+                typed_object_id=str(normalized_doc.document_id)
+            ).first()
+            if rec is None:
+                # No canonical record at all — skip only if any dependency declared
+                return list(deps)
+            canonical = rec.canonical_data or {}
+            return [f for f in deps if canonical.get(f) is None]
+        except Exception as exc:
+            logger.warning("RuleDependencyChecker error for %s: %s", normalized_doc.document_id, exc)
+            return []  # fail open — run the rule anyway
 
     @staticmethod
     def _count_statuses(results: list) -> dict:

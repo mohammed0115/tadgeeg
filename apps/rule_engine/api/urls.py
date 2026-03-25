@@ -11,4 +11,7 @@ urlpatterns = [
     path("high-risk/", views.HighRiskDocumentsView.as_view(), name="high-risk-documents"),
     path("trigger/", views.trigger_audit, name="trigger-audit"),
     path("analytics/top-failures/", views.top_failed_rules, name="top-failed-rules"),
+    # Canonical data endpoints (Day 6)
+    path("canonical/<uuid:document_id>/", views.canonical_data_view, name="canonical-data"),
+    path("canonical/", views.canonical_cross_query, name="canonical-cross-query"),
 ]

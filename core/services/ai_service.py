@@ -424,50 +424,358 @@ def benford_analysis(amounts: list[float]) -> dict:
 
 # ─── Cash Flow Forecasting ────────────────────────────────────────────────────
 
-def forecast_cash_flow(historical_data: list[dict], periods: int = 6, currency: str = "SAR") -> dict:
-    """
-    Forecast future cash flows using AI.
+_IAS7_SYSTEM_PROMPT = """
+You are an expert IFRS financial analyst specializing in IAS 7 (Statement of Cash Flows)
+for GCC markets. You will receive historical transaction data and must produce a
+fully IAS 7-compliant cash flow forecast.
 
-    Args:
-        historical_data: List of monthly {'month', 'inflow', 'outflow', 'net'} dicts.
-        periods: Number of future months to forecast.
-        currency: Currency code.
+════════════════════════════════════════
+STRICT IAS 7 REQUIREMENTS — MANDATORY
+════════════════════════════════════════
 
-    Returns:
-        dict with forecasted periods and confidence intervals.
-    """
-    system_prompt = f"""You are a financial forecasting expert for GCC markets.
-Analyze historical cash flow data and forecast future periods.
-Return ONLY JSON:
-{{
-  "forecasts": [
-    {{
+1. ACTIVITY CLASSIFICATION (IAS 7.14–7.17)
+   Classify every cash movement into exactly ONE of:
+   - operating:   receipts from customers, payments to suppliers/employees,
+                  tax paid, interest paid (if operating policy)
+   - investing:   purchase/sale of PPE, investments, loans given/collected
+   - financing:   loan proceeds/repayments, dividends paid, equity issuance
+
+2. PRESENTATION METHOD (IAS 7.18)
+   - Use DIRECT method for operating activities (recommended by IAS 7)
+   - If data is insufficient for direct, use INDIRECT and state it explicitly
+   - Always declare: "method": "direct" | "indirect"
+
+3. OPENING → CLOSING BALANCE EQUATION (IAS 7.45)
+   closing_cash = opening_cash
+               + net_operating
+               + net_investing
+               + net_financing
+               + fx_effect
+   This equation MUST balance. Never omit it.
+
+4. FOREIGN CURRENCY EFFECT (IAS 7.25–7.28)
+   - Report fx_effect on cash as a separate line
+   - Use period-average rate for transactions, period-end rate for balances
+   - If single-currency org: fx_effect = 0 (still include the field)
+
+5. CASH & CASH EQUIVALENTS DEFINITION (IAS 7.7)
+   - Cash: notes, coins, demand deposits
+   - Cash equivalents: short-term investments ≤ 3 months maturity,
+     readily convertible, insignificant risk of value change
+   - Bank overdrafts repayable on demand are part of cash management
+
+6. DISCOUNT / PRESENT VALUE
+   - Apply discount rate to all forecast periods
+   - Use SAMA rate (Saudi Arabia) or Central Bank rate for other GCC countries:
+     SA: SAMA repo rate | UAE: CBUAE rate | BH: CBB rate
+   - Formula: PV = FV / (1 + r)^n  where n = months / 12
+
+7. NON-CASH TRANSACTIONS (IAS 7.43)
+   - Exclude from cash flow statement
+   - Disclose separately in notes field
+   - Examples: asset acquisition via finance lease, debt-to-equity conversion
+
+8. COMPARATIVE PERIODS (IAS 7.46)
+   - Always include prior period actuals alongside forecast
+   - Mark actuals as "actual": true, forecasts as "actual": false
+
+════════════════════════════════════════
+RESPONSE SCHEMA — RETURN ONLY THIS JSON
+════════════════════════════════════════
+
+{
+  "ifrs_standard": "IAS 7",
+  "presentation_method": "direct | indirect",
+  "currency": "SAR | AED | KWD | ...",
+  "discount_rate_pct": 0.0,
+  "discount_rate_source": "SAMA repo rate | CBUAE | ...",
+
+  "cash_equivalents_definition": "string — what is included",
+
+  "periods": [
+    {
       "period": "YYYY-MM",
-      "predicted_inflow": 0.0,
-      "predicted_outflow": 0.0,
-      "predicted_net": 0.0,
+      "actual": true | false,
+
+      "opening_cash_balance": 0.0,
+
+      "operating_activities": {
+        "collections_from_customers": 0.0,
+        "payments_to_suppliers": 0.0,
+        "payments_to_employees": 0.0,
+        "tax_paid": 0.0,
+        "interest_paid": 0.0,
+        "other_operating": 0.0,
+        "net_operating": 0.0
+      },
+
+      "investing_activities": {
+        "purchase_of_ppe": 0.0,
+        "proceeds_from_disposal": 0.0,
+        "purchase_of_investments": 0.0,
+        "loans_advanced": 0.0,
+        "loans_collected": 0.0,
+        "net_investing": 0.0
+      },
+
+      "financing_activities": {
+        "loan_proceeds": 0.0,
+        "loan_repayments": 0.0,
+        "dividends_paid": 0.0,
+        "equity_issuance": 0.0,
+        "net_financing": 0.0
+      },
+
+      "fx_effect_on_cash": 0.0,
+
+      "net_change_in_cash": 0.0,
+      "closing_cash_balance": 0.0,
+
+      "present_value": 0.0,
       "confidence_lower": 0.0,
       "confidence_upper": 0.0,
-      "confidence_pct": 0-100
-    }}
+      "confidence_pct": 0,
+
+      "balance_check": {
+        "equation": "opening + operating + investing + financing + fx = closing",
+        "balanced": true | false,
+        "variance": 0.0
+      }
+    }
   ],
-  "trend": "increasing|decreasing|stable|volatile",
-  "seasonal_patterns": ["string"],
+
+  "non_cash_transactions": [],
+
+  "trend_analysis": {
+    "operating_trend": "increasing | decreasing | stable | volatile",
+    "liquidity_ratio": 0.0,
+    "cash_burn_rate": 0.0,
+    "months_of_runway": 0
+  },
+
   "key_drivers": ["string"],
   "risks": ["string"],
-  "currency": "{currency}"
-}}"""
+  "seasonal_patterns": ["string"],
 
-    try:
-        content = _chat([
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"""
-Forecast next {periods} months in {currency}.
+  "auditor_notes": [
+    "string — IAS 7 compliance observations"
+  ]
+}
+
+════════════════════════════════════════
+VALIDATION RULES — ENFORCE STRICTLY
+════════════════════════════════════════
+
+- closing_cash_balance = opening_cash_balance + net_operating
+  + net_investing + net_financing + fx_effect_on_cash
+  Tolerance: ±0.01 only. Flag balance_check.balanced = false if exceeded.
+
+- All monetary values in the same currency. No mixing.
+
+- confidence_pct must be between 40 and 95.
+  Never claim 100% confidence on a forecast.
+
+- If historical data < 6 months: reduce confidence_pct by 20 and add
+  auditor_notes entry: "Limited history — forecast reliability reduced"
+
+- If any activity type has no data: set all its sub-fields to 0.0,
+  do NOT omit the section.
+
+- Never hallucinate amounts not derivable from provided data.
+  Use null only if data is genuinely unavailable for a sub-field.
+
+- present_value calculation:
+  n = (period_index + 1) in months from today
+  PV = closing_cash_balance / (1 + discount_rate_pct/100)^(n/12)
+
+════════════════════════════════════════
+LANGUAGE
+════════════════════════════════════════
+- All field names: English (as schema above)
+- auditor_notes, risks, key_drivers: Arabic or English matching org language
+- Do NOT include any text outside the JSON object
+"""
+
+
+def _build_ias7_user_message(
+    historical_data: list[dict],
+    periods: int,
+    currency: str,
+    opening_balance: float,
+    discount_rate: float,
+    discount_source: str,
+    org_country: str = "SA",
+) -> str:
+    return f"""Forecast the next {periods} months.
+
+Organization country: {org_country}
+Currency: {currency}
+Opening cash balance (latest month): {opening_balance}
+Discount rate: {discount_rate}% ({discount_source})
+
 Historical data ({len(historical_data)} months):
 {json.dumps(historical_data, ensure_ascii=False, default=str)}
-"""},
+
+Requirements:
+1. Classify all transactions into operating / investing / financing
+2. Use direct method if sufficient data, indirect otherwise
+3. Verify closing balance equation for every period
+4. Apply {discount_rate}% annual discount rate for present values
+5. Include fx_effect (set to 0 if single-currency)
+6. Return ONLY the JSON schema specified in the system prompt
+"""
+
+
+def forecast_cash_flow(
+    historical_data: list[dict],
+    periods: int = 6,
+    currency: str = "SAR",
+    opening_balance: float = 0.0,
+    discount_rate: float = 6.0,
+    discount_source: str = "SAMA repo rate",
+    org_country: str = "SA",
+) -> dict:
+    """
+    Forecast future cash flows using AI — IAS 7 compliant.
+
+    Args:
+        historical_data: List of monthly cash flow dicts.
+        periods:         Number of future months to forecast.
+        currency:        ISO currency code (SAR, AED, …).
+        opening_balance: Opening cash balance of the latest historical month.
+        discount_rate:   Annual discount rate % for present value calculations.
+        discount_source: Source label for the discount rate (e.g. "SAMA repo rate").
+        org_country:     GCC country code (SA / AE / BH / KW / OM / QA).
+
+    Returns:
+        IAS 7-structured dict with periods, trend_analysis, auditor_notes, etc.
+    """
+    try:
+        content = _chat([
+            {"role": "system", "content": _IAS7_SYSTEM_PROMPT},
+            {"role": "user", "content": _build_ias7_user_message(
+                historical_data, periods, currency,
+                opening_balance, discount_rate, discount_source, org_country,
+            )},
         ])
         return json.loads(content)
     except Exception as e:
         logger.error(f"Cash flow forecast error: {e}")
-        return {"forecasts": [], "error": str(e)}
+        return {"periods": [], "error": str(e)}
+
+
+# ─── Executive Report AI Narrative ────────────────────────────────────────────
+
+def generate_executive_report_narrative(
+    computed_metrics: dict,
+    language: str = "ar",
+    org_name: str = "",
+    country: str = "SA",
+) -> dict | None:
+    """
+    Generate AI-assisted narrative for the Executive Audit Report.
+
+    The AI receives ONLY programmatically computed metrics and interprets them.
+    It NEVER invents figures — every claim must cite a provided data point.
+
+    Args:
+        computed_metrics: All programmatically computed KPIs and findings.
+        language:         "ar" (default) or "en".
+        org_name:         Organization name.
+        country:          GCC country code (SA / AE / BH / KW / OM / QA).
+
+    Returns:
+        {
+          "executive_summary":  str,        # 3–5 sentence narrative
+          "anomaly_patterns":   str,        # plain-language anomaly description
+          "auditor_opinion":    str,        # formal Unqualified/Qualified/Adverse opinion
+          "key_risks":          list[str],  # top 3 risk statements
+          "rule_rationale":     dict,       # rule_code → rationale string
+        }
+        Returns None if AI is unavailable or fails.
+    """
+    lang_instr = (
+        "اكتب الرد بالكامل باللغة العربية الفصحى المهنية الرسمية."
+        if language == "ar"
+        else "Write entirely in formal professional English."
+    )
+
+    regulations = {
+        "SA": "ZATCA Phase 2, Saudi VAT 15%, GAZT, IFRS (KSA)",
+        "AE": "FTA UAE, UAE VAT 5%, IFRS",
+        "BH": "NBR Bahrain, Bahrain VAT 10%",
+        "KW": "Ministry of Finance Kuwait",
+        "OM": "OTA Oman",
+        "QA": "GAZT Qatar",
+    }.get(country, "GCC financial regulations")
+
+    system_prompt = (
+        "أنت مدقق مالي معتمد (CPA/CIA) متخصص في منظمات الخليج العربي.\n"
+        "مهمتك: تفسير الأرقام المحسوبة برمجيًا وصياغة تقرير تنفيذي احترافي.\n\n"
+        "قواعد صارمة لا استثناء منها:\n"
+        "1. استخدم الأرقام المقدمة فقط — لا تخترع أرقامًا أو نسبًا مئوية.\n"
+        "2. كل جملة يجب أن تستند إلى رقم أو حقيقة مذكورة في البيانات.\n"
+        "3. لا تضيف توقعات أو ادعاءات خارج نطاق البيانات المقدمة.\n"
+        f"4. {lang_instr}\n\n"
+        f"اللوائح المعمول بها: {regulations}\n\n"
+        "أعد JSON بالهيكل التالي فقط:\n"
+        "{\n"
+        '  "executive_summary": "نص 3-5 جمل احترافية تلخص الوضع الكلي",\n'
+        '  "anomaly_patterns": "وصف سردي للأنماط الشاذة المكتشفة فقط بناءً على الأعداد المقدمة",\n'
+        '  "auditor_opinion": "رأي رسمي (غير متحفظ / متحفظ / سلبي / امتناع عن الرأي) مع التبرير بالأرقام",\n'
+        '  "key_risks": ["خطر 1 مستند لبيانات فعلية", "خطر 2", "خطر 3"],\n'
+        '  "rule_rationale": {\n'
+        '    "<rule_code>": "تبرير قصير مبني على عدد حالات الفشل الفعلية"\n'
+        '  }\n'
+        "}"
+    )
+
+    # Compact payload — only the numbers, no raw records
+    compact = {
+        "organization":          org_name,
+        "overall_score":         computed_metrics.get("overall_score"),
+        "compliance_rate_pct":   computed_metrics.get("compliance_rate"),
+        "risk_level":            computed_metrics.get("risk_level"),
+        "avg_risk_score":        computed_metrics.get("avg_risk_score"),
+        "total_documents":       computed_metrics.get("total_documents"),
+        "top_issues_count":      computed_metrics.get("top_issues_count"),
+        "critical_documents":    computed_metrics.get("total_critical"),
+        "high_risk_documents":   computed_metrics.get("total_high"),
+        "pass_rate_pct":         computed_metrics.get("pass_rate"),
+        "failure_rate_pct":      computed_metrics.get("failure_rate"),
+        "zatca_compliance_pct":  computed_metrics.get("zatca_compliance_rate"),
+        "vat_failures":          computed_metrics.get("vat_failures"),
+        "fraud_indicator_count": computed_metrics.get("fraud_indicator_count"),
+        "structuring_alerts":    computed_metrics.get("structuring_alerts"),
+        "ghost_employee_alerts": computed_metrics.get("ghost_employee_alerts"),
+        "duplicate_alerts":      computed_metrics.get("duplicate_alerts"),
+        "self_approval_alerts":  computed_metrics.get("self_approval_alerts"),
+        "financial":             computed_metrics.get("financial", {}),
+        "top_failed_rules":      computed_metrics.get("top_failed_rules", [])[:5],
+    }
+
+    try:
+        content = _chat(
+            [
+                {"role": "system", "content": system_prompt},
+                {
+                    "role": "user",
+                    "content": (
+                        "البيانات المحسوبة برمجيًا:\n"
+                        + json.dumps(compact, ensure_ascii=False, default=str)
+                        + "\n\nاكتب التقرير التنفيذي بناءً على هذه البيانات فقط."
+                    ),
+                },
+            ],
+            temperature=0,
+        )
+        result = json.loads(content)
+        result.setdefault("executive_summary", "")
+        result.setdefault("anomaly_patterns", "")
+        result.setdefault("auditor_opinion", "")
+        result.setdefault("key_risks", [])
+        result.setdefault("rule_rationale", {})
+        return result
+    except Exception as exc:
+        logger.error("generate_executive_report_narrative failed: %s", exc)
+        return None

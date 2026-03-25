@@ -103,7 +103,7 @@ class Transform:
 
     @classmethod
     def apply(cls, name: str, value: Any, args: dict = {}, raw: dict = {}) -> Any:
-        fn = cls._REGISTRY.get(name, cls.direct.__func__)
+        fn = cls._REGISTRY.get(name) or cls._REGISTRY["direct"]
         try:
             return fn(value, args, raw)
         except Exception as exc:
@@ -301,6 +301,21 @@ class CanonicalMapper:
             pass
         return self.FALLBACK_MAPPING.get(document_type, {})
 
+    @staticmethod
+    def _json_safe(obj: Any) -> Any:
+        """Recursively convert non-JSON-serializable types to primitives."""
+        from datetime import date, datetime
+        from decimal import Decimal
+        if isinstance(obj, (date, datetime)):
+            return obj.isoformat()
+        if isinstance(obj, Decimal):
+            return float(obj)
+        if isinstance(obj, dict):
+            return {k: CanonicalMapper._json_safe(v) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple)):
+            return [CanonicalMapper._json_safe(i) for i in obj]
+        return obj
+
     def save_canonical(
         self,
         raw_data: dict,
@@ -311,9 +326,11 @@ class CanonicalMapper:
         """
         Run mapping and persist result as DocumentCanonicalData.
         Idempotent — updates existing record if one exists.
+        Dates/Decimals are converted to JSON-safe primitives before storage.
         """
         from apps.documents.canonical_models import DocumentCanonicalData
-        canonical = self.map(raw_data, document_type)
+        canonical   = self._json_safe(self.map(raw_data, document_type))
+        safe_raw    = self._json_safe(raw_data)
 
         obj, created = DocumentCanonicalData.objects.get_or_create(
             typed_model_name=typed_model_name,
@@ -321,12 +338,12 @@ class CanonicalMapper:
             defaults={
                 "document_type": document_type,
                 "canonical_data": canonical,
-                "raw_ai_output":  raw_data,
+                "raw_ai_output":  safe_raw,
             },
         )
         if not created:
             obj.canonical_data = canonical
-            obj.raw_ai_output  = raw_data
+            obj.raw_ai_output  = safe_raw
             obj.version       += 1
             obj.save(update_fields=["canonical_data", "raw_ai_output", "version", "updated_at"])
         return obj

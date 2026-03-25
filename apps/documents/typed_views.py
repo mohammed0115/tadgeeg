@@ -156,13 +156,42 @@ def _first_nonempty(series):
     return ""
 
 
+import re as _re
+
+def _normalize_col_name(name: str) -> str:
+    """
+    Normalize column name for fuzzy matching:
+    - lowercase
+    - strip parenthetical suffixes like (SAR), (15%), (سنة), (%)
+    - collapse spaces, dashes, underscores to single underscore
+    """
+    s = str(name).strip().lower()
+    s = _re.sub(r'\s*\([^)]*\)', '', s)   # remove (SAR), (15%), etc.
+    s = _re.sub(r'[\s\-]+', '_', s)        # spaces/dashes → underscore
+    s = _re.sub(r'_+', '_', s).strip('_') # collapse multiple underscores
+    return s
+
+
 def _col(df, *candidates):
-    """Return the first matching column Series by case-insensitive name, or None."""
-    cols_lower = {c.lower(): c for c in df.columns}
+    """Return the first matching column Series by normalized name, or None."""
+    cols_norm = {_normalize_col_name(c): c for c in df.columns}
     for name in candidates:
-        real = cols_lower.get(name.lower())
+        real = cols_norm.get(_normalize_col_name(name))
         if real is not None:
             return df[real]
+    return None
+
+
+def _row_get(row, *candidates):
+    """
+    Normalized row value lookup — strips (SAR)/(%) suffixes, case-insensitive.
+    """
+    row_norm = {_normalize_col_name(str(k)): v for k, v in row.items()}
+    for name in candidates:
+        key = _normalize_col_name(name)
+        val = row_norm.get(key)
+        if val is not None and str(val).strip() not in ("", "nan", "none", "0.0", "0"):
+            return val
     return None
 
 
@@ -221,82 +250,176 @@ def _extract_from_pandas(file_path: str, ext: str, doc_type: str) -> dict:
         if doc_type == "purchase_order":
             line_items = []
             for _, row in df.iterrows():
+                # description: "وصف الصنف" OR "اسم الصنف" from actual sample file
+                desc = str(_row_get(row,
+                    "وصف الصنف", "اسم الصنف",          # actual sample columns
+                    "description", "item", "item_name",
+                    "الوصف", "البند", "اسم البند") or "")
+                qty = float(_safe_decimal(_row_get(row,
+                    "الكمية", "qty", "quantity", "كمية") or 0))
+                unit_price = float(_safe_decimal(_row_get(row,
+                    "سعر الوحدة (SAR)", "سعر الوحدة",
+                    "unit_price", "price", "السعر") or 0))
+                subtotal_line = float(_safe_decimal(_row_get(row,
+                    "إجمالي قبل الضريبة",               # actual sample column (no SAR suffix)
+                    "subtotal", "amount_before_vat") or 0))
+                vat_line = float(_safe_decimal(_row_get(row,
+                    "ضريبة القيمة (15%)", "ضريبة القيمة",  # actual sample column
+                    "vat_amount", "vat", "tax") or 0))
+                total_line = float(_safe_decimal(_row_get(row,
+                    "الإجمالي الكلي (SAR)", "الإجمالي الكلي",  # actual sample column
+                    "total", "total_amount", "المجموع") or 0))
+                # Auto-compute missing values
+                if not total_line and (subtotal_line or unit_price):
+                    total_line = round((subtotal_line or unit_price * qty) + vat_line, 2)
+                if not subtotal_line and unit_price and qty:
+                    subtotal_line = round(unit_price * qty, 2)
                 item = {
-                    "description": str(row.get("description") or row.get("item") or row.get("الوصف") or ""),
-                    "qty":         float(_safe_decimal(row.get("qty") or row.get("quantity") or row.get("الكمية") or 0)),
-                    "unit_price":  float(_safe_decimal(row.get("unit_price") or row.get("price") or row.get("سعر_الوحدة") or 0)),
-                    "total":       float(_safe_decimal(row.get("total") or row.get("amount") or row.get("المبلغ") or 0)),
+                    "description": desc,
+                    "qty":         qty,
+                    "unit_price":  unit_price,
+                    "subtotal":    subtotal_line,
+                    "vat_amount":  vat_line,
+                    "total":       total_line,
                 }
-                if any(v for v in item.values() if v):
+                if desc or unit_price or qty:
                     line_items.append(item)
 
-            total = _sum_col(df, "total", "amount", "total_amount", "المبلغ", "الإجمالي")
-            vat   = _sum_col(df, "vat", "tax", "vat_amount", "ضريبة")
+            total   = _sum_col(df,
+                "الإجمالي الكلي (SAR)", "الإجمالي الكلي",
+                "total", "total_amount")
+            vat     = _sum_col(df,
+                "ضريبة القيمة (15%)", "ضريبة القيمة",
+                "vat_amount", "vat", "tax")
+            subtotal = _sum_col(df,
+                "إجمالي قبل الضريبة",
+                "subtotal", "amount_before_vat")
+            if not subtotal and total and vat:
+                subtotal = round(total - vat, 2)
             return {
-                "po_number":    _first_nonempty(_col(df, "po_number", "reference", "ref", "رقم_الأمر", "المرجع")),
-                "po_date":      _first_nonempty(_col(df, "date", "po_date", "invoice_date", "تاريخ")),
-                "vendor_name":  _first_nonempty(_col(df, "vendor", "vendor_name", "supplier", "المورد")),
-                "currency":     _first_nonempty(_col(df, "currency", "ccy", "العملة")) or "SAR",
-                "total_amount": total,
-                "vat_amount":   vat,
-                "subtotal":     round(total - vat, 2),
-                "line_items":   line_items,
-                "ai_summary":   f"تم استيراد {len(df)} سجل من الملف المهيكل",
+                "po_number":         _first_nonempty(_col(df,
+                    "رقم أمر الشراء", "po_number", "reference", "ref")),
+                "po_date":           _first_nonempty(_col(df,
+                    "تاريخ الإصدار", "date", "po_date", "invoice_date")),
+                "delivery_date":     _first_nonempty(_col(df,
+                    "تاريخ التسليم المطلوب", "delivery_date", "due_date")),
+                "vendor_name":       _first_nonempty(_col(df,
+                    "اسم المورد", "vendor_name", "vendor", "supplier")),
+                "vendor_vat_number": _first_nonempty(_col(df,
+                    "رقم ضريبة المورد", "vendor_vat_number", "vat_number")),
+                "cost_center":       _first_nonempty(_col(df,
+                    "مركز التكلفة", "cost_center")),
+                "account_code":      _first_nonempty(_col(df,
+                    "رمز الحساب", "account_code")),
+                "currency":          _first_nonempty(_col(df, "currency", "العملة")) or "SAR",
+                "total_amount":      total,
+                "vat_amount":        vat,
+                "subtotal":          subtotal,
+                "line_items":        line_items,
+                "ai_summary":        f"تم استيراد {len(line_items)} بند من الملف المهيكل",
             }
 
         if doc_type == "bank_statement":
             transactions = []
             for _, row in df.iterrows():
-                debit  = float(_safe_decimal(row.get("debit") or row.get("withdrawals") or row.get("المدين") or 0))
-                credit = float(_safe_decimal(row.get("credit") or row.get("deposits") or row.get("الدائن") or 0))
-                amt    = float(_safe_decimal(row.get("amount") or row.get("المبلغ") or 0))
+                debit  = float(_safe_decimal(_row_get(row,
+                    "مدين (SAR)", "مدين", "debit", "withdrawals", "المدين") or 0))
+                credit = float(_safe_decimal(_row_get(row,
+                    "دائن (SAR)", "دائن", "credit", "deposits", "الدائن") or 0))
+                amt    = float(_safe_decimal(_row_get(row, "amount", "المبلغ") or 0))
                 if not debit and not credit and amt:
                     if amt < 0:
                         debit = abs(amt)
                     else:
                         credit = amt
                 t = {
-                    "date":        str(row.get("date") or row.get("txn_date") or row.get("تاريخ") or ""),
-                    "description": str(row.get("description") or row.get("narration") or row.get("البيان") or ""),
+                    "date":        str(_row_get(row,
+                        "تاريخ المعاملة", "date", "txn_date", "تاريخ") or ""),
+                    "description": str(_row_get(row,
+                        "وصف المعاملة",              # actual sample column
+                        "البيان", "description", "narration", "الوصف") or ""),
                     "debit":       debit,
                     "credit":      credit,
-                    "balance":     float(_safe_decimal(row.get("balance") or row.get("الرصيد") or 0)),
-                    "ref":         str(row.get("reference") or row.get("ref") or row.get("المرجع") or ""),
+                    "amount":      credit - debit if (credit or debit) else 0.0,
+                    "balance":     float(_safe_decimal(_row_get(row,
+                        "الرصيد (SAR)", "الرصيد", "balance") or 0)),
+                    "ref":         str(_row_get(row,
+                        "رقم المرجع", "reference", "ref", "المرجع") or ""),
                 }
                 transactions.append(t)
             credits = sum(t["credit"] for t in transactions)
             debits  = sum(t["debit"]  for t in transactions)
             return {
+                "bank_name":         _first_nonempty(_col(df,
+                    "اسم البنك", "bank_name", "bank")),
+                "account_number":    _first_nonempty(_col(df,
+                    "رقم الحساب", "account_number", "account")),
                 "transaction_count": len(transactions),
                 "total_credits":     round(credits, 2),
                 "total_debits":      round(debits, 2),
                 "transactions":      transactions,
-                "currency":          _first_nonempty(_col(df, "currency", "العملة")) or "SAR",
+                "currency":          _first_nonempty(_col(df,
+                    "رمز العملة", "currency", "العملة")) or "SAR",
                 "ai_summary":        f"تم استيراد {len(transactions)} معاملة من الملف المهيكل",
             }
 
         if doc_type == "payroll":
             employees = []
             for _, row in df.iterrows():
+                basic = float(_safe_decimal(_row_get(row,
+                    "الراتب الأساسي (SAR)", "الراتب الأساسي",
+                    "gross", "gross_salary") or 0))
+                total_gross = float(_safe_decimal(_row_get(row,
+                    "إجمالي الراتب (SAR)", "إجمالي الراتب",
+                    "total_salary") or basic))
+                deductions = float(_safe_decimal(_row_get(row,
+                    "الاستقطاعات (SAR)", "الاستقطاعات",
+                    "deductions", "الخصومات") or 0))
+                net = float(_safe_decimal(_row_get(row,
+                    "صافي الراتب (SAR)", "صافي الراتب",
+                    "net", "net_salary") or 0))
+                # Sum individual allowances if no single allowances column
+                housing    = float(_safe_decimal(_row_get(row, "بدل السكن (SAR)", "بدل السكن", "housing_allowance") or 0))
+                transport  = float(_safe_decimal(_row_get(row, "بدل المواصلات (SAR)", "بدل المواصلات", "transport_allowance") or 0))
+                comms      = float(_safe_decimal(_row_get(row, "بدل اتصالات (SAR)", "بدل اتصالات", "comms_allowance") or 0))
+                other_all  = float(_safe_decimal(_row_get(row, "بدلات أخرى (SAR)", "بدلات أخرى", "other_allowances") or 0))
+                allowances = housing + transport + comms + other_all or float(_safe_decimal(
+                    _row_get(row, "البدلات", "allowances", "إجمالي البدلات") or 0))
                 e = {
-                    "name":        str(row.get("name") or row.get("employee_name") or row.get("الاسم") or ""),
-                    "id":          str(row.get("id") or row.get("employee_id") or row.get("رقم_الموظف") or ""),
-                    "gross":       float(_safe_decimal(row.get("gross") or row.get("gross_salary") or row.get("الراتب_الأساسي") or 0)),
-                    "net":         float(_safe_decimal(row.get("net") or row.get("net_salary") or row.get("صافي_الراتب") or 0)),
-                    "allowances":  float(_safe_decimal(row.get("allowances") or row.get("البدلات") or 0)),
-                    "deductions":  float(_safe_decimal(row.get("deductions") or row.get("الخصومات") or 0)),
-                    "gosi":        float(_safe_decimal(row.get("gosi") or 0)),
-                    "bank_account": str(row.get("bank_account") or row.get("حساب_بنكي") or ""),
+                    "name":         str(_row_get(row,
+                        "اسم الموظف", "name", "employee_name") or ""),
+                    "id":           str(_row_get(row,
+                        "رقم الموظف", "رقم الهوية / الإقامة",
+                        "id", "employee_id") or ""),
+                    "gross":        total_gross or basic,
+                    "net":          net,
+                    "allowances":   allowances,
+                    "deductions":   deductions,
+                    "gosi":         float(_safe_decimal(_row_get(row,
+                        "gosi", "التأمينات", "اشتراك التأمينات") or 0)),
+                    "bank_account": str(_row_get(row,
+                        "رقم الحساب البنكي", "bank_account", "iban") or ""),
                 }
                 if e["name"] or e["gross"]:
                     employees.append(e)
             return {
                 "employee_count":     len(employees),
-                "total_gross_salary": _sum_col(df, "gross", "gross_salary", "الراتب_الأساسي"),
-                "total_net_salary":   _sum_col(df, "net", "net_salary", "صافي_الراتب"),
-                "total_allowances":   _sum_col(df, "allowances", "البدلات"),
-                "total_deductions":   _sum_col(df, "deductions", "الخصومات"),
-                "total_gosi":         _sum_col(df, "gosi"),
+                "total_gross_salary": _sum_col(df,
+                    "إجمالي الراتب (SAR)", "إجمالي الراتب",
+                    "gross", "gross_salary"),
+                "total_net_salary":   _sum_col(df,
+                    "صافي الراتب (SAR)", "صافي الراتب",
+                    "net", "net_salary"),
+                "total_allowances":   (
+                    _sum_col(df, "بدل السكن (SAR)", "بدل السكن") +
+                    _sum_col(df, "بدل المواصلات (SAR)", "بدل المواصلات") +
+                    _sum_col(df, "بدل اتصالات (SAR)", "بدل اتصالات") +
+                    _sum_col(df, "بدلات أخرى (SAR)", "بدلات أخرى") or
+                    _sum_col(df, "البدلات", "allowances")
+                ),
+                "total_deductions":   _sum_col(df,
+                    "الاستقطاعات (SAR)", "الاستقطاعات", "deductions"),
+                "total_gosi":         _sum_col(df, "gosi", "التأمينات"),
                 "employees":          employees,
                 "currency":           "SAR",
                 "ai_summary":         f"تم استيراد {len(employees)} موظف من الملف المهيكل",
@@ -305,21 +428,209 @@ def _extract_from_pandas(file_path: str, ext: str, doc_type: str) -> dict:
         if doc_type == "expense_report":
             lines = []
             for _, row in df.iterrows():
+                receipt_raw = str(_row_get(row,
+                    "هل يوجد إيصال؟",           # actual sample column
+                    "receipt_attached", "receipt", "إيصال") or "نعم")
+                receipt_attached = receipt_raw.strip() not in ("لا", "no", "false", "0", "")
                 l = {
-                    "date":             str(row.get("date") or row.get("expense_date") or row.get("تاريخ") or ""),
-                    "description":      str(row.get("description") or row.get("purpose") or row.get("الوصف") or ""),
-                    "amount":           float(_safe_decimal(row.get("amount") or row.get("المبلغ") or 0)),
-                    "category":         str(row.get("category") or row.get("type") or row.get("الفئة") or "other"),
-                    "receipt_attached": True,
-                    "receipt_number":   str(row.get("receipt_number") or row.get("رقم_الإيصال") or ""),
+                    "date":             str(_row_get(row,
+                        "تاريخ المصروف",             # actual sample column
+                        "date", "expense_date") or ""),
+                    "description":      str(_row_get(row,
+                        "وصف المصروف",               # actual sample column
+                        "description", "purpose", "الوصف", "البند") or ""),
+                    "amount":           float(_safe_decimal(_row_get(row,
+                        "المبلغ (SAR)", "المبلغ",    # actual sample column
+                        "amount") or 0)),
+                    "vat_amount":       float(_safe_decimal(_row_get(row,
+                        "ضريبة القيمة (SAR)", "ضريبة القيمة",  # actual sample column
+                        "vat", "tax") or 0)),
+                    "total":            float(_safe_decimal(_row_get(row,
+                        "الإجمالي (SAR)", "الإجمالي",  # actual sample column
+                        "total", "total_amount") or 0)),
+                    "category":         str(_row_get(row,
+                        "نوع المصروف",               # actual sample column
+                        "category", "type", "الفئة") or "other"),
+                    "receipt_attached": receipt_attached,
+                    "receipt_number":   str(_row_get(row,
+                        "رقم المطالبة", "receipt_number", "رقم_الإيصال") or ""),
                 }
                 if l["description"] or l["amount"]:
                     lines.append(l)
+            missing = sum(1 for l in lines if not l["receipt_attached"])
             return {
-                "total_claimed": _sum_col(df, "amount", "المبلغ"),
-                "expense_lines": lines,
-                "currency":      _first_nonempty(_col(df, "currency", "العملة")) or "SAR",
-                "ai_summary":    f"تم استيراد {len(lines)} مصروف من الملف المهيكل",
+                "employee_name":        _first_nonempty(_col(df,
+                    "اسم الموظف", "employee_name")),
+                "employee_id":          _first_nonempty(_col(df,
+                    "رقم الموظف", "employee_id")),
+                "total_claimed":        _sum_col(df,
+                    "المبلغ (SAR)", "المبلغ", "amount"),
+                "vat_included":         _sum_col(df,
+                    "ضريبة القيمة (SAR)", "ضريبة القيمة", "vat"),
+                "expense_lines":        lines,
+                "missing_receipts_count": missing,
+                "currency":             "SAR",
+                "ai_summary":           f"تم استيراد {len(lines)} مصروف من الملف المهيكل",
+            }
+
+        if doc_type in ("vat_return", "tax_declaration"):
+            # VAT return: one row per filing period
+            first = df.iloc[0].to_dict() if len(df) > 0 else {}
+            def _fv(*cols):
+                return _row_get(first, *cols)
+            return {
+                "taxpayer_name":            str(_fv(
+                    "اسم الشركة",                        # actual sample column
+                    "اسم المنشأة", "taxpayer_name", "company_name") or ""),
+                "vat_number":               str(_fv(
+                    "رقم تسجيل ضريبة القيمة",           # actual sample column
+                    "الرقم الضريبي", "vat_number") or ""),
+                "zatca_reference":          str(_fv(
+                    "رقم الإقرار", "zatca_reference", "ref") or ""),
+                "period_from":              str(_fv("period_from", "from") or ""),
+                "period_to":               str(_fv("period_to", "to") or ""),
+                "filing_date":             str(_fv(
+                    "تاريخ التقديم", "filing_date", "submission_date") or ""),
+                "standard_rated_sales":    float(_safe_decimal(_fv(
+                    "إجمالي المبيعات الخاضعة (SAR)",    # actual sample column
+                    "المبيعات الخاضعة", "standard_rated_sales") or 0)),
+                "output_vat":              float(_safe_decimal(_fv(
+                    "ضريبة المخرجات (SAR)",              # actual sample column
+                    "ضريبة المخرجات", "output_vat") or 0)),
+                "standard_rated_purchases": float(_safe_decimal(_fv(
+                    "إجمالي المشتريات الخاضعة (SAR)",   # actual sample column
+                    "المشتريات الخاضعة", "standard_rated_purchases") or 0)),
+                "input_vat":               float(_safe_decimal(_fv(
+                    "ضريبة المدخلات (SAR)",              # actual sample column
+                    "ضريبة المدخلات", "input_vat") or 0)),
+                "net_vat_payable":         float(_safe_decimal(_fv(
+                    "صافي الضريبة المستحقة (SAR)",       # actual sample column
+                    "صافي الضريبة المستحقة", "net_vat_payable") or 0)),
+                "vat_paid":                float(_safe_decimal(_fv(
+                    "مبلغ السداد (SAR)", "vat_paid", "amount_paid") or 0)),
+                "ai_summary":              "تم استيراد إقرار ضريبي من الملف المهيكل",
+            }
+
+        if doc_type == "fixed_asset":
+            assets = []
+            for _, row in df.iterrows():
+                cost = float(_safe_decimal(_row_get(row,
+                    "تكلفة الاقتناء", "تكلفة الاقتناء (SAR)",
+                    "cost", "acquisition_cost", "التكلفة") or 0))
+                acc_dep = float(_safe_decimal(_row_get(row,
+                    "مجمع الإهلاك", "مجمع الإهلاك (SAR)",
+                    "accumulated_depreciation", "إهلاك_مجمع") or 0))
+                book_val = float(_safe_decimal(_row_get(row,
+                    "القيمة الدفترية", "القيمة الدفترية (SAR)",
+                    "book_value", "net_book_value", "القيمة_الدفترية") or 0))
+                if not book_val and cost:
+                    book_val = round(cost - acc_dep, 2)
+                asset_name = str(_row_get(row,
+                    "اسم الأصل", "asset_name", "name") or "")
+                a = {
+                    "asset_id":                  str(_row_get(row,
+                        "رقم الأصل", "asset_id", "id") or ""),
+                    "name":                      asset_name,
+                    "category":                  str(_row_get(row,
+                        "فئة الأصل",                     # actual sample column
+                        "category", "asset_category", "الفئة") or ""),
+                    "purchase_date":             str(_row_get(row,
+                        "تاريخ الاقتناء",                # actual sample column
+                        "purchase_date", "acquisition_date") or ""),
+                    "useful_life_years":         float(_safe_decimal(_row_get(row,
+                        "العمر الإنتاجي (سنة)",          # actual sample column
+                        "العمر الإنتاجي", "useful_life_years", "useful_life") or 0)),
+                    "method":                    str(_row_get(row,
+                        "طريقة الإهلاك",                 # actual sample column
+                        "method", "depreciation_method") or "straight_line"),
+                    "annual_depreciation":       float(_safe_decimal(_row_get(row,
+                        "الإهلاك السنوي", "annual_depreciation") or 0)),
+                    "cost":                      cost,
+                    "accumulated_depreciation":  acc_dep,
+                    "book_value":                book_val,
+                    "is_fully_depreciated":      book_val <= 0 and cost > 0,
+                }
+                if asset_name or cost:
+                    assets.append(a)
+            negative_bv = sum(1 for a in assets if a["book_value"] < 0)
+            over_dep    = sum(1 for a in assets if a["accumulated_depreciation"] > a["cost"] > 0)
+            missing_ids = sum(1 for a in assets if not a["asset_id"])
+            ids_seen, dupes = set(), 0
+            for a in assets:
+                if a["asset_id"]:
+                    if a["asset_id"] in ids_seen:
+                        dupes += 1
+                    ids_seen.add(a["asset_id"])
+            return {
+                "asset_count":                   len(assets),
+                "total_cost":                    _sum_col(df,
+                    "تكلفة الاقتناء", "تكلفة الاقتناء (SAR)", "cost"),
+                "total_accumulated_depreciation": _sum_col(df,
+                    "مجمع الإهلاك", "مجمع الإهلاك (SAR)", "accumulated_depreciation"),
+                "total_book_value":               _sum_col(df,
+                    "القيمة الدفترية", "القيمة الدفترية (SAR)", "book_value"),
+                "assets":                         assets,
+                "negative_book_value_count":      negative_bv,
+                "over_depreciated_count":         over_dep,
+                "missing_asset_id_count":         missing_ids,
+                "duplicate_asset_id_count":       dupes,
+                "ai_summary":                     f"تم استيراد {len(assets)} أصل ثابت من الملف المهيكل",
+            }
+
+        if doc_type == "sales_receipt":
+            line_items = []
+            for _, row in df.iterrows():
+                unit_price = float(_safe_decimal(_row_get(row,
+                    "سعر الوحدة (SAR)", "سعر الوحدة",    # actual sample column
+                    "unit_price", "price") or 0))
+                qty = float(_safe_decimal(_row_get(row,
+                    "الكمية", "qty", "quantity") or 1))
+                subtotal = float(_safe_decimal(_row_get(row,
+                    "إجمالي قبل الضريبة (SAR)", "إجمالي قبل الضريبة",  # actual sample
+                    "subtotal", "amount_before_vat") or 0))
+                if not subtotal and unit_price:
+                    subtotal = round(unit_price * qty, 2)
+                vat_amount = float(_safe_decimal(_row_get(row,
+                    "ضريبة القيمة (SAR)", "ضريبة القيمة",  # actual sample column
+                    "vat_amount", "tax") or 0))
+                total = float(_safe_decimal(_row_get(row,
+                    "الإجمالي المدفوع (SAR)",              # actual sample column
+                    "الإجمالي الكلي (SAR)", "الإجمالي الكلي",
+                    "total", "total_amount") or 0))
+                if not total:
+                    total = round(subtotal + vat_amount, 2)
+                item = {
+                    "description": str(_row_get(row,
+                        "الصنف / الخدمة",               # actual sample column
+                        "description", "item", "الوصف", "البند") or ""),
+                    "qty":         qty,
+                    "unit_price":  unit_price,
+                    "subtotal":    subtotal,
+                    "vat_rate":    float(_safe_decimal(_row_get(row,
+                        "نسبة الضريبة (%)", "نسبة الضريبة",  # actual sample
+                        "vat_rate", "tax_rate") or 15)),
+                    "vat_amount":  vat_amount,
+                    "total":       total,
+                }
+                if item["description"] or unit_price:
+                    line_items.append(item)
+            total_subtotal = sum(i["subtotal"]   for i in line_items)
+            total_vat      = sum(i["vat_amount"] for i in line_items)
+            total_amount   = sum(i["total"]      for i in line_items)
+            return {
+                "receipt_number": _first_nonempty(_col(df,
+                    "رقم الإيصال", "receipt_number")),
+                "receipt_date":   _first_nonempty(_col(df,
+                    "تاريخ البيع", "receipt_date", "date")),
+                "zatca_uuid":     _first_nonempty(_col(df,
+                    "رقم الفاتورة ZATCA", "zatca_uuid", "zatca_reference")),
+                "has_qr_code":    bool(_first_nonempty(_col(df, "رمز QR", "qr_code"))),
+                "subtotal":       round(total_subtotal, 2),
+                "vat_amount":     round(total_vat, 2),
+                "total_amount":   round(total_amount, 2),
+                "line_items":     line_items,
+                "currency":       "SAR",
+                "ai_summary":     f"تم استيراد {len(line_items)} سطر من الملف المهيكل",
             }
 
         # Generic fallback: return first row as flat dict
@@ -329,6 +640,26 @@ def _extract_from_pandas(file_path: str, ext: str, doc_type: str) -> dict:
     except Exception as e:
         logger.warning(f"[pandas extract] {e}")
         return {}
+
+
+# ── Canonical data persistence ────────────────────────────────────────────────
+
+def _save_canonical(ai_data: dict, doc_type: str, model_name: str, object_id) -> None:
+    """
+    Persist a DocumentCanonicalData record for any typed document.
+    Called immediately after _create_typed_record. Never raises — failure is
+    logged and silently swallowed so it cannot interrupt the upload pipeline.
+    """
+    try:
+        from core.services.canonical_mapper import CanonicalMapper
+        CanonicalMapper().save_canonical(
+            raw_data        = ai_data,
+            document_type   = doc_type,
+            typed_model_name= model_name,
+            typed_object_id = object_id,
+        )
+    except Exception as exc:
+        logger.warning("[canonical] save failed for %s/%s: %s", doc_type, object_id, exc)
 
 
 # ── Core processing pipeline ───────────────────────────────────────────────────
@@ -401,6 +732,9 @@ def _process_typed_document(file_obj, filename: str, doc_type: str, org, user, r
 
     # ── 4. Create typed model ───────────────────────────────────────────────
     typed_obj = _create_typed_record(doc_type, ai_data, base_doc, org, user)
+
+    # ── 4b. Persist canonical snapshot ──────────────────────────────────────
+    _save_canonical(ai_data, doc_type, typed_obj.__class__.__name__, typed_obj.id)
 
     # ── 5. Validation ───────────────────────────────────────────────────────
     val_result = run_document_validation(doc_type, typed_obj)

@@ -163,7 +163,38 @@ class DocumentReportService:
             "document_specific": self._build_document_specific(document_type, canonical, typed_obj),
             "narrative_sections": narrative,
         }
+        report["ai_narrative"] = self._build_ai_narrative(report, document_type, language)
         return _safe(report)
+
+    def _build_ai_narrative(self, report_data: dict, document_type: str, language: str) -> dict:
+        """
+        Call generate_audit_narrative() to produce the full AI-powered analytical
+        summary. Returns an empty dict on any failure so the report still renders.
+        """
+        try:
+            from core.services.ai_service import generate_audit_narrative
+
+            audit_input = {
+                "organization": {
+                    "name": getattr(self.org, "name", ""),
+                    "country": getattr(self.org, "country", "SA"),
+                },
+                "document_type": document_type,
+                "document_type_ar": self._doc_type_ar(document_type),
+                "document_type_en": self._doc_type_en(document_type),
+                "report_type": f"document_audit_{document_type}",
+                "summary": report_data.get("summary", {}),
+                "key_fields": report_data.get("key_fields", {}),
+                "violations": report_data.get("violations", []),
+                "compliance": report_data.get("compliance", {}),
+                "ai_insights": report_data.get("ai_insights", {}),
+                "recommendations": report_data.get("recommendations", []),
+                "audit_trail": report_data.get("audit_trail", {}),
+            }
+            return generate_audit_narrative(audit_input, language=language)
+        except Exception as exc:
+            logger.warning("AI narrative skipped for %s/%s: %s", document_type, self.org, exc)
+            return {}
 
     # ─── Section builders ─────────────────────────────────────────────────────
 

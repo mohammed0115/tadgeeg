@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import logging
 from collections import defaultdict
-from datetime import date, datetime
+from datetime import date, datetime, timezone as dt_timezone
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
 
@@ -293,7 +293,7 @@ class InvoiceAuditReportService:
             "title":            "تقرير تدقيق الفواتير" if language == "ar" else "Invoice Audit Report",
             "organization_name": getattr(self.org, "name", str(self.org)),
             "organization_id":  str(self.org.id),
-            "created_at":       datetime.now(tz=timezone.utc).isoformat(),
+            "created_at":       datetime.now(tz=dt_timezone.utc).isoformat(),
             "created_by":       str(self.user) if self.user else None,
             "report_type":      "invoice_audit",
             "language":         language,

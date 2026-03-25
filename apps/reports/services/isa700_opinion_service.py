@@ -30,7 +30,7 @@ Version: 2.0 (March 2026)
 """
 
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timezone as dt_timezone
 from decimal import Decimal
 from typing import Dict, List, Optional, Tuple
 
@@ -91,7 +91,7 @@ misstatement.
         """Initialize with organization context."""
         self.org = organization
         self.user = user
-        self.now = datetime.now(tz=timezone.utc)
+        self.now = datetime.now(tz=dt_timezone.utc)
 
     def generate_opinion(
         self,

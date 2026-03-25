@@ -773,6 +773,80 @@
 
 
 <!-- ══════════════════════════════════════════════════════════
+  SECTION — ANALYTICAL SUMMARY (AI Narrative)
+══════════════════════════════════════════════════════════ -->
+{% if narrative and narrative.executive_summary %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-indigo-100 text-indigo-700">📄</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}الملخص التحليلي{% else %}Analytical Summary{% endif %}
+    </h2>
+  </div>
+  <div class="section-body space-y-6 text-sm leading-relaxed text-slate-700">
+
+    {% if narrative.executive_summary %}
+    <div>
+      <h3 class="text-xs font-bold uppercase tracking-wide text-indigo-600 mb-2">EXECUTIVE_SUMMARY</h3>
+      <p>{{ narrative.executive_summary }}</p>
+    </div>
+    {% endif %}
+
+    {% if narrative.scope_and_methodology %}
+    <div>
+      <h3 class="text-xs font-bold uppercase tracking-wide text-indigo-600 mb-2">SCOPE_AND_METHODOLOGY</h3>
+      <p>{{ narrative.scope_and_methodology }}</p>
+    </div>
+    {% endif %}
+
+    {% if narrative.key_findings %}
+    <div>
+      <h3 class="text-xs font-bold uppercase tracking-wide text-amber-600 mb-2">KEY_FINDINGS</h3>
+      <p>{{ narrative.key_findings }}</p>
+    </div>
+    {% endif %}
+
+    {% if narrative.anomalies_section %}
+    <div>
+      <h3 class="text-xs font-bold uppercase tracking-wide text-red-600 mb-2">ANOMALIES_SECTION</h3>
+      <p>{{ narrative.anomalies_section }}</p>
+    </div>
+    {% endif %}
+
+    {% if narrative.compliance_section %}
+    <div>
+      <h3 class="text-xs font-bold uppercase tracking-wide text-blue-600 mb-2">COMPLIANCE_SECTION</h3>
+      <p>{{ narrative.compliance_section }}</p>
+    </div>
+    {% endif %}
+
+    {% if narrative.recommendations %}
+    <div>
+      <h3 class="text-xs font-bold uppercase tracking-wide text-green-600 mb-2">RECOMMENDATIONS</h3>
+      <p>{{ narrative.recommendations }}</p>
+    </div>
+    {% endif %}
+
+    {% if narrative.conclusion %}
+    <div>
+      <h3 class="text-xs font-bold uppercase tracking-wide text-slate-600 mb-2">CONCLUSION</h3>
+      <p>{{ narrative.conclusion }}</p>
+    </div>
+    {% endif %}
+
+    {% if narrative.management_response_placeholder %}
+    <div class="bg-slate-50 border border-dashed border-slate-300 rounded-lg p-4">
+      <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">MANAGEMENT_RESPONSE_PLACEHOLDER</h3>
+      <p class="text-slate-500 italic">{{ narrative.management_response_placeholder }}</p>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endif %}
+
+
+<!-- ══════════════════════════════════════════════════════════
   SECTION 7 — COMPLIANCE (ZATCA)
 ══════════════════════════════════════════════════════════ -->
 <div class="section-card">

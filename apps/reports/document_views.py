@@ -212,7 +212,7 @@ class DocumentReportPDFView(APIView):
             "recs":               data.get("recommendations", []),
             "trail":              data.get("audit_trail", {}),
             "specific":           data.get("document_specific", {}),
-            "narrative":          data.get("narrative_sections", {}),
+            "narrative":          data.get("ai_narrative", {}),
             "is_rtl":             data.get("report_meta", {}).get("language", "ar") == "ar",
             "request":            request,
         }

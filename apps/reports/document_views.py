@@ -167,6 +167,8 @@ class DocumentReportPDFView(APIView):
 
     def get(self, request, pk):
         org = _get_org(request)
+        if not org:
+            return Response({"error": "No organization."}, status=status.HTTP_403_FORBIDDEN)
         try:
             report = Report.objects.get(pk=pk, organization=org)
         except Report.DoesNotExist:
@@ -180,13 +182,19 @@ class DocumentReportPDFView(APIView):
             from apps.reports.views import _render_report_pdf_bytes
             pdf_bytes = _render_report_pdf_bytes(html_str, request.build_absolute_uri("/"))
             response = HttpResponse(pdf_bytes, content_type="application/pdf")
-            safe_title = report.title.replace(" ", "_")[:60]
+            safe_title = (report.title or "report").replace(" ", "_")[:60]
             response["Content-Disposition"] = f'attachment; filename="{safe_title}.pdf"'
             return response
+        except OSError as exc:
+            logger.warning("WeasyPrint OSError (missing system libs) for document report %s: %s", pk, exc)
+            return Response(
+                {"error": "مكتبات PDF غير مهيأة على الخادم. استخدم رابط /html/ لعرض التقرير."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         except Exception as exc:
             logger.error("PDF generation failed for document report %s: %s", pk, exc)
             return Response(
-                {"error": "PDF generation failed. Use the /html/ endpoint to view this report."},
+                {"error": "فشل توليد PDF. استخدم رابط /html/ لعرض التقرير."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -305,73 +313,88 @@ class ExecutiveReportLatestView(APIView):
         return Response(report.data)
 
 
+def _exec_report_context(report, request) -> dict:
+    """Build template context for executive report. Safe against None/empty data."""
+    data = report.data or {}
+    return {
+        "report":        data,
+        "meta":          data.get("report_meta", {}),
+        "exec_sum":      data.get("executive_summary", {}),
+        "financial":     data.get("financial_overview", {}),
+        "audit_ov":      data.get("audit_overview", {}),
+        "risk":          data.get("risk_analysis", {}),
+        "compliance":    data.get("compliance_overview", {}),
+        "top_issues":    data.get("top_issues", []),
+        "ai":            data.get("ai_insights", {}),
+        "recs":          data.get("recommendations", []),
+        "doc_breakdown": data.get("document_breakdown", []),
+        "is_rtl":        data.get("report_meta", {}).get("language", "ar") == "ar",
+        "request":       request,
+    }
+
+
+def _get_executive_report(pk, org):
+    """
+    Fetch an executive report by pk + organization.
+    Does NOT filter by report_type — supports both 'executive_summary'
+    and any legacy type strings stored by older generation code.
+    """
+    try:
+        return Report.objects.get(pk=pk, organization=org)
+    except Report.DoesNotExist:
+        return None
+
+
 class ExecutiveReportPDFView(APIView):
     """GET /api/v1/reports/executive/<pk>/pdf/ — Download executive PDF."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
         org = _get_org(request)
-        try:
-            report = Report.objects.get(pk=pk, organization=org, report_type="executive_summary")
-        except Report.DoesNotExist:
+        if not org:
+            return Response({"error": "No organization."}, status=status.HTTP_403_FORBIDDEN)
+
+        report = _get_executive_report(pk, org)
+        if report is None:
             return Response({"error": "Report not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        context = {
-            "report":    report.data,
-            "meta":      report.data.get("report_meta", {}),
-            "exec_sum":  report.data.get("executive_summary", {}),
-            "financial": report.data.get("financial_overview", {}),
-            "audit_ov":  report.data.get("audit_overview", {}),
-            "risk":      report.data.get("risk_analysis", {}),
-            "compliance":report.data.get("compliance_overview", {}),
-            "top_issues":report.data.get("top_issues", []),
-            "ai":        report.data.get("ai_insights", {}),
-            "recs":      report.data.get("recommendations", []),
-            "doc_breakdown": report.data.get("document_breakdown", []),
-            "is_rtl":    report.data.get("report_meta", {}).get("language", "ar") == "ar",
-            "request":   request,
-        }
+        context  = _exec_report_context(report, request)
         html_str = render_to_string("reports/executive_report.html", context, request=request)
 
         try:
             from apps.reports.views import _render_report_pdf_bytes
             pdf_bytes = _render_report_pdf_bytes(html_str, request.build_absolute_uri("/"))
-            response = HttpResponse(pdf_bytes, content_type="application/pdf")
+            response  = HttpResponse(pdf_bytes, content_type="application/pdf")
             response["Content-Disposition"] = 'attachment; filename="executive_report.pdf"'
             return response
+        except OSError as exc:
+            logger.warning("WeasyPrint OSError (missing system libs) for executive report %s: %s", pk, exc)
+            return Response(
+                {"error": "مكتبات PDF غير مهيأة على الخادم. استخدم رابط /html/ لعرض التقرير."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         except Exception as exc:
             logger.error("PDF generation failed for executive report %s: %s", pk, exc)
             return Response(
-                {"error": "PDF generation failed. Use the /html/ endpoint to view this report."},
+                {"error": "فشل توليد PDF. استخدم رابط /html/ لعرض التقرير."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
 
-class ExecutiveReportHTMLView(ExecutiveReportPDFView):
+class ExecutiveReportHTMLView(APIView):
     """GET /api/v1/reports/executive/<pk>/html/ — View executive report in browser."""
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, pk):
         org = _get_org(request)
-        try:
-            report = Report.objects.get(pk=pk, organization=org, report_type="executive_summary")
-        except Report.DoesNotExist:
+        if not org:
+            return Response({"error": "No organization."}, status=status.HTTP_403_FORBIDDEN)
+
+        report = _get_executive_report(pk, org)
+        if report is None:
             return Response({"error": "Report not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        context = {
-            "report":    report.data,
-            "meta":      report.data.get("report_meta", {}),
-            "exec_sum":  report.data.get("executive_summary", {}),
-            "financial": report.data.get("financial_overview", {}),
-            "audit_ov":  report.data.get("audit_overview", {}),
-            "risk":      report.data.get("risk_analysis", {}),
-            "compliance":report.data.get("compliance_overview", {}),
-            "top_issues":report.data.get("top_issues", []),
-            "ai":        report.data.get("ai_insights", {}),
-            "recs":      report.data.get("recommendations", []),
-            "doc_breakdown": report.data.get("document_breakdown", []),
-            "is_rtl":    report.data.get("report_meta", {}).get("language", "ar") == "ar",
-            "request":   request,
-        }
+        context  = _exec_report_context(report, request)
         html_str = render_to_string("reports/executive_report.html", context, request=request)
         return HttpResponse(html_str, content_type="text/html; charset=utf-8")
 

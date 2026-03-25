@@ -930,6 +930,94 @@ def otp_resend(request):
     )
 
 
+# ✅ PHASE 1 FIX: MFA Login Verification View 
+@ensure_csrf_cookie
+def mfa_login_verify(request):
+    """
+    Handle MFA verification during login flow.
+    POST with temp_token + code → Issue full JWT tokens
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": _("Method not allowed")}, status=405)
+    
+    try:
+        import json
+        import pyotp
+        from datetime import timedelta
+        from django.utils import timezone
+        from rest_framework_simplejwt.tokens import RefreshToken
+        from apps.authentication.models import User, AuditLog
+        from core.utils.audit import log_action
+        
+        data = json.loads(request.body)
+        temp_token_str = data.get("temp_token", "").strip()
+        totp_code = str(data.get("code", "")).strip()
+        
+        if not temp_token_str or not totp_code or len(totp_code) != 6:
+            return JsonResponse(
+                {"error": _("Temporary token and 6-digit TOTP code are required")},
+                status=400
+            )
+        
+        # Verify temporary token and get user
+        try:
+            temp_token = RefreshToken(temp_token_str)
+            user_id = temp_token.get("user_id")
+            user = User.objects.get(id=user_id)
+        except Exception:
+            return JsonResponse(
+                {"error": _("Invalid or expired temporary token")},
+                status=401
+            )
+        
+        # Verify TOTP code
+        if not user.mfa_enabled or not user.mfa_secret:
+            return JsonResponse(
+                {"error": _("MFA not enabled for this user")},
+                status=400
+            )
+        
+        totp = pyotp.TOTP(user.mfa_secret)
+        if not totp.verify(totp_code, valid_window=1):
+            # Track failed MFA attempts
+            user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+            if user.failed_login_attempts >= 5:
+                user.locked_until = timezone.now() + timedelta(minutes=30)
+            user.save()
+            
+            return JsonResponse(
+                {"error": _("Invalid or expired TOTP code")},
+                status=401
+            )
+        
+        # MFA successful - issue full tokens
+        user.failed_login_attempts = 0
+        user.last_login = timezone.now()
+        user.save()
+        
+        # Log the action
+        log_action(request, AuditLog.Action.LOGIN, "user", str(user.id), details={"mfa": "verified"})
+        
+        # Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
+        payload = {
+            "success": True,
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "redirect": reverse("frontend:dashboard"),
+            "message": _("Login successful!")
+        }
+        return JsonResponse(payload, status=200)
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return JsonResponse(
+            {"error": _("An error occurred during MFA verification")},
+            status=500
+        )
+
+
 @login_required(login_url="/login/")
 def dashboard(request):
     return render(request, "dashboard/index.html", _ctx(request, "dashboard", monthly_growth=12))

@@ -253,13 +253,21 @@
   </div>
 
   <!-- Quick compliance bar -->
-  {% if summary.total_rules %}
+  {% if summary.total_rules or summary.average_score %}
   <div class="px-8 py-3 bg-blue-50 border-t border-blue-100 flex items-center gap-4 text-sm flex-wrap">
     <span class="text-slate-500 text-xs">{% if is_rtl %}الامتثال الإجمالي{% else %}Overall Compliance{% endif %}</span>
     <div class="flex-1 min-w-[120px] risk-bar risk-{{ summary.risk_level|default:'low' }}">
+      {% if meta.document_id %}
       <div class="risk-fill" style="width: {{ summary.pass_rate }}%"></div>
+      {% else %}
+      <div class="risk-fill" style="width: {{ summary.average_score }}%"></div>
+      {% endif %}
     </div>
+    {% if meta.document_id %}
     <span class="font-semibold text-blue-900 text-xs">{{ summary.pass_rate|floatformat:1 }}%</span>
+    {% else %}
+    <span class="font-semibold text-blue-900 text-xs">{{ summary.average_score|floatformat:1 }}%</span>
+    {% endif %}
     {% if summary.blocks_approval %}
     <span class="pill pill-fail">🔒 {% if is_rtl %}يمنع الاعتماد{% else %}Blocks Approval{% endif %}</span>
     {% endif %}
@@ -280,50 +288,183 @@
     <h2 class="font-semibold text-slate-800">{% if is_rtl %}الملخص التنفيذي{% else %}Executive Summary{% endif %}</h2>
   </div>
   <div class="section-body">
-    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
 
-      <div class="kpi-card border-blue-100">
-        <div class="kpi-value text-blue-800">{{ summary.total_amount|floatformat:0|default:"—" }}</div>
-        <div class="kpi-label">
-          {% if is_rtl %}الإجمالي ({{ summary.currency }}){% else %}Total ({{ summary.currency }}){% endif %}
-        </div>
+  {% if meta.document_id %}
+  <!-- Single-document KPIs -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div class="kpi-card border-blue-100">
+      <div class="kpi-value text-blue-800">{{ summary.total_amount|floatformat:0|default:"—" }}</div>
+      <div class="kpi-label">
+        {% if is_rtl %}الإجمالي ({{ summary.currency }}){% else %}Total ({{ summary.currency }}){% endif %}
       </div>
-
-      <div class="kpi-card border-green-100">
-        <div class="kpi-value text-green-600">{{ summary.rules_passed|default:0 }}</div>
-        <div class="kpi-label">{% if is_rtl %}قواعد ناجحة{% else %}Rules Passed{% endif %}</div>
-      </div>
-
-      <div class="kpi-card border-red-100">
-        <div class="kpi-value text-red-600">{{ summary.rules_failed|default:0 }}</div>
-        <div class="kpi-label">{% if is_rtl %}قواعد فاشلة{% else %}Rules Failed{% endif %}</div>
-      </div>
-
-      <div class="kpi-card border-yellow-100">
-        <div class="kpi-value text-yellow-600">{{ summary.rules_warning|default:0 }}</div>
-        <div class="kpi-label">{% if is_rtl %}تحذيرات{% else %}Warnings{% endif %}</div>
-      </div>
-
-      <div class="kpi-card border-purple-100">
-        <div class="kpi-value text-purple-600">{{ summary.blocking_failures|default:0 }}</div>
-        <div class="kpi-label">{% if is_rtl %}تمنع الاعتماد{% else %}Block Approval{% endif %}</div>
-      </div>
-
-      <div class="kpi-card {% if summary.error_rate > 20 %}border-red-200{% elif summary.error_rate > 5 %}border-yellow-200{% else %}border-green-200{% endif %}">
-        <div class="kpi-value {% if summary.error_rate > 20 %}text-red-600{% elif summary.error_rate > 5 %}text-yellow-600{% else %}text-green-600{% endif %}">
-          {{ summary.error_rate|floatformat:1 }}%
-        </div>
-        <div class="kpi-label">{% if is_rtl %}نسبة الأخطاء{% else %}Error Rate{% endif %}</div>
-      </div>
-
     </div>
+    <div class="kpi-card border-green-100">
+      <div class="kpi-value text-green-600">{{ summary.rules_passed|default:0 }}</div>
+      <div class="kpi-label">{% if is_rtl %}قواعد ناجحة{% else %}Rules Passed{% endif %}</div>
+    </div>
+    <div class="kpi-card border-red-100">
+      <div class="kpi-value text-red-600">{{ summary.rules_failed|default:0 }}</div>
+      <div class="kpi-label">{% if is_rtl %}قواعد فاشلة{% else %}Rules Failed{% endif %}</div>
+    </div>
+    <div class="kpi-card border-yellow-100">
+      <div class="kpi-value text-yellow-600">{{ summary.rules_warning|default:0 }}</div>
+      <div class="kpi-label">{% if is_rtl %}تحذيرات{% else %}Warnings{% endif %}</div>
+    </div>
+    <div class="kpi-card border-purple-100">
+      <div class="kpi-value text-purple-600">{{ summary.blocking_failures|default:0 }}</div>
+      <div class="kpi-label">{% if is_rtl %}تمنع الاعتماد{% else %}Block Approval{% endif %}</div>
+    </div>
+    <div class="kpi-card {% if summary.error_rate > 20 %}border-red-200{% elif summary.error_rate > 5 %}border-yellow-200{% else %}border-green-200{% endif %}">
+      <div class="kpi-value {% if summary.error_rate > 20 %}text-red-600{% elif summary.error_rate > 5 %}text-yellow-600{% else %}text-green-600{% endif %}">
+        {{ summary.error_rate|floatformat:1 }}%
+      </div>
+      <div class="kpi-label">{% if is_rtl %}نسبة الأخطاء{% else %}Error Rate{% endif %}</div>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- Summary-report KPIs (aggregate) -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div class="kpi-card border-blue-100">
+      <div class="kpi-value text-blue-800">{{ summary.total_documents|default:0 }}</div>
+      <div class="kpi-label">{% if is_rtl %}إجمالي المستندات{% else %}Total Documents{% endif %}</div>
+    </div>
+    <div class="kpi-card border-green-100">
+      <div class="kpi-value text-green-600">{{ summary.average_score|floatformat:1|default:"—" }}%</div>
+      <div class="kpi-label">{% if is_rtl %}متوسط الدرجة{% else %}Average Score{% endif %}</div>
+    </div>
+    <div class="kpi-card border-red-100">
+      <div class="kpi-value text-red-600">{{ summary.high_risk_count|default:0 }}</div>
+      <div class="kpi-label">{% if is_rtl %}مخاطر عالية{% else %}High Risk{% endif %}</div>
+    </div>
+    <div class="kpi-card border-yellow-100">
+      <div class="kpi-value text-yellow-600">{{ summary.flagged_count|default:0 }}</div>
+      <div class="kpi-label">{% if is_rtl %}مُعلَّق{% else %}Flagged{% endif %}</div>
+    </div>
+    <div class="kpi-card border-purple-100">
+      <div class="kpi-value text-purple-600">{{ summary.risk_distribution.critical|default:0 }}</div>
+      <div class="kpi-label">{% if is_rtl %}خطر حرج{% else %}Critical Risk{% endif %}</div>
+    </div>
+    <div class="kpi-card border-green-200">
+      <div class="kpi-value text-green-600">{{ summary.clean_count|default:0 }}</div>
+      <div class="kpi-label">{% if is_rtl %}نظيف{% else %}Clean{% endif %}</div>
+    </div>
+  </div>
+  {% endif %}
+
   </div>
 </div>
 
 
 <!-- ══════════════════════════════════════════════════════════
+  SECTION 2b — SUMMARY MODE: Document List + Top Violations
+══════════════════════════════════════════════════════════ -->
+{% if not meta.document_id %}
+
+{% if report.high_risk_documents %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-red-100 text-red-700">🚨</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}المستندات عالية المخاطر ({{ report.high_risk_documents|length }}){% else %}High-Risk Documents ({{ report.high_risk_documents|length }}){% endif %}
+    </h2>
+  </div>
+  <div class="section-body p-0 overflow-x-auto">
+    <table class="rule-table">
+      <thead>
+        <tr>
+          <th>{% if is_rtl %}المعرف{% else %}ID{% endif %}</th>
+          <th>{% if is_rtl %}مستوى الخطر{% else %}Risk Level{% endif %}</th>
+          <th>{% if is_rtl %}الدرجة{% else %}Score{% endif %}</th>
+          <th>{% if is_rtl %}الحالة{% else %}Status{% endif %}</th>
+          <th>{% if is_rtl %}القواعد الفاشلة{% else %}Failed Rules{% endif %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for doc in report.high_risk_documents %}
+        <tr>
+          <td class="font-mono text-xs text-slate-500">{{ doc.id|slice:":8" }}…</td>
+          <td><span class="pill pill-{{ doc.risk_level }}">{% if is_rtl %}{{ doc.risk_level_ar }}{% else %}{{ doc.risk_level|upper }}{% endif %}</span></td>
+          <td class="font-semibold {% if doc.validation_score < 60 %}text-red-600{% elif doc.validation_score < 80 %}text-yellow-600{% else %}text-green-600{% endif %}">
+            {{ doc.validation_score|floatformat:1 }}%
+          </td>
+          <td><span class="pill pill-{% if doc.audit_status == 'flagged' %}fail{% elif doc.audit_status == 'approved' %}pass{% else %}warning{% endif %}">{{ doc.audit_status }}</span></td>
+          <td class="text-xs text-slate-500">{{ doc.failed_codes|join:", " }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if report.top_violations %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-orange-100 text-orange-700">⚠️</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}أكثر المخالفات تكراراً{% else %}Most Frequent Violations{% endif %}
+    </h2>
+  </div>
+  <div class="section-body">
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      {% for v in report.top_violations %}
+      <div class="flex items-center justify-between bg-red-50 border border-red-100 rounded-lg px-4 py-3">
+        <span class="font-mono text-sm font-semibold text-red-800">{{ v.code }}</span>
+        <span class="bg-red-200 text-red-900 text-xs font-bold px-2 py-1 rounded-full">×{{ v.count }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-slate-100 text-slate-600">📋</div>
+    <h2 class="font-semibold text-slate-800">
+      {% if is_rtl %}قائمة المستندات ({{ report.document_list|length }}){% else %}Document List ({{ report.document_list|length }}){% endif %}
+    </h2>
+  </div>
+  <div class="section-body p-0 overflow-x-auto">
+    <table class="rule-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>{% if is_rtl %}المعرف{% else %}Document ID{% endif %}</th>
+          <th>{% if is_rtl %}مستوى الخطر{% else %}Risk{% endif %}</th>
+          <th>{% if is_rtl %}الدرجة{% else %}Score{% endif %}</th>
+          <th>{% if is_rtl %}الحالة{% else %}Status{% endif %}</th>
+          <th>{% if is_rtl %}تاريخ الإنشاء{% else %}Created{% endif %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for doc in report.document_list %}
+        <tr>
+          <td class="text-slate-400 text-xs">{{ forloop.counter }}</td>
+          <td class="font-mono text-xs text-slate-500">{{ doc.id|slice:":8" }}…</td>
+          <td><span class="pill pill-{{ doc.risk_level }}">{{ doc.risk_level }}</span></td>
+          <td class="font-semibold {% if doc.validation_score < 60 %}text-red-600{% elif doc.validation_score < 80 %}text-yellow-600{% else %}text-green-600{% endif %}">
+            {{ doc.validation_score|floatformat:1 }}%
+          </td>
+          <td><span class="pill pill-{% if doc.audit_status == 'flagged' %}fail{% elif doc.audit_status == 'approved' %}pass{% else %}warning{% endif %}">{{ doc.audit_status }}</span></td>
+          <td class="text-xs text-slate-400">{{ doc.created_at|slice:":10" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="text-center text-slate-400 py-6">—</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endif %}{# end not meta.document_id #}
+
+
+<!-- ══════════════════════════════════════════════════════════
   SECTION 3 — KEY FIELDS
 ══════════════════════════════════════════════════════════ -->
+{% if meta.document_id %}
 <div class="section-card">
   <div class="section-header">
     <div class="icon bg-slate-100 text-slate-600">📋</div>
@@ -430,11 +571,13 @@
     {% endif %}
   </div>
 </div>
+{% endif %}{# end meta.document_id — Key Fields only for single-doc #}
 
 
 <!-- ══════════════════════════════════════════════════════════
   SECTION 4 — RULE EVALUATION TABLE
 ══════════════════════════════════════════════════════════ -->
+{% if meta.document_id %}
 <div class="section-card">
   <div class="section-header">
     <div class="icon bg-indigo-100 text-indigo-700">⚖️</div>
@@ -519,6 +662,7 @@
     </table>
   </div>
 </div>
+{% endif %}{# end meta.document_id — Rules table only for single-doc #}
 
 
 <!-- ══════════════════════════════════════════════════════════

@@ -65,6 +65,7 @@ urlpatterns = [
     path('auth/google/callback/', views.google_oauth_callback, name='google_oauth_callback'),
     path('verify-email/', views.otp_verify, name='otp_verify'),
     path('verify-email/resend/', views.otp_resend, name='otp_resend'),
+    path('mfa-login/verify/', views.mfa_login_verify, name='mfa-login-verify'),  # ✅ PHASE 1: MFA verification endpoint
     path('google-pending/', views.google_pending, name='google_pending'),
 
     # Dashboard

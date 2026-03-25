@@ -1,0 +1,216 @@
+{% extends "layouts/base_vendor_dashboard.html" %}
+{% load i18n %}
+{% block page_title %}مهام المراجعة{% endblock %}
+{% block breadcrumb_current %}المراجعة{% endblock %}
+
+{% block content %}
+<div x-data="auditsManager()" x-init="init()" class="space-y-5 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">مهام المراجعة</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">تتبع ونتائج مهام المراجعة المالية الذكية</p>
+    </div>
+    <a href="/dashboard/upload/" class="btn-primary">
+      <i data-lucide="plus" class="w-4 h-4"></i>
+      مراجعة جديدة
+    </a>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="card p-4 text-center">
+      <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
+      <template x-if="!loading"><p class="text-2xl font-black text-slate-900 dark:text-white" x-text="stats.total || 0"></p></template>
+      <p class="text-xs text-slate-500 mt-1">إجمالي المهام</p>
+    </div>
+    <div class="card p-4 text-center">
+      <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
+      <template x-if="!loading"><p class="text-2xl font-black text-blue-600" x-text="stats.running || 0"></p></template>
+      <p class="text-xs text-slate-500 mt-1">جارية</p>
+    </div>
+    <div class="card p-4 text-center">
+      <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
+      <template x-if="!loading"><p class="text-2xl font-black text-emerald-600" x-text="stats.completed || 0"></p></template>
+      <p class="text-xs text-slate-500 mt-1">مكتملة</p>
+    </div>
+    <div class="card p-4 text-center">
+      <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
+      <template x-if="!loading"><p class="text-2xl font-black text-red-500" x-text="stats.failed || 0"></p></template>
+      <p class="text-xs text-slate-500 mt-1">فاشلة</p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card p-4 flex flex-wrap items-center gap-3">
+    <select x-model="filter.status" @change="load()" class="select">
+      <option value="">جميع الحالات</option>
+      <option value="pending">في الانتظار</option>
+      <option value="running">جارية</option>
+      <option value="completed">مكتملة</option>
+      <option value="failed">فاشلة</option>
+    </select>
+    <input type="text" x-model.debounce.300ms="filter.search" @input="load()"
+           class="input max-w-xs" placeholder="البحث...">
+  </div>
+
+  <!-- Audits Table -->
+  <div class="card overflow-hidden">
+    <template x-if="loading">
+      <div class="animate-pulse divide-y divide-slate-100 dark:divide-slate-700/30">
+        <template x-for="i in [1,2,3,4,5]" :key="i">
+          <div class="px-5 py-4 flex items-center gap-4">
+            <div class="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-700 flex-shrink-0"></div>
+            <div class="flex-1 space-y-2">
+              <div class="h-3.5 bg-slate-200 dark:bg-slate-700 rounded w-48"></div>
+              <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-32"></div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <template x-if="!loading && audits.length === 0">
+      <div class="px-5 py-16 text-center">
+        <i data-lucide="shield-check" class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3"></i>
+        <p class="text-slate-500 text-sm">لا توجد مهام مراجعة</p>
+        <a href="/dashboard/upload/" class="btn-ghost text-xs mt-4 mx-auto">
+          <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+          ارفع ملفاً للبدء
+        </a>
+      </div>
+    </template>
+
+    <template x-if="!loading && audits.length > 0">
+      <div class="overflow-x-auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>المستند</th>
+              <th>النوع</th>
+              <th>درجة المخاطر</th>
+              <th>الامتثال</th>
+              <th>الحالة</th>
+              <th>التاريخ</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="audit in audits" :key="audit.id">
+              <tr>
+                <td>
+                  <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center flex-shrink-0">
+                      <i data-lucide="shield-check" class="w-4 h-4 text-violet-600 dark:text-violet-400"></i>
+                    </div>
+                    <div>
+                      <p class="text-sm font-medium text-slate-700 dark:text-slate-300 truncate max-w-[200px]"
+                         x-text="audit.document_name || audit.id"></p>
+                    </div>
+                  </div>
+                </td>
+                <td><span class="badge-slate text-[10px]" x-text="audit.document_type || '—'"></span></td>
+                <td>
+                  <template x-if="audit.risk_score !== undefined && audit.risk_score !== null">
+                    <div class="flex items-center gap-2">
+                      <div class="w-16 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div class="h-full rounded-full transition-all"
+                             :class="{
+                               'bg-emerald-500': audit.risk_score < 30,
+                               'bg-amber-500':   audit.risk_score >= 30 && audit.risk_score < 70,
+                               'bg-red-500':     audit.risk_score >= 70,
+                             }"
+                             :style="'width:' + audit.risk_score + '%'"></div>
+                      </div>
+                      <span class="text-xs font-bold"
+                            :class="{
+                              'text-emerald-600': audit.risk_score < 30,
+                              'text-amber-600':   audit.risk_score >= 30 && audit.risk_score < 70,
+                              'text-red-600':     audit.risk_score >= 70,
+                            }"
+                            x-text="audit.risk_score + '%'"></span>
+                    </div>
+                  </template>
+                  <template x-if="audit.risk_score === undefined || audit.risk_score === null">
+                    <span class="text-slate-400 text-xs">—</span>
+                  </template>
+                </td>
+                <td>
+                  <template x-if="audit.compliance_score !== undefined && audit.compliance_score !== null">
+                    <span class="badge text-xs"
+                          :class="{
+                            'badge-green':  audit.compliance_score >= 80,
+                            'badge-amber':  audit.compliance_score >= 50 && audit.compliance_score < 80,
+                            'badge-red':    audit.compliance_score < 50,
+                          }"
+                          x-text="audit.compliance_score + '%'"></span>
+                  </template>
+                  <template x-if="audit.compliance_score === undefined || audit.compliance_score === null">
+                    <span class="text-slate-400 text-xs">—</span>
+                  </template>
+                </td>
+                <td>
+                  <span class="badge"
+                        :class="{
+                          'badge-amber':  audit.status === 'pending',
+                          'badge-blue':   audit.status === 'running',
+                          'badge-green':  audit.status === 'completed',
+                          'badge-red':    audit.status === 'failed',
+                        }"
+                        x-text="audit.status === 'pending' ? 'في الانتظار' : audit.status === 'running' ? 'جارية' : audit.status === 'completed' ? 'مكتملة' : 'فاشلة'">
+                  </span>
+                </td>
+                <td class="text-xs text-slate-400"
+                    x-text="audit.created_at ? new Date(audit.created_at).toLocaleDateString('ar-SA') : '—'"></td>
+                <td>
+                  <a :href="'/dashboard/audit-results/' + audit.id + '/'" class="btn-ghost text-xs px-2 py-1">
+                    <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                  </a>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </template>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function auditsManager() {
+  return {
+    audits: [], stats: {}, loading: true,
+    filter: { status: '', search: '' },
+
+    async load() {
+      this.loading = true;
+      try {
+        const params = new URLSearchParams();
+        if (this.filter.status) params.set('status', this.filter.status);
+        if (this.filter.search) params.set('search', this.filter.search);
+        const [auditsRes, statsRes] = await Promise.all([
+          apiFetch('/api/v1/audit/jobs/?' + params.toString()),
+          apiFetch('/api/v1/audit/jobs/stats/'),
+        ]);
+        if (auditsRes && auditsRes.ok) {
+          const data = await auditsRes.json();
+          this.audits = Array.isArray(data) ? data : (data.results || []);
+        }
+        if (statsRes && statsRes.ok) this.stats = await statsRes.json();
+      } catch (e) {
+        notify('تعذّر تحميل المراجعات', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async init() { await this.load(); },
+  };
+}
+</script>
+{% endblock %}

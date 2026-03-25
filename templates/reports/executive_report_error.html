@@ -1,0 +1,42 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>خطأ — التقرير التنفيذي</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Tajawal', 'Segoe UI', sans-serif; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-red-50 to-red-100 min-h-screen flex items-center justify-center">
+
+<div class="max-w-md bg-white rounded-lg shadow-lg p-8 text-center">
+    <div class="text-6xl mb-4">⚠️</div>
+    
+    <h1 class="text-2xl font-bold text-red-600 mb-2">خطأ في التقرير التنفيذي</h1>
+    
+    <div class="bg-red-50 border-r-4 border-red-500 p-4 rounded text-right mb-6">
+        <p class="text-sm text-red-800">
+            <strong>الرسالة:</strong><br/>
+            {{ error|default:"حدث خطأ غير متوقع أثناء توليد التقرير التنفيذي" }}
+        </p>
+    </div>
+    
+    <div class="space-y-3">
+        <a href="javascript:history.back()" class="block bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded transition">
+            ← العودة للخلف
+        </a>
+        <a href="/reports/" class="block bg-slate-600 hover:bg-slate-700 text-white py-2 px-4 rounded transition">
+            🏠 العودة للتقارير
+        </a>
+    </div>
+    
+    <p class="text-xs text-slate-500 mt-6">
+        إذا استمرت المشكلة، يرجى التواصل مع فريق الدعم الفني
+    </p>
+</div>
+
+</body>
+</html>

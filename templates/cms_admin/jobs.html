@@ -1,0 +1,624 @@
+{% extends "cms_admin/base_cms.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Jobs & Careers" %}{% endblock %}
+{% block page_title %}{% trans "Platform CMS" %}{% endblock %}
+{% block tab_jobs %}active{% endblock %}
+
+{% block cms_content %}
+<div x-data="jobsManager()" x-init="init()" class="space-y-5">
+
+  <!-- Stats Row -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+    <template x-for="stat in statCards" :key="stat.key">
+      <div class="card p-4 flex flex-col items-center text-center gap-1">
+        <template x-if="loading">
+          <div class="h-7 w-16 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+        </template>
+        <template x-if="!loading">
+          <p class="text-2xl font-black" :class="stat.cls" x-text="(stats[stat.key] || 0).toLocaleString()"></p>
+        </template>
+        <p class="text-xs text-slate-500 dark:text-slate-400" x-text="stat.label"></p>
+      </div>
+    </template>
+  </div>
+
+  <!-- Tab Switcher -->
+  <div class="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl w-fit">
+    <button @click="activeTab = 'jobs'; $nextTick(() => lucide.createIcons())"
+            class="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+            :class="activeTab === 'jobs' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'">
+      <i data-lucide="briefcase" class="w-4 h-4 inline-block -mt-0.5 mr-1"></i>
+      {% trans "Job Posts" %}
+    </button>
+    <button @click="activeTab = 'applications'; loadApplications(); $nextTick(() => lucide.createIcons())"
+            class="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+            :class="activeTab === 'applications' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'">
+      <i data-lucide="users" class="w-4 h-4 inline-block -mt-0.5 mr-1"></i>
+      {% trans "Applications" %}
+    </button>
+  </div>
+
+  <!-- ── Job Posts Tab ── -->
+  <div x-show="activeTab === 'jobs'" class="space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3 flex-wrap">
+        <select x-model="jobFilter.status" @change="loadJobs()" class="select">
+          <option value="">{% trans "All Statuses" %}</option>
+          <option value="draft">{% trans "Draft" %}</option>
+          <option value="published">{% trans "Published" %}</option>
+          <option value="closed">{% trans "Closed" %}</option>
+        </select>
+      </div>
+      <button @click="openNewJob()" class="btn-primary">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        {% trans "New Job" %}
+      </button>
+    </div>
+
+    <div class="card overflow-hidden">
+      <template x-if="loadingJobs">
+        <div class="animate-pulse divide-y divide-slate-100 dark:divide-slate-700/30">
+          <template x-for="i in [1,2,3,4]" :key="i">
+            <div class="px-5 py-4 flex gap-4">
+              <div class="flex-1 h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+              <div class="h-5 w-20 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
+              <div class="h-4 w-16 bg-slate-200 dark:bg-slate-700 rounded"></div>
+            </div>
+          </template>
+        </div>
+      </template>
+      <template x-if="!loadingJobs && jobs.length === 0">
+        <div class="py-12 flex flex-col items-center gap-3 text-slate-400">
+          <i data-lucide="briefcase" class="w-10 h-10 opacity-40"></i>
+          <p class="text-sm">{% trans "No jobs found." %}</p>
+        </div>
+      </template>
+      <template x-if="!loadingJobs && jobs.length > 0">
+        <div class="overflow-x-auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>{% trans "Title" %}</th>
+                <th>{% trans "Department" %}</th>
+                <th>{% trans "Type" %}</th>
+                <th>{% trans "Status" %}</th>
+                <th>{% trans "Applications" %}</th>
+                <th>{% trans "Published" %}</th>
+                <th class="text-center">{% trans "Actions" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="job in jobs" :key="job.id">
+                <tr>
+                  <td>
+                    <div>
+                      <p class="font-medium text-slate-800 dark:text-white" x-text="job.title || job.title_ar"></p>
+                      <p class="text-xs text-slate-400" x-text="job.location || ''"></p>
+                    </div>
+                  </td>
+                  <td class="text-sm" x-text="job.department || '—'"></td>
+                  <td>
+                    <span class="badge bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400" x-text="job.job_type || '—'"></span>
+                  </td>
+                  <td>
+                    <span :class="jobStatusBadge(job.status)" x-text="job.status"></span>
+                  </td>
+                  <td>
+                    <button @click="viewApplications(job)" class="text-sm font-semibold text-primary-600 dark:text-primary-400 hover:underline" x-text="job.applications_count || 0"></button>
+                  </td>
+                  <td class="text-xs text-slate-400 whitespace-nowrap" x-text="fmtDate(job.published_at)"></td>
+                  <td>
+                    <div class="flex items-center justify-center gap-1.5">
+                      <button @click="openEditJob(job)" class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-blue-600 transition-colors">
+                        <i data-lucide="pencil" class="w-4 h-4"></i>
+                      </button>
+                      <button @click="toggleJobStatus(job)" class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 transition-colors"
+                              :class="job.status === 'published' ? 'hover:text-amber-600' : 'hover:text-green-600'"
+                              :title="job.status === 'published' ? '{% trans "Close Job" %}' : '{% trans "Publish Job" %}'">
+                        <i :data-lucide="job.status === 'published' ? 'x-circle' : 'globe'" class="w-4 h-4"></i>
+                      </button>
+                      <button @click="confirmDeleteJob(job)" class="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-500 hover:text-red-600 transition-colors">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- ── Applications Tab ── -->
+  <div x-show="activeTab === 'applications'" class="space-y-4">
+    <div class="card p-4 flex flex-wrap items-center gap-3">
+      <select x-model="appFilter.job_id" @change="loadApplications()" class="select">
+        <option value="">{% trans "All Jobs" %}</option>
+        <template x-for="job in jobs" :key="job.id">
+          <option :value="job.id" x-text="job.title || job.title_ar"></option>
+        </template>
+      </select>
+      <select x-model="appFilter.status" @change="loadApplications()" class="select">
+        <option value="">{% trans "All Statuses" %}</option>
+        <option value="pending">{% trans "Pending" %}</option>
+        <option value="shortlisted">{% trans "Shortlisted" %}</option>
+        <option value="rejected">{% trans "Rejected" %}</option>
+        <option value="hired">{% trans "Hired" %}</option>
+      </select>
+    </div>
+
+    <div class="card overflow-hidden">
+      <template x-if="loadingApps">
+        <div class="animate-pulse divide-y divide-slate-100 dark:divide-slate-700/30">
+          <template x-for="i in [1,2,3,4]" :key="i">
+            <div class="px-5 py-4 flex gap-4">
+              <div class="flex-1 h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+              <div class="h-5 w-20 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
+            </div>
+          </template>
+        </div>
+      </template>
+      <template x-if="!loadingApps && applications.length === 0">
+        <div class="py-12 flex flex-col items-center gap-3 text-slate-400">
+          <i data-lucide="users" class="w-10 h-10 opacity-40"></i>
+          <p class="text-sm">{% trans "No applications found." %}</p>
+        </div>
+      </template>
+      <template x-if="!loadingApps && applications.length > 0">
+        <div class="overflow-x-auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>{% trans "Applicant" %}</th>
+                <th>{% trans "Email" %}</th>
+                <th>{% trans "Job" %}</th>
+                <th>{% trans "Status" %}</th>
+                <th>{% trans "Applied At" %}</th>
+                <th class="text-center">{% trans "Actions" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="app in applications" :key="app.id">
+                <tr>
+                  <td class="font-medium text-slate-800 dark:text-white" x-text="app.full_name || app.name || '—'"></td>
+                  <td class="text-sm text-slate-500" x-text="app.email || '—'"></td>
+                  <td class="text-sm" x-text="app.job_title || '—'"></td>
+                  <td>
+                    <span :class="appStatusBadge(app.status)" x-text="app.status"></span>
+                  </td>
+                  <td class="text-xs text-slate-400 whitespace-nowrap" x-text="fmtDate(app.created_at)"></td>
+                  <td>
+                    <div class="flex items-center justify-center gap-1.5">
+                      <button @click="openViewApplication(app)" class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-blue-600 transition-colors">
+                        <i data-lucide="eye" class="w-4 h-4"></i>
+                      </button>
+                      <button @click="confirmDeleteApp(app)" class="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-500 hover:text-red-600 transition-colors">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- New/Edit Job Modal -->
+  <div x-show="showJobModal" x-transition class="modal-backdrop" @click.self="showJobModal = false" x-cloak>
+    <div class="modal-box p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white"
+            x-text="editingJob ? '{% trans "Edit Job" %}' : '{% trans "New Job" %}'"></h3>
+        <button @click="showJobModal = false" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form @submit.prevent="saveJob()" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Title" %} (EN)</label>
+            <input type="text" x-model="jobForm.title" class="input" required>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Title" %} (عربي)</label>
+            <input type="text" x-model="jobForm.title_ar" class="input" dir="rtl">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Department" %}</label>
+            <input type="text" x-model="jobForm.department" class="input" placeholder="Engineering">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Location" %}</label>
+            <input type="text" x-model="jobForm.location" class="input" placeholder="Riyadh, SA">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Job Type" %}</label>
+            <select x-model="jobForm.job_type" class="select w-full">
+              <option value="full_time">{% trans "Full Time" %}</option>
+              <option value="part_time">{% trans "Part Time" %}</option>
+              <option value="contract">{% trans "Contract" %}</option>
+              <option value="internship">{% trans "Internship" %}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Experience Level" %}</label>
+            <select x-model="jobForm.experience_level" class="select w-full">
+              <option value="entry">{% trans "Entry Level" %}</option>
+              <option value="mid">{% trans "Mid Level" %}</option>
+              <option value="senior">{% trans "Senior" %}</option>
+              <option value="lead">{% trans "Lead" %}</option>
+            </select>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Description" %} (EN)</label>
+            <textarea x-model="jobForm.description" class="input" rows="4"></textarea>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Description" %} (عربي)</label>
+            <textarea x-model="jobForm.description_ar" class="input" rows="4" dir="rtl"></textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Salary Min (SAR)" %}</label>
+            <input type="number" x-model.number="jobForm.salary_min" class="input" min="0">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Salary Max (SAR)" %}</label>
+            <input type="number" x-model.number="jobForm.salary_max" class="input" min="0">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Closes At" %}</label>
+            <input type="date" x-model="jobForm.closes_at" class="input">
+          </div>
+          <div class="flex items-center gap-3 pt-2">
+            <button type="button" @click="jobForm.show_salary = !jobForm.show_salary"
+                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                    :class="jobForm.show_salary ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'">
+              <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                    :class="jobForm.show_salary ? '-translate-x-6' : '-translate-x-1'"></span>
+            </button>
+            <label class="text-sm text-slate-700 dark:text-slate-300">{% trans "Show Salary" %}</label>
+          </div>
+        </div>
+
+        <!-- Requirements -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-xs font-semibold text-slate-500">{% trans "Requirements" %}</label>
+            <button type="button" @click="jobForm.requirements.push('')" class="btn-ghost text-xs py-1 px-2">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+          <div class="space-y-2">
+            <template x-for="(req, idx) in jobForm.requirements" :key="idx">
+              <div class="flex items-center gap-2">
+                <input type="text" x-model="jobForm.requirements[idx]" class="input flex-1" placeholder="{% trans "Requirement..." %}">
+                <button type="button" @click="jobForm.requirements.splice(idx, 1)" class="text-slate-400 hover:text-red-500">
+                  <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Benefits -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-xs font-semibold text-slate-500">{% trans "Benefits" %}</label>
+            <button type="button" @click="jobForm.benefits.push('')" class="btn-ghost text-xs py-1 px-2">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+          <div class="space-y-2">
+            <template x-for="(ben, idx) in jobForm.benefits" :key="idx">
+              <div class="flex items-center gap-2">
+                <input type="text" x-model="jobForm.benefits[idx]" class="input flex-1" placeholder="{% trans "Benefit..." %}">
+                <button type="button" @click="jobForm.benefits.splice(idx, 1)" class="text-slate-400 hover:text-red-500">
+                  <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <div class="flex gap-3 justify-end pt-2">
+          <button type="button" @click="showJobModal = false" class="btn-ghost">{% trans "Cancel" %}</button>
+          <button type="submit" :disabled="saving" class="btn-primary">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span x-text="saving ? '{% trans "Saving..." %}' : '{% trans "Save Job" %}'"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- View Application Modal -->
+  <div x-show="showAppModal" x-transition class="modal-backdrop" @click.self="showAppModal = false" x-cloak>
+    <div class="modal-box p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">{% trans "Application Details" %}</h3>
+        <button @click="showAppModal = false" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <template x-if="selectedApp">
+        <div class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <p class="text-xs text-slate-400">{% trans "Name" %}</p>
+              <p class="font-semibold text-slate-800 dark:text-white" x-text="selectedApp.full_name || selectedApp.name"></p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400">{% trans "Email" %}</p>
+              <p class="font-medium text-slate-700 dark:text-slate-300" x-text="selectedApp.email"></p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400">{% trans "Phone" %}</p>
+              <p class="font-medium" x-text="selectedApp.phone || '—'"></p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400">{% trans "Applied At" %}</p>
+              <p class="font-medium" x-text="fmtDate(selectedApp.created_at)"></p>
+            </div>
+          </div>
+          <div x-show="selectedApp.cover_letter">
+            <p class="text-xs text-slate-400 mb-1">{% trans "Cover Letter" %}</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/30 rounded-xl p-3 leading-relaxed" x-text="selectedApp.cover_letter"></p>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Status" %}</label>
+            <select x-model="appStatusUpdate" class="select w-full">
+              <option value="pending">{% trans "Pending" %}</option>
+              <option value="shortlisted">{% trans "Shortlisted" %}</option>
+              <option value="rejected">{% trans "Rejected" %}</option>
+              <option value="hired">{% trans "Hired" %}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Internal Notes" %}</label>
+            <textarea x-model="appNotes" class="input" rows="3" placeholder="{% trans "Add internal notes..." %}"></textarea>
+          </div>
+          <div class="flex gap-3 justify-end">
+            <button @click="showAppModal = false" class="btn-ghost">{% trans "Close" %}</button>
+            <button @click="updateApplication()" :disabled="saving" class="btn-primary">
+              <i data-lucide="save" class="w-4 h-4"></i>
+              <span x-text="saving ? '{% trans "Updating..." %}' : '{% trans "Update" %}'"></span>
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div x-show="showDeleteModal" x-transition class="modal-backdrop" @click.self="showDeleteModal = false" x-cloak>
+    <div class="modal-box p-6 max-w-sm w-full">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="trash-2" class="w-5 h-5 text-red-600 dark:text-red-400"></i>
+        </div>
+        <h3 class="font-bold text-slate-900 dark:text-white">{% trans "Confirm Delete" %}</h3>
+      </div>
+      <p class="text-sm text-slate-600 dark:text-slate-300 mb-5">{% trans "This action cannot be undone." %}</p>
+      <div class="flex gap-3 justify-end">
+        <button @click="showDeleteModal = false" class="btn-ghost">{% trans "Cancel" %}</button>
+        <button @click="performDelete()" :disabled="saving" class="btn-red">
+          <span x-text="saving ? '{% trans "Deleting..." %}' : '{% trans "Delete" %}'"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function jobsManager() {
+  return {
+    loading: true,
+    loadingJobs: false,
+    loadingApps: false,
+    saving: false,
+    activeTab: 'jobs',
+    stats: {},
+    jobs: [],
+    applications: [],
+    jobFilter: { status: '' },
+    appFilter: { job_id: '', status: '' },
+    showJobModal: false,
+    showAppModal: false,
+    showDeleteModal: false,
+    editingJob: null,
+    deleteTarget: null,
+    selectedApp: null,
+    appStatusUpdate: 'pending',
+    appNotes: '',
+    jobForm: { title:'', title_ar:'', department:'', location:'', job_type:'full_time', experience_level:'mid', description:'', description_ar:'', requirements:[], benefits:[], salary_min:0, salary_max:0, salary_currency:'SAR', show_salary:true, closes_at:'' },
+
+    statCards: [
+      { key:'total_jobs',        label:'{% trans "Total Jobs" %}',        cls:'text-slate-800 dark:text-white' },
+      { key:'published_jobs',    label:'{% trans "Published" %}',         cls:'text-green-600 dark:text-green-400' },
+      { key:'draft_jobs',        label:'{% trans "Draft" %}',             cls:'text-amber-600 dark:text-amber-400' },
+      { key:'closed_jobs',       label:'{% trans "Closed" %}',            cls:'text-slate-500 dark:text-slate-400' },
+      { key:'total_applications',label:'{% trans "Applications" %}',      cls:'text-blue-600 dark:text-blue-400' },
+      { key:'pending_applications',label:'{% trans "Pending" %}',         cls:'text-violet-600 dark:text-violet-400' },
+    ],
+
+    async init() {
+      this.loading = true;
+      try {
+        const [statsData, jobsData] = await Promise.all([
+          apiFetch('/api/v1/cms/admin/jobs/stats/'),
+          apiFetch('/api/v1/cms/admin/jobs/'),
+        ]);
+        this.stats = statsData || {};
+        this.jobs = jobsData?.results || jobsData || [];
+      } catch (e) {
+        notify('{% trans "Failed to load jobs" %}', 'error');
+      } finally {
+        this.loading = false;
+        this.loadingJobs = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async loadJobs() {
+      this.loadingJobs = true;
+      try {
+        const params = new URLSearchParams();
+        if (this.jobFilter.status) params.set('status', this.jobFilter.status);
+        const data = await apiFetch(`/api/v1/cms/admin/jobs/?${params}`);
+        this.jobs = data?.results || data || [];
+      } catch (e) {
+        notify('{% trans "Failed to load jobs" %}', 'error');
+      } finally {
+        this.loadingJobs = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async loadApplications() {
+      this.loadingApps = true;
+      try {
+        const params = new URLSearchParams();
+        if (this.appFilter.job_id) params.set('job_id', this.appFilter.job_id);
+        if (this.appFilter.status) params.set('status', this.appFilter.status);
+        const data = await apiFetch(`/api/v1/cms/admin/applications/?${params}`);
+        this.applications = data?.results || data || [];
+      } catch (e) {
+        notify('{% trans "Failed to load applications" %}', 'error');
+      } finally {
+        this.loadingApps = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    openNewJob() {
+      this.editingJob = null;
+      this.jobForm = { title:'', title_ar:'', department:'', location:'', job_type:'full_time', experience_level:'mid', description:'', description_ar:'', requirements:[], benefits:[], salary_min:0, salary_max:0, salary_currency:'SAR', show_salary:true, closes_at:'' };
+      this.showJobModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    openEditJob(job) {
+      this.editingJob = job;
+      this.jobForm = { ...job, requirements: [...(job.requirements||[])], benefits: [...(job.benefits||[])] };
+      this.showJobModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    viewApplications(job) {
+      this.appFilter.job_id = job.id;
+      this.activeTab = 'applications';
+      this.loadApplications();
+    },
+
+    openViewApplication(app) {
+      this.selectedApp = app;
+      this.appStatusUpdate = app.status || 'pending';
+      this.appNotes = app.internal_notes || '';
+      this.showAppModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    confirmDeleteJob(job) {
+      this.deleteTarget = { type: 'job', item: job };
+      this.showDeleteModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    confirmDeleteApp(app) {
+      this.deleteTarget = { type: 'application', item: app };
+      this.showDeleteModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async saveJob() {
+      this.saving = true;
+      try {
+        const method = this.editingJob ? 'PUT' : 'POST';
+        const url = this.editingJob ? `/api/v1/cms/admin/jobs/${this.editingJob.id}/` : '/api/v1/cms/admin/jobs/';
+        await apiFetch(url, { method, body: JSON.stringify(this.jobForm) });
+        notify('{% trans "Job saved" %}', 'success');
+        this.showJobModal = false;
+        await this.init();
+      } catch (e) {
+        notify(e.message || '{% trans "Failed" %}', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async toggleJobStatus(job) {
+      const newStatus = job.status === 'published' ? 'closed' : 'published';
+      try {
+        await apiFetch(`/api/v1/cms/admin/jobs/${job.id}/`, { method: 'PATCH', body: JSON.stringify({ status: newStatus }) });
+        job.status = newStatus;
+        notify(`{% trans "Status updated" %}`, 'success');
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) {
+        notify(e.message || '{% trans "Failed" %}', 'error');
+      }
+    },
+
+    async updateApplication() {
+      this.saving = true;
+      try {
+        await apiFetch(`/api/v1/cms/admin/applications/${this.selectedApp.id}/`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: this.appStatusUpdate, internal_notes: this.appNotes }),
+        });
+        notify('{% trans "Application updated" %}', 'success');
+        this.selectedApp.status = this.appStatusUpdate;
+        this.showAppModal = false;
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) {
+        notify(e.message || '{% trans "Failed" %}', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async performDelete() {
+      this.saving = true;
+      try {
+        const { type, item } = this.deleteTarget;
+        const url = type === 'job'
+          ? `/api/v1/cms/admin/jobs/${item.id}/`
+          : `/api/v1/cms/admin/applications/${item.id}/`;
+        await apiFetch(url, { method: 'DELETE' });
+        notify('{% trans "Deleted" %}', 'success');
+        this.showDeleteModal = false;
+        await this.init();
+        if (this.activeTab === 'applications') await this.loadApplications();
+      } catch (e) {
+        notify(e.message || '{% trans "Failed" %}', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    jobStatusBadge(s) {
+      const m = { draft:'badge bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400', published:'badge bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400', closed:'badge bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400' };
+      return m[s] || 'badge';
+    },
+
+    appStatusBadge(s) {
+      const m = { pending:'badge bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400', shortlisted:'badge bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400', rejected:'badge bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400', hired:'badge bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' };
+      return m[s] || 'badge';
+    },
+
+    fmtDate(str) {
+      if (!str) return '—';
+      return new Date(str).toLocaleDateString(APP_LOCALE, { year:'numeric', month:'short', day:'numeric' });
+    },
+  };
+}
+</script>
+{% endblock %}

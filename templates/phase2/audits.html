@@ -1,0 +1,430 @@
+{% extends "phase2/base_phase2.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Audit Jobs" %}{% endblock %}
+{% block page_title %}{% trans "Audit Jobs" %}{% endblock %}
+{% block tab_audits %}active{% endblock %}
+
+{% block phase2_content %}
+<div x-data="auditJobs()" x-init="init()" class="space-y-4">
+
+  <!-- Toolbar -->
+  <div class="card p-4">
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Status filter -->
+      <select class="select" x-model="filters.status" @change="loadJobs()">
+        <option value="">{% trans "All Statuses" %}</option>
+        <option value="pending">{% trans "Pending" %}</option>
+        <option value="queued">{% trans "Queued" %}</option>
+        <option value="running">{% trans "Running" %}</option>
+        <option value="completed">{% trans "Completed" %}</option>
+        <option value="failed">{% trans "Failed" %}</option>
+        <option value="canceled">{% trans "Canceled" %}</option>
+      </select>
+
+      <!-- Audit type filter -->
+      <select class="select" x-model="filters.audit_type" @change="loadJobs()">
+        <option value="">{% trans "All Types" %}</option>
+        <option value="generic_audit">{% trans "Generic Audit" %}</option>
+        <option value="financial_audit">{% trans "Financial Audit" %}</option>
+        <option value="compliance_audit">{% trans "Compliance Audit" %}</option>
+        <option value="fraud_detection">{% trans "Fraud Detection" %}</option>
+        <option value="vat_validation">{% trans "VAT Validation" %}</option>
+      </select>
+
+      <div class="flex-1"></div>
+
+      <!-- Refresh -->
+      <button class="btn-ghost"
+              @click="loadJobs()"
+              :disabled="loading"
+              title="{% trans 'Refresh' %}">
+        <i data-lucide="refresh-cw" class="w-4 h-4" :class="loading ? 'animate-spin' : ''"></i>
+      </button>
+
+      <!-- Run New Audit -->
+      <button class="btn-primary"
+              @click="showRunModal = true; $nextTick(() => lucide.createIcons())">
+        <i data-lucide="play-circle" class="w-4 h-4"></i>
+        {% trans "Run New Audit" %}
+      </button>
+    </div>
+  </div>
+
+  <!-- Jobs Table -->
+  <div class="card overflow-hidden">
+    <!-- Loading skeleton -->
+    <template x-if="loading">
+      <div class="p-6 space-y-4">
+        <template x-for="i in [1,2,3,4,5,6]" :key="i">
+          <div class="flex items-center gap-4">
+            <div class="w-32 h-4 rounded bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+            <div class="w-24 h-4 rounded bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+            <div class="w-20 h-5 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+            <div class="flex-1 h-4 rounded bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+            <div class="w-24 h-4 rounded bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <!-- Empty state -->
+    <template x-if="!loading && jobs.length === 0">
+      <div class="py-16 flex flex-col items-center gap-4 text-slate-400">
+        <i data-lucide="shield" class="w-14 h-14 opacity-30"></i>
+        <div class="text-center">
+          <p class="font-semibold text-slate-600 dark:text-slate-300">{% trans "No audit jobs found" %}</p>
+          <p class="text-sm mt-1">{% trans "Run an audit on a file to get started." %}</p>
+        </div>
+        <button class="btn-primary mt-2"
+                @click="showRunModal = true; $nextTick(() => lucide.createIcons())">
+          <i data-lucide="play-circle" class="w-4 h-4"></i>
+          {% trans "Run New Audit" %}
+        </button>
+      </div>
+    </template>
+
+    <!-- Table -->
+    <template x-if="!loading && jobs.length > 0">
+      <div class="overflow-x-auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{% trans "File Name" %}</th>
+              <th>{% trans "Audit Type" %}</th>
+              <th>{% trans "Status" %}</th>
+              <th>{% trans "Score" %}</th>
+              <th>{% trans "Duration" %}</th>
+              <th>{% trans "Created By" %}</th>
+              <th>{% trans "Date" %}</th>
+              <th>{% trans "Actions" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="job in jobs" :key="job.id">
+              <tr>
+                <!-- File name -->
+                <td>
+                  <div class="flex items-center gap-2">
+                    <i data-lucide="file" class="w-4 h-4 text-slate-400 flex-shrink-0"></i>
+                    <span class="font-medium text-slate-800 dark:text-white truncate max-w-[180px]"
+                          x-text="job.file_name || job.file?.original_filename || '—'"></span>
+                  </div>
+                </td>
+
+                <!-- Audit type -->
+                <td>
+                  <span class="text-xs font-medium text-slate-600 dark:text-slate-300"
+                        x-text="auditTypeLabel(job.audit_type)"></span>
+                </td>
+
+                <!-- Status badge with icon -->
+                <td>
+                  <span class="badge flex items-center gap-1.5 w-fit"
+                        :class="statusBadgeClass(job.status)">
+                    <i :data-lucide="statusIcon(job.status)"
+                       class="w-3 h-3 flex-shrink-0"
+                       :class="job.status === 'running' || job.status === 'queued' ? 'animate-spin' : ''"></i>
+                    <span x-text="job.status || '—'"></span>
+                  </span>
+                </td>
+
+                <!-- Score -->
+                <td>
+                  <template x-if="job.result && job.result.audit_score != null">
+                    <span class="font-semibold text-sm"
+                          :class="scoreColor(job.result.audit_score)"
+                          x-text="parseFloat(job.result.audit_score).toFixed(1)"></span>
+                  </template>
+                  <template x-if="!job.result || job.result.audit_score == null">
+                    <span class="text-slate-400 text-xs">—</span>
+                  </template>
+                </td>
+
+                <!-- Duration -->
+                <td class="text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap"
+                    x-text="formatDuration(job.duration_seconds || job.processing_time)"></td>
+
+                <!-- Created By -->
+                <td class="text-slate-500 dark:text-slate-400 text-xs"
+                    x-text="job.created_by_email || job.created_by || '—'"></td>
+
+                <!-- Date -->
+                <td class="text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap"
+                    x-text="(job.created_at || '').slice(0,10)"></td>
+
+                <!-- Actions -->
+                <td>
+                  <div class="flex items-center gap-1">
+                    <!-- View result (completed) -->
+                    <template x-if="job.status === 'completed'">
+                      <button class="btn-ghost py-1 px-2.5 text-xs"
+                              @click="viewResult(job.id)">
+                        <i data-lucide="eye" class="w-3.5 h-3.5 text-blue-600"></i>
+                        <span class="hidden sm:inline">{% trans "View" %}</span>
+                      </button>
+                    </template>
+
+                    <!-- Cancel (pending / queued) -->
+                    <template x-if="job.status === 'pending' || job.status === 'queued'">
+                      <button class="btn-ghost py-1 px-2 text-xs"
+                              @click="cancelJob(job.id)"
+                              title="{% trans 'Cancel' %}">
+                        <i data-lucide="x-circle" class="w-3.5 h-3.5 text-red-500"></i>
+                      </button>
+                    </template>
+
+                    <!-- Retry (failed) -->
+                    <template x-if="job.status === 'failed'">
+                      <button class="btn-ghost py-1 px-2.5 text-xs"
+                              @click="retryJob(job)"
+                              title="{% trans 'Retry' %}">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-amber-600"></i>
+                        <span class="hidden sm:inline">{% trans "Retry" %}</span>
+                      </button>
+                    </template>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </template>
+  </div>
+
+  <!-- Run Audit Modal -->
+  <div x-show="showRunModal"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-end="opacity-0"
+       class="modal-backdrop"
+       @click.self="showRunModal = false"
+       x-cloak>
+    <div class="modal-box max-w-md w-full" @click.stop>
+      <div class="p-5 border-b border-slate-100 dark:border-slate-700/40 flex items-center justify-between">
+        <h3 class="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+          <i data-lucide="play-circle" class="w-4 h-4 text-amber-500"></i>
+          {% trans "Run New Audit" %}
+        </h3>
+        <button @click="showRunModal = false" class="btn-ghost w-8 h-8 p-0 flex items-center justify-center">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div class="p-5 space-y-4">
+        <!-- File selector -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
+            {% trans "File ID or search" %}
+            <span class="text-red-500">*</span>
+          </label>
+          <div class="relative">
+            <i data-lucide="file-search" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"></i>
+            <input type="text"
+                   class="input pr-10"
+                   placeholder="{% trans 'Enter file ID...' %}"
+                   x-model="selectedFileId">
+          </div>
+          <p class="text-xs text-slate-400 mt-1">{% trans "You can find the File ID in the Files tab." %}</p>
+        </div>
+
+        <!-- Audit Type -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">{% trans "Audit Type" %}</label>
+          <select class="select w-full" x-model="selectedAuditType">
+            <option value="generic_audit">{% trans "Generic Audit" %} — {% trans "Full document analysis" %}</option>
+            <option value="financial_audit">{% trans "Financial Audit" %} — {% trans "Financial data validation" %}</option>
+            <option value="compliance_audit">{% trans "Compliance Audit" %} — {% trans "ZATCA/VAT compliance check" %}</option>
+            <option value="fraud_detection">{% trans "Fraud Detection" %} — {% trans "Fraud signal analysis" %}</option>
+            <option value="vat_validation">{% trans "VAT Validation" %} — {% trans "VAT amount validation" %}</option>
+          </select>
+          <!-- Type description -->
+          <p class="text-xs text-slate-400 mt-1.5" x-text="auditTypeDescription(selectedAuditType)"></p>
+        </div>
+
+        <!-- Audit type descriptions -->
+        <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/40 border border-slate-200 dark:border-slate-700/40 text-xs text-slate-600 dark:text-slate-300">
+          <div class="flex items-start gap-2">
+            <i data-lucide="info" class="w-3.5 h-3.5 text-blue-500 flex-shrink-0 mt-0.5"></i>
+            <span x-text="auditTypeDescription(selectedAuditType)"></span>
+          </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="flex gap-2 pt-1">
+          <button class="btn-primary flex-1"
+                  @click="runAudit()"
+                  :disabled="running || !selectedFileId.trim()">
+            <template x-if="running">
+              <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+              </svg>
+            </template>
+            <template x-if="!running">
+              <i data-lucide="play" class="w-4 h-4"></i>
+            </template>
+            <span x-text="running ? '{% trans "Starting..." %}' : '{% trans "Run Audit" %}'"></span>
+          </button>
+          <button class="btn-ghost" @click="showRunModal = false" :disabled="running">
+            {% trans "Cancel" %}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function auditJobs() {
+  return {
+    jobs: [],
+    loading: true,
+    running: false,
+    filters: { status: '', audit_type: '' },
+    showRunModal: false,
+    selectedFileId: '',
+    selectedAuditType: 'generic_audit',
+
+    async init() {
+      await this.loadJobs();
+      // Check URL for ?action=new
+      if (new URLSearchParams(window.location.search).get('action') === 'new') {
+        this.showRunModal = true;
+      }
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async loadJobs() {
+      this.loading = true;
+      try {
+        const params = new URLSearchParams();
+        if (this.filters.status) params.set('status', this.filters.status);
+        if (this.filters.audit_type) params.set('audit_type', this.filters.audit_type);
+
+        const data = await apiFetch('/audits/jobs/?' + params.toString());
+        this.jobs = Array.isArray(data) ? data : (data?.results || []);
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to load audit jobs." %}', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async runAudit() {
+      if (!this.selectedFileId.trim()) return;
+      this.running = true;
+      try {
+        const result = await apiFetch('/audits/jobs/run/', {
+          method: 'POST',
+          body: JSON.stringify({
+            file_id: this.selectedFileId.trim(),
+            audit_type: this.selectedAuditType,
+          }),
+        });
+        notify('{% trans "Audit job started successfully." %}', 'success');
+        this.showRunModal = false;
+        this.selectedFileId = '';
+        await this.loadJobs();
+        if (result?.id) {
+          setTimeout(() => { window.location.href = `/audits/${result.id}/result/`; }, 1500);
+        }
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to start audit." %}', 'error');
+      } finally {
+        this.running = false;
+      }
+    },
+
+    async cancelJob(id) {
+      try {
+        await apiFetch(`/audits/jobs/${id}/cancel/`, { method: 'POST' });
+        notify('{% trans "Audit job canceled." %}', 'info');
+        await this.loadJobs();
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to cancel job." %}', 'error');
+      }
+    },
+
+    async retryJob(job) {
+      this.selectedFileId = job.file_id || job.file?.id || '';
+      this.selectedAuditType = job.audit_type || 'generic_audit';
+      this.showRunModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    viewResult(id) {
+      window.location.href = `/audits/${id}/result/`;
+    },
+
+    statusBadgeClass(status) {
+      const map = {
+        pending:   'badge bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300',
+        queued:    'badge-info',
+        running:   'badge-medium',
+        completed: 'badge-low',
+        failed:    'badge-critical',
+        canceled:  'badge bg-slate-200 dark:bg-slate-700 text-slate-500 line-through',
+      };
+      return map[status] || 'badge bg-slate-100 dark:bg-slate-700 text-slate-500';
+    },
+
+    statusIcon(status) {
+      const map = {
+        pending: 'clock',
+        queued: 'loader',
+        running: 'loader',
+        completed: 'check-circle',
+        failed: 'x-circle',
+        canceled: 'minus-circle',
+      };
+      return map[status] || 'circle';
+    },
+
+    auditTypeLabel(type) {
+      const map = {
+        generic_audit: '{% trans "Generic" %}',
+        financial_audit: '{% trans "Financial" %}',
+        compliance_audit: '{% trans "Compliance" %}',
+        fraud_detection: '{% trans "Fraud" %}',
+        vat_validation: '{% trans "VAT" %}',
+      };
+      return map[type] || type || '—';
+    },
+
+    auditTypeDescription(type) {
+      const map = {
+        generic_audit: '{% trans "Performs a full document analysis including classification, extraction, duplicate detection, fraud scoring, and compliance checking." %}',
+        financial_audit: '{% trans "Validates financial data integrity, amount consistency, and ledger accuracy." %}',
+        compliance_audit: '{% trans "Checks ZATCA and VAT compliance requirements including mandatory fields, QR codes, and tax rates." %}',
+        fraud_detection: '{% trans "Runs 10 fraud signal detectors including round-amount patterns, weekend transactions, and vendor anomalies." %}',
+        vat_validation: '{% trans "Validates VAT calculations, tax rates (15%), and ZATCA invoice requirements." %}',
+      };
+      return map[type] || '';
+    },
+
+    formatDuration(seconds) {
+      if (seconds == null) return '—';
+      const s = parseFloat(seconds);
+      if (s < 1) return (s * 1000).toFixed(0) + ' ms';
+      if (s < 60) return s.toFixed(1) + ' s';
+      return Math.floor(s / 60) + 'm ' + (s % 60).toFixed(0) + 's';
+    },
+
+    scoreColor(score) {
+      const s = parseFloat(score);
+      if (s >= 90) return 'text-emerald-600 dark:text-emerald-400';
+      if (s >= 70) return 'text-amber-600 dark:text-amber-400';
+      if (s >= 50) return 'text-orange-600 dark:text-orange-400';
+      return 'text-red-600 dark:text-red-400';
+    },
+  };
+}
+</script>
+{% endblock %}

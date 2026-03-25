@@ -1,0 +1,313 @@
+{% extends "storage_management/base_storage.html" %}
+{% load i18n %}
+
+{% block title %}{% if provider_id %}{% trans "Edit Provider" %}{% else %}{% trans "New Provider" %}{% endif %}{% endblock %}
+
+{% block subnav_providers %}border-primary-500 text-primary-600 dark:text-primary-400{% endblock %}
+
+{% block storage_content %}
+<div x-data="providerForm('{{ provider_id }}')" x-init="init()" class="max-w-2xl mx-auto space-y-6">
+
+  <!-- Page header -->
+  <div class="flex items-center gap-3">
+    <a href="{% url 'storage_providers' %}" class="btn-ghost py-2 px-3">
+      <i data-lucide="arrow-right" class="w-4 h-4"></i>
+    </a>
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-white">
+        <span x-text="providerId ? '{% trans "Edit Provider" %}' : '{% trans "New Provider" %}'"></span>
+      </h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+        {% trans "Configure a storage backend for your organisation's files." %}
+      </p>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div x-show="loading" class="card p-8 flex items-center justify-center">
+    <svg class="animate-spin w-6 h-6 text-primary-500" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+    </svg>
+  </div>
+
+  <form x-show="!loading" x-cloak @submit.prevent="submit()" class="space-y-6">
+
+    <!-- Provider Details card -->
+    <div class="card p-6 space-y-5">
+      <h2 class="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+        <i data-lucide="info" class="w-4 h-4 text-primary-500"></i>
+        {% trans "Provider Details" %}
+      </h2>
+
+      <!-- Name -->
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+          {% trans "Provider Name" %} <span class="text-red-500">*</span>
+        </label>
+        <input x-model="form.name" type="text" class="input"
+               placeholder="{% trans 'e.g. Primary S3, Local Dev, MinIO Prod' %}" required />
+      </div>
+
+      <!-- Provider Type -->
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+          {% trans "Provider Type" %} <span class="text-red-500">*</span>
+        </label>
+        <select x-model="form.provider_type" class="select w-full" required>
+          <option value="">{% trans "— Select type —" %}</option>
+          <option value="local">{% trans "Local Storage" %}</option>
+          <option value="s3">{% trans "Amazon S3" %}</option>
+          <option value="minio">{% trans "MinIO" %}</option>
+          <option value="azure">{% trans "Azure Blob (Coming soon)" %}</option>
+        </select>
+      </div>
+
+      <!-- Description -->
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+          {% trans "Description" %}
+        </label>
+        <textarea x-model="form.description" class="input" rows="2"
+                  placeholder="{% trans 'Optional notes about this provider…' %}"></textarea>
+      </div>
+
+      <!-- Flags -->
+      <div class="flex flex-wrap gap-6">
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" x-model="form.is_active"
+                 class="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
+          <span class="text-sm text-slate-700 dark:text-slate-300">{% trans "Active" %}</span>
+        </label>
+        <label class="flex items-center gap-2 cursor-pointer">
+          <input type="checkbox" x-model="form.is_default"
+                 class="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
+          <span class="text-sm text-slate-700 dark:text-slate-300">{% trans "Set as global default" %}</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Configuration card — shown based on provider type -->
+
+    <!-- LOCAL -->
+    <div x-show="form.provider_type === 'local'" x-cloak class="card p-6 space-y-5">
+      <h2 class="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+        <i data-lucide="folder" class="w-4 h-4 text-primary-500"></i>
+        {% trans "Local Storage Configuration" %}
+      </h2>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+          {% trans "Base Path" %}
+        </label>
+        <input x-model="config.base_path" type="text" class="input"
+               placeholder="{% trans '/var/data/storage or leave blank for MEDIA_ROOT/storage' %}" />
+        <p class="text-xs text-slate-400 mt-1.5">
+          {% trans "Absolute filesystem path. Leave blank to use the default MEDIA_ROOT/storage." %}
+        </p>
+      </div>
+    </div>
+
+    <!-- S3 -->
+    <div x-show="form.provider_type === 's3'" x-cloak class="card p-6 space-y-5">
+      <h2 class="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+        <i data-lucide="cloud" class="w-4 h-4 text-primary-500"></i>
+        {% trans "Amazon S3 Configuration" %}
+      </h2>
+      {% include "storage_management/_s3_fields.html" %}
+    </div>
+
+    <!-- MinIO -->
+    <div x-show="form.provider_type === 'minio'" x-cloak class="card p-6 space-y-5">
+      <h2 class="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+        <i data-lucide="database" class="w-4 h-4 text-primary-500"></i>
+        {% trans "MinIO Configuration" %}
+      </h2>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+          {% trans "Endpoint URL" %} <span class="text-red-500">*</span>
+        </label>
+        <input x-model="config.endpoint_url" type="url" class="input"
+               placeholder="http://minio.example.com:9000" required />
+        <p class="text-xs text-slate-400 mt-1.5">{% trans "Required for MinIO. Include protocol and port." %}</p>
+      </div>
+      {% include "storage_management/_s3_fields.html" %}
+    </div>
+
+    <!-- Azure coming soon -->
+    <div x-show="form.provider_type === 'azure'" x-cloak
+         class="card p-6 bg-amber-50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800/40">
+      <div class="flex items-center gap-3 text-amber-700 dark:text-amber-400">
+        <i data-lucide="construction" class="w-5 h-5"></i>
+        <p class="text-sm font-medium">
+          {% trans "Azure Blob Storage support is coming soon. Please choose a different provider type." %}
+        </p>
+      </div>
+    </div>
+
+    <!-- Error display -->
+    <div x-show="formError" x-cloak
+         class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl p-4 text-red-700 dark:text-red-400 text-sm flex items-start gap-3">
+      <i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0 mt-0.5"></i>
+      <span x-text="formError"></span>
+    </div>
+
+    <!-- Form actions -->
+    <div class="flex items-center justify-end gap-3 pt-2">
+      <a href="{% url 'storage_providers' %}" class="btn-ghost">{% trans "Cancel" %}</a>
+      <button type="submit"
+              :disabled="saving || form.provider_type === 'azure'"
+              class="btn-primary">
+        <template x-if="saving">
+          <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          </svg>
+        </template>
+        <template x-if="!saving">
+          <i data-lucide="save" class="w-4 h-4"></i>
+        </template>
+        <span x-text="providerId ? '{% trans "Save Changes" %}' : '{% trans "Create Provider" %}'"></span>
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<!-- Inline partial for shared S3/MinIO fields -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function providerForm(providerId) {
+  return {
+    providerId: providerId || null,
+    loading: !!providerId,
+    saving: false,
+    formError: null,
+    form: {
+      name: '',
+      provider_type: '',
+      description: '',
+      is_active: true,
+      is_default: false,
+    },
+    config: {
+      bucket_name: '',
+      region: 'us-east-1',
+      endpoint_url: '',
+      base_path: '',
+      access_key: '',
+      secret_key: '',
+      use_ssl: true,
+      extra_settings: {},
+    },
+
+    async init() {
+      if (this.providerId) {
+        await this.loadProvider();
+      }
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async loadProvider() {
+      try {
+        const provider = await apiFetch(`/api/v1/storage/providers/${this.providerId}/`);
+        this.form.name = provider.name;
+        this.form.provider_type = provider.provider_type;
+        this.form.description = provider.description || '';
+        this.form.is_active = provider.is_active;
+        this.form.is_default = provider.is_default;
+
+        // Try to load config
+        try {
+          const cfgs = await apiFetch(`/api/v1/storage/configs/?provider=${this.providerId}`);
+          const cfg = (cfgs.results ?? cfgs)[0];
+          if (cfg) {
+            this.config.bucket_name = cfg.bucket_name || '';
+            this.config.region = cfg.region || 'us-east-1';
+            this.config.endpoint_url = cfg.endpoint_url || '';
+            this.config.base_path = cfg.base_path || '';
+            this.config.use_ssl = cfg.use_ssl;
+          }
+        } catch (_) {}
+      } catch (e) {
+        this.formError = e.message;
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async submit() {
+      if (this.form.provider_type === 'azure') return;
+      this.saving = true;
+      this.formError = null;
+
+      try {
+        let provider;
+        if (this.providerId) {
+          provider = await apiFetch(`/api/v1/storage/providers/${this.providerId}/`, {
+            method: 'PATCH',
+            body: JSON.stringify(this.form),
+          });
+        } else {
+          provider = await apiFetch('/api/v1/storage/providers/', {
+            method: 'POST',
+            body: JSON.stringify(this.form),
+          });
+        }
+
+        // Save config (skip for local if nothing set)
+        if (this.form.provider_type !== 'local' || this.config.base_path) {
+          const configPayload = {
+            provider: provider.id,
+            bucket_name: this.config.bucket_name,
+            region: this.config.region,
+            endpoint_url: this.config.endpoint_url,
+            base_path: this.config.base_path,
+            access_key: this.config.access_key,
+            secret_key: this.config.secret_key,
+            use_ssl: this.config.use_ssl,
+          };
+
+          // Check if config exists (edit mode)
+          try {
+            const cfgs = await apiFetch(`/api/v1/storage/configs/?provider=${provider.id}`);
+            const existing = (cfgs.results ?? cfgs)[0];
+            if (existing) {
+              await apiFetch(`/api/v1/storage/configs/${existing.id}/`, {
+                method: 'PATCH',
+                body: JSON.stringify(configPayload),
+              });
+            } else {
+              await apiFetch('/api/v1/storage/configs/', {
+                method: 'POST',
+                body: JSON.stringify(configPayload),
+              });
+            }
+          } catch (_) {
+            // Config save errors are non-fatal for the provider record
+          }
+        }
+
+        window.dispatchEvent(new CustomEvent('notify', {
+          detail: {
+            type: 'success',
+            title: this.providerId ? '{% trans "Provider updated" %}' : '{% trans "Provider created" %}',
+            message: provider.name,
+          }
+        }));
+
+        setTimeout(() => { window.location.href = '{% url "storage_providers" %}'; }, 800);
+
+      } catch (e) {
+        this.formError = e.message || '{% trans "Save failed. Please check the form and try again." %}';
+        this.$nextTick(() => lucide.createIcons());
+      } finally {
+        this.saving = false;
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

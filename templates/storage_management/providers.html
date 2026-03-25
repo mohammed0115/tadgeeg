@@ -1,0 +1,310 @@
+{% extends "storage_management/base_storage.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Storage Providers" %}{% endblock %}
+
+{% block subnav_providers %}border-primary-500 text-primary-600 dark:text-primary-400{% endblock %}
+
+{% block storage_content %}
+<div x-data="storageProviders()" x-init="init()" class="max-w-6xl mx-auto space-y-6">
+
+  <!-- Page header -->
+  <div class="flex items-center justify-between flex-wrap gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+        <i data-lucide="hard-drive" class="w-6 h-6 text-primary-500"></i>
+        {% trans "Storage Providers" %}
+      </h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+        {% trans "Configure and manage storage backends for file persistence." %}
+      </p>
+    </div>
+    <a href="{% url 'storage_provider_new' %}" class="btn-primary">
+      <i data-lucide="plus" class="w-4 h-4"></i>
+      {% trans "Add Provider" %}
+    </a>
+  </div>
+
+  <!-- Error banner -->
+  <div x-show="error" x-cloak class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl p-4 text-red-700 dark:text-red-400 text-sm flex items-start gap-3">
+    <i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0 mt-0.5"></i>
+    <span x-text="error"></span>
+  </div>
+
+  <!-- Providers table card -->
+  <div class="card overflow-hidden">
+    <!-- Loading skeleton -->
+    <div x-show="loading" class="p-8 flex items-center justify-center">
+      <div class="flex items-center gap-3 text-slate-500 dark:text-slate-400">
+        <svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+        </svg>
+        {% trans "Loading providers..." %}
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div x-show="!loading && providers.length === 0" x-cloak class="p-12 text-center">
+      <i data-lucide="hard-drive" class="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4"></i>
+      <p class="text-slate-500 dark:text-slate-400 font-medium">{% trans "No storage providers configured yet." %}</p>
+      <a href="{% url 'storage_provider_new' %}" class="btn-primary mt-4 inline-flex">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        {% trans "Add your first provider" %}
+      </a>
+    </div>
+
+    <!-- Table -->
+    <div x-show="!loading && providers.length > 0" x-cloak class="overflow-x-auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>{% trans "Name" %}</th>
+            <th>{% trans "Type" %}</th>
+            <th>{% trans "Status" %}</th>
+            <th>{% trans "Default" %}</th>
+            <th>{% trans "Connection" %}</th>
+            <th>{% trans "Actions" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="provider in providers" :key="provider.id">
+            <tr>
+              <!-- Name + description -->
+              <td>
+                <div class="font-medium text-slate-900 dark:text-white" x-text="provider.name"></div>
+                <div x-show="provider.description" class="text-xs text-slate-400 truncate max-w-xs" x-text="provider.description"></div>
+              </td>
+
+              <!-- Provider type badge -->
+              <td>
+                <span class="badge"
+                      :class="{
+                        'badge-info': provider.provider_type === 'local',
+                        'badge-medium': provider.provider_type === 's3',
+                        'badge-low': provider.provider_type === 'minio',
+                        'badge-high': provider.provider_type === 'azure',
+                      }"
+                      x-text="provider.provider_type_display">
+                </span>
+              </td>
+
+              <!-- Active / inactive toggle -->
+              <td>
+                <button @click="toggleActive(provider)"
+                        :disabled="toggling === provider.id"
+                        class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none"
+                        :class="provider.is_active ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'">
+                  <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                        :class="provider.is_active ? '-translate-x-6' : '-translate-x-1'"></span>
+                </button>
+                <span class="text-xs mr-2" :class="provider.is_active ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'"
+                      x-text="provider.is_active ? '{% trans "Active" %}' : '{% trans "Inactive" %}'"></span>
+              </td>
+
+              <!-- Default indicator -->
+              <td>
+                <template x-if="provider.is_default">
+                  <span class="badge badge-info">
+                    <i data-lucide="star" class="w-3 h-3 me-1"></i>
+                    {% trans "Default" %}
+                  </span>
+                </template>
+                <template x-if="!provider.is_default">
+                  <span class="text-slate-400 text-xs">—</span>
+                </template>
+              </td>
+
+              <!-- Connection test -->
+              <td>
+                <div x-show="testResults[provider.id] === undefined">
+                  <button @click="testConnection(provider)"
+                          :disabled="testing === provider.id"
+                          class="btn-ghost text-xs py-1.5 px-3">
+                    <template x-if="testing === provider.id">
+                      <svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                      </svg>
+                    </template>
+                    <template x-if="testing !== provider.id">
+                      <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                    </template>
+                    {% trans "Test" %}
+                  </button>
+                </div>
+                <div x-show="testResults[provider.id] !== undefined" x-cloak>
+                  <span class="badge"
+                        :class="testResults[provider.id]?.success ? 'badge-low' : 'badge-critical'"
+                        :title="testResults[provider.id]?.message">
+                    <i :data-lucide="testResults[provider.id]?.success ? 'check-circle' : 'x-circle'" class="w-3 h-3 me-1"></i>
+                    <span x-text="testResults[provider.id]?.success
+                      ? '{% trans "OK" %} (' + testResults[provider.id]?.latency_ms + 'ms)'
+                      : '{% trans "Failed" %}'">
+                    </span>
+                  </span>
+                  <button @click="delete testResults[provider.id]" class="text-slate-400 hover:text-slate-600 ms-1 text-xs underline">
+                    {% trans "Reset" %}
+                  </button>
+                </div>
+              </td>
+
+              <!-- Actions -->
+              <td>
+                <div class="flex items-center gap-2">
+                  <a :href="'/storage/providers/' + provider.id + '/edit/'"
+                     class="btn-ghost py-1.5 px-3 text-xs">
+                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                    {% trans "Edit" %}
+                  </a>
+                  <button @click="confirmDelete(provider)"
+                          class="btn-ghost py-1.5 px-3 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    {% trans "Delete" %}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Delete confirmation modal -->
+  <div x-show="deleteTarget" x-cloak class="modal-backdrop" @click.self="deleteTarget = null">
+    <div class="modal-box max-w-md p-6 space-y-4">
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="trash-2" class="w-6 h-6 text-red-600 dark:text-red-400"></i>
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-900 dark:text-white text-lg">{% trans "Delete Provider" %}</h3>
+          <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">
+            {% trans "Are you sure you want to delete" %}
+            <strong x-text="deleteTarget?.name" class="text-slate-800 dark:text-white"></strong>?
+            {% trans "This cannot be undone." %}
+          </p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button @click="deleteTarget = null" class="btn-ghost">{% trans "Cancel" %}</button>
+        <button @click="doDelete()" :disabled="deleting" class="btn-red">
+          <template x-if="deleting">
+            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+          </template>
+          {% trans "Delete" %}
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function storageProviders() {
+  return {
+    providers: [],
+    loading: true,
+    error: null,
+    testing: null,
+    toggling: null,
+    testResults: {},
+    deleteTarget: null,
+    deleting: false,
+
+    async init() {
+      await this.loadProviders();
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async loadProviders() {
+      this.loading = true;
+      this.error = null;
+      try {
+        const data = await apiFetch('/api/v1/storage/providers/');
+        this.providers = data.results ?? data;
+      } catch (e) {
+        this.error = e.message || '{% trans "Failed to load providers." %}';
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async testConnection(provider) {
+      this.testing = provider.id;
+      try {
+        const result = await apiFetch(
+          `/api/v1/storage/providers/${provider.id}/test-connection/`,
+          { method: 'POST' }
+        );
+        this.testResults = { ...this.testResults, [provider.id]: result };
+        window.dispatchEvent(new CustomEvent('notify', {
+          detail: {
+            type: result.success ? 'success' : 'error',
+            title: result.success ? '{% trans "Connection OK" %}' : '{% trans "Connection Failed" %}',
+            message: result.message,
+          }
+        }));
+      } catch (e) {
+        this.testResults = { ...this.testResults, [provider.id]: { success: false, message: e.message, latency_ms: 0 } };
+      } finally {
+        this.testing = null;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async toggleActive(provider) {
+      this.toggling = provider.id;
+      try {
+        const updated = await apiFetch(
+          `/api/v1/storage/providers/${provider.id}/toggle-active/`,
+          { method: 'PATCH' }
+        );
+        const idx = this.providers.findIndex(p => p.id === provider.id);
+        if (idx !== -1) this.providers[idx] = updated;
+      } catch (e) {
+        window.dispatchEvent(new CustomEvent('notify', {
+          detail: { type: 'error', title: '{% trans "Error" %}', message: e.message }
+        }));
+      } finally {
+        this.toggling = null;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    confirmDelete(provider) {
+      this.deleteTarget = provider;
+    },
+
+    async doDelete() {
+      if (!this.deleteTarget) return;
+      this.deleting = true;
+      try {
+        await apiFetch(
+          `/api/v1/storage/providers/${this.deleteTarget.id}/`,
+          { method: 'DELETE' }
+        );
+        this.providers = this.providers.filter(p => p.id !== this.deleteTarget.id);
+        window.dispatchEvent(new CustomEvent('notify', {
+          detail: { type: 'success', title: '{% trans "Deleted" %}', message: '{% trans "Provider removed." %}' }
+        }));
+        this.deleteTarget = null;
+      } catch (e) {
+        window.dispatchEvent(new CustomEvent('notify', {
+          detail: { type: 'error', title: '{% trans "Error" %}', message: e.message }
+        }));
+      } finally {
+        this.deleting = false;
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

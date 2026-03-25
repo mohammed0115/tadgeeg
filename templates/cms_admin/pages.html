@@ -1,0 +1,319 @@
+{% extends "cms_admin/base_cms.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "CMS Pages" %}{% endblock %}
+{% block page_title %}{% trans "Platform CMS" %}{% endblock %}
+{% block tab_pages %}active{% endblock %}
+
+{% block cms_content %}
+<div x-data="cmsPages()" x-init="init()" class="space-y-5">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <h2 class="text-lg font-bold text-slate-800 dark:text-white">{% trans "Pages" %}</h2>
+    <button @click="openNew()" class="btn-primary">
+      <i data-lucide="plus" class="w-4 h-4"></i>
+      {% trans "New Page" %}
+    </button>
+  </div>
+
+  <!-- Filters -->
+  <div class="card p-4 flex flex-wrap items-center gap-3">
+    <select x-model="filter.status" @change="init()" class="select">
+      <option value="">{% trans "All Statuses" %}</option>
+      <option value="draft">{% trans "Draft" %}</option>
+      <option value="published">{% trans "Published" %}</option>
+      <option value="archived">{% trans "Archived" %}</option>
+    </select>
+    <input type="text" x-model.debounce.300ms="filter.search" @input="init()" class="input max-w-xs" placeholder="{% trans "Search pages..." %}">
+  </div>
+
+  <!-- Table -->
+  <div class="card overflow-hidden">
+    <template x-if="loading">
+      <div class="animate-pulse space-y-0 divide-y divide-slate-100 dark:divide-slate-700/30">
+        <template x-for="i in [1,2,3,4,5]" :key="i">
+          <div class="px-5 py-4 flex items-center gap-4">
+            <div class="h-4 w-40 bg-slate-200 dark:bg-slate-700 rounded"></div>
+            <div class="h-5 w-16 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
+            <div class="h-4 w-24 bg-slate-200 dark:bg-slate-700 rounded ml-auto"></div>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <template x-if="!loading && pages.length === 0">
+      <div class="py-16 flex flex-col items-center gap-3 text-slate-400">
+        <i data-lucide="file-x" class="w-12 h-12 opacity-40"></i>
+        <p class="text-sm">{% trans "No pages found." %}</p>
+        <button @click="openNew()" class="btn-ghost text-xs mt-1">
+          <i data-lucide="plus" class="w-4 h-4"></i> {% trans "Create First Page" %}
+        </button>
+      </div>
+    </template>
+
+    <template x-if="!loading && pages.length > 0">
+      <div class="overflow-x-auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{% trans "Title" %}</th>
+              <th>{% trans "Slug" %}</th>
+              <th>{% trans "Status" %}</th>
+              <th>{% trans "Created By" %}</th>
+              <th>{% trans "Created At" %}</th>
+              <th class="text-center">{% trans "Actions" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="page in pages" :key="page.id">
+              <tr>
+                <td>
+                  <div>
+                    <p class="font-medium text-slate-800 dark:text-white" x-text="page.title || page.title_ar || '—'"></p>
+                    <p class="text-xs text-slate-400" x-text="page.title_ar || ''"></p>
+                  </div>
+                </td>
+                <td>
+                  <code class="text-xs bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded" x-text="page.slug"></code>
+                </td>
+                <td>
+                  <span :class="statusBadge(page.status)" x-text="page.status"></span>
+                </td>
+                <td class="text-xs text-slate-500" x-text="page.created_by || '—'"></td>
+                <td class="text-xs text-slate-400 whitespace-nowrap" x-text="fmtDate(page.created_at)"></td>
+                <td>
+                  <div class="flex items-center justify-center gap-1.5">
+                    <button @click="openEdit(page)" class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-blue-600 transition-colors" title="{% trans "Edit" %}">
+                      <i data-lucide="pencil" class="w-4 h-4"></i>
+                    </button>
+                    <button @click="toggleStatus(page)" class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 transition-colors"
+                            :class="page.status === 'published' ? 'hover:text-amber-600' : 'hover:text-green-600'"
+                            :title="page.status === 'published' ? '{% trans "Archive" %}' : '{% trans "Publish" %}'">
+                      <i :data-lucide="page.status === 'published' ? 'archive' : 'globe'" class="w-4 h-4"></i>
+                    </button>
+                    <button @click="confirmDelete(page)" class="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-500 hover:text-red-600 transition-colors" title="{% trans "Delete" %}">
+                      <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
+    <!-- Pagination -->
+    <template x-if="!loading && totalPages > 1">
+      <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-700/30 flex items-center justify-between">
+        <p class="text-xs text-slate-400">
+          {% trans "Page" %} <span x-text="currentPage"></span> {% trans "of" %} <span x-text="totalPages"></span>
+        </p>
+        <div class="flex gap-2">
+          <button @click="changePage(currentPage - 1)" :disabled="currentPage <= 1" class="btn-ghost text-xs py-1 px-2">
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+          <button @click="changePage(currentPage + 1)" :disabled="currentPage >= totalPages" class="btn-ghost text-xs py-1 px-2">
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- New/Edit Page Modal -->
+  <div x-show="showModal" x-transition class="modal-backdrop" @click.self="showModal = false" x-cloak>
+    <div class="modal-box p-6 max-w-lg w-full">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white" x-text="editingPage ? '{% trans "Edit Page" %}' : '{% trans "New Page" %}'"></h3>
+        <button @click="showModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form @submit.prevent="savePage()" class="space-y-4">
+        <div class="grid grid-cols-1 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Title" %} (EN)</label>
+            <input type="text" x-model="form.title" class="input" @input="if(!editingPage) form.slug = slugify(form.title)" required>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Title" %} (عربي)</label>
+            <input type="text" x-model="form.title_ar" class="input" dir="rtl">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Slug" %}</label>
+            <input type="text" x-model="form.slug" class="input font-mono text-xs" required>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Status" %}</label>
+            <select x-model="form.status" class="select w-full">
+              <option value="draft">{% trans "Draft" %}</option>
+              <option value="published">{% trans "Published" %}</option>
+              <option value="archived">{% trans "Archived" %}</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex gap-3 justify-end pt-2">
+          <button type="button" @click="showModal = false" class="btn-ghost">{% trans "Cancel" %}</button>
+          <button type="submit" :disabled="saving" class="btn-primary">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span x-text="saving ? '{% trans "Saving..." %}' : '{% trans "Save Page" %}'"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div x-show="showDeleteModal" x-transition class="modal-backdrop" @click.self="showDeleteModal = false" x-cloak>
+    <div class="modal-box p-6 max-w-sm w-full">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="trash-2" class="w-5 h-5 text-red-600 dark:text-red-400"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-900 dark:text-white">{% trans "Delete Page" %}</h3>
+          <p class="text-xs text-slate-500" x-text="'&quot;' + (deletingPage?.title || '') + '&quot;'"></p>
+        </div>
+      </div>
+      <p class="text-sm text-slate-600 dark:text-slate-300 mb-5">{% trans "This action cannot be undone." %}</p>
+      <div class="flex gap-3 justify-end">
+        <button @click="showDeleteModal = false" class="btn-ghost">{% trans "Cancel" %}</button>
+        <button @click="deletePage()" :disabled="saving" class="btn-red">
+          <span x-text="saving ? '{% trans "Deleting..." %}' : '{% trans "Delete" %}'"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function cmsPages() {
+  return {
+    loading: true,
+    saving: false,
+    pages: [],
+    currentPage: 1,
+    totalPages: 1,
+    filter: { status: '', search: '' },
+    showModal: false,
+    showDeleteModal: false,
+    editingPage: null,
+    deletingPage: null,
+    form: { title: '', title_ar: '', slug: '', status: 'draft' },
+
+    async init() {
+      this.loading = true;
+      try {
+        const params = new URLSearchParams({ page: this.currentPage });
+        if (this.filter.status) params.set('status', this.filter.status);
+        if (this.filter.search) params.set('search', this.filter.search);
+        const data = await apiFetch(`/api/v1/cms/admin/pages/?${params}`);
+        this.pages = data?.results || data || [];
+        this.totalPages = data?.total_pages || 1;
+      } catch (e) {
+        notify('{% trans "Failed to load pages" %}', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    openNew() {
+      this.editingPage = null;
+      this.form = { title: '', title_ar: '', slug: '', status: 'draft' };
+      this.showModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    openEdit(page) {
+      this.editingPage = page;
+      this.form = { title: page.title || '', title_ar: page.title_ar || '', slug: page.slug || '', status: page.status || 'draft' };
+      this.showModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    confirmDelete(page) {
+      this.deletingPage = page;
+      this.showDeleteModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async savePage() {
+      this.saving = true;
+      try {
+        const method = this.editingPage ? 'PUT' : 'POST';
+        const url = this.editingPage
+          ? `/api/v1/cms/admin/pages/${this.editingPage.id}/`
+          : '/api/v1/cms/admin/pages/';
+        await apiFetch(url, { method, body: JSON.stringify(this.form) });
+        notify('{% trans "Page saved successfully" %}', 'success');
+        this.showModal = false;
+        await this.init();
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to save" %}', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async deletePage() {
+      this.saving = true;
+      try {
+        await apiFetch(`/api/v1/cms/admin/pages/${this.deletingPage.id}/`, { method: 'DELETE' });
+        notify('{% trans "Page deleted" %}', 'success');
+        this.showDeleteModal = false;
+        await this.init();
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to delete" %}', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async toggleStatus(page) {
+      const newStatus = page.status === 'published' ? 'archived' : 'published';
+      try {
+        await apiFetch(`/api/v1/cms/admin/pages/${page.id}/`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: newStatus }),
+        });
+        page.status = newStatus;
+        notify(`{% trans "Status updated to" %} ${newStatus}`, 'success');
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to update status" %}', 'error');
+      }
+    },
+
+    changePage(n) {
+      if (n < 1 || n > this.totalPages) return;
+      this.currentPage = n;
+      this.init();
+    },
+
+    statusBadge(status) {
+      const map = {
+        draft: 'badge bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
+        published: 'badge bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
+        archived: 'badge bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300',
+      };
+      return map[status] || 'badge';
+    },
+
+    slugify(str) {
+      return (str || '').toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, '-').replace(/^-|-$/g, '');
+    },
+
+    fmtDate(str) {
+      if (!str) return '—';
+      return new Date(str).toLocaleDateString(APP_LOCALE, { year: 'numeric', month: 'short', day: 'numeric' });
+    },
+  };
+}
+</script>
+{% endblock %}

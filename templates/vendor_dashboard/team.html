@@ -1,0 +1,263 @@
+{% extends "layouts/base_vendor_dashboard.html" %}
+{% load i18n %}
+{% block page_title %}الفريق{% endblock %}
+{% block breadcrumb_current %}الفريق{% endblock %}
+
+{% block content %}
+<div x-data="teamManager()" x-init="init()" class="space-y-5 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">الفريق</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">إدارة أعضاء الفريق والصلاحيات</p>
+    </div>
+    <button @click="openInvite()" class="btn-primary">
+      <i data-lucide="user-plus" class="w-4 h-4"></i>
+      دعوة عضو
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+    <div class="card p-4 text-center">
+      <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
+      <template x-if="!loading"><p class="text-2xl font-black text-slate-900 dark:text-white" x-text="members.length"></p></template>
+      <p class="text-xs text-slate-500 mt-1">إجمالي الأعضاء</p>
+    </div>
+    <div class="card p-4 text-center">
+      <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
+      <template x-if="!loading"><p class="text-2xl font-black text-amber-600" x-text="pendingInvitations.length"></p></template>
+      <p class="text-xs text-slate-500 mt-1">دعوات معلقة</p>
+    </div>
+    <div class="card p-4 text-center">
+      <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
+      <template x-if="!loading"><p class="text-2xl font-black text-indigo-600" x-text="members.filter(m=>m.role==='admin').length"></p></template>
+      <p class="text-xs text-slate-500 mt-1">مشرفون</p>
+    </div>
+  </div>
+
+  <!-- Members List -->
+  <div class="card overflow-hidden">
+    <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
+      <h3 class="text-sm font-bold text-slate-800 dark:text-white">أعضاء الفريق النشطون</h3>
+    </div>
+    <template x-if="loading">
+      <div class="animate-pulse divide-y divide-slate-100 dark:divide-slate-700/30">
+        <template x-for="i in [1,2,3,4]" :key="i">
+          <div class="px-5 py-4 flex items-center gap-4">
+            <div class="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex-shrink-0"></div>
+            <div class="flex-1 space-y-2">
+              <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-40"></div>
+              <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-56"></div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </template>
+    <template x-if="!loading && members.length === 0">
+      <div class="px-5 py-12 text-center text-slate-400 text-sm">لا يوجد أعضاء فريق بعد</div>
+    </template>
+    <template x-if="!loading && members.length > 0">
+      <div class="divide-y divide-slate-100 dark:divide-slate-700/30">
+        <template x-for="member in members" :key="member.id">
+          <div class="px-5 py-4 flex items-center gap-4">
+            <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
+                 :style="'background: linear-gradient(135deg, ' + member.avatar_color_1 + ', ' + member.avatar_color_2 + ')'">
+              <span x-text="(member.full_name || member.email || '?')[0].toUpperCase()"></span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="font-semibold text-slate-800 dark:text-white text-sm" x-text="member.full_name || '—'"></p>
+              <p class="text-xs text-slate-400" x-text="member.email"></p>
+            </div>
+            <div class="flex items-center gap-3 flex-shrink-0">
+              <span class="badge"
+                    :class="{
+                      'badge-indigo': member.role === 'admin',
+                      'badge-blue':   member.role === 'member',
+                      'badge-slate':  member.role === 'viewer',
+                    }"
+                    x-text="member.role === 'admin' ? 'مشرف' : member.role === 'member' ? 'عضو' : 'قارئ'">
+              </span>
+              <template x-if="member.id !== currentUserId">
+                <button @click="removeMember(member.id)"
+                        class="text-slate-400 hover:text-red-500 p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition">
+                  <i data-lucide="user-x" class="w-4 h-4"></i>
+                </button>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+    </template>
+  </div>
+
+  <!-- Pending Invitations -->
+  <template x-if="!loading && pendingInvitations.length > 0">
+    <div class="card overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
+        <h3 class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+          <i data-lucide="mail" class="w-4 h-4 text-amber-500"></i>
+          دعوات معلقة
+        </h3>
+      </div>
+      <div class="divide-y divide-slate-100 dark:divide-slate-700/30">
+        <template x-for="inv in pendingInvitations" :key="inv.id">
+          <div class="px-5 py-3.5 flex items-center gap-4">
+            <div class="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 flex-shrink-0">
+              <i data-lucide="mail" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-slate-700 dark:text-slate-300" x-text="inv.email"></p>
+              <p class="text-xs text-slate-400"
+                 x-text="'دُعي بتاريخ ' + (inv.created_at ? new Date(inv.created_at).toLocaleDateString('ar-SA') : '')"></p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button @click="resendInvitation(inv.id)" class="btn-ghost text-xs px-3 py-1.5">
+                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                إعادة إرسال
+              </button>
+              <button @click="cancelInvitation(inv.id)" class="btn-ghost text-xs px-3 py-1.5 text-red-500">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </template>
+
+  <!-- Invite Modal -->
+  <template x-if="showModal">
+    <div class="modal-backdrop" @click.self="showModal=false">
+      <div class="modal-box max-w-md">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/30">
+          <h3 class="font-bold text-slate-800 dark:text-white">دعوة عضو جديد</h3>
+          <button @click="showModal=false"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">البريد الإلكتروني</label>
+            <input type="email" x-model="inviteForm.email" class="input" placeholder="user@company.com">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">الدور</label>
+            <select x-model="inviteForm.role" class="select w-full">
+              <option value="viewer">قارئ — عرض التقارير فقط</option>
+              <option value="member">عضو — رفع الملفات وعرض النتائج</option>
+              <option value="admin">مشرف — إدارة كاملة</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-700/30">
+          <button @click="showModal=false" class="btn-ghost">إلغاء</button>
+          <button @click="sendInvite()" :disabled="!inviteForm.email || saving" class="btn-primary">
+            <i data-lucide="send" class="w-4 h-4"></i>
+            <span x-text="saving ? 'جاري الإرسال...' : 'إرسال الدعوة'"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function teamManager() {
+  return {
+    members: [], pendingInvitations: [],
+    loading: true, saving: false,
+    showModal: false,
+    inviteForm: { email: '', role: 'member' },
+    currentUserId: '{{ request.user.id }}',
+
+    async init() {
+      await this.load();
+      // Set avatar colors
+      this.members.forEach(m => {
+        m.avatar_color_1 = '#3b82f6';
+        m.avatar_color_2 = '#8b5cf6';
+      });
+    },
+
+    async load() {
+      this.loading = true;
+      try {
+        const [membersRes, invitesRes] = await Promise.all([
+          apiFetch('/api/v1/auth/team/members/'),
+          apiFetch('/api/v1/auth/team/invitations/'),
+        ]);
+        if (membersRes && membersRes.ok) {
+          const data = await membersRes.json();
+          this.members = Array.isArray(data) ? data : (data.results || []);
+        }
+        if (invitesRes && invitesRes.ok) {
+          const data = await invitesRes.json();
+          this.pendingInvitations = Array.isArray(data) ? data.filter(i => i.status === 'pending') : [];
+        }
+      } catch (e) {
+        notify('تعذّر تحميل بيانات الفريق', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    openInvite() {
+      this.inviteForm = { email: '', role: 'member' };
+      this.showModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async sendInvite() {
+      if (!this.inviteForm.email) return;
+      this.saving = true;
+      try {
+        const res = await apiFetch('/api/v1/auth/team/invite/', {
+          method: 'POST',
+          body: JSON.stringify(this.inviteForm),
+        });
+        if (res && res.ok) {
+          const inv = await res.json();
+          this.pendingInvitations.push(inv);
+          notify('تم إرسال الدعوة إلى ' + this.inviteForm.email, 'success');
+          this.showModal = false;
+        } else {
+          const err = await res.json().catch(() => ({}));
+          notify(err.detail || 'فشل إرسال الدعوة', 'error');
+        }
+      } catch (e) {
+        notify('فشل إرسال الدعوة', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async removeMember(id) {
+      if (!confirm('هل أنت متأكد من إزالة هذا العضو؟')) return;
+      const res = await apiFetch(`/api/v1/auth/team/members/${id}/`, { method: 'DELETE' });
+      if (res && (res.ok || res.status === 204)) {
+        this.members = this.members.filter(m => m.id !== id);
+        notify('تم إزالة العضو', 'success');
+      }
+    },
+
+    async resendInvitation(id) {
+      const res = await apiFetch(`/api/v1/auth/team/invitations/${id}/resend/`, { method: 'POST' });
+      if (res && res.ok) notify('تم إعادة إرسال الدعوة', 'success');
+      else notify('فشل إعادة الإرسال', 'error');
+    },
+
+    async cancelInvitation(id) {
+      const res = await apiFetch(`/api/v1/auth/team/invitations/${id}/`, { method: 'DELETE' });
+      if (res && (res.ok || res.status === 204)) {
+        this.pendingInvitations = this.pendingInvitations.filter(i => i.id !== id);
+        notify('تم إلغاء الدعوة', 'success');
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

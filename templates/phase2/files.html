@@ -1,0 +1,494 @@
+{% extends "phase2/base_phase2.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "File Management" %}{% endblock %}
+{% block page_title %}{% trans "File Management" %}{% endblock %}
+{% block tab_files %}active{% endblock %}
+
+{% block phase2_content %}
+<div x-data="fileManager()" x-init="init()" class="space-y-4">
+
+  <!-- Toolbar -->
+  <div class="card p-4">
+    <div class="flex flex-wrap items-center gap-3">
+      <!-- Search -->
+      <div class="relative flex-1 min-w-[200px]">
+        <i data-lucide="search" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"></i>
+        <input type="text"
+               class="input pr-9"
+               placeholder="{% trans 'Search files...' %}"
+               x-model="filters.search"
+               @input.debounce.400ms="loadFiles()">
+      </div>
+
+      <!-- Type filter -->
+      <select class="select" x-model="filters.file_type" @change="loadFiles()">
+        <option value="">{% trans "All Types" %}</option>
+        <option value="pdf">PDF</option>
+        <option value="excel">Excel</option>
+        <option value="csv">CSV</option>
+        <option value="json">JSON</option>
+        <option value="image">{% trans "Image" %}</option>
+      </select>
+
+      <!-- Status filter -->
+      <select class="select" x-model="filters.status" @change="loadFiles()">
+        <option value="">{% trans "All Statuses" %}</option>
+        <option value="uploaded">{% trans "Uploaded" %}</option>
+        <option value="stored">{% trans "Stored" %}</option>
+        <option value="processing">{% trans "Processing" %}</option>
+        <option value="failed">{% trans "Failed" %}</option>
+        <option value="archived">{% trans "Archived" %}</option>
+      </select>
+
+      <!-- Folder filter -->
+      <select class="select" x-model="filters.folder_id" @change="loadFiles()">
+        <option value="">{% trans "All Folders" %}</option>
+        <template x-for="folder in folders" :key="folder.id">
+          <option :value="folder.id" x-text="folder.name"></option>
+        </template>
+      </select>
+
+      <!-- Upload button -->
+      <button class="btn-primary flex-shrink-0" @click="showUploadModal = true; $nextTick(() => lucide.createIcons())">
+        <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+        {% trans "Upload File" %}
+      </button>
+    </div>
+  </div>
+
+  <!-- File Table -->
+  <div class="card overflow-hidden">
+    <!-- Loading skeleton -->
+    <template x-if="loading">
+      <div class="p-6 space-y-3">
+        <template x-for="i in [1,2,3,4,5,6]" :key="i">
+          <div class="flex items-center gap-4">
+            <div class="w-8 h-8 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse flex-shrink-0"></div>
+            <div class="flex-1 h-4 rounded bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+            <div class="w-16 h-4 rounded bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+            <div class="w-20 h-4 rounded bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+            <div class="w-24 h-4 rounded bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <!-- Empty state -->
+    <template x-if="!loading && files.length === 0">
+      <div class="py-16 flex flex-col items-center gap-4 text-slate-400">
+        <i data-lucide="inbox" class="w-14 h-14 opacity-30"></i>
+        <div class="text-center">
+          <p class="font-semibold text-slate-600 dark:text-slate-300">{% trans "No files found" %}</p>
+          <p class="text-sm mt-1">{% trans "Upload a file to get started with auditing." %}</p>
+        </div>
+        <button class="btn-primary mt-2" @click="showUploadModal = true; $nextTick(() => lucide.createIcons())">
+          <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+          {% trans "Upload File" %}
+        </button>
+      </div>
+    </template>
+
+    <!-- Table -->
+    <template x-if="!loading && files.length > 0">
+      <div class="overflow-x-auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="w-8">
+                <input type="checkbox" class="rounded" @change="toggleSelectAll($event.target.checked)">
+              </th>
+              <th>{% trans "Name" %}</th>
+              <th>{% trans "Type" %}</th>
+              <th>{% trans "Size" %}</th>
+              <th>{% trans "Status" %}</th>
+              <th>{% trans "Folder" %}</th>
+              <th>{% trans "Uploaded By" %}</th>
+              <th>{% trans "Date" %}</th>
+              <th>{% trans "Actions" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="file in files" :key="file.id">
+              <tr class="cursor-pointer" @click.self="selectedFile = file">
+                <td @click.stop>
+                  <input type="checkbox" class="rounded" :value="file.id" x-model="selectedIds">
+                </td>
+                <!-- Name + extension icon -->
+                <td>
+                  <div class="flex items-center gap-2.5">
+                    <span class="text-lg leading-none flex-shrink-0" x-text="fileIcon(file.file_type || file.mime_type || '')"></span>
+                    <div class="min-w-0">
+                      <p class="font-medium text-slate-800 dark:text-white truncate max-w-[200px]" x-text="file.original_filename || file.name"></p>
+                      <p class="text-xs text-slate-400" x-text="(file.file_type || '').toUpperCase()"></p>
+                    </div>
+                  </div>
+                </td>
+                <td class="text-slate-500 dark:text-slate-400" x-text="(file.file_type || file.mime_type || '—').toUpperCase()"></td>
+                <td class="text-slate-500 dark:text-slate-400 whitespace-nowrap"
+                    x-text="file.file_size ? ((file.file_size / 1048576).toFixed(1) + ' MB') : '—'"></td>
+                <!-- Status badge -->
+                <td>
+                  <span class="badge"
+                        :class="statusBadgeClass(file.status)">
+                    <span x-show="file.status === 'processing'" class="inline-block w-2 h-2 rounded-full bg-current mr-1 animate-pulse"></span>
+                    <span x-text="file.status || '—'"></span>
+                  </span>
+                </td>
+                <td class="text-slate-500 dark:text-slate-400" x-text="file.folder_name || '—'"></td>
+                <td class="text-slate-500 dark:text-slate-400 text-xs" x-text="file.uploaded_by_email || file.uploaded_by || '—'"></td>
+                <td class="text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap"
+                    x-text="(file.created_at || file.uploaded_at || '').slice(0,10)"></td>
+                <!-- Actions -->
+                <td @click.stop>
+                  <div class="flex items-center gap-1">
+                    <button class="btn-ghost py-1 px-2 text-xs"
+                            @click="getDownloadUrl(file.id)"
+                            title="{% trans 'Download' %}">
+                      <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button class="btn-ghost py-1 px-2 text-xs"
+                            @click="runAudit(file.id)"
+                            title="{% trans 'Run Audit' %}">
+                      <i data-lucide="shield-check" class="w-3.5 h-3.5 text-amber-600"></i>
+                    </button>
+                    <template x-if="file.status !== 'archived'">
+                      <button class="btn-ghost py-1 px-2 text-xs"
+                              @click="archiveFile(file.id)"
+                              title="{% trans 'Archive' %}">
+                        <i data-lucide="archive" class="w-3.5 h-3.5 text-slate-500"></i>
+                      </button>
+                    </template>
+                    <template x-if="file.status === 'archived'">
+                      <button class="btn-ghost py-1 px-2 text-xs"
+                              @click="restoreFile(file.id)"
+                              title="{% trans 'Restore' %}">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-emerald-600"></i>
+                      </button>
+                    </template>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
+    <!-- Pagination -->
+    <template x-if="!loading && totalCount > pageSize">
+      <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-700/30 flex items-center justify-between">
+        <p class="text-xs text-slate-500 dark:text-slate-400">
+          {% trans "Showing" %}
+          <span x-text="((currentPage - 1) * pageSize) + 1"></span>–<span x-text="Math.min(currentPage * pageSize, totalCount)"></span>
+          {% trans "of" %} <span x-text="totalCount"></span>
+        </p>
+        <div class="flex items-center gap-1">
+          <button class="btn-ghost py-1 px-2.5 text-xs"
+                  :disabled="currentPage === 1"
+                  @click="currentPage--; loadFiles()">
+            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+          </button>
+          <span class="text-xs text-slate-600 dark:text-slate-300 px-2"
+                x-text="currentPage + ' / ' + Math.ceil(totalCount / pageSize)"></span>
+          <button class="btn-ghost py-1 px-2.5 text-xs"
+                  :disabled="currentPage >= Math.ceil(totalCount / pageSize)"
+                  @click="currentPage++; loadFiles()">
+            <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Upload Modal -->
+  <div x-show="showUploadModal"
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-end="opacity-0"
+       class="modal-backdrop"
+       @click.self="showUploadModal = false"
+       x-cloak>
+    <div class="modal-box max-w-lg w-full" @click.stop>
+      <div class="p-5 border-b border-slate-100 dark:border-slate-700/40 flex items-center justify-between">
+        <h3 class="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+          <i data-lucide="upload-cloud" class="w-4 h-4 text-blue-500"></i>
+          {% trans "Upload File" %}
+        </h3>
+        <button @click="showUploadModal = false" class="btn-ghost w-8 h-8 p-0 flex items-center justify-center">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div class="p-5 space-y-4">
+        <form @submit.prevent="submitUpload($event)" enctype="multipart/form-data" id="uploadForm">
+
+          <!-- Drag-drop zone -->
+          <div class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-8 text-center transition-colors"
+               :class="dragOver ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20' : 'hover:border-slate-400'"
+               @dragover.prevent="dragOver = true"
+               @dragleave.prevent="dragOver = false"
+               @drop.prevent="handleDrop($event)"
+               @click="$refs.fileInput.click()">
+            <i data-lucide="upload-cloud" class="w-10 h-10 text-slate-400 mx-auto mb-3"
+               :class="dragOver ? 'text-blue-500' : ''"></i>
+            <p class="text-sm font-medium text-slate-600 dark:text-slate-300">
+              <template x-if="!selectedUploadFile">
+                <span>{% trans "Drop file here or click to browse" %}</span>
+              </template>
+              <template x-if="selectedUploadFile">
+                <span class="text-blue-600 dark:text-blue-400" x-text="selectedUploadFile.name"></span>
+              </template>
+            </p>
+            <p class="text-xs text-slate-400 mt-1">PDF, Excel, CSV, JSON, PNG, JPG, WebP</p>
+            <input type="file"
+                   x-ref="fileInput"
+                   name="file"
+                   class="hidden"
+                   accept=".pdf,.xlsx,.xls,.csv,.json,.png,.jpg,.jpeg,.webp"
+                   @change="selectedUploadFile = $event.target.files[0]">
+          </div>
+
+          <!-- File validation feedback -->
+          <template x-if="uploadError">
+            <p class="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+              <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
+              <span x-text="uploadError"></span>
+            </p>
+          </template>
+
+          <!-- Folder selector -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">{% trans "Folder (optional)" %}</label>
+            <select class="select w-full" name="folder_id" x-model="uploadFolderId">
+              <option value="">{% trans "No folder" %}</option>
+              <template x-for="folder in folders" :key="folder.id">
+                <option :value="folder.id" x-text="folder.name"></option>
+              </template>
+            </select>
+          </div>
+
+          <!-- Progress bar -->
+          <template x-if="uploading">
+            <div class="space-y-1">
+              <div class="flex justify-between text-xs text-slate-500 dark:text-slate-400">
+                <span>{% trans "Uploading..." %}</span>
+                <span x-text="uploadProgress + '%'"></span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill bg-blue-500" :style="`width:${uploadProgress}%`"></div>
+              </div>
+            </div>
+          </template>
+
+          <!-- Submit button -->
+          <div class="flex gap-2 pt-1">
+            <button type="submit"
+                    class="btn-primary flex-1"
+                    :disabled="uploading || !selectedUploadFile">
+              <template x-if="uploading">
+                <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                </svg>
+              </template>
+              <template x-if="!uploading">
+                <i data-lucide="upload" class="w-4 h-4"></i>
+              </template>
+              <span x-text="uploading ? '{% trans "Uploading..." %}' : '{% trans "Upload" %}'"></span>
+            </button>
+            <button type="button" class="btn-ghost" @click="showUploadModal = false" :disabled="uploading">
+              {% trans "Cancel" %}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function fileManager() {
+  return {
+    files: [],
+    folders: [],
+    loading: true,
+    uploading: false,
+    dragOver: false,
+    filters: { search: '', file_type: '', status: '', folder_id: '' },
+    selectedFile: null,
+    selectedIds: [],
+    showUploadModal: false,
+    uploadProgress: 0,
+    uploadFolderId: '',
+    selectedUploadFile: null,
+    uploadError: '',
+    currentPage: 1,
+    totalCount: 0,
+    pageSize: 20,
+
+    async init() {
+      await Promise.all([this.loadFiles(), this.loadFolders()]);
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async loadFolders() {
+      try {
+        const data = await apiFetch('/files/folders/');
+        this.folders = Array.isArray(data) ? data : (data?.results || []);
+      } catch (e) {
+        // non-fatal
+      }
+    },
+
+    async loadFiles() {
+      this.loading = true;
+      try {
+        const params = new URLSearchParams();
+        if (this.filters.search) params.set('search', this.filters.search);
+        if (this.filters.file_type) params.set('file_type', this.filters.file_type);
+        if (this.filters.status) params.set('status', this.filters.status);
+        if (this.filters.folder_id) params.set('folder_id', this.filters.folder_id);
+        params.set('page', this.currentPage);
+        params.set('page_size', this.pageSize);
+
+        const data = await apiFetch('/files/files/?' + params.toString());
+        if (Array.isArray(data)) {
+          this.files = data;
+          this.totalCount = data.length;
+        } else {
+          this.files = data?.results || [];
+          this.totalCount = data?.count || 0;
+        }
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to load files" %}', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    handleDrop(event) {
+      this.dragOver = false;
+      const file = event.dataTransfer.files[0];
+      if (file) {
+        this.selectedUploadFile = file;
+        this.$refs.fileInput.files = event.dataTransfer.files;
+      }
+    },
+
+    async submitUpload(event) {
+      if (!this.selectedUploadFile) {
+        this.uploadError = '{% trans "Please select a file to upload." %}';
+        return;
+      }
+      this.uploadError = '';
+      this.uploading = true;
+      this.uploadProgress = 10;
+
+      const formData = new FormData();
+      formData.append('file', this.selectedUploadFile);
+      if (this.uploadFolderId) formData.append('folder_id', this.uploadFolderId);
+
+      try {
+        // Simulate progress
+        const progressInterval = setInterval(() => {
+          if (this.uploadProgress < 85) this.uploadProgress += 5;
+        }, 200);
+
+        await apiFetch('/files/files/', { method: 'POST', body: formData });
+
+        clearInterval(progressInterval);
+        this.uploadProgress = 100;
+
+        notify('{% trans "File uploaded successfully." %}', 'success');
+        this.showUploadModal = false;
+        this.selectedUploadFile = null;
+        this.uploadProgress = 0;
+        await this.loadFiles();
+      } catch (e) {
+        this.uploadError = e.message || '{% trans "Upload failed." %}';
+        notify(e.message || '{% trans "Upload failed." %}', 'error');
+      } finally {
+        this.uploading = false;
+      }
+    },
+
+    async archiveFile(id) {
+      try {
+        await apiFetch(`/files/files/${id}/archive/`, { method: 'POST' });
+        notify('{% trans "File archived." %}', 'success');
+        await this.loadFiles();
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to archive file." %}', 'error');
+      }
+    },
+
+    async restoreFile(id) {
+      try {
+        await apiFetch(`/files/files/${id}/restore/`, { method: 'POST' });
+        notify('{% trans "File restored." %}', 'success');
+        await this.loadFiles();
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to restore file." %}', 'error');
+      }
+    },
+
+    async runAudit(fileId) {
+      try {
+        const result = await apiFetch('/audits/jobs/run/', {
+          method: 'POST',
+          body: JSON.stringify({ file_id: fileId, audit_type: 'generic_audit' }),
+        });
+        notify('{% trans "Audit job started." %}', 'success');
+        if (result?.id) {
+          setTimeout(() => { window.location.href = `/audits/${result.id}/result/`; }, 1500);
+        }
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to start audit." %}', 'error');
+      }
+    },
+
+    async getDownloadUrl(id) {
+      try {
+        const data = await apiFetch(`/files/files/${id}/download-url/`);
+        const url = data?.url || data?.download_url || data;
+        if (url) window.open(url, '_blank');
+        else notify('{% trans "Download URL not available." %}', 'error');
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to get download URL." %}', 'error');
+      }
+    },
+
+    toggleSelectAll(checked) {
+      this.selectedIds = checked ? this.files.map(f => f.id) : [];
+    },
+
+    fileIcon(type) {
+      const t = (type || '').toLowerCase();
+      if (t.includes('pdf')) return '📄';
+      if (t.includes('excel') || t.includes('xlsx') || t.includes('xls') || t.includes('spreadsheet')) return '📊';
+      if (t.includes('csv')) return '📋';
+      if (t.includes('json')) return '🔧';
+      if (t.includes('image') || t.includes('png') || t.includes('jpg') || t.includes('jpeg') || t.includes('webp')) return '🖼️';
+      return '📁';
+    },
+
+    statusBadgeClass(status) {
+      const map = {
+        uploaded: 'badge-info',
+        stored: 'badge-low',
+        processing: 'badge-medium',
+        failed: 'badge-critical',
+        archived: 'badge bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400',
+      };
+      return map[status] || 'badge-info';
+    },
+  };
+}
+</script>
+{% endblock %}

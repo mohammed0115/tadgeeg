@@ -1,0 +1,414 @@
+{% extends "cms_admin/base_cms.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Pricing Plans" %}{% endblock %}
+{% block page_title %}{% trans "Platform CMS" %}{% endblock %}
+{% block tab_pricing %}active{% endblock %}
+
+{% block cms_content %}
+<div x-data="pricingEditor()" x-init="init()" class="space-y-5">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between">
+    <h2 class="text-lg font-bold text-slate-800 dark:text-white">{% trans "Pricing Plans" %}</h2>
+    <button @click="openAddPlan()" class="btn-primary">
+      <i data-lucide="plus" class="w-4 h-4"></i>
+      {% trans "Add Plan" %}
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <template x-if="loading">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 animate-pulse">
+      <template x-for="i in [1,2,3]" :key="i">
+        <div class="card p-6 space-y-4">
+          <div class="h-6 w-24 bg-slate-200 dark:bg-slate-700 rounded"></div>
+          <div class="h-10 w-32 bg-slate-200 dark:bg-slate-700 rounded"></div>
+          <div class="space-y-2">
+            <template x-for="j in [1,2,3,4]" :key="j">
+              <div class="h-4 w-full bg-slate-200 dark:bg-slate-700 rounded"></div>
+            </template>
+          </div>
+        </div>
+      </template>
+    </div>
+  </template>
+
+  <!-- Empty -->
+  <template x-if="!loading && plans.length === 0">
+    <div class="card py-16 flex flex-col items-center gap-3 text-slate-400">
+      <i data-lucide="tag" class="w-12 h-12 opacity-40"></i>
+      <p class="text-sm">{% trans "No pricing plans yet." %}</p>
+      <button @click="openAddPlan()" class="btn-ghost text-xs mt-1">
+        <i data-lucide="plus" class="w-4 h-4"></i> {% trans "Add First Plan" %}
+      </button>
+    </div>
+  </template>
+
+  <!-- Plans Grid -->
+  <template x-if="!loading && plans.length > 0">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+      <template x-for="plan in plans" :key="plan.id">
+        <div class="card p-6 space-y-4 relative overflow-hidden"
+             :class="plan.is_featured ? 'ring-2 ring-primary-500' : ''">
+          <!-- Featured badge -->
+          <template x-if="plan.is_featured">
+            <div class="absolute top-3 left-3">
+              <span class="badge bg-primary-600 text-white text-[10px]">{% trans "Featured" %}</span>
+            </div>
+          </template>
+          <!-- Plan header -->
+          <div :class="plan.is_featured ? 'pt-5' : ''">
+            <div class="flex items-start justify-between">
+              <div>
+                <h3 class="font-bold text-slate-800 dark:text-white text-lg" x-text="plan.name || plan.name_ar"></h3>
+                <p class="text-xs text-slate-400" x-text="plan.name_ar || ''"></p>
+              </div>
+              <!-- Active toggle -->
+              <button @click="togglePlanActive(plan)"
+                      class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0"
+                      :class="plan.is_active ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'">
+                <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                      :class="plan.is_active ? '-translate-x-6' : '-translate-x-1'"></span>
+              </button>
+            </div>
+            <!-- Price -->
+            <div class="mt-3 flex items-baseline gap-1">
+              <span class="text-3xl font-black text-slate-900 dark:text-white" x-text="fmtNum(plan.price_monthly)"></span>
+              <span class="text-sm text-slate-400" x-text="(plan.currency || 'SAR') + '/{% trans "mo" %}'"></span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">
+              <span x-text="fmtNum(plan.price_annual)"></span>
+              <span x-text="' ' + (plan.currency || 'SAR') + ' /{% trans "yr" %}'"></span>
+            </p>
+          </div>
+
+          <!-- Limits -->
+          <div class="grid grid-cols-3 gap-2 text-center border-y border-slate-100 dark:border-slate-700/30 py-3">
+            <div>
+              <p class="text-xs font-bold text-slate-800 dark:text-white" x-text="plan.max_users === -1 ? '∞' : plan.max_users"></p>
+              <p class="text-[10px] text-slate-400">{% trans "Users" %}</p>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-slate-800 dark:text-white" x-text="plan.max_invoices === -1 ? '∞' : plan.max_invoices"></p>
+              <p class="text-[10px] text-slate-400">{% trans "Invoices" %}</p>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-slate-800 dark:text-white" x-text="(plan.max_storage_gb || 0) === -1 ? '∞' : (plan.max_storage_gb || 0) + 'GB'"></p>
+              <p class="text-[10px] text-slate-400">{% trans "Storage" %}</p>
+            </div>
+          </div>
+
+          <!-- Features list -->
+          <div class="space-y-1.5 min-h-[80px]">
+            <template x-for="(feat, fi) in (plan.features || [])" :key="fi">
+              <div class="flex items-start gap-2">
+                <i :data-lucide="feat.is_included ? 'check-circle' : 'x-circle'"
+                   class="w-4 h-4 flex-shrink-0 mt-0.5"
+                   :class="feat.is_included ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600'"></i>
+                <span class="text-xs" :class="feat.is_included ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400 line-through'"
+                      x-text="feat.text || feat.text_ar"></span>
+                <button @click="deleteFeature(plan, fi)" class="mr-auto flex-shrink-0 text-slate-300 hover:text-red-500 transition-colors">
+                  <i data-lucide="x" class="w-3 h-3"></i>
+                </button>
+              </div>
+            </template>
+            <button @click="openAddFeature(plan)" class="text-xs text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-1 pt-1">
+              <i data-lucide="plus" class="w-3 h-3"></i> {% trans "Add Feature" %}
+            </button>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-700/30">
+            <button @click="openEditPlan(plan)" class="btn-ghost text-xs flex-1">
+              <i data-lucide="pencil" class="w-3.5 h-3.5"></i> {% trans "Edit" %}
+            </button>
+            <button @click="confirmDeletePlan(plan)" class="p-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-600 transition-colors">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </template>
+
+  <!-- Add/Edit Plan Modal -->
+  <div x-show="showPlanModal" x-transition class="modal-backdrop" @click.self="showPlanModal = false" x-cloak>
+    <div class="modal-box p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white"
+            x-text="editingPlan ? '{% trans "Edit Plan" %}' : '{% trans "Add Plan" %}'"></h3>
+        <button @click="showPlanModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form @submit.prevent="savePlan()" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Name" %} (EN)</label>
+            <input type="text" x-model="planForm.name" class="input" required>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Name" %} (عربي)</label>
+            <input type="text" x-model="planForm.name_ar" class="input" dir="rtl">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Slug" %}</label>
+            <input type="text" x-model="planForm.slug" class="input font-mono text-xs" required>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Currency" %}</label>
+            <input type="text" x-model="planForm.currency" class="input" placeholder="SAR" maxlength="3">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Price Monthly" %}</label>
+            <input type="number" x-model.number="planForm.price_monthly" class="input" step="0.01" min="0">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Price Annual" %}</label>
+            <input type="number" x-model.number="planForm.price_annual" class="input" step="0.01" min="0">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Max Users (-1 = unlimited)" %}</label>
+            <input type="number" x-model.number="planForm.max_users" class="input" min="-1">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Max Invoices (-1 = unlimited)" %}</label>
+            <input type="number" x-model.number="planForm.max_invoices" class="input" min="-1">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Max Storage GB (-1 = unlimited)" %}</label>
+            <input type="number" x-model.number="planForm.max_storage_gb" class="input" min="-1">
+          </div>
+          <div class="flex items-center gap-3 pt-2">
+            <button type="button" @click="planForm.is_featured = !planForm.is_featured"
+                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                    :class="planForm.is_featured ? 'bg-primary-600' : 'bg-slate-300 dark:bg-slate-600'">
+              <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                    :class="planForm.is_featured ? '-translate-x-6' : '-translate-x-1'"></span>
+            </button>
+            <label class="text-sm text-slate-700 dark:text-slate-300">{% trans "Featured Plan" %}</label>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "CTA Text" %} (EN)</label>
+            <input type="text" x-model="planForm.cta_text" class="input" placeholder="Get Started">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "CTA URL" %}</label>
+            <input type="text" x-model="planForm.cta_url" class="input" placeholder="/register/">
+          </div>
+        </div>
+        <div class="flex gap-3 justify-end pt-2">
+          <button type="button" @click="showPlanModal = false" class="btn-ghost">{% trans "Cancel" %}</button>
+          <button type="submit" :disabled="saving" class="btn-primary">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span x-text="saving ? '{% trans "Saving..." %}' : '{% trans "Save Plan" %}'"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Feature Modal -->
+  <div x-show="showFeatureModal" x-transition class="modal-backdrop" @click.self="showFeatureModal = false" x-cloak>
+    <div class="modal-box p-6 max-w-md w-full">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">{% trans "Add Feature" %}</h3>
+        <button @click="showFeatureModal = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form @submit.prevent="saveFeature()" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Feature Text" %} (EN)</label>
+          <input type="text" x-model="featureForm.text" class="input" required>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Feature Text" %} (عربي)</label>
+          <input type="text" x-model="featureForm.text_ar" class="input" dir="rtl">
+        </div>
+        <div class="flex items-center gap-3">
+          <button type="button" @click="featureForm.is_included = !featureForm.is_included"
+                  class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                  :class="featureForm.is_included ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'">
+            <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                  :class="featureForm.is_included ? '-translate-x-6' : '-translate-x-1'"></span>
+          </button>
+          <label class="text-sm text-slate-700 dark:text-slate-300">{% trans "Included" %}</label>
+        </div>
+        <div class="flex gap-3 justify-end pt-2">
+          <button type="button" @click="showFeatureModal = false" class="btn-ghost">{% trans "Cancel" %}</button>
+          <button type="submit" :disabled="saving" class="btn-primary">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span x-text="saving ? '{% trans "Adding..." %}' : '{% trans "Add Feature" %}'"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Plan Modal -->
+  <div x-show="showDeleteModal" x-transition class="modal-backdrop" @click.self="showDeleteModal = false" x-cloak>
+    <div class="modal-box p-6 max-w-sm w-full">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="trash-2" class="w-5 h-5 text-red-600 dark:text-red-400"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-900 dark:text-white">{% trans "Delete Plan" %}</h3>
+          <p class="text-xs text-slate-500" x-text="deletingPlan?.name || ''"></p>
+        </div>
+      </div>
+      <p class="text-sm text-slate-600 dark:text-slate-300 mb-5">{% trans "This action cannot be undone." %}</p>
+      <div class="flex gap-3 justify-end">
+        <button @click="showDeleteModal = false" class="btn-ghost">{% trans "Cancel" %}</button>
+        <button @click="deletePlan()" :disabled="saving" class="btn-red">
+          <span x-text="saving ? '{% trans "Deleting..." %}' : '{% trans "Delete" %}'"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function pricingEditor() {
+  return {
+    loading: true,
+    saving: false,
+    plans: [],
+    showPlanModal: false,
+    showFeatureModal: false,
+    showDeleteModal: false,
+    editingPlan: null,
+    deletingPlan: null,
+    targetPlan: null,
+    planForm: { name:'', name_ar:'', slug:'', currency:'SAR', price_monthly:0, price_annual:0, max_users:5, max_invoices:100, max_storage_gb:10, is_featured:false, cta_text:'', cta_url:'' },
+    featureForm: { text:'', text_ar:'', is_included:true },
+
+    async init() {
+      this.loading = true;
+      try {
+        const data = await apiFetch('/api/v1/cms/admin/pricing/');
+        this.plans = data?.results || data || [];
+      } catch (e) {
+        notify('{% trans "Failed to load pricing plans" %}', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    openAddPlan() {
+      this.editingPlan = null;
+      this.planForm = { name:'', name_ar:'', slug:'', currency:'SAR', price_monthly:0, price_annual:0, max_users:5, max_invoices:100, max_storage_gb:10, is_featured:false, cta_text:'', cta_url:'' };
+      this.showPlanModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    openEditPlan(plan) {
+      this.editingPlan = plan;
+      this.planForm = { ...plan };
+      this.showPlanModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    confirmDeletePlan(plan) {
+      this.deletingPlan = plan;
+      this.showDeleteModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    openAddFeature(plan) {
+      this.targetPlan = plan;
+      this.featureForm = { text:'', text_ar:'', is_included:true };
+      this.showFeatureModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async savePlan() {
+      this.saving = true;
+      try {
+        const method = this.editingPlan ? 'PUT' : 'POST';
+        const url = this.editingPlan
+          ? `/api/v1/cms/admin/pricing/${this.editingPlan.id}/`
+          : '/api/v1/cms/admin/pricing/';
+        await apiFetch(url, { method, body: JSON.stringify(this.planForm) });
+        notify('{% trans "Plan saved" %}', 'success');
+        this.showPlanModal = false;
+        await this.init();
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to save" %}', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async deletePlan() {
+      this.saving = true;
+      try {
+        await apiFetch(`/api/v1/cms/admin/pricing/${this.deletingPlan.id}/`, { method: 'DELETE' });
+        notify('{% trans "Plan deleted" %}', 'success');
+        this.showDeleteModal = false;
+        await this.init();
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to delete" %}', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async saveFeature() {
+      this.saving = true;
+      try {
+        await apiFetch(`/api/v1/cms/admin/pricing/${this.targetPlan.id}/features/`, {
+          method: 'POST',
+          body: JSON.stringify(this.featureForm),
+        });
+        notify('{% trans "Feature added" %}', 'success');
+        this.showFeatureModal = false;
+        await this.init();
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to add feature" %}', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async deleteFeature(plan, featureIdx) {
+      const feat = plan.features[featureIdx];
+      if (!feat?.id) { plan.features.splice(featureIdx, 1); return; }
+      try {
+        await apiFetch(`/api/v1/cms/admin/pricing/${plan.id}/features/${feat.id}/`, { method: 'DELETE' });
+        plan.features.splice(featureIdx, 1);
+        notify('{% trans "Feature removed" %}', 'success');
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to remove feature" %}', 'error');
+      }
+    },
+
+    async togglePlanActive(plan) {
+      const was = plan.is_active;
+      plan.is_active = !was;
+      try {
+        await apiFetch(`/api/v1/cms/admin/pricing/${plan.id}/`, {
+          method: 'PATCH',
+          body: JSON.stringify({ is_active: plan.is_active }),
+        });
+        this.$nextTick(() => lucide.createIcons());
+      } catch (e) {
+        plan.is_active = was;
+        notify(e.message || '{% trans "Failed to update" %}', 'error');
+      }
+    },
+
+    fmtNum(v) {
+      return Number(v || 0).toLocaleString(APP_LOCALE);
+    },
+  };
+}
+</script>
+{% endblock %}

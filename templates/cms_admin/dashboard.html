@@ -1,0 +1,303 @@
+{% extends "cms_admin/base_cms.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "CMS Overview" %}{% endblock %}
+{% block page_title %}{% trans "Platform CMS" %}{% endblock %}
+{% block tab_dashboard %}active{% endblock %}
+
+{% block cms_content %}
+<div x-data="cmsDashboard()" x-init="init()" class="space-y-6">
+
+  <!-- Stats Cards Row -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+
+    <!-- Total Pages -->
+    <div class="card p-5 flex items-start gap-4">
+      <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+        <i data-lucide="file-text" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{% trans "Total Pages" %}</p>
+        <template x-if="loading">
+          <div class="mt-1.5 h-7 w-20 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+        </template>
+        <template x-if="!loading">
+          <p class="mt-0.5 text-2xl font-black text-slate-800 dark:text-white" x-text="(stats.total_pages || 0).toLocaleString()"></p>
+        </template>
+        <template x-if="!loading">
+          <div class="flex items-center gap-2 mt-1">
+            <span class="badge bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+              <span x-text="stats.published_pages || 0"></span> {% trans "published" %}
+            </span>
+            <span class="badge bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400">
+              <span x-text="stats.draft_pages || 0"></span> {% trans "draft" %}
+            </span>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Active Jobs -->
+    <div class="card p-5 flex items-start gap-4">
+      <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center">
+        <i data-lucide="briefcase" class="w-6 h-6 text-violet-600 dark:text-violet-400"></i>
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{% trans "Active Jobs" %}</p>
+        <template x-if="loading">
+          <div class="mt-1.5 h-7 w-16 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+        </template>
+        <template x-if="!loading">
+          <p class="mt-0.5 text-2xl font-black text-slate-800 dark:text-white" x-text="(stats.active_jobs || 0).toLocaleString()"></p>
+        </template>
+        <template x-if="!loading">
+          <p class="text-xs text-slate-400 mt-1">
+            <span x-text="stats.total_applications || 0"></span> {% trans "total applications" %}
+          </p>
+        </template>
+      </div>
+    </div>
+
+    <!-- New Leads -->
+    <div class="card p-5 flex items-start gap-4">
+      <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-red-50 dark:bg-red-900/30 flex items-center justify-center relative">
+        <i data-lucide="inbox" class="w-6 h-6 text-red-600 dark:text-red-400"></i>
+        <template x-if="!loading && (stats.new_leads || 0) > 0">
+          <span class="absolute -top-1 -right-1 min-w-[20px] h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1" x-text="stats.new_leads"></span>
+        </template>
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{% trans "New Leads" %}</p>
+        <template x-if="loading">
+          <div class="mt-1.5 h-7 w-14 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+        </template>
+        <template x-if="!loading">
+          <p class="mt-0.5 text-2xl font-black" :class="(stats.new_leads||0) > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-white'" x-text="(stats.new_leads || 0).toLocaleString()"></p>
+        </template>
+        <template x-if="!loading">
+          <p class="text-xs text-slate-400 mt-1"><span x-text="stats.total_leads || 0"></span> {% trans "total" %}</p>
+        </template>
+      </div>
+    </div>
+
+    <!-- Media Assets -->
+    <div class="card p-5 flex items-start gap-4">
+      <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
+        <i data-lucide="image" class="w-6 h-6 text-emerald-600 dark:text-emerald-400"></i>
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{% trans "Media Assets" %}</p>
+        <template x-if="loading">
+          <div class="mt-1.5 h-7 w-20 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+        </template>
+        <template x-if="!loading">
+          <p class="mt-0.5 text-2xl font-black text-slate-800 dark:text-white" x-text="(stats.media_assets || 0).toLocaleString()"></p>
+        </template>
+        <template x-if="!loading">
+          <p class="text-xs text-slate-400 mt-1"><span x-text="stats.media_size || '0 MB'"></span></p>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Row: Recent Activity + Quick Actions + SEO Health -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Recent Activity Table -->
+    <div class="lg:col-span-2 card overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/30 flex items-center justify-between">
+        <h2 class="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+          <i data-lucide="activity" class="w-4 h-4 text-blue-500"></i>
+          {% trans "Recent Activity" %}
+        </h2>
+      </div>
+
+      <template x-if="loading">
+        <div class="animate-pulse space-y-0 divide-y divide-slate-100 dark:divide-slate-700/30">
+          <template x-for="i in [1,2,3,4,5]" :key="i">
+            <div class="px-5 py-3.5 flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex-shrink-0"></div>
+              <div class="flex-1 space-y-1.5">
+                <div class="h-3.5 w-3/4 rounded bg-slate-200 dark:bg-slate-700"></div>
+                <div class="h-3 w-1/3 rounded bg-slate-200 dark:bg-slate-700"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <template x-if="!loading && activity.length === 0">
+        <div class="py-12 flex flex-col items-center gap-3 text-slate-400">
+          <i data-lucide="clock" class="w-10 h-10 opacity-40"></i>
+          <p class="text-sm">{% trans "No recent activity" %}</p>
+        </div>
+      </template>
+
+      <template x-if="!loading && activity.length > 0">
+        <div class="overflow-x-auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>{% trans "Action" %}</th>
+                <th>{% trans "Item" %}</th>
+                <th>{% trans "User" %}</th>
+                <th>{% trans "Time" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="row in activity" :key="row.id">
+                <tr>
+                  <td>
+                    <span class="inline-flex items-center gap-1.5">
+                      <i :data-lucide="activityIcon(row.action)" class="w-3.5 h-3.5 text-slate-400"></i>
+                      <span x-text="row.action_label || row.action"></span>
+                    </span>
+                  </td>
+                  <td class="max-w-[180px] truncate" x-text="row.item || '—'"></td>
+                  <td class="text-xs text-slate-500" x-text="row.user || '—'"></td>
+                  <td class="text-xs text-slate-400 whitespace-nowrap" x-text="relativeTime(row.timestamp)"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+    </div>
+
+    <!-- Right column: Quick Actions + SEO Health -->
+    <div class="space-y-4">
+
+      <!-- Quick Actions -->
+      <div class="card p-5 space-y-3">
+        <h2 class="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+          <i data-lucide="zap" class="w-4 h-4 text-amber-500"></i>
+          {% trans "Quick Actions" %}
+        </h2>
+        <div class="space-y-2">
+          <a href="/cms/pages/?action=new" class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700/40 hover:border-blue-300 dark:hover:border-blue-600/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all group">
+            <div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-600 transition-colors">
+              <i data-lucide="file-plus" class="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:text-white"></i>
+            </div>
+            <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{% trans "Add Page" %}</span>
+            <i data-lucide="chevron-left" class="w-4 h-4 text-slate-300 mr-auto"></i>
+          </a>
+          <a href="/cms/jobs/?action=new" class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700/40 hover:border-violet-300 dark:hover:border-violet-600/50 hover:bg-violet-50 dark:hover:bg-violet-900/20 transition-all group">
+            <div class="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center flex-shrink-0 group-hover:bg-violet-600 transition-colors">
+              <i data-lucide="briefcase" class="w-4 h-4 text-violet-600 dark:text-violet-400 group-hover:text-white"></i>
+            </div>
+            <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{% trans "Add Job" %}</span>
+            <i data-lucide="chevron-left" class="w-4 h-4 text-slate-300 mr-auto"></i>
+          </a>
+          <a href="/cms/leads/" class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700/40 hover:border-red-300 dark:hover:border-red-600/50 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all group">
+            <div class="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/40 flex items-center justify-center flex-shrink-0 group-hover:bg-red-600 transition-colors">
+              <i data-lucide="inbox" class="w-4 h-4 text-red-600 dark:text-red-400 group-hover:text-white"></i>
+            </div>
+            <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{% trans "View Leads" %}</span>
+            <i data-lucide="chevron-left" class="w-4 h-4 text-slate-300 mr-auto"></i>
+          </a>
+          <a href="/cms/media/?action=upload" class="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700/40 hover:border-emerald-300 dark:hover:border-emerald-600/50 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all group">
+            <div class="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-600 transition-colors">
+              <i data-lucide="upload-cloud" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 group-hover:text-white"></i>
+            </div>
+            <span class="text-sm font-medium text-slate-700 dark:text-slate-200">{% trans "Upload Media" %}</span>
+            <i data-lucide="chevron-left" class="w-4 h-4 text-slate-300 mr-auto"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- SEO Health -->
+      <div class="card p-5 space-y-3">
+        <h2 class="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+          <i data-lucide="search" class="w-4 h-4 text-emerald-500"></i>
+          {% trans "SEO Health" %}
+        </h2>
+        <template x-if="loading">
+          <div class="animate-pulse space-y-2">
+            <template x-for="i in [1,2,3,4,5]" :key="i">
+              <div class="h-8 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+            </template>
+          </div>
+        </template>
+        <template x-if="!loading">
+          <div class="space-y-2">
+            <template x-for="page in seoPages" :key="page.key">
+              <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-700/30">
+                <div class="flex items-center gap-2">
+                  <i :data-lucide="page.icon" class="w-3.5 h-3.5 text-slate-400"></i>
+                  <span class="text-sm text-slate-700 dark:text-slate-300" x-text="page.label"></span>
+                </div>
+                <div class="flex items-center gap-1">
+                  <template x-if="page.has_meta_title">
+                    <span class="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                      <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                      <span>SEO</span>
+                    </span>
+                  </template>
+                  <template x-if="!page.has_meta_title">
+                    <span class="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                      <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                      <span>{% trans "Missing" %}</span>
+                    </span>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </template>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function cmsDashboard() {
+  return {
+    stats: {},
+    activity: [],
+    seoPages: [],
+    loading: true,
+
+    async init() {
+      try {
+        const data = await apiFetch('/api/v1/cms/admin/stats/');
+        this.stats = data || {};
+        this.activity = (data.recent_activity || []).slice(0, 5);
+        this.seoPages = data.seo_pages || [
+          { key: 'home',     label: '{% trans "Home" %}',     icon: 'home',       has_meta_title: false },
+          { key: 'about',    label: '{% trans "About" %}',    icon: 'info',       has_meta_title: false },
+          { key: 'services', label: '{% trans "Services" %}', icon: 'zap',        has_meta_title: false },
+          { key: 'pricing',  label: '{% trans "Pricing" %}',  icon: 'tag',        has_meta_title: false },
+          { key: 'faq',      label: '{% trans "FAQ" %}',      icon: 'help-circle',has_meta_title: false },
+        ];
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to load CMS stats" %}', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    activityIcon(action) {
+      const map = {
+        page_created: 'file-plus', page_updated: 'file-edit', page_deleted: 'file-x',
+        job_posted: 'briefcase', lead_received: 'inbox', media_uploaded: 'image',
+        settings_updated: 'settings-2', service_updated: 'zap',
+      };
+      return map[action] || 'circle';
+    },
+
+    relativeTime(str) {
+      if (!str) return '';
+      const diff = Math.floor((Date.now() - new Date(str).getTime()) / 1000);
+      if (diff < 60) return diff + '{% trans "s" %}';
+      if (diff < 3600) return Math.floor(diff / 60) + '{% trans "m" %}';
+      if (diff < 86400) return Math.floor(diff / 3600) + '{% trans "h" %}';
+      return Math.floor(diff / 86400) + '{% trans "d" %}';
+    },
+  };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,204 @@
+{% load i18n %}
+
+<!-- ✅ ISA 700 Auditor Opinion Section -->
+<div class="opinion-section" id="opinion-section">
+  {% if report.isa700_auditor_opinion %}
+  <div class="card opinion-card shadow-lg border-l-4 border-blue-500">
+    <!-- Header with Opinion Type Badge -->
+    <div class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-900">
+            {% trans "Auditor Opinion" %}
+          </h2>
+          <p class="text-sm text-slate-600 mt-1">
+            {% trans "Independent Auditor Opinion per ISA 700" %}
+          </p>
+        </div>
+        <!-- Opinion Type Badge -->
+        <div class="opinion-badge opinion-type-{{ report.isa700_auditor_opinion.opinion_type|lower }}">
+          {% if report.isa700_auditor_opinion.opinion_type == 'unqualified' %}
+            <span class="badge badge-success">
+              <svg class="w-5 h-5 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              {% trans "UNQUALIFIED" %}
+            </span>
+          {% elif report.isa700_auditor_opinion.opinion_type == 'qualified' %}
+            <span class="badge badge-warning">
+              <svg class="w-5 h-5 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+              </svg>
+              {% trans "QUALIFIED" %}
+            </span>
+          {% elif report.isa700_auditor_opinion.opinion_type == 'adverse' %}
+            <span class="badge badge-danger">
+              <svg class="w-5 h-5 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+              </svg>
+              {% trans "ADVERSE" %}
+            </span>
+          {% else %}
+            <span class="badge badge-secondary">
+              {% trans "DISCLAIMER" %}
+            </span>
+          {% endif %}
+        </div>
+      </div>
+      <!-- Confidence Score -->
+      <div class="mt-4 pt-4 border-t">
+        <div class="flex items-center justify-between">
+          <span class="text-sm font-semibold text-slate-700">{% trans "Confidence Score" %}</span>
+          <div class="flex items-center gap-2">
+            <div class="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div class="h-full bg-gradient-to-r from-green-400 to-blue-500 rounded-full" 
+                   style="width: {{ report.isa700_auditor_opinion.confidence|default:0 }}%"></div>
+            </div>
+            <span class="text-sm font-bold text-slate-900">
+              {{ report.isa700_auditor_opinion.confidence|default:0 }}%
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Opinion Text -->
+    <div class="card-body p-6 space-y-6">
+      <!-- Full Opinion -->
+      <section>
+        <h3 class="text-lg font-semibold text-slate-900 mb-3">
+          {% trans "Opinion" %}
+        </h3>
+        <p class="text-slate-700 relative p-4 bg-slate-50 rounded-lg border-l-4 border-blue-400 italic">
+          {{ report.isa700_auditor_opinion.opinion_text }}
+        </p>
+      </section>
+
+      <!-- Basis for Opinion -->
+      {% if report.isa700_auditor_opinion.basis_for_opinion %}
+      <section>
+        <h3 class="text-lg font-semibold text-slate-900 mb-3">
+          {% trans "Basis for Opinion" %}
+        </h3>
+        <ul class="space-y-2">
+          {% for item in report.isa700_auditor_opinion.basis_for_opinion %}
+          <li class="flex gap-3 items-start">
+            <svg class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
+            <span class="text-slate-700">{{ item }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+
+      <!-- Concerns/Issues -->
+      {% if report.isa700_auditor_opinion.concerns %}
+      <section class="bg-amber-50 border border-amber-200 rounded-lg p-4">
+        <h3 class="text-lg font-semibold text-amber-900 mb-3">
+          {% trans "Identified Concerns" %}
+        </h3>
+        <ul class="space-y-2">
+          {% for concern in report.isa700_auditor_opinion.concerns %}
+          <li class="flex gap-3 items-start">
+            <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            <span class="text-amber-800">{{ concern }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+      </section>
+      {% endif %}
+
+      <!-- Going Concern -->
+      {% if report.isa700_auditor_opinion.going_concern %}
+      <section>
+        <h3 class="text-lg font-semibold text-slate-900 mb-3">
+          {% trans "Going Concern Assessment" %}
+        </h3>
+        <p class="text-slate-700 p-4 bg-slate-50 rounded-lg">
+          {{ report.isa700_auditor_opinion.going_concern }}
+        </p>
+      </section>
+      {% endif %}
+    </div>
+
+    <!-- Footer -->
+    <div class="card-footer bg-slate-50 border-t p-4 text-sm text-slate-600">
+      <div class="flex items-center justify-between">
+        <span>{% trans "Compliant with ISA 700 standards" %}</span>
+        <span>{% trans "Generated on" %} {{ report.generated_at|date:"SHORT_DATETIME_FORMAT" }}</span>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-info">
+    <svg class="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+      <path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2z" clip-rule="evenodd"/>
+    </svg>
+    {% trans "Opinion data not yet available" %}
+  </div>
+  {% endif %}
+</div>
+
+<style>
+.opinion-card {
+  border-radius: 0.5rem;
+  transition: all 0.3s ease;
+}
+
+.opinion-card:hover {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.opinion-badge {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.opinion-type-unqualified {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  border-left: 4px solid #059669;
+}
+
+.opinion-type-qualified {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-left: 4px solid #d97706;
+}
+
+.opinion-type-adverse {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  border-left: 4px solid #dc2626;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-success {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.badge-warning {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.badge-danger {
+  background-color: #fee2e2;
+  color: #9d1720;
+}
+</style>

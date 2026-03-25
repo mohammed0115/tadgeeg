@@ -1,0 +1,181 @@
+{% extends "cms_admin/base_cms.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Platform Settings" %}{% endblock %}
+{% block page_title %}{% trans "Platform CMS" %}{% endblock %}
+{% block tab_settings %}active{% endblock %}
+
+{% block cms_content %}
+<div x-data="platformSettings()" x-init="init()" class="space-y-5">
+
+  <!-- Group Tabs -->
+  <div class="card p-1 flex gap-1 flex-wrap">
+    <template x-for="group in groups" :key="group.key">
+      <button @click="activeGroup = group.key; $nextTick(() => lucide.createIcons())"
+              class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all"
+              :class="activeGroup === group.key
+                ? 'bg-primary-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/40'">
+        <i :data-lucide="group.icon" class="w-3.5 h-3.5"></i>
+        <span x-text="group.label"></span>
+      </button>
+    </template>
+  </div>
+
+  <!-- Loading -->
+  <template x-if="loading">
+    <div class="animate-pulse space-y-3">
+      <template x-for="i in [1,2,3,4,5]" :key="i">
+        <div class="card p-4 flex items-center justify-between gap-4">
+          <div class="space-y-1 flex-1">
+            <div class="h-4 w-32 bg-slate-200 dark:bg-slate-700 rounded"></div>
+            <div class="h-3 w-64 bg-slate-200 dark:bg-slate-700 rounded"></div>
+          </div>
+          <div class="h-10 w-48 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+        </div>
+      </template>
+    </div>
+  </template>
+
+  <!-- Settings for active group -->
+  <template x-if="!loading">
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+          <template x-for="group in groups" :key="group.key">
+            <template x-if="group.key === activeGroup">
+              <i :data-lucide="group.icon" class="w-4 h-4 text-primary-500"></i>
+            </template>
+          </template>
+          <span x-text="groupLabel(activeGroup)"></span>
+        </h2>
+        <button @click="saveGroup()" :disabled="saving" class="btn-primary">
+          <i data-lucide="save" class="w-4 h-4"></i>
+          <span x-text="saving ? '{% trans "Saving..." %}' : '{% trans "Save All" %}'"></span>
+        </button>
+      </div>
+
+      <template x-if="groupSettings.length === 0">
+        <div class="card py-10 flex flex-col items-center gap-2 text-slate-400">
+          <i data-lucide="settings-2" class="w-10 h-10 opacity-40"></i>
+          <p class="text-sm">{% trans "No settings in this group." %}</p>
+        </div>
+      </template>
+
+      <div class="space-y-3">
+        <template x-for="setting in groupSettings" :key="setting.key">
+          <div class="card p-5 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <p class="font-semibold text-slate-800 dark:text-white text-sm" x-text="setting.label"></p>
+                <code class="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded" x-text="setting.key"></code>
+              </div>
+              <p x-show="setting.description" class="text-xs text-slate-400 mt-1" x-text="setting.description"></p>
+            </div>
+            <div class="flex-shrink-0 sm:w-80">
+              <!-- Boolean toggle -->
+              <template x-if="setting.type === 'boolean'">
+                <button type="button" @click="setting.value = setting.value === 'true' || setting.value === true ? false : true"
+                        class="relative inline-flex h-7 w-12 items-center rounded-full transition-colors"
+                        :class="(setting.value === 'true' || setting.value === true) ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'">
+                  <span class="inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform"
+                        :class="(setting.value === 'true' || setting.value === true) ? '-translate-x-6' : '-translate-x-1'"></span>
+                </button>
+              </template>
+              <!-- JSON textarea -->
+              <template x-if="setting.type === 'json'">
+                <textarea x-model="setting.value" class="input font-mono text-xs" rows="4" placeholder="{}"></textarea>
+              </template>
+              <!-- URL input -->
+              <template x-if="setting.type === 'url'">
+                <input type="url" x-model="setting.value" class="input" placeholder="https://">
+              </template>
+              <!-- Email input -->
+              <template x-if="setting.type === 'email'">
+                <input type="email" x-model="setting.value" class="input" placeholder="email@example.com">
+              </template>
+              <!-- Number input -->
+              <template x-if="setting.type === 'number'">
+                <input type="number" x-model.number="setting.value" class="input">
+              </template>
+              <!-- Default: text input -->
+              <template x-if="!['boolean','json','url','email','number'].includes(setting.type)">
+                <input type="text" x-model="setting.value" class="input">
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Save at bottom too -->
+      <template x-if="groupSettings.length > 4">
+        <div class="flex justify-end pt-2">
+          <button @click="saveGroup()" :disabled="saving" class="btn-primary">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span x-text="saving ? '{% trans "Saving..." %}' : '{% trans "Save All" %}'"></span>
+          </button>
+        </div>
+      </template>
+    </div>
+  </template>
+
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function platformSettings() {
+  return {
+    loading: true,
+    saving: false,
+    activeGroup: 'general',
+    allSettings: [],
+    groups: [
+      { key:'general',      label:'{% trans "General" %}',      icon:'settings-2' },
+      { key:'seo',          label:'{% trans "SEO" %}',          icon:'search' },
+      { key:'social',       label:'{% trans "Social Media" %}', icon:'share-2' },
+      { key:'contact',      label:'{% trans "Contact" %}',      icon:'phone' },
+      { key:'features',     label:'{% trans "Features" %}',     icon:'toggle-left' },
+    ],
+
+    get groupSettings() {
+      return this.allSettings.filter(s => s.group === this.activeGroup);
+    },
+
+    groupLabel(key) {
+      const g = this.groups.find(g => g.key === key);
+      return g ? g.label : key;
+    },
+
+    async init() {
+      this.loading = true;
+      try {
+        const data = await apiFetch('/api/v1/cms/admin/settings/');
+        this.allSettings = data?.results || data || [];
+      } catch (e) {
+        notify('{% trans "Failed to load settings" %}', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async saveGroup() {
+      this.saving = true;
+      try {
+        const payload = this.groupSettings.map(s => ({ key: s.key, value: s.value }));
+        await apiFetch('/api/v1/cms/admin/settings/bulk-update/', {
+          method: 'POST',
+          body: JSON.stringify({ settings: payload }),
+        });
+        notify('{% trans "Settings saved" %}', 'success');
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to save settings" %}', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

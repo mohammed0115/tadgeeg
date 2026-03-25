@@ -1,0 +1,691 @@
+{
+  "system_name": "Tadgeeg (FinAI) — AI-Powered Financial Auditing Platform",
+  "analysis_date": "2026-03-25",
+  "overall_score": 76,
+  "production_ready": false,
+  "verdict": "Pre-production system with 16 identified gaps: 3 critical blockers (ZATCA QR generation, Benford's Law, DELETE endpoints), 6 high-priority compliance/feature gaps, and 7 medium/low improvements needed. Financial standards (ISA 700/701) ARE implemented. Test coverage insufficient (45% vs 60%+ target). Estimated 2-3 weeks of focused development to reach production-ready status (80+ score).",
+
+  "score_breakdown": {
+    "feature_completeness": {
+      "score": 82,
+      "weight": 0.20,
+      "notes": "30 validation rules implemented. ISA 700/701 implemented. Core features complete but delete endpoints missing, API versioning incomplete."
+    },
+    "financial_standards": {
+      "score": 79,
+      "weight": 0.20,
+      "notes": "ISA 700/701 fully coded and tested. ISA 315/330/500/250 partially implemented through rule engine. IAS 7 cash flow absent. ZATCA basic compliance present but QR generation missing."
+    },
+    "security": {
+      "score": 81,
+      "weight": 0.15,
+      "notes": "Multi-tenant isolation solid. RBAC 7 roles enforced. JWT on protected endpoints. File upload MIME validation present. Missing: malware scanning, CSP headers, rate limiting."
+    },
+    "data_architecture": {
+      "score": 75,
+      "weight": 0.10,
+      "notes": "Models well-structured with organization FK. Audit trail fields present. Missing: IAS 7 cash flow classifications, historical KPI snapshots, document metadata completeness."
+    },
+    "api_quality": {
+      "score": 68,
+      "weight": 0.10,
+      "notes": "REST endpoints exist. Pagination missing from views. Filtering/search incomplete. No /api/v1/ versioning. No rate limiting. DELETE endpoints absent."
+    },
+    "ai_pipeline": {
+      "score": 58,
+      "weight": 0.10,
+      "notes": "GPT-4o integration works. No output schema validation (hallucination risk). Benford's Law too simplistic (3x heuristic). Missing AI model version tracking. No confidence thresholds enforced."
+    },
+    "reporting": {
+      "score": 80,
+      "weight": 0.05,
+      "notes": "ISA 700/701 reporting implemented. PDF/HTML export functional. Bilingual support complete. Missing: formal sections enforcement, audit trail in reports, ISA 315/330 methodology details."
+    },
+    "testing": {
+      "score": 35,
+      "weight": 0.05,
+      "notes": "45% test coverage (pytest configured for 45% minimum). ~50 test functions exist. Missing: comprehensive auth tests, file upload security tests, performance/load tests, UI test coverage."
+    },
+    "performance": {
+      "score": 68,
+      "weight": 0.03,
+      "notes": "Celery async for reports configured. Synchronous operations in some API paths. No caching layer. Query optimization incomplete (N+1 risks in dashboard). No query timeouts set."
+    },
+    "documentation": {
+      "score": 62,
+      "weight": 0.02,
+      "notes": "README and SRS exist. API docs via drf-spectacular available. Missing: database schema ERD, deployment runbook, troubleshooting guide, backup procedures, monitoring setup."
+    }
+  },
+
+  "gaps": [
+    {
+      "id": "GAP-C1",
+      "severity": "critical",
+      "dimension": "feature_completeness",
+      "title": "ZATCA Phase 2 QR Code Generation Missing",
+      "file": "apps/compliance/ / core/services/",
+      "description": "System validates ZATCA compliance and detects QR codes in uploaded documents, but does NOT generate QR codes for new or corrected invoices. This blocks ZATCA Phase 2 compliance for organizations trying to certify invoices for electronic submission to ZATCA platform.",
+      "current_code": "# QR detection only (apps/invoices/qr_utils.py)\ndef extract_qr_from_pdf(pdf_path):\n    \"\"\"Detect QR code in uploaded PDF\"\"\"\n    # Detects existing QR — does NOT generate\n\n# No file generates QR code from invoice data",
+      "required_code": "# apps/compliance/zatca_qr_service.py — NEW FILE\nfrom qrcode import QRCode\nfrom typing import Dict\n\nclass ZATCAQRService:\n    def generate_tlv_qr(self, invoice: Dict) -> str:\n        \"\"\"Generate ZATCA Phase 2 TLV-encoded QR code\n        Per ZATCA Technical Specification v2.0\n        \"\"\"\n        tlv_array = [\n            (0x01, invoice['seller_vat'].encode()),      # Seller VAT\n            (0x02, invoice['timestamp'].isoformat().encode()),  # Timestamp\n            (0x03, str(invoice['total_amount']).encode()),  # Invoice Total\n            (0x04, str(invoice['vat_amount']).encode()),  # VAT Total\n            (0x05, invoice['hash'].encode()),             # Hash\n        ]\n        tlv_encoded = b''.join([bytes([tag]) + bytes([len(data)]) + data \n                                for tag, data in tlv_array])\n        tlv_base64 = base64.b64encode(tlv_encoded).decode()\n        \n        qr = QRCode(version=1, box_size=10)\n        qr.add_data(tlv_base64)\n        qr.make()\n        return qr.make_image()\n\n# apps/invoices/views.py — UPDATE\nfrom apps.compliance.zatca_qr_service import ZATCAQRService\n\nclass InvoiceDetailView(RetrieveAPIView):\n    def get_object(self):\n        invoice = super().get_object()\n        qr_service = ZATCAQRService()\n        invoice.qr_code_image = qr_service.generate_tlv_qr(invoice.to_dict())\n        return invoice",
+      "standard_reference": "ZATCA Phase 2 Technical Specification v2.0 — TLV QR Code Encoding (Mandatory)",
+      "business_impact": "Cannot export certified invoices for ZATCA submission. Clients cannot prove compliance to tax authorities. Regulatory liability in Saudi Arabia. Loss of primary use case for enterprise customers.",
+      "fix_effort": "12 hours",
+      "fix_priority": 1
+    },
+    {
+      "id": "GAP-C2",
+      "severity": "critical",
+      "dimension": "feature_completeness",
+      "title": "Benford's Law Fraud Detection Too Simplistic",
+      "file": "apps/invoices/views.py:609",
+      "description": "Anomaly detection uses basic heuristic (amount > 3x average) instead of actual Benford's Law digit distribution analysis. Cannot detect sophisticated fraud patterns that exploit statistical properties.",
+      "current_code": "# apps/invoices/views.py — LINE 609\ndef _get_vendor_history(self, vendor_id, months=12):\n    avg = invoices.aggregate(Avg('total_amount'))['total_amount__avg']\n    for inv in invoices:\n        if inv.total_amount > avg * 3:  # ← only 3x heuristic\n            flags.append({'anomaly': 'amount_spike'})",
+      "required_code": "# apps/analytics/benford_service.py — NEW FILE\nimport numpy as np\nfrom scipy import stats\n\nclass BenfordAnalyzer:\n    BENFORD_DISTRIBUTION = {\n        1: 0.301, 2: 0.176, 3: 0.125, 4: 0.097,\n        5: 0.079, 6: 0.067, 7: 0.058, 8: 0.051, 9: 0.046\n    }\n    \n    def analyze_invoices(self, invoices: List[Invoice]) -> Dict:\n        \"\"\"Chi-square test against Benford's Law\"\"\"\n        amounts = [str(int(inv.total_amount)) for inv in invoices if inv.total_amount > 0]\n        if len(amounts) < 30:  # Need minimum sample\n            return {'deviation': None, 'chi_squared': None}\n        \n        # Extract first digits\n        first_digits = [int(a[0]) for a in amounts]\n        observed_freq = np.bincount(first_digits, minlength=10)[1:] / len(first_digits)\n        expected_freq = np.array([self.BENFORD_DISTRIBUTION[i] for i in range(1, 10)])\n        \n        # Chi-square goodness-of-fit test\n        chi2, p_value = stats.chisquare(observed_freq * len(amounts), \n                                        expected_freq * len(amounts))\n        \n        return {\n            'chi_squared': float(chi2),\n            'p_value': float(p_value),\n            'benford_deviation': 'significant' if p_value < 0.05 else 'normal',\n            'confidence': 1 - p_value\n        }\n\n# apps/invoices/views.py — UPDATE\nfrom apps.analytics.benford_service import BenfordAnalyzer\n\nclass InvoiceListView(ListAPIView):\n    def get_queryset(self):\n        qs = super().get_queryset()\n        analyzer = BenfordAnalyzer()\n        benford_result = analyzer.analyze_invoices(list(qs))\n        if benford_result['benford_deviation'] == 'significant':\n            # Flag for manual review\n            self.request.benford_alert = True\n        return qs",
+      "standard_reference": "ISA 315 — Risk Assessment Methodology (Fraud Detection) | Internal QA Standard",
+      "business_impact": "Cannot detect sophisticated round-number fraud or invoice manipulation patterns. Audit reports lack credibility with Big Four firms. Enterprise clients dismiss platform as unreliable for fraud detection.",
+      "fix_effort": "8 hours",
+      "fix_priority": 2
+    },
+    {
+      "id": "GAP-C3",
+      "severity": "critical",
+      "dimension": "api_quality",
+      "title": "No DELETE Endpoints for Core Resources",
+      "file": "apps/invoices/urls.py / apps/documents/typed_views.py",
+      "description": "Invoice, Document, AuditCase resources have Create/Read/Update but NO DELETE. Cannot support GDPR Article 17 data subject deletion requests. API is incomplete REST.",
+      "current_code": "# apps/invoices/urls.py\nrouter.register(r'invoices', InvoiceViewSet)\n# InvoiceViewSet has only: CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, ListModelMixin\n# Missing: DestroyModelMixin",
+      "required_code": "# apps/invoices/models.py — ADD FIELD\nclass Invoice(TimeStampedModel):\n    is_deleted = models.BooleanField(default=False)\n    deleted_at = models.DateTimeField(null=True, blank=True)\n    deleted_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL, related_name='deleted_invoices')\n\n# apps/invoices/views.py — UPDATE\nfrom rest_framework import mixins\nfrom apps.activity_logs.models import AuditLog\n\nclass InvoiceViewSet(\n    mixins.CreateModelMixin,\n    mixins.RetrieveModelMixin,\n    mixins.UpdateModelMixin,\n    mixins.ListModelMixin,\n    mixins.DestroyModelMixin,  # ← ADD\n    viewsets.GenericViewSet\n):\n    queryset = Invoice.objects.filter(is_deleted=False)  # Soft delete\n    serializer_class = InvoiceSerializer\n    \n    def destroy(self, request, *args, **kwargs):\n        \"\"\"Soft-delete invoice with audit trail\"\"\"\n        instance = self.get_object()\n        instance.is_deleted = True\n        instance.deleted_at = now()\n        instance.deleted_by = request.user\n        instance.save()\n        \n        # Audit log\n        AuditLog.objects.create(\n            organization=request.user.organization,\n            user=request.user,\n            action='DELETE',\n            resource_type='invoice',\n            resource_id=str(instance.id),\n            details={'reason': request.data.get('reason', 'User deletion')}\n        )\n        return Response(status=status.HTTP_204_NO_CONTENT)",
+      "standard_reference": "GDPR Article 17 (Right to Erasure) | REST API Design Best Practices (RFC 7231)",
+      "business_impact": "Cannot comply with GDPR deletion requests. Regulatory liability in EU-adjacent markets. Audit trail integrity compromised for deleted resources. Enterprise customers cannot certify GDPR compliance.",
+      "fix_effort": "8 hours",
+      "fix_priority": 3
+    },
+    {
+      "id": "GAP-H1",
+      "severity": "high",
+      "dimension": "financial_standards",
+      "title": "IAS 7 Cash Flow Statement Classification Missing",
+      "file": "apps/transactions/models.py / apps/reports/",
+      "description": "System tracks transactions but does NOT classify them per IAS 7 (Operating/Investing/Financing activities). Cannot generate proper cash flow statements required for IFRS financial reporting.",
+      "current_code": "# apps/transactions/models.py\nclass Transaction(TimeStampedModel):\n    organization = FK(Organization)\n    amount = DecimalField()\n    description = CharField()\n    # No ias7_classification field",
+      "required_code": "# apps/transactions/models.py — ADD\nclass Transaction(TimeStampedModel):\n    IAS7_CLASSIFICATIONS = [\n        ('operating', 'Operating Activity'),\n        ('investing', 'Investing Activity'),\n        ('financing', 'Financing Activity'),\n    ]\n    \n    organization = ForeignKeyField(Organization)\n    amount = DecimalField(max_digits=15, decimal_places=2)\n    description = CharField()\n    ias7_classification = CharField(choices=IAS7_CLASSIFICATIONS, default='operating')\n    cash_flow_category = CharField(max_length=50)  # e.g. 'sales', 'capex', 'debt_payment'\n    \n# apps/reports/services/cash_flow_service.py — NEW FILE\nclass CashFlowStatementService:\n    def build_ias7_statement(self, org: Organization, date_from, date_to):\n        \"\"\"Generate IAS 7 cash flow statement\"\"\"\n        transactions = Transaction.objects.filter(\n            organization=org,\n            created_at__gte=date_from,\n            created_at__lte=date_to\n        )\n        \n        operating = transactions.filter(ias7_classification='operating').aggregate(\n            total=Sum('amount')\n        )['total'] or 0\n        investing = transactions.filter(ias7_classification='investing').aggregate(\n            total=Sum('amount')\n        )['total'] or 0\n        financing = transactions.filter(ias7_classification='financing').aggregate(\n            total=Sum('amount')\n        )['total'] or 0\n        \n        return {\n            'cash_flows': {\n                'operating': operating,\n                'investing': investing,\n                'financing': financing,\n                'net_change': operating + investing + financing,\n            },\n            'standard': 'IAS 7',\n            'period': {'from': date_from, 'to': date_to}\n        }",
+      "standard_reference": "IAS 7 — Statement of Cash Flows (Mandatory for IFRS compliance)",
+      "business_impact": "Cannot generate IFRS-compliant financial statements. Audit reports incomplete per international standards. Enterprise clients cannot rely on system for financial reporting.",
+      "fix_effort": "20 hours",
+      "fix_priority": 4
+    },
+    {
+      "id": "GAP-H2",
+      "severity": "high",
+      "dimension": "ai_pipeline",
+      "title": "No Hallucination Prevention or Output Schema Validation",
+      "file": "core/services/ai_service.py",
+      "description": "AI services rely on json.loads() only. If GPT-4o returns valid JSON with wrong fields, system silently uses garbage data. Zero confidence thresholds or structured output enforcement.",
+      "current_code": "# core/services/ai_service.py\ndef detect_anomalies_ai(invoice_data: dict) -> dict:\n    response = openai.ChatCompletion.create(\n        model=OPENAI_MODEL,\n        messages=[...]\n    )\n    content = response['choices'][0]['message']['content']\n    return json.loads(content)  # ← No validation, no confidence check",
+      "required_code": "# core/services/ai_service.py — UPDATE\nfrom jsonschema import validate, ValidationError\nimport logging\n\nANOMALY_SCHEMA = {\n    'type': 'object',\n    'required': ['anomalies', 'summary', 'confidence'],\n    'properties': {\n        'anomalies': {'type': 'array', 'minimum': 0},\n        'summary': {'type': 'object'},\n        'confidence': {'type': 'number', 'minimum': 0, 'maximum': 100},\n    }\n}\n\ndef detect_anomalies_ai(invoice_data: dict) -> dict:\n    logger = logging.getLogger(__name__)\n    \n    response = openai.ChatCompletion.create(\n        model=OPENAI_MODEL,\n        messages=[...],\n        temperature=0.0,  # Lowest temperature for consistency\n    )\n    content = response['choices'][0]['message']['content']\n    \n    try:\n        result = json.loads(content)\n        validate(instance=result, schema=ANOMALY_SCHEMA)\n        \n        # Check confidence threshold\n        if result.get('confidence', 0) < 60:\n            logger.warning('Low confidence AI output: %s%%', result.get('confidence'))\n            return {\n                'anomalies': [],\n                'summary': {'error': 'Low confidence in AI analysis'},\n                'confidence': result.get('confidence', 0)\n            }\n        \n        return result\n        \n    except (json.JSONDecodeError, ValidationError) as e:\n        logger.error('AI output validation failed: %s', e)\n        return {\n            'anomalies': [],\n            'summary': {'error': f'Validation error: {str(e)[:100]}'},\n            'confidence': 0\n        }",
+      "standard_reference": "ISO 27001 A.12.2.1 (Change Management) | Internal AI Quality Standard",
+      "business_impact": "False anomaly alerts damage client trust. Incorrect risk assessments cause wrong business decisions. Liability if AI-driven decisions cause financial harm to clients.",
+      "fix_effort": "12 hours",
+      "fix_priority": 5
+    },
+    {
+      "id": "GAP-H3",
+      "severity": "high",
+      "dimension": "performance",
+      "title": "Synchronous Report Generation Blocks HTTP Request (60s Nginx Timeout)",
+      "file": "apps/reports/invoice_report_views.py",
+      "description": "Large report generation (1000+ invoices) executed in HTTP request. Exceeds Nginx 60s timeout. Should be async Celery task with 202 Accepted response.",
+      "current_code": "# apps/reports/invoice_report_views.py:148\nclass InvoiceAuditReportGenerateView(APIView):\n    def post(self, request):\n        svc = InvoiceAuditReportService(org, request.user)\n        data = svc.build(date_from=date_from, date_to=date_to, language=language)  # ← Synchronous",
+      "required_code": "# apps/reports/invoice_report_views.py — UPDATE\nfrom celery import shared_task\nfrom django.http import JsonResponse\n\nclass InvoiceAuditReportGenerateView(APIView):\n    def post(self, request):\n        date_from = request.data.get('date_from')\n        date_to = request.data.get('date_to')\n        language = request.data.get('language', 'ar')\n        \n        # Check if async requested (default: True)\n        use_async = request.data.get('async', True)\n        \n        if use_async:\n            # Enqueue Celery task\n            from apps.reports.tasks import generate_invoice_audit_report\n            task = generate_invoice_audit_report.delay(\n                str(request.user.organization.id),\n                request.user.id,\n                date_from,\n                date_to,\n                language\n            )\n            return Response(\n                {'task_id': task.id, 'status': 'queued'},\n                status=status.HTTP_202_ACCEPTED\n            )\n        else:\n            # Synchronous fallback for small reports (< 100 invoices)\n            svc = InvoiceAuditReportService(request.user.organization, request.user)\n            data = svc.build(date_from=date_from, date_to=date_to, language=language)\n            return Response(data, status=status.HTTP_201_CREATED)\n\n# apps/reports/tasks.py — ENSURE CELERY TASK EXISTS\n@shared_task(\n    bind=True,\n    name='reports.generate_invoice_audit_report',\n    max_retries=2,\n    time_limit=600,  # 10 minutes\n)\ndef generate_invoice_audit_report(\n    self,\n    org_id: str,\n    user_id: str,\n    date_from: str,\n    date_to: str,\n    language: str = 'ar'\n):\n    org = Organization.objects.get(id=org_id)\n    user = User.objects.get(id=user_id)\n    svc = InvoiceAuditReportService(org, user)\n    data = svc.build(date_from=date_from, date_to=date_to, language=language)\n    Report.objects.create(\n        organization=org,\n        generated_by=user,\n        report_type='invoice_audit',\n        language=language,\n        data=data,\n        title=data['report_header']['title']\n    )\n    return {'status': 'success', 'report_id': str(report_obj.id)}",
+      "standard_reference": "Internal SRS R-003 (Async Report Generation)",
+      "business_impact": "Large clients experience 504 Gateway Timeout errors. Cannot generate reports for organizations with 10k+ invoices. Enterprise deals at risk.",
+      "fix_effort": "8 hours",
+      "fix_priority": 6
+    },
+    {
+      "id": "GAP-H4",
+      "severity": "high",
+      "dimension": "feature_completeness",
+      "title": "No API for Rule Creation / Customization",
+      "file": "apps/rule_engine/api/",
+      "description": "All 40+ rules are seeded via migrations. No endpoint allows creating, updating, enabling/disabling, or deleting rules. Users cannot customize audit policies per organization.",
+      "current_code": "# apps/rule_engine/urls.py\nrouter.register('rules', RuleDefinitionViewSet, basename='rule')\n# Endpoints: GET /rules/, GET /rules/{id}/\n# Missing: POST, PUT, PATCH, DELETE",
+      "required_code": "# apps/rule_engine/api/serializers.py — UPDATE\nfrom rest_framework import serializers\nfrom apps.rule_engine.models import RuleDefinition\n\nclass RuleDefinitionSerializer(serializers.ModelSerializer):\n    class Meta:\n        model = RuleDefinition\n        fields = [\n            'id', 'code', 'title', 'description', 'category',\n            'is_enabled', 'severity', 'rule_type', 'logic',\n            'created_at', 'updated_at'\n        ]\n        read_only_fields = ['id', 'created_at', 'updated_at']\n\n# apps/rule_engine/api/views.py — UPDATE\nfrom rest_framework import viewsets, status\nfrom rest_framework.decorators import action\nfrom rest_framework.response import Response\nfrom apps.core.permissions import IsAdminOrAuditor\nfrom apps.activity_logs.models import AuditLog\n\nclass RuleDefinitionViewSet(viewsets.ModelViewSet):\n    queryset = RuleDefinition.objects.all()\n    serializer_class = RuleDefinitionSerializer\n    permission_classes = [IsAdminOrAuditor]\n    \n    def get_queryset(self):\n        # Filter by organization if rule is org-specific\n        qs = RuleDefinition.objects.filter(\n            Q(organization=None) | Q(organization=self.request.user.organization)\n        )\n        return qs\n    \n    def create(self, request, *args, **kwargs):\n        serializer = self.get_serializer(data=request.data)\n        serializer.is_valid(raise_exception=True)\n        rule = serializer.save(organization=request.user.organization)\n        \n        # Audit\n        AuditLog.objects.create(\n            organization=request.user.organization,\n            user=request.user,\n            action='CREATE',\n            resource_type='rule',\n            resource_id=str(rule.id),\n            details={'code': rule.code, 'title': rule.title}\n        )\n        return Response(serializer.data, status=status.HTTP_201_CREATED)\n    \n    @action(detail=True, methods=['post'])\n    def toggle_enabled(self, request, pk=None):\n        \"\"\"Enable/disable a rule for this organization\"\"\"\n        rule = self.get_object()\n        rule.is_enabled = not rule.is_enabled\n        rule.save()\n        AuditLog.objects.create(\n            organization=request.user.organization,\n            user=request.user,\n            action='UPDATE',\n            resource_type='rule',\n            resource_id=str(rule.id),\n            details={'is_enabled': rule.is_enabled}\n        )\n        return Response({'is_enabled': rule.is_enabled})",
+      "standard_reference": "Internal SRS FR-9 (Rule Customization API)",
+      "business_impact": "Cannot sell to enterprise clients who need custom audit policies. Cannot adaptto domain-specific requirements. Product perceived as inflexible.",
+      "fix_effort": "24 hours",
+      "fix_priority": 7
+    },
+    {
+      "id": "GAP-H5",
+      "severity": "high",
+      "dimension": "security",
+      "title": "No Malware Scanning on Uploaded Files",
+      "file": "apps/invoices/views.py",
+      "description": "File upload validates MIME type and extension but does NOT scan content for malware. Attacker can rename .exe to .pdf and upload it.",
+      "current_code": "# apps/invoices/views.py\nALLOWED_MIME_TYPES = [\n    'application/pdf', 'image/jpeg', 'image/png',\n    'image/tiff', 'application/vnd.ms-excel'\n]\n\nif file.content_type not in ALLOWED_MIME_TYPES:\n    raise ValidationError('Invalid file type')\n# No malware scan",
+      "required_code": "# Install: pip install pyclamd\n# Also: apt-get install clamav-daemon (Linux)\n\n# apps/invoices/malware_scanner.py — NEW FILE\nimport clamd\nimport logging\nfrom django.core.exceptions import ValidationError\n\nlogger = logging.getLogger(__name__)\n\nclass MalwareScannerService:\n    def __init__(self):\n        try:\n            self.clam = clamd.ClamdUnixSocket()\n            self.available = self.clam.ping()\n        except Exception as e:\n            logger.warning('ClamAV not available: %s', e)\n            self.available = False\n    \n    def scan_file(self, file_obj) -> bool:\n        \"\"\"Scan file for malware. Returns True if clean, False if infected.\"\"\"\n        if not self.available:\n            logger.warning('Malware scanner unavailable, allowing file')\n            return True  # Fail open if scanner unavailable\n        \n        try:\n            scan_result = self.clam.instream(file_obj)\n            if scan_result:\n                found_key = list(scan_result.keys())[0]\n                if scan_result[found_key][0] == 'FOUND':\n                    logger.warning('Malware detected: %s', scan_result[found_key][1])\n                    raise ValidationError(f\"File contains malware: {scan_result[found_key][1]}\")\n            return True\n        except ValidationError:\n            raise\n        except Exception as e:\n            logger.error('Malware scan error: %s', e)\n            raise ValidationError(f'File scan failed: {str(e)}')\n\n# apps/invoices/views.py — UPDATE\nfrom apps.invoices.malware_scanner import MalwareScannerService\n\nclass InvoiceUploadView(CreateAPIView):\n    def post(self, request):\n        file = request.FILES.get('file')\n        \n        # MIME type validation\n        if file.content_type not in ALLOWED_MIME_TYPES:\n            return Response({'error': 'Invalid file type'}, status=400)\n        \n        # Malware scan\n        scanner = MalwareScannerService()\n        if not scanner.scan_file(file):\n            return Response({'error': 'File rejected: malware detected'}, status=400)\n        \n        # Process file\n        ...",
+      "standard_reference": "ISO 27001 A.12.2.1 (Change Management) | OWASP File Upload Security",
+      "business_impact": "Potential malware distribution or execution via uploaded documents. Security breach damages client trust. Regulatory liability if breached data traced to platform malware.",
+      "fix_effort": "8 hours",
+      "fix_priority": 8
+    },
+    {
+      "id": "GAP-H6",
+      "severity": "high",
+      "dimension": "testing",
+      "title": "Insufficient Test Coverage (45% vs 60%+ Target)",
+      "file": "tests/ / pytest.ini",
+      "description": "Current test coverage is 45% (configured minimum in pytest.ini). Missing: comprehensive auth tests, file upload security tests, financial calculation verification, performance tests.",
+      "current_code": "# pytest.ini\n[pytest]\naddopts = --cov-fail-under=45  # ← Target too low\ntestpaths = tests apps/rule_engine/tests",
+      "required_code": "# pytest.ini — UPDATE\n[pytest]\naddopts = \n    --strict-markers\n    --tb=short\n    --disable-warnings\n    --cov=apps\n    --cov=core\n    --cov-report=html\n    --cov-report=term-missing:skip-covered\n    --cov-fail-under=60  # ← Raise to 60%\n    --cov-branch\ntestpaths = tests apps\nmarkers =\n    slow: marks tests as slow\n    integration: marks tests as integration tests\n    unit: marks tests as unit tests\n    security: marks tests as security-related\n    django_db: marks tests that need database access\n    auth: marks tests for authentication\n    financial: marks tests for financial calculations\n\n# tests/test_security.py — NEW FILE\nimport pytest\nfrom django.test import Client\nfrom django.contrib.auth import get_user_model\nfrom apps.invoices.models import Invoice\n\nUser = get_user_model()\n\n@pytest.mark.security\n@pytest.mark.django_db\nclass TestFileUploadSecurity:\n    def test_malicious_filename_rejected(self, authenticated_client):\n        \"\"\"Reject files with shell metacharacters\"\"\"\n        response = authenticated_client.post(\n            '/api/v1/invoices/upload/',\n            {'file': ('$(rm -rf /)_invoice.pdf', b'fake pdf content')},\n            content_type='multipart/form-data'\n        )\n        assert response.status_code == 400\n    \n    def test_oversized_file_rejected(self, authenticated_client):\n        \"\"\"Reject files > 50MB\"\"\"\n        large_file = b'x' * (51 * 1024 * 1024)\n        response = authenticated_client.post(\n            '/api/v1/invoices/upload/',\n            {'file': ('large.pdf', large_file)},\n            content_type='multipart/form-data'\n        )\n        assert response.status_code == 400\n        assert 'File too large' in response.json()\n\n# tests/test_financial_calcs.py — NEW FILE (expand existing)\n@pytest.mark.financial\n@pytest.mark.django_db\nclass TestInvoiceCalculations:\n    def test_vat_calculation_15_percent(self):\n        inv = Invoice(\n            base_amount=1000,\n            country='SA',\n            currency='SAR'\n        )\n        assert inv.vat_amount == 150  # 15% of 1000\n        assert inv.total_amount == 1150\n    \n    def test_decimal_precision_preserved(self):\n        \"\"\"Ensure no floating-point rounding errors\"\"\"\n        inv = Invoice(\n            base_amount=Decimal('999.99'),\n            country='SA'\n        )\n        assert inv.total_amount == Decimal('1149.99')  # Exact\n\n# tests/test_performance.py — NEW FILE\n@pytest.mark.slow\n@pytest.mark.django_db\nclass TestPerformance:\n    def test_dashboard_loads_under_2_seconds(self, authenticated_client):\n        import time\n        start = time.time()\n        response = authenticated_client.get('/api/v1/dashboard/')\n        elapsed = time.time() - start\n        assert elapsed < 2.0, f'Dashboard took {elapsed:.2f}s'\n    \n    def test_invoice_list_1000_records_under_5_seconds(self, authenticated_client):\n        # Create 1000 invoices\n        for i in range(1000):\n            Invoice.objects.create(...)\n        \n        import time\n        start = time.time()\n        response = authenticated_client.get('/api/v1/invoices/?limit=50')\n        elapsed = time.time() - start\n        assert elapsed < 5.0",
+      "standard_reference": "Internal QA Standard (60% test coverage target)",
+      "business_impact": "Cannot confidently merge new features. Regressions slip into production. Customer incidents damage trust. Enterprise deals require proof of test coverage.",
+      "fix_effort": "40 hours",
+      "fix_priority": 9
+    },
+    {
+      "id": "GAP-M1",
+      "severity": "medium",
+      "dimension": "ai_pipeline",
+      "title": "AI Model Version Not Tracked in Outputs",
+      "file": "core/services/ai_service.py:33",
+      "description": "Hardcoded OPENAI_MODEL='gpt-4o'. When model is upgraded, existing audit results cannot be compared to new results. No version stored in AuditRun or Report.",
+      "current_code": "# core/services/ai_service.py\nOPENAI_MODEL = os.environ.get('OPENAI_MODEL', 'gpt-4o')\n# AuditRun/Report have no model_version field",
+      "required_code": "# apps/reports/models.py — ADD FIELD\nfrom django.db import models\nfrom django.conf import settings\n\nclass Report(TimeStampedModel):\n    # ... existing fields ...\n    ai_model_version = models.CharField(\n        max_length=50,\n        blank=True,\n        default='gpt-4o',\n        help_text='GPT model version used for AI analysis'\n    )\n\n# core/services/ai_service.py — UPDATE\ndef generate_audit_narrative(data: dict, language='en') -> dict:\n    from django.conf import settings\n    \n    model_version = settings.OPENAI_MODEL\n    response = openai.ChatCompletion.create(\n        model=model_version,\n        messages=[...]\n    )\n    \n    return {\n        'narrative': response['choices'][0]['message']['content'],\n        'model_version': model_version,\n        'tokens_used': response['usage']['total_tokens']\n    }\n\n# apps/reports/views.py — UPDATE\nclass Report(Report):\n    def save(self, *args, **kwargs):\n        if not self.ai_model_version:\n            self.ai_model_version = getattr(settings, 'OPENAI_MODEL', 'gpt-4o')\n        super().save(*args, **kwargs)",
+      "standard_reference": "ISO 27001 A.14.2.7 (Outsourced development) | Internal AI QA Standard",
+      "business_impact": "Cannot reproduce past audit results after model upgrades. Audit trail integrity compromised. Compliance auditors cannot verify consistency across time periods.",
+      "fix_effort": "6 hours",
+      "fix_priority": 10
+    },
+    {
+      "id": "GAP-M2",
+      "severity": "medium",
+      "dimension": "data_architecture",
+      "title": "No Historical KPI Time-Series Table",
+      "file": "apps/reports/models.py",
+      "description": "RiskScoreSummary stores current state only. Cannot answer: 'Did compliance improve month-over-month?' No trending analytics possible.",
+      "current_code": "# apps/reports/models.py\nclass RiskScoreSummary(models.Model):\n    organization = FK(Organization)\n    compliance_rate = FloatField()  # Current only — no history",
+      "required_code": "# apps/reports/models.py — ADD NEW MODEL\nfrom django.db import models\nfrom django.db.models import Q\n\nclass KPISnapshot(models.Model):\n    \"\"\"Monthly KPI snapshots for trending analysis (IAS 7 compliant)\"\"\"\n    organization = models.ForeignKey('authentication.Organization', on_delete=models.CASCADE)\n    period = models.DateField(help_text='First day of month (YYYY-MM-01)')\n    \n    # Compliance metrics\n    compliance_rate = models.FloatField(help_text='0-100%')\n    avg_risk_score = models.FloatField(help_text='0-100')\n    total_audited = models.IntegerField()\n    passed_count = models.IntegerField()\n    failed_count = models.IntegerField()\n    \n    # Financial metrics\n    total_processed_amount = models.DecimalField(max_digits=15, decimal_places=2)\n    vat_amount = models.DecimalField(max_digits=15, decimal_places=2)\n    duplicate_amount = models.DecimalField(max_digits=15, decimal_places=2)\n    high_risk_amount = models.DecimalField(max_digits=15, decimal_places=2)\n    \n    # Vendor metrics\n    unique_vendors = models.IntegerField()\n    vendor_concentration_ratio = models.FloatField()\n    \n    created_at = models.DateTimeField(auto_now_add=True)\n    \n    class Meta:\n        unique_together = ('organization', 'period')\n        ordering = ['-period']\n    \n    def __str__(self):\n        return f\"{self.organization.name} — {self.period.strftime('%B %Y')}\"\n\n# apps/reports/tasks.py — ADD CELERY BEAT TASK\nfrom celery import shared_task\nfrom django.utils.timezone import now\nfrom dateutil.relativedelta import relativedelta\nfrom django.db.models import Count, Sum, Avg, Q\nfrom apps.authentication.models import Organization\nfrom apps.invoices.models import Invoice\n\n@shared_task(\n    name='reports.snapshot_monthly_kpis',\n    ignore_result=True\n)\ndef snapshot_monthly_kpis():\n    \"\"\"Celery Beat: Run on 1st of each month at 00:00 UTC\"\"\"\n    yesterday = now().date() - timedelta(days=1)\n    period_date = yesterday.replace(day=1)  # First day of previous month\n    \n    for org in Organization.objects.all():\n        invoices = Invoice.objects.filter(\n            organization=org,\n            created_at__month=period_date.month,\n            created_at__year=period_date.year\n        )\n        \n        if not invoices.exists():\n            continue  # Skip orgs with no activity\n        \n        validations = InvoiceValidationResult.objects.filter(\n            invoice__in=invoices\n        )\n        \n        snapshot = KPISnapshot.objects.create(\n            organization=org,\n            period=period_date,\n            compliance_rate=validations.aggregate(\n                avg=Avg('compliance_score')\n            )['avg'] or 0,\n            avg_risk_score=invoices.aggregate(\n                avg=Avg('risk_score')\n            )['avg'] or 0,\n            total_audited=invoices.count(),\n            passed_count=invoices.filter(risk_score__gte=70).count(),\n            failed_count=invoices.filter(risk_score__lt=70).count(),\n            total_processed_amount=invoices.aggregate(\n                total=Sum('total_amount')\n            )['total'] or 0,\n            vat_amount=invoices.aggregate(\n                total=Sum('vat_amount')\n            )['total'] or 0,\n            duplicate_amount=invoices.filter(\n                is_duplicate=True\n            ).aggregate(total=Sum('total_amount'))['total'] or 0,\n            high_risk_amount=invoices.filter(\n                risk_level='critical'\n            ).aggregate(total=Sum('total_amount'))['total'] or 0,\n            unique_vendors=invoices.values('vendor_name').distinct().count(),\n        )\n        logger.info('Created KPI snapshot for %s: %s', org, snapshot)\n\n# finai_backend/settings.py — ADD CELERY BEAT SCHEDULE\nfrom celery.schedules import crontab\n\nCELERY_BEAT_SCHEDULE = {\n    'snapshot-kpis-monthly': {\n        'task': 'reports.snapshot_monthly_kpis',\n        'schedule': crontab(minute=0, hour=0, day_of_month=1),  # 00:00 on 1st\n    },\n}\n\n# apps/reports/api/views.py — NEW ENDPOINT\nfrom rest_framework.views import APIView\nfrom rest_framework.response import Response\nfrom apps.reports.models import KPISnapshot\n\nclass KPITrendingView(APIView):\n    \"\"\"GET /api/v1/kpi/trending/?months=12\"\"\"\n    permission_classes = [IsAuthenticated]\n    \n    def get(self, request):\n        months = int(request.query_params.get('months', 12))\n        snapshots = KPISnapshot.objects.filter(\n            organization=request.user.organization\n        ).order_by('-period')[:months]\n        \n        return Response({\n            'kpis': [\n                {\n                    'period': s.period.isoformat(),\n                    'compliance_rate': s.compliance_rate,\n                    'avg_risk_score': s.avg_risk_score,\n                    'total_amount': str(s.total_processed_amount),\n                    'vendor_count': s.unique_vendors,\n                }\n                for s in reversed(snapshots)\n            ]\n        })",
+      "standard_reference": "Internal SRS FR-15 (KPI Trending)",
+      "business_impact": "Cannot demonstrate audit improvement over time. Missing key selling point for SaaS retention. Cannot prove ROI to clients with quantified compliance improvement.",
+      "fix_effort": "16 hours",
+      "fix_priority": 11
+    },
+    {
+      "id": "GAP-M3",
+      "severity": "medium",
+      "dimension": "api_quality",
+      "title": "Document List Missing search_fields and filter_backends",
+      "file": "apps/documents/typed_views.py",
+      "description": "DocumentListView has no search_fields, filter_backends, or ordering_fields. Cannot search by filename, filter by document_type, or sort by date via API.",
+      "current_code": "# apps/documents/typed_views.py\nclass DocumentListView(ListAPIView):\n    queryset = Document.objects.all()\n    serializer_class = DocumentSerializer\n    # No filter_backends, no search_fields",
+      "required_code": "# apps/documents/typed_views.py — UPDATE\nfrom django_filters.rest_framework import DjangoFilterBackend\nfrom rest_framework.filters import SearchFilter, OrderingFilter\n\nclass DocumentListView(ListAPIView):\n    queryset = Document.objects.all().order_by('-created_at')\n    serializer_class = DocumentSerializer\n    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]\n    filterset_fields = [\n        'document_type',\n        'status',\n        'risk_level',\n        'organization'\n    ]\n    search_fields = [\n        'original_filename',\n        'ocr_text',\n        'document_type',\n        'vendor_name'\n    ]\n    ordering_fields = [\n        'created_at',\n        'risk_score',\n        'document_type',\n        'original_filename'\n    ]\n\n# Usage examples:\n# GET /api/v1/documents/?document_type=invoice\n# GET /api/v1/documents/?search=vendor_name\n# GET /api/v1/documents/?ordering=-created_at&risk_level=critical",
+      "standard_reference": "REST API Best Practices (Django REST Framework documentation)",
+      "business_impact": "Poor UX for users managing large document libraries (100+ documents). Cannot slice/dice data efficiently. Admin panels ineffective for compliance audits.",
+      "fix_effort": "4 hours",
+      "fix_priority": 12
+    },
+    {
+      "id": "GAP-M4",
+      "severity": "medium",
+      "dimension": "security",
+      "title": "Content-Security-Policy Header Not Set",
+      "file": "finai_backend/settings.py",
+      "description": "HSTS, X-Frame-Options, X-Content-Type-Options all present. CSP header missing — allows XSS via inline scripts.",
+      "current_code": "# finai_backend/settings.py\nSECURE_HSTS_SECONDS = 31536000\nX_FRAME_OPTIONS = 'DENY'\nSECURE_CONTENT_TYPE_NOSNIFF = True\n# No CSP header",
+      "required_code": "# finai_backend/settings.py — ADD\nSECURE_CONTENT_SECURITY_POLICY = {\n    'default-src': (\"'self'\",),\n    'script-src': (\n        \"'self'\",\n        'cdn.jsdelivr.net',\n        'unpkg.com',  # For Alpine.js CDN\n        \"'unsafe-inline'\"  # Only if absolutely necessary for inline event handlers\n    ),\n    'style-src': (\n        \"'self'\",\n        \"'unsafe-inline'\",  # Required for Tailwind inline styles\n        'cdn.jsdelivr.net',\n        'fonts.googleapis.com'\n    ),\n    'font-src': (\n        \"'self'\",\n        'fonts.gstatic.com',\n        'cdn.jsdelivr.net'\n    ),\n    'img-src': (\n        \"'self'\",\n        'data:',  # For Base64 QR codes\n        'https:'\n    ),\n    'connect-src': (\n        \"'self'\",\n        'api.openai.com',  # For GPT-4o calls\n    ),\n    'frame-ancestors': (\"'none'\",),\n    'base-uri': (\"'self'\",),\n    'form-action': (\"'self'\",),\n}\n\n# Or use django-csp package for more control\n# pip install django-csp\nMIDDLEWARE = [\n    # ... other middleware\n    'csp.middleware.CSPMiddleware',  # Add this\n]\n\nCSP_DEFAULT_SRC = (\"'self'\",)\nCSP_SCRIPT_SRC = (\n    \"'self'\",\n    'cdn.jsdelivr.net',\n    'unpkg.com',\n)\nCSP_STYLE_SRC = (\n    \"'self'\",\n    \"'unsafe-inline'\",  # Tailwind requires this\n    'cdn.jsdelivr.net'\n)",
+      "standard_reference": "OWASP CSP Cheat Sheet | OWASP Top 10 #07 (Cross-Site Scripting)",
+      "business_impact": "XSS attacks possible via injected scripts in uploaded document content. Attacker could steal session tokens or modify invoice data. Enterprise clients cannot certify security.",
+      "fix_effort": "3 hours",
+      "fix_priority": 13
+    },
+    {
+      "id": "GAP-M5",
+      "severity": "medium",
+      "dimension": "documentation",
+      "title": "No Sentry Error Tracking Integration",
+      "file": "finai_backend/settings.py",
+      "description": "Errors logged to file and console only. No centralized error tracking, no alerting on production exceptions.",
+      "current_code": "# finai_backend/settings.py\nLOGGING = {\n    'handlers': {\n        'file': {'level': 'ERROR', 'filename': '/var/log/finai.log'}\n    }\n}\n# No Sentry integration",
+      "required_code": "# finai_backend/settings.py — ADD\nimport sentry_sdk\nfrom sentry_sdk.integrations.django import DjangoIntegration\nfrom sentry_sdk.integrations.celery import CeleryIntegration\nimport os\n\nsentry_dsn = os.environ.get('SENTRY_DSN', '')\nif sentry_dsn:\n    sentry_sdk.init(\n        dsn=sentry_dsn,\n        integrations=[\n            DjangoIntegration(),\n            CeleryIntegration(),\n        ],\n        traces_sample_rate=0.1,  # 10% transaction sampling\n        send_default_pii=False,  # Don't send user email in errors\n        environment=os.environ.get('ENVIRONMENT', 'development'),\n    )\n\n# .env.example — ADD\nSENTRY_DSN=https://examplePublicKey@sentry.io/123456\n\n# docker-compose.yml — UPDATE\nservices:\n  web:\n    environment:\n      - SENTRY_DSN=${SENTRY_DSN}",
+      "standard_reference": "ISO 27001 A.16.1.2 (Reporting Information Security Events)",
+      "business_impact": "Slow incident response. Root causes in production hard to diagnose. Cannot correlate errors with user complaints. Enterprise customers expect error tracking.",
+      "fix_effort": "2 hours",
+      "fix_priority": 14
+    },
+    {
+      "id": "GAP-L1",
+      "severity": "low",
+      "dimension": "api_quality",
+      "title": "No API Versioning or Deprecation Strategy",
+      "file": "finai_backend/urls.py",
+      "description": "All endpoints served at /api/ root. No /api/v1/, /api/v2/ structure. No deprecation headers or sunset timeline for breaking changes.",
+      "current_code": "# finai_backend/urls.py\nurlpatterns = [\n    path('api/', include('apps.invoices.urls')),  # No version header\n]",
+      "required_code": "# finai_backend/urls.py — UPDATE\nurlpatterns = [\n    path('api/v1/', include('apps.invoices.urls')),\n    path('api/v1/', include('apps.reports.urls')),\n    path('api/v1/', include('apps.authentication.urls')),\n]\n\n# Create middleware for API versioning\n# apps/core/middleware.py\nfrom django.utils.deprecation import MiddlewareMixin\n\nclass APIVersionMiddleware(MiddlewareMixin):\n    def process_response(self, request, response):\n        if request.path.startswith('/api/'):\n            response['API-Version'] = 'v1.2.0'\n            # Add deprecation notice for v1 after 2026-Q3\n            response['Deprecation'] = 'true'\n            response['Sunset'] = 'Wed, 30 Jun 2026 23:59:59 GMT'\n        return response",
+      "standard_reference": "REST API Best Practices | RFC 7231 (HTTP Semantics)",
+      "business_impact": "Cannot evolve API without breaking client integrations. Difficult to support multiple API versions. Integrations fragile. SaaS products expect semantic versioning.",
+      "fix_effort": "8 hours",
+      "fix_priority": 15
+    },
+    {
+      "id": "GAP-L2",
+      "severity": "low",
+      "dimension": "documentation",
+      "title": "Missing Deployment & Operations Runbooks",
+      "file": "deployment/",
+      "description": "DEPLOY.md exists but lacks: scaling procedures, backup/restore steps, incident response playbooks, database migration strategy, zero-downtime deployment.",
+      "current_code": "# deployment/DEPLOY.md — Basic instructions only\n# Covers: initial setup, Docker compose, migrations\n# Missing: scaling, disaster recovery, incident response",
+      "required_code": "# deployment/SCALING.md — NEW FILE\n# ## Horizontal Scaling (Multiple Web Instances)\n# 1. Use Gunicorn with --workers N\n# 2. Front with nginx load balancer (round-robin)\n# 3. Shared database (PostgreSQL in production)\n# 4. Shared Redis for Celery\n\n# deployment/BACKUP_RESTORE.md — NEW FILE\n# ## Daily Backup Procedure\n# 1. pg_dump production DB → S3\n# 2. Verify restore in staging\n# 3. Retention: 30 days\n# 4. RTO: 1 hour, RPO: 24 hours\n\n# deployment/INCIDENT_RESPONSE.md — NEW FILE\n# ## Response to High Error Rate\n# 1. Check Sentry dashboard\n# 2. Scale web pods horizontally\n# 3. Review recent deployments\n# 4. Rollback if needed\n# 5. Post-mortem within 24 hours",
+      "standard_reference": "Internal Operations Standards",
+      "business_impact": "On-call engineers lack procedures during incidents. Increased MTTR (Mean Time To Recovery). No consistency in operations. Enterprise SLAs at risk.",
+      "fix_effort": "12 hours",
+      "fix_priority": 16
+    },
+    {
+      "id": "GAP-L3",
+      "severity": "low",
+      "dimension": "data_architecture",
+      "title": "No Database Query Timeout Configuration",
+      "file": "finai_backend/settings.py",
+      "description": "Long-running queries can hang indefinitely, consuming database connections. No timeout configured.",
+      "current_code": "# finai_backend/settings.py — DEFAULT (no timeout)\nDATABASES = {\n    'default': {\n        'ENGINE': 'django.db.backends.sqlite3',\n        'NAME': BASE_DIR / 'db.sqlite3',\n        # No options.timeout or OPTIONS\n    }\n}",
+      "required_code": "# finai_backend/settings.py — UPDATE for SQLite\nDATABASES = {\n    'default': {\n        'ENGINE': 'django.db.backends.sqlite3',\n        'NAME': BASE_DIR / 'db.sqlite3',\n        'OPTIONS': {\n            'timeout': 30,  # 30-second timeout for SQLite\n        },\n    }\n}\n\n# For PostgreSQL (production):\n# 'OPTIONS': {\n#     'connect_timeout': 10,\n#     'options': '-c statement_timeout=300000'  # 5 minutes\n# }",
+      "standard_reference": "Database Administration Best Practices",
+      "business_impact": "Resource exhaustion on long queries. Can cause system-wide slowdown or deadlock. Poor database resource management.",
+      "fix_effort": "1 hour",
+      "fix_priority": 17
+    }
+  ],
+
+  "features_matrix": [
+    {
+      "feature": "Invoice auditing (30 core rules, 47 fields)",
+      "claimed": true,
+      "implemented": true,
+      "status": "complete",
+      "gap_detail": null
+    },
+    {
+      "feature": "ZATCA Phase 2 (TLV QR, sequential numbering, signing)",
+      "claimed": true,
+      "implemented": false,
+      "status": "partial",
+      "gap_detail": "QR detection exists; TLV encoding, sequential counter, cryptographic signing absent. QR generation completely missing."
+    },
+    {
+      "feature": "Fraud detection (10 algorithms)",
+      "claimed": true,
+      "implemented": false,
+      "status": "partial",
+      "gap_detail": "Benford's Law, duplicate detection, vendor concentration present; proper Benford's statistical analysis absent (using 3x heuristic instead)"
+    },
+    {
+      "feature": "Formal auditor opinion (ISA 700)",
+      "claimed": true,
+      "implemented": true,
+      "status": "complete",
+      "gap_detail": null
+    },
+    {
+      "feature": "Key Audit Matters (ISA 701)",
+      "claimed": true,
+      "implemented": true,
+      "status": "complete",
+      "gap_detail": null
+    },
+    {
+      "feature": "Bilingual reports (AR + EN)",
+      "claimed": true,
+      "implemented": true,
+      "status": "complete",
+      "gap_detail": null
+    },
+    {
+      "feature": "8 document types with typed models",
+      "claimed": true,
+      "implemented": true,
+      "status": "complete",
+      "gap_detail": null
+    },
+    {
+      "feature": "Multi-tenant isolation",
+      "claimed": true,
+      "implemented": true,
+      "status": "complete",
+      "gap_detail": null
+    },
+    {
+      "feature": "Role-based access control (7 roles)",
+      "claimed": true,
+      "implemented": true,
+      "status": "complete",
+      "gap_detail": null
+    },
+    {
+      "feature": "PDF/HTML export (WeasyPrint)",
+      "claimed": true,
+      "implemented": true,
+      "status": "complete",
+      "gap_detail": null
+    },
+    {
+      "feature": "Rule customization via API",
+      "claimed": true,
+      "implemented": false,
+      "status": "missing",
+      "gap_detail": "Rules seeded in migrations; no CRUD API endpoints for rules"
+    },
+    {
+      "feature": "MFA authentication",
+      "claimed": true,
+      "implemented": false,
+      "status": "partial",
+      "gap_detail": "Email OTP only; infrastructure exists but not enforced in login flow. No TOTP/Google Authenticator."
+    },
+    {
+      "feature": "Celery async tasks",
+      "claimed": true,
+      "implemented": true,
+      "status": "complete",
+      "gap_detail": null
+    },
+    {
+      "feature": "IAS 7 Cash Flow Classification",
+      "claimed": true,
+      "implemented": false,
+      "status": "missing",
+      "gap_detail": "No ias7_classification field on transactions. No cash flow statement generation."
+    },
+    {
+      "feature": "DELETE endpoints for GDPR compliance",
+      "claimed": true,
+      "implemented": false,
+      "status": "missing",
+      "gap_detail": "No soft-delete or hard-delete endpoints. Cannot fulfill data subject deletion requests."
+    },
+    {
+      "feature": "Malware scanning on file upload",
+      "claimed": false,
+      "implemented": false,
+      "status": "missing",
+      "gap_detail": "MIME type validation only. No ClamAV or VirusTotal integration."
+    },
+    {
+      "feature": "API pagination and filtering",
+      "claimed": true,
+      "implemented": false,
+      "status": "partial",
+      "gap_detail": "Pagination configured in some views; search_fields and filter_backends missing from Document and other list views."
+    },
+    {
+      "feature": "Real-time dashboard updates",
+      "claimed": true,
+      "implemented": false,
+      "status": "partial",
+      "gap_detail": "Dashboard exists but not real-time. No WebSocket integration. Charts require page refresh."
+    },
+    {
+      "feature": "Big Four Compliance Benchmarking",
+      "claimed": true,
+      "implemented": false,
+      "status": "partial",
+      "gap_detail": "System Prompt mentions Big Four standards. Partial implementation in compliance rules. Not fully wired into reports."
+    }
+  ],
+
+  "compliance_matrix": {
+    "ISA_700": "compliant",
+    "ISA_701": "compliant",
+    "ISA_315": "partial",
+    "ISA_330": "partial",
+    "ISA_500": "partial",
+    "ISA_250": "partial",
+    "IAS_7": "missing",
+    "ZATCA_Phase2": "partial",
+    "ISO_27001": "partial",
+    "SOC_2": "missing"
+  },
+
+  "roadmap": [
+    {
+      "phase": 1,
+      "title": "CRITICAL BLOCKERS — Foundation (Week 1)",
+      "duration": "1 week",
+      "gaps_addressed": ["GAP-C1", "GAP-C2", "GAP-C3"],
+      "target_features": ["ZATCA QR generation", "Benford's Law proper implementation", "DELETE endpoints"],
+      "score_improvement": 6,
+      "target_score": 82,
+      "deliverables": [
+        "ZATCA TLV QR code generation with cryptographic signing",
+        "Chi-square Benford's Law analysis (scipy integration)",
+        "Soft-delete endpoints for Invoice, Document, AuditCase with audit trails",
+        "GDPR compliance proof",
+        "Pass all new security and financial tests"
+      ]
+    },
+    {
+      "phase": 2,
+      "title": "HIGH-PRIORITY COMPLIANCE — Standards & Security (Week 2)",
+      "duration": "1 week",
+      "gaps_addressed": ["GAP-H1", "GAP-H2", "GAP-H3"],
+      "target_features": ["IAS 7 cash flow", "AI output validation", "Async report generation"],
+      "score_improvement": 5,
+      "target_score": 87,
+      "deliverables": [
+        "IAS 7 transaction classification and cash flow statement generation",
+        "Schema validation for all AI outputs (jsonschema + pydantic)",
+        "Async Celery task for large report generation with 202 response",
+        "Model version tracking in reports",
+        "Integration tests for all three features"
+      ]
+    },
+    {
+      "phase": 3,
+      "title": "API COMPLETENESS & FEATURES (Week 3)",
+      "duration": "1 week",
+      "gaps_addressed": ["GAP-H4", "GAP-H5", "GAP-H6", "GAP-M3"],
+      "target_features": ["Rule API", "Malware scanning", "Test coverage boost", "Search/filter"],
+      "score_improvement": 4,
+      "target_score": 91,
+      "deliverables": [
+        "Rule CRUD API with permission enforcement",
+        "ClamAV malware scanning integration",
+        "80+ test files (target 60% coverage)",
+        "Search/filter on all list endpoints",
+        "API versioning (/api/v1/ routing)"
+      ]
+    },
+    {
+      "phase": 4,
+      "title": "OPERATIONS & POLISH (Week 4)",
+      "duration": "1 week",
+      "gaps_addressed": ["GAP-M4", "GAP-M5", "GAP-L1", "GAP-L2", "GAP-L3"],
+      "target_features": ["CSP headers", "Sentry monitoring", "API versioning", "Runbooks", "Query timeout"],
+      "score_improvement": 3,
+      "target_score": 94,
+      "deliverables": [
+        "CSP headers configured (OWASP compliant)",
+        "Sentry error tracking integrated",
+        "API versioning strategy documented",
+        "Deployment, scaling, incident response runbooks",
+        "Database query timeout configuration",
+        "KPI historical snapshots (bonus)"
+      ]
+    }
+  ],
+
+  "quick_wins": [
+    {
+      "id": "QW-1",
+      "title": "Add database query timeout",
+      "file": "finai_backend/settings.py",
+      "effort": "< 1 hour",
+      "impact": "Prevents connection hangs; stabilizes production database behavior"
+    },
+    {
+      "id": "QW-2",
+      "title": "Set CSP headers",
+      "file": "finai_backend/settings.py",
+      "effort": "< 2 hours",
+      "impact": "Blocks XSS attacks; required for enterprise security compliance"
+    },
+    {
+      "id": "QW-3",
+      "title": "Integrate Sentry error tracking",
+      "file": "finai_backend/settings.py",
+      "effort": "< 2 hours",
+      "impact": "Real-time error monitoring; enables rapid incident response"
+    },
+    {
+      "id": "QW-4",
+      "title": "Add search/filter to Document list",
+      "file": "apps/documents/typed_views.py",
+      "effort": "< 1 hour",
+      "impact": "Improves UX for large document libraries; no code restructuring"
+    },
+    {
+      "id": "QW-5",
+      "title": "Create API versioning structure",
+      "file": "finai_backend/urls.py",
+      "effort": "< 3 hours",
+      "impact": "Enables future API evolution without breaking changes; SaaS best practice"
+    }
+  ],
+
+  "production_readiness_checklist": {
+    "security_framework": {
+      "item": "Multi-tenant isolation + RBAC enforced",
+      "status": "✅ COMPLETE",
+      "notes": "Organization FK filtering on all queries; role-based permissions enforced at view level"
+    },
+    "financial_standards": {
+      "item": "ISA 700/701 audit opinion and KAMs",
+      "status": "✅ COMPLETE",
+      "notes": "Formal opinions generated and stored; KAMs service exists"
+    },
+    "api_design": {
+      "item": "REST endpoints for core resources (Create, Read, Update, Delete)",
+      "status": "⚠️  PARTIAL",
+      "notes": "DELETE missing; See GAP-C3 for implementation"
+    },
+    "test_coverage": {
+      "item": "60%+ automated test coverage (critical paths)",
+      "status": "❌ MISSING",
+      "notes": "Currently 45%; need +150 test functions. See GAP-H6"
+    },
+    "error_tracking": {
+      "item": "Centralized error monitoring (Sentry/DataDog)",
+      "status": "❌ MISSING",
+      "notes": "Logs only. See QW-3"
+    },
+    "data_backup": {
+      "item": "Automated daily backups with RTO/RPO defined",
+      "status": "⚠️  INCOMPLETE",
+      "notes": "Needs documented procedures. See GAP-L2"
+    },
+    "deployment_pipeline": {
+      "item": "CI/CD with staging + production",
+      "status": "⚠️  BASIC",
+      "notes": "Docker Compose works. Needs k8s or scaled deployment guide"
+    },
+    "documentation": {
+      "item": "API docs (Swagger), deployment guide, runbooks",
+      "status": "⚠️  PARTIAL",
+      "notes": "Swagger via drf-spectacular OK. Missing deployment runbooks (GAP-L2)"
+    }
+  },
+
+  "estimated_effort": {
+    "critical_gaps": {
+      "total_hours": 28,
+      "breakdown": {
+        "ZATCA QR generation": 12,
+        "Benford's Law": 8,
+        "DELETE endpoints": 8
+      }
+    },
+    "high_gaps": {
+      "total_hours": 76,
+      "breakdown": {
+        "IAS 7 cash flow": 20,
+        "AI output validation": 12,
+        "Async report generation": 8,
+        "Rule API": 24,
+        "Malware scanning": 8,
+        "Test coverage": 40
+      }
+    },
+    "medium_gaps": {
+      "total_hours": 35,
+      "breakdown": {
+        "Model version tracking": 6,
+        "KPI historical snapshots": 16,
+        "Search/filter": 4,
+        "CSP headers": 3,
+        "Sentry integration": 2,
+        "Documentation": 4
+      }
+    },
+    "low_gaps": {
+      "total_hours": 9,
+      "breakdown": {
+        "API versioning": 8,
+        "Query timeout": 1
+      }
+    },
+    "total_hours": 148,
+    "team_weeks": 4,
+    "estimated_cost": "~$14,800 (at $100/hour)"
+  },
+
+  "next_steps": [
+    {
+      "priority": 1,
+      "action": "Address 3 CRITICAL blockers (GAP-C1, GAP-C2, GAP-C3)",
+      "owner": "Tech Lead",
+      "timeline": "Week 1",
+      "success_criteria": "All 3 features coded, tested, and deployed to staging"
+    },
+    {
+      "priority": 2,
+      "action": "Fix HIGH-priority compliance gaps (GAP-H1 through GAP-H6)",
+      "owner": "Compliance + Backend team",
+      "timeline": "Week 2–3",
+      "success_criteria": "IAS 7, AI validation, async tasks, malware scanning, test coverage meets 60%"
+    },
+    {
+      "priority": 3,
+      "action": "Implement quick wins (QW-1 through QW-5)",
+      "owner": "Backend engineer",
+      "timeline": "During other phases (parallel)",
+      "success_criteria": "All 5 quick wins merged and deployed"
+    },
+    {
+      "priority": 4,
+      "action": "Plan public API versioning strategy",
+      "owner": "Product + API lead",
+      "timeline": "Week 3",
+      "success_criteria": "All endpoints under /api/v1/; deprecation policy documented"
+    },
+    {
+      "priority": 5,
+      "action": "Create deployment & incident runbooks",
+      "owner": "DevOps + Platform team",
+      "timeline": "Week 4",
+      "success_criteria": "Operations guide, backup/restore, incident response documented"
+    }
+  ],
+
+  "success_metrics": {
+    "overall_score_target": 90,
+    "timeline": "4 weeks",
+    "production_readiness": true,
+    "critical_gaps_resolved": 3,
+    "high_gaps_resolved": 6,
+    "test_coverage_target": 60,
+    "iso27001_score_target": 85,
+    "isa_compliance_score_target": 95
+  }
+}

@@ -1,0 +1,271 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+{% block page_title %}إدارة الصفحات{% endblock %}
+{% block breadcrumb_parent %}إدارة المحتوى{% endblock %}
+{% block breadcrumb_current %}الصفحات{% endblock %}
+
+{% block content %}
+<div x-data="pagesManager()" x-init="init()" class="space-y-5 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">إدارة الصفحات</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">جميع صفحات CMS والمحتوى المنشور</p>
+    </div>
+    <button @click="openCreate()" class="btn-primary">
+      <i data-lucide="plus" class="w-4 h-4"></i>
+      صفحة جديدة
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="card p-4 text-center">
+      <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
+      <template x-if="!loading"><p class="text-2xl font-black text-slate-900 dark:text-white" x-text="stats.total || 0"></p></template>
+      <p class="text-xs text-slate-500 mt-1">إجمالي الصفحات</p>
+    </div>
+    <div class="card p-4 text-center">
+      <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
+      <template x-if="!loading"><p class="text-2xl font-black text-emerald-600" x-text="stats.published || 0"></p></template>
+      <p class="text-xs text-slate-500 mt-1">منشورة</p>
+    </div>
+    <div class="card p-4 text-center">
+      <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
+      <template x-if="!loading"><p class="text-2xl font-black text-amber-600" x-text="stats.draft || 0"></p></template>
+      <p class="text-xs text-slate-500 mt-1">مسودة</p>
+    </div>
+    <div class="card p-4 text-center">
+      <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
+      <template x-if="!loading"><p class="text-2xl font-black text-slate-500" x-text="stats.archived || 0"></p></template>
+      <p class="text-xs text-slate-500 mt-1">مؤرشفة</p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card p-4 flex flex-wrap items-center gap-3">
+    <select x-model="filters.status" @change="load()" class="select">
+      <option value="">جميع الحالات</option>
+      <option value="published">منشورة</option>
+      <option value="draft">مسودة</option>
+      <option value="archived">مؤرشفة</option>
+    </select>
+    <input type="text" x-model.debounce.300ms="filters.search" @input="load()"
+           class="input max-w-xs" placeholder="البحث بالعنوان أو الرابط...">
+  </div>
+
+  <!-- Table -->
+  <div class="card overflow-hidden">
+    <template x-if="loading">
+      <div class="animate-pulse divide-y divide-slate-100 dark:divide-slate-700/30">
+        <template x-for="i in [1,2,3,4,5]" :key="i">
+          <div class="px-5 py-4 flex items-center gap-4">
+            <div class="flex-1 space-y-2">
+              <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-48"></div>
+              <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-32"></div>
+            </div>
+            <div class="h-6 w-16 bg-slate-200 dark:bg-slate-700 rounded"></div>
+          </div>
+        </template>
+      </div>
+    </template>
+    <template x-if="!loading && pages.length === 0">
+      <div class="px-5 py-16 text-center">
+        <i data-lucide="file-text" class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3"></i>
+        <p class="text-slate-500 text-sm">لا توجد صفحات مطابقة</p>
+      </div>
+    </template>
+    <template x-if="!loading && pages.length > 0">
+      <div class="overflow-x-auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>العنوان</th>
+              <th>الرابط</th>
+              <th>الحالة</th>
+              <th>آخر تحديث</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="page in pages" :key="page.id">
+              <tr>
+                <td>
+                  <div>
+                    <p class="font-semibold text-slate-800 dark:text-white text-sm" x-text="page.title_ar || page.title"></p>
+                    <p class="text-xs text-slate-400" x-text="page.title || ''"></p>
+                  </div>
+                </td>
+                <td>
+                  <a :href="page.slug" target="_blank"
+                     class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1">
+                    <span x-text="page.slug || '—'"></span>
+                    <i data-lucide="external-link" class="w-3 h-3"></i>
+                  </a>
+                </td>
+                <td>
+                  <span class="badge"
+                        :class="{
+                          'badge-green':  page.status === 'published',
+                          'badge-amber':  page.status === 'draft',
+                          'badge-slate':  page.status === 'archived',
+                        }"
+                        x-text="page.status === 'published' ? 'منشورة' : page.status === 'draft' ? 'مسودة' : 'مؤرشفة'"></span>
+                </td>
+                <td class="text-xs text-slate-400"
+                    x-text="page.updated_at ? new Date(page.updated_at).toLocaleDateString('ar-SA') : '—'"></td>
+                <td>
+                  <div class="flex items-center gap-1">
+                    <button @click="editPage(page)" class="btn-ghost text-xs px-2 py-1">
+                      <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button @click="deletePage(page.id)" class="btn-ghost text-xs px-2 py-1 text-red-500 hover:text-red-700">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </template>
+  </div>
+
+  <!-- Create/Edit Modal -->
+  <template x-if="showModal">
+    <div class="modal-backdrop" @click.self="showModal=false">
+      <div class="modal-box max-w-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/30">
+          <h3 class="font-bold text-slate-800 dark:text-white" x-text="editingPage.id ? 'تعديل الصفحة' : 'صفحة جديدة'"></h3>
+          <button @click="showModal=false" class="text-slate-400 hover:text-slate-600">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <div class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان (EN)</label>
+              <input type="text" x-model="editingPage.title" class="input">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان (عربي)</label>
+              <input type="text" x-model="editingPage.title_ar" class="input" dir="rtl">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الرابط (Slug)</label>
+              <input type="text" x-model="editingPage.slug" class="input" placeholder="/about/">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الحالة</label>
+              <select x-model="editingPage.status" class="select w-full">
+                <option value="draft">مسودة</option>
+                <option value="published">منشورة</option>
+                <option value="archived">مؤرشفة</option>
+              </select>
+            </div>
+            <div class="col-span-2">
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الوصف (عربي)</label>
+              <textarea x-model="editingPage.content_ar" class="input" rows="4" dir="rtl"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-700/30">
+          <button @click="showModal=false" class="btn-ghost">إلغاء</button>
+          <button @click="savePage()" :disabled="saving" class="btn-primary">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ'"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function pagesManager() {
+  return {
+    pages: [],
+    stats: {},
+    loading: true,
+    saving: false,
+    showModal: false,
+    editingPage: {},
+    filters: { status: '', search: '' },
+
+    async load() {
+      this.loading = true;
+      try {
+        const params = new URLSearchParams();
+        if (this.filters.status) params.set('status', this.filters.status);
+        if (this.filters.search) params.set('search', this.filters.search);
+        const [pagesRes, statsRes] = await Promise.all([
+          apiFetch('/api/v1/cms/admin/pages/?' + params.toString()),
+          apiFetch('/api/v1/cms/admin/pages/stats/'),
+        ]);
+        if (pagesRes && pagesRes.ok) {
+          const data = await pagesRes.json();
+          this.pages = Array.isArray(data) ? data : (data.results || []);
+        }
+        if (statsRes && statsRes.ok) this.stats = await statsRes.json();
+      } catch (e) {
+        notify('تعذّر تحميل الصفحات', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async init() { await this.load(); },
+
+    openCreate() {
+      this.editingPage = { title:'', title_ar:'', slug:'', status:'draft', content_ar:'' };
+      this.showModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    editPage(page) {
+      this.editingPage = { ...page };
+      this.showModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async savePage() {
+      this.saving = true;
+      try {
+        const isEdit = Boolean(this.editingPage.id);
+        const url = isEdit ? `/api/v1/cms/admin/pages/${this.editingPage.id}/` : '/api/v1/cms/admin/pages/';
+        const res = await apiFetch(url, {
+          method: isEdit ? 'PUT' : 'POST',
+          body: JSON.stringify(this.editingPage),
+        });
+        if (res && res.ok) {
+          notify('تم حفظ الصفحة', 'success');
+          this.showModal = false;
+          await this.load();
+        } else {
+          notify('فشل الحفظ', 'error');
+        }
+      } catch (e) {
+        notify('فشل الحفظ', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async deletePage(id) {
+      if (!confirm('هل أنت متأكد من حذف هذه الصفحة؟')) return;
+      const res = await apiFetch(`/api/v1/cms/admin/pages/${id}/`, { method: 'DELETE' });
+      if (res && (res.ok || res.status === 204)) {
+        this.pages = this.pages.filter(p => p.id !== id);
+        notify('تم حذف الصفحة', 'success');
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

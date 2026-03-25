@@ -1,0 +1,269 @@
+{% extends "layouts/base_vendor_dashboard.html" %}
+{% load i18n %}
+{% block page_title %}لوحة التحكم{% endblock %}
+{% block breadcrumb_current %}نظرة عامة{% endblock %}
+
+{% block content %}
+<div x-data="vendorDashboard()" x-init="init()" class="space-y-6 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">مرحباً، {{ request.user.full_name|default:request.user.email|truncatechars:25 }}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">نظرة عامة على حسابك ونشاط المراجعة المالية</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="/dashboard/upload/" class="btn-primary">
+        <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+        رفع ملفات
+      </a>
+    </div>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <!-- Total Files -->
+    <div class="card p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+          <i data-lucide="files" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+        </div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">إجمالي الملفات</p>
+      </div>
+      <template x-if="loading">
+        <div class="h-8 w-20 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+      </template>
+      <template x-if="!loading">
+        <p class="text-3xl font-black text-slate-900 dark:text-white" x-text="(stats.total_files || 0).toLocaleString()"></p>
+      </template>
+      <p class="text-xs text-slate-400 mt-1" x-text="(stats.storage_used_human || '0 MB') + ' مستخدم'"></p>
+    </div>
+
+    <!-- Running Audits -->
+    <div class="card p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center">
+          <i data-lucide="shield-check" class="w-5 h-5 text-violet-600 dark:text-violet-400"></i>
+        </div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">مراجعات نشطة</p>
+      </div>
+      <template x-if="loading">
+        <div class="h-8 w-16 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+      </template>
+      <template x-if="!loading">
+        <p class="text-3xl font-black text-slate-900 dark:text-white" x-text="(stats.running_audits || 0).toLocaleString()"></p>
+      </template>
+      <template x-if="!loading && (stats.pending_audits || 0) > 0">
+        <p class="text-xs text-amber-600 mt-1" x-text="(stats.pending_audits || 0) + ' في الانتظار'"></p>
+      </template>
+    </div>
+
+    <!-- Reports -->
+    <div class="card p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
+          <i data-lucide="file-bar-chart" class="w-5 h-5 text-emerald-600 dark:text-emerald-400"></i>
+        </div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">التقارير</p>
+      </div>
+      <template x-if="loading">
+        <div class="h-8 w-16 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+      </template>
+      <template x-if="!loading">
+        <p class="text-3xl font-black text-slate-900 dark:text-white" x-text="(stats.total_reports || 0).toLocaleString()"></p>
+      </template>
+    </div>
+
+    <!-- Team Members -->
+    <div class="card p-5">
+      <div class="flex items-center gap-3 mb-3">
+        <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
+          <i data-lucide="users" class="w-5 h-5 text-amber-600 dark:text-amber-400"></i>
+        </div>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">أعضاء الفريق</p>
+      </div>
+      <template x-if="loading">
+        <div class="h-8 w-16 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+      </template>
+      <template x-if="!loading">
+        <p class="text-3xl font-black text-slate-900 dark:text-white" x-text="(stats.team_members || 0).toLocaleString()"></p>
+      </template>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="card p-5">
+    <h3 class="text-sm font-bold text-slate-700 dark:text-slate-200 mb-4">إجراءات سريعة</h3>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <a href="/dashboard/upload/"
+         class="flex flex-col items-center gap-2 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20
+                hover:bg-blue-100 dark:hover:bg-blue-900/40 transition text-center">
+        <i data-lucide="upload-cloud" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+        <span class="text-xs font-semibold text-blue-700 dark:text-blue-300">رفع ملفات</span>
+      </a>
+      <a href="/dashboard/audits/"
+         class="flex flex-col items-center gap-2 p-4 rounded-xl bg-violet-50 dark:bg-violet-900/20
+                hover:bg-violet-100 dark:hover:bg-violet-900/40 transition text-center">
+        <i data-lucide="shield-check" class="w-6 h-6 text-violet-600 dark:text-violet-400"></i>
+        <span class="text-xs font-semibold text-violet-700 dark:text-violet-300">بدء مراجعة</span>
+      </a>
+      <a href="/dashboard/reports/"
+         class="flex flex-col items-center gap-2 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20
+                hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition text-center">
+        <i data-lucide="file-bar-chart" class="w-6 h-6 text-emerald-600 dark:text-emerald-400"></i>
+        <span class="text-xs font-semibold text-emerald-700 dark:text-emerald-300">عرض التقارير</span>
+      </a>
+      <a href="/dashboard/team/"
+         class="flex flex-col items-center gap-2 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20
+                hover:bg-amber-100 dark:hover:bg-amber-900/40 transition text-center">
+        <i data-lucide="users" class="w-6 h-6 text-amber-600 dark:text-amber-400"></i>
+        <span class="text-xs font-semibold text-amber-700 dark:text-amber-300">إدارة الفريق</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Two Columns -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+    <!-- Recent Activity -->
+    <div class="card overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
+        <h3 class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+          <i data-lucide="activity" class="w-4 h-4 text-blue-500"></i>
+          آخر النشاطات
+        </h3>
+        <a href="/dashboard/files/" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">عرض الكل</a>
+      </div>
+      <template x-if="loading">
+        <div class="animate-pulse divide-y divide-slate-100 dark:divide-slate-700/30">
+          <template x-for="i in [1,2,3,4]" :key="i">
+            <div class="px-5 py-3.5 flex items-center gap-3">
+              <div class="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-700 flex-shrink-0"></div>
+              <div class="flex-1 space-y-1.5">
+                <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-40"></div>
+                <div class="h-2.5 bg-slate-200 dark:bg-slate-700 rounded w-24"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+      <template x-if="!loading && recentActivity.length === 0">
+        <div class="px-5 py-10 text-center text-slate-400 text-sm">لا يوجد نشاط بعد</div>
+      </template>
+      <template x-if="!loading && recentActivity.length > 0">
+        <div class="divide-y divide-slate-100 dark:divide-slate-700/30">
+          <template x-for="item in recentActivity" :key="item.id">
+            <div class="px-5 py-3.5 flex items-center gap-3">
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+                   :class="{
+                     'bg-blue-50 dark:bg-blue-900/30':    item.type === 'upload',
+                     'bg-violet-50 dark:bg-violet-900/30': item.type === 'audit',
+                     'bg-emerald-50 dark:bg-emerald-900/30': item.type === 'report',
+                     'bg-slate-50 dark:bg-slate-700/40':  !item.type,
+                   }">
+                <i :data-lucide="item.type === 'upload' ? 'upload' : item.type === 'audit' ? 'shield-check' : item.type === 'report' ? 'file-bar-chart' : 'activity'"
+                   class="w-4 h-4"
+                   :class="{
+                     'text-blue-600':    item.type === 'upload',
+                     'text-violet-600':  item.type === 'audit',
+                     'text-emerald-600': item.type === 'report',
+                     'text-slate-400':   !item.type,
+                   }"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-slate-700 dark:text-slate-300 truncate" x-text="item.description"></p>
+                <p class="text-xs text-slate-400" x-text="item.created_at ? new Date(item.created_at).toLocaleString('ar-SA') : ''"></p>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+    </div>
+
+    <!-- Storage Usage -->
+    <div class="card p-5 space-y-4">
+      <h3 class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+        <i data-lucide="hard-drive" class="w-4 h-4 text-amber-500"></i>
+        استخدام التخزين
+      </h3>
+      <template x-if="loading">
+        <div class="space-y-3 animate-pulse">
+          <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+          <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-3/4"></div>
+        </div>
+      </template>
+      <template x-if="!loading">
+        <div class="space-y-4">
+          <div>
+            <div class="flex items-center justify-between text-xs mb-2">
+              <span class="text-slate-500">المستخدم</span>
+              <span class="font-semibold text-slate-700 dark:text-slate-200"
+                    x-text="(stats.storage_used_human || '0 MB') + ' / ' + (stats.storage_limit_human || '1 GB')"></span>
+            </div>
+            <div class="progress-track h-3">
+              <div class="progress-fill rounded-full"
+                   :class="{
+                     'bg-blue-500':   (stats.storage_percent || 0) < 70,
+                     'bg-amber-500':  (stats.storage_percent || 0) >= 70 && (stats.storage_percent || 0) < 90,
+                     'bg-red-500':    (stats.storage_percent || 0) >= 90,
+                   }"
+                   :style="'width:' + Math.min(stats.storage_percent || 0, 100) + '%'"></div>
+            </div>
+            <p class="text-xs text-slate-400 mt-1" x-text="(stats.storage_percent || 0) + '% مستخدم'"></p>
+          </div>
+
+          <!-- File Type Breakdown -->
+          <div class="space-y-2.5">
+            <template x-for="item in (stats.storage_breakdown || [])" :key="item.type">
+              <div class="flex items-center justify-between text-xs">
+                <div class="flex items-center gap-2">
+                  <div class="w-2 h-2 rounded-full" :style="'background:' + item.color"></div>
+                  <span class="text-slate-500" x-text="item.label_ar || item.type"></span>
+                </div>
+                <span class="font-medium text-slate-600 dark:text-slate-400" x-text="item.size_human"></span>
+              </div>
+            </template>
+          </div>
+
+          <a href="/dashboard/storage/" class="btn-ghost w-full justify-center text-xs">
+            <i data-lucide="hard-drive" class="w-4 h-4"></i>
+            تفاصيل التخزين
+          </a>
+        </div>
+      </template>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function vendorDashboard() {
+  return {
+    stats: {},
+    recentActivity: [],
+    loading: true,
+
+    async init() {
+      try {
+        const [statsRes, activityRes] = await Promise.all([
+          apiFetch('/api/v1/vendor/dashboard/stats/'),
+          apiFetch('/api/v1/vendor/activity/?limit=8'),
+        ]);
+        if (statsRes && statsRes.ok) this.stats = await statsRes.json();
+        if (activityRes && activityRes.ok) {
+          const data = await activityRes.json();
+          this.recentActivity = Array.isArray(data) ? data : (data.results || []);
+        }
+      } catch (e) {
+        notify('تعذّر تحميل بيانات لوحة التحكم', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

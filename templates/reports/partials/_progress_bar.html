@@ -1,0 +1,346 @@
+{% load i18n %}
+
+<!-- ✅ Report Generation Progress Component -->
+<div class="report-progress-section" id="progress-section">
+  <div class="progress-card">
+    <!-- Status Indicator -->
+    <div class="progress-header">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          {% if report.status == 'pending' %}
+          <div class="spinner"></div>
+          <span class="text-lg font-semibold text-slate-900">{% trans "Generating Report..." %}</span>
+          {% elif report.status == 'completed' %}
+          <svg class="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-lg font-semibold text-green-600">{% trans "Report Completed" %}</span>
+          {% elif report.status == 'failed' %}
+          <svg class="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+          </svg>
+          <span class="text-lg font-semibold text-red-600">{% trans "Report Generation Failed" %}</span>
+          {% else %}
+          <svg class="w-6 h-6 text-slate-400" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
+          </svg>
+          <span class="text-lg font-semibold text-slate-600">{% trans "Preparing..." %}</span>
+          {% endif %}
+        </div>
+
+        <!-- Status Badge -->
+        {% if report.status == 'pending' %}
+        <span class="badge badge-info">{% trans "IN PROGRESS" %}</span>
+        {% elif report.status == 'completed' %}
+        <span class="badge badge-success">{% trans "READY" %}</span>
+        {% elif report.status == 'failed' %}
+        <span class="badge badge-danger">{% trans "ERROR" %}</span>
+        {% else %}
+        <span class="badge badge-secondary">{% trans "DRAFT" %}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Progress Bar -->
+    {% if report.status == 'pending' or report.status == 'draft' %}
+    <div class="progress-container mb-6">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-sm font-semibold text-slate-700">{% trans "Progress" %}</span>
+        <span class="text-sm font-mono font-bold text-slate-900">
+          {{ report.progress_percentage|default:0 }}%
+        </span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" 
+             style="width: {{ report.progress_percentage|default:0 }}%; transition: width 0.3s ease;">
+        </div>
+      </div>
+      
+      <!-- Estimated Time -->
+      {% if report.status == 'pending' and report.progress_percentage > 0 %}
+      <p class="text-xs text-slate-600 mt-2">
+        {% trans "Estimated time remaining:" %}
+        <span id="estimatedTime" class="font-mono font-bold">
+          {% if report.progress_percentage >= 80 %}
+            < 1 {% trans "minute" %}
+          {% elif report.progress_percentage >= 50 %}
+            2-3 {% trans "minutes" %}
+          {% elif report.progress_percentage >= 25 %}
+            4-5 {% trans "minutes" %}
+          {% else %}
+            < 10 {% trans "minutes" %}
+          {% endif %}
+        </span>
+      </p>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Error Message -->
+    {% if report.status == 'failed' and report.processing_error %}
+    <div class="error-box mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+      <h4 class="font-semibold text-red-900 mb-2">{% trans "Error Details" %}</h4>
+      <p class="text-sm text-red-800 font-mono">{{ report.processing_error }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Metadata -->
+    <div class="progress-metadata mt-6 pt-4 border-t border-slate-200">
+      <div class="grid grid-cols-3 gap-4 text-sm">
+        <div>
+          <p class="text-slate-600">{% trans "Started" %}</p>
+          <p class="font-mono font-bold text-slate-900">
+            {% if report.created_at %}
+              {{ report.created_at|date:"SHORT_DATETIME_FORMAT" }}
+            {% else %}
+              N/A
+            {% endif %}
+          </p>
+        </div>
+        <div>
+          <p class="text-slate-600">{% trans "Duration" %}</p>
+          <p class="font-mono font-bold text-slate-900">
+            {% if report.generated_at and report.created_at %}
+              {{ report.generated_at|timesince:report.created_at }}
+            {% else %}
+              {% trans "Processing..." %}
+            {% endif %}
+          </p>
+        </div>
+        <div>
+          <p class="text-slate-600">{% trans "Completed" %}</p>
+          <p class="font-mono font-bold text-slate-900">
+            {% if report.status == 'completed' %}
+              {{ report.generated_at|date:"SHORT_DATETIME_FORMAT" }}
+            {% else %}
+              {% trans "Pending..." %}
+            {% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="progress-actions mt-6 flex gap-3">
+      {% if report.status == 'completed' %}
+      <button class="btn btn-primary" onclick="downloadReport()">
+        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+        {% trans "Download Report" %}
+      </button>
+      <button class="btn btn-secondary" onclick="shareReport()">
+        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-2l-4 4m0 0l-4-4m4 4V4" />
+        </svg>
+        {% trans "Share" %}
+      </button>
+      {% elif report.status == 'pending' %}
+      <button class="btn btn-secondary" onclick="cancelReportGeneration()">
+        <svg class="w-4 h-4 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+        </svg>
+        {% trans "Cancel" %}
+      </button>
+      {% elif report.status == 'failed' %}
+      <button class="btn btn-primary" onclick="retryReportGeneration()">
+        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        {% trans "Retry" %}
+      </button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Auto-refresh for pending reports -->
+{% if report.status == 'pending' %}
+<script>
+// Auto-refresh progress every 2 seconds
+setInterval(() => {
+  fetch(window.location.href, {
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  }).then(response => response.text())
+    .then(html => {
+      const parser = new DOMParser();
+      const newDoc = parser.parseFromString(html, 'text/html');
+      const newProgress = newDoc.querySelector('#progress-section');
+      if (newProgress) {
+        document.getElementById('progress-section').outerHTML = newProgress.outerHTML;
+      }
+    })
+    .catch(err => console.error('Auto-refresh error:', err));
+}, 2000);
+</script>
+{% endif %}
+
+<style>
+.progress-card {
+  background: white;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.progress-bar-bg {
+  width: 100%;
+  height: 24px;
+  background-color: #e2e8f0;
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6 0%, #06b6d4 100%);
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+  position: relative;
+}
+
+.progress-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.badge {
+  display: inline-flex;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.badge-info {
+  background-color: #dbeafe;
+  color: #0c4a6e;
+}
+
+.badge-success {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.badge-danger {
+  background-color: #fee2e2;
+  color: #9d1720;
+}
+
+.badge-secondary {
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: #2563eb;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #1d4ed8;
+}
+
+.btn-secondary {
+  background-color: #e2e8f0;
+  color: #334155;
+}
+
+.btn-secondary:hover {
+  background-color: #cbd5e1;
+}
+</style>
+
+<script>
+async function downloadReport() {
+  // Implementation for downloading report
+  const reportId = '{{ report.id }}';
+  window.location.href = `/reports/${reportId}/download/`;
+}
+
+async function shareReport() {
+  // Implementation for sharing report
+  const reportLink = window.location.href;
+  if (navigator.share) {
+    navigator.share({
+      title: '{{ report.name }}',
+      text: 'Check out this audit report',
+      url: reportLink
+    });
+  } else {
+    navigator.clipboard.writeText(reportLink);
+    alert('Link copied to clipboard');
+  }
+}
+
+async function cancelReportGeneration() {
+  if (!confirm('Are you sure you want to cancel this report?')) return;
+  
+  const reportId = '{{ report.id }}';
+  const response = await fetch(`/api/v1/reports/${reportId}/cancel/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': getCsrfToken() }
+  });
+  
+  if (response.ok) {
+    location.reload();
+  }
+}
+
+async function retryReportGeneration() {
+  const reportId = '{{ report.id }}';
+  const response = await fetch(`/api/v1/reports/${reportId}/regenerate/`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': getCsrfToken() }
+  });
+  
+  if (response.ok) {
+    location.reload();
+  }
+}
+
+function getCsrfToken() {
+  return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+         document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
+}
+</script>

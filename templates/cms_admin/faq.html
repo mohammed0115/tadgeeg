@@ -1,0 +1,386 @@
+{% extends "cms_admin/base_cms.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "FAQ Editor" %}{% endblock %}
+{% block page_title %}{% trans "Platform CMS" %}{% endblock %}
+{% block tab_faq %}active{% endblock %}
+
+{% block cms_content %}
+<div x-data="faqEditor()" x-init="init()" class="space-y-5">
+
+  <!-- Loading -->
+  <template x-if="loading">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-5 animate-pulse">
+      <div class="lg:col-span-1 space-y-3">
+        <div class="h-8 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+        <template x-for="i in [1,2,3]" :key="i">
+          <div class="h-12 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+        </template>
+      </div>
+      <div class="lg:col-span-3 space-y-3">
+        <div class="h-8 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+        <template x-for="i in [1,2,3,4]" :key="i">
+          <div class="h-16 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+        </template>
+      </div>
+    </div>
+  </template>
+
+  <template x-if="!loading">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-5">
+
+      <!-- Left: Categories Panel -->
+      <div class="lg:col-span-1 space-y-3">
+        <div class="card p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold text-slate-800 dark:text-white text-sm">{% trans "Categories" %}</h3>
+            <button @click="openAddCategory()" class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-blue-600 transition-colors">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <div class="space-y-1">
+            <template x-for="cat in categories" :key="cat.id">
+              <div class="flex items-center gap-2 px-3 py-2 rounded-xl cursor-pointer transition-colors"
+                   :class="selectedCategoryId === cat.id ? 'bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300' : 'hover:bg-slate-50 dark:hover:bg-slate-700/30 text-slate-700 dark:text-slate-300'"
+                   @click="selectCategory(cat.id)">
+                <span class="flex-1 text-sm" x-text="cat.name || cat.name_ar"></span>
+                <span class="text-xs text-slate-400" x-text="cat.items_count || 0"></span>
+                <div class="flex gap-0.5">
+                  <button @click.stop="openEditCategory(cat)" class="p-1 rounded hover:text-blue-600 text-slate-400">
+                    <i data-lucide="pencil" class="w-3 h-3"></i>
+                  </button>
+                  <button @click.stop="confirmDeleteCategory(cat)" class="p-1 rounded hover:text-red-500 text-slate-400">
+                    <i data-lucide="trash-2" class="w-3 h-3"></i>
+                  </button>
+                </div>
+              </div>
+            </template>
+            <template x-if="categories.length === 0">
+              <p class="text-xs text-slate-400 text-center py-4">{% trans "No categories yet." %}</p>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: FAQ Items Panel -->
+      <div class="lg:col-span-3 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="font-semibold text-slate-800 dark:text-white">
+            <span x-text="selectedCategory ? (selectedCategory.name || selectedCategory.name_ar) : '{% trans "All Questions" %}'"></span>
+            <span class="text-slate-400 font-normal text-sm">
+              (<span x-text="filteredItems.length"></span> {% trans "items" %})
+            </span>
+          </h3>
+          <button @click="openAddQuestion()" class="btn-primary">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            {% trans "Add Question" %}
+          </button>
+        </div>
+
+        <!-- Items accordion -->
+        <template x-if="filteredItems.length === 0">
+          <div class="card py-12 flex flex-col items-center gap-3 text-slate-400">
+            <i data-lucide="help-circle" class="w-10 h-10 opacity-40"></i>
+            <p class="text-sm">{% trans "No questions in this category." %}</p>
+            <button @click="openAddQuestion()" class="btn-ghost text-xs mt-1">
+              <i data-lucide="plus" class="w-4 h-4"></i> {% trans "Add First Question" %}
+            </button>
+          </div>
+        </template>
+
+        <div class="space-y-2">
+          <template x-for="item in filteredItems" :key="item.id">
+            <div class="card overflow-hidden">
+              <div class="px-5 py-4 flex items-start gap-3 cursor-pointer"
+                   @click="toggleItem(item.id)">
+                <div class="flex-1 min-w-0">
+                  <p class="font-medium text-slate-800 dark:text-white text-sm" x-text="item.question || item.question_ar || '—'"></p>
+                  <p class="text-xs text-slate-400 mt-0.5" x-text="item.question_ar || ''"></p>
+                </div>
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                  <button @click.stop="openEditQuestion(item)" class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-blue-600 transition-colors">
+                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button @click.stop="confirmDeleteQuestion(item)" class="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-600 transition-colors">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <i :data-lucide="openItems.includes(item.id) ? 'chevron-up' : 'chevron-down'" class="w-4 h-4 text-slate-400"></i>
+                </div>
+              </div>
+              <div x-show="openItems.includes(item.id)" x-transition class="px-5 pb-4 border-t border-slate-100 dark:border-slate-700/30">
+                <p class="text-sm text-slate-600 dark:text-slate-300 pt-3 leading-relaxed" x-text="item.answer || item.answer_ar || ''"></p>
+                <template x-if="item.answer_ar">
+                  <p class="text-sm text-slate-500 dark:text-slate-400 pt-2 leading-relaxed" dir="rtl" x-text="item.answer_ar"></p>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- Add/Edit Category Modal -->
+  <div x-show="showCategoryModal" x-transition class="modal-backdrop" @click.self="showCategoryModal = false" x-cloak>
+    <div class="modal-box p-6 max-w-md w-full">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white"
+            x-text="editingCategory ? '{% trans "Edit Category" %}' : '{% trans "Add Category" %}'"></h3>
+        <button @click="showCategoryModal = false" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form @submit.prevent="saveCategory()" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Name" %} (EN)</label>
+          <input type="text" x-model="categoryForm.name" class="input" required>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Name" %} (عربي)</label>
+          <input type="text" x-model="categoryForm.name_ar" class="input" dir="rtl">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Display Order" %}</label>
+          <input type="number" x-model.number="categoryForm.order" class="input" min="0">
+        </div>
+        <div class="flex gap-3 justify-end pt-2">
+          <button type="button" @click="showCategoryModal = false" class="btn-ghost">{% trans "Cancel" %}</button>
+          <button type="submit" :disabled="saving" class="btn-primary">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span x-text="saving ? '{% trans "Saving..." %}' : '{% trans "Save" %}'"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add/Edit Question Modal -->
+  <div x-show="showQuestionModal" x-transition class="modal-backdrop" @click.self="showQuestionModal = false" x-cloak>
+    <div class="modal-box p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white"
+            x-text="editingQuestion ? '{% trans "Edit Question" %}' : '{% trans "Add Question" %}'"></h3>
+        <button @click="showQuestionModal = false" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form @submit.prevent="saveQuestion()" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Category" %}</label>
+          <select x-model="questionForm.category_id" class="select w-full" required>
+            <option value="">{% trans "Select category..." %}</option>
+            <template x-for="cat in categories" :key="cat.id">
+              <option :value="cat.id" x-text="cat.name || cat.name_ar"></option>
+            </template>
+          </select>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Question" %} (EN)</label>
+            <input type="text" x-model="questionForm.question" class="input" required>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Question" %} (عربي)</label>
+            <input type="text" x-model="questionForm.question_ar" class="input" dir="rtl">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Answer" %} (EN)</label>
+            <textarea x-model="questionForm.answer" class="input" rows="5" required></textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Answer" %} (عربي)</label>
+            <textarea x-model="questionForm.answer_ar" class="input" rows="5" dir="rtl"></textarea>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Display Order" %}</label>
+          <input type="number" x-model.number="questionForm.order" class="input" min="0">
+        </div>
+        <div class="flex gap-3 justify-end pt-2">
+          <button type="button" @click="showQuestionModal = false" class="btn-ghost">{% trans "Cancel" %}</button>
+          <button type="submit" :disabled="saving" class="btn-primary">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span x-text="saving ? '{% trans "Saving..." %}' : '{% trans "Save" %}'"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div x-show="showDeleteModal" x-transition class="modal-backdrop" @click.self="showDeleteModal = false" x-cloak>
+    <div class="modal-box p-6 max-w-sm w-full">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="trash-2" class="w-5 h-5 text-red-600 dark:text-red-400"></i>
+        </div>
+        <h3 class="font-bold text-slate-900 dark:text-white" x-text="deleteTarget?.type === 'category' ? '{% trans "Delete Category" %}' : '{% trans "Delete Question" %}'"></h3>
+      </div>
+      <p class="text-sm text-slate-600 dark:text-slate-300 mb-5">{% trans "This action cannot be undone." %}</p>
+      <div class="flex gap-3 justify-end">
+        <button @click="showDeleteModal = false" class="btn-ghost">{% trans "Cancel" %}</button>
+        <button @click="performDelete()" :disabled="saving" class="btn-red">
+          <span x-text="saving ? '{% trans "Deleting..." %}' : '{% trans "Delete" %}'"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function faqEditor() {
+  return {
+    loading: true,
+    saving: false,
+    categories: [],
+    items: [],
+    selectedCategoryId: null,
+    openItems: [],
+    showCategoryModal: false,
+    showQuestionModal: false,
+    showDeleteModal: false,
+    editingCategory: null,
+    editingQuestion: null,
+    deleteTarget: null,
+    categoryForm: { name: '', name_ar: '', order: 0 },
+    questionForm: { question: '', question_ar: '', answer: '', answer_ar: '', category_id: '', order: 0 },
+
+    get selectedCategory() {
+      return this.categories.find(c => c.id === this.selectedCategoryId) || null;
+    },
+    get filteredItems() {
+      if (!this.selectedCategoryId) return this.items;
+      return this.items.filter(i => i.category_id === this.selectedCategoryId || i.category === this.selectedCategoryId);
+    },
+
+    async init() {
+      this.loading = true;
+      try {
+        const [cats, faqs] = await Promise.all([
+          apiFetch('/api/v1/cms/admin/faq/categories/'),
+          apiFetch('/api/v1/cms/admin/faq/'),
+        ]);
+        this.categories = cats?.results || cats || [];
+        this.items = faqs?.results || faqs || [];
+        if (this.categories.length > 0 && !this.selectedCategoryId) {
+          this.selectedCategoryId = this.categories[0].id;
+        }
+      } catch (e) {
+        notify('{% trans "Failed to load FAQ" %}', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    selectCategory(id) {
+      this.selectedCategoryId = id;
+    },
+
+    toggleItem(id) {
+      const idx = this.openItems.indexOf(id);
+      if (idx >= 0) this.openItems.splice(idx, 1);
+      else this.openItems.push(id);
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    openAddCategory() {
+      this.editingCategory = null;
+      this.categoryForm = { name: '', name_ar: '', order: this.categories.length };
+      this.showCategoryModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    openEditCategory(cat) {
+      this.editingCategory = cat;
+      this.categoryForm = { name: cat.name || '', name_ar: cat.name_ar || '', order: cat.order || 0 };
+      this.showCategoryModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    openAddQuestion() {
+      this.editingQuestion = null;
+      this.questionForm = { question:'', question_ar:'', answer:'', answer_ar:'', category_id: this.selectedCategoryId || '', order: this.filteredItems.length };
+      this.showQuestionModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    openEditQuestion(item) {
+      this.editingQuestion = item;
+      this.questionForm = { question: item.question||'', question_ar: item.question_ar||'', answer: item.answer||'', answer_ar: item.answer_ar||'', category_id: item.category_id || item.category || '', order: item.order||0 };
+      this.showQuestionModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    confirmDeleteCategory(cat) {
+      this.deleteTarget = { type: 'category', item: cat };
+      this.showDeleteModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    confirmDeleteQuestion(item) {
+      this.deleteTarget = { type: 'question', item };
+      this.showDeleteModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async saveCategory() {
+      this.saving = true;
+      try {
+        const method = this.editingCategory ? 'PUT' : 'POST';
+        const url = this.editingCategory
+          ? `/api/v1/cms/admin/faq/categories/${this.editingCategory.id}/`
+          : '/api/v1/cms/admin/faq/categories/';
+        await apiFetch(url, { method, body: JSON.stringify(this.categoryForm) });
+        notify('{% trans "Category saved" %}', 'success');
+        this.showCategoryModal = false;
+        await this.init();
+      } catch (e) {
+        notify(e.message || '{% trans "Failed" %}', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async saveQuestion() {
+      this.saving = true;
+      try {
+        const method = this.editingQuestion ? 'PUT' : 'POST';
+        const url = this.editingQuestion
+          ? `/api/v1/cms/admin/faq/${this.editingQuestion.id}/`
+          : '/api/v1/cms/admin/faq/';
+        await apiFetch(url, { method, body: JSON.stringify(this.questionForm) });
+        notify('{% trans "Question saved" %}', 'success');
+        this.showQuestionModal = false;
+        await this.init();
+      } catch (e) {
+        notify(e.message || '{% trans "Failed" %}', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async performDelete() {
+      this.saving = true;
+      try {
+        const { type, item } = this.deleteTarget;
+        const url = type === 'category'
+          ? `/api/v1/cms/admin/faq/categories/${item.id}/`
+          : `/api/v1/cms/admin/faq/${item.id}/`;
+        await apiFetch(url, { method: 'DELETE' });
+        notify('{% trans "Deleted successfully" %}', 'success');
+        this.showDeleteModal = false;
+        await this.init();
+      } catch (e) {
+        notify(e.message || '{% trans "Failed" %}', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

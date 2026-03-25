@@ -1,0 +1,251 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+{% block page_title %}خطط الأسعار{% endblock %}
+{% block breadcrumb_parent %}إدارة المحتوى{% endblock %}
+{% block breadcrumb_current %}الأسعار{% endblock %}
+
+{% block content %}
+<div x-data="pricingEditor()" x-init="init()" class="space-y-5 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">خطط الأسعار</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">إدارة خطط الاشتراك والأسعار المعروضة</p>
+    </div>
+    <button @click="openAddPlan()" class="btn-primary">
+      <i data-lucide="plus" class="w-4 h-4"></i>
+      إضافة خطة
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <template x-if="loading">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 animate-pulse">
+      <template x-for="i in [1,2,3]" :key="i">
+        <div class="card p-6 space-y-4">
+          <div class="h-6 bg-slate-200 dark:bg-slate-700 rounded w-24"></div>
+          <div class="h-10 bg-slate-200 dark:bg-slate-700 rounded w-32"></div>
+          <div class="space-y-2">
+            <template x-for="j in [1,2,3,4]" :key="j">
+              <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-full"></div>
+            </template>
+          </div>
+        </div>
+      </template>
+    </div>
+  </template>
+
+  <!-- Plans Grid -->
+  <template x-if="!loading">
+    <div class="space-y-4">
+      <template x-if="plans.length === 0">
+        <div class="card p-12 text-center">
+          <i data-lucide="tag" class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3"></i>
+          <p class="text-slate-500 text-sm">لا توجد خطط أسعار بعد.</p>
+        </div>
+      </template>
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <template x-for="plan in plans" :key="plan.id">
+          <div class="card p-5 space-y-4" :class="plan.is_popular ? 'ring-2 ring-indigo-500' : ''">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-slate-800 dark:text-white" x-text="plan.name"></span>
+                <template x-if="plan.is_popular">
+                  <span class="badge-indigo text-[10px]">الأكثر شيوعاً</span>
+                </template>
+              </div>
+              <div class="flex items-center gap-1">
+                <button @click="editPlan(plan)" class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20">
+                  <i data-lucide="pencil" class="w-4 h-4"></i>
+                </button>
+                <button @click="deletePlan(plan.id)" class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-1">
+              <span class="text-3xl font-black text-slate-900 dark:text-white" x-text="plan.price || '0'"></span>
+              <span class="text-sm text-slate-500">SAR / <span x-text="plan.billing_period || 'شهر'"></span></span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400" x-text="plan.description_ar || plan.description || ''"></p>
+            <ul class="space-y-1.5">
+              <template x-for="feature in (plan.features || [])" :key="feature">
+                <li class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                  <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0"></i>
+                  <span x-text="feature"></span>
+                </li>
+              </template>
+            </ul>
+            <div class="pt-2 border-t border-slate-100 dark:border-slate-700/30 flex items-center justify-between">
+              <span class="text-xs" :class="plan.is_active ? 'text-emerald-600' : 'text-slate-400'"
+                    x-text="plan.is_active ? 'نشط' : 'مخفي'"></span>
+              <button @click="toggleActive(plan)" class="text-xs"
+                      :class="plan.is_active ? 'text-red-500 hover:text-red-700' : 'text-emerald-500 hover:text-emerald-700'"
+                      x-text="plan.is_active ? 'إخفاء' : 'تفعيل'"></button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </template>
+
+  <!-- Plan Modal -->
+  <template x-if="showModal">
+    <div class="modal-backdrop" @click.self="showModal=false">
+      <div class="modal-box max-w-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/30">
+          <h3 class="font-bold text-slate-800 dark:text-white"
+              x-text="editingPlan.id ? 'تعديل الخطة' : 'إضافة خطة جديدة'"></h3>
+          <button @click="showModal=false" class="text-slate-400 hover:text-slate-600">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <div class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">اسم الخطة (EN)</label>
+              <input type="text" x-model="editingPlan.name" class="input" placeholder="Pro Plan">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">اسم الخطة (عربي)</label>
+              <input type="text" x-model="editingPlan.name_ar" class="input" dir="rtl" placeholder="الخطة المتقدمة">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">السعر (SAR)</label>
+              <input type="number" x-model.number="editingPlan.price" class="input" placeholder="299">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">فترة الفوترة</label>
+              <select x-model="editingPlan.billing_period" class="select w-full">
+                <option value="month">شهري</option>
+                <option value="year">سنوي</option>
+              </select>
+            </div>
+            <div class="col-span-2">
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الوصف (عربي)</label>
+              <textarea x-model="editingPlan.description_ar" class="input" rows="2" dir="rtl"></textarea>
+            </div>
+            <div class="col-span-2">
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الميزات (سطر لكل ميزة)</label>
+              <textarea x-model="featuresText" class="input font-mono text-xs" rows="6"
+                        placeholder="رفع الملفات&#10;التقارير التلقائية&#10;دعم ZATCA"></textarea>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
+              <input type="checkbox" x-model="editingPlan.is_popular" class="rounded">
+              الأكثر شيوعاً
+            </label>
+            <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
+              <input type="checkbox" x-model="editingPlan.is_active" class="rounded">
+              نشط
+            </label>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-700/30">
+          <button @click="showModal=false" class="btn-ghost">إلغاء</button>
+          <button @click="savePlan()" :disabled="saving" class="btn-primary">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ'"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function pricingEditor() {
+  return {
+    plans: [],
+    loading: true,
+    saving: false,
+    showModal: false,
+    editingPlan: {},
+    featuresText: '',
+
+    async init() {
+      try {
+        const res = await apiFetch('/api/v1/cms/admin/pricing/');
+        if (res && res.ok) {
+          const data = await res.json();
+          this.plans = Array.isArray(data) ? data : (data.results || []);
+        }
+      } catch (e) {
+        notify('تعذّر تحميل خطط الأسعار', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    openAddPlan() {
+      this.editingPlan = { name:'', name_ar:'', price:0, billing_period:'month', description_ar:'', features:[], is_popular:false, is_active:true };
+      this.featuresText = '';
+      this.showModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    editPlan(plan) {
+      this.editingPlan = { ...plan };
+      this.featuresText = (plan.features || []).join('\n');
+      this.showModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async savePlan() {
+      this.saving = true;
+      this.editingPlan.features = this.featuresText.split('\n').map(f => f.trim()).filter(Boolean);
+      try {
+        const isEdit = Boolean(this.editingPlan.id);
+        const url = isEdit ? `/api/v1/cms/admin/pricing/${this.editingPlan.id}/` : '/api/v1/cms/admin/pricing/';
+        const res = await apiFetch(url, {
+          method: isEdit ? 'PUT' : 'POST',
+          body: JSON.stringify(this.editingPlan),
+        });
+        if (res && res.ok) {
+          const saved = await res.json();
+          if (isEdit) {
+            const idx = this.plans.findIndex(p => p.id === saved.id);
+            if (idx !== -1) this.plans[idx] = saved;
+          } else {
+            this.plans.push(saved);
+          }
+          notify('تم حفظ الخطة', 'success');
+          this.showModal = false;
+          this.$nextTick(() => lucide.createIcons());
+        } else {
+          notify('فشل الحفظ', 'error');
+        }
+      } catch (e) {
+        notify('فشل الحفظ', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async deletePlan(id) {
+      if (!confirm('هل أنت متأكد من حذف هذه الخطة؟')) return;
+      const res = await apiFetch(`/api/v1/cms/admin/pricing/${id}/`, { method: 'DELETE' });
+      if (res && (res.ok || res.status === 204)) {
+        this.plans = this.plans.filter(p => p.id !== id);
+        notify('تم حذف الخطة', 'success');
+      }
+    },
+
+    async toggleActive(plan) {
+      plan.is_active = !plan.is_active;
+      const res = await apiFetch(`/api/v1/cms/admin/pricing/${plan.id}/`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_active: plan.is_active }),
+      });
+      if (!res || !res.ok) plan.is_active = !plan.is_active;
+    },
+  };
+}
+</script>
+{% endblock %}

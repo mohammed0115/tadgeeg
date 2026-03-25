@@ -1,0 +1,424 @@
+{% load static i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
+<!DOCTYPE html>
+<html
+  lang="{{ LANGUAGE_CODE }}"
+  dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}"
+  x-data="platformShell()"
+  x-init="init()"
+  :class="dark ? 'dark' : ''"
+>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block page_title %}{% trans "Platform Admin" %}{% endblock %} | {{ console_label|default:"Get Solution Admin Console" }}</title>
+
+  <script src="{% static 'vendor/tailwind.browser.js' %}"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            platform: {
+              50: "#eef2ff",
+              100: "#e0e7ff",
+              400: "#818cf8",
+              500: "#6366f1",
+              600: "#4f46e5",
+              700: "#4338ca",
+              900: "#312e81"
+            }
+          },
+          fontFamily: {
+            sans: ['"Segoe UI"', "Tahoma", "Arial", "system-ui", "sans-serif"]
+          }
+        }
+      }
+    };
+  </script>
+  <script defer src="{% static 'vendor/alpine.min.js' %}"></script>
+  <script src="{% static 'vendor/lucide.min.js' %}"></script>
+  <script src="{% static 'vendor/chart.umd.min.js' %}"></script>
+
+  <style type="text/tailwindcss">
+    * { font-family: "Segoe UI", Tahoma, Arial, sans-serif; }
+    [x-cloak] { display: none !important; }
+
+    .platform-shell {
+      @apply min-h-screen bg-slate-100 text-slate-800 antialiased dark:bg-slate-950 dark:text-slate-100;
+    }
+
+    .platform-card {
+      @apply rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900;
+    }
+
+    .card { @apply rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900; }
+
+    .platform-btn {
+      @apply inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition;
+    }
+
+    .platform-btn-primary {
+      @apply platform-btn bg-platform-600 text-white hover:bg-platform-500;
+    }
+
+    .platform-btn-ghost {
+      @apply platform-btn bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700;
+    }
+
+    .btn { @apply inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition; }
+    .btn-primary { @apply inline-flex items-center gap-2 rounded-xl bg-platform-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-platform-500; }
+    .btn-ghost { @apply inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700; }
+    .btn-red { @apply inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500; }
+    .btn-green { @apply inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500; }
+
+    .platform-input {
+      @apply block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 transition focus:border-transparent focus:outline-none focus:ring-2 focus:ring-platform-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white;
+    }
+
+    .platform-select {
+      @apply rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 transition focus:border-transparent focus:outline-none focus:ring-2 focus:ring-platform-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200;
+    }
+
+    .input { @apply block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm text-slate-800 placeholder-slate-400 transition focus:border-transparent focus:outline-none focus:ring-2 focus:ring-platform-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white; }
+    .select { @apply rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 transition focus:border-transparent focus:outline-none focus:ring-2 focus:ring-platform-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200; }
+
+    .platform-badge {
+      @apply inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold;
+    }
+
+    .badge { @apply inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold; }
+    .badge-indigo { @apply inline-flex items-center gap-1 rounded-lg bg-platform-50 px-2.5 py-1 text-xs font-semibold text-platform-700 dark:bg-platform-900/30 dark:text-platform-200; }
+    .badge-green { @apply inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200; }
+    .badge-amber { @apply inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-900/30 dark:text-amber-200; }
+    .badge-red { @apply inline-flex items-center gap-1 rounded-lg bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 dark:bg-red-900/30 dark:text-red-200; }
+    .badge-slate { @apply inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200; }
+
+    .platform-nav-item {
+      @apply flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/5 hover:text-white;
+    }
+
+    .platform-nav-item.active {
+      @apply bg-platform-500/20 text-white;
+      box-shadow: inset 3px 0 0 #818cf8;
+    }
+
+    html[dir="ltr"] .platform-nav-item.active {
+      box-shadow: inset -3px 0 0 #818cf8;
+    }
+
+    .platform-table {
+      @apply w-full text-sm;
+    }
+
+    .data-table { @apply w-full text-sm; }
+
+    .platform-table thead {
+      @apply bg-slate-50 dark:bg-slate-800;
+    }
+
+    .data-table thead { @apply bg-slate-50 dark:bg-slate-800; }
+
+    .platform-table th {
+      @apply px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400;
+    }
+
+    .data-table th { @apply px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400; }
+
+    .platform-table td {
+      @apply border-b border-slate-100 px-4 py-3.5 text-slate-700 dark:border-slate-800 dark:text-slate-300;
+    }
+
+    .data-table td { @apply border-b border-slate-100 px-4 py-3.5 text-slate-700 dark:border-slate-800 dark:text-slate-300; }
+
+    html[dir="ltr"] .platform-table th {
+      text-align: left;
+    }
+
+    html[dir="ltr"] .data-table th { text-align: left; }
+
+    .progress-track { @apply h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800; }
+    .progress-fill { @apply h-full rounded-full transition-all duration-500; }
+
+    .modal-backdrop {
+      @apply fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm;
+    }
+
+    .modal-box {
+      @apply w-full max-w-2xl rounded-2xl bg-white shadow-2xl dark:bg-slate-900;
+    }
+  </style>
+</head>
+
+<body class="platform-shell" data-console-context="platform_admin">
+  <div
+    x-data="toastStore()"
+    @notify.window="push($event.detail)"
+    class="pointer-events-none fixed inset-x-0 top-4 z-[100] mx-auto flex w-[min(92vw,32rem)] flex-col gap-3"
+  >
+    <template x-for="toast in toasts" :key="toast.id">
+      <div
+        x-show="toast.visible"
+        x-transition
+        class="pointer-events-auto rounded-2xl border bg-white/95 p-4 shadow-xl backdrop-blur dark:bg-slate-900/95"
+        :class="{
+          'border-emerald-200 dark:border-emerald-800': toast.type === 'success',
+          'border-red-200 dark:border-red-800': toast.type === 'error',
+          'border-amber-200 dark:border-amber-800': toast.type === 'warning',
+          'border-blue-200 dark:border-blue-800': toast.type === 'info'
+        }"
+      >
+        <p class="text-sm font-semibold text-slate-900 dark:text-white" x-text="toast.message"></p>
+        <p x-show="toast.detail" class="mt-1 text-xs text-slate-500 dark:text-slate-400" x-text="toast.detail"></p>
+      </div>
+    </template>
+  </div>
+
+  <div
+    x-cloak
+    x-show="mobileNavOpen"
+    x-transition.opacity
+    @click="mobileNavOpen = false"
+    class="fixed inset-0 z-30 bg-slate-950/60 backdrop-blur-sm lg:hidden"
+  ></div>
+
+  <div class="relative flex min-h-screen">
+    <aside
+      class="fixed inset-y-0 right-0 z-40 flex max-w-[88vw] flex-col overflow-hidden border-l border-white/10 bg-slate-950 transition lg:static lg:max-w-none"
+      :class="mobileNavOpen || isDesktop ? 'translate-x-0' : (isRtl ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0')"
+      :style="sidebarOpen ? 'width:19rem' : 'width:5rem'"
+    >
+      <div class="flex min-h-[72px] items-center gap-3 border-b border-white/10 px-4">
+        <div class="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-platform-500 to-platform-700 shadow-lg shadow-platform-900/40">
+          <i data-lucide="shield-check" class="h-5 w-5 text-white"></i>
+        </div>
+        <div x-show="sidebarOpen" class="min-w-0">
+          <p class="truncate text-sm font-black text-white">Get Solution</p>
+          <p class="truncate text-[11px] font-semibold text-platform-200">{{ console_label_ar|default:"لوحة إدارة منصة Get Solution" }}</p>
+        </div>
+        <button
+          type="button"
+          @click="mobileNavOpen = false"
+          class="mr-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-slate-300 lg:hidden"
+        >
+          <i data-lucide="x" class="h-4 w-4"></i>
+        </button>
+      </div>
+
+      <nav class="flex-1 overflow-y-auto px-2 py-4">
+        {% include "layouts/partials/platform_sidebar.html" %}
+      </nav>
+
+      <div class="space-y-1 border-t border-white/10 p-2">
+        <button @click="dark = !dark; localStorage.setItem('platform_admin_dark', dark)" class="platform-nav-item w-full">
+          <i :data-lucide="dark ? 'sun' : 'moon'" class="h-[18px] w-[18px] flex-shrink-0"></i>
+          <span x-show="sidebarOpen" class="truncate text-xs">{% trans "Theme" %}</span>
+        </button>
+        <button @click="sidebarOpen = !sidebarOpen; localStorage.setItem('platform_admin_sidebar', sidebarOpen)" class="platform-nav-item hidden w-full lg:flex">
+          <i :data-lucide="sidebarOpen ? 'panel-right-close' : 'panel-right-open'" class="h-[18px] w-[18px] flex-shrink-0"></i>
+          <span x-show="sidebarOpen" class="truncate text-xs">{% trans "Collapse" %}</span>
+        </button>
+        <a href="{% url 'frontend:logout' %}" class="platform-nav-item">
+          <div class="flex h-8 w-8 items-center justify-center rounded-full bg-platform-600 text-xs font-bold text-white">
+            {% if request.user.is_authenticated %}{{ request.user.email|first|upper }}{% endif %}
+          </div>
+          <span x-show="sidebarOpen" class="truncate text-xs">
+            {% if request.user.is_authenticated %}{{ request.user.email|truncatechars:24 }}{% endif %}
+          </span>
+        </a>
+      </div>
+    </aside>
+
+    <div class="flex min-w-0 flex-1 flex-col lg:mr-0">
+      {% include "layouts/partials/platform_topbar.html" %}
+
+      <main class="flex-1 overflow-y-auto">
+        <div class="mx-auto w-full max-w-screen-2xl px-4 py-6 sm:px-6">
+          {% block content %}{% endblock %}
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    function platformShell() {
+      return {
+        dark: localStorage.getItem("platform_admin_dark") === "true",
+        sidebarOpen: localStorage.getItem("platform_admin_sidebar") !== "false",
+        mobileNavOpen: false,
+        isDesktop: window.innerWidth >= 1024,
+        get isRtl() {
+          return document.documentElement.dir === "rtl";
+        },
+        init() {
+          window.addEventListener("resize", () => {
+            this.isDesktop = window.innerWidth >= 1024;
+          });
+          this.$nextTick(() => lucide.createIcons());
+        }
+      };
+    }
+
+    function notify(message, type = "info", detail = "") {
+      window.dispatchEvent(new CustomEvent("notify", { detail: { message, type, detail } }));
+    }
+
+    function toastStore() {
+      return {
+        toasts: [],
+        push(detail) {
+          const id = Date.now() + Math.random();
+          this.toasts.push({
+            id,
+            visible: true,
+            message: detail.message || "",
+            detail: detail.detail || "",
+            type: detail.type || "info"
+          });
+          setTimeout(() => this.dismiss(id), 4500);
+        },
+        dismiss(id) {
+          const toast = this.toasts.find((item) => item.id === id);
+          if (toast) {
+            toast.visible = false;
+          }
+          setTimeout(() => {
+            this.toasts = this.toasts.filter((item) => item.id !== id);
+          }, 250);
+        }
+      };
+    }
+
+    function csrfToken() {
+      const match = document.cookie.split(";").map((item) => item.trim()).find((item) => item.startsWith("csrftoken="));
+      return match ? match.split("=")[1] : "";
+    }
+
+    function toPathnameAndQuery(path) {
+      const normalized = path.startsWith("/api/") ? path : `/api/v1${path}`;
+      const [pathname, query = ""] = normalized.split("?");
+      return { pathname, query: query ? `?${query}` : "" };
+    }
+
+    function parseJsonBody(body) {
+      if (!body || typeof body !== "string") {
+        return null;
+      }
+      try {
+        return JSON.parse(body);
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function normalizePlatformApiRequest(path, options = {}) {
+      const request = { ...options };
+      const method = (request.method || "GET").toUpperCase();
+      const { pathname, query } = toPathnameAndQuery(path);
+
+      if (pathname === "/api/v1/cms/admin/seo/") {
+        if (method === "GET") {
+          const params = new URLSearchParams(query);
+          const page = params.get("page") || "home";
+          return { path: `/api/platform-admin/seo/${page}/`, options: request };
+        }
+
+        const payload = typeof request.body === "string" ? parseJsonBody(request.body) : request.body;
+        const page = payload && payload.page ? payload.page : "home";
+        if (payload && typeof payload === "object") {
+          const nextPayload = { ...payload };
+          delete nextPayload.page;
+          if (nextPayload.og_image && !nextPayload.og_image_url) {
+            nextPayload.og_image_url = nextPayload.og_image;
+          }
+          delete nextPayload.og_image;
+          delete nextPayload.og_type;
+          request.body = JSON.stringify(nextPayload);
+        }
+        request.method = "PUT";
+        return { path: `/api/platform-admin/seo/${page}/`, options: request };
+      }
+
+      const exactMappings = {
+        "/api/v1/cms/admin/stats/": "/api/platform-admin/stats/",
+        "/api/v1/cms/admin/homepage/": "/api/platform-admin/homepage/",
+        "/api/v1/cms/admin/about/": "/api/platform-admin/about/",
+        "/api/v1/cms/admin/faq/": "/api/platform-admin/faq/",
+        "/api/v1/cms/admin/intro-video/": "/api/platform-admin/intro-video/",
+        "/api/v1/cms/admin/media/upload/": "/api/platform-admin/media/",
+        "/api/v1/platform/health/": "/api/platform-admin/monitoring/health/",
+        "/api/v1/platform/metrics/": "/api/platform-admin/monitoring/metrics/",
+        "/api/v1/platform/errors/": "/api/platform-admin/monitoring/errors/",
+        "/api/v1/platform/activity-logs/stats/": "/api/platform-admin/activity-logs/stats/",
+        "/api/v1/cms/admin/pages/stats/": "/api/platform-admin/cms/pages/stats/",
+        "/api/v1/cms/admin/jobs/stats/": "/api/platform-admin/jobs/stats/",
+        "/api/v1/cms/admin/job-applications/": "/api/platform-admin/jobs/applications/",
+        "/api/v1/cms/admin/leads/stats/": "/api/platform-admin/leads/stats/",
+        "/api/v1/cms/admin/leads/mark-all-read/": "/api/platform-admin/leads/mark-all-read/",
+        "/api/v1/cms/admin/storage-providers/": "/api/platform-admin/storage/providers/",
+        "/api/v1/cms/admin/settings/": "/api/platform-admin/settings/",
+        "/api/v1/auth/organizations/": "/api/platform-admin/organizations/"
+      };
+
+      if (exactMappings[pathname]) {
+        return { path: `${exactMappings[pathname]}${query}`, options: request };
+      }
+
+      const prefixMappings = [
+        ["/api/v1/platform/activity-logs/", "/api/platform-admin/activity-logs/"],
+        ["/api/v1/cms/admin/pages/", "/api/platform-admin/cms/pages/"],
+        ["/api/v1/cms/admin/pricing/", "/api/platform-admin/pricing/"],
+        ["/api/v1/cms/admin/services/", "/api/platform-admin/services/"],
+        ["/api/v1/cms/admin/jobs/", "/api/platform-admin/jobs/"],
+        ["/api/v1/cms/admin/leads/", "/api/platform-admin/leads/"],
+        ["/api/v1/cms/admin/media/", "/api/platform-admin/media/"],
+        ["/api/v1/cms/admin/storage-providers/", "/api/platform-admin/storage/providers/"],
+        ["/api/v1/auth/organizations/", "/api/platform-admin/organizations/"]
+      ];
+
+      for (const [legacyPrefix, newPrefix] of prefixMappings) {
+        if (pathname.startsWith(legacyPrefix)) {
+          let nextPath = `${newPrefix}${pathname.slice(legacyPrefix.length)}${query}`;
+          nextPath = nextPath.replace("/test/", "/test-connection/");
+          return { path: nextPath, options: request };
+        }
+      }
+
+      return { path: `${pathname}${query}`, options: request };
+    }
+
+    async function apiFetch(path, options = {}) {
+      const normalized = normalizePlatformApiRequest(path, options);
+      const headers = {
+        "X-CSRFToken": csrfToken(),
+        ...(normalized.options.headers || {})
+      };
+
+      if (!(normalized.options.body instanceof FormData) && !headers["Content-Type"]) {
+        headers["Content-Type"] = "application/json";
+      }
+
+      const response = await fetch(normalized.path, {
+        ...normalized.options,
+        headers,
+        credentials: "same-origin"
+      });
+
+      if (response.status === 401) {
+        window.location.href = "/login/";
+        return null;
+      }
+
+      if (response.status === 403) {
+        notify("ليس لديك صلاحية للوصول إلى إدارة المنصة.", "error");
+        return null;
+      }
+
+      return response;
+    }
+  </script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,179 @@
+{% extends "layouts/base_vendor_dashboard.html" %}
+{% load i18n %}
+{% block page_title %}نتائج المراجعة{% endblock %}
+{% block breadcrumb_parent %}المراجعة{% endblock %}
+{% block breadcrumb_current %}النتائج{% endblock %}
+
+{% block content %}
+<div x-data="auditResults()" x-init="init()" class="space-y-6 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">نتائج المراجعة</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">تفاصيل وتقارير نتائج المراجعة المالية</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="/dashboard/audits/" class="btn-ghost text-xs">
+        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        كل المراجعات
+      </a>
+    </div>
+  </div>
+
+  <!-- Loading skeleton -->
+  <template x-if="loading">
+    <div class="animate-pulse space-y-4">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <template x-for="i in [1,2,3,4]" :key="i">
+          <div class="card p-5 space-y-2">
+            <div class="h-5 bg-slate-200 dark:bg-slate-700 rounded w-24"></div>
+            <div class="h-8 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </template>
+
+  <!-- Results list -->
+  <template x-if="!loading && results.length === 0">
+    <div class="card p-16 text-center">
+      <i data-lucide="bar-chart-2" class="w-14 h-14 mx-auto text-slate-300 dark:text-slate-600 mb-4"></i>
+      <p class="text-slate-500 text-sm">لا توجد نتائج مراجعة بعد</p>
+      <a href="/dashboard/audits/" class="btn-ghost text-xs mt-4 mx-auto">
+        <i data-lucide="shield-check" class="w-4 h-4"></i>
+        عرض مهام المراجعة
+      </a>
+    </div>
+  </template>
+
+  <template x-if="!loading && results.length > 0">
+    <div class="space-y-5">
+      <template x-for="result in results" :key="result.id">
+        <div class="card overflow-hidden">
+          <!-- Result Header -->
+          <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/30 flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                   :class="{
+                     'bg-emerald-50 dark:bg-emerald-900/30': result.risk_level === 'low',
+                     'bg-amber-50 dark:bg-amber-900/30':    result.risk_level === 'medium',
+                     'bg-red-50 dark:bg-red-900/30':        result.risk_level === 'high' || result.risk_level === 'critical',
+                   }">
+                <i data-lucide="shield-check" class="w-5 h-5"
+                   :class="{
+                     'text-emerald-600': result.risk_level === 'low',
+                     'text-amber-600':   result.risk_level === 'medium',
+                     'text-red-600':     result.risk_level === 'high' || result.risk_level === 'critical',
+                   }"></i>
+              </div>
+              <div class="min-w-0">
+                <p class="font-bold text-slate-800 dark:text-white truncate"
+                   x-text="result.document_name || 'مستند #' + result.id"></p>
+                <p class="text-xs text-slate-400"
+                   x-text="result.created_at ? new Date(result.created_at).toLocaleString('ar-SA') : ''"></p>
+              </div>
+            </div>
+            <div class="flex items-center gap-4">
+              <!-- Risk Score -->
+              <div class="text-center">
+                <p class="text-xs text-slate-400">درجة المخاطر</p>
+                <p class="text-xl font-black"
+                   :class="{
+                     'text-emerald-600': (result.risk_score || 0) < 30,
+                     'text-amber-600':   (result.risk_score || 0) >= 30 && (result.risk_score || 0) < 70,
+                     'text-red-600':     (result.risk_score || 0) >= 70,
+                   }"
+                   x-text="(result.risk_score || 0) + '%'"></p>
+              </div>
+              <!-- Compliance Score -->
+              <div class="text-center">
+                <p class="text-xs text-slate-400">الامتثال</p>
+                <p class="text-xl font-black"
+                   :class="{
+                     'text-emerald-600': (result.compliance_score || 0) >= 80,
+                     'text-amber-600':   (result.compliance_score || 0) >= 50,
+                     'text-red-600':     (result.compliance_score || 0) < 50,
+                   }"
+                   x-text="(result.compliance_score || 0) + '%'"></p>
+              </div>
+              <a :href="'/dashboard/reports/' + result.report_id + '/'" x-show="result.report_id"
+                 class="btn-primary text-xs">
+                <i data-lucide="file-bar-chart" class="w-4 h-4"></i>
+                عرض التقرير
+              </a>
+            </div>
+          </div>
+
+          <!-- Audit Findings -->
+          <template x-if="result.findings && result.findings.length > 0">
+            <div class="p-5 space-y-3">
+              <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wide">النتائج والتنبيهات</h4>
+              <div class="space-y-2">
+                <template x-for="finding in result.findings" :key="finding.rule_id">
+                  <div class="flex items-start gap-3 p-3 rounded-xl"
+                       :class="{
+                         'bg-red-50 dark:bg-red-900/10':    finding.severity === 'critical' || finding.severity === 'high',
+                         'bg-amber-50 dark:bg-amber-900/10': finding.severity === 'medium',
+                         'bg-blue-50 dark:bg-blue-900/10':  finding.severity === 'low' || finding.severity === 'info',
+                       }">
+                    <i :data-lucide="finding.severity === 'critical' || finding.severity === 'high' ? 'alert-circle' : finding.severity === 'medium' ? 'alert-triangle' : 'info'"
+                       class="w-4 h-4 flex-shrink-0 mt-0.5"
+                       :class="{
+                         'text-red-600':    finding.severity === 'critical' || finding.severity === 'high',
+                         'text-amber-600':  finding.severity === 'medium',
+                         'text-blue-600':   finding.severity === 'low' || finding.severity === 'info',
+                       }"></i>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs font-bold font-mono text-slate-500" x-text="finding.rule_id"></span>
+                        <span class="text-xs font-semibold text-slate-700 dark:text-slate-300" x-text="finding.title || finding.rule_id"></span>
+                        <span class="badge text-[10px]"
+                              :class="{
+                                'badge-red':    finding.severity === 'critical' || finding.severity === 'high',
+                                'badge-amber':  finding.severity === 'medium',
+                                'badge-blue':   finding.severity === 'low',
+                                'badge-slate':  finding.severity === 'info',
+                              }"
+                              x-text="finding.severity"></span>
+                      </div>
+                      <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5" x-text="finding.message || finding.description || ''"></p>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+    </div>
+  </template>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function auditResults() {
+  return {
+    results: [],
+    loading: true,
+
+    async init() {
+      try {
+        const res = await apiFetch('/api/v1/audit/results/');
+        if (res && res.ok) {
+          const data = await res.json();
+          this.results = Array.isArray(data) ? data : (data.results || []);
+        }
+      } catch (e) {
+        notify('تعذّر تحميل النتائج', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

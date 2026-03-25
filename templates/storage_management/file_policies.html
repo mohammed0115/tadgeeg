@@ -1,0 +1,267 @@
+{% extends "storage_management/base_storage.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "File Policies" %}{% endblock %}
+
+{% block subnav_file_policies %}border-primary-500 text-primary-600 dark:text-primary-400{% endblock %}
+
+{% block storage_content %}
+<div x-data="filePolicies()" x-init="init()" class="max-w-4xl mx-auto space-y-6">
+
+  <!-- Page header -->
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+      <i data-lucide="shield-check" class="w-6 h-6 text-primary-500"></i>
+      {% trans "File Policies" %}
+    </h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+      {% trans "Configure per-organisation file validation rules: size limits, allowed types, retention." %}
+    </p>
+  </div>
+
+  <!-- Loading -->
+  <div x-show="loading" class="card p-10 flex items-center justify-center">
+    <svg class="animate-spin w-6 h-6 text-primary-500" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+    </svg>
+  </div>
+
+  <!-- Error banner -->
+  <div x-show="error" x-cloak
+       class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl p-4 text-red-700 dark:text-red-400 text-sm flex items-start gap-3">
+    <i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0 mt-0.5"></i>
+    <span x-text="error"></span>
+  </div>
+
+  <!-- Policy cards per organisation -->
+  <template x-for="row in rows" :key="row.org.id">
+    <div x-show="!loading" x-cloak class="card p-6 space-y-5">
+
+      <!-- Org title -->
+      <div class="flex items-center justify-between">
+        <h2 class="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+          <i data-lucide="building-2" class="w-4 h-4 text-slate-400"></i>
+          <span x-text="row.org.name"></span>
+        </h2>
+        <span x-show="row.policyId" class="badge badge-info text-xs">{% trans "Policy configured" %}</span>
+        <span x-show="!row.policyId" class="badge badge-medium text-xs">{% trans "Using defaults" %}</span>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+
+        <!-- Max file size -->
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            {% trans "Max File Size (MB)" %}
+          </label>
+          <input x-model.number="row.form.max_file_size_mb" type="number" min="1" max="5000" class="input" />
+        </div>
+
+        <!-- Retention days -->
+        <div>
+          <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            {% trans "Retention (days)" %}
+          </label>
+          <input x-model.number="row.form.retention_days" type="number" min="1" class="input" />
+        </div>
+
+      </div>
+
+      <!-- Allowed extensions tag input -->
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+          {% trans "Allowed Extensions" %}
+          <span class="text-slate-400 font-normal">{% trans "(leave empty to allow all)" %}</span>
+        </label>
+        <div class="flex flex-wrap gap-2 p-3 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600/50 rounded-xl min-h-[44px]">
+          <template x-for="(ext, idx) in row.form.allowed_extensions" :key="idx">
+            <span class="badge badge-info flex items-center gap-1">
+              <span x-text="'.' + ext"></span>
+              <button type="button" @click="row.form.allowed_extensions.splice(idx, 1)"
+                      class="hover:text-red-500 transition-colors">
+                <i data-lucide="x" class="w-3 h-3"></i>
+              </button>
+            </span>
+          </template>
+          <input type="text"
+                 :placeholder="row.form.allowed_extensions.length ? '' : '{% trans "pdf, xlsx, csv, jpg…" %}'"
+                 class="bg-transparent text-sm outline-none text-slate-700 dark:text-slate-300 flex-1 min-w-[80px]"
+                 @keydown.enter.prevent="addTag($event, row.form.allowed_extensions)"
+                 @keydown.comma.prevent="addTag($event, row.form.allowed_extensions)"
+                 @blur="addTag($event, row.form.allowed_extensions)" />
+        </div>
+        <p class="text-xs text-slate-400 mt-1">{% trans "Press Enter or comma to add. No leading dot needed." %}</p>
+      </div>
+
+      <!-- Allowed MIME types -->
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+          {% trans "Allowed MIME Types" %}
+          <span class="text-slate-400 font-normal">{% trans "(leave empty to allow all)" %}</span>
+        </label>
+        <div class="flex flex-wrap gap-2 p-3 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600/50 rounded-xl min-h-[44px]">
+          <template x-for="(mime, idx) in row.form.allowed_mime_types" :key="idx">
+            <span class="badge badge-low flex items-center gap-1">
+              <span x-text="mime"></span>
+              <button type="button" @click="row.form.allowed_mime_types.splice(idx, 1)"
+                      class="hover:text-red-500 transition-colors">
+                <i data-lucide="x" class="w-3 h-3"></i>
+              </button>
+            </span>
+          </template>
+          <input type="text"
+                 :placeholder="row.form.allowed_mime_types.length ? '' : 'application/pdf, image/jpeg…'"
+                 class="bg-transparent text-sm outline-none text-slate-700 dark:text-slate-300 flex-1 min-w-[120px]"
+                 @keydown.enter.prevent="addTag($event, row.form.allowed_mime_types)"
+                 @keydown.comma.prevent="addTag($event, row.form.allowed_mime_types)"
+                 @blur="addTag($event, row.form.allowed_mime_types)" />
+        </div>
+      </div>
+
+      <!-- Security toggles -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <label class="flex items-start gap-3 cursor-pointer p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+          <input type="checkbox" x-model="row.form.require_signed_urls"
+                 class="w-4 h-4 mt-0.5 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
+          <div>
+            <div class="text-sm font-medium text-slate-700 dark:text-slate-300">{% trans "Require Signed URLs" %}</div>
+            <div class="text-xs text-slate-400 mt-0.5">{% trans "Files only accessible via pre-signed links." %}</div>
+          </div>
+        </label>
+
+        <label class="flex items-start gap-3 cursor-pointer p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+          <input type="checkbox" x-model="row.form.require_encryption"
+                 class="w-4 h-4 mt-0.5 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
+          <div>
+            <div class="text-sm font-medium text-slate-700 dark:text-slate-300">{% trans "Require Encryption" %}</div>
+            <div class="text-xs text-slate-400 mt-0.5">{% trans "Files must be stored encrypted at rest." %}</div>
+          </div>
+        </label>
+
+        <label class="flex items-start gap-3 cursor-pointer p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+          <input type="checkbox" x-model="row.form.antivirus_scan_enabled"
+                 class="w-4 h-4 mt-0.5 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
+          <div>
+            <div class="text-sm font-medium text-slate-700 dark:text-slate-300">{% trans "Antivirus Scan" %}</div>
+            <div class="text-xs text-slate-400 mt-0.5">{% trans "Scan uploads for malware before storing." %}</div>
+          </div>
+        </label>
+      </div>
+
+      <!-- Save button -->
+      <div class="flex justify-end pt-2 border-t border-slate-100 dark:border-slate-700/30">
+        <button @click="saveRow(row)" :disabled="row.saving" class="btn-primary">
+          <template x-if="row.saving">
+            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+          </template>
+          <template x-if="!row.saving">
+            <i data-lucide="save" class="w-4 h-4"></i>
+          </template>
+          {% trans "Save Policy" %}
+        </button>
+      </div>
+
+    </div>
+  </template>
+
+  <!-- Empty state -->
+  <div x-show="!loading && rows.length === 0" x-cloak class="card p-10 text-center text-slate-400">
+    {% trans "No organisations found." %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filePolicies() {
+  return {
+    rows: [],
+    loading: true,
+    error: null,
+
+    async init() {
+      try {
+        const [orgsData, policiesData] = await Promise.all([
+          apiFetch('/api/v1/auth/organizations/'),
+          apiFetch('/api/v1/storage/policies/'),
+        ]);
+        const orgs = orgsData.results ?? orgsData;
+        const policies = policiesData.results ?? policiesData;
+
+        const policyByOrg = {};
+        policies.forEach(p => { policyByOrg[p.organization] = p; });
+
+        this.rows = orgs.map(org => {
+          const policy = policyByOrg[org.id];
+          return {
+            org,
+            policyId: policy?.id || null,
+            saving: false,
+            form: {
+              max_file_size_mb: policy?.max_file_size_mb ?? 50,
+              allowed_extensions: policy?.allowed_extensions ?? [],
+              allowed_mime_types: policy?.allowed_mime_types ?? [],
+              retention_days: policy?.retention_days ?? 365,
+              require_signed_urls: policy?.require_signed_urls ?? false,
+              require_encryption: policy?.require_encryption ?? false,
+              antivirus_scan_enabled: policy?.antivirus_scan_enabled ?? false,
+            },
+          };
+        });
+      } catch (e) {
+        this.error = e.message;
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    addTag(event, list) {
+      const val = event.target.value.trim().replace(/^\./, '').replace(/,$/, '').trim();
+      if (val && !list.includes(val)) {
+        list.push(val);
+      }
+      event.target.value = '';
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async saveRow(row) {
+      row.saving = true;
+      const payload = {
+        organization: row.org.id,
+        ...row.form,
+      };
+      try {
+        if (row.policyId) {
+          await apiFetch(`/api/v1/storage/policies/${row.policyId}/`, {
+            method: 'PATCH',
+            body: JSON.stringify(payload),
+          });
+        } else {
+          const created = await apiFetch('/api/v1/storage/policies/', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+          });
+          row.policyId = created.id;
+        }
+        window.dispatchEvent(new CustomEvent('notify', {
+          detail: { type: 'success', title: '{% trans "Policy saved" %}', message: row.org.name }
+        }));
+      } catch (e) {
+        window.dispatchEvent(new CustomEvent('notify', {
+          detail: { type: 'error', title: '{% trans "Error" %}', message: e.message }
+        }));
+      } finally {
+        row.saving = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

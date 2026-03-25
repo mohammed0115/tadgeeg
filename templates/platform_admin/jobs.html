@@ -1,0 +1,381 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+{% block page_title %}الوظائف والمسار المهني{% endblock %}
+{% block breadcrumb_current %}الوظائف{% endblock %}
+
+{% block content %}
+<div x-data="jobsManager()" x-init="init()" class="space-y-5 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">الوظائف والمسار المهني</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">إدارة إعلانات الوظائف وطلبات التوظيف</p>
+    </div>
+    <button @click="openCreateJob()" class="btn-primary">
+      <i data-lucide="plus" class="w-4 h-4"></i>
+      إضافة وظيفة
+    </button>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+    <template x-for="stat in statCards" :key="stat.key">
+      <div class="card p-4 flex flex-col items-center text-center gap-1">
+        <template x-if="loading">
+          <div class="h-7 w-16 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+        </template>
+        <template x-if="!loading">
+          <p class="text-2xl font-black" :class="stat.cls" x-text="(stats[stat.key] || 0).toLocaleString()"></p>
+        </template>
+        <p class="text-xs text-slate-500 dark:text-slate-400" x-text="stat.label"></p>
+      </div>
+    </template>
+  </div>
+
+  <!-- Tab Switcher -->
+  <div class="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl w-fit">
+    <button @click="activeTab = 'jobs'; $nextTick(() => lucide.createIcons())"
+            class="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+            :class="activeTab === 'jobs' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'">
+      <i data-lucide="briefcase" class="w-4 h-4 inline-block -mt-0.5 mr-1"></i>
+      إعلانات الوظائف
+    </button>
+    <button @click="activeTab = 'applications'; loadApplications(); $nextTick(() => lucide.createIcons())"
+            class="px-4 py-2 rounded-lg text-sm font-medium transition-all"
+            :class="activeTab === 'applications' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'">
+      <i data-lucide="users" class="w-4 h-4 inline-block -mt-0.5 mr-1"></i>
+      طلبات التوظيف
+    </button>
+  </div>
+
+  <!-- Jobs Tab -->
+  <div x-show="activeTab === 'jobs'" class="space-y-4">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3 flex-wrap">
+        <select x-model="jobFilter.status" @change="loadJobs()" class="select">
+          <option value="">جميع الحالات</option>
+          <option value="draft">مسودة</option>
+          <option value="published">منشورة</option>
+          <option value="closed">مغلقة</option>
+        </select>
+        <input type="text" x-model.debounce.300ms="jobFilter.search" @input="loadJobs()"
+               class="input max-w-xs" placeholder="البحث بالعنوان أو القسم...">
+      </div>
+    </div>
+
+    <div class="card overflow-hidden">
+      <template x-if="jobsLoading">
+        <div class="animate-pulse divide-y divide-slate-100 dark:divide-slate-700/30">
+          <template x-for="i in [1,2,3,4]" :key="i">
+            <div class="px-5 py-4 flex items-center gap-4">
+              <div class="flex-1 space-y-2">
+                <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-48"></div>
+                <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-32"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+      <template x-if="!jobsLoading && jobs.length === 0">
+        <div class="px-5 py-12 text-center">
+          <i data-lucide="briefcase" class="w-10 h-10 mx-auto text-slate-300 mb-2"></i>
+          <p class="text-slate-500 text-sm">لا توجد وظائف</p>
+        </div>
+      </template>
+      <template x-if="!jobsLoading && jobs.length > 0">
+        <div class="overflow-x-auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>المسمى الوظيفي</th>
+                <th>القسم</th>
+                <th>الموقع</th>
+                <th>نوع الدوام</th>
+                <th>الطلبات</th>
+                <th>الحالة</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="job in jobs" :key="job.id">
+                <tr>
+                  <td>
+                    <div>
+                      <p class="font-semibold text-slate-800 dark:text-white text-sm" x-text="job.title_ar || job.title"></p>
+                      <p class="text-xs text-slate-400" x-text="job.title || ''"></p>
+                    </div>
+                  </td>
+                  <td class="text-slate-500 text-xs" x-text="job.department || '—'"></td>
+                  <td class="text-slate-500 text-xs" x-text="job.location || 'عن بعد'"></td>
+                  <td>
+                    <span class="badge-slate text-[10px]" x-text="job.employment_type || 'full_time'"></span>
+                  </td>
+                  <td>
+                    <span class="badge-indigo" x-text="job.applications_count || 0"></span>
+                  </td>
+                  <td>
+                    <span class="badge"
+                          :class="{
+                            'badge-green': job.status === 'published',
+                            'badge-amber': job.status === 'draft',
+                            'badge-slate': job.status === 'closed',
+                          }"
+                          x-text="job.status === 'published' ? 'منشورة' : job.status === 'draft' ? 'مسودة' : 'مغلقة'">
+                    </span>
+                  </td>
+                  <td>
+                    <div class="flex items-center gap-1">
+                      <button @click="editJob(job)" class="btn-ghost text-xs px-2 py-1">
+                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                      </button>
+                      <button @click="deleteJob(job.id)" class="btn-ghost text-xs px-2 py-1 text-red-500">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Applications Tab -->
+  <div x-show="activeTab === 'applications'" class="space-y-4">
+    <div class="card overflow-hidden">
+      <template x-if="appsLoading">
+        <div class="animate-pulse divide-y divide-slate-100 dark:divide-slate-700/30 p-4 space-y-3">
+          <template x-for="i in [1,2,3]" :key="i">
+            <div class="h-16 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+          </template>
+        </div>
+      </template>
+      <template x-if="!appsLoading && applications.length === 0">
+        <div class="px-5 py-12 text-center">
+          <i data-lucide="users" class="w-10 h-10 mx-auto text-slate-300 mb-2"></i>
+          <p class="text-slate-500 text-sm">لا توجد طلبات توظيف</p>
+        </div>
+      </template>
+      <template x-if="!appsLoading && applications.length > 0">
+        <div class="overflow-x-auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>المتقدم</th>
+                <th>الوظيفة</th>
+                <th>تاريخ التقديم</th>
+                <th>الحالة</th>
+                <th>إجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="app in applications" :key="app.id">
+                <tr>
+                  <td>
+                    <div class="flex items-center gap-2">
+                      <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-xs font-bold"
+                           x-text="(app.applicant_name || '?')[0].toUpperCase()"></div>
+                      <div>
+                        <p class="text-sm font-semibold" x-text="app.applicant_name"></p>
+                        <p class="text-xs text-slate-400" x-text="app.applicant_email"></p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="text-sm text-slate-600 dark:text-slate-400" x-text="app.job_title || '—'"></td>
+                  <td class="text-xs text-slate-400"
+                      x-text="app.created_at ? new Date(app.created_at).toLocaleDateString('ar-SA') : '—'"></td>
+                  <td>
+                    <span class="badge"
+                          :class="{
+                            'badge-amber':  app.status === 'pending',
+                            'badge-indigo': app.status === 'reviewed',
+                            'badge-green':  app.status === 'accepted',
+                            'badge-red':    app.status === 'rejected',
+                          }"
+                          x-text="app.status"></span>
+                  </td>
+                  <td>
+                    <a :href="app.cv_url" target="_blank" class="btn-ghost text-xs px-2 py-1">
+                      <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                    </a>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Job Modal -->
+  <template x-if="showJobModal">
+    <div class="modal-backdrop" @click.self="showJobModal=false">
+      <div class="modal-box max-w-2xl">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/30">
+          <h3 class="font-bold text-slate-800 dark:text-white" x-text="editingJob.id ? 'تعديل الوظيفة' : 'إضافة وظيفة جديدة'"></h3>
+          <button @click="showJobModal=false"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button>
+        </div>
+        <div class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">المسمى الوظيفي (EN)</label>
+              <input type="text" x-model="editingJob.title" class="input">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">المسمى الوظيفي (عربي)</label>
+              <input type="text" x-model="editingJob.title_ar" class="input" dir="rtl">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">القسم</label>
+              <input type="text" x-model="editingJob.department" class="input" placeholder="Engineering">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الموقع</label>
+              <input type="text" x-model="editingJob.location" class="input" placeholder="Riyadh / Remote">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">نوع الدوام</label>
+              <select x-model="editingJob.employment_type" class="select w-full">
+                <option value="full_time">دوام كامل</option>
+                <option value="part_time">دوام جزئي</option>
+                <option value="contract">عقد</option>
+                <option value="internship">تدريب</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الحالة</label>
+              <select x-model="editingJob.status" class="select w-full">
+                <option value="draft">مسودة</option>
+                <option value="published">منشورة</option>
+                <option value="closed">مغلقة</option>
+              </select>
+            </div>
+            <div class="col-span-2">
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الوصف (عربي)</label>
+              <textarea x-model="editingJob.description_ar" class="input" rows="4" dir="rtl"></textarea>
+            </div>
+            <div class="col-span-2">
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">المتطلبات (عربي)</label>
+              <textarea x-model="editingJob.requirements_ar" class="input" rows="3" dir="rtl" placeholder="سطر لكل متطلب..."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-700/30">
+          <button @click="showJobModal=false" class="btn-ghost">إلغاء</button>
+          <button @click="saveJob()" :disabled="saving" class="btn-primary">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ'"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function jobsManager() {
+  return {
+    jobs: [], applications: [], stats: {},
+    loading: true, jobsLoading: false, appsLoading: false, saving: false,
+    activeTab: 'jobs',
+    showJobModal: false,
+    editingJob: {},
+    jobFilter: { status: '', search: '' },
+    statCards: [
+      { key: 'total_jobs',        label: 'إجمالي الوظائف',  cls: 'text-slate-800 dark:text-white' },
+      { key: 'published_jobs',    label: 'منشورة',           cls: 'text-emerald-600' },
+      { key: 'draft_jobs',        label: 'مسودة',            cls: 'text-amber-600' },
+      { key: 'closed_jobs',       label: 'مغلقة',            cls: 'text-slate-500' },
+      { key: 'total_applications',label: 'إجمالي الطلبات',  cls: 'text-indigo-600' },
+      { key: 'pending_applications',label: 'قيد المراجعة',  cls: 'text-violet-600' },
+    ],
+
+    async init() {
+      const res = await apiFetch('/api/v1/cms/admin/jobs/stats/');
+      if (res && res.ok) this.stats = await res.json();
+      this.loading = false;
+      await this.loadJobs();
+    },
+
+    async loadJobs() {
+      this.jobsLoading = true;
+      try {
+        const params = new URLSearchParams();
+        if (this.jobFilter.status) params.set('status', this.jobFilter.status);
+        if (this.jobFilter.search) params.set('search', this.jobFilter.search);
+        const res = await apiFetch('/api/v1/cms/admin/jobs/?' + params.toString());
+        if (res && res.ok) {
+          const data = await res.json();
+          this.jobs = Array.isArray(data) ? data : (data.results || []);
+        }
+      } finally {
+        this.jobsLoading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async loadApplications() {
+      this.appsLoading = true;
+      try {
+        const res = await apiFetch('/api/v1/cms/admin/job-applications/');
+        if (res && res.ok) {
+          const data = await res.json();
+          this.applications = Array.isArray(data) ? data : (data.results || []);
+        }
+      } finally {
+        this.appsLoading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    openCreateJob() {
+      this.editingJob = { title:'', title_ar:'', department:'', location:'', employment_type:'full_time', status:'draft', description_ar:'', requirements_ar:'' };
+      this.showJobModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    editJob(job) {
+      this.editingJob = { ...job };
+      this.showJobModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async saveJob() {
+      this.saving = true;
+      try {
+        const isEdit = Boolean(this.editingJob.id);
+        const url = isEdit ? `/api/v1/cms/admin/jobs/${this.editingJob.id}/` : '/api/v1/cms/admin/jobs/';
+        const res = await apiFetch(url, { method: isEdit ? 'PUT' : 'POST', body: JSON.stringify(this.editingJob) });
+        if (res && res.ok) {
+          notify('تم حفظ الوظيفة', 'success');
+          this.showJobModal = false;
+          await this.loadJobs();
+        } else {
+          notify('فشل الحفظ', 'error');
+        }
+      } catch (e) {
+        notify('فشل الحفظ', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async deleteJob(id) {
+      if (!confirm('هل أنت متأكد من حذف هذه الوظيفة؟')) return;
+      const res = await apiFetch(`/api/v1/cms/admin/jobs/${id}/`, { method: 'DELETE' });
+      if (res && (res.ok || res.status === 204)) {
+        this.jobs = this.jobs.filter(j => j.id !== id);
+        notify('تم حذف الوظيفة', 'success');
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

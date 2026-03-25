@@ -1,0 +1,465 @@
+{% extends "cms_admin/base_cms.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Media Library" %}{% endblock %}
+{% block page_title %}{% trans "Platform CMS" %}{% endblock %}
+{% block tab_media %}active{% endblock %}
+
+{% block cms_content %}
+<div x-data="mediaLibrary()" x-init="init()" class="space-y-5">
+
+  <!-- Upload Zone -->
+  <div class="card p-6"
+       @dragover.prevent="dragOver = true"
+       @dragleave.prevent="dragOver = false"
+       @drop.prevent="handleDrop($event)">
+    <div class="border-2 border-dashed rounded-xl p-8 text-center transition-colors"
+         :class="dragOver ? 'border-primary-400 bg-primary-50 dark:bg-primary-900/10' : 'border-slate-300 dark:border-slate-600 hover:border-primary-300 dark:hover:border-primary-600'">
+      <i data-lucide="upload-cloud" class="w-10 h-10 mx-auto mb-3" :class="dragOver ? 'text-primary-500' : 'text-slate-400'"></i>
+      <p class="font-semibold text-slate-700 dark:text-slate-300 mb-1">{% trans "Drag & drop files here" %}</p>
+      <p class="text-xs text-slate-400 mb-4">{% trans "or" %}</p>
+      <div class="flex items-center justify-center gap-3 flex-wrap">
+        <label class="btn-primary cursor-pointer">
+          <i data-lucide="folder-open" class="w-4 h-4"></i>
+          {% trans "Choose Files" %}
+          <input type="file" multiple @change="handleFileInput($event)" class="hidden" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.csv">
+        </label>
+        <button @click="showUploadModal = true; $nextTick(() => lucide.createIcons())" class="btn-ghost">
+          <i data-lucide="link" class="w-4 h-4"></i>
+          {% trans "Add by URL" %}
+        </button>
+      </div>
+      <template x-if="uploading">
+        <div class="mt-4">
+          <p class="text-xs text-slate-500 mb-2">{% trans "Uploading..." %} <span x-text="uploadProgress"></span>%</p>
+          <div class="progress-track max-w-xs mx-auto">
+            <div class="progress-fill bg-primary-500" :style="`width:${uploadProgress}%`"></div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Filters + View Toggle -->
+  <div class="flex flex-wrap items-center gap-3">
+    <select x-model="filter.type" @change="init()" class="select">
+      <option value="">{% trans "All Types" %}</option>
+      <option value="image">{% trans "Images" %}</option>
+      <option value="video">{% trans "Videos" %}</option>
+      <option value="document">{% trans "Documents" %}</option>
+      <option value="other">{% trans "Other" %}</option>
+    </select>
+    <input type="text" x-model.debounce.300ms="filter.search" @input="init()" class="input max-w-xs" placeholder="{% trans "Search files..." %}">
+    <div class="mr-auto"></div>
+    <div class="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl">
+      <button @click="viewMode = 'grid'; $nextTick(() => lucide.createIcons())"
+              class="p-2 rounded-lg transition-all"
+              :class="viewMode === 'grid' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400'">
+        <i data-lucide="layout-grid" class="w-4 h-4"></i>
+      </button>
+      <button @click="viewMode = 'list'; $nextTick(() => lucide.createIcons())"
+              class="p-2 rounded-lg transition-all"
+              :class="viewMode === 'list' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-800 dark:text-white' : 'text-slate-400'">
+        <i data-lucide="list" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <template x-if="loading">
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3 animate-pulse">
+      <template x-for="i in [1,2,3,4,5,6,7,8]" :key="i">
+        <div class="aspect-square bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+      </template>
+    </div>
+  </template>
+
+  <!-- Empty -->
+  <template x-if="!loading && assets.length === 0">
+    <div class="card py-16 flex flex-col items-center gap-3 text-slate-400">
+      <i data-lucide="image" class="w-12 h-12 opacity-40"></i>
+      <p class="text-sm">{% trans "No media assets yet." %}</p>
+    </div>
+  </template>
+
+  <!-- Grid View -->
+  <template x-if="!loading && assets.length > 0 && viewMode === 'grid'">
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-3">
+      <template x-for="asset in assets" :key="asset.id">
+        <div class="card overflow-hidden group relative cursor-pointer" @click="openPreview(asset)">
+          <!-- Thumbnail -->
+          <div class="aspect-square bg-slate-100 dark:bg-slate-700 relative overflow-hidden">
+            <template x-if="asset.file_type === 'image' && asset.file_url">
+              <img :src="asset.file_url" :alt="asset.alt_text || asset.title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+            </template>
+            <template x-if="asset.file_type !== 'image' || !asset.file_url">
+              <div class="w-full h-full flex items-center justify-center">
+                <i :data-lucide="fileTypeIcon(asset.file_type)" class="w-10 h-10 text-slate-400"></i>
+              </div>
+            </template>
+            <!-- Overlay on hover -->
+            <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+              <button @click.stop="openPreview(asset)" class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/40 text-white flex items-center justify-center">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+              </button>
+              <button @click.stop="confirmDelete(asset)" class="w-8 h-8 rounded-full bg-red-500/70 hover:bg-red-500 text-white flex items-center justify-center">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+          <div class="p-2">
+            <p class="text-xs font-medium text-slate-700 dark:text-slate-300 truncate" x-text="asset.title || asset.file_name || '—'"></p>
+            <div class="flex items-center justify-between mt-0.5">
+              <span class="text-[10px] text-slate-400" x-text="fileSizeLabel(asset.file_size)"></span>
+              <span :class="fileTypeBadge(asset.file_type)" x-text="asset.file_type || 'other'" class="text-[9px] px-1.5 py-0.5 rounded font-semibold"></span>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </template>
+
+  <!-- List View -->
+  <template x-if="!loading && assets.length > 0 && viewMode === 'list'">
+    <div class="card overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="w-12"></th>
+              <th>{% trans "Title" %}</th>
+              <th>{% trans "Type" %}</th>
+              <th>{% trans "Size" %}</th>
+              <th>{% trans "Uploaded By" %}</th>
+              <th>{% trans "Date" %}</th>
+              <th class="text-center">{% trans "Actions" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="asset in assets" :key="asset.id">
+              <tr>
+                <td class="pr-0">
+                  <div class="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-700 overflow-hidden flex items-center justify-center">
+                    <template x-if="asset.file_type === 'image' && asset.file_url">
+                      <img :src="asset.file_url" class="w-full h-full object-cover" :alt="asset.alt_text">
+                    </template>
+                    <template x-if="asset.file_type !== 'image' || !asset.file_url">
+                      <i :data-lucide="fileTypeIcon(asset.file_type)" class="w-5 h-5 text-slate-400"></i>
+                    </template>
+                  </div>
+                </td>
+                <td>
+                  <p class="font-medium text-slate-800 dark:text-white text-sm" x-text="asset.title || asset.file_name || '—'"></p>
+                  <p class="text-xs text-slate-400" x-text="asset.tags || ''"></p>
+                </td>
+                <td>
+                  <span :class="fileTypeBadge(asset.file_type)" x-text="asset.file_type || 'other'"></span>
+                </td>
+                <td class="text-xs text-slate-500" x-text="fileSizeLabel(asset.file_size)"></td>
+                <td class="text-xs text-slate-500" x-text="asset.uploaded_by || '—'"></td>
+                <td class="text-xs text-slate-400 whitespace-nowrap" x-text="fmtDate(asset.created_at)"></td>
+                <td>
+                  <div class="flex items-center justify-center gap-1.5">
+                    <button @click="openPreview(asset)" class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-blue-600 transition-colors">
+                      <i data-lucide="eye" class="w-4 h-4"></i>
+                    </button>
+                    <a :href="asset.file_url" target="_blank" class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 hover:text-emerald-600 transition-colors">
+                      <i data-lucide="download" class="w-4 h-4"></i>
+                    </a>
+                    <button @click="confirmDelete(asset)" class="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-500 hover:text-red-600 transition-colors">
+                      <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </template>
+
+  <!-- Pagination -->
+  <template x-if="!loading && totalPages > 1">
+    <div class="flex items-center justify-between">
+      <p class="text-xs text-slate-400">{% trans "Page" %} <span x-text="currentPage"></span> {% trans "of" %} <span x-text="totalPages"></span></p>
+      <div class="flex gap-2">
+        <button @click="changePage(currentPage - 1)" :disabled="currentPage <= 1" class="btn-ghost text-xs py-1 px-2">
+          <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        </button>
+        <button @click="changePage(currentPage + 1)" :disabled="currentPage >= totalPages" class="btn-ghost text-xs py-1 px-2">
+          <i data-lucide="chevron-left" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </template>
+
+  <!-- Upload by URL Modal -->
+  <div x-show="showUploadModal" x-transition class="modal-backdrop" @click.self="showUploadModal = false" x-cloak>
+    <div class="modal-box p-6 max-w-md w-full">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">{% trans "Add Asset by URL" %}</h3>
+        <button @click="showUploadModal = false" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form @submit.prevent="saveUrlAsset()" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Title" %}</label>
+          <input type="text" x-model="urlForm.title" class="input" required>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "File URL" %}</label>
+          <input type="url" x-model="urlForm.file_url" class="input" required placeholder="https://...">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Alt Text" %}</label>
+          <input type="text" x-model="urlForm.alt_text" class="input" placeholder="{% trans "Descriptive text for screen readers" %}">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "File Type" %}</label>
+          <select x-model="urlForm.file_type" class="select w-full">
+            <option value="image">{% trans "Image" %}</option>
+            <option value="video">{% trans "Video" %}</option>
+            <option value="document">{% trans "Document" %}</option>
+            <option value="other">{% trans "Other" %}</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Tags (comma-separated)" %}</label>
+          <input type="text" x-model="urlForm.tags" class="input" placeholder="logo, brand, hero">
+        </div>
+        <div class="flex gap-3 justify-end pt-2">
+          <button type="button" @click="showUploadModal = false" class="btn-ghost">{% trans "Cancel" %}</button>
+          <button type="submit" :disabled="saving" class="btn-primary">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+            <span x-text="saving ? '{% trans "Saving..." %}' : '{% trans "Add Asset" %}'"></span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Preview / Lightbox Modal -->
+  <div x-show="showPreviewModal" x-transition class="modal-backdrop" @click.self="showPreviewModal = false" x-cloak>
+    <div class="modal-box p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-slate-900 dark:text-white" x-text="previewAsset?.title || previewAsset?.file_name || '—'"></h3>
+        <button @click="showPreviewModal = false" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <template x-if="previewAsset">
+        <div class="space-y-4">
+          <template x-if="previewAsset.file_type === 'image' && previewAsset.file_url">
+            <img :src="previewAsset.file_url" :alt="previewAsset.alt_text" class="max-w-full rounded-xl mx-auto max-h-96 object-contain">
+          </template>
+          <template x-if="previewAsset.file_type !== 'image' || !previewAsset.file_url">
+            <div class="flex flex-col items-center gap-3 py-8 text-slate-400">
+              <i :data-lucide="fileTypeIcon(previewAsset.file_type)" class="w-16 h-16 opacity-40"></i>
+              <a :href="previewAsset.file_url" target="_blank" class="btn-primary text-sm">
+                <i data-lucide="external-link" class="w-4 h-4"></i>
+                {% trans "Open File" %}
+              </a>
+            </div>
+          </template>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+            <div>
+              <p class="text-xs text-slate-400">{% trans "Type" %}</p>
+              <span :class="fileTypeBadge(previewAsset.file_type)" x-text="previewAsset.file_type"></span>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400">{% trans "Size" %}</p>
+              <p class="font-medium text-slate-700 dark:text-slate-300" x-text="fileSizeLabel(previewAsset.file_size)"></p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400">{% trans "Uploaded" %}</p>
+              <p class="font-medium text-slate-700 dark:text-slate-300" x-text="fmtDate(previewAsset.created_at)"></p>
+            </div>
+            <div x-show="previewAsset.alt_text">
+              <p class="text-xs text-slate-400">{% trans "Alt Text" %}</p>
+              <p class="font-medium text-slate-700 dark:text-slate-300" x-text="previewAsset.alt_text"></p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 pt-2">
+            <a :href="previewAsset.file_url" target="_blank" class="btn-ghost text-sm flex-1 justify-center">
+              <i data-lucide="external-link" class="w-4 h-4"></i>
+              {% trans "Open Original" %}
+            </a>
+            <button @click="copyUrl(previewAsset.file_url)" class="btn-ghost text-sm flex-1 justify-center">
+              <i data-lucide="copy" class="w-4 h-4"></i>
+              {% trans "Copy URL" %}
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div x-show="showDeleteModal" x-transition class="modal-backdrop" @click.self="showDeleteModal = false" x-cloak>
+    <div class="modal-box p-6 max-w-sm w-full">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="trash-2" class="w-5 h-5 text-red-600 dark:text-red-400"></i>
+        </div>
+        <h3 class="font-bold text-slate-900 dark:text-white">{% trans "Delete Asset" %}</h3>
+      </div>
+      <p class="text-sm text-slate-600 dark:text-slate-300 mb-5">{% trans "This action cannot be undone." %}</p>
+      <div class="flex gap-3 justify-end">
+        <button @click="showDeleteModal = false" class="btn-ghost">{% trans "Cancel" %}</button>
+        <button @click="deleteAsset()" :disabled="saving" class="btn-red">
+          <span x-text="saving ? '{% trans "Deleting..." %}' : '{% trans "Delete" %}'"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function mediaLibrary() {
+  return {
+    loading: true,
+    saving: false,
+    uploading: false,
+    uploadProgress: 0,
+    assets: [],
+    currentPage: 1,
+    totalPages: 1,
+    viewMode: 'grid',
+    dragOver: false,
+    filter: { type: '', search: '' },
+    showUploadModal: false,
+    showPreviewModal: false,
+    showDeleteModal: false,
+    previewAsset: null,
+    deletingAsset: null,
+    urlForm: { title:'', file_url:'', alt_text:'', file_type:'image', tags:'' },
+
+    async init() {
+      this.loading = true;
+      try {
+        const params = new URLSearchParams({ page: this.currentPage });
+        if (this.filter.type) params.set('file_type', this.filter.type);
+        if (this.filter.search) params.set('search', this.filter.search);
+        const data = await apiFetch(`/api/v1/cms/admin/media/?${params}`);
+        this.assets = data?.results || data || [];
+        this.totalPages = data?.total_pages || 1;
+      } catch (e) {
+        notify('{% trans "Failed to load media" %}', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    handleDrop(e) {
+      this.dragOver = false;
+      const files = e.dataTransfer.files;
+      if (files.length) this.uploadFiles(files);
+    },
+
+    handleFileInput(e) {
+      const files = e.target.files;
+      if (files.length) this.uploadFiles(files);
+    },
+
+    async uploadFiles(files) {
+      this.uploading = true;
+      this.uploadProgress = 0;
+      let uploaded = 0;
+      for (const file of files) {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('title', file.name.split('.').slice(0,-1).join('.'));
+        try {
+          await apiFetch('/api/v1/cms/admin/media/', { method:'POST', body: fd });
+          uploaded++;
+          this.uploadProgress = Math.round((uploaded / files.length) * 100);
+        } catch (e) {
+          notify(`{% trans "Failed to upload" %} ${file.name}`, 'error');
+        }
+      }
+      this.uploading = false;
+      notify(`${uploaded} {% trans "file(s) uploaded" %}`, 'success');
+      await this.init();
+    },
+
+    async saveUrlAsset() {
+      this.saving = true;
+      try {
+        await apiFetch('/api/v1/cms/admin/media/', { method:'POST', body: JSON.stringify(this.urlForm) });
+        notify('{% trans "Asset added" %}', 'success');
+        this.showUploadModal = false;
+        await this.init();
+      } catch (e) {
+        notify(e.message || '{% trans "Failed" %}', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    openPreview(asset) {
+      this.previewAsset = asset;
+      this.showPreviewModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    confirmDelete(asset) {
+      this.deletingAsset = asset;
+      this.showDeleteModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async deleteAsset() {
+      this.saving = true;
+      try {
+        await apiFetch(`/api/v1/cms/admin/media/${this.deletingAsset.id}/`, { method:'DELETE' });
+        notify('{% trans "Asset deleted" %}', 'success');
+        this.showDeleteModal = false;
+        await this.init();
+      } catch (e) {
+        notify(e.message || '{% trans "Failed" %}', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    copyUrl(url) {
+      navigator.clipboard.writeText(url).then(() => notify('{% trans "URL copied to clipboard" %}', 'success'));
+    },
+
+    changePage(n) {
+      if (n < 1 || n > this.totalPages) return;
+      this.currentPage = n;
+      this.init();
+    },
+
+    fileTypeIcon(type) {
+      const m = { image:'image', video:'video', document:'file-text', other:'file' };
+      return m[type] || 'file';
+    },
+
+    fileTypeBadge(type) {
+      const m = { image:'badge bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400', video:'badge bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400', document:'badge bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400', other:'badge bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400' };
+      return m[type] || 'badge';
+    },
+
+    fileSizeLabel(bytes) {
+      if (!bytes) return '—';
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    },
+
+    fmtDate(str) {
+      if (!str) return '—';
+      return new Date(str).toLocaleDateString(APP_LOCALE, { year:'numeric', month:'short', day:'numeric' });
+    },
+  };
+}
+</script>
+{% endblock %}

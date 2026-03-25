@@ -1,0 +1,213 @@
+{% extends "storage_management/base_storage.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Organisation Storage Policies" %}{% endblock %}
+
+{% block subnav_org_policies %}border-primary-500 text-primary-600 dark:text-primary-400{% endblock %}
+
+{% block storage_content %}
+<div x-data="orgPolicies()" x-init="init()" class="max-w-5xl mx-auto space-y-6">
+
+  <!-- Page header -->
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+      <i data-lucide="building-2" class="w-6 h-6 text-primary-500"></i>
+      {% trans "Organisation Storage Policies" %}
+    </h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+      {% trans "Assign primary, backup, archive, and temp storage providers to each organisation." %}
+    </p>
+  </div>
+
+  <!-- Error banner -->
+  <div x-show="error" x-cloak
+       class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl p-4 text-red-700 dark:text-red-400 text-sm flex items-start gap-3">
+    <i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0 mt-0.5"></i>
+    <span x-text="error"></span>
+  </div>
+
+  <!-- Loading -->
+  <div x-show="loading" class="card p-10 flex items-center justify-center">
+    <svg class="animate-spin w-6 h-6 text-primary-500" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+    </svg>
+  </div>
+
+  <!-- Policies table -->
+  <div x-show="!loading" x-cloak class="card overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>{% trans "Organisation" %}</th>
+            <th>{% trans "Primary" %}</th>
+            <th>{% trans "Backup" %}</th>
+            <th>{% trans "Archive" %}</th>
+            <th>{% trans "Temp" %}</th>
+            <th>{% trans "Actions" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="row in rows" :key="row.org.id">
+            <tr>
+              <td>
+                <div class="font-medium text-slate-900 dark:text-white" x-text="row.org.name"></div>
+              </td>
+              <!-- Primary (required) -->
+              <td>
+                <select x-model="row.form.primary_storage"
+                        class="select text-xs py-1.5 px-2 min-w-[120px]">
+                  <option value="">{% trans "— None —" %}</option>
+                  <template x-for="p in providers" :key="p.id">
+                    <option :value="p.id" x-text="p.name"></option>
+                  </template>
+                </select>
+              </td>
+              <!-- Backup -->
+              <td>
+                <select x-model="row.form.backup_storage" class="select text-xs py-1.5 px-2 min-w-[120px]">
+                  <option value="">{% trans "— None —" %}</option>
+                  <template x-for="p in providers" :key="p.id">
+                    <option :value="p.id" x-text="p.name"></option>
+                  </template>
+                </select>
+              </td>
+              <!-- Archive -->
+              <td>
+                <select x-model="row.form.archive_storage" class="select text-xs py-1.5 px-2 min-w-[120px]">
+                  <option value="">{% trans "— None —" %}</option>
+                  <template x-for="p in providers" :key="p.id">
+                    <option :value="p.id" x-text="p.name"></option>
+                  </template>
+                </select>
+              </td>
+              <!-- Temp -->
+              <td>
+                <select x-model="row.form.temp_storage" class="select text-xs py-1.5 px-2 min-w-[120px]">
+                  <option value="">{% trans "— None —" %}</option>
+                  <template x-for="p in providers" :key="p.id">
+                    <option :value="p.id" x-text="p.name"></option>
+                  </template>
+                </select>
+              </td>
+              <!-- Save action -->
+              <td>
+                <button @click="saveRow(row)"
+                        :disabled="row.saving"
+                        class="btn-primary py-1.5 px-3 text-xs">
+                  <template x-if="row.saving">
+                    <svg class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                  </template>
+                  <template x-if="!row.saving">
+                    <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                  </template>
+                  {% trans "Save" %}
+                </button>
+              </td>
+            </tr>
+          </template>
+          <!-- Empty -->
+          <tr x-show="rows.length === 0">
+            <td colspan="6" class="text-center py-8 text-slate-400">{% trans "No organisations found." %}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function orgPolicies() {
+  return {
+    rows: [],
+    providers: [],
+    loading: true,
+    error: null,
+
+    async init() {
+      try {
+        const [orgsData, providersData, policiesData] = await Promise.all([
+          apiFetch('/api/v1/auth/organizations/'),
+          apiFetch('/api/v1/storage/providers/'),
+          apiFetch('/api/v1/storage/organization-policies/'),
+        ]);
+        this.providers = providersData.results ?? providersData;
+        const orgs = orgsData.results ?? orgsData;
+        const policies = policiesData.results ?? policiesData;
+
+        const policyByOrg = {};
+        policies.forEach(p => { policyByOrg[p.organization] = p; });
+
+        this.rows = orgs.map(org => {
+          const policy = policyByOrg[org.id];
+          return {
+            org,
+            policyId: policy?.id || null,
+            saving: false,
+            form: {
+              primary_storage: policy?.primary_storage || '',
+              backup_storage: policy?.backup_storage || '',
+              archive_storage: policy?.archive_storage || '',
+              temp_storage: policy?.temp_storage || '',
+            },
+          };
+        });
+      } catch (e) {
+        this.error = e.message;
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async saveRow(row) {
+      if (!row.form.primary_storage) {
+        window.dispatchEvent(new CustomEvent('notify', {
+          detail: { type: 'warning', title: '{% trans "Required" %}', message: '{% trans "Primary storage is required." %}' }
+        }));
+        return;
+      }
+      row.saving = true;
+      const payload = {
+        organization: row.org.id,
+        primary_storage: row.form.primary_storage || null,
+        backup_storage: row.form.backup_storage || null,
+        archive_storage: row.form.archive_storage || null,
+        temp_storage: row.form.temp_storage || null,
+      };
+      try {
+        if (row.policyId) {
+          await apiFetch(`/api/v1/storage/organization-policies/${row.policyId}/`, {
+            method: 'PATCH',
+            body: JSON.stringify(payload),
+          });
+        } else {
+          const created = await apiFetch('/api/v1/storage/organization-policies/', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+          });
+          row.policyId = created.id;
+        }
+        window.dispatchEvent(new CustomEvent('notify', {
+          detail: { type: 'success', title: '{% trans "Saved" %}', message: row.org.name }
+        }));
+      } catch (e) {
+        window.dispatchEvent(new CustomEvent('notify', {
+          detail: { type: 'error', title: '{% trans "Error" %}', message: e.message }
+        }));
+      } finally {
+        row.saving = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

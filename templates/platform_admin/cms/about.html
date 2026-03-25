@@ -1,0 +1,212 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+{% block page_title %}صفحة من نحن{% endblock %}
+{% block breadcrumb_parent %}إدارة المحتوى{% endblock %}
+{% block breadcrumb_current %}من نحن{% endblock %}
+
+{% block content %}
+<div x-data="aboutEditor()" x-init="init()" class="space-y-6 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">تحرير صفحة من نحن</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">تعديل محتوى صفحة التعريف بالشركة</p>
+    </div>
+    <a href="/platform-admin/" class="btn-ghost text-xs">
+      <i data-lucide="arrow-right" class="w-4 h-4"></i>
+      العودة
+    </a>
+  </div>
+
+  <!-- Loading -->
+  <template x-if="loading">
+    <div class="animate-pulse space-y-4">
+      <div class="card p-6 space-y-3">
+        <template x-for="i in [1,2,3,4]" :key="i">
+          <div class="h-10 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+        </template>
+      </div>
+    </div>
+  </template>
+
+  <template x-if="!loading">
+    <div class="space-y-6">
+
+      <!-- About Content -->
+      <div class="card p-6 space-y-5">
+        <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-700/30">
+          <i data-lucide="info" class="w-5 h-5 text-blue-500"></i>
+          محتوى من نحن
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان (EN)</label>
+            <input type="text" x-model="form.title" class="input">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان (عربي)</label>
+            <input type="text" x-model="form.title_ar" class="input" dir="rtl">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان الفرعي (EN)</label>
+            <input type="text" x-model="form.subtitle" class="input">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان الفرعي (عربي)</label>
+            <input type="text" x-model="form.subtitle_ar" class="input" dir="rtl">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">المحتوى الرئيسي (EN)</label>
+            <textarea x-model="form.content" class="input" rows="5"></textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">المحتوى الرئيسي (عربي)</label>
+            <textarea x-model="form.content_ar" class="input" rows="5" dir="rtl"></textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">الرسالة (Mission)</label>
+            <textarea x-model="form.mission" class="input" rows="3"></textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">الرؤية (Vision)</label>
+            <textarea x-model="form.vision" class="input" rows="3"></textarea>
+          </div>
+          <div class="md:col-span-2">
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">رابط الصورة</label>
+            <input type="url" x-model="form.image_url" class="input" placeholder="https://...">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">تاريخ التأسيس</label>
+            <input type="text" x-model="form.founded_year" class="input" placeholder="2020">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">عدد الموظفين</label>
+            <input type="text" x-model="form.employees_count" class="input" placeholder="50+">
+          </div>
+        </div>
+        <div class="flex justify-end pt-2">
+          <button @click="saveAbout()" :disabled="saving" class="btn-primary">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ المحتوى'"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Team Members -->
+      <div class="card p-6 space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700/30">
+          <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <i data-lucide="users" class="w-5 h-5 text-violet-500"></i>
+            أعضاء الفريق
+          </h3>
+          <button @click="addTeamMember()" class="btn-ghost text-xs">
+            <i data-lucide="plus" class="w-4 h-4"></i> إضافة عضو
+          </button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <template x-for="(member, idx) in form.team_members" :key="idx">
+            <div class="p-4 bg-slate-50 dark:bg-slate-700/30 rounded-xl space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-semibold text-slate-500">عضو #<span x-text="idx+1"></span></span>
+                <button @click="form.team_members.splice(idx, 1)" class="text-slate-400 hover:text-red-500">
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                </button>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <input type="text" x-model="member.name" class="input" placeholder="الاسم">
+                <input type="text" x-model="member.role" class="input" placeholder="الدور / المسمى">
+                <input type="url" x-model="member.photo_url" class="input col-span-2" placeholder="رابط الصورة">
+                <input type="url" x-model="member.linkedin_url" class="input" placeholder="LinkedIn URL">
+                <input type="url" x-model="member.twitter_url" class="input" placeholder="Twitter URL">
+              </div>
+            </div>
+          </template>
+          <template x-if="form.team_members.length === 0">
+            <p class="col-span-2 text-sm text-slate-400 text-center py-4">لا يوجد أعضاء فريق بعد.</p>
+          </template>
+        </div>
+        <div class="flex justify-end pt-2">
+          <button @click="saveTeam()" :disabled="saving" class="btn-primary">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ الفريق'"></span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </template>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function aboutEditor() {
+  return {
+    loading: true,
+    saving: false,
+    form: {
+      title: '', title_ar: '', subtitle: '', subtitle_ar: '',
+      content: '', content_ar: '', mission: '', vision: '',
+      image_url: '', founded_year: '', employees_count: '',
+      team_members: [],
+    },
+
+    async init() {
+      try {
+        const res = await apiFetch('/api/v1/cms/admin/about/');
+        if (res && res.ok) {
+          const data = await res.json();
+          Object.assign(this.form, data);
+          if (!Array.isArray(this.form.team_members)) this.form.team_members = [];
+        }
+      } catch (e) {
+        notify('تعذّر تحميل بيانات الصفحة', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    addTeamMember() {
+      this.form.team_members.push({ name:'', role:'', photo_url:'', linkedin_url:'', twitter_url:'' });
+    },
+
+    async saveAbout() {
+      this.saving = true;
+      try {
+        const payload = { ...this.form };
+        delete payload.team_members;
+        const res = await apiFetch('/api/v1/cms/admin/about/', {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
+        });
+        if (res && res.ok) notify('تم حفظ المحتوى', 'success');
+        else notify('فشل الحفظ', 'error');
+      } catch (e) {
+        notify('فشل الحفظ', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async saveTeam() {
+      this.saving = true;
+      try {
+        const res = await apiFetch('/api/v1/cms/admin/about/', {
+          method: 'PATCH',
+          body: JSON.stringify({ team_members: this.form.team_members }),
+        });
+        if (res && res.ok) notify('تم حفظ الفريق', 'success');
+        else notify('فشل الحفظ', 'error');
+      } catch (e) {
+        notify('فشل الحفظ', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

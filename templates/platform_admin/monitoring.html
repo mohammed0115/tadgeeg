@@ -1,0 +1,270 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+{% block page_title %}مراقبة النظام{% endblock %}
+{% block breadcrumb_current %}مراقبة النظام{% endblock %}
+
+{% block content %}
+<div x-data="systemMonitoring()" x-init="init()" class="space-y-6 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">مراقبة النظام</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">حالة الخوادم والخدمات في الوقت الفعلي</p>
+    </div>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 text-xs">
+        <div class="w-2 h-2 rounded-full" :class="allHealthy ? 'bg-emerald-500 animate-pulse' : 'bg-red-500 animate-pulse'"></div>
+        <span x-text="allHealthy ? 'جميع الخدمات تعمل' : 'يوجد مشكلة'"></span>
+      </div>
+      <button @click="refresh()" :disabled="loading" class="btn-ghost text-xs">
+        <i data-lucide="refresh-cw" class="w-4 h-4" :class="loading ? 'animate-spin' : ''"></i>
+        تحديث
+      </button>
+    </div>
+  </div>
+
+  <!-- System Health Grid -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <template x-for="service in services" :key="service.key">
+      <div class="card p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div class="w-10 h-10 rounded-xl flex items-center justify-center"
+               :class="{
+                 'bg-emerald-50 dark:bg-emerald-900/30': service.status === 'healthy',
+                 'bg-red-50 dark:bg-red-900/30':         service.status === 'down',
+                 'bg-amber-50 dark:bg-amber-900/30':     service.status === 'degraded',
+                 'bg-slate-50 dark:bg-slate-700/40':     !service.status,
+               }">
+            <i :data-lucide="service.icon" class="w-5 h-5"
+               :class="{
+                 'text-emerald-600': service.status === 'healthy',
+                 'text-red-600':     service.status === 'down',
+                 'text-amber-600':   service.status === 'degraded',
+                 'text-slate-400':   !service.status,
+               }"></i>
+          </div>
+          <span class="w-2.5 h-2.5 rounded-full"
+                :class="{
+                  'bg-emerald-500': service.status === 'healthy',
+                  'bg-red-500':     service.status === 'down',
+                  'bg-amber-500':   service.status === 'degraded',
+                  'bg-slate-400 animate-pulse': loading || !service.status,
+                }"></span>
+        </div>
+        <p class="text-sm font-semibold text-slate-700 dark:text-slate-200" x-text="service.label"></p>
+        <p class="text-xs mt-1"
+           :class="{
+             'text-emerald-600': service.status === 'healthy',
+             'text-red-600':     service.status === 'down',
+             'text-amber-600':   service.status === 'degraded',
+             'text-slate-400':   !service.status,
+           }"
+           x-text="service.status === 'healthy' ? 'يعمل بشكل طبيعي' : service.status === 'down' ? 'متوقف' : service.status === 'degraded' ? 'أداء منخفض' : 'جاري الفحص...'">
+        </p>
+        <template x-if="service.latency">
+          <p class="text-[10px] text-slate-400 mt-1" x-text="service.latency + ' ms'"></p>
+        </template>
+      </div>
+    </template>
+  </div>
+
+  <!-- Resource Usage -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+    <!-- CPU -->
+    <div class="card p-5 space-y-3">
+      <div class="flex items-center justify-between">
+        <h4 class="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+          <i data-lucide="cpu" class="w-4 h-4 text-indigo-500"></i>
+          المعالج CPU
+        </h4>
+        <template x-if="loading">
+          <div class="h-5 w-12 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+        </template>
+        <template x-if="!loading">
+          <span class="text-lg font-black"
+                :class="{
+                  'text-emerald-600': (metrics.cpu_percent || 0) < 60,
+                  'text-amber-600':   (metrics.cpu_percent || 0) >= 60 && (metrics.cpu_percent || 0) < 85,
+                  'text-red-600':     (metrics.cpu_percent || 0) >= 85,
+                }"
+                x-text="(metrics.cpu_percent || 0) + '%'"></span>
+        </template>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill"
+             :class="{
+               'bg-emerald-500': (metrics.cpu_percent || 0) < 60,
+               'bg-amber-500':   (metrics.cpu_percent || 0) >= 60 && (metrics.cpu_percent || 0) < 85,
+               'bg-red-500':     (metrics.cpu_percent || 0) >= 85,
+             }"
+             :style="'width:' + (metrics.cpu_percent || 0) + '%'"></div>
+      </div>
+      <p class="text-xs text-slate-400" x-text="(metrics.cpu_cores || 0) + ' أنوية'"></p>
+    </div>
+
+    <!-- Memory -->
+    <div class="card p-5 space-y-3">
+      <div class="flex items-center justify-between">
+        <h4 class="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+          <i data-lucide="memory-stick" class="w-4 h-4 text-violet-500"></i>
+          الذاكرة RAM
+        </h4>
+        <template x-if="!loading">
+          <span class="text-lg font-black"
+                :class="{
+                  'text-emerald-600': (metrics.memory_percent || 0) < 70,
+                  'text-amber-600':   (metrics.memory_percent || 0) >= 70 && (metrics.memory_percent || 0) < 90,
+                  'text-red-600':     (metrics.memory_percent || 0) >= 90,
+                }"
+                x-text="(metrics.memory_percent || 0) + '%'"></span>
+        </template>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill"
+             :class="{
+               'bg-violet-500': (metrics.memory_percent || 0) < 70,
+               'bg-amber-500':  (metrics.memory_percent || 0) >= 70 && (metrics.memory_percent || 0) < 90,
+               'bg-red-500':    (metrics.memory_percent || 0) >= 90,
+             }"
+             :style="'width:' + (metrics.memory_percent || 0) + '%'"></div>
+      </div>
+      <p class="text-xs text-slate-400" x-text="(metrics.memory_used_gb || 0) + ' GB / ' + (metrics.memory_total_gb || 0) + ' GB'"></p>
+    </div>
+
+    <!-- Disk -->
+    <div class="card p-5 space-y-3">
+      <div class="flex items-center justify-between">
+        <h4 class="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+          <i data-lucide="hard-drive" class="w-4 h-4 text-blue-500"></i>
+          القرص الصلب
+        </h4>
+        <template x-if="!loading">
+          <span class="text-lg font-black"
+                :class="{
+                  'text-emerald-600': (metrics.disk_percent || 0) < 70,
+                  'text-amber-600':   (metrics.disk_percent || 0) >= 70 && (metrics.disk_percent || 0) < 90,
+                  'text-red-600':     (metrics.disk_percent || 0) >= 90,
+                }"
+                x-text="(metrics.disk_percent || 0) + '%'"></span>
+        </template>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill bg-blue-500"
+             :style="'width:' + (metrics.disk_percent || 0) + '%'"></div>
+      </div>
+      <p class="text-xs text-slate-400" x-text="(metrics.disk_used_gb || 0) + ' GB / ' + (metrics.disk_total_gb || 0) + ' GB'"></p>
+    </div>
+  </div>
+
+  <!-- Recent Errors -->
+  <div class="card overflow-hidden">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
+      <h3 class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500"></i>
+        آخر الأخطاء والتحذيرات
+      </h3>
+      <a href="/platform-admin/activity-logs/" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+        عرض كل السجلات
+      </a>
+    </div>
+    <template x-if="loading">
+      <div class="animate-pulse p-4 space-y-2">
+        <template x-for="i in [1,2,3]" :key="i">
+          <div class="h-10 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+        </template>
+      </div>
+    </template>
+    <template x-if="!loading && recentErrors.length === 0">
+      <div class="px-5 py-10 text-center">
+        <i data-lucide="check-circle-2" class="w-10 h-10 mx-auto text-emerald-500 mb-2"></i>
+        <p class="text-slate-500 text-sm">لا توجد أخطاء مؤخراً</p>
+      </div>
+    </template>
+    <template x-if="!loading && recentErrors.length > 0">
+      <div class="divide-y divide-slate-100 dark:divide-slate-700/30">
+        <template x-for="err in recentErrors" :key="err.id">
+          <div class="px-5 py-3.5 flex items-start gap-3">
+            <div class="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                 :class="{
+                   'bg-red-50 dark:bg-red-900/30':    err.level === 'error',
+                   'bg-amber-50 dark:bg-amber-900/30': err.level === 'warning',
+                   'bg-blue-50 dark:bg-blue-900/30':   err.level === 'info',
+                 }">
+              <i :data-lucide="err.level === 'error' ? 'x-circle' : err.level === 'warning' ? 'alert-triangle' : 'info'"
+                 class="w-3.5 h-3.5"
+                 :class="{
+                   'text-red-600':    err.level === 'error',
+                   'text-amber-600':  err.level === 'warning',
+                   'text-blue-600':   err.level === 'info',
+                 }"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate" x-text="err.message"></p>
+              <p class="text-[10px] text-slate-400 mt-0.5" x-text="(err.path || '') + ' — ' + (err.timestamp ? new Date(err.timestamp).toLocaleString('ar-SA') : '')"></p>
+            </div>
+          </div>
+        </template>
+      </div>
+    </template>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function systemMonitoring() {
+  return {
+    loading: true,
+    metrics: {},
+    recentErrors: [],
+    services: [
+      { key: 'web',      label: 'Web Server',    icon: 'server',     status: null },
+      { key: 'database', label: 'Database',       icon: 'database',   status: null },
+      { key: 'cache',    label: 'Redis Cache',    icon: 'zap',        status: null },
+      { key: 'celery',   label: 'Celery Workers', icon: 'layers',     status: null },
+      { key: 'storage',  label: 'Storage',        icon: 'hard-drive', status: null },
+      { key: 'email',    label: 'Email Service',  icon: 'mail',       status: null },
+      { key: 'ai',       label: 'AI Engine',      icon: 'brain',      status: null },
+      { key: 'ocr',      label: 'OCR Service',    icon: 'scan-text',  status: null },
+    ],
+    get allHealthy() {
+      return this.services.every(s => s.status === 'healthy' || s.status === null);
+    },
+
+    async init() { await this.refresh(); },
+
+    async refresh() {
+      this.loading = true;
+      try {
+        const [healthRes, metricsRes, errorsRes] = await Promise.all([
+          apiFetch('/api/v1/platform/health/'),
+          apiFetch('/api/v1/platform/metrics/'),
+          apiFetch('/api/v1/platform/errors/?limit=10'),
+        ]);
+        if (healthRes && healthRes.ok) {
+          const health = await healthRes.json();
+          this.services.forEach(s => {
+            if (health[s.key]) {
+              s.status = health[s.key].status;
+              s.latency = health[s.key].latency_ms;
+            }
+          });
+        }
+        if (metricsRes && metricsRes.ok) this.metrics = await metricsRes.json();
+        if (errorsRes && errorsRes.ok) {
+          const data = await errorsRes.json();
+          this.recentErrors = Array.isArray(data) ? data : (data.results || []);
+        }
+      } catch (e) {
+        notify('تعذّر تحميل بيانات المراقبة', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,250 @@
+{% load i18n %}
+
+<!-- ✅ Key Audit Matters (KAMs) Section per ISA 701 -->
+<div class="kams-section" id="kams-section">
+  {% if report.key_audit_matters %}
+  <div class="kams-container">
+    <div class="section-header mb-6">
+      <h2 class="text-2xl font-bold text-slate-900">
+        {% trans "Key Audit Matters" %}
+      </h2>
+      <p class="text-sm text-slate-600 mt-1">
+        {% trans "Matters we determined to be of most significance during our audit (ISA 701)" %}
+      </p>
+    </div>
+
+    <!-- KAM Summary Stats -->
+    <div class="grid grid-cols-4 gap-4 mb-6">
+      <div class="stat-card">
+        <div class="stat-value text-2xl font-bold text-slate-900">{{ report.key_audit_matters|length }}</div>
+        <div class="stat-label text-sm text-slate-600">{% trans "Total KAMs" %}</div>
+      </div>
+      {% with high_count=report.key_audit_matters|dictsort:"severity"|length %}
+      <div class="stat-card">
+        <div class="stat-value text-2xl font-bold text-red-600">
+          {% widthratio report.key_audit_matters|dictsort:"severity" report.key_audit_matters|length 100 %}%
+        </div>
+        <div class="stat-label text-sm text-slate-600">{% trans "High Severity" %}</div>
+      </div>
+      {% endwith %}
+      <div class="stat-card">
+        <div class="stat-value text-2xl font-bold text-slate-900">
+          {% widthratio report.key_audit_matters|length 7 100 %}%
+        </div>
+        <div class="stat-label text-sm text-slate-600">{% trans "Coverage" %}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value text-2xl font-bold text-green-600">
+          {% if report.key_audit_matters|length >= 3 %}✅{% else %}⚠️{% endif %}
+        </div>
+        <div class="stat-label text-sm text-slate-600">{% trans "Threshold Status" %}</div>
+      </div>
+    </div>
+
+    <!-- KAM List -->
+    <div class="kams-list space-y-4">
+      {% for kam in report.key_audit_matters %}
+      <div class="kam-card border rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+        <!-- KAM Header -->
+        <div class="kam-header bg-slate-50 p-4 border-b">
+          <div class="flex items-start justify-between">
+            <div>
+              <div class="flex items-center gap-3">
+                <span class="inline-block px-3 py-1 bg-slate-200 text-slate-900 rounded text-sm font-mono font-bold">
+                  {{ kam.kam_id }}
+                </span>
+                <h3 class="text-lg font-bold text-slate-900">{{ kam.title }}</h3>
+              </div>
+              {% if kam.description %}
+              <p class="text-sm text-slate-600 mt-2">{{ kam.description }}</p>
+              {% endif %}
+            </div>
+            <!-- Severity Badge -->
+            <div class="flex-shrink-0">
+              {% if kam.severity == "CRITICAL" %}
+              <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-red-100 text-red-800">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                </svg>
+                {% trans "CRITICAL" %}
+              </span>
+              {% elif kam.severity == "HIGH" %}
+              <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-orange-100 text-orange-800">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                {% trans "HIGH" %}
+              </span>
+              {% elif kam.severity == "MEDIUM" %}
+              <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-yellow-100 text-yellow-800">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2z" clip-rule="evenodd"/>
+                </svg>
+                {% trans "MEDIUM" %}
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-800">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                {% trans "LOW" %}
+              </span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <!-- KAM Body -->
+        <div class="kam-body p-4 space-y-4">
+          <!-- Key Findings -->
+          {% if kam.evidence %}
+          <div>
+            <h4 class="font-semibold text-slate-900 mb-2">{% trans "Key Findings" %}</h4>
+            <ul class="space-y-2">
+              {% if kam.evidence|length > 0 %}
+                {% for item in kam.evidence %}
+                <li class="flex gap-2 items-start text-sm text-slate-700">
+                  <span class="inline-block w-2 h-2 bg-blue-500 rounded-full mt-1.5 flex-shrink-0"></span>
+                  {{ item }}
+                </li>
+                {% endfor %}
+              {% else %}
+                <p class="text-sm text-slate-500 italic">{% trans "No specific evidence available" %}</p>
+              {% endif %}
+            </ul>
+          </div>
+          {% endif %}
+
+          <!-- Affected Items Count -->
+          {% if kam.affected_count %}
+          <div class="grid grid-cols-2 gap-4 pt-2 border-t">
+            <div>
+              <span class="text-sm text-slate-600">{% trans "Affected Items" %}</span>
+              <p class="text-xl font-bold text-slate-900">{{ kam.affected_count }}</p>
+            </div>
+            {% if kam.total_amount %}
+            <div>
+              <span class="text-sm text-slate-600">{% trans "Total Amount Affected" %}</span>
+              <p class="text-xl font-bold text-slate-900">
+                {% if kam.total_amount > 1000000 %}
+                  {{ kam.total_amount|floatformat:0 }} SAR
+                {% else %}
+                  {{ kam.total_amount|floatformat:0 }} SAR
+                {% endif %}
+              </p>
+            </div>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          <!-- Recommendation -->
+          {% if kam.recommendation %}
+          <div class="bg-blue-50 border-l-4 border-blue-400 p-3 rounded">
+            <h4 class="font-semibold text-blue-900 text-sm mb-1">{% trans "Recommendation" %}</h4>
+            <p class="text-sm text-blue-800">{{ kam.recommendation }}</p>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- KAM Footer -->
+        <div class="kam-footer bg-slate-50 border-t p-3 flex items-center justify-between text-sm">
+          <span class="text-slate-600">
+            {% trans "Identified during audit procedures" %}
+          </span>
+          <button class="text-blue-600 hover:text-blue-800 font-semibold" 
+                  data-kam-id="{{ kam.kam_id }}"
+                  onclick="expandKam(this)">
+            {% trans "View Details" %}
+          </button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- ISA 701 Compliance Footer -->
+    <div class="mt-6 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
+      <div class="flex items-start gap-3">
+        <svg class="w-5 h-5 text-indigo-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M19 10.5a8.5 8.5 0 11-17 0 8.5 8.5 0 0117 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+        </svg>
+        <div class="text-sm text-indigo-800">
+          <p class="font-semibold">{% trans "ISA 701 Compliance" %}</p>
+          <p class="text-xs mt-1">
+            {% trans "These matters represent areas of higher assessed risk of material misstatement or significant judgments made during the audit, and have been determined to be the most significant matters communicated to those charged with governance." %}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-info">
+    <svg class="w-5 h-5 inline mr-2" fill="currentColor" viewBox="0 0 20 20">
+      <path fill-rule="evenodd" d="M18 5v8a2 2 0 01-2 2h-5l-5 4v-4H4a2 2 0 01-2-2V5a2 2 0 012-2h12a2 2 0 012 2z" clip-rule="evenodd"/>
+    </svg>
+    {% trans "No key audit matters identified" %}
+  </div>
+  {% endif %}
+</div>
+
+<style>
+.stat-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.kam-card {
+  border-color: #e2e8f0;
+  transition: all 0.3s ease;
+}
+
+.kam-card:hover {
+  border-color: #cbd5e1;
+}
+
+.kam-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+.kams-list {
+  max-height: 2000px;
+  overflow-y: auto;
+}
+
+.alert {
+  padding: 1rem;
+  border-radius: 0.5rem;
+  display: flex;
+  align-items: center;
+}
+
+.alert-info {
+  background-color: #ecf0f1;
+  color: #2c3e50;
+  border-color: #bdc3c7;
+  border: 1px solid #bdc3c7;
+}
+</style>
+
+<script>
+function expandKam(button) {
+  const kamCard = button.closest('.kam-card');
+  const kamBody = kamCard.querySelector('.kam-body');
+  
+  if (kamBody.style.display === 'none') {
+    kamBody.style.display = 'block';
+    button.textContent = 'Hide Details';
+  } else {
+    kamBody.style.display = 'none';
+    button.textContent = 'View Details';
+  }
+}
+</script>

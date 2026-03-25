@@ -1,0 +1,226 @@
+{% extends "layouts/base_vendor_dashboard.html" %}
+{% load i18n %}
+{% block page_title %}رفع الملفات{% endblock %}
+{% block breadcrumb_current %}رفع ملفات{% endblock %}
+
+{% block content %}
+<div x-data="uploadCenter()" x-init="init()" class="space-y-6 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">رفع الملفات</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">ارفع مستنداتك المالية للمراجعة الذكية الآلية</p>
+    </div>
+    <a href="/dashboard/files/" class="btn-ghost text-xs">
+      <i data-lucide="files" class="w-4 h-4"></i>
+      عرض الملفات
+    </a>
+  </div>
+
+  <!-- Drop Zone -->
+  <div class="card p-8 text-center"
+       @dragover.prevent="dragOver = true"
+       @dragleave.prevent="dragOver = false"
+       @drop.prevent="handleDrop($event)">
+    <div class="border-2 border-dashed rounded-2xl p-12 transition-all"
+         :class="dragOver
+           ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/10'
+           : 'border-slate-300 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-600'">
+      <div class="max-w-sm mx-auto space-y-4">
+        <div class="w-16 h-16 mx-auto rounded-2xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center"
+             :class="dragOver ? 'bg-blue-100 dark:bg-blue-900/50 scale-110' : ''">
+          <i data-lucide="upload-cloud" class="w-8 h-8 text-blue-600 dark:text-blue-400"></i>
+        </div>
+        <div>
+          <p class="text-lg font-bold text-slate-700 dark:text-slate-200">
+            <span x-show="!dragOver">اسحب الملفات وأفلتها هنا</span>
+            <span x-show="dragOver">أفلت الملفات الآن</span>
+          </p>
+          <p class="text-sm text-slate-400 mt-1">يدعم PDF، Excel، CSV، JSON، ZIP وصور المستندات</p>
+        </div>
+        <div class="flex items-center gap-3 justify-center">
+          <label class="btn-primary cursor-pointer">
+            <i data-lucide="folder-open" class="w-4 h-4"></i>
+            اختر ملفات
+            <input type="file" multiple @change="handleFiles($event)" class="hidden"
+                   accept=".pdf,.xls,.xlsx,.csv,.json,.zip,.jpg,.jpeg,.png,.tiff,.tif">
+          </label>
+        </div>
+        <p class="text-xs text-slate-400">الحد الأقصى: 50 ميجابايت للملف الواحد</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Supported formats info -->
+  <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+    <template x-for="fmt in formats" :key="fmt.ext">
+      <div class="card p-3 flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" :style="'background:' + fmt.bg">
+          <i :data-lucide="fmt.icon" class="w-4 h-4" :style="'color:' + fmt.color"></i>
+        </div>
+        <div>
+          <p class="text-xs font-bold text-slate-700 dark:text-slate-200" x-text="fmt.ext.toUpperCase()"></p>
+          <p class="text-[10px] text-slate-400" x-text="fmt.label"></p>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Upload Queue -->
+  <template x-if="queue.length > 0">
+    <div class="card overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
+        <h3 class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+          <i data-lucide="upload" class="w-4 h-4 text-blue-500"></i>
+          قائمة الرفع
+        </h3>
+        <button @click="clearCompleted()" class="text-xs text-slate-400 hover:text-slate-600">
+          مسح المكتملة
+        </button>
+      </div>
+      <div class="divide-y divide-slate-100 dark:divide-slate-700/30">
+        <template x-for="(item, idx) in queue" :key="idx">
+          <div class="px-5 py-4 flex items-center gap-4">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                 :class="{
+                   'bg-blue-50 dark:bg-blue-900/20':    item.status === 'uploading',
+                   'bg-emerald-50 dark:bg-emerald-900/20': item.status === 'done',
+                   'bg-red-50 dark:bg-red-900/20':      item.status === 'error',
+                   'bg-slate-50 dark:bg-slate-700/40':  item.status === 'pending',
+                 }">
+              <i :data-lucide="item.status === 'done' ? 'check-circle' : item.status === 'error' ? 'x-circle' : item.status === 'uploading' ? 'loader' : 'file'"
+                 class="w-5 h-5"
+                 :class="{
+                   'text-blue-600 animate-spin': item.status === 'uploading',
+                   'text-emerald-600':           item.status === 'done',
+                   'text-red-600':               item.status === 'error',
+                   'text-slate-400':             item.status === 'pending',
+                 }"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-slate-700 dark:text-slate-300 truncate" x-text="item.name"></p>
+              <template x-if="item.status === 'uploading'">
+                <div class="progress-track mt-1.5">
+                  <div class="progress-fill bg-blue-500" :style="'width:' + item.progress + '%'"></div>
+                </div>
+              </template>
+              <template x-if="item.status !== 'uploading'">
+                <p class="text-xs mt-0.5"
+                   :class="{
+                     'text-emerald-600': item.status === 'done',
+                     'text-red-500':     item.status === 'error',
+                     'text-slate-400':   item.status === 'pending',
+                   }"
+                   x-text="item.status === 'done' ? 'تم الرفع بنجاح' : item.status === 'error' ? (item.error || 'فشل الرفع') : 'في الانتظار'"></p>
+              </template>
+            </div>
+            <div class="flex-shrink-0 text-right">
+              <p class="text-xs text-slate-400" x-text="item.sizeHuman"></p>
+              <template x-if="item.status === 'uploading'">
+                <p class="text-xs text-blue-600" x-text="item.progress + '%'"></p>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+      <template x-if="queue.some(i => i.status === 'done')">
+        <div class="px-5 py-4 border-t border-slate-100 dark:border-slate-700/30 flex justify-between items-center">
+          <p class="text-xs text-slate-500">
+            <span x-text="queue.filter(i=>i.status==='done').length"></span> ملف تم رفعه بنجاح
+          </p>
+          <a href="/dashboard/audits/" class="btn-primary text-xs">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+            بدء المراجعة
+          </a>
+        </div>
+      </template>
+    </div>
+  </template>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function uploadCenter() {
+  return {
+    dragOver: false,
+    queue: [],
+    formats: [
+      { ext: 'pdf',   label: 'فواتير ومستندات', icon: 'file-text',     bg: '#fef2f2', color: '#dc2626' },
+      { ext: 'xlsx',  label: 'جداول بيانات',     icon: 'table-2',       bg: '#f0fdf4', color: '#16a34a' },
+      { ext: 'csv',   label: 'بيانات خام',       icon: 'file-spreadsheet', bg: '#eff6ff', color: '#2563eb' },
+      { ext: 'json',  label: 'بيانات منظمة',     icon: 'braces',        bg: '#fefce8', color: '#ca8a04' },
+      { ext: 'zip',   label: 'أرشيف متعدد',      icon: 'archive',       bg: '#faf5ff', color: '#9333ea' },
+    ],
+
+    init() {
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    handleDrop(e) {
+      this.dragOver = false;
+      const files = [...e.dataTransfer.files];
+      files.forEach(f => this.addToQueue(f));
+    },
+
+    handleFiles(e) {
+      const files = [...e.target.files];
+      files.forEach(f => this.addToQueue(f));
+      e.target.value = '';
+    },
+
+    addToQueue(file) {
+      const item = {
+        file,
+        name: file.name,
+        size: file.size,
+        sizeHuman: this.formatSize(file.size),
+        status: 'pending',
+        progress: 0,
+        error: null,
+      };
+      this.queue.push(item);
+      this.uploadFile(item);
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async uploadFile(item) {
+      item.status = 'uploading';
+      const formData = new FormData();
+      formData.append('file', item.file);
+      try {
+        const res = await apiFetch('/api/v1/documents/upload/', { method: 'POST', body: formData });
+        if (res && res.ok) {
+          item.progress = 100;
+          item.status = 'done';
+          notify('تم رفع: ' + item.name, 'success');
+        } else {
+          const err = await res.json().catch(() => ({}));
+          item.error = err.detail || err.message || 'فشل الرفع';
+          item.status = 'error';
+          notify('فشل رفع: ' + item.name, 'error');
+        }
+      } catch (e) {
+        item.error = e.message || 'خطأ في الشبكة';
+        item.status = 'error';
+        notify('فشل رفع: ' + item.name, 'error');
+      } finally {
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    clearCompleted() {
+      this.queue = this.queue.filter(i => i.status !== 'done');
+    },
+
+    formatSize(bytes) {
+      if (bytes < 1024) return bytes + ' B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    },
+  };
+}
+</script>
+{% endblock %}

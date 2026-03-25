@@ -1,0 +1,270 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+{% block page_title %}مكتبة الوسائط{% endblock %}
+{% block breadcrumb_current %}مكتبة الوسائط{% endblock %}
+
+{% block content %}
+<div x-data="mediaLibrary()" x-init="init()" class="space-y-5 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">مكتبة الوسائط</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">رفع وإدارة الصور والملفات</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button @click="viewMode='grid'" class="btn-ghost text-xs px-3 py-1.5"
+              :class="viewMode==='grid' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700' : ''">
+        <i data-lucide="grid-3x3" class="w-4 h-4"></i>
+      </button>
+      <button @click="viewMode='list'" class="btn-ghost text-xs px-3 py-1.5"
+              :class="viewMode==='list' ? 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700' : ''">
+        <i data-lucide="list" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Upload Zone -->
+  <div class="card p-6"
+       @dragover.prevent="dragOver = true"
+       @dragleave.prevent="dragOver = false"
+       @drop.prevent="handleDrop($event)">
+    <div class="border-2 border-dashed rounded-xl p-8 text-center transition-colors"
+         :class="dragOver ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-900/10' : 'border-slate-300 dark:border-slate-600 hover:border-indigo-300 dark:hover:border-indigo-600'">
+      <i data-lucide="upload-cloud" class="w-10 h-10 mx-auto mb-3" :class="dragOver ? 'text-indigo-500' : 'text-slate-400'"></i>
+      <p class="font-semibold text-slate-700 dark:text-slate-300 mb-1">اسحب الملفات وأفلتها هنا</p>
+      <p class="text-xs text-slate-400 mb-4">أو</p>
+      <div class="flex items-center justify-center gap-3 flex-wrap">
+        <label class="btn-primary cursor-pointer">
+          <i data-lucide="folder-open" class="w-4 h-4"></i>
+          اختر ملفات
+          <input type="file" multiple @change="handleFileInput($event)" class="hidden"
+                 accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.csv">
+        </label>
+        <button @click="showUrlModal=true; $nextTick(()=>lucide.createIcons())" class="btn-ghost">
+          <i data-lucide="link" class="w-4 h-4"></i>
+          إضافة رابط
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Queue -->
+  <template x-if="uploadQueue.length > 0">
+    <div class="card p-4 space-y-3">
+      <h4 class="text-sm font-semibold text-slate-700 dark:text-slate-200">قيد الرفع</h4>
+      <div class="space-y-2">
+        <template x-for="(item, idx) in uploadQueue" :key="idx">
+          <div class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-700/30 rounded-xl">
+            <i data-lucide="file" class="w-5 h-5 text-slate-400 flex-shrink-0"></i>
+            <div class="flex-1 min-w-0">
+              <p class="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate" x-text="item.name"></p>
+              <div class="progress-track mt-1">
+                <div class="progress-fill bg-indigo-500" :style="'width:' + item.progress + '%'"></div>
+              </div>
+            </div>
+            <span class="text-xs text-slate-500" x-text="item.progress + '%'"></span>
+          </div>
+        </template>
+      </div>
+    </div>
+  </template>
+
+  <!-- Filters -->
+  <div class="card p-4 flex flex-wrap items-center gap-3">
+    <select x-model="filter.type" @change="load()" class="select">
+      <option value="">جميع الأنواع</option>
+      <option value="image">صور</option>
+      <option value="video">فيديو</option>
+      <option value="document">مستندات</option>
+    </select>
+    <input type="text" x-model.debounce.300ms="filter.search" @input="load()"
+           class="input max-w-xs" placeholder="البحث بالاسم...">
+    <span class="text-xs text-slate-500 mr-auto" x-text="files.length + ' ملف'"></span>
+  </div>
+
+  <!-- Media Grid -->
+  <template x-if="loading">
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 animate-pulse">
+      <template x-for="i in [1,2,3,4,5,6,7,8]" :key="i">
+        <div class="aspect-square bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+      </template>
+    </div>
+  </template>
+
+  <template x-if="!loading && files.length === 0">
+    <div class="card p-12 text-center">
+      <i data-lucide="image" class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3"></i>
+      <p class="text-slate-500 text-sm">لا توجد ملفات بعد</p>
+    </div>
+  </template>
+
+  <!-- Grid View -->
+  <template x-if="!loading && files.length > 0 && viewMode === 'grid'">
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+      <template x-for="file in files" :key="file.id">
+        <div class="group relative aspect-square rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-pointer"
+             @click="preview(file)">
+          <template x-if="file.type === 'image'">
+            <img :src="file.url" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" :alt="file.name">
+          </template>
+          <template x-if="file.type !== 'image'">
+            <div class="w-full h-full flex flex-col items-center justify-center gap-1">
+              <i :data-lucide="file.type === 'video' ? 'video' : 'file-text'" class="w-8 h-8 text-slate-400"></i>
+              <p class="text-[10px] text-slate-400 truncate px-2 w-full text-center" x-text="file.name"></p>
+            </div>
+          </template>
+          <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+            <button @click.stop="copyUrl(file.url)" class="w-7 h-7 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/40">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            </button>
+            <button @click.stop="deleteFile(file.id)" class="w-7 h-7 rounded-lg bg-red-500/80 backdrop-blur-sm flex items-center justify-center text-white hover:bg-red-500">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </template>
+
+  <!-- List View -->
+  <template x-if="!loading && files.length > 0 && viewMode === 'list'">
+    <div class="card overflow-hidden">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>الملف</th>
+            <th>النوع</th>
+            <th>الحجم</th>
+            <th>تاريخ الرفع</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="file in files" :key="file.id">
+            <tr>
+              <td>
+                <div class="flex items-center gap-3">
+                  <template x-if="file.type === 'image'">
+                    <img :src="file.url" class="w-10 h-10 rounded-lg object-cover flex-shrink-0" :alt="file.name">
+                  </template>
+                  <template x-if="file.type !== 'image'">
+                    <div class="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                      <i :data-lucide="file.type === 'video' ? 'video' : 'file-text'" class="w-5 h-5 text-slate-400"></i>
+                    </div>
+                  </template>
+                  <span class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate max-w-xs" x-text="file.name"></span>
+                </div>
+              </td>
+              <td><span class="badge-slate text-[10px]" x-text="file.type"></span></td>
+              <td class="text-xs text-slate-400" x-text="file.size_human || '—'"></td>
+              <td class="text-xs text-slate-400"
+                  x-text="file.created_at ? new Date(file.created_at).toLocaleDateString('ar-SA') : '—'"></td>
+              <td>
+                <div class="flex items-center gap-1">
+                  <button @click="copyUrl(file.url)" class="btn-ghost text-xs px-2 py-1">
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <a :href="file.url" target="_blank" class="btn-ghost text-xs px-2 py-1">
+                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                  </a>
+                  <button @click="deleteFile(file.id)" class="btn-ghost text-xs px-2 py-1 text-red-500">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+  </template>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function mediaLibrary() {
+  return {
+    files: [], loading: true, dragOver: false,
+    uploadQueue: [], viewMode: 'grid',
+    showUrlModal: false, urlInput: '',
+    filter: { type: '', search: '' },
+
+    async init() { await this.load(); },
+
+    async load() {
+      this.loading = true;
+      try {
+        const params = new URLSearchParams();
+        if (this.filter.type) params.set('type', this.filter.type);
+        if (this.filter.search) params.set('search', this.filter.search);
+        const res = await apiFetch('/api/v1/cms/admin/media/?' + params.toString());
+        if (res && res.ok) {
+          const data = await res.json();
+          this.files = Array.isArray(data) ? data : (data.results || []);
+        }
+      } catch (e) {
+        notify('تعذّر تحميل الملفات', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    handleDrop(e) {
+      this.dragOver = false;
+      const files = [...e.dataTransfer.files];
+      files.forEach(f => this.uploadFile(f));
+    },
+
+    handleFileInput(e) {
+      const files = [...e.target.files];
+      files.forEach(f => this.uploadFile(f));
+      e.target.value = '';
+    },
+
+    async uploadFile(file) {
+      const item = { name: file.name, progress: 0 };
+      this.uploadQueue.push(item);
+      const formData = new FormData();
+      formData.append('file', file);
+      try {
+        const res = await apiFetch('/api/v1/cms/admin/media/upload/', { method: 'POST', body: formData });
+        if (res && res.ok) {
+          const uploaded = await res.json();
+          this.files.unshift(uploaded);
+          item.progress = 100;
+          notify('تم رفع الملف: ' + file.name, 'success');
+          this.$nextTick(() => lucide.createIcons());
+        } else {
+          notify('فشل رفع: ' + file.name, 'error');
+        }
+      } catch (e) {
+        notify('فشل رفع: ' + file.name, 'error');
+      } finally {
+        setTimeout(() => { this.uploadQueue = this.uploadQueue.filter(q => q !== item); }, 2000);
+      }
+    },
+
+    async deleteFile(id) {
+      if (!confirm('هل أنت متأكد من حذف هذا الملف؟')) return;
+      const res = await apiFetch(`/api/v1/cms/admin/media/${id}/`, { method: 'DELETE' });
+      if (res && (res.ok || res.status === 204)) {
+        this.files = this.files.filter(f => f.id !== id);
+        notify('تم حذف الملف', 'success');
+      }
+    },
+
+    copyUrl(url) {
+      navigator.clipboard.writeText(url).then(() => notify('تم نسخ الرابط', 'success'));
+    },
+
+    preview(file) {
+      if (file.type === 'image') window.open(file.url, '_blank');
+    },
+  };
+}
+</script>
+{% endblock %}

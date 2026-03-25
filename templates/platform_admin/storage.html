@@ -1,0 +1,301 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+{% block page_title %}مزودو التخزين{% endblock %}
+{% block breadcrumb_current %}مزودو التخزين{% endblock %}
+
+{% block content %}
+<div x-data="storageManager()" x-init="init()" class="space-y-6 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">مزودو التخزين</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">إعداد وإدارة مزودي التخزين السحابي</p>
+    </div>
+    <button @click="openAdd()" class="btn-primary">
+      <i data-lucide="plus" class="w-4 h-4"></i>
+      إضافة مزود
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="card p-5">
+      <div class="flex items-center gap-3 mb-2">
+        <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
+          <i data-lucide="hard-drive" class="w-5 h-5 text-indigo-600 dark:text-indigo-400"></i>
+        </div>
+        <p class="text-xs font-semibold text-slate-500 uppercase">إجمالي المزودين</p>
+      </div>
+      <template x-if="loading"><div class="h-8 w-12 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
+      <template x-if="!loading"><p class="text-3xl font-black text-slate-900 dark:text-white" x-text="providers.length"></p></template>
+    </div>
+    <div class="card p-5">
+      <div class="flex items-center gap-3 mb-2">
+        <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
+          <i data-lucide="check-circle" class="w-5 h-5 text-emerald-600 dark:text-emerald-400"></i>
+        </div>
+        <p class="text-xs font-semibold text-slate-500 uppercase">نشطون</p>
+      </div>
+      <template x-if="loading"><div class="h-8 w-12 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
+      <template x-if="!loading"><p class="text-3xl font-black text-emerald-600" x-text="providers.filter(p=>p.is_active).length"></p></template>
+    </div>
+    <div class="card p-5">
+      <div class="flex items-center gap-3 mb-2">
+        <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+          <i data-lucide="database" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
+        </div>
+        <p class="text-xs font-semibold text-slate-500 uppercase">المزود الافتراضي</p>
+      </div>
+      <template x-if="loading"><div class="h-5 w-24 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
+      <template x-if="!loading">
+        <p class="text-sm font-bold text-blue-600 dark:text-blue-400"
+           x-text="providers.find(p=>p.is_default)?.name || 'غير محدد'"></p>
+      </template>
+    </div>
+  </div>
+
+  <!-- Providers List -->
+  <div class="space-y-4">
+    <template x-if="loading">
+      <div class="animate-pulse space-y-3">
+        <template x-for="i in [1,2,3]" :key="i">
+          <div class="card p-5 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl bg-slate-200 dark:bg-slate-700"></div>
+            <div class="flex-1 space-y-2">
+              <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-48"></div>
+              <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-32"></div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <template x-if="!loading && providers.length === 0">
+      <div class="card p-12 text-center">
+        <i data-lucide="hard-drive" class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3"></i>
+        <p class="text-slate-500 text-sm">لا توجد مزودو تخزين. انقر "إضافة مزود".</p>
+      </div>
+    </template>
+
+    <template x-if="!loading && providers.length > 0">
+      <div class="space-y-3">
+        <template x-for="provider in providers" :key="provider.id">
+          <div class="card p-5">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex items-center gap-4 min-w-0">
+                <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                     :class="{
+                       'bg-amber-50 dark:bg-amber-900/30': provider.backend === 's3',
+                       'bg-blue-50 dark:bg-blue-900/30':   provider.backend === 'azure',
+                       'bg-slate-50 dark:bg-slate-700/40': provider.backend === 'local' || !provider.backend,
+                     }">
+                  <i :data-lucide="provider.backend === 's3' ? 'cloud' : provider.backend === 'azure' ? 'cloud-snow' : 'hard-drive'"
+                     class="w-6 h-6"
+                     :class="{
+                       'text-amber-600': provider.backend === 's3',
+                       'text-blue-600':  provider.backend === 'azure',
+                       'text-slate-500': provider.backend === 'local' || !provider.backend,
+                     }"></i>
+                </div>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <p class="font-bold text-slate-800 dark:text-white" x-text="provider.name"></p>
+                    <template x-if="provider.is_default">
+                      <span class="badge-indigo text-[10px]">افتراضي</span>
+                    </template>
+                    <span class="badge"
+                          :class="provider.is_active ? 'badge-green' : 'badge-slate'"
+                          x-text="provider.is_active ? 'نشط' : 'معطّل'"></span>
+                  </div>
+                  <p class="text-xs text-slate-400 mt-0.5"
+                     x-text="(provider.backend || 'local').toUpperCase() + ' — ' + (provider.bucket || provider.path || '—')"></p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <button @click="testConnection(provider)" class="btn-ghost text-xs px-3 py-1.5">
+                  <i data-lucide="wifi" class="w-3.5 h-3.5"></i>
+                  اختبار
+                </button>
+                <button @click="editProvider(provider)" class="btn-ghost text-xs px-3 py-1.5">
+                  <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                </button>
+                <button @click="deleteProvider(provider.id)" class="btn-ghost text-xs px-3 py-1.5 text-red-500">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </template>
+      </div>
+    </template>
+  </div>
+
+  <!-- Provider Modal -->
+  <template x-if="showModal">
+    <div class="modal-backdrop" @click.self="showModal=false">
+      <div class="modal-box max-w-lg">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/30">
+          <h3 class="font-bold text-slate-800 dark:text-white" x-text="editingProvider.id ? 'تعديل مزود التخزين' : 'إضافة مزود جديد'"></h3>
+          <button @click="showModal=false"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">الاسم</label>
+            <input type="text" x-model="editingProvider.name" class="input" placeholder="Primary S3 Storage">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">نوع المزود</label>
+            <select x-model="editingProvider.backend" class="select w-full">
+              <option value="local">Local Filesystem</option>
+              <option value="s3">Amazon S3 / Compatible</option>
+              <option value="azure">Azure Blob Storage</option>
+              <option value="gcs">Google Cloud Storage</option>
+            </select>
+          </div>
+          <template x-if="editingProvider.backend === 's3'">
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1.5">Endpoint URL</label>
+                <input type="url" x-model="editingProvider.endpoint_url" class="input" placeholder="https://s3.amazonaws.com">
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-500 mb-1.5">Access Key ID</label>
+                  <input type="text" x-model="editingProvider.access_key" class="input font-mono text-xs">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-500 mb-1.5">Secret Access Key</label>
+                  <input type="password" x-model="editingProvider.secret_key" class="input font-mono text-xs">
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-500 mb-1.5">Bucket Name</label>
+                  <input type="text" x-model="editingProvider.bucket" class="input">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-500 mb-1.5">Region</label>
+                  <input type="text" x-model="editingProvider.region" class="input" placeholder="us-east-1">
+                </div>
+              </div>
+            </div>
+          </template>
+          <template x-if="editingProvider.backend === 'local' || !editingProvider.backend">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">مسار التخزين</label>
+              <input type="text" x-model="editingProvider.path" class="input font-mono text-xs" placeholder="/var/media/">
+            </div>
+          </template>
+          <div class="flex items-center gap-4">
+            <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
+              <input type="checkbox" x-model="editingProvider.is_active" class="rounded">
+              نشط
+            </label>
+            <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
+              <input type="checkbox" x-model="editingProvider.is_default" class="rounded">
+              افتراضي
+            </label>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-700/30">
+          <button @click="showModal=false" class="btn-ghost">إلغاء</button>
+          <button @click="save()" :disabled="saving" class="btn-primary">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ'"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function storageManager() {
+  return {
+    providers: [],
+    loading: true,
+    saving: false,
+    showModal: false,
+    editingProvider: {},
+
+    async init() {
+      try {
+        const res = await apiFetch('/api/v1/cms/admin/storage-providers/');
+        if (res && res.ok) {
+          const data = await res.json();
+          this.providers = Array.isArray(data) ? data : (data.results || []);
+        }
+      } catch (e) {
+        notify('تعذّر تحميل مزودي التخزين', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    openAdd() {
+      this.editingProvider = { name:'', backend:'local', is_active:true, is_default:false };
+      this.showModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    editProvider(p) {
+      this.editingProvider = { ...p };
+      this.showModal = true;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async save() {
+      this.saving = true;
+      try {
+        const isEdit = Boolean(this.editingProvider.id);
+        const url = isEdit ? `/api/v1/cms/admin/storage-providers/${this.editingProvider.id}/` : '/api/v1/cms/admin/storage-providers/';
+        const res = await apiFetch(url, { method: isEdit ? 'PUT' : 'POST', body: JSON.stringify(this.editingProvider) });
+        if (res && res.ok) {
+          const saved = await res.json();
+          if (isEdit) {
+            const idx = this.providers.findIndex(p => p.id === saved.id);
+            if (idx !== -1) this.providers[idx] = saved;
+          } else {
+            this.providers.push(saved);
+          }
+          notify('تم حفظ المزود', 'success');
+          this.showModal = false;
+          this.$nextTick(() => lucide.createIcons());
+        } else {
+          notify('فشل الحفظ', 'error');
+        }
+      } catch (e) {
+        notify('فشل الحفظ', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async testConnection(provider) {
+      notify('جاري اختبار الاتصال...', 'info');
+      try {
+        const res = await apiFetch(`/api/v1/cms/admin/storage-providers/${provider.id}/test/`, { method: 'POST' });
+        if (res && res.ok) notify('الاتصال ناجح', 'success');
+        else notify('فشل الاتصال', 'error');
+      } catch (e) {
+        notify('فشل الاتصال', 'error');
+      }
+    },
+
+    async deleteProvider(id) {
+      if (!confirm('هل أنت متأكد من حذف هذا المزود؟')) return;
+      const res = await apiFetch(`/api/v1/cms/admin/storage-providers/${id}/`, { method: 'DELETE' });
+      if (res && (res.ok || res.status === 204)) {
+        this.providers = this.providers.filter(p => p.id !== id);
+        notify('تم حذف المزود', 'success');
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,573 @@
+{% extends "phase2/base_phase2.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Audit Result" %}{% endblock %}
+{% block page_title %}{% trans "Audit Result" %}{% endblock %}
+{% block tab_audits %}active{% endblock %}
+
+{% block phase2_content %}
+<div x-data="auditResult()" x-init="init()" class="space-y-5">
+
+  <!-- Loading skeleton -->
+  <template x-if="loading">
+    <div class="space-y-4">
+      <div class="card p-6 space-y-4">
+        <div class="h-6 w-64 rounded-xl bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+        <div class="h-4 w-40 rounded bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <template x-for="i in [1,2,3]" :key="i">
+          <div class="card p-5 space-y-3">
+            <div class="h-16 w-16 rounded-xl bg-slate-200 dark:bg-slate-700 animate-pulse mx-auto"></div>
+            <div class="h-4 w-20 rounded bg-slate-200 dark:bg-slate-700 animate-pulse mx-auto"></div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </template>
+
+  <!-- Error state -->
+  <template x-if="!loading && !job">
+    <div class="card p-12 flex flex-col items-center gap-4 text-center">
+      <i data-lucide="alert-circle" class="w-14 h-14 text-red-400 opacity-60"></i>
+      <p class="font-semibold text-slate-700 dark:text-slate-200">{% trans "Audit result not found" %}</p>
+      <p class="text-sm text-slate-400">{% trans "The audit job may still be running or may not exist." %}</p>
+      <a href="/audits/" class="btn-primary mt-2">
+        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        {% trans "Back to Audit Jobs" %}
+      </a>
+    </div>
+  </template>
+
+  <!-- Result content -->
+  <template x-if="!loading && job">
+    <div class="space-y-5">
+
+      <!-- Header card -->
+      <div class="card p-5">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+          <div class="space-y-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <a href="/audits/" class="btn-ghost py-1 px-2 text-xs">
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                {% trans "Back" %}
+              </a>
+              <span class="text-slate-300 dark:text-slate-600">/</span>
+            </div>
+            <h1 class="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <i data-lucide="file" class="w-5 h-5 text-blue-500 flex-shrink-0"></i>
+              <span x-text="job.file_name || job.file?.original_filename || 'Untitled'"></span>
+            </h1>
+            <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
+              <span class="flex items-center gap-1">
+                <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                <span x-text="auditTypeLabel(job.audit_type)"></span>
+              </span>
+              <span class="text-slate-300 dark:text-slate-600">·</span>
+              <span class="flex items-center gap-1">
+                <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                <span x-text="(job.completed_at || job.updated_at || job.created_at || '').slice(0,16).replace('T',' ')"></span>
+              </span>
+              <span class="text-slate-300 dark:text-slate-600">·</span>
+              <span x-text="formatDuration(job.duration_seconds)"></span>
+            </div>
+          </div>
+          <span class="badge flex-shrink-0 text-sm px-3 py-1"
+                :class="statusBadgeClass(job.status)"
+                x-text="job.status"></span>
+        </div>
+      </div>
+
+      <!-- Score & Risk Row -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+        <!-- Audit Score gauge -->
+        <div class="card p-6 flex flex-col items-center gap-2">
+          <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{% trans "Audit Score" %}</p>
+          <div class="relative w-24 h-24">
+            <!-- SVG gauge circle -->
+            <svg class="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="40" fill="none" stroke="#e2e8f0" stroke-width="10" class="dark:stroke-slate-700"/>
+              <circle cx="50" cy="50" r="40" fill="none"
+                      :stroke="scoreStrokeColor(result?.audit_score)"
+                      stroke-width="10"
+                      stroke-linecap="round"
+                      :stroke-dasharray="`${(result?.audit_score || 0) * 2.513} 251.3`"/>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+              <span class="text-2xl font-black leading-none"
+                    :class="scoreTextColor(result?.audit_score)"
+                    x-text="result?.audit_score != null ? parseFloat(result.audit_score).toFixed(0) : '—'"></span>
+              <span class="text-[10px] text-slate-400">/100</span>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 text-center" x-text="scoreLabel(result?.audit_score)"></p>
+        </div>
+
+        <!-- Risk Level -->
+        <div class="card p-6 flex flex-col items-center gap-3">
+          <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{% trans "Risk Level" %}</p>
+          <div class="w-16 h-16 rounded-2xl flex items-center justify-center"
+               :class="riskBgClass(result?.risk_level)">
+            <i :data-lucide="riskIcon(result?.risk_level)" class="w-8 h-8"
+               :class="riskIconClass(result?.risk_level)"></i>
+          </div>
+          <span class="badge text-sm px-3 py-1"
+                :class="riskBadgeClass(result?.risk_level)"
+                x-text="result?.risk_level || '—'"></span>
+        </div>
+
+        <!-- Issue Count breakdown -->
+        <div class="card p-5 flex flex-col gap-3">
+          <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{% trans "Issues Found" %}</p>
+          <div class="space-y-2 flex-1">
+            <div class="flex items-center justify-between">
+              <span class="badge-critical text-xs px-2 py-0.5">CRITICAL</span>
+              <span class="font-bold text-red-600 dark:text-red-400"
+                    x-text="issueCounts.critical || 0"></span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="badge-high text-xs px-2 py-0.5">HIGH</span>
+              <span class="font-bold text-orange-600 dark:text-orange-400"
+                    x-text="issueCounts.high || 0"></span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="badge-medium text-xs px-2 py-0.5">MEDIUM</span>
+              <span class="font-bold text-amber-600 dark:text-amber-400"
+                    x-text="issueCounts.medium || 0"></span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="badge-low text-xs px-2 py-0.5">LOW</span>
+              <span class="font-bold text-emerald-600 dark:text-emerald-400"
+                    x-text="issueCounts.low || 0"></span>
+            </div>
+          </div>
+          <p class="text-xs text-slate-400 pt-1 border-t border-slate-100 dark:border-slate-700/30">
+            {% trans "Total:" %} <strong x-text="issues.length"></strong> {% trans "issues" %}
+          </p>
+        </div>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="border-b border-slate-200 dark:border-slate-700/30">
+        <nav class="flex gap-1">
+          <button class="nav-tab"
+                  :class="activeTab === 'overview' ? 'active' : ''"
+                  @click="activeTab = 'overview'; $nextTick(() => lucide.createIcons())">
+            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+            {% trans "Overview" %}
+          </button>
+          <button class="nav-tab"
+                  :class="activeTab === 'issues' ? 'active' : ''"
+                  @click="activeTab = 'issues'; $nextTick(() => lucide.createIcons())">
+            <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+            {% trans "Issues" %}
+            <span x-show="issues.length > 0"
+                  class="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                  x-text="issues.length"></span>
+          </button>
+          <button class="nav-tab"
+                  :class="activeTab === 'text' ? 'active' : ''"
+                  @click="activeTab = 'text'; $nextTick(() => lucide.createIcons())">
+            <i data-lucide="file-text" class="w-4 h-4"></i>
+            {% trans "Extracted Text" %}
+          </button>
+          <button class="nav-tab"
+                  :class="activeTab === 'entities' ? 'active' : ''"
+                  @click="activeTab = 'entities'; $nextTick(() => lucide.createIcons())">
+            <i data-lucide="database" class="w-4 h-4"></i>
+            {% trans "Entities" %}
+          </button>
+        </nav>
+      </div>
+
+      <!-- Tab Content -->
+
+      <!-- Overview Tab -->
+      <div x-show="activeTab === 'overview'" class="space-y-4">
+        <!-- Summary -->
+        <div class="card p-5 space-y-3">
+          <h3 class="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+            <i data-lucide="clipboard-list" class="w-4 h-4 text-blue-500"></i>
+            {% trans "Summary" %}
+          </h3>
+          <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed"
+             x-text="result?.summary || result?.details?.summary || '{% trans "No summary available." %}'"></p>
+        </div>
+
+        <!-- Issue severity breakdown -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="card p-4 text-center border-t-4 border-red-500">
+            <p class="text-2xl font-black text-red-600 dark:text-red-400" x-text="issueCounts.critical || 0"></p>
+            <p class="text-xs font-semibold text-slate-500 mt-1 uppercase tracking-wide">{% trans "Critical" %}</p>
+          </div>
+          <div class="card p-4 text-center border-t-4 border-orange-500">
+            <p class="text-2xl font-black text-orange-600 dark:text-orange-400" x-text="issueCounts.high || 0"></p>
+            <p class="text-xs font-semibold text-slate-500 mt-1 uppercase tracking-wide">{% trans "High" %}</p>
+          </div>
+          <div class="card p-4 text-center border-t-4 border-amber-400">
+            <p class="text-2xl font-black text-amber-600 dark:text-amber-400" x-text="issueCounts.medium || 0"></p>
+            <p class="text-xs font-semibold text-slate-500 mt-1 uppercase tracking-wide">{% trans "Medium" %}</p>
+          </div>
+          <div class="card p-4 text-center border-t-4 border-emerald-500">
+            <p class="text-2xl font-black text-emerald-600 dark:text-emerald-400" x-text="issueCounts.low || 0"></p>
+            <p class="text-xs font-semibold text-slate-500 mt-1 uppercase tracking-wide">{% trans "Low" %}</p>
+          </div>
+        </div>
+
+        <!-- Processing stats -->
+        <div class="card p-5">
+          <h3 class="font-semibold text-slate-800 dark:text-white flex items-center gap-2 mb-4">
+            <i data-lucide="cpu" class="w-4 h-4 text-violet-500"></i>
+            {% trans "Processing Stats" %}
+          </h3>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+            <div>
+              <p class="text-xs text-slate-400 uppercase tracking-wide font-semibold">{% trans "Model" %}</p>
+              <p class="font-medium text-slate-700 dark:text-slate-200 mt-0.5"
+                 x-text="result?.model_used || result?.metadata?.model || '—'"></p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 uppercase tracking-wide font-semibold">{% trans "Tokens Used" %}</p>
+              <p class="font-medium text-slate-700 dark:text-slate-200 mt-0.5"
+                 x-text="(result?.tokens_used || result?.metadata?.tokens || 0).toLocaleString()"></p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 uppercase tracking-wide font-semibold">{% trans "Processing Time" %}</p>
+              <p class="font-medium text-slate-700 dark:text-slate-200 mt-0.5"
+                 x-text="formatDuration(job.duration_seconds)"></p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 uppercase tracking-wide font-semibold">{% trans "Audit Type" %}</p>
+              <p class="font-medium text-slate-700 dark:text-slate-200 mt-0.5"
+                 x-text="auditTypeLabel(job.audit_type)"></p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 uppercase tracking-wide font-semibold">{% trans "Completed At" %}</p>
+              <p class="font-medium text-slate-700 dark:text-slate-200 mt-0.5"
+                 x-text="(job.completed_at || '').slice(0,16).replace('T',' ')"></p>
+            </div>
+            <div>
+              <p class="text-xs text-slate-400 uppercase tracking-wide font-semibold">{% trans "Created By" %}</p>
+              <p class="font-medium text-slate-700 dark:text-slate-200 mt-0.5"
+                 x-text="job.created_by_email || job.created_by || '—'"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Issues Tab -->
+      <div x-show="activeTab === 'issues'" class="space-y-3">
+        <template x-if="issues.length === 0">
+          <div class="card py-14 flex flex-col items-center gap-3 text-slate-400">
+            <i data-lucide="check-circle-2" class="w-12 h-12 text-emerald-400 opacity-70"></i>
+            <p class="font-semibold text-slate-600 dark:text-slate-300">{% trans "No issues found" %}</p>
+            <p class="text-sm">{% trans "This file passed all audit checks." %}</p>
+          </div>
+        </template>
+
+        <!-- Group by severity -->
+        <template x-for="severity in ['critical','high','medium','low']" :key="severity">
+          <template x-if="issuesBySeverity(severity).length > 0">
+            <div>
+              <div class="flex items-center gap-2 mb-2 px-1">
+                <span class="badge" :class="'badge-' + severity" x-text="severity.toUpperCase()"></span>
+                <span class="text-xs text-slate-400"
+                      x-text="issuesBySeverity(severity).length + ' {% trans "issues" %}'"></span>
+              </div>
+              <div class="space-y-2">
+                <template x-for="issue in issuesBySeverity(severity)" :key="issue.id || issue.issue_code">
+                  <div class="card p-4 border-r-4"
+                       :class="issueBorderClass(severity)"
+                       x-data="{ expanded: false }">
+                    <div class="flex items-start gap-3">
+                      <div class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
+                           :class="issueIconBg(severity)">
+                        <i data-lucide="alert-triangle" class="w-4 h-4"
+                           :class="issueIconColor(severity)"></i>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-start gap-2 justify-between">
+                          <div>
+                            <p class="font-semibold text-slate-800 dark:text-white text-sm" x-text="issue.title || issue.issue_code"></p>
+                            <p class="text-xs font-mono text-slate-400 mt-0.5" x-text="issue.issue_code || ''"></p>
+                          </div>
+                          <button class="btn-ghost py-0.5 px-2 text-xs flex-shrink-0"
+                                  @click="expanded = !expanded">
+                            <i :data-lucide="expanded ? 'chevron-up' : 'chevron-down'" class="w-3.5 h-3.5"></i>
+                          </button>
+                        </div>
+                        <p class="text-sm text-slate-600 dark:text-slate-300 mt-1.5 leading-relaxed" x-text="issue.description"></p>
+                        <div x-show="expanded" x-transition class="mt-3 space-y-2">
+                          <template x-if="issue.suggested_fix">
+                            <div class="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800/40">
+                              <p class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-1 flex items-center gap-1">
+                                <i data-lucide="lightbulb" class="w-3.5 h-3.5"></i>
+                                {% trans "Suggested Fix" %}
+                              </p>
+                              <p class="text-xs text-emerald-700 dark:text-emerald-300" x-text="issue.suggested_fix"></p>
+                            </div>
+                          </template>
+                          <template x-if="issue.details">
+                            <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-700/40">
+                              <p class="text-xs font-semibold text-slate-500 mb-1">{% trans "Details" %}</p>
+                              <pre class="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap"
+                                   x-text="typeof issue.details === 'object' ? JSON.stringify(issue.details, null, 2) : issue.details"></pre>
+                            </div>
+                          </template>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+        </template>
+      </div>
+
+      <!-- Extracted Text Tab -->
+      <div x-show="activeTab === 'text'" class="space-y-3">
+        <div class="card overflow-hidden">
+          <div class="px-5 py-3.5 border-b border-slate-100 dark:border-slate-700/30 flex items-center justify-between">
+            <h3 class="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+              <i data-lucide="align-left" class="w-4 h-4 text-blue-500"></i>
+              {% trans "Extracted Text" %}
+            </h3>
+            <span class="text-xs text-slate-400"
+                  x-text="(result?.extracted_text || '').length.toLocaleString() + ' {% trans "chars" %}'"></span>
+          </div>
+          <div class="p-5">
+            <template x-if="!result?.extracted_text">
+              <p class="text-sm text-slate-400 text-center py-8">{% trans "No extracted text available." %}</p>
+            </template>
+            <template x-if="result?.extracted_text">
+              <div>
+                <pre class="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto font-mono bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-200 dark:border-slate-700/40"
+                     x-text="showFullText ? (result.extracted_text || '') : (result.extracted_text || '').slice(0, 5000)"></pre>
+                <template x-if="(result.extracted_text || '').length > 5000">
+                  <button class="mt-3 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                          @click="showFullText = !showFullText"
+                          x-text="showFullText ? '{% trans "Show less" %}' : '{% trans "Show full text (" %}' + ((result.extracted_text || '').length - 5000).toLocaleString() + '{% trans " more chars)" %}'">
+                  </button>
+                </template>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Entities Tab -->
+      <div x-show="activeTab === 'entities'" class="space-y-3">
+        <div class="card overflow-hidden">
+          <div class="px-5 py-3.5 border-b border-slate-100 dark:border-slate-700/30">
+            <h3 class="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+              <i data-lucide="database" class="w-4 h-4 text-violet-500"></i>
+              {% trans "Extracted Entities" %}
+            </h3>
+          </div>
+          <template x-if="!result?.extracted_entities && !result?.metadata">
+            <p class="text-sm text-slate-400 text-center py-10">{% trans "No entities extracted." %}</p>
+          </template>
+          <template x-if="result?.extracted_entities || result?.metadata">
+            <div class="divide-y divide-slate-100 dark:divide-slate-700/30">
+              <template x-for="[key, val] in Object.entries(result?.extracted_entities || result?.metadata || {})" :key="key">
+                <div class="px-5 py-3 flex items-start gap-4">
+                  <div class="w-40 flex-shrink-0">
+                    <span class="font-mono text-xs font-semibold text-slate-500 dark:text-slate-400" x-text="key"></span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <template x-if="Array.isArray(val)">
+                      <div class="flex flex-wrap gap-1">
+                        <template x-for="(item, idx) in val" :key="idx">
+                          <span class="badge-info text-xs font-mono" x-text="item"></span>
+                        </template>
+                      </div>
+                    </template>
+                    <template x-if="!Array.isArray(val) && typeof val === 'object' && val !== null">
+                      <pre class="text-xs text-slate-600 dark:text-slate-300 font-mono whitespace-pre-wrap"
+                           x-text="JSON.stringify(val, null, 2)"></pre>
+                    </template>
+                    <template x-if="!Array.isArray(val) && (typeof val !== 'object' || val === null)">
+                      <span class="text-sm text-slate-700 dark:text-slate-200 font-mono" x-text="val ?? '—'"></span>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
+      </div>
+
+    </div>
+  </template>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function auditResult() {
+  return {
+    job: null,
+    result: null,
+    issues: [],
+    loading: true,
+    activeTab: 'overview',
+    showFullText: false,
+
+    get issueCounts() {
+      const counts = { critical: 0, high: 0, medium: 0, low: 0 };
+      (this.issues || []).forEach(i => {
+        const sev = (i.severity || '').toLowerCase();
+        if (counts[sev] !== undefined) counts[sev]++;
+      });
+      return counts;
+    },
+
+    issuesBySeverity(severity) {
+      return (this.issues || []).filter(i => (i.severity || '').toLowerCase() === severity);
+    },
+
+    async init() {
+      // Extract job_id from URL: /audits/{job_id}/result/
+      const match = window.location.pathname.match(/\/audits\/([^/]+)\/result\//);
+      const jobId = match ? match[1] : '{{ job_id|default:"" }}';
+      if (!jobId) {
+        this.loading = false;
+        return;
+      }
+      try {
+        const data = await apiFetch(`/audits/jobs/${jobId}/result/`);
+        if (data) {
+          this.job = data.job || data;
+          this.result = data.result || data;
+          const rawIssues = data.issues || data.result?.issues || [];
+          this.issues = Array.isArray(rawIssues) ? rawIssues : [];
+        }
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to load audit result." %}', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    auditTypeLabel(type) {
+      const map = {
+        generic_audit: '{% trans "Generic Audit" %}',
+        financial_audit: '{% trans "Financial Audit" %}',
+        compliance_audit: '{% trans "Compliance Audit" %}',
+        fraud_detection: '{% trans "Fraud Detection" %}',
+        vat_validation: '{% trans "VAT Validation" %}',
+      };
+      return map[type] || type || '—';
+    },
+
+    scoreStrokeColor(score) {
+      const s = parseFloat(score);
+      if (s >= 90) return '#10b981';
+      if (s >= 70) return '#f59e0b';
+      if (s >= 50) return '#f97316';
+      return '#ef4444';
+    },
+
+    scoreTextColor(score) {
+      const s = parseFloat(score);
+      if (s >= 90) return 'text-emerald-600 dark:text-emerald-400';
+      if (s >= 70) return 'text-amber-600 dark:text-amber-400';
+      if (s >= 50) return 'text-orange-600 dark:text-orange-400';
+      return 'text-red-600 dark:text-red-400';
+    },
+
+    scoreLabel(score) {
+      const s = parseFloat(score);
+      if (isNaN(s)) return '{% trans "Not scored" %}';
+      if (s >= 90) return '{% trans "Excellent" %}';
+      if (s >= 70) return '{% trans "Good" %}';
+      if (s >= 50) return '{% trans "Needs review" %}';
+      return '{% trans "Critical issues" %}';
+    },
+
+    riskBgClass(level) {
+      const map = {
+        LOW: 'bg-emerald-100 dark:bg-emerald-900/30',
+        MEDIUM: 'bg-amber-100 dark:bg-amber-900/30',
+        HIGH: 'bg-orange-100 dark:bg-orange-900/30',
+        CRITICAL: 'bg-red-100 dark:bg-red-900/30',
+      };
+      return map[(level || '').toUpperCase()] || 'bg-slate-100 dark:bg-slate-700';
+    },
+
+    riskIcon(level) {
+      const map = { LOW: 'shield-check', MEDIUM: 'shield-alert', HIGH: 'alert-triangle', CRITICAL: 'x-octagon' };
+      return map[(level || '').toUpperCase()] || 'shield';
+    },
+
+    riskIconClass(level) {
+      const map = {
+        LOW: 'text-emerald-600 dark:text-emerald-400',
+        MEDIUM: 'text-amber-600 dark:text-amber-400',
+        HIGH: 'text-orange-600 dark:text-orange-400',
+        CRITICAL: 'text-red-600 dark:text-red-400',
+      };
+      return map[(level || '').toUpperCase()] || 'text-slate-500';
+    },
+
+    riskBadgeClass(level) {
+      const map = { LOW: 'badge-low', MEDIUM: 'badge-medium', HIGH: 'badge-high', CRITICAL: 'badge-critical' };
+      return map[(level || '').toUpperCase()] || 'badge bg-slate-100 dark:bg-slate-700 text-slate-600';
+    },
+
+    statusBadgeClass(status) {
+      const map = {
+        completed: 'badge-low',
+        failed: 'badge-critical',
+        running: 'badge-medium',
+        pending: 'badge bg-slate-100 dark:bg-slate-700 text-slate-600',
+        queued: 'badge-info',
+        canceled: 'badge bg-slate-200 dark:bg-slate-700 text-slate-500',
+      };
+      return map[status] || 'badge-info';
+    },
+
+    issueBorderClass(severity) {
+      const map = {
+        critical: 'border-red-500',
+        high: 'border-orange-500',
+        medium: 'border-amber-400',
+        low: 'border-emerald-400',
+      };
+      return map[severity] || 'border-slate-300';
+    },
+
+    issueIconBg(severity) {
+      const map = {
+        critical: 'bg-red-100 dark:bg-red-900/30',
+        high: 'bg-orange-100 dark:bg-orange-900/30',
+        medium: 'bg-amber-100 dark:bg-amber-900/30',
+        low: 'bg-emerald-100 dark:bg-emerald-900/30',
+      };
+      return map[severity] || 'bg-slate-100 dark:bg-slate-700';
+    },
+
+    issueIconColor(severity) {
+      const map = {
+        critical: 'text-red-600 dark:text-red-400',
+        high: 'text-orange-600 dark:text-orange-400',
+        medium: 'text-amber-600 dark:text-amber-400',
+        low: 'text-emerald-600 dark:text-emerald-400',
+      };
+      return map[severity] || 'text-slate-500';
+    },
+
+    formatDuration(seconds) {
+      if (seconds == null) return '—';
+      const s = parseFloat(seconds);
+      if (s < 1) return (s * 1000).toFixed(0) + ' ms';
+      if (s < 60) return s.toFixed(1) + ' s';
+      return Math.floor(s / 60) + 'm ' + (s % 60).toFixed(0) + 's';
+    },
+  };
+}
+</script>
+{% endblock %}

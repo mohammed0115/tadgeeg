@@ -1,0 +1,226 @@
+{% extends "layouts/base_vendor_dashboard.html" %}
+{% load i18n %}
+{% block page_title %}الفواتير والاشتراك{% endblock %}
+{% block breadcrumb_current %}الاشتراك{% endblock %}
+
+{% block content %}
+<div x-data="billingManager()" x-init="init()" class="space-y-6 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">الفواتير والاشتراك</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">إدارة خطة الاشتراك والفواتير</p>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <template x-if="loading">
+    <div class="animate-pulse space-y-4">
+      <div class="card p-6 space-y-3">
+        <template x-for="i in [1,2,3]" :key="i">
+          <div class="h-10 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+        </template>
+      </div>
+    </div>
+  </template>
+
+  <template x-if="!loading">
+    <div class="space-y-6">
+
+      <!-- Current Plan -->
+      <div class="card p-6">
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">الخطة الحالية</p>
+            <div class="flex items-center gap-3">
+              <h2 class="text-2xl font-black text-slate-900 dark:text-white" x-text="subscription.plan_name || 'مجاني'"></h2>
+              <span class="badge"
+                    :class="{
+                      'badge-green':  subscription.status === 'active',
+                      'badge-amber':  subscription.status === 'trial',
+                      'badge-red':    subscription.status === 'expired' || subscription.status === 'cancelled',
+                    }"
+                    x-text="subscription.status === 'active' ? 'نشط' : subscription.status === 'trial' ? 'تجريبي' : subscription.status === 'expired' ? 'منتهي' : subscription.status || '—'">
+              </span>
+            </div>
+            <p class="text-3xl font-black mt-2">
+              <span x-text="subscription.price || '0'"></span>
+              <span class="text-base font-semibold text-slate-500"> SAR / <span x-text="subscription.billing_period === 'year' ? 'سنة' : 'شهر'"></span></span>
+            </p>
+          </div>
+          <div class="text-right">
+            <p class="text-xs text-slate-400">تاريخ التجديد</p>
+            <p class="text-sm font-semibold text-slate-700 dark:text-slate-200"
+               x-text="subscription.next_billing_date ? new Date(subscription.next_billing_date).toLocaleDateString('ar-SA') : '—'"></p>
+          </div>
+        </div>
+
+        <!-- Plan Features -->
+        <div class="mt-5 pt-5 border-t border-slate-100 dark:border-slate-700/30">
+          <p class="text-xs font-semibold text-slate-500 mb-3">ما تتضمنه خطتك</p>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+              <i data-lucide="hard-drive" class="w-4 h-4 text-blue-500 flex-shrink-0"></i>
+              <span x-text="(subscription.storage_limit_human || '1 GB') + ' تخزين'"></span>
+            </div>
+            <div class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+              <i data-lucide="shield-check" class="w-4 h-4 text-violet-500 flex-shrink-0"></i>
+              <span x-text="(subscription.audit_limit || 'غير محدود') + ' مراجعة / شهر'"></span>
+            </div>
+            <div class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+              <i data-lucide="users" class="w-4 h-4 text-emerald-500 flex-shrink-0"></i>
+              <span x-text="(subscription.team_limit || 1) + ' أعضاء فريق'"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-5 flex gap-3">
+          <button @click="upgradePlan()" class="btn-primary">
+            <i data-lucide="arrow-up-circle" class="w-4 h-4"></i>
+            ترقية الخطة
+          </button>
+          <button x-show="subscription.status === 'active'" @click="cancelSubscription()" class="btn-ghost text-xs text-red-500">
+            إلغاء الاشتراك
+          </button>
+        </div>
+      </div>
+
+      <!-- Usage Stats -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="card p-5">
+          <p class="text-xs font-semibold text-slate-500 mb-2">الملفات هذا الشهر</p>
+          <p class="text-2xl font-black text-slate-900 dark:text-white"
+             x-text="(usage.files_this_month || 0).toLocaleString()"></p>
+          <div class="progress-track mt-3">
+            <div class="progress-fill bg-blue-500"
+                 :style="'width:' + Math.min((usage.files_percent || 0), 100) + '%'"></div>
+          </div>
+        </div>
+        <div class="card p-5">
+          <p class="text-xs font-semibold text-slate-500 mb-2">المراجعات هذا الشهر</p>
+          <p class="text-2xl font-black text-slate-900 dark:text-white"
+             x-text="(usage.audits_this_month || 0).toLocaleString()"></p>
+          <div class="progress-track mt-3">
+            <div class="progress-fill bg-violet-500"
+                 :style="'width:' + Math.min((usage.audits_percent || 0), 100) + '%'"></div>
+          </div>
+        </div>
+        <div class="card p-5">
+          <p class="text-xs font-semibold text-slate-500 mb-2">التخزين المستخدم</p>
+          <p class="text-2xl font-black text-slate-900 dark:text-white"
+             x-text="usage.storage_used_human || '0 MB'"></p>
+          <div class="progress-track mt-3">
+            <div class="progress-fill bg-emerald-500"
+                 :style="'width:' + Math.min((usage.storage_percent || 0), 100) + '%'"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Invoices -->
+      <div class="card overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
+          <h3 class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <i data-lucide="receipt" class="w-4 h-4 text-emerald-500"></i>
+            سجل الفواتير
+          </h3>
+        </div>
+        <template x-if="invoices.length === 0">
+          <div class="px-5 py-10 text-center text-slate-400 text-sm">لا توجد فواتير بعد</div>
+        </template>
+        <template x-if="invoices.length > 0">
+          <div class="overflow-x-auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>رقم الفاتورة</th>
+                  <th>الخطة</th>
+                  <th>المبلغ</th>
+                  <th>التاريخ</th>
+                  <th>الحالة</th>
+                  <th>تنزيل</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template x-for="inv in invoices" :key="inv.id">
+                  <tr>
+                    <td class="font-mono text-xs text-slate-600 dark:text-slate-400" x-text="inv.invoice_number || inv.id"></td>
+                    <td class="text-sm text-slate-600 dark:text-slate-400" x-text="inv.plan_name || '—'"></td>
+                    <td class="font-semibold text-slate-800 dark:text-white" x-text="(inv.amount || 0) + ' SAR'"></td>
+                    <td class="text-xs text-slate-400"
+                        x-text="inv.created_at ? new Date(inv.created_at).toLocaleDateString('ar-SA') : '—'"></td>
+                    <td>
+                      <span class="badge"
+                            :class="{
+                              'badge-green':  inv.status === 'paid',
+                              'badge-amber':  inv.status === 'pending',
+                              'badge-red':    inv.status === 'failed',
+                            }"
+                            x-text="inv.status === 'paid' ? 'مدفوعة' : inv.status === 'pending' ? 'معلقة' : 'فاشلة'">
+                      </span>
+                    </td>
+                    <td>
+                      <a :href="'/api/v1/billing/invoices/' + inv.id + '/download/'" target="_blank"
+                         class="btn-ghost text-xs px-2 py-1">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                      </a>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </template>
+      </div>
+    </div>
+  </template>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function billingManager() {
+  return {
+    subscription: {}, usage: {}, invoices: [], loading: true,
+
+    async init() {
+      try {
+        const [subRes, usageRes, invRes] = await Promise.all([
+          apiFetch('/api/v1/billing/subscription/'),
+          apiFetch('/api/v1/billing/usage/'),
+          apiFetch('/api/v1/billing/invoices/'),
+        ]);
+        if (subRes && subRes.ok)   this.subscription = await subRes.json();
+        if (usageRes && usageRes.ok) this.usage = await usageRes.json();
+        if (invRes && invRes.ok) {
+          const data = await invRes.json();
+          this.invoices = Array.isArray(data) ? data : (data.results || []);
+        }
+      } catch (e) {
+        notify('تعذّر تحميل بيانات الاشتراك', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    upgradePlan() {
+      window.location.href = '/dashboard/billing/upgrade/';
+    },
+
+    async cancelSubscription() {
+      if (!confirm('هل أنت متأكد من إلغاء اشتراكك؟ ستفقد الميزات المتقدمة في نهاية الدورة الحالية.')) return;
+      const res = await apiFetch('/api/v1/billing/subscription/cancel/', { method: 'POST' });
+      if (res && res.ok) {
+        notify('تم تقديم طلب إلغاء الاشتراك', 'info');
+        this.subscription.status = 'cancelled';
+        this.$nextTick(() => lucide.createIcons());
+      } else {
+        notify('فشل إلغاء الاشتراك', 'error');
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

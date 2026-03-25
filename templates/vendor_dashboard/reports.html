@@ -1,0 +1,161 @@
+{% extends "layouts/base_vendor_dashboard.html" %}
+{% load i18n %}
+{% block page_title %}التقارير{% endblock %}
+{% block breadcrumb_current %}التقارير{% endblock %}
+
+{% block content %}
+<div x-data="reportsManager()" x-init="init()" class="space-y-5 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">التقارير</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">تقارير المراجعة المالية والامتثال</p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card p-4 flex flex-wrap items-center gap-3">
+    <select x-model="filter.type" @change="load()" class="select">
+      <option value="">جميع الأنواع</option>
+      <option value="audit">مراجعة مالية</option>
+      <option value="compliance">امتثال ZATCA</option>
+      <option value="fraud">كشف احتيال</option>
+      <option value="risk">تحليل مخاطر</option>
+    </select>
+    <input type="text" x-model.debounce.300ms="filter.search" @input="load()"
+           class="input max-w-xs" placeholder="البحث...">
+    <span class="text-xs text-slate-500 mr-auto" x-text="total + ' تقرير'"></span>
+  </div>
+
+  <!-- Reports Grid -->
+  <template x-if="loading">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 animate-pulse">
+      <template x-for="i in [1,2,3,4,5,6]" :key="i">
+        <div class="card p-5 space-y-3">
+          <div class="h-5 bg-slate-200 dark:bg-slate-700 rounded w-3/4"></div>
+          <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
+          <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-full"></div>
+        </div>
+      </template>
+    </div>
+  </template>
+
+  <template x-if="!loading && reports.length === 0">
+    <div class="card p-16 text-center">
+      <i data-lucide="file-bar-chart" class="w-14 h-14 mx-auto text-slate-300 dark:text-slate-600 mb-4"></i>
+      <p class="text-slate-500 text-sm">لا توجد تقارير بعد</p>
+    </div>
+  </template>
+
+  <template x-if="!loading && reports.length > 0">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <template x-for="report in reports" :key="report.id">
+        <div class="card p-5 space-y-3 hover:shadow-md transition-shadow cursor-pointer"
+             @click="openReport(report)">
+          <div class="flex items-start justify-between">
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                 :class="{
+                   'bg-violet-50 dark:bg-violet-900/30': report.report_type === 'audit',
+                   'bg-blue-50 dark:bg-blue-900/30':    report.report_type === 'compliance',
+                   'bg-red-50 dark:bg-red-900/30':      report.report_type === 'fraud',
+                   'bg-amber-50 dark:bg-amber-900/30':  report.report_type === 'risk',
+                 }">
+              <i :data-lucide="report.report_type === 'audit' ? 'shield-check' : report.report_type === 'compliance' ? 'check-circle' : report.report_type === 'fraud' ? 'alert-triangle' : 'bar-chart-2'"
+                 class="w-5 h-5"
+                 :class="{
+                   'text-violet-600': report.report_type === 'audit',
+                   'text-blue-600':   report.report_type === 'compliance',
+                   'text-red-600':    report.report_type === 'fraud',
+                   'text-amber-600':  report.report_type === 'risk',
+                 }"></i>
+            </div>
+            <span class="badge-slate text-[10px] uppercase" x-text="report.report_type || 'audit'"></span>
+          </div>
+          <div>
+            <p class="font-bold text-slate-800 dark:text-white text-sm truncate"
+               x-text="report.title || report.document_name || 'تقرير #' + report.id"></p>
+            <p class="text-xs text-slate-400 mt-1"
+               x-text="report.created_at ? new Date(report.created_at).toLocaleDateString('ar-SA') : ''"></p>
+          </div>
+          <div class="flex items-center justify-between pt-1">
+            <div class="flex items-center gap-3">
+              <template x-if="report.risk_score !== undefined">
+                <div class="text-center">
+                  <p class="text-[10px] text-slate-400">مخاطر</p>
+                  <p class="text-sm font-black"
+                     :class="{
+                       'text-emerald-600': report.risk_score < 30,
+                       'text-amber-600':   report.risk_score >= 30 && report.risk_score < 70,
+                       'text-red-600':     report.risk_score >= 70,
+                     }"
+                     x-text="report.risk_score + '%'"></p>
+                </div>
+              </template>
+              <template x-if="report.compliance_score !== undefined">
+                <div class="text-center">
+                  <p class="text-[10px] text-slate-400">امتثال</p>
+                  <p class="text-sm font-black"
+                     :class="{
+                       'text-emerald-600': report.compliance_score >= 80,
+                       'text-amber-600':   report.compliance_score >= 50,
+                       'text-red-600':     report.compliance_score < 50,
+                     }"
+                     x-text="report.compliance_score + '%'"></p>
+                </div>
+              </template>
+            </div>
+            <div class="flex items-center gap-1">
+              <button @click.stop="downloadReport(report)" class="btn-ghost text-xs px-2 py-1">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </template>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function reportsManager() {
+  return {
+    reports: [], loading: true, total: 0,
+    filter: { type: '', search: '' },
+
+    async load() {
+      this.loading = true;
+      try {
+        const params = new URLSearchParams();
+        if (this.filter.type)   params.set('report_type', this.filter.type);
+        if (this.filter.search) params.set('search', this.filter.search);
+        const res = await apiFetch('/api/v1/reports/?' + params.toString());
+        if (res && res.ok) {
+          const data = await res.json();
+          this.reports = Array.isArray(data) ? data : (data.results || []);
+          this.total = data.count || this.reports.length;
+        }
+      } catch (e) {
+        notify('تعذّر تحميل التقارير', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async init() { await this.load(); },
+
+    openReport(report) {
+      window.open(`/api/dashboard/reports/${report.id}/download/`, '_blank');
+    },
+
+    downloadReport(report) {
+      window.open(`/api/dashboard/reports/${report.id}/download/`, '_blank');
+    },
+  };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,321 @@
+{% extends "phase2/base_phase2.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Audit Dashboard" %}{% endblock %}
+{% block page_title %}{% trans "Audit Dashboard" %}{% endblock %}
+
+{% block phase2_content %}
+<div x-data="auditDashboard()" x-init="init()" class="space-y-6">
+
+  <!-- KPI Row 1: 4 cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+
+    <!-- Total Files -->
+    <div class="card p-5 flex items-start gap-4">
+      <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
+        <i data-lucide="files" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{% trans "Total Files" %}</p>
+        <template x-if="loading">
+          <div class="mt-1.5 h-7 w-20 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+        </template>
+        <template x-if="!loading">
+          <p class="mt-0.5 text-2xl font-black text-slate-800 dark:text-white"
+             x-text="(metrics.total_files || 0).toLocaleString()"></p>
+        </template>
+      </div>
+    </div>
+
+    <!-- Running Audits -->
+    <div class="card p-5 flex items-start gap-4">
+      <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center"
+           :class="(metrics.running_audits || 0) > 0 ? 'animate-pulse' : ''">
+        <i data-lucide="loader" class="w-6 h-6 text-amber-600 dark:text-amber-400"></i>
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{% trans "Running Audits" %}</p>
+        <template x-if="loading">
+          <div class="mt-1.5 h-7 w-16 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+        </template>
+        <template x-if="!loading">
+          <p class="mt-0.5 text-2xl font-black"
+             :class="(metrics.running_audits || 0) > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-white'"
+             x-text="(metrics.running_audits || 0).toLocaleString()"></p>
+        </template>
+      </div>
+    </div>
+
+    <!-- High Risk Files -->
+    <div class="card p-5 flex items-start gap-4">
+      <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-red-50 dark:bg-red-900/30 flex items-center justify-center">
+        <i data-lucide="alert-triangle" class="w-6 h-6 text-red-600 dark:text-red-400"></i>
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{% trans "High Risk Files" %}</p>
+        <template x-if="loading">
+          <div class="mt-1.5 h-7 w-14 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+        </template>
+        <template x-if="!loading">
+          <p class="mt-0.5 text-2xl font-black"
+             :class="(metrics.high_risk_files || 0) > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-white'"
+             x-text="(metrics.high_risk_files || 0).toLocaleString()"></p>
+        </template>
+      </div>
+    </div>
+
+    <!-- Average Score -->
+    <div class="card p-5 flex items-start gap-4">
+      <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
+        <i data-lucide="bar-chart-2" class="w-6 h-6 text-emerald-600 dark:text-emerald-400"></i>
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{% trans "Average Score" %}</p>
+        <template x-if="loading">
+          <div class="mt-1.5 h-7 w-20 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+        </template>
+        <template x-if="!loading">
+          <p class="mt-0.5 text-2xl font-black text-emerald-600 dark:text-emerald-400">
+            <span x-text="parseFloat(metrics.average_score || 0).toFixed(1)"></span>
+            <span class="text-sm font-normal text-slate-400">/100</span>
+          </p>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI Row 2: 2 more KPIs -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+    <!-- Total Audits -->
+    <div class="card p-5 flex items-start gap-4">
+      <div class="flex-shrink-0 w-12 h-12 rounded-xl bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center">
+        <i data-lucide="search" class="w-6 h-6 text-violet-600 dark:text-violet-400"></i>
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{% trans "Total Audits" %}</p>
+        <template x-if="loading">
+          <div class="mt-1.5 h-7 w-20 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+        </template>
+        <template x-if="!loading">
+          <p class="mt-0.5 text-2xl font-black text-slate-800 dark:text-white"
+             x-text="(metrics.total_audits || 0).toLocaleString()"></p>
+        </template>
+        <template x-if="!loading">
+          <p class="text-xs text-slate-400 mt-0.5">
+            <span x-text="(metrics.completed_audits || 0).toLocaleString()"></span> {% trans "completed" %}
+          </p>
+        </template>
+      </div>
+    </div>
+
+    <!-- Failed Audits -->
+    <div class="card p-5 flex items-start gap-4">
+      <div class="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"
+           :class="(metrics.failed_audits || 0) > 0 ? 'bg-red-50 dark:bg-red-900/30' : 'bg-slate-100 dark:bg-slate-700/50'">
+        <i data-lucide="x-circle" class="w-6 h-6"
+           :class="(metrics.failed_audits || 0) > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-400'"></i>
+      </div>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{% trans "Failed Audits" %}</p>
+        <template x-if="loading">
+          <div class="mt-1.5 h-7 w-14 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+        </template>
+        <template x-if="!loading">
+          <p class="mt-0.5 text-2xl font-black"
+             :class="(metrics.failed_audits || 0) > 0 ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-white'"
+             x-text="(metrics.failed_audits || 0).toLocaleString()"></p>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom row: Recent Activity + Quick Actions -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Recent Activity -->
+    <div class="lg:col-span-2 card overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/30 flex items-center justify-between">
+        <h2 class="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+          <i data-lucide="activity" class="w-4 h-4 text-blue-500"></i>
+          {% trans "Recent Activity" %}
+        </h2>
+        <a href="/activity/" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">{% trans "View all" %}</a>
+      </div>
+
+      <!-- Loading skeleton -->
+      <template x-if="loading">
+        <div class="divide-y divide-slate-100 dark:divide-slate-700/30">
+          <template x-for="i in [1,2,3,4,5]" :key="i">
+            <div class="px-5 py-3.5 flex items-start gap-3">
+              <div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse flex-shrink-0"></div>
+              <div class="flex-1 space-y-1.5">
+                <div class="h-3.5 w-3/4 rounded bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+                <div class="h-3 w-1/3 rounded bg-slate-200 dark:bg-slate-700 animate-pulse"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+
+      <!-- Empty state -->
+      <template x-if="!loading && recentActivity.length === 0">
+        <div class="py-12 flex flex-col items-center gap-3 text-slate-400">
+          <i data-lucide="clock" class="w-10 h-10 opacity-40"></i>
+          <p class="text-sm">{% trans "No recent activity" %}</p>
+        </div>
+      </template>
+
+      <!-- Activity list -->
+      <template x-if="!loading && recentActivity.length > 0">
+        <div class="divide-y divide-slate-100 dark:divide-slate-700/30 max-h-96 overflow-y-auto">
+          <template x-for="item in recentActivity" :key="item.id">
+            <div class="px-5 py-3.5 flex items-start gap-3 hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors">
+              <div class="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                   :class="activityIconBg(item.action)">
+                <i :data-lucide="activityIcon(item.action)" class="w-4 h-4"></i>
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="text-sm text-slate-700 dark:text-slate-200 leading-snug" x-text="item.description || item.action"></p>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <span class="text-xs text-slate-400" x-text="item.user_email || item.user || '—'"></span>
+                  <span class="text-slate-300 dark:text-slate-600 text-xs">·</span>
+                  <span class="text-xs text-slate-400" x-text="relativeTime(item.timestamp || item.created_at)"></span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </template>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card p-5 space-y-4">
+      <h2 class="font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+        <i data-lucide="zap" class="w-4 h-4 text-amber-500"></i>
+        {% trans "Quick Actions" %}
+      </h2>
+      <p class="text-xs text-slate-500 dark:text-slate-400">{% trans "Common tasks to get started quickly." %}</p>
+
+      <div class="space-y-2.5 pt-1">
+        <a href="/files/?action=upload"
+           class="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/40 hover:border-blue-300 dark:hover:border-blue-600/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all group">
+          <div class="w-9 h-9 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-600 transition-colors">
+            <i data-lucide="upload-cloud" class="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:text-white"></i>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">{% trans "Upload File" %}</p>
+            <p class="text-xs text-slate-400">{% trans "PDF, Excel, CSV, JSON, Image" %}</p>
+          </div>
+          <i data-lucide="chevron-left" class="w-4 h-4 text-slate-300 mr-auto"></i>
+        </a>
+
+        <a href="/audits/?action=new"
+           class="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/40 hover:border-amber-300 dark:hover:border-amber-600/50 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-all group">
+          <div class="w-9 h-9 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center flex-shrink-0 group-hover:bg-amber-600 transition-colors">
+            <i data-lucide="play-circle" class="w-4 h-4 text-amber-600 dark:text-amber-400 group-hover:text-white"></i>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">{% trans "Run Audit" %}</p>
+            <p class="text-xs text-slate-400">{% trans "Analyze a file for issues" %}</p>
+          </div>
+          <i data-lucide="chevron-left" class="w-4 h-4 text-slate-300 mr-auto"></i>
+        </a>
+
+        <a href="/reports/phase2/?action=new"
+           class="flex items-center gap-3 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/40 hover:border-emerald-300 dark:hover:border-emerald-600/50 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all group">
+          <div class="w-9 h-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-600 transition-colors">
+            <i data-lucide="file-text" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 group-hover:text-white"></i>
+          </div>
+          <div>
+            <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">{% trans "Generate Report" %}</p>
+            <p class="text-xs text-slate-400">{% trans "Export audit summary" %}</p>
+          </div>
+          <i data-lucide="chevron-left" class="w-4 h-4 text-slate-300 mr-auto"></i>
+        </a>
+      </div>
+
+      <!-- Summary bar -->
+      <template x-if="!loading">
+        <div class="pt-2 border-t border-slate-100 dark:border-slate-700/30 space-y-2">
+          <p class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{% trans "Audit Health" %}</p>
+          <div class="progress-track">
+            <div class="progress-fill bg-emerald-500"
+                 :style="`width:${metrics.total_audits > 0 ? Math.round(((metrics.completed_audits || 0)/metrics.total_audits)*100) : 0}%`"></div>
+          </div>
+          <p class="text-xs text-slate-400">
+            <span x-text="metrics.total_audits > 0 ? Math.round(((metrics.completed_audits || 0)/metrics.total_audits)*100) : 0"></span>{% trans "% completed" %}
+          </p>
+        </div>
+      </template>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function auditDashboard() {
+  return {
+    metrics: {},
+    recentActivity: [],
+    loading: true,
+
+    async init() {
+      try {
+        const [metricsData, activityData] = await Promise.all([
+          apiFetch('/reporting/dashboard/metrics/'),
+          apiFetch('/reporting/dashboard/recent-activity/'),
+        ]);
+        this.metrics = metricsData || {};
+        const raw = activityData || [];
+        this.recentActivity = Array.isArray(raw) ? raw.slice(0, 10) : (raw.results || []).slice(0, 10);
+      } catch (e) {
+        notify(e.message || '{% trans "Failed to load dashboard data" %}', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    activityIcon(action) {
+      const map = {
+        file_uploaded: 'upload-cloud',
+        file_archived: 'archive',
+        file_restored: 'refresh-cw',
+        file_deleted: 'trash-2',
+        folder_created: 'folder-plus',
+        folder_deleted: 'folder-minus',
+        audit_started: 'play-circle',
+        audit_completed: 'check-circle',
+        audit_failed: 'x-circle',
+        report_generated: 'file-text',
+        report_downloaded: 'download',
+        login: 'log-in',
+        logout: 'log-out',
+      };
+      return map[action] || 'circle';
+    },
+
+    activityIconBg(action) {
+      if (!action) return 'bg-slate-400';
+      if (action.startsWith('file')) return 'bg-blue-500';
+      if (action.startsWith('folder')) return 'bg-violet-500';
+      if (action.startsWith('audit')) return 'bg-amber-500';
+      if (action.startsWith('report')) return 'bg-emerald-500';
+      return 'bg-slate-400';
+    },
+
+    relativeTime(str) {
+      if (!str) return '';
+      const diff = Math.floor((Date.now() - new Date(str).getTime()) / 1000);
+      if (diff < 60) return diff + '{% trans "s ago" %}';
+      if (diff < 3600) return Math.floor(diff / 60) + '{% trans "m ago" %}';
+      if (diff < 86400) return Math.floor(diff / 3600) + '{% trans "h ago" %}';
+      return Math.floor(diff / 86400) + '{% trans "d ago" %}';
+    },
+  };
+}
+</script>
+{% endblock %}

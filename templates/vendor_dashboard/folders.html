@@ -1,0 +1,222 @@
+{% extends "layouts/base_vendor_dashboard.html" %}
+{% load i18n %}
+{% block page_title %}المجلدات{% endblock %}
+{% block breadcrumb_current %}المجلدات{% endblock %}
+
+{% block content %}
+<div x-data="foldersManager()" x-init="init()" class="space-y-5 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">المجلدات</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">تنظيم ملفاتك في مجلدات</p>
+    </div>
+    <button @click="openCreate()" class="btn-primary">
+      <i data-lucide="folder-plus" class="w-4 h-4"></i>
+      مجلد جديد
+    </button>
+  </div>
+
+  <!-- Breadcrumb path -->
+  <div class="flex items-center gap-1 text-sm flex-wrap">
+    <button @click="navigateTo(null)" class="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+      <i data-lucide="home" class="w-3.5 h-3.5"></i>
+      الجذر
+    </button>
+    <template x-for="(crumb, idx) in breadcrumb" :key="crumb.id">
+      <div class="flex items-center gap-1">
+        <i data-lucide="chevron-left" class="w-3.5 h-3.5 text-slate-400"></i>
+        <button @click="navigateTo(crumb.id)"
+                class="text-sm"
+                :class="idx === breadcrumb.length - 1 ? 'font-semibold text-slate-700 dark:text-slate-200' : 'text-blue-600 dark:text-blue-400 hover:underline'"
+                x-text="crumb.name"></button>
+      </div>
+    </template>
+  </div>
+
+  <!-- Loading -->
+  <template x-if="loading">
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 animate-pulse">
+      <template x-for="i in [1,2,3,4,5,6]" :key="i">
+        <div class="card p-4 space-y-2">
+          <div class="w-10 h-10 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+          <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded"></div>
+        </div>
+      </template>
+    </div>
+  </template>
+
+  <!-- Folders Grid -->
+  <template x-if="!loading">
+    <div>
+      <template x-if="folders.length === 0 && files.length === 0">
+        <div class="card p-12 text-center">
+          <i data-lucide="folder-open" class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3"></i>
+          <p class="text-slate-500 text-sm">المجلد فارغ</p>
+          <button @click="openCreate()" class="btn-ghost text-xs mt-4 mx-auto">
+            <i data-lucide="folder-plus" class="w-4 h-4"></i>
+            إنشاء مجلد فرعي
+          </button>
+        </div>
+      </template>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+        <!-- Sub-folders -->
+        <template x-for="folder in folders" :key="folder.id">
+          <div class="card p-4 cursor-pointer hover:shadow-md transition-shadow group"
+               @click="navigateTo(folder.id)">
+            <div class="flex items-start justify-between mb-2">
+              <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+                <i data-lucide="folder" class="w-5 h-5 text-amber-500"></i>
+              </div>
+              <button @click.stop="deleteFolder(folder.id)"
+                      class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity p-0.5">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+            <p class="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate" x-text="folder.name"></p>
+            <p class="text-[10px] text-slate-400" x-text="(folder.files_count || 0) + ' ملف'"></p>
+          </div>
+        </template>
+
+        <!-- Files in folder -->
+        <template x-for="file in files" :key="file.id">
+          <div class="card p-4 cursor-pointer hover:shadow-md transition-shadow group"
+               @click="window.location.href='/dashboard/files/'+file.id+'/'">
+            <div class="w-10 h-10 rounded-xl mb-2 flex items-center justify-center"
+                 :class="{
+                   'bg-red-50 dark:bg-red-900/20':    file.file_type === 'pdf',
+                   'bg-green-50 dark:bg-green-900/20': file.file_type === 'excel',
+                   'bg-blue-50 dark:bg-blue-900/20':   file.file_type === 'csv',
+                   'bg-slate-50 dark:bg-slate-700/40': !file.file_type,
+                 }">
+              <i :data-lucide="file.file_type === 'pdf' ? 'file-text' : file.file_type === 'excel' ? 'table-2' : 'file'"
+                 class="w-5 h-5 text-slate-500"></i>
+            </div>
+            <p class="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate" x-text="file.original_name || file.name"></p>
+            <p class="text-[10px] text-slate-400" x-text="file.size_human || ''"></p>
+          </div>
+        </template>
+      </div>
+    </div>
+  </template>
+
+  <!-- Create Folder Modal -->
+  <template x-if="showModal">
+    <div class="modal-backdrop" @click.self="showModal=false">
+      <div class="modal-box max-w-sm">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/30">
+          <h3 class="font-bold text-slate-800 dark:text-white">مجلد جديد</h3>
+          <button @click="showModal=false"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button>
+        </div>
+        <div class="p-6 space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">اسم المجلد</label>
+            <input type="text" x-model="newFolderName" @keyup.enter="createFolder()" class="input"
+                   placeholder="مثال: فواتير 2025" autofocus>
+          </div>
+        </div>
+        <div class="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-700/30">
+          <button @click="showModal=false" class="btn-ghost">إلغاء</button>
+          <button @click="createFolder()" :disabled="!newFolderName.trim() || saving" class="btn-primary">
+            <i data-lucide="folder-plus" class="w-4 h-4"></i>
+            إنشاء
+          </button>
+        </div>
+      </div>
+    </div>
+  </template>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function foldersManager() {
+  return {
+    folders: [], files: [], loading: true, saving: false,
+    currentFolder: null, breadcrumb: [],
+    showModal: false, newFolderName: '',
+
+    async init() { await this.load(); },
+
+    async load() {
+      this.loading = true;
+      try {
+        const url = this.currentFolder
+          ? `/api/v1/documents/folders/${this.currentFolder}/contents/`
+          : '/api/v1/documents/folders/';
+        const res = await apiFetch(url);
+        if (res && res.ok) {
+          const data = await res.json();
+          this.folders = data.folders || [];
+          this.files   = data.files   || [];
+        }
+      } catch (e) {
+        notify('تعذّر تحميل المجلدات', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async navigateTo(folderId) {
+      if (folderId === null) {
+        this.currentFolder = null;
+        this.breadcrumb = [];
+      } else {
+        const idx = this.breadcrumb.findIndex(b => b.id === folderId);
+        if (idx !== -1) {
+          this.breadcrumb = this.breadcrumb.slice(0, idx + 1);
+        } else {
+          const folder = this.folders.find(f => f.id === folderId);
+          if (folder) this.breadcrumb.push({ id: folder.id, name: folder.name });
+        }
+        this.currentFolder = folderId;
+      }
+      await this.load();
+    },
+
+    openCreate() {
+      this.newFolderName = '';
+      this.showModal = true;
+      this.$nextTick(() => { lucide.createIcons(); document.querySelector('input[x-model="newFolderName"]')?.focus(); });
+    },
+
+    async createFolder() {
+      if (!this.newFolderName.trim()) return;
+      this.saving = true;
+      try {
+        const res = await apiFetch('/api/v1/documents/folders/', {
+          method: 'POST',
+          body: JSON.stringify({ name: this.newFolderName.trim(), parent: this.currentFolder }),
+        });
+        if (res && res.ok) {
+          const folder = await res.json();
+          this.folders.push(folder);
+          notify('تم إنشاء المجلد', 'success');
+          this.showModal = false;
+          this.$nextTick(() => lucide.createIcons());
+        } else {
+          notify('فشل إنشاء المجلد', 'error');
+        }
+      } catch (e) {
+        notify('فشل إنشاء المجلد', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async deleteFolder(id) {
+      if (!confirm('هل أنت متأكد من حذف هذا المجلد وكل محتوياته؟')) return;
+      const res = await apiFetch(`/api/v1/documents/folders/${id}/`, { method: 'DELETE' });
+      if (res && (res.ok || res.status === 204)) {
+        this.folders = this.folders.filter(f => f.id !== id);
+        notify('تم حذف المجلد', 'success');
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

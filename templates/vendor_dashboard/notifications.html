@@ -1,0 +1,296 @@
+{% extends "layouts/base_vendor_dashboard.html" %}
+{% load i18n %}
+{% block page_title %}الإشعارات{% endblock %}
+{% block breadcrumb_current %}الإشعارات{% endblock %}
+
+{% block content %}
+<div x-data="notificationsManager()" x-init="init()" class="space-y-5 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">الإشعارات</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">جميع تنبيهاتك ورسائل النظام</p>
+    </div>
+    <button @click="markAllRead()" x-show="unreadCount > 0" class="btn-ghost text-xs">
+      <i data-lucide="check-check" class="w-4 h-4"></i>
+      تحديد الكل كمقروء
+    </button>
+  </div>
+
+  <!-- Stats + Filter Bar -->
+  <div class="flex flex-wrap items-center gap-3">
+    <div class="flex gap-2">
+      <button @click="filter = ''; load()"
+              class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+              :class="filter === '' ? 'bg-primary-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'">
+        الكل
+        <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black"
+              :class="filter === '' ? 'bg-white/20' : 'bg-slate-200 dark:bg-slate-600'"
+              x-text="total"></span>
+      </button>
+      <button @click="filter = 'unread'; load()"
+              class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+              :class="filter === 'unread' ? 'bg-primary-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'">
+        غير مقروءة
+        <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black"
+              :class="filter === 'unread' ? 'bg-white/20' : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'"
+              x-text="unreadCount"></span>
+      </button>
+      <button @click="filter = 'read'; load()"
+              class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+              :class="filter === 'read' ? 'bg-primary-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'">
+        مقروءة
+      </button>
+    </div>
+
+    <select x-model="typeFilter" @change="load()" class="select text-xs mr-auto">
+      <option value="">جميع الأنواع</option>
+      <option value="audit_complete">اكتمال مراجعة</option>
+      <option value="audit_failed">فشل مراجعة</option>
+      <option value="high_risk">مخاطر عالية</option>
+      <option value="compliance_alert">تنبيه امتثال</option>
+      <option value="storage_warning">تحذير تخزين</option>
+      <option value="new_team_member">عضو جديد</option>
+      <option value="system">نظام</option>
+    </select>
+  </div>
+
+  <!-- Loading Skeleton -->
+  <template x-if="loading">
+    <div class="card overflow-hidden animate-pulse divide-y divide-slate-100 dark:divide-slate-700/30">
+      <template x-for="i in [1,2,3,4,5,6]" :key="i">
+        <div class="px-5 py-4 flex items-start gap-4">
+          <div class="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-700 flex-shrink-0"></div>
+          <div class="flex-1 space-y-2">
+            <div class="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4"></div>
+            <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
+          </div>
+          <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-20 flex-shrink-0"></div>
+        </div>
+      </template>
+    </div>
+  </template>
+
+  <!-- Empty State -->
+  <template x-if="!loading && notifications.length === 0">
+    <div class="card p-16 text-center">
+      <i data-lucide="bell-off" class="w-14 h-14 mx-auto text-slate-300 dark:text-slate-600 mb-4"></i>
+      <p class="text-slate-500 text-sm font-medium">لا توجد إشعارات</p>
+      <p class="text-slate-400 text-xs mt-1" x-show="filter !== ''">جرّب تغيير الفلتر لعرض إشعارات أخرى</p>
+    </div>
+  </template>
+
+  <!-- Notifications List -->
+  <template x-if="!loading && notifications.length > 0">
+    <div class="card overflow-hidden">
+      <div class="divide-y divide-slate-100 dark:divide-slate-700/30">
+        <template x-for="notif in notifications" :key="notif.id">
+          <div class="px-5 py-4 flex items-start gap-4 transition-colors cursor-pointer"
+               :class="!notif.is_read ? 'bg-blue-50/50 dark:bg-blue-900/10 hover:bg-blue-50 dark:hover:bg-blue-900/20' : 'hover:bg-slate-50 dark:hover:bg-slate-700/20'"
+               @click="markRead(notif)">
+
+            <!-- Icon -->
+            <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                 :class="{
+                   'bg-emerald-100 dark:bg-emerald-900/30': notif.notification_type === 'audit_complete',
+                   'bg-red-100 dark:bg-red-900/30':         notif.notification_type === 'audit_failed' || notif.notification_type === 'high_risk',
+                   'bg-amber-100 dark:bg-amber-900/30':     notif.notification_type === 'compliance_alert' || notif.notification_type === 'storage_warning',
+                   'bg-blue-100 dark:bg-blue-900/30':       notif.notification_type === 'new_team_member',
+                   'bg-slate-100 dark:bg-slate-700/40':     notif.notification_type === 'system' || !notif.notification_type,
+                 }">
+              <i :data-lucide="typeIcon(notif.notification_type)"
+                 class="w-5 h-5"
+                 :class="{
+                   'text-emerald-600': notif.notification_type === 'audit_complete',
+                   'text-red-600':     notif.notification_type === 'audit_failed' || notif.notification_type === 'high_risk',
+                   'text-amber-600':   notif.notification_type === 'compliance_alert' || notif.notification_type === 'storage_warning',
+                   'text-blue-600':    notif.notification_type === 'new_team_member',
+                   'text-slate-500':   notif.notification_type === 'system' || !notif.notification_type,
+                 }"></i>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <p class="text-sm font-semibold text-slate-800 dark:text-white"
+                   x-text="notif.title || typeLabelAr(notif.notification_type)"></p>
+                <span x-show="!notif.is_read"
+                      class="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></span>
+                <span class="badge text-[10px] uppercase flex-shrink-0"
+                      :class="{
+                        'badge-green':  notif.notification_type === 'audit_complete',
+                        'badge-red':    notif.notification_type === 'audit_failed' || notif.notification_type === 'high_risk',
+                        'badge-amber':  notif.notification_type === 'compliance_alert' || notif.notification_type === 'storage_warning',
+                        'badge-blue':   notif.notification_type === 'new_team_member',
+                        'badge-slate':  notif.notification_type === 'system' || !notif.notification_type,
+                      }"
+                      x-text="typeLabelAr(notif.notification_type)"></span>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2"
+                 x-text="notif.message || notif.body || ''"></p>
+              <template x-if="notif.action_url">
+                <a :href="notif.action_url" @click.stop
+                   class="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1 inline-flex items-center gap-1">
+                  <i data-lucide="arrow-left" class="w-3 h-3"></i>
+                  <span x-text="notif.action_label || 'عرض التفاصيل'"></span>
+                </a>
+              </template>
+            </div>
+
+            <!-- Time + Actions -->
+            <div class="flex flex-col items-end gap-2 flex-shrink-0">
+              <p class="text-xs text-slate-400"
+                 x-text="notif.created_at ? timeAgo(notif.created_at) : ''"></p>
+              <button @click.stop="deleteNotification(notif.id)"
+                      class="text-slate-300 hover:text-red-400 transition p-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- Pagination -->
+      <template x-if="totalPages > 1">
+        <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-700/30 flex items-center justify-between">
+          <p class="text-xs text-slate-500" x-text="'عرض ' + notifications.length + ' من ' + total"></p>
+          <div class="flex items-center gap-2">
+            <button @click="page--; load()" :disabled="page <= 1"
+                    class="btn-ghost text-xs px-3 py-1.5 disabled:opacity-40">
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+            <span class="text-xs text-slate-500" x-text="page + ' / ' + totalPages"></span>
+            <button @click="page++; load()" :disabled="page >= totalPages"
+                    class="btn-ghost text-xs px-3 py-1.5 disabled:opacity-40">
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </template>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function notificationsManager() {
+  return {
+    notifications: [], loading: true,
+    filter: '', typeFilter: '',
+    page: 1, total: 0, totalPages: 1, pageSize: 20,
+    unreadCount: 0,
+
+    async init() {
+      await this.load();
+    },
+
+    async load() {
+      this.loading = true;
+      try {
+        const params = new URLSearchParams();
+        params.set('page', this.page);
+        params.set('page_size', this.pageSize);
+        if (this.filter === 'unread') params.set('is_read', 'false');
+        if (this.filter === 'read')   params.set('is_read', 'true');
+        if (this.typeFilter)          params.set('notification_type', this.typeFilter);
+
+        const [notifRes, countRes] = await Promise.all([
+          apiFetch('/api/v1/vendor/notifications/?' + params.toString()),
+          apiFetch('/api/v1/vendor/notifications/unread-count/'),
+        ]);
+
+        if (notifRes && notifRes.ok) {
+          const data = await notifRes.json();
+          this.notifications = Array.isArray(data) ? data : (data.results || []);
+          this.total = data.count || this.notifications.length;
+          this.totalPages = Math.ceil(this.total / this.pageSize) || 1;
+        }
+        if (countRes && countRes.ok) {
+          const d = await countRes.json();
+          this.unreadCount = d.count ?? d.unread_count ?? 0;
+        }
+      } catch (e) {
+        notify('تعذّر تحميل الإشعارات', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async markRead(notif) {
+      if (notif.is_read) return;
+      const res = await apiFetch(`/api/v1/vendor/notifications/${notif.id}/mark-read/`, { method: 'POST' });
+      if (res && res.ok) {
+        notif.is_read = true;
+        this.unreadCount = Math.max(0, this.unreadCount - 1);
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async markAllRead() {
+      const res = await apiFetch('/api/v1/vendor/notifications/mark-all-read/', { method: 'POST' });
+      if (res && res.ok) {
+        this.notifications.forEach(n => { n.is_read = true; });
+        this.unreadCount = 0;
+        notify('تم تحديد جميع الإشعارات كمقروءة', 'success');
+        this.$nextTick(() => lucide.createIcons());
+      } else {
+        notify('فشل تحديث الإشعارات', 'error');
+      }
+    },
+
+    async deleteNotification(id) {
+      const res = await apiFetch(`/api/v1/vendor/notifications/${id}/`, { method: 'DELETE' });
+      if (res && (res.ok || res.status === 204)) {
+        const notif = this.notifications.find(n => n.id === id);
+        if (notif && !notif.is_read) this.unreadCount = Math.max(0, this.unreadCount - 1);
+        this.notifications = this.notifications.filter(n => n.id !== id);
+        this.total = Math.max(0, this.total - 1);
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    typeIcon(type) {
+      const icons = {
+        audit_complete:   'shield-check',
+        audit_failed:     'shield-x',
+        high_risk:        'alert-triangle',
+        compliance_alert: 'alert-circle',
+        storage_warning:  'hard-drive',
+        new_team_member:  'user-plus',
+        system:           'settings',
+      };
+      return icons[type] || 'bell';
+    },
+
+    typeLabelAr(type) {
+      const labels = {
+        audit_complete:   'اكتمال مراجعة',
+        audit_failed:     'فشل مراجعة',
+        high_risk:        'مخاطر عالية',
+        compliance_alert: 'تنبيه امتثال',
+        storage_warning:  'تحذير تخزين',
+        new_team_member:  'عضو جديد',
+        system:           'نظام',
+      };
+      return labels[type] || 'إشعار';
+    },
+
+    timeAgo(dateStr) {
+      const diff = Date.now() - new Date(dateStr).getTime();
+      const mins  = Math.floor(diff / 60000);
+      const hours = Math.floor(diff / 3600000);
+      const days  = Math.floor(diff / 86400000);
+      if (mins < 1)   return 'الآن';
+      if (mins < 60)  return `منذ ${mins} دقيقة`;
+      if (hours < 24) return `منذ ${hours} ساعة`;
+      if (days < 7)   return `منذ ${days} يوم`;
+      return new Date(dateStr).toLocaleDateString('ar-SA');
+    },
+  };
+}
+</script>
+{% endblock %}

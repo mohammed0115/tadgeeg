@@ -1,0 +1,50 @@
+{% load i18n %}
+<!-- Shared S3/MinIO form fields — included by provider_form.html -->
+
+<div>
+  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+    {% trans "Bucket Name" %} <span class="text-red-500">*</span>
+  </label>
+  <input x-model="config.bucket_name" type="text" class="input"
+         placeholder="{% trans 'my-bucket-name' %}" />
+</div>
+
+<div>
+  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+    {% trans "Region" %}
+  </label>
+  <input x-model="config.region" type="text" class="input"
+         placeholder="us-east-1" />
+</div>
+
+<div x-show="form.provider_type === 's3'">
+  <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+    {% trans "Endpoint URL" %}
+    <span class="text-slate-400 font-normal">{% trans "(optional — for S3-compatible services)" %}</span>
+  </label>
+  <input x-model="config.endpoint_url" type="url" class="input"
+         placeholder="https://s3.amazonaws.com" />
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+  <div>
+    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+      {% trans "Access Key" %}
+    </label>
+    <input x-model="config.access_key" type="password" autocomplete="new-password" class="input"
+           placeholder="{% trans 'Leave blank to keep existing' %}" />
+  </div>
+  <div>
+    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+      {% trans "Secret Key" %}
+    </label>
+    <input x-model="config.secret_key" type="password" autocomplete="new-password" class="input"
+           placeholder="{% trans 'Leave blank to keep existing' %}" />
+  </div>
+</div>
+
+<label class="flex items-center gap-2 cursor-pointer">
+  <input type="checkbox" x-model="config.use_ssl"
+         class="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
+  <span class="text-sm text-slate-700 dark:text-slate-300">{% trans "Use SSL / HTTPS" %}</span>
+</label>

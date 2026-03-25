@@ -1,0 +1,451 @@
+{% extends "storage_management/base_storage.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "File Monitor" %}{% endblock %}
+
+{% block subnav_file_monitor %}border-primary-500 text-primary-600 dark:text-primary-400{% endblock %}
+
+{% block storage_content %}
+<div x-data="fileMonitor()" x-init="init()" class="max-w-7xl mx-auto space-y-6">
+
+  <!-- Page header -->
+  <div class="flex items-center justify-between flex-wrap gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+        <i data-lucide="folder-search" class="w-6 h-6 text-primary-500"></i>
+        {% trans "File Monitor" %}
+      </h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+        {% trans "Browse, search, and manage all stored files." %}
+      </p>
+    </div>
+    <!-- Stats summary -->
+    <div class="flex gap-4 text-center" x-show="stats">
+      <div class="card px-4 py-2.5">
+        <div class="text-lg font-bold text-slate-900 dark:text-white" x-text="stats?.total_files ?? '—'"></div>
+        <div class="text-xs text-slate-400">{% trans "Total Files" %}</div>
+      </div>
+      <div class="card px-4 py-2.5">
+        <div class="text-lg font-bold text-slate-900 dark:text-white" x-text="formatBytes(stats?.total_size_bytes ?? 0)"></div>
+        <div class="text-xs text-slate-400">{% trans "Total Size" %}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters row -->
+  <div class="card p-4">
+    <div class="flex flex-wrap gap-3 items-end">
+
+      <!-- Search -->
+      <div class="flex-1 min-w-[200px]">
+        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{% trans "Search" %}</label>
+        <div class="relative">
+          <i data-lucide="search" class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"></i>
+          <input x-model="filters.search" @input.debounce.400ms="loadFiles()"
+                 type="search" class="input ps-9"
+                 placeholder="{% trans 'File name or checksum…' %}" />
+        </div>
+      </div>
+
+      <!-- Status filter -->
+      <div class="w-36">
+        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{% trans "Status" %}</label>
+        <select x-model="filters.status" @change="loadFiles()" class="select w-full">
+          <option value="">{% trans "All" %}</option>
+          <option value="uploaded">{% trans "Uploaded" %}</option>
+          <option value="processing">{% trans "Processing" %}</option>
+          <option value="stored">{% trans "Stored" %}</option>
+          <option value="failed">{% trans "Failed" %}</option>
+          <option value="archived">{% trans "Archived" %}</option>
+        </select>
+      </div>
+
+      <!-- Date from -->
+      <div class="w-36">
+        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{% trans "From" %}</label>
+        <input x-model="filters.date_from" @change="loadFiles()" type="date" class="input" />
+      </div>
+
+      <!-- Date to -->
+      <div class="w-36">
+        <label class="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">{% trans "To" %}</label>
+        <input x-model="filters.date_to" @change="loadFiles()" type="date" class="input" />
+      </div>
+
+      <!-- Reset -->
+      <button @click="resetFilters()" class="btn-ghost">
+        <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+        {% trans "Reset" %}
+      </button>
+
+    </div>
+  </div>
+
+  <!-- Error banner -->
+  <div x-show="error" x-cloak
+       class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50 rounded-xl p-4 text-red-700 dark:text-red-400 text-sm flex items-start gap-3">
+    <i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0 mt-0.5"></i>
+    <span x-text="error"></span>
+  </div>
+
+  <!-- Table -->
+  <div class="card overflow-hidden">
+
+    <!-- Loading -->
+    <div x-show="loading" class="p-10 flex items-center justify-center">
+      <svg class="animate-spin w-6 h-6 text-primary-500" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+      </svg>
+    </div>
+
+    <!-- Empty -->
+    <div x-show="!loading && files.length === 0" x-cloak class="p-12 text-center">
+      <i data-lucide="inbox" class="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4"></i>
+      <p class="text-slate-500 dark:text-slate-400">{% trans "No files found matching your filters." %}</p>
+    </div>
+
+    <!-- Files table -->
+    <div x-show="!loading && files.length > 0" x-cloak class="overflow-x-auto">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>{% trans "File Name" %}</th>
+            <th>{% trans "Organisation" %}</th>
+            <th>{% trans "Provider" %}</th>
+            <th>{% trans "Size" %}</th>
+            <th>{% trans "Status" %}</th>
+            <th>{% trans "Uploaded By" %}</th>
+            <th>{% trans "Created" %}</th>
+            <th>{% trans "Actions" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="file in files" :key="file.id">
+            <tr>
+              <!-- File name + type badge -->
+              <td class="max-w-xs">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
+                    <i :data-lucide="fileIcon(file.file_type)" class="w-4 h-4 text-slate-500"></i>
+                  </div>
+                  <div>
+                    <div class="font-medium text-slate-900 dark:text-white text-sm truncate max-w-[200px]"
+                         :title="file.original_name" x-text="file.original_name"></div>
+                    <div class="text-xs text-slate-400" x-text="file.content_type"></div>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Organisation -->
+              <td class="text-sm" x-text="file.organization_name || '—'"></td>
+
+              <!-- Provider -->
+              <td>
+                <template x-if="file.storage_mappings && file.storage_mappings.length">
+                  <span class="badge badge-info text-xs"
+                        x-text="file.storage_mappings[0].provider_name">
+                  </span>
+                </template>
+                <template x-if="!file.storage_mappings || !file.storage_mappings.length">
+                  <span class="text-slate-400 text-xs">—</span>
+                </template>
+              </td>
+
+              <!-- Size -->
+              <td class="text-sm tabular-nums" x-text="file.file_size_display"></td>
+
+              <!-- Status badge -->
+              <td>
+                <span class="badge"
+                      :class="{
+                        'badge-low': file.status === 'stored',
+                        'badge-info': file.status === 'uploaded',
+                        'status-processing': file.status === 'processing',
+                        'badge-critical': file.status === 'failed',
+                        'badge-medium': file.status === 'archived',
+                      }"
+                      x-text="file.status_display">
+                </span>
+              </td>
+
+              <!-- Uploaded by -->
+              <td class="text-sm text-slate-500" x-text="file.uploaded_by_email || '—'"></td>
+
+              <!-- Created at -->
+              <td class="text-sm text-slate-500 tabular-nums" x-text="formatDate(file.created_at)"></td>
+
+              <!-- Actions -->
+              <td>
+                <div class="flex items-center gap-1.5">
+                  <button @click="viewDetails(file)" class="btn-ghost py-1 px-2 text-xs"
+                          title="{% trans 'Storage details' %}">
+                    <i data-lucide="info" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button @click="getDownloadUrl(file)" class="btn-ghost py-1 px-2 text-xs"
+                          title="{% trans 'Download' %}">
+                    <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button @click="confirmDelete(file)"
+                          class="btn-ghost py-1 px-2 text-xs text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          title="{% trans 'Delete' %}">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+              </td>
+
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div x-show="!loading && (nextUrl || prevUrl)" x-cloak
+         class="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-slate-700/30">
+      <button @click="loadPage(prevUrl)" :disabled="!prevUrl" class="btn-ghost text-sm py-1.5 px-3">
+        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        {% trans "Previous" %}
+      </button>
+      <span class="text-sm text-slate-500" x-text="`{% trans 'Page' %} ${page}`"></span>
+      <button @click="loadPage(nextUrl)" :disabled="!nextUrl" class="btn-ghost text-sm py-1.5 px-3">
+        {% trans "Next" %}
+        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Storage details modal -->
+  <div x-show="detailsFile" x-cloak class="modal-backdrop" @click.self="detailsFile = null">
+    <div class="modal-box max-w-xl p-0 overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/40">
+        <h3 class="font-semibold text-slate-900 dark:text-white">{% trans "Storage Details" %}</h3>
+        <button @click="detailsFile = null" class="text-slate-400 hover:text-slate-600 transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+        <template x-if="detailsFile">
+          <div class="space-y-3">
+            <div class="grid grid-cols-2 gap-3 text-sm">
+              <div class="text-slate-500">{% trans "File name" %}</div>
+              <div class="font-medium text-slate-900 dark:text-white break-all" x-text="detailsFile.original_name"></div>
+              <div class="text-slate-500">{% trans "Size" %}</div>
+              <div x-text="detailsFile.file_size_display"></div>
+              <div class="text-slate-500">{% trans "Checksum (MD5)" %}</div>
+              <div class="font-mono text-xs break-all" x-text="detailsFile.checksum"></div>
+              <div class="text-slate-500">{% trans "Status" %}</div>
+              <div x-text="detailsFile.status_display"></div>
+            </div>
+            <div class="pt-3 border-t border-slate-100 dark:border-slate-700/30">
+              <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">{% trans "Storage Locations" %}</p>
+              <template x-for="(m, i) in detailsFile.storage_mappings" :key="i">
+                <div class="p-3 bg-slate-50 dark:bg-slate-700/40 rounded-xl mb-2 text-xs space-y-1">
+                  <div class="flex items-center justify-between">
+                    <span class="badge badge-info" x-text="m.provider_name"></span>
+                    <span class="text-slate-400">{% trans "v" %}<span x-text="m.version_number"></span></span>
+                  </div>
+                  <div class="text-slate-500 font-mono break-all" x-text="m.storage_path"></div>
+                  <div x-show="m.storage_bucket" class="text-slate-400">{% trans "Bucket:" %} <span x-text="m.storage_bucket"></span></div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete confirmation modal -->
+  <div x-show="deleteTarget" x-cloak class="modal-backdrop" @click.self="deleteTarget = null">
+    <div class="modal-box max-w-md p-6 space-y-4">
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="trash-2" class="w-6 h-6 text-red-600 dark:text-red-400"></i>
+        </div>
+        <div>
+          <h3 class="font-semibold text-slate-900 dark:text-white text-lg">{% trans "Delete File" %}</h3>
+          <p class="text-slate-500 dark:text-slate-400 text-sm mt-1">
+            {% trans "Permanently delete" %}
+            <strong class="text-slate-800 dark:text-white break-all" x-text="deleteTarget?.original_name"></strong>?
+            {% trans "This removes the file from all storage backends." %}
+          </p>
+        </div>
+      </div>
+      <div class="flex justify-end gap-3 pt-2">
+        <button @click="deleteTarget = null" class="btn-ghost">{% trans "Cancel" %}</button>
+        <button @click="doDelete()" :disabled="deleting" class="btn-red">
+          <template x-if="deleting">
+            <svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+          </template>
+          {% trans "Delete" %}
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function fileMonitor() {
+  return {
+    files: [],
+    stats: null,
+    loading: true,
+    error: null,
+    nextUrl: null,
+    prevUrl: null,
+    page: 1,
+    detailsFile: null,
+    deleteTarget: null,
+    deleting: false,
+    filters: {
+      search: '',
+      status: '',
+      date_from: '',
+      date_to: '',
+    },
+
+    async init() {
+      await Promise.all([this.loadFiles(), this.loadStats()]);
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    buildUrl(base) {
+      const params = new URLSearchParams();
+      if (this.filters.search) params.set('search', this.filters.search);
+      if (this.filters.status) params.set('status', this.filters.status);
+      if (this.filters.date_from) params.set('date_from', this.filters.date_from);
+      if (this.filters.date_to) params.set('date_to', this.filters.date_to);
+      const qs = params.toString();
+      return qs ? `${base}?${qs}` : base;
+    },
+
+    async loadFiles() {
+      this.loading = true;
+      this.error = null;
+      try {
+        const url = this.buildUrl('/api/v1/storage/files/');
+        const data = await apiFetch(url);
+        this.files = data.results ?? data;
+        this.nextUrl = data.next || null;
+        this.prevUrl = data.previous || null;
+      } catch (e) {
+        this.error = e.message;
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async loadStats() {
+      try {
+        const data = await apiFetch('/api/v1/storage/files/');
+        // Basic stats from listing — ideally a dedicated /stats/ endpoint
+        if (data.count !== undefined) {
+          this.stats = { total_files: data.count, total_size_bytes: 0 };
+        }
+      } catch (_) {}
+    },
+
+    async loadPage(url) {
+      if (!url) return;
+      this.loading = true;
+      try {
+        const data = await apiFetch(url);
+        this.files = data.results ?? data;
+        this.nextUrl = data.next || null;
+        this.prevUrl = data.previous || null;
+        if (url === this.nextUrl) this.page++;
+        else this.page = Math.max(1, this.page - 1);
+      } catch (e) {
+        this.error = e.message;
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    resetFilters() {
+      this.filters = { search: '', status: '', date_from: '', date_to: '' };
+      this.page = 1;
+      this.loadFiles();
+    },
+
+    viewDetails(file) {
+      this.detailsFile = file;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async getDownloadUrl(file) {
+      try {
+        const data = await apiFetch(`/api/v1/storage/files/${file.id}/download-url/`);
+        window.open(data.url, '_blank');
+      } catch (e) {
+        window.dispatchEvent(new CustomEvent('notify', {
+          detail: { type: 'error', title: '{% trans "Error" %}', message: e.message }
+        }));
+      }
+    },
+
+    confirmDelete(file) {
+      this.deleteTarget = file;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    async doDelete() {
+      if (!this.deleteTarget) return;
+      this.deleting = true;
+      try {
+        await apiFetch(`/api/v1/storage/files/${this.deleteTarget.id}/`, { method: 'DELETE' });
+        this.files = this.files.filter(f => f.id !== this.deleteTarget.id);
+        window.dispatchEvent(new CustomEvent('notify', {
+          detail: { type: 'success', title: '{% trans "Deleted" %}', message: this.deleteTarget.original_name }
+        }));
+        this.deleteTarget = null;
+      } catch (e) {
+        window.dispatchEvent(new CustomEvent('notify', {
+          detail: { type: 'error', title: '{% trans "Error" %}', message: e.message }
+        }));
+      } finally {
+        this.deleting = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    fileIcon(ext) {
+      const icons = {
+        pdf: 'file-text', xlsx: 'table', xls: 'table', csv: 'table-2',
+        jpg: 'image', jpeg: 'image', png: 'image', gif: 'image',
+        zip: 'archive', tar: 'archive', gz: 'archive',
+        json: 'braces', xml: 'code', txt: 'file-type',
+      };
+      return icons[ext?.toLowerCase()] || 'file';
+    },
+
+    formatBytes(bytes) {
+      if (!bytes) return '0 B';
+      const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+      let i = 0;
+      while (bytes >= 1024 && i < units.length - 1) {
+        bytes /= 1024;
+        i++;
+      }
+      return `${bytes.toFixed(1)} ${units[i]}`;
+    },
+
+    formatDate(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    },
+  };
+}
+</script>
+{% endblock %}

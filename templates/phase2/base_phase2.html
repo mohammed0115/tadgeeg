@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block nav_audit %}active{% endblock %}
+
+{% block page_title %}{% trans "Audit Platform" %}{% endblock %}
+
+{% block content %}
+<div class="space-y-5 max-w-screen-2xl">
+
+  <!-- Sub-navigation tabs -->
+  <nav class="flex gap-1 border-b border-slate-200 dark:border-slate-700/30 pb-0 overflow-x-auto">
+    <style>
+      .nav-tab {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.625rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #64748b;
+        border-bottom: 2px solid transparent;
+        margin-bottom: -2px;
+        white-space: nowrap;
+        transition: color 0.15s, border-color 0.15s;
+        text-decoration: none;
+      }
+      .nav-tab:hover {
+        color: #1e40af;
+        border-bottom-color: #93c5fd;
+      }
+      .nav-tab.active {
+        color: #2563eb;
+        border-bottom-color: #2563eb;
+        font-weight: 600;
+      }
+      .dark .nav-tab {
+        color: #94a3b8;
+      }
+      .dark .nav-tab:hover {
+        color: #93c5fd;
+        border-bottom-color: #3b82f6;
+      }
+      .dark .nav-tab.active {
+        color: #60a5fa;
+        border-bottom-color: #3b82f6;
+      }
+    </style>
+
+    <a href="/files/" class="nav-tab {% block tab_files %}{% endblock %}">
+      <i data-lucide="files" class="w-4 h-4"></i>
+      {% trans "Files" %}
+    </a>
+    <a href="/folders/" class="nav-tab {% block tab_folders %}{% endblock %}">
+      <i data-lucide="folder" class="w-4 h-4"></i>
+      {% trans "Folders" %}
+    </a>
+    <a href="/audits/" class="nav-tab {% block tab_audits %}{% endblock %}">
+      <i data-lucide="shield-check" class="w-4 h-4"></i>
+      {% trans "Audit Jobs" %}
+    </a>
+    <a href="/reports/phase2/" class="nav-tab {% block tab_reports %}{% endblock %}">
+      <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+      {% trans "Reports" %}
+    </a>
+    <a href="/activity/" class="nav-tab {% block tab_activity %}{% endblock %}">
+      <i data-lucide="activity" class="w-4 h-4"></i>
+      {% trans "Activity" %}
+    </a>
+  </nav>
+
+  <!-- Page content injected by child templates -->
+  {% block phase2_content %}{% endblock %}
+
+</div>
+{% endblock %}

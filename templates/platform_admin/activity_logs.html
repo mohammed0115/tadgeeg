@@ -1,0 +1,229 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+{% block page_title %}سجل النشاط{% endblock %}
+{% block breadcrumb_current %}سجل النشاط{% endblock %}
+
+{% block content %}
+<div x-data="activityLogs()" x-init="init()" class="space-y-5 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">سجل النشاط</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">تتبع جميع العمليات والإجراءات على المنصة</p>
+    </div>
+    <button @click="exportLogs()" class="btn-ghost text-xs">
+      <i data-lucide="download" class="w-4 h-4"></i>
+      تصدير
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div class="card p-4 text-center">
+      <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
+      <template x-if="!loading"><p class="text-2xl font-black text-slate-900 dark:text-white" x-text="(stats.total || 0).toLocaleString()"></p></template>
+      <p class="text-xs text-slate-500 mt-1">إجمالي السجلات</p>
+    </div>
+    <div class="card p-4 text-center">
+      <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
+      <template x-if="!loading"><p class="text-2xl font-black text-red-600" x-text="stats.errors || 0"></p></template>
+      <p class="text-xs text-slate-500 mt-1">أخطاء</p>
+    </div>
+    <div class="card p-4 text-center">
+      <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
+      <template x-if="!loading"><p class="text-2xl font-black text-amber-600" x-text="stats.warnings || 0"></p></template>
+      <p class="text-xs text-slate-500 mt-1">تحذيرات</p>
+    </div>
+    <div class="card p-4 text-center">
+      <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
+      <template x-if="!loading"><p class="text-2xl font-black text-slate-500" x-text="stats.today || 0"></p></template>
+      <p class="text-xs text-slate-500 mt-1">اليوم</p>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card p-4 flex flex-wrap items-center gap-3">
+    <select x-model="filter.level" @change="load()" class="select">
+      <option value="">جميع المستويات</option>
+      <option value="info">معلومات</option>
+      <option value="warning">تحذير</option>
+      <option value="error">خطأ</option>
+      <option value="critical">حرج</option>
+    </select>
+    <select x-model="filter.action" @change="load()" class="select">
+      <option value="">جميع الإجراءات</option>
+      <option value="login">تسجيل دخول</option>
+      <option value="logout">تسجيل خروج</option>
+      <option value="create">إنشاء</option>
+      <option value="update">تعديل</option>
+      <option value="delete">حذف</option>
+      <option value="export">تصدير</option>
+    </select>
+    <input type="text" x-model.debounce.300ms="filter.search" @input="load()"
+           class="input max-w-xs" placeholder="البحث في السجلات...">
+    <input type="date" x-model="filter.date_from" @change="load()" class="input w-36">
+    <input type="date" x-model="filter.date_to" @change="load()" class="input w-36">
+    <button @click="clearFilters()" class="btn-ghost text-xs">
+      <i data-lucide="x-circle" class="w-4 h-4"></i>
+      مسح الفلاتر
+    </button>
+  </div>
+
+  <!-- Logs Table -->
+  <div class="card overflow-hidden">
+    <template x-if="loading">
+      <div class="animate-pulse divide-y divide-slate-100 dark:divide-slate-700/30">
+        <template x-for="i in [1,2,3,4,5,6,7,8]" :key="i">
+          <div class="px-5 py-3.5 flex items-center gap-4">
+            <div class="w-6 h-6 bg-slate-200 dark:bg-slate-700 rounded-lg flex-shrink-0"></div>
+            <div class="flex-1 space-y-1">
+              <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-64"></div>
+              <div class="h-2.5 bg-slate-200 dark:bg-slate-700 rounded w-40"></div>
+            </div>
+            <div class="h-3 w-28 bg-slate-200 dark:bg-slate-700 rounded"></div>
+          </div>
+        </template>
+      </div>
+    </template>
+
+    <template x-if="!loading && logs.length === 0">
+      <div class="px-5 py-16 text-center">
+        <i data-lucide="scroll-text" class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3"></i>
+        <p class="text-slate-500 text-sm">لا توجد سجلات مطابقة</p>
+      </div>
+    </template>
+
+    <template x-if="!loading && logs.length > 0">
+      <div class="overflow-x-auto">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>المستوى</th>
+              <th>الإجراء</th>
+              <th>الرسالة</th>
+              <th>المستخدم</th>
+              <th>عنوان IP</th>
+              <th>الوقت</th>
+            </tr>
+          </thead>
+          <tbody>
+            <template x-for="log in logs" :key="log.id">
+              <tr>
+                <td>
+                  <span class="badge flex items-center gap-1"
+                        :class="{
+                          'badge-red':    log.level === 'error' || log.level === 'critical',
+                          'badge-amber':  log.level === 'warning',
+                          'badge-indigo': log.level === 'info',
+                          'badge-slate':  !log.level,
+                        }">
+                    <i :data-lucide="log.level === 'error' || log.level === 'critical' ? 'x-circle' : log.level === 'warning' ? 'alert-triangle' : 'info'" class="w-3 h-3"></i>
+                    <span x-text="log.level || 'info'"></span>
+                  </span>
+                </td>
+                <td><span class="badge-slate text-[10px]" x-text="log.action || '—'"></span></td>
+                <td class="max-w-xs">
+                  <p class="text-sm text-slate-700 dark:text-slate-300 truncate" x-text="log.message"></p>
+                  <template x-if="log.path">
+                    <p class="text-[10px] text-slate-400 truncate font-mono" x-text="log.path"></p>
+                  </template>
+                </td>
+                <td>
+                  <template x-if="log.user_email">
+                    <div>
+                      <p class="text-xs font-medium text-slate-700 dark:text-slate-300" x-text="log.user_email"></p>
+                    </div>
+                  </template>
+                  <template x-if="!log.user_email">
+                    <span class="text-slate-400 text-xs">نظام</span>
+                  </template>
+                </td>
+                <td class="text-xs font-mono text-slate-400" x-text="log.ip_address || '—'"></td>
+                <td class="text-xs text-slate-400 whitespace-nowrap"
+                    x-text="log.created_at ? new Date(log.created_at).toLocaleString('ar-SA') : '—'"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
+    <!-- Pagination -->
+    <template x-if="!loading && totalPages > 1">
+      <div class="px-5 py-3.5 border-t border-slate-100 dark:border-slate-700/30 flex items-center justify-between">
+        <p class="text-xs text-slate-500" x-text="'صفحة ' + page + ' من ' + totalPages + ' (' + total + ' سجل)'"></p>
+        <div class="flex gap-2">
+          <button @click="page--; load()" :disabled="page <= 1" class="btn-ghost text-xs px-3 py-1.5 disabled:opacity-40">
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+          <button @click="page++; load()" :disabled="page >= totalPages" class="btn-ghost text-xs px-3 py-1.5 disabled:opacity-40">
+            <i data-lucide="chevron-left" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+    </template>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function activityLogs() {
+  return {
+    logs: [], stats: {},
+    loading: true,
+    page: 1, total: 0, totalPages: 1, pageSize: 50,
+    filter: { level: '', action: '', search: '', date_from: '', date_to: '' },
+
+    async load() {
+      this.loading = true;
+      try {
+        const params = new URLSearchParams({ page: this.page, page_size: this.pageSize });
+        if (this.filter.level)     params.set('level', this.filter.level);
+        if (this.filter.action)    params.set('action', this.filter.action);
+        if (this.filter.search)    params.set('search', this.filter.search);
+        if (this.filter.date_from) params.set('date_from', this.filter.date_from);
+        if (this.filter.date_to)   params.set('date_to', this.filter.date_to);
+        const [logsRes, statsRes] = await Promise.all([
+          apiFetch('/api/v1/platform/activity-logs/?' + params.toString()),
+          apiFetch('/api/v1/platform/activity-logs/stats/'),
+        ]);
+        if (logsRes && logsRes.ok) {
+          const data = await logsRes.json();
+          this.logs = Array.isArray(data) ? data : (data.results || []);
+          this.total = data.count || this.logs.length;
+          this.totalPages = Math.ceil(this.total / this.pageSize);
+        }
+        if (statsRes && statsRes.ok) this.stats = await statsRes.json();
+      } catch (e) {
+        notify('تعذّر تحميل السجلات', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async init() { await this.load(); },
+
+    clearFilters() {
+      this.filter = { level: '', action: '', search: '', date_from: '', date_to: '' };
+      this.page = 1;
+      this.load();
+    },
+
+    exportLogs() {
+      const params = new URLSearchParams();
+      if (this.filter.level)     params.set('level', this.filter.level);
+      if (this.filter.action)    params.set('action', this.filter.action);
+      if (this.filter.search)    params.set('search', this.filter.search);
+      if (this.filter.date_from) params.set('date_from', this.filter.date_from);
+      if (this.filter.date_to)   params.set('date_to', this.filter.date_to);
+      params.set('format', 'csv');
+      window.location.href = '/api/v1/platform/activity-logs/export/?' + params.toString();
+    },
+  };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,298 @@
+{% extends "layouts/base_vendor_dashboard.html" %}
+{% load i18n %}
+{% block page_title %}الإعدادات{% endblock %}
+{% block breadcrumb_current %}الإعدادات{% endblock %}
+
+{% block content %}
+<div x-data="orgSettings()" x-init="init()" class="space-y-6 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">إعدادات المنظمة</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">بيانات حسابك وإعدادات المنظمة</p>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="card p-1 flex gap-1 flex-wrap">
+    <template x-for="tab in tabs" :key="tab.key">
+      <button @click="activeTab = tab.key; $nextTick(() => lucide.createIcons())"
+              class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all"
+              :class="activeTab === tab.key
+                ? 'bg-primary-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/40'">
+        <i :data-lucide="tab.icon" class="w-3.5 h-3.5"></i>
+        <span x-text="tab.label"></span>
+      </button>
+    </template>
+  </div>
+
+  <!-- Loading -->
+  <template x-if="loading">
+    <div class="animate-pulse card p-6 space-y-4">
+      <template x-for="i in [1,2,3,4]" :key="i">
+        <div class="h-10 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+      </template>
+    </div>
+  </template>
+
+  <!-- Organization Profile Tab -->
+  <template x-if="!loading && activeTab === 'profile'">
+    <div class="card p-6 space-y-5">
+      <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-700/30">
+        <i data-lucide="building-2" class="w-5 h-5 text-blue-500"></i>
+        بيانات المنظمة
+      </h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">اسم المنظمة (EN)</label>
+          <input type="text" x-model="form.name" class="input" placeholder="Company Inc.">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">اسم المنظمة (عربي)</label>
+          <input type="text" x-model="form.name_ar" class="input" dir="rtl" placeholder="شركة المثال">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">رقم السجل التجاري</label>
+          <input type="text" x-model="form.commercial_registration" class="input" placeholder="1234567890">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">الرقم الضريبي (VAT)</label>
+          <input type="text" x-model="form.vat_number" class="input" placeholder="300000000000003">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">البريد الإلكتروني</label>
+          <input type="email" x-model="form.email" class="input" placeholder="info@company.com">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">الهاتف</label>
+          <input type="tel" x-model="form.phone" class="input" placeholder="+966 XX XXX XXXX">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">المدينة</label>
+          <input type="text" x-model="form.city" class="input" placeholder="الرياض">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">الدولة</label>
+          <select x-model="form.country" class="select w-full">
+            <option value="SA">المملكة العربية السعودية</option>
+            <option value="AE">الإمارات العربية المتحدة</option>
+            <option value="KW">الكويت</option>
+            <option value="BH">البحرين</option>
+            <option value="QA">قطر</option>
+            <option value="OM">سلطنة عُمان</option>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان</label>
+          <textarea x-model="form.address" class="input" rows="2" dir="rtl"></textarea>
+        </div>
+      </div>
+      <div class="flex justify-end pt-2">
+        <button @click="saveProfile()" :disabled="saving" class="btn-primary">
+          <i data-lucide="save" class="w-4 h-4"></i>
+          <span x-text="saving ? 'جاري الحفظ...' : 'حفظ البيانات'"></span>
+        </button>
+      </div>
+    </div>
+  </template>
+
+  <!-- Security Tab -->
+  <template x-if="!loading && activeTab === 'security'">
+    <div class="space-y-5">
+      <!-- Change Password -->
+      <div class="card p-6 space-y-4">
+        <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-700/30">
+          <i data-lucide="lock" class="w-5 h-5 text-red-500"></i>
+          تغيير كلمة المرور
+        </h3>
+        <div class="space-y-3 max-w-md">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">كلمة المرور الحالية</label>
+            <input type="password" x-model="security.current_password" class="input">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">كلمة المرور الجديدة</label>
+            <input type="password" x-model="security.new_password" class="input">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">تأكيد كلمة المرور</label>
+            <input type="password" x-model="security.confirm_password" class="input">
+          </div>
+        </div>
+        <div class="flex justify-end pt-2">
+          <button @click="changePassword()" :disabled="saving" class="btn-primary">
+            <i data-lucide="shield" class="w-4 h-4"></i>
+            <span x-text="saving ? 'جاري التغيير...' : 'تغيير كلمة المرور'"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Sessions -->
+      <div class="card p-6 space-y-4">
+        <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-700/30">
+          <i data-lucide="monitor" class="w-5 h-5 text-amber-500"></i>
+          الجلسات النشطة
+        </h3>
+        <template x-for="session in sessions" :key="session.id">
+          <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/30 rounded-xl">
+            <div class="flex items-center gap-3">
+              <i :data-lucide="session.device_type === 'mobile' ? 'smartphone' : 'monitor'" class="w-5 h-5 text-slate-400"></i>
+              <div>
+                <p class="text-sm font-medium text-slate-700 dark:text-slate-300" x-text="session.device || 'جهاز غير معروف'"></p>
+                <p class="text-xs text-slate-400" x-text="session.ip + ' — ' + (session.last_active ? new Date(session.last_active).toLocaleString('ar-SA') : '')"></p>
+              </div>
+            </div>
+            <template x-if="!session.is_current">
+              <button @click="revokeSession(session.id)" class="btn-ghost text-xs text-red-500 px-3 py-1.5">
+                إنهاء
+              </button>
+            </template>
+            <template x-if="session.is_current">
+              <span class="badge-green text-[10px]">الجلسة الحالية</span>
+            </template>
+          </div>
+        </template>
+      </div>
+    </div>
+  </template>
+
+  <!-- Notifications Tab -->
+  <template x-if="!loading && activeTab === 'notifications'">
+    <div class="card p-6 space-y-4">
+      <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-700/30">
+        <i data-lucide="bell" class="w-5 h-5 text-blue-500"></i>
+        إعدادات الإشعارات
+      </h3>
+      <div class="space-y-3">
+        <template x-for="pref in notificationPrefs" :key="pref.key">
+          <div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-700/30 last:border-0">
+            <div>
+              <p class="text-sm font-medium text-slate-700 dark:text-slate-300" x-text="pref.label_ar"></p>
+              <p class="text-xs text-slate-400" x-text="pref.description_ar"></p>
+            </div>
+            <button @click="pref.enabled = !pref.enabled; saveNotifications()"
+                    class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                    :class="pref.enabled ? 'bg-primary-600' : 'bg-slate-300 dark:bg-slate-600'">
+              <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                    :class="pref.enabled ? 'translate-x-6' : 'translate-x-1'"></span>
+            </button>
+          </div>
+        </template>
+      </div>
+    </div>
+  </template>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function orgSettings() {
+  return {
+    loading: true, saving: false,
+    activeTab: 'profile',
+    tabs: [
+      { key: 'profile',       label: 'بيانات المنظمة',   icon: 'building-2' },
+      { key: 'security',      label: 'الأمان',           icon: 'shield' },
+      { key: 'notifications', label: 'الإشعارات',        icon: 'bell' },
+    ],
+    form: {
+      name: '', name_ar: '', commercial_registration: '', vat_number: '',
+      email: '', phone: '', city: '', country: 'SA', address: '',
+    },
+    security: { current_password: '', new_password: '', confirm_password: '' },
+    sessions: [],
+    notificationPrefs: [
+      { key: 'audit_complete',    label_ar: 'اكتمال المراجعة',     description_ar: 'إشعار عند اكتمال مهمة مراجعة', enabled: true },
+      { key: 'audit_failed',      label_ar: 'فشل المراجعة',        description_ar: 'إشعار عند فشل مهمة مراجعة', enabled: true },
+      { key: 'high_risk',         label_ar: 'مخاطر عالية',         description_ar: 'إشعار عند اكتشاف مخاطر عالية', enabled: true },
+      { key: 'compliance_alert',  label_ar: 'تنبيه الامتثال',      description_ar: 'إشعار عند مشكلة امتثال ZATCA', enabled: true },
+      { key: 'new_team_member',   label_ar: 'عضو جديد في الفريق',  description_ar: 'إشعار عند انضمام عضو جديد', enabled: false },
+      { key: 'storage_warning',   label_ar: 'تحذير مساحة التخزين', description_ar: 'إشعار عند اقتراب الحد الأقصى', enabled: true },
+    ],
+
+    async init() {
+      try {
+        const [orgRes, sessionRes] = await Promise.all([
+          apiFetch('/api/v1/auth/organization/'),
+          apiFetch('/api/v1/auth/sessions/'),
+        ]);
+        if (orgRes && orgRes.ok) Object.assign(this.form, await orgRes.json());
+        if (sessionRes && sessionRes.ok) {
+          const data = await sessionRes.json();
+          this.sessions = Array.isArray(data) ? data : (data.results || []);
+        }
+      } catch (e) {
+        notify('تعذّر تحميل الإعدادات', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async saveProfile() {
+      this.saving = true;
+      try {
+        const res = await apiFetch('/api/v1/auth/organization/', {
+          method: 'PATCH',
+          body: JSON.stringify(this.form),
+        });
+        if (res && res.ok) notify('تم حفظ بيانات المنظمة', 'success');
+        else notify('فشل الحفظ', 'error');
+      } catch (e) {
+        notify('فشل الحفظ', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async changePassword() {
+      if (this.security.new_password !== this.security.confirm_password) {
+        notify('كلمتا المرور غير متطابقتين', 'error');
+        return;
+      }
+      this.saving = true;
+      try {
+        const res = await apiFetch('/api/v1/auth/change-password/', {
+          method: 'POST',
+          body: JSON.stringify({
+            current_password: this.security.current_password,
+            new_password: this.security.new_password,
+          }),
+        });
+        if (res && res.ok) {
+          notify('تم تغيير كلمة المرور بنجاح', 'success');
+          this.security = { current_password: '', new_password: '', confirm_password: '' };
+        } else {
+          const err = await res.json().catch(() => ({}));
+          notify(err.detail || 'فشل تغيير كلمة المرور', 'error');
+        }
+      } catch (e) {
+        notify('فشل تغيير كلمة المرور', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+
+    async revokeSession(id) {
+      const res = await apiFetch(`/api/v1/auth/sessions/${id}/`, { method: 'DELETE' });
+      if (res && (res.ok || res.status === 204)) {
+        this.sessions = this.sessions.filter(s => s.id !== id);
+        notify('تم إنهاء الجلسة', 'success');
+      }
+    },
+
+    async saveNotifications() {
+      await apiFetch('/api/v1/auth/notification-preferences/', {
+        method: 'PUT',
+        body: JSON.stringify(
+          Object.fromEntries(this.notificationPrefs.map(p => [p.key, p.enabled]))
+        ),
+      });
+    },
+  };
+}
+</script>
+{% endblock %}

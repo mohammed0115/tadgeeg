@@ -1,0 +1,165 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+{% block page_title %}إعدادات المنصة{% endblock %}
+{% block breadcrumb_current %}الإعدادات{% endblock %}
+
+{% block content %}
+<div x-data="platformSettings()" x-init="init()" class="space-y-5 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">إعدادات المنصة</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">الإعدادات العامة لمنصة Get Solution</p>
+    </div>
+  </div>
+
+  <!-- Group Tabs -->
+  <div class="card p-1 flex gap-1 flex-wrap">
+    <template x-for="group in groups" :key="group.key">
+      <button @click="activeGroup = group.key; $nextTick(() => lucide.createIcons())"
+              class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all"
+              :class="activeGroup === group.key
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700/40'">
+        <i :data-lucide="group.icon" class="w-3.5 h-3.5"></i>
+        <span x-text="group.label"></span>
+      </button>
+    </template>
+  </div>
+
+  <!-- Loading -->
+  <template x-if="loading">
+    <div class="animate-pulse space-y-3">
+      <template x-for="i in [1,2,3,4,5]" :key="i">
+        <div class="card p-4 flex items-center justify-between gap-4">
+          <div class="space-y-1 flex-1">
+            <div class="h-3.5 bg-slate-200 dark:bg-slate-700 rounded w-40"></div>
+            <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-64"></div>
+          </div>
+          <div class="h-9 w-32 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+        </div>
+      </template>
+    </div>
+  </template>
+
+  <!-- Settings by Group -->
+  <template x-if="!loading">
+    <div class="space-y-3">
+      <template x-for="setting in filteredSettings" :key="setting.key">
+        <div class="card p-4 flex items-center justify-between gap-4">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2">
+              <p class="text-sm font-semibold text-slate-700 dark:text-slate-200" x-text="setting.label_ar || setting.key"></p>
+              <template x-if="setting.is_sensitive">
+                <span class="badge-amber text-[10px]">حساس</span>
+              </template>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5" x-text="setting.description_ar || ''"></p>
+          </div>
+          <div class="flex-shrink-0">
+            <template x-if="setting.type === 'boolean'">
+              <button @click="toggleBool(setting)"
+                      class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
+                      :class="setting.value === 'true' ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'">
+                <span class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+                      :class="setting.value === 'true' ? 'translate-x-6' : 'translate-x-1'"></span>
+              </button>
+            </template>
+            <template x-if="setting.type === 'text' || setting.type === 'email' || setting.type === 'url'">
+              <input :type="setting.type" x-model="setting.value" @change="saveSetting(setting)"
+                     class="input w-64" :placeholder="setting.placeholder || ''">
+            </template>
+            <template x-if="setting.type === 'number'">
+              <input type="number" x-model.number="setting.value" @change="saveSetting(setting)"
+                     class="input w-32">
+            </template>
+            <template x-if="setting.type === 'select'">
+              <select x-model="setting.value" @change="saveSetting(setting)" class="select">
+                <template x-for="opt in (setting.options || [])" :key="opt.value">
+                  <option :value="opt.value" x-text="opt.label"></option>
+                </template>
+              </select>
+            </template>
+            <template x-if="setting.type === 'password'">
+              <div class="flex items-center gap-2">
+                <input :type="showPasswords[setting.key] ? 'text' : 'password'"
+                       x-model="setting.value" @change="saveSetting(setting)"
+                       class="input w-48 font-mono text-xs">
+                <button @click="showPasswords[setting.key] = !showPasswords[setting.key]"
+                        class="text-slate-400 hover:text-slate-600">
+                  <i :data-lucide="showPasswords[setting.key] ? 'eye-off' : 'eye'" class="w-4 h-4"></i>
+                </button>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+
+      <template x-if="filteredSettings.length === 0">
+        <div class="card p-10 text-center">
+          <p class="text-slate-400 text-sm">لا توجد إعدادات في هذه المجموعة</p>
+        </div>
+      </template>
+    </div>
+  </template>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function platformSettings() {
+  return {
+    settings: [],
+    loading: true,
+    activeGroup: 'general',
+    showPasswords: {},
+    groups: [
+      { key: 'general',       label: 'عام',              icon: 'settings-2' },
+      { key: 'email',         label: 'البريد الإلكتروني', icon: 'mail' },
+      { key: 'integrations',  label: 'التكاملات',        icon: 'plug' },
+      { key: 'security',      label: 'الأمان',           icon: 'shield' },
+      { key: 'notifications', label: 'الإشعارات',        icon: 'bell' },
+      { key: 'billing',       label: 'الفوترة',          icon: 'credit-card' },
+    ],
+    get filteredSettings() {
+      return this.settings.filter(s => s.group === this.activeGroup);
+    },
+
+    async init() {
+      try {
+        const res = await apiFetch('/api/v1/cms/admin/settings/');
+        if (res && res.ok) {
+          const data = await res.json();
+          this.settings = Array.isArray(data) ? data : (data.results || []);
+        }
+      } catch (e) {
+        notify('تعذّر تحميل الإعدادات', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async toggleBool(setting) {
+      setting.value = setting.value === 'true' ? 'false' : 'true';
+      await this.saveSetting(setting);
+    },
+
+    async saveSetting(setting) {
+      try {
+        const res = await apiFetch(`/api/v1/cms/admin/settings/${setting.key}/`, {
+          method: 'PATCH',
+          body: JSON.stringify({ value: String(setting.value) }),
+        });
+        if (res && res.ok) notify('تم حفظ الإعداد', 'success');
+        else notify('فشل حفظ الإعداد', 'error');
+      } catch (e) {
+        notify('فشل حفظ الإعداد', 'error');
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

@@ -1,0 +1,200 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+{% block page_title %}الفيديو التعريفي{% endblock %}
+{% block breadcrumb_parent %}إدارة المحتوى{% endblock %}
+{% block breadcrumb_current %}الفيديو التعريفي{% endblock %}
+
+{% block content %}
+<div x-data="introVideoEditor()" x-init="init()" class="space-y-6 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">الفيديو التعريفي</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">إدارة الفيديو التعريفي للمنصة المعروض في الموقع</p>
+    </div>
+    <a href="/platform-admin/" class="btn-ghost text-xs">
+      <i data-lucide="arrow-right" class="w-4 h-4"></i>
+      العودة
+    </a>
+  </div>
+
+  <!-- Loading -->
+  <template x-if="loading">
+    <div class="animate-pulse space-y-4">
+      <div class="card p-6 space-y-3">
+        <template x-for="i in [1,2,3,4]" :key="i">
+          <div class="h-10 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
+        </template>
+      </div>
+    </div>
+  </template>
+
+  <template x-if="!loading">
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+      <!-- Form -->
+      <div class="xl:col-span-2 card p-6 space-y-5">
+        <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-700/30">
+          <i data-lucide="play-circle" class="w-5 h-5 text-violet-500"></i>
+          إعدادات الفيديو
+        </h3>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">رابط الفيديو (YouTube / Vimeo)</label>
+            <input type="url" x-model="form.video_url" class="input" placeholder="https://youtube.com/watch?v=...">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">رابط الصورة المصغّرة</label>
+            <div class="flex gap-3">
+              <input type="url" x-model="form.thumbnail_url" class="input flex-1" placeholder="https://...thumbnail.jpg">
+              <template x-if="form.thumbnail_url">
+                <img :src="form.thumbnail_url" class="w-20 h-12 object-cover rounded-xl border border-slate-200 dark:border-slate-700 flex-shrink-0" alt="Thumbnail">
+              </template>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان (EN)</label>
+              <input type="text" x-model="form.title" class="input" placeholder="See How It Works">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان (عربي)</label>
+              <input type="text" x-model="form.title_ar" class="input" dir="rtl" placeholder="شاهد كيف يعمل">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الوصف (EN)</label>
+              <textarea x-model="form.description" class="input" rows="3" placeholder="Brief description in English..."></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الوصف (عربي)</label>
+              <textarea x-model="form.description_ar" class="input" rows="3" dir="rtl" placeholder="وصف مختصر بالعربية..."></textarea>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">مدة الفيديو</label>
+              <input type="text" x-model="form.duration" class="input" placeholder="3:45">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">نص زر التشغيل (عربي)</label>
+              <input type="text" x-model="form.cta_text_ar" class="input" dir="rtl" placeholder="شاهد الفيديو">
+            </div>
+          </div>
+          <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
+            <input type="checkbox" x-model="form.is_active" class="rounded">
+            <span>عرض الفيديو التعريفي في الموقع</span>
+          </label>
+        </div>
+
+        <div class="flex justify-end pt-2">
+          <button @click="save()" :disabled="saving" class="btn-primary">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ الفيديو'"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div class="space-y-4">
+        <div class="card p-5 space-y-4">
+          <h4 class="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
+            <i data-lucide="eye" class="w-4 h-4 text-indigo-500"></i>
+            معاينة
+          </h4>
+          <template x-if="form.thumbnail_url">
+            <div class="relative rounded-xl overflow-hidden bg-slate-900 aspect-video">
+              <img :src="form.thumbnail_url" class="w-full h-full object-cover opacity-80">
+              <div class="absolute inset-0 flex items-center justify-center">
+                <div class="w-14 h-14 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <i data-lucide="play" class="w-7 h-7 text-white fill-white"></i>
+                </div>
+              </div>
+              <template x-if="form.duration">
+                <span class="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded font-mono"
+                      x-text="form.duration"></span>
+              </template>
+            </div>
+          </template>
+          <template x-if="!form.thumbnail_url">
+            <div class="rounded-xl bg-slate-100 dark:bg-slate-700/40 aspect-video flex flex-col items-center justify-center gap-2">
+              <i data-lucide="video" class="w-8 h-8 text-slate-400"></i>
+              <p class="text-xs text-slate-400">أضف رابط الصورة المصغّرة</p>
+            </div>
+          </template>
+          <template x-if="form.title_ar">
+            <p class="text-sm font-semibold text-slate-700 dark:text-slate-200" x-text="form.title_ar"></p>
+          </template>
+          <template x-if="form.description_ar">
+            <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-3" x-text="form.description_ar"></p>
+          </template>
+        </div>
+
+        <div class="card p-4 space-y-2">
+          <p class="text-xs font-semibold text-slate-500">حالة الفيديو</p>
+          <div class="flex items-center gap-2">
+            <div class="w-2 h-2 rounded-full" :class="form.is_active ? 'bg-emerald-500' : 'bg-slate-400'"></div>
+            <span class="text-sm" x-text="form.is_active ? 'معروض في الموقع' : 'مخفي'"></span>
+          </div>
+          <template x-if="form.video_url">
+            <a :href="form.video_url" target="_blank"
+               class="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+              <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+              فتح الفيديو
+            </a>
+          </template>
+        </div>
+      </div>
+
+    </div>
+  </template>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function introVideoEditor() {
+  return {
+    loading: true,
+    saving: false,
+    form: {
+      video_url: '', thumbnail_url: '', title: '', title_ar: '',
+      description: '', description_ar: '', duration: '', cta_text_ar: '', is_active: true,
+    },
+
+    async init() {
+      try {
+        const res = await apiFetch('/api/v1/cms/admin/intro-video/');
+        if (res && res.ok) {
+          const data = await res.json();
+          Object.assign(this.form, data);
+        }
+      } catch (e) {
+        notify('تعذّر تحميل بيانات الفيديو', 'error');
+      } finally {
+        this.loading = false;
+        this.$nextTick(() => lucide.createIcons());
+      }
+    },
+
+    async save() {
+      this.saving = true;
+      try {
+        const res = await apiFetch('/api/v1/cms/admin/intro-video/', {
+          method: 'PUT',
+          body: JSON.stringify(this.form),
+        });
+        if (res && res.ok) notify('تم حفظ الفيديو التعريفي', 'success');
+        else notify('فشل الحفظ', 'error');
+      } catch (e) {
+        notify('فشل الحفظ', 'error');
+      } finally {
+        this.saving = false;
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

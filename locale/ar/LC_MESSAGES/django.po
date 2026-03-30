@@ -2295,3 +2295,229 @@ msgstr "تعذر إرسال البريد الإلكتروني. راجع إعدا
 
 msgid "A rule violation was detected and requires detailed review."
 msgstr "تم رصد مخالفة لهذه القاعدة وتحتاج مراجعة تفصيلية."
+
+# --- Dashboard / Analytics / Audit / Compliance: i18n labels ---
+msgid "Big Four Audit Standards"
+msgstr "معايير المراجعة للأربعة الكبار"
+
+msgid "Industry Benchmark"
+msgstr "المعيار الصناعي"
+
+msgid "Risk Indicators"
+msgstr "مؤشرات المخاطر"
+
+msgid "HIGH RISK"
+msgstr "مخاطر عالية"
+
+msgid "Review Queue"
+msgstr "قائمة المراجعة"
+
+msgid "Top Vendors"
+msgstr "أبرز الموردون"
+
+msgid "Audit Rule Quality"
+msgstr "جودة قواعد التدقيق"
+
+msgid "Monthly Cash Flow"
+msgstr "التدفق النقدي الشهري"
+
+msgid "Anomaly Detection Analytics"
+msgstr "تحليلات كشف الشذوذ"
+
+msgid "Automated Anomaly Scan"
+msgstr "فحص الشذوذ الآلي"
+
+msgid "Benford's Law"
+msgstr "قانون بنفورد"
+
+msgid "High-Risk Invoices"
+msgstr "الفواتير عالية المخاطر"
+
+msgid "Financial Audit Cases"
+msgstr "حالات التدقيق المالي"
+
+msgid "ASSIGNED TO"
+msgstr "مسند إلى"
+
+msgid "OPENED"
+msgstr "تاريخ الفتح"
+
+msgid "SEVERITY"
+msgstr "الخطورة"
+
+msgid "TYPE"
+msgstr "النوع"
+
+msgid "TITLE"
+msgstr "العنوان"
+
+msgid "CASE NUMBER"
+msgstr "رقم الحالة"
+
+msgid "No audit cases"
+msgstr "لا توجد حالات تدقيق"
+
+msgid "Compliance Dashboard"
+msgstr "لوحة الامتثال"
+
+msgid "Track compliance and regulatory readiness"
+msgstr "تتبع الامتثال والاستعداد التنظيمي"
+
+msgid "READINESS SCORE"
+msgstr "نقاط الاستعداد"
+
+msgid "CLOSURE RATE"
+msgstr "معدل الإغلاق"
+
+msgid "OPEN VIOLATIONS"
+msgstr "المخالفات المفتوحة"
+
+msgid "COMPLIANCE RULES"
+msgstr "قواعد الامتثال"
+
+msgid "Tadgeeg AI Compliance Center"
+msgstr "مركز الامتثال - تدقيق الذكاء الاصطناعي"
+
+msgid "Compliance Center"
+msgstr "مركز الامتثال"
+
+msgid "Active Compliance Rules"
+msgstr "قواعد الامتثال النشطة"
+
+msgid "Open Violations and Cases"
+msgstr "المخالفات والحالات المفتوحة"
+
+msgid "RULES REGISTRY"
+msgstr "سجل القواعد"
+
+msgid "Resolution rate:"
+msgstr "معدل الحل:"
+
+msgid "visible frameworks"
+msgstr "الأطر المرئية"
+
+msgid "Status is currently stable"
+msgstr "الحالة مستقرة حالياً"
+
+msgid "Scan Now"
+msgstr "فحص الآن"
+
+msgid "Run"
+msgstr "تشغيل"
+
+msgid "No high-risk invoices"
+msgstr "لا توجد فواتير عالية المخاطر"
+
+msgid "REASON"
+msgstr "السبب"
+
+msgid "Non-compliant"
+msgstr "غير ممتثل"
+
+msgid "At average"
+msgstr "في المتوسط"
+
+msgid "Above average"
+msgstr "فوق المتوسط"
+
+msgid "Below average"
+msgstr "دون المتوسط"
+
+msgid "Passed"
+msgstr "اجتاز"
+
+msgid "Passed:"
+msgstr "اجتاز:"
+
+msgid "No vendor data available"
+msgstr "لا توجد بيانات موردين"
+
+msgid "Upload invoices to see top vendors"
+msgstr "ارفع فواتير لعرض أبرز الموردين"
+
+msgid "No recent audit sessions"
+msgstr "لا توجد جلسات تدقيق حديثة"
+
+msgid "Upload invoices to start an audit session"
+msgstr "ارفع فواتير لبدء جلسة تدقيق"
+
+msgid "Start your first audit"
+msgstr "ابدأ أول تدقيق"
+
+msgid "View all"
+msgstr "عرض الكل"
+
+msgid "Last 12 months"
+msgstr "آخر 12 شهراً"
+
+msgid "overall"
+msgstr "إجمالي"
+
+msgid "Compared to:"
+msgstr "مقارنةً بـ:"
+
+msgid "Compared to"
+msgstr "مقارنةً بـ"
+
+msgid "ISA 315"
+msgstr "ISA 315"
+
+msgid "ISA 500"
+msgstr "ISA 500"
+
+msgid "ISA 250"
+msgstr "ISA 250"
+
+msgid "ISA 330"
+msgstr "ISA 330"
+
+msgid "IDENTIFYING AND ASSESSING RISKS"
+msgstr "تحديد وتقييم المخاطر"
+
+msgid "AUDIT EVIDENCE"
+msgstr "أدلة التدقيق"
+
+msgid "CONSIDERATION OF LAWS AND REGULATIONS"
+msgstr "الاعتبار بالقوانين واللوائح"
+
+msgid "AUDITOR'S RESPONSES TO ASSESSED RISKS"
+msgstr "استجابات المدقق للمخاطر المقيّمة"
+
+msgid "Rules Registry"
+msgstr "سجل القواعد"
+
+msgid "Framework View"
+msgstr "عرض الإطار"
+
+msgid "Most Visible Regulatory Frameworks"
+msgstr "أبرز الأطر التنظيمية"
+
+msgid "Readiness Note"
+msgstr "ملاحظة الاستعداد"
+
+msgid "Operational Team Recommendation"
+msgstr "توصية الفريق التشغيلي"
+
+msgid "Track the latest violations and identify cases requiring decisions or quick compliance team intervention."
+msgstr "تتبع أحدث المخالفات وتحديد الحالات التي تستلزم قرارات أو تدخلاً سريعاً من فريق الامتثال."
+
+msgid "Switch between all, open only, or resolved cases to review progress."
+msgstr "التبديل بين جميع الحالات أو المفتوحة فقط أو المحلولة لمراجعة التقدم."
+
+msgid "Browse current rules and quickly search by name, rule type, and visible regulatory frameworks in the data."
+msgstr "استعرض القواعد الحالية وابحث سريعاً بالاسم أو نوع القاعدة أو الأطر التنظيمية المرئية في البيانات."
+
+msgid "This view helps you identify dominant frameworks such as ZATCA or internal policies."
+msgstr "تساعدك هذه العرض على تحديد الأطر السائدة كـ ZATCA أو السياسات الداخلية."
+
+msgid "A concise view of frameworks appearing in current compliance rules to identify where regulatory load is concentrated."
+msgstr "عرض موجز للأطر الظاهرة في قواعد الامتثال الحالية لتحديد مكامن التركز التنظيمي."
+
+msgid "This summary is based on values available in the framework field of rules loaded from the API."
+msgstr "يستند هذا الملخص إلى قيم حقل الإطار في القواعد المحملة من واجهة API."
+
+msgid "A quick summary to show where the compliance team should begin its next review cycle."
+msgstr "ملخص سريع يوضح من أين ينبغي أن يبدأ فريق الامتثال دورة المراجعة التالية."
+
+msgid "The goal is to support decisions, not replace human verification or formal reviews."
+msgstr "الهدف دعم اتخاذ القرارات لا إحلال التحقق البشري أو المراجعات الرسمية."

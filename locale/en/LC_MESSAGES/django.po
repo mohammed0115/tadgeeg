@@ -653,3 +653,229 @@ msgstr "Failed to send email. Check SMTP settings."
 
 msgid "A rule violation was detected and requires detailed review."
 msgstr "A rule violation was detected and requires detailed review."
+
+# --- Dashboard / Analytics / Audit / Compliance: i18n labels ---
+msgid "Big Four Audit Standards"
+msgstr "Big Four Audit Standards"
+
+msgid "Industry Benchmark"
+msgstr "Industry Benchmark"
+
+msgid "Risk Indicators"
+msgstr "Risk Indicators"
+
+msgid "HIGH RISK"
+msgstr "HIGH RISK"
+
+msgid "Review Queue"
+msgstr "Review Queue"
+
+msgid "Top Vendors"
+msgstr "Top Vendors"
+
+msgid "Audit Rule Quality"
+msgstr "Audit Rule Quality"
+
+msgid "Monthly Cash Flow"
+msgstr "Monthly Cash Flow"
+
+msgid "Anomaly Detection Analytics"
+msgstr "Anomaly Detection Analytics"
+
+msgid "Automated Anomaly Scan"
+msgstr "Automated Anomaly Scan"
+
+msgid "Benford's Law"
+msgstr "Benford's Law"
+
+msgid "High-Risk Invoices"
+msgstr "High-Risk Invoices"
+
+msgid "Financial Audit Cases"
+msgstr "Financial Audit Cases"
+
+msgid "ASSIGNED TO"
+msgstr "ASSIGNED TO"
+
+msgid "OPENED"
+msgstr "OPENED"
+
+msgid "SEVERITY"
+msgstr "SEVERITY"
+
+msgid "TYPE"
+msgstr "TYPE"
+
+msgid "TITLE"
+msgstr "TITLE"
+
+msgid "CASE NUMBER"
+msgstr "CASE NUMBER"
+
+msgid "No audit cases"
+msgstr "No audit cases"
+
+msgid "Compliance Dashboard"
+msgstr "Compliance Dashboard"
+
+msgid "Track compliance and regulatory readiness"
+msgstr "Track compliance and regulatory readiness"
+
+msgid "READINESS SCORE"
+msgstr "READINESS SCORE"
+
+msgid "CLOSURE RATE"
+msgstr "CLOSURE RATE"
+
+msgid "OPEN VIOLATIONS"
+msgstr "OPEN VIOLATIONS"
+
+msgid "COMPLIANCE RULES"
+msgstr "COMPLIANCE RULES"
+
+msgid "Tadgeeg AI Compliance Center"
+msgstr "Tadgeeg AI Compliance Center"
+
+msgid "Compliance Center"
+msgstr "Compliance Center"
+
+msgid "Active Compliance Rules"
+msgstr "Active Compliance Rules"
+
+msgid "Open Violations and Cases"
+msgstr "Open Violations and Cases"
+
+msgid "RULES REGISTRY"
+msgstr "RULES REGISTRY"
+
+msgid "Resolution rate:"
+msgstr "Resolution rate:"
+
+msgid "visible frameworks"
+msgstr "visible frameworks"
+
+msgid "Status is currently stable"
+msgstr "Status is currently stable"
+
+msgid "Scan Now"
+msgstr "Scan Now"
+
+msgid "Run"
+msgstr "Run"
+
+msgid "No high-risk invoices"
+msgstr "No high-risk invoices"
+
+msgid "REASON"
+msgstr "REASON"
+
+msgid "Non-compliant"
+msgstr "Non-compliant"
+
+msgid "At average"
+msgstr "At average"
+
+msgid "Above average"
+msgstr "Above average"
+
+msgid "Below average"
+msgstr "Below average"
+
+msgid "Passed"
+msgstr "Passed"
+
+msgid "Passed:"
+msgstr "Passed:"
+
+msgid "No vendor data available"
+msgstr "No vendor data available"
+
+msgid "Upload invoices to see top vendors"
+msgstr "Upload invoices to see top vendors"
+
+msgid "No recent audit sessions"
+msgstr "No recent audit sessions"
+
+msgid "Upload invoices to start an audit session"
+msgstr "Upload invoices to start an audit session"
+
+msgid "Start your first audit"
+msgstr "Start your first audit"
+
+msgid "View all"
+msgstr "View all"
+
+msgid "Last 12 months"
+msgstr "Last 12 months"
+
+msgid "overall"
+msgstr "overall"
+
+msgid "Compared to:"
+msgstr "Compared to:"
+
+msgid "Compared to"
+msgstr "Compared to"
+
+msgid "ISA 315"
+msgstr "ISA 315"
+
+msgid "ISA 500"
+msgstr "ISA 500"
+
+msgid "ISA 250"
+msgstr "ISA 250"
+
+msgid "ISA 330"
+msgstr "ISA 330"
+
+msgid "IDENTIFYING AND ASSESSING RISKS"
+msgstr "IDENTIFYING AND ASSESSING RISKS"
+
+msgid "AUDIT EVIDENCE"
+msgstr "AUDIT EVIDENCE"
+
+msgid "CONSIDERATION OF LAWS AND REGULATIONS"
+msgstr "CONSIDERATION OF LAWS AND REGULATIONS"
+
+msgid "AUDITOR'S RESPONSES TO ASSESSED RISKS"
+msgstr "AUDITOR'S RESPONSES TO ASSESSED RISKS"
+
+msgid "Rules Registry"
+msgstr "Rules Registry"
+
+msgid "Framework View"
+msgstr "Framework View"
+
+msgid "Most Visible Regulatory Frameworks"
+msgstr "Most Visible Regulatory Frameworks"
+
+msgid "Readiness Note"
+msgstr "Readiness Note"
+
+msgid "Operational Team Recommendation"
+msgstr "Operational Team Recommendation"
+
+msgid "Track the latest violations and identify cases requiring decisions or quick compliance team intervention."
+msgstr "Track the latest violations and identify cases requiring decisions or quick compliance team intervention."
+
+msgid "Switch between all, open only, or resolved cases to review progress."
+msgstr "Switch between all, open only, or resolved cases to review progress."
+
+msgid "Browse current rules and quickly search by name, rule type, and visible regulatory frameworks in the data."
+msgstr "Browse current rules and quickly search by name, rule type, and visible regulatory frameworks in the data."
+
+msgid "This view helps you identify dominant frameworks such as ZATCA or internal policies."
+msgstr "This view helps you identify dominant frameworks such as ZATCA or internal policies."
+
+msgid "A concise view of frameworks appearing in current compliance rules to identify where regulatory load is concentrated."
+msgstr "A concise view of frameworks appearing in current compliance rules to identify where regulatory load is concentrated."
+
+msgid "This summary is based on values available in the framework field of rules loaded from the API."
+msgstr "This summary is based on values available in the framework field of rules loaded from the API."
+
+msgid "A quick summary to show where the compliance team should begin its next review cycle."
+msgstr "A quick summary to show where the compliance team should begin its next review cycle."
+
+msgid "The goal is to support decisions, not replace human verification or formal reviews."
+msgstr "The goal is to support decisions, not replace human verification or formal reviews."

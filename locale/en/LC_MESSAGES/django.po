@@ -879,3 +879,6 @@ msgstr "A quick summary to show where the compliance team should begin its next 
 
 msgid "The goal is to support decisions, not replace human verification or formal reviews."
 msgstr "The goal is to support decisions, not replace human verification or formal reviews."
+
+msgid "Return directly to %(product)s and continue your work."
+msgstr "Return directly to %(product)s and continue your work."

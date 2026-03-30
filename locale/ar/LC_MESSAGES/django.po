@@ -2525,3 +2525,6 @@ msgstr "الهدف دعم اتخاذ القرارات لا إحلال التحق
 # --- Login portal: step 03 ---
 msgid "Move directly into the %(product)s dashboard"
 msgstr "انتقل مباشرةً إلى لوحة تحكم %(product)s"
+
+msgid "Return directly to %(product)s and continue your work."
+msgstr "عُد مباشرةً إلى %(product)s وواصل عملك."

@@ -1,7 +1,7 @@
 {% extends "layouts/base_vendor_dashboard.html" %}
 {% load i18n %}
-{% block page_title %}مهام المراجعة{% endblock %}
-{% block breadcrumb_current %}المراجعة{% endblock %}
+{% block page_title %}{% trans "Audit Jobs" %}{% endblock %}
+{% block breadcrumb_current %}{% trans "Audits" %}{% endblock %}
 
 {% block content %}
 <div x-data="auditsManager()" x-init="init()" class="space-y-5 fade-in">
@@ -9,12 +9,12 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">مهام المراجعة</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">تتبع ونتائج مهام المراجعة المالية الذكية</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans "Audit Jobs" %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans "Track and review smart financial audit tasks" %}</p>
     </div>
     <a href="/dashboard/upload/" class="btn-primary">
       <i data-lucide="plus" class="w-4 h-4"></i>
-      مراجعة جديدة
+      {% trans "New Audit" %}
     </a>
   </div>
 
@@ -23,36 +23,36 @@
     <div class="card p-4 text-center">
       <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
       <template x-if="!loading"><p class="text-2xl font-black text-slate-900 dark:text-white" x-text="stats.total || 0"></p></template>
-      <p class="text-xs text-slate-500 mt-1">إجمالي المهام</p>
+      <p class="text-xs text-slate-500 mt-1">{% trans "Total jobs" %}</p>
     </div>
     <div class="card p-4 text-center">
       <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
       <template x-if="!loading"><p class="text-2xl font-black text-blue-600" x-text="stats.running || 0"></p></template>
-      <p class="text-xs text-slate-500 mt-1">جارية</p>
+      <p class="text-xs text-slate-500 mt-1">{% trans "Running" %}</p>
     </div>
     <div class="card p-4 text-center">
       <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
       <template x-if="!loading"><p class="text-2xl font-black text-emerald-600" x-text="stats.completed || 0"></p></template>
-      <p class="text-xs text-slate-500 mt-1">مكتملة</p>
+      <p class="text-xs text-slate-500 mt-1">{% trans "Completed" %}</p>
     </div>
     <div class="card p-4 text-center">
       <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
       <template x-if="!loading"><p class="text-2xl font-black text-red-500" x-text="stats.failed || 0"></p></template>
-      <p class="text-xs text-slate-500 mt-1">فاشلة</p>
+      <p class="text-xs text-slate-500 mt-1">{% trans "Failed" %}</p>
     </div>
   </div>
 
   <!-- Filters -->
   <div class="card p-4 flex flex-wrap items-center gap-3">
     <select x-model="filter.status" @change="load()" class="select">
-      <option value="">جميع الحالات</option>
-      <option value="pending">في الانتظار</option>
-      <option value="running">جارية</option>
-      <option value="completed">مكتملة</option>
-      <option value="failed">فاشلة</option>
+      <option value="">{% trans "All statuses" %}</option>
+      <option value="pending">{% trans "Pending" %}</option>
+      <option value="running">{% trans "Running" %}</option>
+      <option value="completed">{% trans "Completed" %}</option>
+      <option value="failed">{% trans "Failed" %}</option>
     </select>
     <input type="text" x-model.debounce.300ms="filter.search" @input="load()"
-           class="input max-w-xs" placeholder="البحث...">
+           class="input max-w-xs" placeholder="{% trans 'Search...' %}">
   </div>
 
   <!-- Audits Table -->
@@ -74,10 +74,10 @@
     <template x-if="!loading && audits.length === 0">
       <div class="px-5 py-16 text-center">
         <i data-lucide="shield-check" class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3"></i>
-        <p class="text-slate-500 text-sm">لا توجد مهام مراجعة</p>
+        <p class="text-slate-500 text-sm">{% trans "No audit jobs found" %}</p>
         <a href="/dashboard/upload/" class="btn-ghost text-xs mt-4 mx-auto">
           <i data-lucide="upload-cloud" class="w-4 h-4"></i>
-          ارفع ملفاً للبدء
+          {% trans "Upload a file to get started" %}
         </a>
       </div>
     </template>
@@ -87,13 +87,13 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>المستند</th>
-              <th>النوع</th>
-              <th>درجة المخاطر</th>
-              <th>الامتثال</th>
-              <th>الحالة</th>
-              <th>التاريخ</th>
-              <th>إجراءات</th>
+              <th>{% trans "Document" %}</th>
+              <th>{% trans "Type" %}</th>
+              <th>{% trans "Risk score" %}</th>
+              <th>{% trans "Compliance" %}</th>
+              <th>{% trans "Status" %}</th>
+              <th>{% trans "Date" %}</th>
+              <th>{% trans "Actions" %}</th>
             </tr>
           </thead>
           <tbody>
@@ -158,11 +158,11 @@
                           'badge-green':  audit.status === 'completed',
                           'badge-red':    audit.status === 'failed',
                         }"
-                        x-text="audit.status === 'pending' ? 'في الانتظار' : audit.status === 'running' ? 'جارية' : audit.status === 'completed' ? 'مكتملة' : 'فاشلة'">
+                        x-text="audit.status === 'pending' ? '{% trans \"Pending\" %}' : audit.status === 'running' ? '{% trans \"Running\" %}' : audit.status === 'completed' ? '{% trans \"Completed\" %}' : '{% trans \"Failed\" %}'">
                   </span>
                 </td>
                 <td class="text-xs text-slate-400"
-                    x-text="audit.created_at ? new Date(audit.created_at).toLocaleDateString('ar-SA') : '—'"></td>
+                    x-text="audit.created_at ? new Date(audit.created_at).toLocaleDateString(APP_LOCALE) : '—'"></td>
                 <td>
                   <a :href="'/dashboard/audit-results/' + audit.id + '/'" class="btn-ghost text-xs px-2 py-1">
                     <i data-lucide="eye" class="w-3.5 h-3.5"></i>
@@ -202,7 +202,7 @@ function auditsManager() {
         }
         if (statsRes && statsRes.ok) this.stats = await statsRes.json();
       } catch (e) {
-        notify('تعذّر تحميل المراجعات', 'error');
+        notify('{% trans "Failed to load audits" %}', 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());

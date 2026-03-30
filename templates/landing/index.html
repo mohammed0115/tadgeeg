@@ -158,6 +158,9 @@
   x-data="landingApp()"
   x-init="init()"
 >
+  <div class="fixed {% if LANGUAGE_BIDI %}right-4{% else %}left-4{% endif %} top-4 z-[70]">
+    {% include "partials/language_switcher.html" with extra_classes="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/90 p-1 text-xs font-semibold text-slate-700 shadow-lg backdrop-blur" %}
+  </div>
 
   <!-- Ambient blobs (fixed, pointer-events-none) -->
   <div class="fixed inset-0 pointer-events-none z-0 overflow-hidden" aria-hidden="true">

@@ -1,11 +1,12 @@
 {% extends "base.html" %}
-{% block title %}تفاصيل الفاتورة{% endblock %}
-{% block page_title %}تفاصيل الفاتورة{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Invoice Details" %}{% endblock %}
+{% block page_title %}{% trans "Invoice Details" %}{% endblock %}
 {% block nav_invoices %}active{% endblock %}
 
 {% block breadcrumb %}
   <span class="mx-2 text-sm text-slate-400">/</span>
-  <a href="{% url 'frontend:invoices' %}" class="text-sm text-slate-400 hover:text-primary-500">الفواتير</a>
+  <a href="{% url 'frontend:invoices' %}" class="text-sm text-slate-400 hover:text-primary-500">{% trans "Invoices" %}</a>
   <span class="mx-2 text-sm text-slate-400">/</span>
   <span class="text-sm text-slate-600 dark:text-slate-300">{{ invoice_display.invoice_number }}</span>
 {% endblock %}
@@ -14,16 +15,16 @@
 <div class="flex items-center gap-2 flex-wrap">
   <button onclick="document.getElementById('revalidateBtn').click()" class="btn-ghost border border-slate-200/80 dark:border-slate-700/60 text-xs py-2.5 px-4">
     <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-    <span>إعادة التدقيق</span>
+    <span>{% trans "Re-run Audit" %}</span>
   </button>
   {% if invoice.status != 'approved' and invoice.status != 'rejected' %}
   <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'reject'}))" class="btn-red text-xs py-2.5 px-4 shadow-sm shadow-red-500/20">
     <i data-lucide="x-circle" class="w-4 h-4"></i>
-    <span>رفض</span>
+    <span>{% trans "Reject" %}</span>
   </button>
   <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'approve'}))" class="btn-green text-xs py-2.5 px-4 shadow-sm shadow-emerald-500/20">
     <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-    <span>اعتماد</span>
+    <span>{% trans "Approve" %}</span>
   </button>
   {% endif %}
 </div>
@@ -39,19 +40,19 @@
         <div class="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div class="space-y-5 min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-2">
-              <span class="badge-info">ملف الفاتورة</span>
+              <span class="badge-info">{% trans "Invoice File" %}</span>
               <span class="{{ invoice_display.risk_badge_class }}">{{ invoice_display.risk_label_ar }}</span>
               <span class="{{ invoice_display.status_badge_class }}">{{ invoice_display.status_label }}</span>
               {% if invoice.is_duplicate %}
-              <span class="badge-medium">فاتورة مكررة</span>
+              <span class="badge-medium">{% trans "Duplicate Invoice" %}</span>
               {% endif %}
               {% if invoice.has_qr_code and invoice.qr_code_valid %}
-              <span class="badge-low">QR صالح</span>
+              <span class="badge-low">{% trans "Valid QR" %}</span>
               {% endif %}
             </div>
 
             <div>
-              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">المورد</p>
+              <p class="text-sm font-medium text-slate-500 dark:text-slate-400">{% trans "Vendor" %}</p>
               <h2 class="mt-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white break-words">{{ invoice_display.vendor_name }}</h2>
               <div class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-slate-500 dark:text-slate-400">
                 <span class="inline-flex items-center gap-2">
@@ -73,19 +74,19 @@
 
             <div class="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
               <div class="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">رقم الفاتورة</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{% trans "Invoice Number" %}</p>
                 <p class="mt-2 font-mono text-sm font-semibold text-slate-800 dark:text-white">{{ invoice_display.invoice_number }}</p>
               </div>
               <div class="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">تاريخ الإصدار</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{% trans "Issue Date" %}</p>
                 <p class="mt-2 text-sm font-semibold text-slate-800 dark:text-white">{{ invoice_display.invoice_date_display }}</p>
               </div>
               <div class="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">تاريخ الاستحقاق</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{% trans "Due Date" %}</p>
                 <p class="mt-2 text-sm font-semibold text-slate-800 dark:text-white">{{ invoice_display.due_date_display }}</p>
               </div>
               <div class="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">طريقة الاستخراج</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{% trans "Extraction Method" %}</p>
                 <p class="mt-2 text-sm font-semibold text-slate-800 dark:text-white">{{ invoice_display.source_method_label }}</p>
               </div>
             </div>
@@ -93,19 +94,19 @@
 
           <div class="grid gap-4 sm:grid-cols-3 xl:grid-cols-1 xl:w-[280px]">
             <div class="rounded-3xl border border-blue-200 bg-blue-50 p-5 dark:border-blue-900/50 dark:bg-blue-950/30">
-              <p class="text-sm font-semibold text-blue-700 dark:text-blue-300">الإجمالي</p>
+              <p class="text-sm font-semibold text-blue-700 dark:text-blue-300">{% trans "Total" %}</p>
               <p class="mt-3 text-2xl font-bold text-blue-900 dark:text-white">{{ invoice_display.total_amount_display }}</p>
-              <p class="mt-2 text-xs text-blue-700/80 dark:text-blue-200/80">المبلغ النهائي بعد الضريبة</p>
+              <p class="mt-2 text-xs text-blue-700/80 dark:text-blue-200/80">{% trans "Final amount after tax" %}</p>
             </div>
             <div class="rounded-3xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-900/50 dark:bg-emerald-950/30">
-              <p class="text-sm font-semibold text-emerald-700 dark:text-emerald-300">صافي قبل الضريبة</p>
+              <p class="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{% trans "Subtotal before tax" %}</p>
               <p class="mt-3 text-xl font-bold text-emerald-900 dark:text-white">{{ invoice_display.subtotal_display }}</p>
-              <p class="mt-2 text-xs text-emerald-700/80 dark:text-emerald-200/80">القيمة الأساسية</p>
+              <p class="mt-2 text-xs text-emerald-700/80 dark:text-emerald-200/80">{% trans "Base amount" %}</p>
             </div>
             <div class="rounded-3xl border border-violet-200 bg-violet-50 p-5 dark:border-violet-900/50 dark:bg-violet-950/30">
-              <p class="text-sm font-semibold text-violet-700 dark:text-violet-300">الضريبة</p>
+              <p class="text-sm font-semibold text-violet-700 dark:text-violet-300">{% trans "Tax" %}</p>
               <p class="mt-3 text-xl font-bold text-violet-900 dark:text-white">{{ invoice_display.vat_amount_display }}</p>
-              <p class="mt-2 text-xs text-violet-700/80 dark:text-violet-200/80">نسبة {{ invoice_display.vat_rate|floatformat:2 }}%</p>
+              <p class="mt-2 text-xs text-violet-700/80 dark:text-violet-200/80">{% trans "Rate" %} {{ invoice_display.vat_rate|floatformat:2 }}%</p>
             </div>
           </div>
         </div>
@@ -114,20 +115,20 @@
       <section class="card p-6 lg:p-7">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div class="min-w-0 flex-1">
-            <h3 class="text-lg font-bold text-slate-900 dark:text-white">ملخص الاستخراج والمراجعة</h3>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">{% trans "Extraction and Review Summary" %}</h3>
             <p class="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">{{ invoice_display.ai_summary }}</p>
           </div>
           <div class="grid gap-3 sm:grid-cols-3 lg:w-[360px] lg:grid-cols-1">
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
-              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">ثقة OCR</p>
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{% trans "OCR Confidence" %}</p>
               <p class="mt-2 text-lg font-bold text-slate-900 dark:text-white">{{ invoice_display.ocr_confidence|floatformat:0 }}%</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
-              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">نقاط التدقيق</p>
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{% trans "Audit Score" %}</p>
               <p class="mt-2 text-lg font-bold text-slate-900 dark:text-white">{{ invoice_display.validation_score|floatformat:0 }}%</p>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
-              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">الخصم</p>
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{% trans "Discount" %}</p>
               <p class="mt-2 text-lg font-bold text-slate-900 dark:text-white">{{ invoice_display.discount_display }}</p>
             </div>
           </div>
@@ -137,31 +138,31 @@
       <section class="card p-6 lg:p-7">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h3 class="text-lg font-bold text-slate-900 dark:text-white">نتائج التدقيق</h3>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">قواعد الفحص، مستوى الخطر، وملخص الملاحظات التفصيلية.</p>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">{% trans "Audit Results" %}</h3>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{% trans "Validation rules, risk level, and a summary of detailed findings." %}</p>
           </div>
           <div class="flex flex-wrap gap-2 text-xs font-semibold">
-            <span class="badge-info">المراجعة: <span class="mr-1 font-mono" x-text="score.toFixed(0) + '%'"></span></span>
-            <span class="badge-low">ناجح: <span class="mr-1 font-mono" x-text="passed"></span></span>
-            <span class="badge-high">فشل: <span class="mr-1 font-mono" x-text="failed"></span></span>
+            <span class="badge-info">{% trans "Review:" %} <span class="mr-1 font-mono" x-text="score.toFixed(0) + '%' "></span></span>
+            <span class="badge-low">{% trans "Passed:" %} <span class="mr-1 font-mono" x-text="passed"></span></span>
+            <span class="badge-high">{% trans "Failed:" %} <span class="mr-1 font-mono" x-text="failed"></span></span>
           </div>
         </div>
 
         <div class="mt-5 grid gap-4 md:grid-cols-4">
           <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">نقاط التدقيق</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{% trans "Audit Score" %}</p>
             <p class="mt-2 text-2xl font-bold text-slate-900 dark:text-white" x-text="score.toFixed(0) + '%'">{{ invoice_display.validation_score|floatformat:0 }}%</p>
           </div>
           <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/30">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600/80 dark:text-emerald-300/80">قواعد ناجحة</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-600/80 dark:text-emerald-300/80">{% trans "Passed Rules" %}</p>
             <p class="mt-2 text-2xl font-bold text-emerald-700 dark:text-emerald-200" x-text="passed">{{ invoice_display.rules_passed }}</p>
           </div>
           <div class="rounded-2xl border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-red-600/80 dark:text-red-300/80">قواعد فاشلة</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-red-600/80 dark:text-red-300/80">{% trans "Failed Rules" %}</p>
             <p class="mt-2 text-2xl font-bold text-red-700 dark:text-red-200" x-text="failed">{{ invoice_display.rules_failed }}</p>
           </div>
           <div class="rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900/50 dark:bg-blue-950/30">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600/80 dark:text-blue-300/80">مصدر البيانات</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-blue-600/80 dark:text-blue-300/80">{% trans "Data Source" %}</p>
             <p class="mt-2 text-sm font-bold text-blue-700 dark:text-blue-100">{{ invoice_display.source_method_label }}</p>
           </div>
         </div>
@@ -179,7 +180,7 @@
           </template>
         </div>
 
-        <div x-show="loadingRules" class="py-10 text-center text-sm text-slate-400">جارٍ تحميل نتائج التدقيق...</div>
+        <div x-show="loadingRules" class="py-10 text-center text-sm text-slate-400">{% trans "Loading audit results..." %}</div>
 
         <div x-show="!loadingRules" class="mt-5 space-y-3">
           <template x-for="[code, rule] in filteredRules()" :key="code">
@@ -193,13 +194,13 @@
                   <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-2">
                       <span class="rounded-lg px-2 py-1 text-[11px] font-bold font-mono" :style="'background:' + ruleGroupColor(code) + '18; color:' + ruleGroupColor(code)" x-text="code"></span>
-                      <span class="text-sm font-semibold text-slate-900 dark:text-white" x-text="rule.description || 'قاعدة تدقيق'"></span>
+                      <span class="text-sm font-semibold text-slate-900 dark:text-white" x-text="rule.description || '{% trans 'Audit Rule' %}'"></span>
                     </div>
-                    <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300" x-text="rule.message || 'لا توجد ملاحظات إضافية.'"></p>
+                    <p class="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300" x-text="rule.message || '{% trans 'No additional notes.' %}'"></p>
                   </div>
                 </div>
                 <div class="flex flex-wrap gap-2 lg:max-w-[220px] lg:justify-end">
-                  <span class="badge" :class="rule.passed ? 'badge-low' : 'badge-high'" x-text="rule.passed ? 'ناجح' : 'فشل'"></span>
+                  <span class="badge" :class="rule.passed ? 'badge-low' : 'badge-high'" x-text="rule.passed ? '{% trans 'Passed' %}' : '{% trans 'Failed' %}'"></span>
                   <span x-show="!rule.passed" class="badge"
                         :class="{
                           'badge-high': rule.severity === 'critical' || rule.severity === 'high',
@@ -212,7 +213,7 @@
             </article>
           </template>
 
-          <div x-show="!filteredRules().length && !loadingRules" class="rounded-2xl border border-dashed border-slate-300 py-10 text-center text-sm text-slate-400 dark:border-slate-700">لا توجد نتائج تدقيق لهذه المجموعة.</div>
+          <div x-show="!filteredRules().length && !loadingRules" class="rounded-2xl border border-dashed border-slate-300 py-10 text-center text-sm text-slate-400 dark:border-slate-700">{% trans "No audit results for this group." %}</div>
         </div>
       </section>
 
@@ -220,8 +221,8 @@
       <section class="card p-6 lg:p-7">
         <div class="flex items-center justify-between gap-3">
           <div>
-            <h3 class="text-lg font-bold text-slate-900 dark:text-white">بنود الفاتورة</h3>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">تفاصيل المواد أو الخدمات المستخرجة من المستند.</p>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">{% trans "Invoice Line Items" %}</h3>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{% trans "Details of items or services extracted from the document." %}</p>
           </div>
         </div>
 
@@ -229,10 +230,10 @@
           <table class="data-table min-w-full">
             <thead>
               <tr>
-                <th>الوصف</th>
-                <th>الكمية</th>
-                <th>سعر الوحدة</th>
-                <th>الإجمالي</th>
+                <th>{% trans "Description" %}</th>
+                <th>{% trans "Quantity" %}</th>
+                <th>{% trans "Unit Price" %}</th>
+                <th>{% trans "Total" %}</th>
               </tr>
             </thead>
             <tbody>
@@ -253,7 +254,7 @@
       <section class="card p-6 lg:p-7">
         <div class="flex items-center gap-2">
           <i data-lucide="history" class="h-4 w-4 text-slate-400"></i>
-          <h3 class="text-lg font-bold text-slate-900 dark:text-white">سجل المراجعة</h3>
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white">{% trans "Audit Trail" %}</h3>
         </div>
         <div class="mt-5 space-y-4">
           {% for ev in audit_trail %}
@@ -270,11 +271,11 @@
             </div>
             <div class="min-w-0 flex-1">
               <p class="text-sm font-medium leading-6 text-slate-800 dark:text-slate-100">{{ ev.description|truncatechars:120 }}</p>
-              <p class="mt-1 text-xs text-slate-400">{{ ev.user.full_name|default:"النظام" }} · {{ ev.timestamp|date:"Y-m-d H:i" }}</p>
+              <p class="mt-1 text-xs text-slate-400">{{ ev.user.full_name|default:_('System') }} · {{ ev.timestamp|date:"Y-m-d H:i" }}</p>
             </div>
           </div>
           {% empty %}
-          <div class="rounded-2xl border border-dashed border-slate-300 py-10 text-center text-sm text-slate-400 dark:border-slate-700">لا توجد سجلات مراجعة لهذه الفاتورة.</div>
+          <div class="rounded-2xl border border-dashed border-slate-300 py-10 text-center text-sm text-slate-400 dark:border-slate-700">{% trans "No audit records for this invoice." %}</div>
           {% endfor %}
         </div>
       </section>
@@ -283,7 +284,7 @@
     <aside class="space-y-6 min-w-0">
       <section class="card p-6">
         <div class="flex items-center justify-between gap-3">
-          <h3 class="text-lg font-bold text-slate-900 dark:text-white">تقييم الخطر</h3>
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white">{% trans "Risk Assessment" %}</h3>
           <span class="{{ invoice_display.risk_badge_class }}">{{ invoice_display.risk_label_ar }}</span>
         </div>
 
@@ -299,7 +300,7 @@
         <div class="mt-6 space-y-4">
           <div>
             <div class="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300">
-              <span>مستوى الخطر</span>
+              <span>{% trans "Risk Level" %}</span>
               <span class="font-semibold {{ invoice_display.risk_text_class }}">{{ invoice_display.risk_label_ar }}</span>
             </div>
             <div class="mt-2 progress-track">
@@ -308,7 +309,7 @@
           </div>
           <div>
             <div class="flex items-center justify-between text-sm text-slate-600 dark:text-slate-300">
-              <span>نقاط التدقيق</span>
+              <span>{% trans "Audit Score" %}</span>
               <span class="font-semibold text-slate-900 dark:text-white">{{ invoice_display.validation_score|floatformat:0 }}%</span>
             </div>
             <div class="mt-2 progress-track">
@@ -320,19 +321,19 @@
 
       <section class="card p-6">
         <div class="flex items-center justify-between gap-3">
-          <h3 class="text-lg font-bold text-slate-900 dark:text-white">الحالة والإجراءات</h3>
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white">{% trans "Status and Actions" %}</h3>
           <span class="{{ invoice_display.status_badge_class }}">{{ invoice_display.status_label }}</span>
         </div>
 
         {% if invoice_display.status_mismatch %}
         <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
-          تم تعديل الحالة المعروضة إلى <strong>{{ invoice_display.status_label }}</strong> لأن درجة الخطر الحالية مرتفعة وتحتاج إلى مراجعة.
+          {% blocktrans with status=invoice_display.status_label %}The displayed status was adjusted to <strong>{{ status }}</strong> because the current risk score is high and requires review.{% endblocktrans %}
         </div>
         {% endif %}
 
         {% if invoice.rejected_reason %}
         <div class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
-          سبب الرفض: {{ invoice.rejected_reason }}
+          {% trans "Rejection reason:" %} {{ invoice.rejected_reason }}
         </div>
         {% endif %}
 
@@ -340,48 +341,48 @@
           {% if invoice.status != 'approved' and invoice.status != 'rejected' %}
           <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'approve'}))" class="btn-green justify-center py-3 text-sm shadow-lg shadow-emerald-500/20">
             <i data-lucide="badge-check" class="w-4 h-4"></i>
-            <span>اعتماد الفاتورة</span>
+            <span>{% trans "Approve Invoice" %}</span>
           </button>
           <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'reject'}))" class="btn-red justify-center py-3 text-sm shadow-lg shadow-red-500/20">
             <i data-lucide="ban" class="w-4 h-4"></i>
-            <span>رفض الفاتورة</span>
+            <span>{% trans "Reject Invoice" %}</span>
           </button>
           {% endif %}
           <button onclick="document.getElementById('revalidateBtn').click()" class="btn-ghost justify-center py-3 text-sm border border-slate-200 dark:border-slate-700/60">
             <i data-lucide="rotate-cw" class="w-4 h-4"></i>
-            <span>إعادة تشغيل التدقيق</span>
+            <span>{% trans "Re-run Audit" %}</span>
           </button>
         </div>
 
         <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
           <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">اعتمد بواسطة</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{% trans "Approved By" %}</p>
             <p class="mt-2 text-sm font-semibold text-slate-800 dark:text-white">{{ invoice.approved_by.full_name|default:"—" }}</p>
           </div>
           <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">آخر تحديث</p>
+            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{% trans "Last Updated" %}</p>
             <p class="mt-2 text-sm font-semibold text-slate-800 dark:text-white">{{ invoice.updated_at|date:"Y-m-d H:i" }}</p>
           </div>
         </div>
       </section>
 
       <section class="card p-6">
-        <h3 class="text-lg font-bold text-slate-900 dark:text-white">مؤشرات الاستخراج</h3>
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">{% trans "Extraction Metrics" %}</h3>
         <div class="mt-5 space-y-4">
           <div class="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700/50 dark:bg-slate-900/40">
-            <span class="text-sm text-slate-500 dark:text-slate-400">طريقة الاستخراج</span>
+            <span class="text-sm text-slate-500 dark:text-slate-400">{% trans "Extraction Method" %}</span>
             <span class="text-sm font-semibold text-slate-900 dark:text-white">{{ invoice_display.source_method_label }}</span>
           </div>
           <div class="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700/50 dark:bg-slate-900/40">
-            <span class="text-sm text-slate-500 dark:text-slate-400">ثقة OCR</span>
+            <span class="text-sm text-slate-500 dark:text-slate-400">{% trans "OCR Confidence" %}</span>
             <span class="font-mono text-sm font-semibold text-slate-900 dark:text-white">{{ invoice_display.ocr_confidence|floatformat:0 }}%</span>
           </div>
           <div class="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700/50 dark:bg-slate-900/40">
-            <span class="text-sm text-slate-500 dark:text-slate-400">العملة</span>
+            <span class="text-sm text-slate-500 dark:text-slate-400">{% trans "Currency" %}</span>
             <span class="font-mono text-sm font-semibold text-slate-900 dark:text-white">{{ invoice_display.currency }}</span>
           </div>
           <div class="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700/50 dark:bg-slate-900/40">
-            <span class="text-sm text-slate-500 dark:text-slate-400">ضريبة القيمة</span>
+            <span class="text-sm text-slate-500 dark:text-slate-400">{% trans "VAT Rate" %}</span>
             <span class="font-mono text-sm font-semibold text-slate-900 dark:text-white">{{ invoice_display.vat_rate|floatformat:2 }}%</span>
           </div>
         </div>
@@ -398,31 +399,31 @@
        x-transition:enter-start="opacity-0"
        x-transition:enter-end="opacity-100">
     <div @click.away="open=false" class="modal-box p-6 animate-[fadeIn_.2s_ease]">
-      <h3 class="text-lg font-bold text-slate-900 dark:text-white" x-text="action === 'approve' ? 'اعتماد الفاتورة' : 'رفض الفاتورة'"></h3>
+      <h3 class="text-lg font-bold text-slate-900 dark:text-white" x-text="action === 'approve' ? '{% trans 'Approve Invoice' %}' : '{% trans 'Reject Invoice' %}'"></h3>
       <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ invoice_display.vendor_name }} — {{ invoice_display.invoice_number }}</p>
 
       <div x-show="action === 'reject'" class="mt-5">
-        <label class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">سبب الرفض</label>
-        <textarea x-model="reason" rows="4" class="input resize-none" placeholder="اكتب سبب الرفض بوضوح..."></textarea>
+        <label class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">{% trans "Rejection Reason" %}</label>
+        <textarea x-model="reason" rows="4" class="input resize-none" placeholder="{% trans 'Write the rejection reason clearly...' %}"></textarea>
       </div>
 
       <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
-        <button @click="open=false" class="btn-ghost flex-1 justify-center py-3">إلغاء</button>
+        <button @click="open=false" class="btn-ghost flex-1 justify-center py-3">{% trans "Cancel" %}</button>
         <button
           @click="
-            if (action === 'reject' && !reason.trim()) { alert('يرجى إدخال سبب الرفض'); return; }
+            if (action === 'reject' && !reason.trim()) { alert('{% trans 'Please enter a rejection reason' %}'); return; }
             apiFetch('/invoices/{{ invoice.id }}/approve/', {
               method: 'POST',
               body: JSON.stringify({ action: action, reason: reason })
             }).then(() => {
               open = false;
-              notify(action === 'approve' ? 'تم اعتماد الفاتورة' : 'تم رفض الفاتورة', action === 'approve' ? 'success' : 'info');
+              notify(action === 'approve' ? '{% trans 'Invoice approved' %}' : '{% trans 'Invoice rejected' %}', action === 'approve' ? 'success' : 'info');
               setTimeout(() => location.reload(), 800);
-            }).catch((e) => notify('فشل: ' + e.message, 'error'))
+            }).catch((e) => notify('{% trans 'Failed:' %} ' + e.message, 'error'))
           "
           class="flex-1 justify-center py-3 text-sm"
           :class="action === 'approve' ? 'btn-green shadow-lg shadow-emerald-500/20' : 'btn-red shadow-lg shadow-red-500/20'"
-          x-text="action === 'approve' ? 'تأكيد الاعتماد' : 'تأكيد الرفض'"
+          x-text="action === 'approve' ? '{% trans 'Confirm Approval' %}' : '{% trans 'Confirm Rejection' %}'"
         ></button>
       </div>
     </div>
@@ -441,13 +442,13 @@ function invoiceDetail(invoiceId, initialScore, initialPassed, initialFailed) {
     activeGroup: 'ALL',
     loadingRules: true,
     ruleTabs: [
-      { code: 'ALL', label: 'الكل', color: '#64748b' },
-      { code: 'INV', label: 'رأس الفاتورة', color: '#3b82f6' },
-      { code: 'DUP', label: 'التكرار', color: '#8b5cf6' },
-      { code: 'VAT', label: 'الضريبة', color: '#06b6d4' },
-      { code: 'ANO', label: 'الشذوذ', color: '#ef4444' },
-      { code: 'CTL', label: 'الرقابة', color: '#0ea5e9' },
-      { code: 'DOC', label: 'المستند', color: '#22c55e' },
+      { code: 'ALL', label: '{% trans "All" %}', color: '#64748b' },
+      { code: 'INV', label: '{% trans "Invoice Header" %}', color: '#3b82f6' },
+      { code: 'DUP', label: '{% trans "Duplicates" %}', color: '#8b5cf6' },
+      { code: 'VAT', label: '{% trans "Tax" %}', color: '#06b6d4' },
+      { code: 'ANO', label: '{% trans "Anomalies" %}', color: '#ef4444' },
+      { code: 'CTL', label: '{% trans "Controls" %}', color: '#0ea5e9' },
+      { code: 'DOC', label: '{% trans "Document" %}', color: '#22c55e' },
     ],
 
     async init() {
@@ -482,21 +483,21 @@ function invoiceDetail(invoiceId, initialScore, initialPassed, initialFailed) {
 
     severityLabel(severity) {
       return {
-        critical: 'حرج',
-        high: 'عالٍ',
-        medium: 'متوسط',
-        low: 'منخفض',
-        info: 'معلومة',
-      }[severity] || 'ملاحظة';
+        critical: '{% trans "Critical" %}',
+        high: '{% trans "High" %}',
+        medium: '{% trans "Medium" %}',
+        low: '{% trans "Low" %}',
+        info: '{% trans "Info" %}',
+      }[severity] || '{% trans "Note" %}';
     },
 
     async revalidate() {
       try {
         await apiFetch('/invoices/' + invoiceId + '/revalidate/', { method: 'POST' });
-        notify('تمت إعادة تشغيل التدقيق وسيتم تحديث الصفحة الآن.', 'success');
+        notify('{% trans "Audit was restarted and the page will refresh now." %}', 'success');
         setTimeout(() => location.reload(), 1000);
       } catch (error) {
-        notify('تعذّر إعادة التدقيق. حاول مرة أخرى.', 'error');
+        notify('{% trans "Unable to re-run the audit. Try again." %}', 'error');
       }
     },
   };

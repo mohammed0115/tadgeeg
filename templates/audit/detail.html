@@ -341,8 +341,8 @@ function auditDetail() {
       this.kase.tags = tags;
     },
 
-    fmtDate(d) { return d ? new Date(d).toLocaleString('ar-SA') : '—'; },
-    fmtCurrency(v, c='SAR') { return v ? Number(v).toLocaleString('ar-SA', {maximumFractionDigits:2}) + ' ' + (c||'SAR') : '—'; },
+    fmtDate(d) { return d ? new Date(d).toLocaleString(APP_LOCALE) : '—'; },
+    fmtCurrency(v, c='SAR') { return v ? Number(v).toLocaleString(APP_LOCALE, {maximumFractionDigits:2}) + ' ' + (c||'SAR') : '—'; },
     scoreColor(s) { return s>=85?'bg-green-500':s>=70?'bg-amber-400':s>=50?'bg-orange-500':'bg-red-500'; },
 
     priorityLabel(p) { return {'critical':'حرج','high':'عالي','medium':'متوسط','low':'منخفض'}[p]??p; },

@@ -1,7 +1,7 @@
 {% extends "layouts/base_vendor_dashboard.html" %}
 {% load i18n %}
-{% block page_title %}التقارير{% endblock %}
-{% block breadcrumb_current %}التقارير{% endblock %}
+{% block page_title %}{% trans "Reports" %}{% endblock %}
+{% block breadcrumb_current %}{% trans "Reports" %}{% endblock %}
 
 {% block content %}
 <div x-data="reportsManager()" x-init="init()" class="space-y-5 fade-in">
@@ -9,23 +9,23 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">التقارير</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">تقارير المراجعة المالية والامتثال</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans "Reports" %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans "Financial audit and compliance reports" %}</p>
     </div>
   </div>
 
   <!-- Filters -->
   <div class="card p-4 flex flex-wrap items-center gap-3">
     <select x-model="filter.type" @change="load()" class="select">
-      <option value="">جميع الأنواع</option>
-      <option value="audit">مراجعة مالية</option>
-      <option value="compliance">امتثال ZATCA</option>
-      <option value="fraud">كشف احتيال</option>
-      <option value="risk">تحليل مخاطر</option>
+      <option value="">{% trans "All types" %}</option>
+      <option value="audit">{% trans "Financial Audit" %}</option>
+      <option value="compliance">{% trans "ZATCA Compliance" %}</option>
+      <option value="fraud">{% trans "Fraud Detection" %}</option>
+      <option value="risk">{% trans "Risk Analysis" %}</option>
     </select>
     <input type="text" x-model.debounce.300ms="filter.search" @input="load()"
-           class="input max-w-xs" placeholder="البحث...">
-    <span class="text-xs text-slate-500 mr-auto" x-text="total + ' تقرير'"></span>
+              class="input max-w-xs" placeholder="{% trans 'Search...' %}">
+            <span class="text-xs text-slate-500 mr-auto" x-text="total + ' {% trans 'reports' %}'"></span>
   </div>
 
   <!-- Reports Grid -->
@@ -44,7 +44,7 @@
   <template x-if="!loading && reports.length === 0">
     <div class="card p-16 text-center">
       <i data-lucide="file-bar-chart" class="w-14 h-14 mx-auto text-slate-300 dark:text-slate-600 mb-4"></i>
-      <p class="text-slate-500 text-sm">لا توجد تقارير بعد</p>
+      <p class="text-slate-500 text-sm">{% trans "No reports yet" %}</p>
     </div>
   </template>
 
@@ -74,15 +74,15 @@
           </div>
           <div>
             <p class="font-bold text-slate-800 dark:text-white text-sm truncate"
-               x-text="report.title || report.document_name || 'تقرير #' + report.id"></p>
+               x-text="report.title || report.document_name || '{% trans 'Report #' %}' + report.id"></p>
             <p class="text-xs text-slate-400 mt-1"
-               x-text="report.created_at ? new Date(report.created_at).toLocaleDateString('ar-SA') : ''"></p>
+               x-text="report.created_at ? new Date(report.created_at).toLocaleDateString(APP_LOCALE) : ''"></p>
           </div>
           <div class="flex items-center justify-between pt-1">
             <div class="flex items-center gap-3">
               <template x-if="report.risk_score !== undefined">
                 <div class="text-center">
-                  <p class="text-[10px] text-slate-400">مخاطر</p>
+                  <p class="text-[10px] text-slate-400">{% trans "Risk" %}</p>
                   <p class="text-sm font-black"
                      :class="{
                        'text-emerald-600': report.risk_score < 30,
@@ -94,7 +94,7 @@
               </template>
               <template x-if="report.compliance_score !== undefined">
                 <div class="text-center">
-                  <p class="text-[10px] text-slate-400">امتثال</p>
+                  <p class="text-[10px] text-slate-400">{% trans "Compliance" %}</p>
                   <p class="text-sm font-black"
                      :class="{
                        'text-emerald-600': report.compliance_score >= 80,
@@ -139,7 +139,7 @@ function reportsManager() {
           this.total = data.count || this.reports.length;
         }
       } catch (e) {
-        notify('تعذّر تحميل التقارير', 'error');
+        notify('{% trans "Failed to load reports" %}', 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());

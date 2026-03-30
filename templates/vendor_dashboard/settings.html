@@ -1,7 +1,7 @@
 {% extends "layouts/base_vendor_dashboard.html" %}
 {% load i18n %}
-{% block page_title %}الإعدادات{% endblock %}
-{% block breadcrumb_current %}الإعدادات{% endblock %}
+{% block page_title %}{% trans "Settings" %}{% endblock %}
+{% block breadcrumb_current %}{% trans "Settings" %}{% endblock %}
 
 {% block content %}
 <div x-data="orgSettings()" x-init="init()" class="space-y-6 fade-in">
@@ -9,8 +9,8 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">إعدادات المنظمة</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">بيانات حسابك وإعدادات المنظمة</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans "Organization Settings" %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans "Your account details and organization settings" %}</p>
     </div>
   </div>
 
@@ -42,57 +42,57 @@
     <div class="card p-6 space-y-5">
       <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-700/30">
         <i data-lucide="building-2" class="w-5 h-5 text-blue-500"></i>
-        بيانات المنظمة
+        {% trans "Organization Profile" %}
       </h3>
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1.5">اسم المنظمة (EN)</label>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Organization Name (EN)" %}</label>
           <input type="text" x-model="form.name" class="input" placeholder="Company Inc.">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1.5">اسم المنظمة (عربي)</label>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Organization Name (Arabic)" %}</label>
           <input type="text" x-model="form.name_ar" class="input" dir="rtl" placeholder="شركة المثال">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1.5">رقم السجل التجاري</label>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Commercial Registration Number" %}</label>
           <input type="text" x-model="form.commercial_registration" class="input" placeholder="1234567890">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1.5">الرقم الضريبي (VAT)</label>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "VAT Number" %}</label>
           <input type="text" x-model="form.vat_number" class="input" placeholder="300000000000003">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1.5">البريد الإلكتروني</label>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Email" %}</label>
           <input type="email" x-model="form.email" class="input" placeholder="info@company.com">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1.5">الهاتف</label>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Phone" %}</label>
           <input type="tel" x-model="form.phone" class="input" placeholder="+966 XX XXX XXXX">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1.5">المدينة</label>
-          <input type="text" x-model="form.city" class="input" placeholder="الرياض">
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "City" %}</label>
+          <input type="text" x-model="form.city" class="input" placeholder="{% trans 'Riyadh' %}">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-500 mb-1.5">الدولة</label>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Country" %}</label>
           <select x-model="form.country" class="select w-full">
-            <option value="SA">المملكة العربية السعودية</option>
-            <option value="AE">الإمارات العربية المتحدة</option>
-            <option value="KW">الكويت</option>
-            <option value="BH">البحرين</option>
-            <option value="QA">قطر</option>
-            <option value="OM">سلطنة عُمان</option>
+            <option value="SA">{% trans "Saudi Arabia" %}</option>
+            <option value="AE">{% trans "United Arab Emirates" %}</option>
+            <option value="KW">{% trans "Kuwait" %}</option>
+            <option value="BH">{% trans "Bahrain" %}</option>
+            <option value="QA">{% trans "Qatar" %}</option>
+            <option value="OM">{% trans "Oman" %}</option>
           </select>
         </div>
         <div class="md:col-span-2">
-          <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان</label>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Address" %}</label>
           <textarea x-model="form.address" class="input" rows="2" dir="rtl"></textarea>
         </div>
       </div>
       <div class="flex justify-end pt-2">
         <button @click="saveProfile()" :disabled="saving" class="btn-primary">
           <i data-lucide="save" class="w-4 h-4"></i>
-          <span x-text="saving ? 'جاري الحفظ...' : 'حفظ البيانات'"></span>
+          <span x-text="saving ? '{% trans \"Saving...\" %}' : '{% trans \"Save Profile\" %}'"></span>
         </button>
       </div>
     </div>
@@ -105,26 +105,26 @@
       <div class="card p-6 space-y-4">
         <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-700/30">
           <i data-lucide="lock" class="w-5 h-5 text-red-500"></i>
-          تغيير كلمة المرور
+          {% trans "Change Password" %}
         </h3>
         <div class="space-y-3 max-w-md">
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">كلمة المرور الحالية</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Current Password" %}</label>
             <input type="password" x-model="security.current_password" class="input">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">كلمة المرور الجديدة</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "New Password" %}</label>
             <input type="password" x-model="security.new_password" class="input">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">تأكيد كلمة المرور</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Confirm Password" %}</label>
             <input type="password" x-model="security.confirm_password" class="input">
           </div>
         </div>
         <div class="flex justify-end pt-2">
           <button @click="changePassword()" :disabled="saving" class="btn-primary">
             <i data-lucide="shield" class="w-4 h-4"></i>
-            <span x-text="saving ? 'جاري التغيير...' : 'تغيير كلمة المرور'"></span>
+            <span x-text="saving ? '{% trans \"Updating...\" %}' : '{% trans \"Change Password\" %}'"></span>
           </button>
         </div>
       </div>
@@ -133,24 +133,24 @@
       <div class="card p-6 space-y-4">
         <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-700/30">
           <i data-lucide="monitor" class="w-5 h-5 text-amber-500"></i>
-          الجلسات النشطة
+          {% trans "Active Sessions" %}
         </h3>
         <template x-for="session in sessions" :key="session.id">
           <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700/30 rounded-xl">
             <div class="flex items-center gap-3">
               <i :data-lucide="session.device_type === 'mobile' ? 'smartphone' : 'monitor'" class="w-5 h-5 text-slate-400"></i>
               <div>
-                <p class="text-sm font-medium text-slate-700 dark:text-slate-300" x-text="session.device || 'جهاز غير معروف'"></p>
-                <p class="text-xs text-slate-400" x-text="session.ip + ' — ' + (session.last_active ? new Date(session.last_active).toLocaleString('ar-SA') : '')"></p>
+                <p class="text-sm font-medium text-slate-700 dark:text-slate-300" x-text="session.device || '{% trans 'Unknown device' %}'"></p>
+                <p class="text-xs text-slate-400" x-text="session.ip + ' — ' + (session.last_active ? new Date(session.last_active).toLocaleString(APP_LOCALE) : '')"></p>
               </div>
             </div>
             <template x-if="!session.is_current">
               <button @click="revokeSession(session.id)" class="btn-ghost text-xs text-red-500 px-3 py-1.5">
-                إنهاء
+                {% trans "Revoke" %}
               </button>
             </template>
             <template x-if="session.is_current">
-              <span class="badge-green text-[10px]">الجلسة الحالية</span>
+              <span class="badge-green text-[10px]">{% trans "Current session" %}</span>
             </template>
           </div>
         </template>
@@ -163,14 +163,14 @@
     <div class="card p-6 space-y-4">
       <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-700/30">
         <i data-lucide="bell" class="w-5 h-5 text-blue-500"></i>
-        إعدادات الإشعارات
+        {% trans "Notification Settings" %}
       </h3>
       <div class="space-y-3">
         <template x-for="pref in notificationPrefs" :key="pref.key">
           <div class="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-700/30 last:border-0">
             <div>
-              <p class="text-sm font-medium text-slate-700 dark:text-slate-300" x-text="pref.label_ar"></p>
-              <p class="text-xs text-slate-400" x-text="pref.description_ar"></p>
+              <p class="text-sm font-medium text-slate-700 dark:text-slate-300" x-text="pref.label"></p>
+              <p class="text-xs text-slate-400" x-text="pref.description"></p>
             </div>
             <button @click="pref.enabled = !pref.enabled; saveNotifications()"
                     class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors"
@@ -194,9 +194,9 @@ function orgSettings() {
     loading: true, saving: false,
     activeTab: 'profile',
     tabs: [
-      { key: 'profile',       label: 'بيانات المنظمة',   icon: 'building-2' },
-      { key: 'security',      label: 'الأمان',           icon: 'shield' },
-      { key: 'notifications', label: 'الإشعارات',        icon: 'bell' },
+      { key: 'profile',       label: '{% trans "Organization Profile" %}', icon: 'building-2' },
+      { key: 'security',      label: '{% trans "Security" %}',             icon: 'shield' },
+      { key: 'notifications', label: '{% trans "Notifications" %}',        icon: 'bell' },
     ],
     form: {
       name: '', name_ar: '', commercial_registration: '', vat_number: '',
@@ -205,12 +205,12 @@ function orgSettings() {
     security: { current_password: '', new_password: '', confirm_password: '' },
     sessions: [],
     notificationPrefs: [
-      { key: 'audit_complete',    label_ar: 'اكتمال المراجعة',     description_ar: 'إشعار عند اكتمال مهمة مراجعة', enabled: true },
-      { key: 'audit_failed',      label_ar: 'فشل المراجعة',        description_ar: 'إشعار عند فشل مهمة مراجعة', enabled: true },
-      { key: 'high_risk',         label_ar: 'مخاطر عالية',         description_ar: 'إشعار عند اكتشاف مخاطر عالية', enabled: true },
-      { key: 'compliance_alert',  label_ar: 'تنبيه الامتثال',      description_ar: 'إشعار عند مشكلة امتثال ZATCA', enabled: true },
-      { key: 'new_team_member',   label_ar: 'عضو جديد في الفريق',  description_ar: 'إشعار عند انضمام عضو جديد', enabled: false },
-      { key: 'storage_warning',   label_ar: 'تحذير مساحة التخزين', description_ar: 'إشعار عند اقتراب الحد الأقصى', enabled: true },
+      { key: 'audit_complete',    label: '{% trans "Audit complete" %}',    description: '{% trans "Notify when an audit job completes" %}', enabled: true },
+      { key: 'audit_failed',      label: '{% trans "Audit failed" %}',      description: '{% trans "Notify when an audit job fails" %}', enabled: true },
+      { key: 'high_risk',         label: '{% trans "High risk" %}',         description: '{% trans "Notify when high risk is detected" %}', enabled: true },
+      { key: 'compliance_alert',  label: '{% trans "Compliance alert" %}',  description: '{% trans "Notify when a ZATCA compliance issue occurs" %}', enabled: true },
+      { key: 'new_team_member',   label: '{% trans "New team member" %}',   description: '{% trans "Notify when a new member joins the team" %}', enabled: false },
+      { key: 'storage_warning',   label: '{% trans "Storage warning" %}',   description: '{% trans "Notify when storage usage nears the limit" %}', enabled: true },
     ],
 
     async init() {
@@ -225,7 +225,7 @@ function orgSettings() {
           this.sessions = Array.isArray(data) ? data : (data.results || []);
         }
       } catch (e) {
-        notify('تعذّر تحميل الإعدادات', 'error');
+        notify('{% trans "Failed to load settings" %}', 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());
@@ -239,10 +239,10 @@ function orgSettings() {
           method: 'PATCH',
           body: JSON.stringify(this.form),
         });
-        if (res && res.ok) notify('تم حفظ بيانات المنظمة', 'success');
-        else notify('فشل الحفظ', 'error');
+        if (res && res.ok) notify('{% trans "Organization profile saved" %}', 'success');
+        else notify('{% trans "Save failed" %}', 'error');
       } catch (e) {
-        notify('فشل الحفظ', 'error');
+        notify('{% trans "Save failed" %}', 'error');
       } finally {
         this.saving = false;
       }
@@ -250,7 +250,7 @@ function orgSettings() {
 
     async changePassword() {
       if (this.security.new_password !== this.security.confirm_password) {
-        notify('كلمتا المرور غير متطابقتين', 'error');
+        notify('{% trans "Passwords do not match" %}', 'error');
         return;
       }
       this.saving = true;
@@ -263,14 +263,14 @@ function orgSettings() {
           }),
         });
         if (res && res.ok) {
-          notify('تم تغيير كلمة المرور بنجاح', 'success');
+          notify('{% trans "Password changed successfully" %}', 'success');
           this.security = { current_password: '', new_password: '', confirm_password: '' };
         } else {
           const err = await res.json().catch(() => ({}));
-          notify(err.detail || 'فشل تغيير كلمة المرور', 'error');
+          notify(err.detail || '{% trans "Failed to change password" %}', 'error');
         }
       } catch (e) {
-        notify('فشل تغيير كلمة المرور', 'error');
+        notify('{% trans "Failed to change password" %}', 'error');
       } finally {
         this.saving = false;
       }
@@ -280,7 +280,7 @@ function orgSettings() {
       const res = await apiFetch(`/api/v1/auth/sessions/${id}/`, { method: 'DELETE' });
       if (res && (res.ok || res.status === 204)) {
         this.sessions = this.sessions.filter(s => s.id !== id);
-        notify('تم إنهاء الجلسة', 'success');
+        notify('{% trans "Session revoked" %}', 'success');
       }
     },
 

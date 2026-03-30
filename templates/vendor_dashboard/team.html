@@ -1,7 +1,7 @@
 {% extends "layouts/base_vendor_dashboard.html" %}
 {% load i18n %}
-{% block page_title %}الفريق{% endblock %}
-{% block breadcrumb_current %}الفريق{% endblock %}
+{% block page_title %}{% trans "Team" %}{% endblock %}
+{% block breadcrumb_current %}{% trans "Team" %}{% endblock %}
 
 {% block content %}
 <div x-data="teamManager()" x-init="init()" class="space-y-5 fade-in">
@@ -9,12 +9,12 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">الفريق</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">إدارة أعضاء الفريق والصلاحيات</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans "Team" %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans "Manage team members and permissions" %}</p>
     </div>
     <button @click="openInvite()" class="btn-primary">
       <i data-lucide="user-plus" class="w-4 h-4"></i>
-      دعوة عضو
+      {% trans "Invite Member" %}
     </button>
   </div>
 
@@ -23,24 +23,24 @@
     <div class="card p-4 text-center">
       <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
       <template x-if="!loading"><p class="text-2xl font-black text-slate-900 dark:text-white" x-text="members.length"></p></template>
-      <p class="text-xs text-slate-500 mt-1">إجمالي الأعضاء</p>
+      <p class="text-xs text-slate-500 mt-1">{% trans "Total members" %}</p>
     </div>
     <div class="card p-4 text-center">
       <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
       <template x-if="!loading"><p class="text-2xl font-black text-amber-600" x-text="pendingInvitations.length"></p></template>
-      <p class="text-xs text-slate-500 mt-1">دعوات معلقة</p>
+      <p class="text-xs text-slate-500 mt-1">{% trans "Pending invitations" %}</p>
     </div>
     <div class="card p-4 text-center">
       <template x-if="loading"><div class="h-7 w-12 mx-auto bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div></template>
       <template x-if="!loading"><p class="text-2xl font-black text-indigo-600" x-text="members.filter(m=>m.role==='admin').length"></p></template>
-      <p class="text-xs text-slate-500 mt-1">مشرفون</p>
+      <p class="text-xs text-slate-500 mt-1">{% trans "Admins" %}</p>
     </div>
   </div>
 
   <!-- Members List -->
   <div class="card overflow-hidden">
     <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
-      <h3 class="text-sm font-bold text-slate-800 dark:text-white">أعضاء الفريق النشطون</h3>
+      <h3 class="text-sm font-bold text-slate-800 dark:text-white">{% trans "Active Team Members" %}</h3>
     </div>
     <template x-if="loading">
       <div class="animate-pulse divide-y divide-slate-100 dark:divide-slate-700/30">
@@ -56,7 +56,7 @@
       </div>
     </template>
     <template x-if="!loading && members.length === 0">
-      <div class="px-5 py-12 text-center text-slate-400 text-sm">لا يوجد أعضاء فريق بعد</div>
+      <div class="px-5 py-12 text-center text-slate-400 text-sm">{% trans "No team members yet" %}</div>
     </template>
     <template x-if="!loading && members.length > 0">
       <div class="divide-y divide-slate-100 dark:divide-slate-700/30">
@@ -77,7 +77,7 @@
                       'badge-blue':   member.role === 'member',
                       'badge-slate':  member.role === 'viewer',
                     }"
-                    x-text="member.role === 'admin' ? 'مشرف' : member.role === 'member' ? 'عضو' : 'قارئ'">
+                    x-text="member.role === 'admin' ? '{% trans \"Admin\" %}' : member.role === 'member' ? '{% trans \"Member\" %}' : '{% trans \"Viewer\" %}'">
               </span>
               <template x-if="member.id !== currentUserId">
                 <button @click="removeMember(member.id)"
@@ -98,7 +98,7 @@
       <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
         <h3 class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
           <i data-lucide="mail" class="w-4 h-4 text-amber-500"></i>
-          دعوات معلقة
+          {% trans "Pending Invitations" %}
         </h3>
       </div>
       <div class="divide-y divide-slate-100 dark:divide-slate-700/30">
@@ -110,12 +110,12 @@
             <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-slate-700 dark:text-slate-300" x-text="inv.email"></p>
               <p class="text-xs text-slate-400"
-                 x-text="'دُعي بتاريخ ' + (inv.created_at ? new Date(inv.created_at).toLocaleDateString('ar-SA') : '')"></p>
+                 x-text="'{% trans "Invited on" %} ' + (inv.created_at ? new Date(inv.created_at).toLocaleDateString(APP_LOCALE) : '')"></p>
             </div>
             <div class="flex items-center gap-2">
               <button @click="resendInvitation(inv.id)" class="btn-ghost text-xs px-3 py-1.5">
                 <i data-lucide="send" class="w-3.5 h-3.5"></i>
-                إعادة إرسال
+                {% trans "Resend" %}
               </button>
               <button @click="cancelInvitation(inv.id)" class="btn-ghost text-xs px-3 py-1.5 text-red-500">
                 <i data-lucide="x" class="w-3.5 h-3.5"></i>
@@ -132,28 +132,28 @@
     <div class="modal-backdrop" @click.self="showModal=false">
       <div class="modal-box max-w-md">
         <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/30">
-          <h3 class="font-bold text-slate-800 dark:text-white">دعوة عضو جديد</h3>
+          <h3 class="font-bold text-slate-800 dark:text-white">{% trans "Invite New Member" %}</h3>
           <button @click="showModal=false"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button>
         </div>
         <div class="p-6 space-y-4">
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">البريد الإلكتروني</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Email" %}</label>
             <input type="email" x-model="inviteForm.email" class="input" placeholder="user@company.com">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">الدور</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Role" %}</label>
             <select x-model="inviteForm.role" class="select w-full">
-              <option value="viewer">قارئ — عرض التقارير فقط</option>
-              <option value="member">عضو — رفع الملفات وعرض النتائج</option>
-              <option value="admin">مشرف — إدارة كاملة</option>
+              <option value="viewer">{% trans "Viewer — reports only" %}</option>
+              <option value="member">{% trans "Member — upload files and view results" %}</option>
+              <option value="admin">{% trans "Admin — full access" %}</option>
             </select>
           </div>
         </div>
         <div class="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-700/30">
-          <button @click="showModal=false" class="btn-ghost">إلغاء</button>
+          <button @click="showModal=false" class="btn-ghost">{% trans "Cancel" %}</button>
           <button @click="sendInvite()" :disabled="!inviteForm.email || saving" class="btn-primary">
             <i data-lucide="send" class="w-4 h-4"></i>
-            <span x-text="saving ? 'جاري الإرسال...' : 'إرسال الدعوة'"></span>
+            <span x-text="saving ? '{% trans \"Sending...\" %}' : '{% trans \"Send Invitation\" %}'"></span>
           </button>
         </div>
       </div>
@@ -198,7 +198,7 @@ function teamManager() {
           this.pendingInvitations = Array.isArray(data) ? data.filter(i => i.status === 'pending') : [];
         }
       } catch (e) {
-        notify('تعذّر تحميل بيانات الفريق', 'error');
+        notify('{% trans "Failed to load team data" %}', 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());
@@ -222,39 +222,39 @@ function teamManager() {
         if (res && res.ok) {
           const inv = await res.json();
           this.pendingInvitations.push(inv);
-          notify('تم إرسال الدعوة إلى ' + this.inviteForm.email, 'success');
+          notify('{% trans "Invitation sent to" %} ' + this.inviteForm.email, 'success');
           this.showModal = false;
         } else {
           const err = await res.json().catch(() => ({}));
-          notify(err.detail || 'فشل إرسال الدعوة', 'error');
+          notify(err.detail || '{% trans "Failed to send invitation" %}', 'error');
         }
       } catch (e) {
-        notify('فشل إرسال الدعوة', 'error');
+        notify('{% trans "Failed to send invitation" %}', 'error');
       } finally {
         this.saving = false;
       }
     },
 
     async removeMember(id) {
-      if (!confirm('هل أنت متأكد من إزالة هذا العضو؟')) return;
+      if (!confirm('{% trans "Are you sure you want to remove this member?" %}')) return;
       const res = await apiFetch(`/api/v1/auth/team/members/${id}/`, { method: 'DELETE' });
       if (res && (res.ok || res.status === 204)) {
         this.members = this.members.filter(m => m.id !== id);
-        notify('تم إزالة العضو', 'success');
+        notify('{% trans "Member removed" %}', 'success');
       }
     },
 
     async resendInvitation(id) {
       const res = await apiFetch(`/api/v1/auth/team/invitations/${id}/resend/`, { method: 'POST' });
-      if (res && res.ok) notify('تم إعادة إرسال الدعوة', 'success');
-      else notify('فشل إعادة الإرسال', 'error');
+      if (res && res.ok) notify('{% trans "Invitation resent" %}', 'success');
+      else notify('{% trans "Failed to resend invitation" %}', 'error');
     },
 
     async cancelInvitation(id) {
       const res = await apiFetch(`/api/v1/auth/team/invitations/${id}/`, { method: 'DELETE' });
       if (res && (res.ok || res.status === 204)) {
         this.pendingInvitations = this.pendingInvitations.filter(i => i.id !== id);
-        notify('تم إلغاء الدعوة', 'success');
+        notify('{% trans "Invitation cancelled" %}', 'success');
       }
     },
   };

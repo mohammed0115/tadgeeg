@@ -1,6 +1,7 @@
 {% extends "base.html" %}
-{% block title %}أوامر الشراء{% endblock %}
-{% block page_title %}أوامر الشراء{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Purchase Orders" %}{% endblock %}
+{% block page_title %}{% trans "Purchase Orders" %}{% endblock %}
 
 {% block content %}
 <div x-data="poList()" x-init="load()">
@@ -8,19 +9,19 @@
   <!-- Stats row -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     <div class="card p-4">
-      <p class="text-xs text-slate-400 mb-1">إجمالي الأوامر</p>
+      <p class="text-xs text-slate-400 mb-1">{% trans "Total Orders" %}</p>
       <p class="text-2xl font-bold text-slate-800 dark:text-white font-mono" x-text="stats.total ?? '—'"></p>
     </div>
     <div class="card p-4">
-      <p class="text-xs text-slate-400 mb-1">مُعلَّقة</p>
+      <p class="text-xs text-slate-400 mb-1">{% trans "Flagged" %}</p>
       <p class="text-2xl font-bold text-amber-600 font-mono" x-text="stats.flagged ?? '—'"></p>
     </div>
     <div class="card p-4">
-      <p class="text-xs text-slate-400 mb-1">مُعتمَدة</p>
+      <p class="text-xs text-slate-400 mb-1">{% trans "Approved" %}</p>
       <p class="text-2xl font-bold text-green-600 font-mono" x-text="stats.approved ?? '—'"></p>
     </div>
     <div class="card p-4">
-      <p class="text-xs text-slate-400 mb-1">إجمالي القيمة (ر.س)</p>
+      <p class="text-xs text-slate-400 mb-1">{% trans "Total Amount (SAR)" %}</p>
       <p class="text-2xl font-bold text-primary-600 font-mono" x-text="fmtNum(stats.total_amount)"></p>
     </div>
   </div>
@@ -29,24 +30,24 @@
   <div class="card p-4 mb-4 flex flex-wrap items-center gap-3">
     <div class="flex-1 relative min-w-48">
       <i data-lucide="search" class="absolute right-3 top-2.5 w-4 h-4 text-slate-400"></i>
-      <input x-model="q" @input.debounce.400ms="load()" placeholder="بحث بالمورد أو رقم الأمر..."
+      <input x-model="q" @input.debounce.400ms="load()" placeholder="{% trans 'Search by vendor or order number...' %}"
              class="input-field pr-9 w-full text-sm"/>
     </div>
     <select x-model="filterStatus" @change="load()" class="input-field text-sm w-36">
-      <option value="">كل الحالات</option>
-      <option value="validated">تم التحقق</option>
-      <option value="flagged">مُعلَّق</option>
-      <option value="approved">مُعتمَد</option>
+      <option value="">{% trans "All statuses" %}</option>
+      <option value="validated">{% trans "Validated" %}</option>
+      <option value="flagged">{% trans "Flagged" %}</option>
+      <option value="approved">{% trans "Approved" %}</option>
     </select>
     <select x-model="filterRisk" @change="load()" class="input-field text-sm w-36">
-      <option value="">كل مستويات الخطر</option>
-      <option value="critical">حرج</option>
-      <option value="high">عالي</option>
-      <option value="medium">متوسط</option>
-      <option value="low">منخفض</option>
+      <option value="">{% trans "All risk levels" %}</option>
+      <option value="critical">{% trans "Critical" %}</option>
+      <option value="high">{% trans "High" %}</option>
+      <option value="medium">{% trans "Medium" %}</option>
+      <option value="low">{% trans "Low" %}</option>
     </select>
     <a href="/documents/upload/?type=purchase_order" class="btn-primary text-sm flex items-center gap-2 px-4 h-9 rounded-lg">
-      <i data-lucide="plus" class="w-4 h-4"></i> رفع أمر شراء
+      <i data-lucide="plus" class="w-4 h-4"></i> {% trans "Upload Purchase Order" %}
     </a>
   </div>
 
@@ -56,13 +57,13 @@
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-slate-200 dark:border-slate-700 text-xs text-slate-500 uppercase">
-            <th class="text-right px-4 py-3 font-semibold">رقم الأمر</th>
-            <th class="text-right px-4 py-3 font-semibold">المورد</th>
-            <th class="text-right px-4 py-3 font-semibold">التاريخ</th>
-            <th class="text-right px-4 py-3 font-semibold">القيمة</th>
-            <th class="text-right px-4 py-3 font-semibold">نقاط التحقق</th>
-            <th class="text-right px-4 py-3 font-semibold">مستوى الخطر</th>
-            <th class="text-right px-4 py-3 font-semibold">الحالة</th>
+            <th class="text-right px-4 py-3 font-semibold">{% trans "Order Number" %}</th>
+            <th class="text-right px-4 py-3 font-semibold">{% trans "Vendor" %}</th>
+            <th class="text-right px-4 py-3 font-semibold">{% trans "Date" %}</th>
+            <th class="text-right px-4 py-3 font-semibold">{% trans "Amount" %}</th>
+            <th class="text-right px-4 py-3 font-semibold">{% trans "Validation Score" %}</th>
+            <th class="text-right px-4 py-3 font-semibold">{% trans "Risk Level" %}</th>
+            <th class="text-right px-4 py-3 font-semibold">{% trans "Status" %}</th>
             <th class="px-4 py-3"></th>
           </tr>
         </thead>
@@ -70,13 +71,13 @@
           <template x-if="loading">
             <tr><td colspan="8" class="text-center py-12 text-slate-400">
               <i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i>
-              <p class="text-sm">جاري التحميل...</p>
+              <p class="text-sm">{% trans "Loading..." %}</p>
             </td></tr>
           </template>
           <template x-if="!loading && rows.length === 0">
             <tr><td colspan="8" class="text-center py-12 text-slate-400">
               <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-30"></i>
-              <p class="text-sm">لا توجد أوامر شراء</p>
+              <p class="text-sm">{% trans "No purchase orders" %}</p>
             </td></tr>
           </template>
           <template x-for="r in rows" :key="r.id">
@@ -128,25 +129,25 @@ function poList() {
         ]);
         this.rows  = r1.results ?? r1;
         this.stats = r2.purchase_orders ?? {};
-      } catch(e) { notify('خطأ في تحميل البيانات', 'error'); }
+      } catch(e) { notify('{% trans "Error loading data" %}', 'error'); }
       finally { this.loading = false; this.$nextTick(() => lucide.createIcons()); }
     },
-    fmtNum(v) { return v ? Number(v).toLocaleString('ar-SA') : '—'; },
-    fmtCurrency(v, c='SAR') { return v ? Number(v).toLocaleString('ar-SA', {maximumFractionDigits:0}) + ' ' + c : '—'; },
+    fmtNum(v) { return v ? Number(v).toLocaleString(APP_LOCALE) : '—'; },
+    fmtCurrency(v, c='SAR') { return v ? Number(v).toLocaleString(APP_LOCALE, {maximumFractionDigits:0}) + ' ' + c : '—'; },
     scoreColor(s) {
       if (s >= 85) return 'bg-green-500';
       if (s >= 70) return 'bg-amber-400';
       if (s >= 50) return 'bg-orange-500';
       return 'bg-red-500';
     },
-    riskLabel(l) { return {'critical':'حرج','high':'عالي','medium':'متوسط','low':'منخفض'}[l] ?? l; },
+    riskLabel(l) { return {'critical':'{% trans "Critical" %}','high':'{% trans "High" %}','medium':'{% trans "Medium" %}','low':'{% trans "Low" %}'}[l] ?? l; },
     riskBadge(l) {
       return {'critical':'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
               'high':'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800',
               'medium':'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800',
               'low':'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'}[l] ?? '';
     },
-    statusLabel(s) { return {'validated':'تم التحقق','flagged':'مُعلَّق','approved':'مُعتمَد','pending':'قيد الانتظار','rejected':'مرفوض'}[s] ?? s; },
+    statusLabel(s) { return {'validated':'{% trans "Validated" %}','flagged':'{% trans "Flagged" %}','approved':'{% trans "Approved" %}','pending':'{% trans "Pending" %}','rejected':'{% trans "Rejected" %}'}[s] ?? s; },
     statusBadge(s) {
       return {'validated':'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800',
               'flagged':'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800',

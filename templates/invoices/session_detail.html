@@ -213,7 +213,7 @@ function auditSessionDetail() {
     },
     fmtDate(value) {
       if (!value) return '—';
-      return new Date(value).toLocaleString('ar-SA');
+      return new Date(value).toLocaleString(APP_LOCALE);
     },
     fmtCurrency(value, currency) {
       return `${currency || 'SAR'} ${Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;

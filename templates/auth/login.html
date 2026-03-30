@@ -1,6 +1,8 @@
 {% load static i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -92,6 +94,10 @@
 
 <body class="min-h-screen bg-slate-950 flex items-center justify-center p-4 lg:p-8 overflow-x-hidden">
 
+  <div class="fixed top-4 left-4 z-30">
+    {% include "partials/language_switcher.html" with extra_classes="inline-flex items-center gap-1 rounded-2xl border border-white/15 bg-slate-900/70 p-1 text-xs font-semibold text-slate-200 shadow-lg backdrop-blur" %}
+  </div>
+
   <!-- ── Global ambient background with enhanced blur ── -->
   <div class="fixed inset-0 grid-bg pointer-events-none"></div>
   <div class="fixed inset-0 pointer-events-none overflow-hidden">
@@ -152,7 +158,7 @@
 
       async login() {
         if (!this.email || !this.password) {
-          this.error = 'يرجى ملء جميع الحقول';
+          this.error = '{% trans "Please fill in all fields" %}';
           return;
         }
         this.loading = true;
@@ -172,7 +178,7 @@
           if (response.status === 202 && data.mfa_required) {
             this.mfaRequired = true;
             this.tempToken = data.temp_token;
-            this.error = data.message || 'يرجى إدخال رمز المصادقة الثنائية';
+            this.error = data.message || '{% trans "Please enter the two-factor authentication code" %}';
             this.totpCode = '';
             this.loading = false;
             return;
@@ -182,9 +188,9 @@
             window.location.href = data.redirect || '/dashboard/';
             return;
           }
-          this.error = data.error || 'بيانات الدخول غير صحيحة';
+          this.error = data.error || '{% trans "Invalid login credentials" %}';
         } catch {
-          this.error = 'خطأ في الاتصال بالخادم';
+          this.error = '{% trans "Server connection error" %}';
         }
         this.loading = false;
       },
@@ -192,7 +198,7 @@
       // ✅ PHASE 1: Handle MFA verification
       async verifyMFA() {
         if (!this.totpCode || this.totpCode.length !== 6) {
-          this.error = 'يرجى إدخال رمز 6 أرقام';
+          this.error = '{% trans "Please enter a 6-digit code" %}';
           return;
         }
         this.loading = true;
@@ -211,9 +217,9 @@
             window.location.href = data.redirect || '/dashboard/';
             return;
           }
-          this.error = data.error || 'رمز غير صحيح';
+          this.error = data.error || '{% trans "Invalid code" %}';
         } catch {
-          this.error = 'خطأ في التحقق من MFA';
+          this.error = '{% trans "MFA verification failed" %}';
         }
         this.loading = false;
       }
@@ -260,8 +266,8 @@
             :class="show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'"
             style="transition-delay:250ms"
           >
-            <h2 class="mb-1 text-2xl font-bold text-white">أهلاً بعودتك 👋</h2>
-            <p class="text-sm text-slate-400 font-medium">سجّل الدخول للوصول إلى لوحة التحكم الذكية</p>
+            <h2 class="mb-1 text-2xl font-bold text-white">{% trans "Welcome back" %} 👋</h2>
+            <p class="text-sm text-slate-400 font-medium">{% trans "Sign in to access the smart dashboard" %}</p>
           </div>
 
           <!-- Error message with smooth entrance ── -->
@@ -303,7 +309,7 @@
               style="transition-delay:320ms"
             >
               <label class="mb-2.5 block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                البريد الإلكتروني
+                {% trans "Email" %}
               </label>
               <div class="relative group">
                 <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-4 text-slate-500 

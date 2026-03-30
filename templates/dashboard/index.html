@@ -1125,10 +1125,10 @@ dashboard = function() {
       this.benchmarkIndustryLabel = response.industry_label || '';
       this.benchmarkPosition = response.summary?.overall_position || '';
       const metaMap = {
-        compliance_rate_pct:    { label: 'معدل الامتثال',       unit: '%' },
-        duplicate_rate_pct:     { label: 'معدل الفواتير المكررة', unit: '%' },
-        avg_risk_score:         { label: 'متوسط درجة المخاطر',  unit: '' },
-        vat_compliance_rate_pct:{ label: 'امتثال ضريبة القيمة المضافة', unit: '%' },
+        compliance_rate_pct:    { label: '{% trans "Compliance rate" %}',       unit: '%' },
+        duplicate_rate_pct:     { label: '{% trans "Duplicate invoice rate" %}', unit: '%' },
+        avg_risk_score:         { label: '{% trans "Average risk score" %}',     unit: '' },
+        vat_compliance_rate_pct:{ label: '{% trans "VAT compliance rate" %}',    unit: '%' },
       };
       this.benchmarkMetrics = Object.entries(response.metrics || {}).map(([key, data]) => ({
         key,

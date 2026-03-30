@@ -111,7 +111,7 @@ function pageList() {
       } catch(e) { notify('خطأ في تحميل البيانات', 'error'); }
       finally { this.loading = false; this.$nextTick(() => lucide.createIcons()); }
     },
-    fmtCurrency(v, c='SAR') { return v ? Number(v).toLocaleString('ar-SA', {maximumFractionDigits:2}) + ' ' + c : '—'; },
+    fmtCurrency(v, c='SAR') { return v ? Number(v).toLocaleString(APP_LOCALE, {maximumFractionDigits:2}) + ' ' + c : '—'; },
     scoreColor(s) { return s>=85?'bg-green-500':s>=70?'bg-amber-400':s>=50?'bg-orange-500':'bg-red-500'; },
     riskLabel(l) { return {'critical':'حرج','high':'عالي','medium':'متوسط','low':'منخفض'}[l]??l; },
     riskBadge(l) {

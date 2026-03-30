@@ -1,7 +1,7 @@
 {% extends "layouts/base_vendor_dashboard.html" %}
 {% load i18n %}
-{% block page_title %}رفع الملفات{% endblock %}
-{% block breadcrumb_current %}رفع ملفات{% endblock %}
+{% block page_title %}{% trans "Upload Files" %}{% endblock %}
+{% block breadcrumb_current %}{% trans "Upload Files" %}{% endblock %}
 
 {% block content %}
 <div x-data="uploadCenter()" x-init="init()" class="space-y-6 fade-in">
@@ -9,12 +9,12 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">رفع الملفات</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">ارفع مستنداتك المالية للمراجعة الذكية الآلية</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans "Upload Files" %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans "Upload your financial documents for smart automated review" %}</p>
     </div>
     <a href="/dashboard/files/" class="btn-ghost text-xs">
       <i data-lucide="files" class="w-4 h-4"></i>
-      عرض الملفات
+      {% trans "View Files" %}
     </a>
   </div>
 
@@ -34,20 +34,20 @@
         </div>
         <div>
           <p class="text-lg font-bold text-slate-700 dark:text-slate-200">
-            <span x-show="!dragOver">اسحب الملفات وأفلتها هنا</span>
-            <span x-show="dragOver">أفلت الملفات الآن</span>
+            <span x-show="!dragOver">{% trans "Drag and drop files here" %}</span>
+            <span x-show="dragOver">{% trans "Drop files now" %}</span>
           </p>
-          <p class="text-sm text-slate-400 mt-1">يدعم PDF، Excel، CSV، JSON، ZIP وصور المستندات</p>
+          <p class="text-sm text-slate-400 mt-1">{% trans "Supports PDF, Excel, CSV, JSON, ZIP, and document images" %}</p>
         </div>
         <div class="flex items-center gap-3 justify-center">
           <label class="btn-primary cursor-pointer">
             <i data-lucide="folder-open" class="w-4 h-4"></i>
-            اختر ملفات
+            {% trans "Choose Files" %}
             <input type="file" multiple @change="handleFiles($event)" class="hidden"
                    accept=".pdf,.xls,.xlsx,.csv,.json,.zip,.jpg,.jpeg,.png,.tiff,.tif">
           </label>
         </div>
-        <p class="text-xs text-slate-400">الحد الأقصى: 50 ميجابايت للملف الواحد</p>
+        <p class="text-xs text-slate-400">{% trans "Maximum size: 50 MB per file" %}</p>
       </div>
     </div>
   </div>
@@ -73,10 +73,10 @@
       <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
         <h3 class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
           <i data-lucide="upload" class="w-4 h-4 text-blue-500"></i>
-          قائمة الرفع
+          {% trans "Upload Queue" %}
         </h3>
         <button @click="clearCompleted()" class="text-xs text-slate-400 hover:text-slate-600">
-          مسح المكتملة
+          {% trans "Clear Completed" %}
         </button>
       </div>
       <div class="divide-y divide-slate-100 dark:divide-slate-700/30">
@@ -112,7 +112,7 @@
                      'text-red-500':     item.status === 'error',
                      'text-slate-400':   item.status === 'pending',
                    }"
-                   x-text="item.status === 'done' ? 'تم الرفع بنجاح' : item.status === 'error' ? (item.error || 'فشل الرفع') : 'في الانتظار'"></p>
+                   x-text="item.status === 'done' ? '{% trans \"Uploaded successfully\" %}' : item.status === 'error' ? (item.error || '{% trans \"Upload failed\" %}') : '{% trans \"Pending\" %}'"></p>
               </template>
             </div>
             <div class="flex-shrink-0 text-right">
@@ -127,11 +127,11 @@
       <template x-if="queue.some(i => i.status === 'done')">
         <div class="px-5 py-4 border-t border-slate-100 dark:border-slate-700/30 flex justify-between items-center">
           <p class="text-xs text-slate-500">
-            <span x-text="queue.filter(i=>i.status==='done').length"></span> ملف تم رفعه بنجاح
+            <span x-text="queue.filter(i=>i.status==='done').length"></span> {% trans "files uploaded successfully" %}
           </p>
           <a href="/dashboard/audits/" class="btn-primary text-xs">
             <i data-lucide="shield-check" class="w-4 h-4"></i>
-            بدء المراجعة
+            {% trans "Start Audit" %}
           </a>
         </div>
       </template>
@@ -148,11 +148,11 @@ function uploadCenter() {
     dragOver: false,
     queue: [],
     formats: [
-      { ext: 'pdf',   label: 'فواتير ومستندات', icon: 'file-text',     bg: '#fef2f2', color: '#dc2626' },
-      { ext: 'xlsx',  label: 'جداول بيانات',     icon: 'table-2',       bg: '#f0fdf4', color: '#16a34a' },
-      { ext: 'csv',   label: 'بيانات خام',       icon: 'file-spreadsheet', bg: '#eff6ff', color: '#2563eb' },
-      { ext: 'json',  label: 'بيانات منظمة',     icon: 'braces',        bg: '#fefce8', color: '#ca8a04' },
-      { ext: 'zip',   label: 'أرشيف متعدد',      icon: 'archive',       bg: '#faf5ff', color: '#9333ea' },
+      { ext: 'pdf',   label: '{% trans "Invoices & documents" %}', icon: 'file-text', bg: '#fef2f2', color: '#dc2626' },
+      { ext: 'xlsx',  label: '{% trans "Spreadsheets" %}',         icon: 'table-2',   bg: '#f0fdf4', color: '#16a34a' },
+      { ext: 'csv',   label: '{% trans "Raw data" %}',             icon: 'file-spreadsheet', bg: '#eff6ff', color: '#2563eb' },
+      { ext: 'json',  label: '{% trans "Structured data" %}',      icon: 'braces',    bg: '#fefce8', color: '#ca8a04' },
+      { ext: 'zip',   label: '{% trans "Multi-file archive" %}',   icon: 'archive',   bg: '#faf5ff', color: '#9333ea' },
     ],
 
     init() {
@@ -195,17 +195,17 @@ function uploadCenter() {
         if (res && res.ok) {
           item.progress = 100;
           item.status = 'done';
-          notify('تم رفع: ' + item.name, 'success');
+          notify('{% trans "Uploaded:" %} ' + item.name, 'success');
         } else {
           const err = await res.json().catch(() => ({}));
-          item.error = err.detail || err.message || 'فشل الرفع';
+          item.error = err.detail || err.message || '{% trans "Upload failed" %}';
           item.status = 'error';
-          notify('فشل رفع: ' + item.name, 'error');
+          notify('{% trans "Failed to upload:" %} ' + item.name, 'error');
         }
       } catch (e) {
-        item.error = e.message || 'خطأ في الشبكة';
+        item.error = e.message || '{% trans "Network error" %}';
         item.status = 'error';
-        notify('فشل رفع: ' + item.name, 'error');
+        notify('{% trans "Failed to upload:" %} ' + item.name, 'error');
       } finally {
         this.$nextTick(() => lucide.createIcons());
       }

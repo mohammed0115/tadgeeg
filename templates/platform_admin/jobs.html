@@ -1,7 +1,7 @@
 {% extends "layouts/base_platform_admin.html" %}
 {% load i18n %}
-{% block page_title %}الوظائف والمسار المهني{% endblock %}
-{% block breadcrumb_current %}الوظائف{% endblock %}
+{% block page_title %}{% trans "Jobs & Careers" %}{% endblock %}
+{% block breadcrumb_current %}{% trans "Jobs" %}{% endblock %}
 
 {% block content %}
 <div x-data="jobsManager()" x-init="init()" class="space-y-5 fade-in">
@@ -9,12 +9,12 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">الوظائف والمسار المهني</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">إدارة إعلانات الوظائف وطلبات التوظيف</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans "Jobs & Careers" %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans "Manage job listings and applications" %}</p>
     </div>
     <button @click="openCreateJob()" class="btn-primary">
       <i data-lucide="plus" class="w-4 h-4"></i>
-      إضافة وظيفة
+      {% trans "Add Job" %}
     </button>
   </div>
 
@@ -39,13 +39,13 @@
             class="px-4 py-2 rounded-lg text-sm font-medium transition-all"
             :class="activeTab === 'jobs' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'">
       <i data-lucide="briefcase" class="w-4 h-4 inline-block -mt-0.5 mr-1"></i>
-      إعلانات الوظائف
+      {% trans "Job Listings" %}
     </button>
     <button @click="activeTab = 'applications'; loadApplications(); $nextTick(() => lucide.createIcons())"
             class="px-4 py-2 rounded-lg text-sm font-medium transition-all"
             :class="activeTab === 'applications' ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-white shadow-sm' : 'text-slate-500 dark:text-slate-400'">
       <i data-lucide="users" class="w-4 h-4 inline-block -mt-0.5 mr-1"></i>
-      طلبات التوظيف
+      {% trans "Applications" %}
     </button>
   </div>
 
@@ -54,13 +54,13 @@
     <div class="flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-3 flex-wrap">
         <select x-model="jobFilter.status" @change="loadJobs()" class="select">
-          <option value="">جميع الحالات</option>
-          <option value="draft">مسودة</option>
-          <option value="published">منشورة</option>
-          <option value="closed">مغلقة</option>
+          <option value="">{% trans "All statuses" %}</option>
+          <option value="draft">{% trans "Draft" %}</option>
+          <option value="published">{% trans "Published" %}</option>
+          <option value="closed">{% trans "Closed" %}</option>
         </select>
         <input type="text" x-model.debounce.300ms="jobFilter.search" @input="loadJobs()"
-               class="input max-w-xs" placeholder="البحث بالعنوان أو القسم...">
+               class="input max-w-xs" placeholder="{% trans 'Search by title or department...' %}">
       </div>
     </div>
 
@@ -80,7 +80,7 @@
       <template x-if="!jobsLoading && jobs.length === 0">
         <div class="px-5 py-12 text-center">
           <i data-lucide="briefcase" class="w-10 h-10 mx-auto text-slate-300 mb-2"></i>
-          <p class="text-slate-500 text-sm">لا توجد وظائف</p>
+          <p class="text-slate-500 text-sm">{% trans "No jobs found" %}</p>
         </div>
       </template>
       <template x-if="!jobsLoading && jobs.length > 0">
@@ -88,13 +88,13 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>المسمى الوظيفي</th>
-                <th>القسم</th>
-                <th>الموقع</th>
-                <th>نوع الدوام</th>
-                <th>الطلبات</th>
-                <th>الحالة</th>
-                <th>إجراءات</th>
+                <th>{% trans "Job Title" %}</th>
+                <th>{% trans "Department" %}</th>
+                <th>{% trans "Location" %}</th>
+                <th>{% trans "Employment Type" %}</th>
+                <th>{% trans "Applications" %}</th>
+                <th>{% trans "Status" %}</th>
+                <th>{% trans "Actions" %}</th>
               </tr>
             </thead>
             <tbody>
@@ -107,7 +107,7 @@
                     </div>
                   </td>
                   <td class="text-slate-500 text-xs" x-text="job.department || '—'"></td>
-                  <td class="text-slate-500 text-xs" x-text="job.location || 'عن بعد'"></td>
+                  <td class="text-slate-500 text-xs" x-text="job.location || '{% trans 'Remote' %}'"></td>
                   <td>
                     <span class="badge-slate text-[10px]" x-text="job.employment_type || 'full_time'"></span>
                   </td>
@@ -121,7 +121,7 @@
                             'badge-amber': job.status === 'draft',
                             'badge-slate': job.status === 'closed',
                           }"
-                          x-text="job.status === 'published' ? 'منشورة' : job.status === 'draft' ? 'مسودة' : 'مغلقة'">
+                          x-text="job.status === 'published' ? '{% trans \"Published\" %}' : job.status === 'draft' ? '{% trans \"Draft\" %}' : '{% trans \"Closed\" %}'">
                     </span>
                   </td>
                   <td>
@@ -156,7 +156,7 @@
       <template x-if="!appsLoading && applications.length === 0">
         <div class="px-5 py-12 text-center">
           <i data-lucide="users" class="w-10 h-10 mx-auto text-slate-300 mb-2"></i>
-          <p class="text-slate-500 text-sm">لا توجد طلبات توظيف</p>
+          <p class="text-slate-500 text-sm">{% trans "No job applications" %}</p>
         </div>
       </template>
       <template x-if="!appsLoading && applications.length > 0">
@@ -164,11 +164,11 @@
           <table class="data-table">
             <thead>
               <tr>
-                <th>المتقدم</th>
-                <th>الوظيفة</th>
-                <th>تاريخ التقديم</th>
-                <th>الحالة</th>
-                <th>إجراءات</th>
+                <th>{% trans "Applicant" %}</th>
+                <th>{% trans "Job" %}</th>
+                <th>{% trans "Applied On" %}</th>
+                <th>{% trans "Status" %}</th>
+                <th>{% trans "Actions" %}</th>
               </tr>
             </thead>
             <tbody>
@@ -186,7 +186,7 @@
                   </td>
                   <td class="text-sm text-slate-600 dark:text-slate-400" x-text="app.job_title || '—'"></td>
                   <td class="text-xs text-slate-400"
-                      x-text="app.created_at ? new Date(app.created_at).toLocaleDateString('ar-SA') : '—'"></td>
+                      x-text="app.created_at ? new Date(app.created_at).toLocaleDateString(APP_LOCALE) : '—'"></td>
                   <td>
                     <span class="badge"
                           :class="{
@@ -216,59 +216,59 @@
     <div class="modal-backdrop" @click.self="showJobModal=false">
       <div class="modal-box max-w-2xl">
         <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/30">
-          <h3 class="font-bold text-slate-800 dark:text-white" x-text="editingJob.id ? 'تعديل الوظيفة' : 'إضافة وظيفة جديدة'"></h3>
+          <h3 class="font-bold text-slate-800 dark:text-white" x-text="editingJob.id ? '{% trans 'Edit Job' %}' : '{% trans 'Add New Job' %}'"></h3>
           <button @click="showJobModal=false"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button>
         </div>
         <div class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">المسمى الوظيفي (EN)</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Job Title (EN)" %}</label>
               <input type="text" x-model="editingJob.title" class="input">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">المسمى الوظيفي (عربي)</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Job Title (Arabic)" %}</label>
               <input type="text" x-model="editingJob.title_ar" class="input" dir="rtl">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">القسم</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Department" %}</label>
               <input type="text" x-model="editingJob.department" class="input" placeholder="Engineering">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الموقع</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Location" %}</label>
               <input type="text" x-model="editingJob.location" class="input" placeholder="Riyadh / Remote">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">نوع الدوام</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Employment Type" %}</label>
               <select x-model="editingJob.employment_type" class="select w-full">
-                <option value="full_time">دوام كامل</option>
-                <option value="part_time">دوام جزئي</option>
-                <option value="contract">عقد</option>
-                <option value="internship">تدريب</option>
+                <option value="full_time">{% trans "Full time" %}</option>
+                <option value="part_time">{% trans "Part time" %}</option>
+                <option value="contract">{% trans "Contract" %}</option>
+                <option value="internship">{% trans "Internship" %}</option>
               </select>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الحالة</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Status" %}</label>
               <select x-model="editingJob.status" class="select w-full">
-                <option value="draft">مسودة</option>
-                <option value="published">منشورة</option>
-                <option value="closed">مغلقة</option>
+                <option value="draft">{% trans "Draft" %}</option>
+                <option value="published">{% trans "Published" %}</option>
+                <option value="closed">{% trans "Closed" %}</option>
               </select>
             </div>
             <div class="col-span-2">
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الوصف (عربي)</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Description (Arabic)" %}</label>
               <textarea x-model="editingJob.description_ar" class="input" rows="4" dir="rtl"></textarea>
             </div>
             <div class="col-span-2">
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">المتطلبات (عربي)</label>
-              <textarea x-model="editingJob.requirements_ar" class="input" rows="3" dir="rtl" placeholder="سطر لكل متطلب..."></textarea>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Requirements (Arabic)" %}</label>
+              <textarea x-model="editingJob.requirements_ar" class="input" rows="3" dir="rtl" placeholder="{% trans 'One line per requirement...' %}"></textarea>
             </div>
           </div>
         </div>
         <div class="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-700/30">
-          <button @click="showJobModal=false" class="btn-ghost">إلغاء</button>
+          <button @click="showJobModal=false" class="btn-ghost">{% trans "Cancel" %}</button>
           <button @click="saveJob()" :disabled="saving" class="btn-primary">
             <i data-lucide="save" class="w-4 h-4"></i>
-            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ'"></span>
+            <span x-text="saving ? '{% trans \"Saving...\" %}' : '{% trans \"Save\" %}'"></span>
           </button>
         </div>
       </div>
@@ -289,12 +289,12 @@ function jobsManager() {
     editingJob: {},
     jobFilter: { status: '', search: '' },
     statCards: [
-      { key: 'total_jobs',        label: 'إجمالي الوظائف',  cls: 'text-slate-800 dark:text-white' },
-      { key: 'published_jobs',    label: 'منشورة',           cls: 'text-emerald-600' },
-      { key: 'draft_jobs',        label: 'مسودة',            cls: 'text-amber-600' },
-      { key: 'closed_jobs',       label: 'مغلقة',            cls: 'text-slate-500' },
-      { key: 'total_applications',label: 'إجمالي الطلبات',  cls: 'text-indigo-600' },
-      { key: 'pending_applications',label: 'قيد المراجعة',  cls: 'text-violet-600' },
+      { key: 'total_jobs',        label: '{% trans "Total jobs" %}',         cls: 'text-slate-800 dark:text-white' },
+      { key: 'published_jobs',    label: '{% trans "Published" %}',          cls: 'text-emerald-600' },
+      { key: 'draft_jobs',        label: '{% trans "Draft" %}',              cls: 'text-amber-600' },
+      { key: 'closed_jobs',       label: '{% trans "Closed" %}',             cls: 'text-slate-500' },
+      { key: 'total_applications',label: '{% trans "Total applications" %}', cls: 'text-indigo-600' },
+      { key: 'pending_applications',label: '{% trans "Pending review" %}',   cls: 'text-violet-600' },
     ],
 
     async init() {
@@ -354,25 +354,25 @@ function jobsManager() {
         const url = isEdit ? `/api/v1/cms/admin/jobs/${this.editingJob.id}/` : '/api/v1/cms/admin/jobs/';
         const res = await apiFetch(url, { method: isEdit ? 'PUT' : 'POST', body: JSON.stringify(this.editingJob) });
         if (res && res.ok) {
-          notify('تم حفظ الوظيفة', 'success');
+          notify('{% trans "Job saved" %}', 'success');
           this.showJobModal = false;
           await this.loadJobs();
         } else {
-          notify('فشل الحفظ', 'error');
+          notify('{% trans "Save failed" %}', 'error');
         }
       } catch (e) {
-        notify('فشل الحفظ', 'error');
+        notify('{% trans "Save failed" %}', 'error');
       } finally {
         this.saving = false;
       }
     },
 
     async deleteJob(id) {
-      if (!confirm('هل أنت متأكد من حذف هذه الوظيفة؟')) return;
+      if (!confirm('{% trans "Are you sure you want to delete this job?" %}')) return;
       const res = await apiFetch(`/api/v1/cms/admin/jobs/${id}/`, { method: 'DELETE' });
       if (res && (res.ok || res.status === 204)) {
         this.jobs = this.jobs.filter(j => j.id !== id);
-        notify('تم حذف الوظيفة', 'success');
+        notify('{% trans "Job deleted" %}', 'success');
       }
     },
   };

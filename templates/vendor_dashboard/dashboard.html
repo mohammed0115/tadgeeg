@@ -1,7 +1,7 @@
 {% extends "layouts/base_vendor_dashboard.html" %}
 {% load i18n %}
-{% block page_title %}لوحة التحكم{% endblock %}
-{% block breadcrumb_current %}نظرة عامة{% endblock %}
+{% block page_title %}{% trans "Dashboard" %}{% endblock %}
+{% block breadcrumb_current %}{% trans "Overview" %}{% endblock %}
 
 {% block content %}
 <div x-data="vendorDashboard()" x-init="init()" class="space-y-6 fade-in">
@@ -9,13 +9,13 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">مرحباً، {{ request.user.full_name|default:request.user.email|truncatechars:25 }}</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">نظرة عامة على حسابك ونشاط المراجعة المالية</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans "Welcome," %} {{ request.user.full_name|default:request.user.email|truncatechars:25 }}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans "Overview of your account and financial audit activity" %}</p>
     </div>
     <div class="flex items-center gap-2">
       <a href="/dashboard/upload/" class="btn-primary">
         <i data-lucide="upload-cloud" class="w-4 h-4"></i>
-        رفع ملفات
+        {% trans "Upload Files" %}
       </a>
     </div>
   </div>
@@ -28,7 +28,7 @@
         <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
           <i data-lucide="files" class="w-5 h-5 text-blue-600 dark:text-blue-400"></i>
         </div>
-        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">إجمالي الملفات</p>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">{% trans "Total Files" %}</p>
       </div>
       <template x-if="loading">
         <div class="h-8 w-20 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
@@ -36,7 +36,7 @@
       <template x-if="!loading">
         <p class="text-3xl font-black text-slate-900 dark:text-white" x-text="(stats.total_files || 0).toLocaleString()"></p>
       </template>
-      <p class="text-xs text-slate-400 mt-1" x-text="(stats.storage_used_human || '0 MB') + ' مستخدم'"></p>
+      <p class="text-xs text-slate-400 mt-1" x-text="(stats.storage_used_human || '0 MB') + ' {% trans 'used' %}'"></p>
     </div>
 
     <!-- Running Audits -->
@@ -45,7 +45,7 @@
         <div class="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-900/30 flex items-center justify-center">
           <i data-lucide="shield-check" class="w-5 h-5 text-violet-600 dark:text-violet-400"></i>
         </div>
-        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">مراجعات نشطة</p>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">{% trans "Active Audits" %}</p>
       </div>
       <template x-if="loading">
         <div class="h-8 w-16 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
@@ -54,7 +54,7 @@
         <p class="text-3xl font-black text-slate-900 dark:text-white" x-text="(stats.running_audits || 0).toLocaleString()"></p>
       </template>
       <template x-if="!loading && (stats.pending_audits || 0) > 0">
-        <p class="text-xs text-amber-600 mt-1" x-text="(stats.pending_audits || 0) + ' في الانتظار'"></p>
+        <p class="text-xs text-amber-600 mt-1" x-text="(stats.pending_audits || 0) + ' {% trans 'pending' %}'"></p>
       </template>
     </div>
 
@@ -64,7 +64,7 @@
         <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 flex items-center justify-center">
           <i data-lucide="file-bar-chart" class="w-5 h-5 text-emerald-600 dark:text-emerald-400"></i>
         </div>
-        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">التقارير</p>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">{% trans "Reports" %}</p>
       </div>
       <template x-if="loading">
         <div class="h-8 w-16 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
@@ -80,7 +80,7 @@
         <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center">
           <i data-lucide="users" class="w-5 h-5 text-amber-600 dark:text-amber-400"></i>
         </div>
-        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">أعضاء الفريق</p>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">{% trans "Team Members" %}</p>
       </div>
       <template x-if="loading">
         <div class="h-8 w-16 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
@@ -93,31 +93,31 @@
 
   <!-- Quick Actions -->
   <div class="card p-5">
-    <h3 class="text-sm font-bold text-slate-700 dark:text-slate-200 mb-4">إجراءات سريعة</h3>
+    <h3 class="text-sm font-bold text-slate-700 dark:text-slate-200 mb-4">{% trans "Quick Actions" %}</h3>
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <a href="/dashboard/upload/"
          class="flex flex-col items-center gap-2 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20
                 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition text-center">
         <i data-lucide="upload-cloud" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
-        <span class="text-xs font-semibold text-blue-700 dark:text-blue-300">رفع ملفات</span>
+        <span class="text-xs font-semibold text-blue-700 dark:text-blue-300">{% trans "Upload Files" %}</span>
       </a>
       <a href="/dashboard/audits/"
          class="flex flex-col items-center gap-2 p-4 rounded-xl bg-violet-50 dark:bg-violet-900/20
                 hover:bg-violet-100 dark:hover:bg-violet-900/40 transition text-center">
         <i data-lucide="shield-check" class="w-6 h-6 text-violet-600 dark:text-violet-400"></i>
-        <span class="text-xs font-semibold text-violet-700 dark:text-violet-300">بدء مراجعة</span>
+        <span class="text-xs font-semibold text-violet-700 dark:text-violet-300">{% trans "Start Audit" %}</span>
       </a>
       <a href="/dashboard/reports/"
          class="flex flex-col items-center gap-2 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20
                 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition text-center">
         <i data-lucide="file-bar-chart" class="w-6 h-6 text-emerald-600 dark:text-emerald-400"></i>
-        <span class="text-xs font-semibold text-emerald-700 dark:text-emerald-300">عرض التقارير</span>
+        <span class="text-xs font-semibold text-emerald-700 dark:text-emerald-300">{% trans "View Reports" %}</span>
       </a>
       <a href="/dashboard/team/"
          class="flex flex-col items-center gap-2 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20
                 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition text-center">
         <i data-lucide="users" class="w-6 h-6 text-amber-600 dark:text-amber-400"></i>
-        <span class="text-xs font-semibold text-amber-700 dark:text-amber-300">إدارة الفريق</span>
+        <span class="text-xs font-semibold text-amber-700 dark:text-amber-300">{% trans "Manage Team" %}</span>
       </a>
     </div>
   </div>
@@ -130,9 +130,9 @@
       <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
         <h3 class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
           <i data-lucide="activity" class="w-4 h-4 text-blue-500"></i>
-          آخر النشاطات
+          {% trans "Recent Activity" %}
         </h3>
-        <a href="/dashboard/files/" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">عرض الكل</a>
+        <a href="/dashboard/files/" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">{% trans "View all" %}</a>
       </div>
       <template x-if="loading">
         <div class="animate-pulse divide-y divide-slate-100 dark:divide-slate-700/30">
@@ -148,7 +148,7 @@
         </div>
       </template>
       <template x-if="!loading && recentActivity.length === 0">
-        <div class="px-5 py-10 text-center text-slate-400 text-sm">لا يوجد نشاط بعد</div>
+        <div class="px-5 py-10 text-center text-slate-400 text-sm">{% trans "No activity yet" %}</div>
       </template>
       <template x-if="!loading && recentActivity.length > 0">
         <div class="divide-y divide-slate-100 dark:divide-slate-700/30">
@@ -172,7 +172,7 @@
               </div>
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-slate-700 dark:text-slate-300 truncate" x-text="item.description"></p>
-                <p class="text-xs text-slate-400" x-text="item.created_at ? new Date(item.created_at).toLocaleString('ar-SA') : ''"></p>
+                <p class="text-xs text-slate-400" x-text="item.created_at ? new Date(item.created_at).toLocaleString(APP_LOCALE) : ''"></p>
               </div>
             </div>
           </template>
@@ -184,7 +184,7 @@
     <div class="card p-5 space-y-4">
       <h3 class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
         <i data-lucide="hard-drive" class="w-4 h-4 text-amber-500"></i>
-        استخدام التخزين
+        {% trans "Storage Usage" %}
       </h3>
       <template x-if="loading">
         <div class="space-y-3 animate-pulse">
@@ -196,7 +196,7 @@
         <div class="space-y-4">
           <div>
             <div class="flex items-center justify-between text-xs mb-2">
-              <span class="text-slate-500">المستخدم</span>
+              <span class="text-slate-500">{% trans "Used" %}</span>
               <span class="font-semibold text-slate-700 dark:text-slate-200"
                     x-text="(stats.storage_used_human || '0 MB') + ' / ' + (stats.storage_limit_human || '1 GB')"></span>
             </div>
@@ -209,7 +209,7 @@
                    }"
                    :style="'width:' + Math.min(stats.storage_percent || 0, 100) + '%'"></div>
             </div>
-            <p class="text-xs text-slate-400 mt-1" x-text="(stats.storage_percent || 0) + '% مستخدم'"></p>
+            <p class="text-xs text-slate-400 mt-1" x-text="(stats.storage_percent || 0) + '% {% trans 'used' %}'"></p>
           </div>
 
           <!-- File Type Breakdown -->
@@ -218,7 +218,7 @@
               <div class="flex items-center justify-between text-xs">
                 <div class="flex items-center gap-2">
                   <div class="w-2 h-2 rounded-full" :style="'background:' + item.color"></div>
-                  <span class="text-slate-500" x-text="item.label_ar || item.type"></span>
+                  <span class="text-slate-500" x-text="item.label || item.type"></span>
                 </div>
                 <span class="font-medium text-slate-600 dark:text-slate-400" x-text="item.size_human"></span>
               </div>
@@ -227,7 +227,7 @@
 
           <a href="/dashboard/storage/" class="btn-ghost w-full justify-center text-xs">
             <i data-lucide="hard-drive" class="w-4 h-4"></i>
-            تفاصيل التخزين
+            {% trans "Storage Details" %}
           </a>
         </div>
       </template>
@@ -257,7 +257,7 @@ function vendorDashboard() {
           this.recentActivity = Array.isArray(data) ? data : (data.results || []);
         }
       } catch (e) {
-        notify('تعذّر تحميل بيانات لوحة التحكم', 'error');
+        notify('{% trans "Failed to load dashboard data" %}', 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());

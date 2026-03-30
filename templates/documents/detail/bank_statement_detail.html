@@ -257,8 +257,8 @@ function docDetail() {
 
     get ruleDetails() { return this.doc?.validation_details?.rule_details || []; },
     severityLabel(s) { return {critical:'حرج',high:'عالي',medium:'متوسط',low:'منخفض'}[s]??s; },
-    fmtDate(d) { return d ? new Date(d).toLocaleString('ar-SA') : '—'; },
-    fmtNum(v) { return v ? Number(v).toLocaleString('ar-SA', {maximumFractionDigits:2}) : '—'; },
+    fmtDate(d) { return d ? new Date(d).toLocaleString(APP_LOCALE) : '—'; },
+    fmtNum(v) { return v ? Number(v).toLocaleString(APP_LOCALE, {maximumFractionDigits:2}) : '—'; },
     scoreColor(s) { return s>=85?'bg-green-500':s>=70?'bg-amber-400':s>=50?'bg-orange-500':'bg-red-500'; },
     riskLabel(l) { return {critical:'حرج',high:'عالي',medium:'متوسط',low:'منخفض'}[l]??l; },
     riskBadge(l) { return {critical:'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',high:'bg-orange-50 text-orange-700 border-orange-200',medium:'bg-amber-50 text-amber-700 border-amber-200',low:'bg-green-50 text-green-700 border-green-200'}[l]??''; },

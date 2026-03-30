@@ -95,7 +95,7 @@
                         x-text="org.is_active ? 'نشط' : 'غير نشط'"></span>
                 </td>
                 <td class="text-slate-400 text-xs"
-                    x-text="org.created_at ? new Date(org.created_at).toLocaleDateString('ar-SA') : '—'"></td>
+                    x-text="org.created_at ? new Date(org.created_at).toLocaleDateString(APP_LOCALE) : '—'"></td>
                 <td>
                   <div class="flex items-center gap-2">
                     <button @click="viewOrg(org)" class="btn-ghost text-xs px-3 py-1.5">

@@ -114,7 +114,7 @@
                         x-text="page.status === 'published' ? 'منشورة' : page.status === 'draft' ? 'مسودة' : 'مؤرشفة'"></span>
                 </td>
                 <td class="text-xs text-slate-400"
-                    x-text="page.updated_at ? new Date(page.updated_at).toLocaleDateString('ar-SA') : '—'"></td>
+                    x-text="page.updated_at ? new Date(page.updated_at).toLocaleDateString(APP_LOCALE) : '—'"></td>
                 <td>
                   <div class="flex items-center gap-1">
                     <button @click="editPage(page)" class="btn-ghost text-xs px-2 py-1">

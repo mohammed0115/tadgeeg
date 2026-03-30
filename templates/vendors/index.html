@@ -165,7 +165,7 @@ function vendorsPage() {
     },
 
     formatNumber(value) {
-      return Number(value || 0).toLocaleString(document.documentElement.lang === 'ar' ? 'ar-SA' : 'en-US', {
+      return Number(value || 0).toLocaleString(APP_LOCALE, {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       });

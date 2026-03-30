@@ -1,12 +1,13 @@
 {% extends "base.html" %}
-{% block title %}مدقق المستندات المالي الموحد{% endblock %}
-{% block page_title %}مدقق المستندات المالي الموحد{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Unified Financial Document Auditor" %}{% endblock %}
+{% block page_title %}{% trans "Unified Financial Document Auditor" %}{% endblock %}
 {% block nav_ai_auditor %}active{% endblock %}
 
 {% block content %}
 <div
   class="max-w-4xl mx-auto space-y-6"
-  dir="rtl"
+  dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}"
   x-data="{
     dragging: false,
     selectedFiles: [],
@@ -41,11 +42,11 @@
       for (let f of files) {
         const ext = '.' + f.name.split('.').pop().toLowerCase();
         if (!allowed.includes(ext)) {
-          this.error = 'نوع ملف غير مدعوم: ' + ext + '. الصيغ المقبولة: PDF، صور، Excel، CSV، JSON، ZIP';
+          this.error = '{% trans "Unsupported file type:" %} ' + ext + '. {% trans "Allowed formats: PDF, images, Excel, CSV, JSON, ZIP" %}';
           return;
         }
         if (f.size > 52428800) {
-          this.error = 'حجم الملف يتجاوز الحد الأقصى (50 ميجابايت): ' + f.name;
+          this.error = '{% trans "File exceeds maximum size (50 MB):" %} ' + f.name;
           return;
         }
         this.selectedFiles.push(f);
@@ -54,13 +55,13 @@
       }
       
       this.error = '';
-      this.fileNames = names.length === 1 ? names[0] : names.length + ' ملفات';
+      this.fileNames = names.length === 1 ? names[0] : names.length + ' {% trans "files" %}';
       this.totalSize = this.formatSize(totalBytes);
     },
 
     submitForm(e) {
       if (!this.selectedFiles || this.selectedFiles.length === 0) {
-        this.error = 'يرجى اختيار ملف أو أكثر أولاً.';
+        this.error = '{% trans "Please choose one or more files first." %}';
         e.preventDefault();
         return;
       }
@@ -77,11 +78,10 @@
         <i data-lucide="scan-search" class="h-7 w-7 text-white"></i>
       </div>
       <div class="flex-1 min-w-0">
-        <h1 class="text-xl font-extrabold tracking-tight">مدقق المستندات المالي الموحد</h1>
-        <p class="text-sm text-blue-100 mt-0.5">المدقق المالي الذكي — تحليل شامل لجميع أنواع المستندات المالية</p>
+        <h1 class="text-xl font-extrabold tracking-tight">{% trans "Unified Financial Document Auditor" %}</h1>
+        <p class="text-sm text-blue-100 mt-0.5">{% trans "Smart financial auditor — comprehensive analysis for all financial document types" %}</p>
         <p class="mt-2 text-sm text-blue-200 leading-relaxed">
-          ارفع أي مستند مالي — فواتير، أوامر شراء، كشوف بنك، مسيرات رواتب، إقرارات ضريبية، والمزيد —
-          ليقوم الذكاء الاصطناعي بالتحليل الكامل، استخراج البيانات، كشف الشذوذات، وتقييم الامتثال مع ZATCA.
+          {% trans "Upload any financial document — invoices, purchase orders, bank statements, payroll sheets, tax returns, and more — for full AI analysis, data extraction, anomaly detection, and ZATCA compliance checks." %}
         </p>
       </div>
     </div>
@@ -95,22 +95,22 @@
         <div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
           <i data-lucide="upload-cloud" class="h-5 w-5"></i>
         </div>
-        <p class="text-xs font-bold text-slate-700">رفع الملف</p>
+        <p class="text-xs font-bold text-slate-700">{% trans "Upload File" %}</p>
       {% elif forloop.counter == 2 %}
         <div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-600">
           <i data-lucide="file-search" class="h-5 w-5"></i>
         </div>
-        <p class="text-xs font-bold text-slate-700">استخراج النص</p>
+        <p class="text-xs font-bold text-slate-700">{% trans "Text Extraction" %}</p>
       {% elif forloop.counter == 3 %}
         <div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
           <i data-lucide="brain-circuit" class="h-5 w-5"></i>
         </div>
-        <p class="text-xs font-bold text-slate-700">تحليل الذكاء الاصطناعي</p>
+        <p class="text-xs font-bold text-slate-700">{% trans "AI Analysis" %}</p>
       {% else %}
         <div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
           <i data-lucide="file-bar-chart" class="h-5 w-5"></i>
         </div>
-        <p class="text-xs font-bold text-slate-700">تقرير النتائج</p>
+        <p class="text-xs font-bold text-slate-700">{% trans "Results Report" %}</p>
       {% endif %}
     </div>
     {% endfor %}
@@ -160,18 +160,18 @@
 
         <template x-if="!selectedFiles || selectedFiles.length === 0">
           <div class="space-y-1.5">
-            <h3 class="text-xl font-bold text-slate-800">اسحب ملف أو عدة ملفات هنا أو انقر للاختيار</h3>
-            <p class="text-sm text-slate-500">PDF، صور، Excel، CSV، JSON، ZIP — بحد أقصى 50 ميجابايت لكل ملف</p>
+            <h3 class="text-xl font-bold text-slate-800">{% trans "Drag one or more files here, or click to choose" %}</h3>
+            <p class="text-sm text-slate-500">{% trans "PDF, images, Excel, CSV, JSON, ZIP — up to 50 MB per file" %}</p>
           </div>
         </template>
         <template x-if="selectedFiles && selectedFiles.length > 0">
           <div class="space-y-1">
             <p class="text-lg font-bold text-slate-800" x-text="fileNames"></p>
             <p class="text-sm text-slate-500">
-              <span class="font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg" x-text="selectedFiles.length + ' ملف'"></span>
+              <span class="font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg" x-text="selectedFiles.length + ' {% trans 'files' %}'"></span>
               · <span x-text="totalSize"></span>
             </p>
-            <p class="text-xs font-semibold text-emerald-600">✓ تم اختيار الملفات</p>
+            <p class="text-xs font-semibold text-emerald-600">{% trans "✓ Files selected" %}</p>
           </div>
         </template>
 
@@ -196,76 +196,76 @@
 
     <!-- Document Type Grid -->
     <div class="px-5 pb-2">
-      <label class="block mb-3 text-sm font-bold text-slate-700">نوع المستند <span class="text-slate-400 font-normal text-xs">(اختياري — الكشف تلقائي)</span></label>
+      <label class="block mb-3 text-sm font-bold text-slate-700">{% trans "Document Type" %} <span class="text-slate-400 font-normal text-xs">({% trans "Optional — auto detection" %})</span></label>
       <div class="grid grid-cols-3 gap-2 sm:grid-cols-5">
         <label class="group cursor-pointer">
           <input type="radio" name="selected_doc_type" value="" class="sr-only peer" checked>
           <div class="flex flex-col items-center gap-1.5 rounded-xl border-2 p-2.5 text-center transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 border-slate-200 hover:border-blue-300 hover:bg-blue-50/40">
             <i data-lucide="search" class="h-4 w-4 text-slate-400 peer-checked:text-blue-600 group-[:has(input:checked)]:text-blue-600"></i>
-            <span class="text-[10px] font-semibold text-slate-600">كشف تلقائي</span>
+            <span class="text-[10px] font-semibold text-slate-600">{% trans "Auto Detect" %}</span>
           </div>
         </label>
         <label class="group cursor-pointer">
           <input type="radio" name="selected_doc_type" value="invoice" class="sr-only peer">
           <div class="flex flex-col items-center gap-1.5 rounded-xl border-2 p-2.5 text-center transition-all peer-checked:border-blue-500 peer-checked:bg-blue-50 border-slate-200 hover:border-blue-300 hover:bg-blue-50/40">
             <i data-lucide="file-text" class="h-4 w-4 text-slate-400"></i>
-            <span class="text-[10px] font-semibold text-slate-600">فاتورة</span>
+            <span class="text-[10px] font-semibold text-slate-600">{% trans "Invoice" %}</span>
           </div>
         </label>
         <label class="group cursor-pointer">
           <input type="radio" name="selected_doc_type" value="purchase_order" class="sr-only peer">
           <div class="flex flex-col items-center gap-1.5 rounded-xl border-2 p-2.5 text-center transition-all peer-checked:border-violet-500 peer-checked:bg-violet-50 border-slate-200 hover:border-violet-300 hover:bg-violet-50/40">
             <i data-lucide="shopping-cart" class="h-4 w-4 text-slate-400"></i>
-            <span class="text-[10px] font-semibold text-slate-600">أمر شراء</span>
+            <span class="text-[10px] font-semibold text-slate-600">{% trans "Purchase Order" %}</span>
           </div>
         </label>
         <label class="group cursor-pointer">
           <input type="radio" name="selected_doc_type" value="bank_statement" class="sr-only peer">
           <div class="flex flex-col items-center gap-1.5 rounded-xl border-2 p-2.5 text-center transition-all peer-checked:border-emerald-500 peer-checked:bg-emerald-50 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/40">
             <i data-lucide="landmark" class="h-4 w-4 text-slate-400"></i>
-            <span class="text-[10px] font-semibold text-slate-600">كشف بنكي</span>
+            <span class="text-[10px] font-semibold text-slate-600">{% trans "Bank Statement" %}</span>
           </div>
         </label>
         <label class="group cursor-pointer">
           <input type="radio" name="selected_doc_type" value="payroll" class="sr-only peer">
           <div class="flex flex-col items-center gap-1.5 rounded-xl border-2 p-2.5 text-center transition-all peer-checked:border-amber-500 peer-checked:bg-amber-50 border-slate-200 hover:border-amber-300 hover:bg-amber-50/40">
             <i data-lucide="users" class="h-4 w-4 text-slate-400"></i>
-            <span class="text-[10px] font-semibold text-slate-600">مسير رواتب</span>
+            <span class="text-[10px] font-semibold text-slate-600">{% trans "Payroll" %}</span>
           </div>
         </label>
         <label class="group cursor-pointer">
           <input type="radio" name="selected_doc_type" value="expense_report" class="sr-only peer">
           <div class="flex flex-col items-center gap-1.5 rounded-xl border-2 p-2.5 text-center transition-all peer-checked:border-orange-500 peer-checked:bg-orange-50 border-slate-200 hover:border-orange-300 hover:bg-orange-50/40">
             <i data-lucide="receipt" class="h-4 w-4 text-slate-400"></i>
-            <span class="text-[10px] font-semibold text-slate-600">مصروفات</span>
+            <span class="text-[10px] font-semibold text-slate-600">{% trans "Expenses" %}</span>
           </div>
         </label>
         <label class="group cursor-pointer">
           <input type="radio" name="selected_doc_type" value="tax_declaration" class="sr-only peer">
           <div class="flex flex-col items-center gap-1.5 rounded-xl border-2 p-2.5 text-center transition-all peer-checked:border-red-500 peer-checked:bg-red-50 border-slate-200 hover:border-red-300 hover:bg-red-50/40">
             <i data-lucide="file-check-2" class="h-4 w-4 text-slate-400"></i>
-            <span class="text-[10px] font-semibold text-slate-600">إقرار ضريبي</span>
+            <span class="text-[10px] font-semibold text-slate-600">{% trans "Tax Return" %}</span>
           </div>
         </label>
         <label class="group cursor-pointer">
           <input type="radio" name="selected_doc_type" value="fixed_asset" class="sr-only peer">
           <div class="flex flex-col items-center gap-1.5 rounded-xl border-2 p-2.5 text-center transition-all peer-checked:border-slate-600 peer-checked:bg-slate-100 border-slate-200 hover:border-slate-400 hover:bg-slate-50">
             <i data-lucide="building-2" class="h-4 w-4 text-slate-400"></i>
-            <span class="text-[10px] font-semibold text-slate-600">أصول ثابتة</span>
+            <span class="text-[10px] font-semibold text-slate-600">{% trans "Fixed Assets" %}</span>
           </div>
         </label>
         <label class="group cursor-pointer">
           <input type="radio" name="selected_doc_type" value="sales_receipt" class="sr-only peer">
           <div class="flex flex-col items-center gap-1.5 rounded-xl border-2 p-2.5 text-center transition-all peer-checked:border-cyan-500 peer-checked:bg-cyan-50 border-slate-200 hover:border-cyan-300 hover:bg-cyan-50/40">
             <i data-lucide="scan-line" class="h-4 w-4 text-slate-400"></i>
-            <span class="text-[10px] font-semibold text-slate-600">إيصال بيع</span>
+            <span class="text-[10px] font-semibold text-slate-600">{% trans "Sales Receipt" %}</span>
           </div>
         </label>
         <label class="group cursor-pointer">
           <input type="radio" name="selected_doc_type" value="other" class="sr-only peer">
           <div class="flex flex-col items-center gap-1.5 rounded-xl border-2 p-2.5 text-center transition-all peer-checked:border-slate-500 peer-checked:bg-slate-100 border-slate-200 hover:border-slate-400 hover:bg-slate-50">
             <i data-lucide="folder" class="h-4 w-4 text-slate-400"></i>
-            <span class="text-[10px] font-semibold text-slate-600">أخرى</span>
+            <span class="text-[10px] font-semibold text-slate-600">{% trans "Other" %}</span>
           </div>
         </label>
       </div>
@@ -274,20 +274,20 @@
     <!-- Language + Formats Row -->
     <div class="grid grid-cols-1 gap-4 px-5 py-4 sm:grid-cols-2">
       <div class="space-y-2">
-        <label class="block text-sm font-bold text-slate-700">لغة المستند</label>
+        <label class="block text-sm font-bold text-slate-700">{% trans "Document Language" %}</label>
         <select
           name="language"
           class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
         >
-          <option value="auto">🌐 كشف تلقائي</option>
-          <option value="ar">🇸🇦 العربية</option>
+          <option value="auto">🌐 {% trans "Auto Detect" %}</option>
+          <option value="ar">🇸🇦 {% trans "Arabic" %}</option>
           <option value="en">🇺🇸 English</option>
-          <option value="ar-en">🔀 ثنائي اللغة</option>
+          <option value="ar-en">🔀 {% trans "Bilingual" %}</option>
         </select>
-        <p class="text-xs text-slate-400">يؤثر على دقة استخراج النص من الصور</p>
+        <p class="text-xs text-slate-400">{% trans "Affects OCR extraction accuracy from images" %}</p>
       </div>
       <div class="space-y-2">
-        <label class="block text-sm font-bold text-slate-700">الصيغ المدعومة</label>
+        <label class="block text-sm font-bold text-slate-700">{% trans "Supported Formats" %}</label>
         <div class="flex flex-wrap gap-1.5">
           <span class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-500"><i data-lucide="file" class="h-2.5 w-2.5"></i>PDF</span>
           <span class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-500"><i data-lucide="file" class="h-2.5 w-2.5"></i>XLSX</span>
@@ -296,7 +296,7 @@
           <span class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-500"><i data-lucide="file" class="h-2.5 w-2.5"></i>ZIP</span>
           <span class="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-500"><i data-lucide="file" class="h-2.5 w-2.5"></i>JPG/PNG</span>
         </div>
-        <p class="text-xs text-slate-400">بحد أقصى 50 ميجابايت للملف</p>
+        <p class="text-xs text-slate-400">{% trans "Maximum 50 MB per file" %}</p>
       </div>
     </div>
 
@@ -304,7 +304,7 @@
     <div class="border-t border-slate-100 bg-slate-50 px-5 py-4">
       <div class="flex items-center justify-between gap-4">
         <p class="text-xs text-slate-500">
-          يتم التحليل بالكامل على الخادم. بياناتك آمنة ومحمية.
+          {% trans "Analysis is performed fully on the server. Your data is secure and protected." %}
         </p>
         <button
           type="submit"
@@ -320,7 +320,7 @@
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
             </svg>
           </template>
-          <span x-text="submitting ? 'جارٍ التحليل...' : 'بدء التدقيق'"></span>
+          <span x-text="submitting ? '{% trans 'Analyzing...' %}' : '{% trans 'Start Audit' %}'"></span>
         </button>
       </div>
     </div>
@@ -331,10 +331,10 @@
   {% if recent %}
   <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-      <a href="{% url 'auditor:history' %}" class="text-xs font-semibold text-blue-600 hover:underline">عرض الكل</a>
+      <a href="{% url 'auditor:history' %}" class="text-xs font-semibold text-blue-600 hover:underline">{% trans "View All" %}</a>
       <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
         <i data-lucide="clock" class="h-4 w-4 text-slate-400"></i>
-        آخر المستندات المرفوعة
+        {% trans "Latest Uploaded Documents" %}
       </h3>
     </div>
     <table class="w-full text-sm">
@@ -348,11 +348,11 @@
           <td class="px-4 py-3 text-center">
             {% if doc.status == "completed" %}
               <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                <i data-lucide="check-circle-2" class="h-3 w-3"></i> مكتمل
+                <i data-lucide="check-circle-2" class="h-3 w-3"></i> {% trans "Completed" %}
               </span>
             {% elif doc.status == "failed" %}
               <span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
-                <i data-lucide="x-circle" class="h-3 w-3"></i> فشل
+                <i data-lucide="x-circle" class="h-3 w-3"></i> {% trans "Failed" %}
               </span>
             {% else %}
               <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
@@ -362,11 +362,11 @@
           </td>
           <td class="px-4 py-3 text-center">
             {% if doc.overall_risk_level == "high" %}
-              <span class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">مرتفع</span>
+              <span class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">{% trans "High" %}</span>
             {% elif doc.overall_risk_level == "medium" %}
-              <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700">متوسط</span>
+              <span class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700">{% trans "Medium" %}</span>
             {% elif doc.overall_risk_level == "low" %}
-              <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">منخفض</span>
+              <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">{% trans "Low" %}</span>
             {% else %}
               <span class="text-xs text-slate-400">—</span>
             {% endif %}
@@ -375,7 +375,7 @@
             <a href="{% url 'auditor:result' doc.pk %}"
                class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all shadow-sm">
               <i data-lucide="eye" class="h-3.5 w-3.5"></i>
-              عرض
+              {% trans "View" %}
             </a>
           </td>
         </tr>

@@ -14,6 +14,8 @@ class SupportedDocumentType(models.TextChoices):
     TAX_RETURN = "tax_return", "VAT / Tax Return"
     FIXED_ASSET = "fixed_asset", "Fixed Asset Register"
     SALES_RECEIPT = "sales_receipt", "Sales Receipt"
+    GRN     = "grn",     "Goods Receipt Note"
+    PAYMENT = "payment", "Payment Voucher"
     OTHER = "other", "Other"
 
 

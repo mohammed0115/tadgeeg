@@ -159,7 +159,7 @@
               <td><span class="badge-slate text-[10px]" x-text="file.type"></span></td>
               <td class="text-xs text-slate-400" x-text="file.size_human || '—'"></td>
               <td class="text-xs text-slate-400"
-                  x-text="file.created_at ? new Date(file.created_at).toLocaleDateString('ar-SA') : '—'"></td>
+                  x-text="file.created_at ? new Date(file.created_at).toLocaleDateString(APP_LOCALE) : '—'"></td>
               <td>
                 <div class="flex items-center gap-1">
                   <button @click="copyUrl(file.url)" class="btn-ghost text-xs px-2 py-1">

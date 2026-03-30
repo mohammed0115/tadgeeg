@@ -1,6 +1,7 @@
 {% extends "base.html" %}
-{% block title %}رفع المستندات{% endblock %}
-{% block page_title %}رفع المستندات{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Upload Documents" %}{% endblock %}
+{% block page_title %}{% trans "Upload Documents" %}{% endblock %}
 {% block nav_documents %}active{% endblock %}
 {% block nav_doc_upload %}active{% endblock %}
 
@@ -8,8 +9,8 @@
 <div class="max-w-7xl mx-auto space-y-5" x-data="docUploader()" x-init="init()">
   <div class="rounded-2xl border border-blue-200 bg-blue-50 px-6 py-5 text-right text-blue-700">
     <p class="text-lg font-semibold leading-8">
-      <span class="font-bold">ملاحظة:</span>
-      النص المستخرج من المستندات يُستخدم كدليل تدقيق فقط وليس كمصدر للحقيقة المحاسبية، ويتم تخزين بصمة رقمية لكل ملف.
+      <span class="font-bold">{% trans "Note:" %}</span>
+      {% trans "Text extracted from documents is used as audit evidence only, not as the accounting source of truth, and a digital fingerprint is stored for each file." %}
     </p>
   </div>
 
@@ -62,7 +63,7 @@
 
           <template x-if="selectedMode === 'csvjson'">
             <div class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700">
-              ادعم ملفات CSV وJSON وJSONL وXLSX وXLS. سيتم استخراج البيانات وتحليلها تلقائيًا.
+              {% trans "CSV, JSON, JSONL, XLSX, and XLS files are supported. Data will be extracted and analyzed automatically." %}
             </div>
           </template>
         </div>
@@ -72,11 +73,11 @@
         <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
           <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
             <div>
-              <h3 class="text-base font-bold text-slate-800">الملفات المحددة</h3>
-              <p class="text-sm text-slate-500" x-text="files.length + ' ملف جاهز للرفع'"></p>
+              <h3 class="text-base font-bold text-slate-800">{% trans "Selected Files" %}</h3>
+              <p class="text-sm text-slate-500" x-text="files.length + ' {% trans 'files ready to upload' %}'"></p>
             </div>
             <button type="button" @click="files = []" class="text-sm font-semibold text-slate-500 transition-colors hover:text-red-600">
-              مسح الكل
+              {% trans "Clear All" %}
             </button>
           </div>
 
@@ -101,18 +102,18 @@
 
       <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
         <div class="space-y-2">
-          <label class="block text-lg font-semibold text-slate-800">نوع المستند</label>
+          <label class="block text-lg font-semibold text-slate-800">{% trans "Document Type" %}</label>
           <select x-model="selectedType" class="h-14 w-full rounded-xl border border-slate-300 bg-white px-4 text-lg text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
-            <option value="">اختر نوع المستند</option>
+            <option value="">{% trans "Select document type" %}</option>
             <template x-for="type in docTypes" :key="type.id">
               <option :value="type.id" x-text="type.label"></option>
             </template>
           </select>
-          <p class="text-sm text-slate-400" x-text="currentType.hint || 'اختر نوع المستند المطلوب لتحليل القواعد المناسبة.'"></p>
+          <p class="text-sm text-slate-400" x-text="currentType.hint || '{% trans 'Choose the document type to apply the right rule analysis.' %}'"></p>
         </div>
 
         <div class="space-y-2">
-          <label class="block text-lg font-semibold text-slate-800">اللغة</label>
+          <label class="block text-lg font-semibold text-slate-800">{% trans "Language" %}</label>
           <select x-model="language" class="h-14 w-full rounded-xl border border-slate-300 bg-white px-4 text-lg text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
             <template x-for="lang in languageOptions" :key="lang.id">
               <option :value="lang.id" x-text="lang.label"></option>
@@ -122,7 +123,7 @@
 
         <label class="flex h-14 min-w-[140px] items-center justify-center gap-3 rounded-xl border border-slate-300 bg-slate-50 px-4 text-lg font-medium text-slate-700">
           <input x-model="isHandwritten" type="checkbox" class="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-          <span>خط يدوي</span>
+          <span>{% trans "Handwritten" %}</span>
         </label>
       </div>
 
@@ -144,30 +145,30 @@
     <div class="space-y-4 rounded-[22px] border border-slate-200 bg-white p-6">
       <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h3 class="text-xl font-bold text-slate-800">نتائج المعالجة</h3>
-          <p class="text-sm text-slate-500" x-text="'تمت معالجة ' + summary.processed + ' من أصل ' + summary.total + ' ملف'"></p>
+          <h3 class="text-xl font-bold text-slate-800">{% trans "Processing Results" %}</h3>
+          <p class="text-sm text-slate-500" x-text="'{% trans 'Processed' %} ' + summary.processed + ' {% trans 'out of' %} ' + summary.total + ' {% trans 'files' %}'"></p>
         </div>
         <a :href="listUrl()" class="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
           <i data-lucide="list"></i>
-          عرض القائمة الكاملة
+          {% trans "View Full List" %}
         </a>
       </div>
 
       <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">الإجمالي</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{% trans "Total" %}</p>
           <p class="mt-2 font-mono text-2xl font-bold text-slate-800" x-text="summary.total"></p>
         </div>
         <div class="rounded-2xl border border-green-200 bg-green-50 p-4">
-          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-green-700">نجح</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-green-700">{% trans "Succeeded" %}</p>
           <p class="mt-2 font-mono text-2xl font-bold text-green-700" x-text="summary.processed"></p>
         </div>
         <div class="rounded-2xl border border-red-200 bg-red-50 p-4">
-          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-red-700">فشل</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-red-700">{% trans "Failed" %}</p>
           <p class="mt-2 font-mono text-2xl font-bold text-red-700" x-text="summary.failed"></p>
         </div>
         <div class="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">النوع</p>
+          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">{% trans "Type" %}</p>
           <p class="mt-2 text-lg font-bold text-blue-700" x-text="summary.documentType"></p>
         </div>
       </div>
@@ -185,7 +186,7 @@
                 <div class="min-w-0 flex-1 text-right">
                   <div class="flex flex-wrap items-center justify-end gap-2">
                     <p class="truncate text-sm font-bold text-slate-800" x-text="result.filename"></p>
-                    <span x-show="result.success === false" class="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">فشل</span>
+                    <span x-show="result.success === false" class="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">{% trans "Failed" %}</span>
                     <span x-show="result.success !== false" class="rounded-lg border px-2.5 py-1 text-xs font-semibold"
                           :class="riskBadge(result.risk_level)" x-text="riskLabel(result.risk_level)"></span>
                   </div>
@@ -197,9 +198,9 @@
                   <template x-if="result.success !== false">
                     <div class="mt-2 space-y-2">
                       <div class="flex flex-wrap items-center justify-end gap-2 text-xs text-slate-500">
-                        <span x-text="'الحالة: ' + statusLabel(result.status)"></span>
+                        <span x-text="'{% trans 'Status:' %} ' + statusLabel(result.status)"></span>
                         <span>•</span>
-                        <span x-text="'الوقت: ' + (result.processing_ms || 0) + ' ms'"></span>
+                        <span x-text="'{% trans 'Time:' %} ' + (result.processing_ms || 0) + ' ms'"></span>
                         <span>•</span>
                         <span class="font-mono text-slate-700" x-text="Math.round(result.validation_score || 0) + '%'"></span>
                       </div>
@@ -228,7 +229,7 @@
                 <template x-if="result.success !== false && result.document_id">
                   <a :href="detailUrl(result.document_id)" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
                     <i data-lucide="eye" class="h-4 w-4"></i>
-                    عرض التفاصيل
+                    {% trans "View Details" %}
                   </a>
                 </template>
               </div>
@@ -257,27 +258,27 @@ function docUploader() {
     maxSizeMb: 50,
 
     uploadModes: [
-      { id: 'single', label: 'ملف واحد', icon: 'file-text', subtext: 'PDF أو صورة' },
-      { id: 'multiple', label: 'ملفات متعددة', icon: 'folder-open', subtext: 'رفع دفعة ملفات' },
-      { id: 'zip', label: 'دفعة ZIP', icon: 'archive', subtext: 'ملف مضغوط واحد' },
-      { id: 'csvjson', label: 'CSV / JSON', icon: 'file-json', subtext: 'ملفات منظمة' },
+      { id: 'single', label: '{% trans "Single File" %}', icon: 'file-text', subtext: '{% trans "PDF or image" %}' },
+      { id: 'multiple', label: '{% trans "Multiple Files" %}', icon: 'folder-open', subtext: '{% trans "Batch upload" %}' },
+      { id: 'zip', label: '{% trans "ZIP Batch" %}', icon: 'archive', subtext: '{% trans "Single compressed file" %}' },
+      { id: 'csvjson', label: 'CSV / JSON', icon: 'file-json', subtext: '{% trans "Structured files" %}' },
     ],
 
     languageOptions: [
-      { id: 'mixed', label: 'عربي وإنجليزي' },
-      { id: 'ar', label: 'عربي' },
+      { id: 'mixed', label: '{% trans "Arabic and English" %}' },
+      { id: 'ar', label: '{% trans "Arabic" %}' },
       { id: 'en', label: 'English' },
     ],
 
     docTypes: [
-      { id: 'purchase_order', label: 'أوامر الشراء', hint: 'تحليل أوامر الشراء وربطها بالموردين والبنود.', listUrl: '/documents/purchase-orders/', detailBase: '/documents/purchase-orders/' },
-      { id: 'bank_statement', label: 'كشف حساب بنكي', hint: 'مطابقة الحركات والرصيد وكشف الشذوذات البنكية.', listUrl: '/documents/bank-statements/', detailBase: '/documents/bank-statements/' },
-      { id: 'payroll', label: 'كشف الرواتب', hint: 'فحص الرواتب والاستقطاعات والموظفين الوهميين.', listUrl: '/documents/payroll/', detailBase: '/documents/payroll/' },
-      { id: 'expense_report', label: 'تقرير مصروفات', hint: 'مراجعة المطالبات والبدلات والمرفقات.', listUrl: '/documents/expense-reports/', detailBase: '/documents/expense-reports/' },
-      { id: 'vat_return', label: 'إقرار ضريبي', hint: 'فحص إقرارات ضريبة القيمة المضافة ومتطلبات ZATCA.', listUrl: '/documents/vat-returns/', detailBase: '/documents/vat-returns/' },
-      { id: 'fixed_asset', label: 'أصل ثابت', hint: 'مراجعة سجلات الأصول والإهلاك والحركة.', listUrl: '/documents/fixed-assets/', detailBase: '/documents/fixed-assets/' },
-      { id: 'sales_receipt', label: 'إيصال بيع', hint: 'تحقق من بيانات الإيصال والضريبة والامتثال.', listUrl: '/documents/sales-receipts/', detailBase: '/documents/sales-receipts/' },
-      { id: 'invoice', label: 'فاتورة', hint: 'سيتم تحويلك إلى شاشة رفع الفواتير المخصصة.', listUrl: '/invoices/', detailBase: '/invoices/' },
+      { id: 'purchase_order', label: '{% trans "Purchase Orders" %}', hint: '{% trans "Analyze purchase orders and map them to vendors and line items." %}', listUrl: '/documents/purchase-orders/', detailBase: '/documents/purchase-orders/' },
+      { id: 'bank_statement', label: '{% trans "Bank Statement" %}', hint: '{% trans "Reconcile transactions and balances and detect banking anomalies." %}', listUrl: '/documents/bank-statements/', detailBase: '/documents/bank-statements/' },
+      { id: 'payroll', label: '{% trans "Payroll" %}', hint: '{% trans "Review payroll, deductions, and ghost employees." %}', listUrl: '/documents/payroll/', detailBase: '/documents/payroll/' },
+      { id: 'expense_report', label: '{% trans "Expense Report" %}', hint: '{% trans "Review claims, allowances, and attachments." %}', listUrl: '/documents/expense-reports/', detailBase: '/documents/expense-reports/' },
+      { id: 'vat_return', label: '{% trans "VAT Return" %}', hint: '{% trans "Validate VAT filings and ZATCA requirements." %}', listUrl: '/documents/vat-returns/', detailBase: '/documents/vat-returns/' },
+      { id: 'fixed_asset', label: '{% trans "Fixed Asset" %}', hint: '{% trans "Review asset records, depreciation, and movement." %}', listUrl: '/documents/fixed-assets/', detailBase: '/documents/fixed-assets/' },
+      { id: 'sales_receipt', label: '{% trans "Sales Receipt" %}', hint: '{% trans "Check receipt details, tax data, and compliance." %}', listUrl: '/documents/sales-receipts/', detailBase: '/documents/sales-receipts/' },
+      { id: 'invoice', label: '{% trans "Invoice" %}', hint: '{% trans "You will be redirected to the dedicated invoice upload screen." %}', listUrl: '/invoices/', detailBase: '/invoices/' },
     ],
 
     init() {
@@ -307,28 +308,28 @@ function docUploader() {
 
     get supportedFilesText() {
       return {
-        single: 'PDF، JPG، PNG، TIFF، TIF — الحد الأقصى 50MB لكل ملف',
-        multiple: 'PDF، JPG، PNG، TIFF، TIF — حتى 50MB لكل ملف',
-        zip: 'ملف ZIP واحد يحتوي على مستندات PDF أو صور — حتى 50MB',
-        csvjson: 'CSV، JSON، JSONL، XLSX، XLS — ملفات البيانات المنظمة — حتى 50MB',
+        single: '{% trans "PDF, JPG, PNG, TIFF, TIF — maximum 50MB per file" %}',
+        multiple: '{% trans "PDF, JPG, PNG, TIFF, TIF — up to 50MB per file" %}',
+        zip: '{% trans "One ZIP file containing PDFs or images — up to 50MB" %}',
+        csvjson: '{% trans "CSV, JSON, JSONL, XLSX, XLS — structured data files — up to 50MB" %}',
       }[this.selectedMode];
     },
 
     get dropzoneTitle() {
       return {
-        single: 'اضغط لاختيار ملف أو اسحب الملف هنا',
-        multiple: 'اسحب عدة ملفات هنا أو اضغط للاختيار',
-        zip: 'اسحب ملف ZIP هنا أو اضغط للاختيار',
-        csvjson: 'اختر ملف CSV أو JSON أو XLSX',
+        single: '{% trans "Click to choose a file or drag it here" %}',
+        multiple: '{% trans "Drag multiple files here or click to choose" %}',
+        zip: '{% trans "Drag a ZIP file here or click to choose" %}',
+        csvjson: '{% trans "Choose a CSV, JSON, or XLSX file" %}',
       }[this.selectedMode];
     },
 
     get dropzoneSubtitle() {
       return {
-        single: 'مناسب لرفع مستند واحد ومعالجته مباشرة',
-        multiple: 'لرفع مجموعة مستندات من نفس النوع مرة واحدة',
-        zip: 'لمعالجة دفعة كاملة داخل ملف مضغوط',
-        csvjson: 'لاستيراد بيانات منظمة من ملفات جداول البيانات',
+        single: '{% trans "Best for uploading and processing one document directly" %}',
+        multiple: '{% trans "Upload a group of documents of the same type at once" %}',
+        zip: '{% trans "Process a full batch inside a compressed archive" %}',
+        csvjson: '{% trans "Import structured data from spreadsheet files" %}',
       }[this.selectedMode];
     },
 
@@ -346,10 +347,10 @@ function docUploader() {
     },
 
     get submitLabel() {
-      if (this.uploading) return 'جاري رفع ومعالجة المستندات...';
-      if (this.selectedMode === 'csvjson') return 'استيراد البيانات المنظمة';
-      if (this.selectedType === 'invoice') return 'الانتقال إلى رفع الفواتير';
-      return 'رفع ومعالجة المستند';
+      if (this.uploading) return '{% trans "Uploading and processing documents..." %}';
+      if (this.selectedMode === 'csvjson') return '{% trans "Import Structured Data" %}';
+      if (this.selectedType === 'invoice') return '{% trans "Go to Invoice Upload" %}';
+      return '{% trans "Upload and Process Document" %}';
     },
 
     setMode(modeId) {
@@ -366,11 +367,11 @@ function docUploader() {
       for (const file of Array.from(fileList || [])) {
         const extension = '.' + (file.name.split('.').pop() || '').toLowerCase();
         if (!allowed.includes(extension)) {
-          notify('نوع الملف غير مدعوم في هذا النمط: ' + file.name, 'warning');
+          notify('{% trans "Unsupported file type for this mode:" %} ' + file.name, 'warning');
           continue;
         }
         if (file.size > maxBytes) {
-          notify('الملف أكبر من 50MB: ' + file.name, 'warning');
+          notify('{% trans "File is larger than 50MB:" %} ' + file.name, 'warning');
           continue;
         }
         acceptedFiles.push(file);
@@ -425,11 +426,11 @@ function docUploader() {
 
     riskLabel(level) {
       return {
-        critical: 'حرج',
-        high: 'عالي',
-        medium: 'متوسط',
-        low: 'منخفض',
-      }[level] || 'غير محدد';
+        critical: '{% trans "Critical" %}',
+        high: '{% trans "High" %}',
+        medium: '{% trans "Medium" %}',
+        low: '{% trans "Low" %}',
+      }[level] || '{% trans "Unspecified" %}';
     },
 
     riskBadge(level) {
@@ -443,12 +444,12 @@ function docUploader() {
 
     statusLabel(status) {
       return {
-        pending: 'قيد الانتظار',
-        validated: 'تم التحقق',
-        flagged: 'مُعلّق',
-        approved: 'معتمد',
-        rejected: 'مرفوض',
-      }[status] || status || 'غير معروف';
+        pending: '{% trans "Pending" %}',
+        validated: '{% trans "Validated" %}',
+        flagged: '{% trans "Flagged" %}',
+        approved: '{% trans "Approved" %}',
+        rejected: '{% trans "Rejected" %}',
+      }[status] || status || '{% trans "Unknown" %}';
     },
 
     progressBarClass(score) {
@@ -478,12 +479,12 @@ function docUploader() {
 
     async upload() {
       if (!this.selectedType) {
-        notify('اختر نوع المستند أولاً.', 'warning');
+        notify('{% trans "Select a document type first." %}', 'warning');
         return;
       }
 
       if (!this.files.length) {
-        notify('اختر ملفًا واحدًا على الأقل.', 'warning');
+        notify('{% trans "Choose at least one file." %}', 'warning');
         return;
       }
 
@@ -520,12 +521,12 @@ function docUploader() {
         ];
         this.files = [];
         notify(
-          (data.failed ? 'اكتملت المعالجة مع بعض الملاحظات. ' : 'تم رفع المستندات بنجاح. ') +
-          'عدد الملفات المعالجة: ' + (data.processed || 0),
+          (data.failed ? '{% trans "Processing completed with some warnings." %} ' : '{% trans "Documents uploaded successfully." %} ') +
+          '{% trans "Processed files:" %} ' + (data.processed || 0),
           data.failed ? 'warning' : 'success'
         );
       } catch (error) {
-        notify('تعذّر رفع المستندات. تحقق من الملفات وحاول مرة أخرى.', 'error');
+        notify('{% trans "Unable to upload documents. Check the files and try again." %}', 'error');
       } finally {
         this.uploading = false;
         this.$nextTick(() => lucide.createIcons());

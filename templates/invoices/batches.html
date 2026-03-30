@@ -1,6 +1,7 @@
 {% extends "base.html" %}
-{% block title %}الدفعات{% endblock %}
-{% block page_title %}دفعات الرفع{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Batches" %}{% endblock %}
+{% block page_title %}{% trans "Upload Batches" %}{% endblock %}
 {% block nav_batches %}active{% endblock %}
 
 {% block content %}
@@ -10,7 +11,7 @@
     try{
       const d=await apiFetch('/invoices/batches/?page_size=50');
       this.batches=d.results||d||[];
-    }catch(e){notify('فشل التحميل','error');}
+    }catch(e){notify('{% trans "Load failed" %}','error');}
     this.loading=false;
     this.$nextTick(()=>lucide.createIcons());
   }
@@ -18,7 +19,7 @@
 
   <div class="card overflow-hidden">
     <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
-      <h3 class="font-semibold text-slate-800 dark:text-white">سجل الدفعات المرفوعة</h3>
+      <h3 class="font-semibold text-slate-800 dark:text-white">{% trans "Uploaded Batch History" %}</h3>
     </div>
 
     <div x-show="loading" class="flex justify-center py-16">
@@ -36,22 +37,22 @@
             <i data-lucide="layers" class="w-5 h-5 text-primary-500"></i>
           </div>
           <div class="flex-1 min-w-0">
-            <p class="font-semibold text-slate-800 dark:text-white" x-text="b.batch_name||'دفعة بدون اسم'"></p>
+            <p class="font-semibold text-slate-800 dark:text-white" x-text="b.batch_name||'{% trans 'Unnamed Batch' %}'"></p>
             <p class="text-xs text-slate-400 mt-0.5"
-               x-text="(b.created_at||'').slice(0,16).replace('T',' ') + ' · ' + (b.total_files||0) + ' ملف'"></p>
+               x-text="(b.created_at||'').slice(0,16).replace('T',' ') + ' · ' + (b.total_files||0) + ' {% trans 'files' %}'"></p>
           </div>
           <div class="grid grid-cols-3 gap-4 text-center flex-shrink-0">
             <div>
               <div class="text-base font-bold font-mono text-slate-700 dark:text-slate-200" x-text="b.total_files||0"></div>
-              <div class="text-[10px] text-slate-400">إجمالي</div>
+              <div class="text-[10px] text-slate-400">{% trans "Total" %}</div>
             </div>
             <div>
               <div class="text-base font-bold font-mono text-emerald-600 dark:text-emerald-400" x-text="b.processed_files||0"></div>
-              <div class="text-[10px] text-slate-400">معالج</div>
+              <div class="text-[10px] text-slate-400">{% trans "Processed" %}</div>
             </div>
             <div>
               <div class="text-base font-bold font-mono text-red-600 dark:text-red-400" x-text="b.failed_files||0"></div>
-              <div class="text-[10px] text-slate-400">فشل</div>
+              <div class="text-[10px] text-slate-400">{% trans "Failed" %}</div>
             </div>
           </div>
           <span class="flex-shrink-0 badge text-xs"
@@ -62,12 +63,12 @@
                   'status-processing':b.status==='processing',
                   'status-validated': b.status==='pending',
                 }"
-                x-text="{'completed':'مكتملة','partial':'جزئية','failed':'فشلت','processing':'جارٍ','pending':'انتظار'}[b.status]||b.status"></span>
+                x-text="{'completed':'{% trans 'Completed' %}','partial':'{% trans 'Partial' %}','failed':'{% trans 'Failed' %}','processing':'{% trans 'Processing' %}','pending':'{% trans 'Pending' %}'}[b.status]||b.status"></span>
         </a>
       </template>
       <div x-show="!loading&&!batches.length" class="text-center py-16 text-slate-400">
         <i data-lucide="layers" class="w-8 h-8 mx-auto mb-2"></i>
-        <p class="text-sm">لا توجد دفعات بعد — ارفع فواتير أولاً</p>
+        <p class="text-sm">{% trans "No batches yet — upload invoices first" %}</p>
       </div>
     </div>
   </div>

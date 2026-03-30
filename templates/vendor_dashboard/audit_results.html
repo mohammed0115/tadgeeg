@@ -1,8 +1,8 @@
 {% extends "layouts/base_vendor_dashboard.html" %}
 {% load i18n %}
-{% block page_title %}نتائج المراجعة{% endblock %}
-{% block breadcrumb_parent %}المراجعة{% endblock %}
-{% block breadcrumb_current %}النتائج{% endblock %}
+{% block page_title %}{% trans "Audit Results" %}{% endblock %}
+{% block breadcrumb_parent %}{% trans "Audits" %}{% endblock %}
+{% block breadcrumb_current %}{% trans "Results" %}{% endblock %}
 
 {% block content %}
 <div x-data="auditResults()" x-init="init()" class="space-y-6 fade-in">
@@ -10,13 +10,13 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">نتائج المراجعة</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">تفاصيل وتقارير نتائج المراجعة المالية</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans "Audit Results" %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans "Financial audit result details and reports" %}</p>
     </div>
     <div class="flex items-center gap-2">
       <a href="/dashboard/audits/" class="btn-ghost text-xs">
         <i data-lucide="arrow-right" class="w-4 h-4"></i>
-        كل المراجعات
+        {% trans "All audits" %}
       </a>
     </div>
   </div>
@@ -39,10 +39,10 @@
   <template x-if="!loading && results.length === 0">
     <div class="card p-16 text-center">
       <i data-lucide="bar-chart-2" class="w-14 h-14 mx-auto text-slate-300 dark:text-slate-600 mb-4"></i>
-      <p class="text-slate-500 text-sm">لا توجد نتائج مراجعة بعد</p>
+      <p class="text-slate-500 text-sm">{% trans "No audit results yet" %}</p>
       <a href="/dashboard/audits/" class="btn-ghost text-xs mt-4 mx-auto">
         <i data-lucide="shield-check" class="w-4 h-4"></i>
-        عرض مهام المراجعة
+        {% trans "View Audit Jobs" %}
       </a>
     </div>
   </template>
@@ -69,15 +69,15 @@
               </div>
               <div class="min-w-0">
                 <p class="font-bold text-slate-800 dark:text-white truncate"
-                   x-text="result.document_name || 'مستند #' + result.id"></p>
+                   x-text="result.document_name || '{% trans 'Document #' %}' + result.id"></p>
                 <p class="text-xs text-slate-400"
-                   x-text="result.created_at ? new Date(result.created_at).toLocaleString('ar-SA') : ''"></p>
+                   x-text="result.created_at ? new Date(result.created_at).toLocaleString(APP_LOCALE) : ''"></p>
               </div>
             </div>
             <div class="flex items-center gap-4">
               <!-- Risk Score -->
               <div class="text-center">
-                <p class="text-xs text-slate-400">درجة المخاطر</p>
+                <p class="text-xs text-slate-400">{% trans "Risk Score" %}</p>
                 <p class="text-xl font-black"
                    :class="{
                      'text-emerald-600': (result.risk_score || 0) < 30,
@@ -88,7 +88,7 @@
               </div>
               <!-- Compliance Score -->
               <div class="text-center">
-                <p class="text-xs text-slate-400">الامتثال</p>
+                <p class="text-xs text-slate-400">{% trans "Compliance" %}</p>
                 <p class="text-xl font-black"
                    :class="{
                      'text-emerald-600': (result.compliance_score || 0) >= 80,
@@ -100,7 +100,7 @@
               <a :href="'/dashboard/reports/' + result.report_id + '/'" x-show="result.report_id"
                  class="btn-primary text-xs">
                 <i data-lucide="file-bar-chart" class="w-4 h-4"></i>
-                عرض التقرير
+                {% trans "View Report" %}
               </a>
             </div>
           </div>
@@ -108,7 +108,7 @@
           <!-- Audit Findings -->
           <template x-if="result.findings && result.findings.length > 0">
             <div class="p-5 space-y-3">
-              <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wide">النتائج والتنبيهات</h4>
+              <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wide">{% trans "Findings & Alerts" %}</h4>
               <div class="space-y-2">
                 <template x-for="finding in result.findings" :key="finding.rule_id">
                   <div class="flex items-start gap-3 p-3 rounded-xl"
@@ -167,7 +167,7 @@ function auditResults() {
           this.results = Array.isArray(data) ? data : (data.results || []);
         }
       } catch (e) {
-        notify('تعذّر تحميل النتائج', 'error');
+        notify('{% trans "Failed to load results" %}', 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());

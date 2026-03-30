@@ -1,7 +1,7 @@
 {% extends "layouts/base_platform_admin.html" %}
 {% load i18n %}
-{% block page_title %}الطلبات الواردة{% endblock %}
-{% block breadcrumb_current %}الطلبات الواردة{% endblock %}
+{% block page_title %}{% trans "Inbound Leads" %}{% endblock %}
+{% block breadcrumb_current %}{% trans "Inbound Leads" %}{% endblock %}
 
 {% block content %}
 <div x-data="leadsManager()" x-init="init()" class="space-y-5 fade-in">
@@ -9,12 +9,12 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">الطلبات الواردة</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">متابعة استفسارات العملاء وطلبات التواصل</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans "Inbound Leads" %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans "Track customer inquiries and contact requests" %}</p>
     </div>
     <button @click="exportLeads()" class="btn-ghost text-xs">
       <i data-lucide="download" class="w-4 h-4"></i>
-      تصدير CSV
+      {% trans "Export CSV" %}
     </button>
   </div>
 
@@ -41,25 +41,25 @@
   <!-- Filter Bar -->
   <div class="card p-4 flex flex-wrap items-center gap-3">
     <select x-model="filter.status" @change="load()" class="select">
-      <option value="">جميع الحالات</option>
-      <option value="new">جديد</option>
-      <option value="in_progress">قيد المتابعة</option>
-      <option value="converted">تحوّل لعميل</option>
-      <option value="spam">بريد مزعج</option>
+      <option value="">{% trans "All statuses" %}</option>
+      <option value="new">{% trans "New" %}</option>
+      <option value="in_progress">{% trans "In progress" %}</option>
+      <option value="converted">{% trans "Converted" %}</option>
+      <option value="spam">{% trans "Spam" %}</option>
     </select>
     <select x-model="filter.source" @change="load()" class="select">
-      <option value="">جميع المصادر</option>
-      <option value="contact_form">نموذج التواصل</option>
-      <option value="pricing_inquiry">استفسار الأسعار</option>
-      <option value="demo_request">طلب عرض</option>
-      <option value="other">أخرى</option>
+      <option value="">{% trans "All sources" %}</option>
+      <option value="contact_form">{% trans "Contact form" %}</option>
+      <option value="pricing_inquiry">{% trans "Pricing inquiry" %}</option>
+      <option value="demo_request">{% trans "Demo request" %}</option>
+      <option value="other">{% trans "Other" %}</option>
     </select>
     <input type="text" x-model.debounce.300ms="filter.search" @input="load()"
-           class="input max-w-xs" placeholder="البحث بالاسم أو البريد أو الشركة...">
+           class="input max-w-xs" placeholder="{% trans 'Search by name, email, or company...' %}">
     <div class="mr-auto"></div>
     <button @click="markAllRead()" class="btn-ghost text-xs" x-show="(stats.new_leads || 0) > 0">
       <i data-lucide="check-check" class="w-4 h-4"></i>
-      تعليم الكل كمقروء
+      {% trans "Mark all as read" %}
     </button>
   </div>
 
@@ -82,7 +82,7 @@
     <template x-if="!loading && leads.length === 0">
       <div class="px-5 py-16 text-center">
         <i data-lucide="inbox" class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3"></i>
-        <p class="text-slate-500 text-sm">لا توجد طلبات مطابقة</p>
+        <p class="text-slate-500 text-sm">{% trans "No matching leads found" %}</p>
       </div>
     </template>
 
@@ -91,13 +91,13 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>المرسل</th>
-              <th>الشركة</th>
-              <th>الموضوع</th>
-              <th>المصدر</th>
-              <th>التاريخ</th>
-              <th>الحالة</th>
-              <th>إجراءات</th>
+              <th>{% trans "Sender" %}</th>
+              <th>{% trans "Company" %}</th>
+              <th>{% trans "Subject" %}</th>
+              <th>{% trans "Source" %}</th>
+              <th>{% trans "Date" %}</th>
+              <th>{% trans "Status" %}</th>
+              <th>{% trans "Actions" %}</th>
             </tr>
           </thead>
           <tbody>
@@ -117,11 +117,11 @@
                 <td class="text-sm text-slate-600 dark:text-slate-400 max-w-xs truncate" x-text="lead.subject || lead.message?.substring(0, 50) || '—'"></td>
                 <td>
                   <span class="badge-slate text-[10px]"
-                        x-text="lead.source === 'contact_form' ? 'نموذج تواصل' : lead.source === 'pricing_inquiry' ? 'استفسار أسعار' : lead.source === 'demo_request' ? 'طلب عرض' : lead.source || '—'">
+                        x-text="lead.source === 'contact_form' ? '{% trans \"Contact form\" %}' : lead.source === 'pricing_inquiry' ? '{% trans \"Pricing inquiry\" %}' : lead.source === 'demo_request' ? '{% trans \"Demo request\" %}' : lead.source || '—'">
                   </span>
                 </td>
                 <td class="text-xs text-slate-400"
-                    x-text="lead.created_at ? new Date(lead.created_at).toLocaleDateString('ar-SA') : '—'"></td>
+                    x-text="lead.created_at ? new Date(lead.created_at).toLocaleDateString(APP_LOCALE) : '—'"></td>
                 <td>
                   <span class="badge"
                         :class="{
@@ -130,7 +130,7 @@
                           'badge-green':  lead.status === 'converted',
                           'badge-red':    lead.status === 'spam',
                         }"
-                        x-text="lead.status === 'new' ? 'جديد' : lead.status === 'in_progress' ? 'قيد المتابعة' : lead.status === 'converted' ? 'عميل' : 'مزعج'">
+                        x-text="lead.status === 'new' ? '{% trans \"New\" %}' : lead.status === 'in_progress' ? '{% trans \"In progress\" %}' : lead.status === 'converted' ? '{% trans \"Converted\" %}' : '{% trans \"Spam\" %}'">
                   </span>
                 </td>
                 <td>
@@ -161,44 +161,44 @@
     <div class="modal-backdrop" @click.self="showDetail=false">
       <div class="modal-box max-w-lg">
         <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/30">
-          <h3 class="font-bold text-slate-800 dark:text-white">تفاصيل الطلب</h3>
+          <h3 class="font-bold text-slate-800 dark:text-white">{% trans "Lead Details" %}</h3>
           <button @click="showDetail=false"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button>
         </div>
         <div class="p-6 space-y-4">
           <div class="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <p class="text-xs text-slate-400 mb-1">الاسم</p>
+              <p class="text-xs text-slate-400 mb-1">{% trans "Name" %}</p>
               <p class="font-semibold text-slate-800 dark:text-white" x-text="selectedLead.name || '—'"></p>
             </div>
             <div>
-              <p class="text-xs text-slate-400 mb-1">البريد الإلكتروني</p>
+              <p class="text-xs text-slate-400 mb-1">{% trans "Email" %}</p>
               <p class="font-semibold text-slate-800 dark:text-white" x-text="selectedLead.email"></p>
             </div>
             <div>
-              <p class="text-xs text-slate-400 mb-1">الشركة</p>
+              <p class="text-xs text-slate-400 mb-1">{% trans "Company" %}</p>
               <p class="font-semibold text-slate-800 dark:text-white" x-text="selectedLead.company || '—'"></p>
             </div>
             <div>
-              <p class="text-xs text-slate-400 mb-1">الهاتف</p>
+              <p class="text-xs text-slate-400 mb-1">{% trans "Phone" %}</p>
               <p class="font-semibold text-slate-800 dark:text-white" x-text="selectedLead.phone || '—'"></p>
             </div>
           </div>
           <div>
-            <p class="text-xs text-slate-400 mb-1">الموضوع</p>
+            <p class="text-xs text-slate-400 mb-1">{% trans "Subject" %}</p>
             <p class="text-sm text-slate-700 dark:text-slate-300" x-text="selectedLead.subject || '—'"></p>
           </div>
           <div>
-            <p class="text-xs text-slate-400 mb-1">الرسالة</p>
+            <p class="text-xs text-slate-400 mb-1">{% trans "Message" %}</p>
             <p class="text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/30 p-3 rounded-xl leading-relaxed"
                x-text="selectedLead.message || '—'"></p>
           </div>
           <div class="flex items-center justify-between pt-2">
-            <p class="text-xs text-slate-400" x-text="selectedLead.created_at ? new Date(selectedLead.created_at).toLocaleString('ar-SA') : ''"></p>
+            <p class="text-xs text-slate-400" x-text="selectedLead.created_at ? new Date(selectedLead.created_at).toLocaleString(APP_LOCALE) : ''"></p>
             <select x-model="selectedLead.status" @change="updateStatus(selectedLead, selectedLead.status)" class="select text-xs">
-              <option value="new">جديد</option>
-              <option value="in_progress">قيد المتابعة</option>
-              <option value="converted">تحوّل لعميل</option>
-              <option value="spam">بريد مزعج</option>
+              <option value="new">{% trans "New" %}</option>
+              <option value="in_progress">{% trans "In progress" %}</option>
+              <option value="converted">{% trans "Converted" %}</option>
+              <option value="spam">{% trans "Spam" %}</option>
             </select>
           </div>
         </div>
@@ -218,11 +218,11 @@ function leadsManager() {
     showDetail: false, selectedLead: null,
     filter: { status: '', source: '', search: '' },
     statCards: [
-      { key: 'total_leads',    label: 'إجمالي الطلبات',  cls: 'text-slate-800 dark:text-white' },
-      { key: 'new_leads',      label: 'جديدة',           cls: 'text-amber-600' },
-      { key: 'in_progress',    label: 'قيد المتابعة',    cls: 'text-indigo-600' },
-      { key: 'converted',      label: 'تحوّلت لعملاء',  cls: 'text-emerald-600' },
-      { key: 'spam',           label: 'بريد مزعج',       cls: 'text-slate-400' },
+      { key: 'total_leads',    label: '{% trans "Total leads" %}',  cls: 'text-slate-800 dark:text-white' },
+      { key: 'new_leads',      label: '{% trans "New leads" %}',    cls: 'text-amber-600' },
+      { key: 'in_progress',    label: '{% trans "In progress" %}',  cls: 'text-indigo-600' },
+      { key: 'converted',      label: '{% trans "Converted" %}',    cls: 'text-emerald-600' },
+      { key: 'spam',           label: '{% trans "Spam" %}',         cls: 'text-slate-400' },
     ],
 
     async load() {
@@ -242,7 +242,7 @@ function leadsManager() {
         }
         if (statsRes && statsRes.ok) this.stats = await statsRes.json();
       } catch (e) {
-        notify('تعذّر تحميل الطلبات', 'error');
+        notify('{% trans "Failed to load leads" %}', 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());
@@ -264,7 +264,7 @@ function leadsManager() {
       });
       if (res && res.ok) {
         lead.status = status;
-        notify('تم تحديث الحالة', 'success');
+        notify('{% trans "Status updated" %}', 'success');
         this.$nextTick(() => lucide.createIcons());
       }
     },
@@ -274,7 +274,7 @@ function leadsManager() {
       if (res && res.ok) {
         this.leads.forEach(l => { if (l.status === 'new') l.status = 'in_progress'; });
         this.stats.new_leads = 0;
-        notify('تم تعليم الكل كمقروء', 'success');
+        notify('{% trans "All leads marked as read" %}', 'success');
         this.$nextTick(() => lucide.createIcons());
       }
     },

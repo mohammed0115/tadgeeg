@@ -296,6 +296,10 @@
       return match ? match.split("=")[1] : "";
     }
 
+    const APP_LANG = '{{ LANGUAGE_CODE }}';
+    const APP_DIR = '{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}';
+    const APP_LOCALE = APP_LANG === 'ar' ? 'ar-SA' : 'en-US';
+
     function toPathnameAndQuery(path) {
       const normalized = path.startsWith("/api/") ? path : `/api/v1${path}`;
       const [pathname, query = ""] = normalized.split("?");

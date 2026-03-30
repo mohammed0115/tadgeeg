@@ -272,9 +272,9 @@
                   <i data-lucide="file-check-2" class="h-5 w-5"></i>
                 </div>
                 <div>
-                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">امتثال</p>
-                  <h2 class="text-lg font-bold text-slate-950 dark:text-white">الضريبة والتسجيل النظامي</h2>
-                  <p class="mt-1 max-w-sm text-sm text-slate-600 dark:text-slate-400">بيانات VAT والتكامل التنظيمي لضمان جاهزية الفوترة الإلكترونية.</p>
+                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{% trans "Compliance" %}</p>
+                  <h2 class="text-lg font-bold text-slate-950 dark:text-white">{% trans "Tax and Regulatory Registration" %}</h2>
+                  <p class="mt-1 max-w-sm text-sm text-slate-600 dark:text-slate-400">{% trans "VAT data and regulatory integration to ensure e-invoicing readiness." %}</p>
                 </div>
               </div>
             </div>
@@ -295,19 +295,19 @@
             <div class="relative space-y-4">
               <div class="grid gap-3 sm:grid-cols-2">
                 <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">الرقم الضريبي (VAT)</label>
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "VAT Number" %}</label>
                   <input x-model="org.vat_number" type="text" dir="ltr" placeholder="300XXXXXXXXXXX3"
                          class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
                 </div>
                 <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">رقم السجل (CR)</label>
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "CR Number" %}</label>
                   <input x-model="org.cr_number" type="text" dir="ltr" placeholder="1010XXXXXX"
                          class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
                 </div>
               </div>
               <div class="grid gap-3 sm:grid-cols-2">
                 <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">نسبة VAT</label>
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "VAT Rate" %}</label>
                   <div class="relative">
                     <input x-model="settings.vat_rate" type="number" min="0" max="100" step="0.1" dir="ltr" placeholder="15"
                            class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 pl-10 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
@@ -315,7 +315,7 @@
                   </div>
                 </div>
                 <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">بيئة ZATCA</label>
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "ZATCA Environment" %}</label>
                   <select x-model="settings.zatca_env"
                           class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
                     <template x-for="option in zatcaEnvironments" :key="option.value">
@@ -325,11 +325,11 @@
                 </div>
               </div>
               <div class="space-y-2">
-                <label class="text-sm font-semibold text-slate-900 dark:text-white">تفعيل QR الإلزامي</label>
+                <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "Require QR Code" %}</label>
                 <select x-model="settings.zatca_qr_required"
                         class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-                  <option value="true">نعم — مطلوب</option>
-                  <option value="false">اختياري</option>
+                  <option value="true">{% trans "Yes — Required" %}</option>
+                  <option value="false">{% trans "Optional" %}</option>
                 </select>
               </div>
             </div>
@@ -345,9 +345,9 @@
                   <i data-lucide="bar-chart-3" class="h-5 w-5"></i>
                 </div>
                 <div>
-                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">ضوابط</p>
-                  <h2 class="text-lg font-bold text-slate-950 dark:text-white">حدود الضبط المالي</h2>
-                  <p class="mt-1 max-w-sm text-sm text-slate-600 dark:text-slate-400">اضبط العتبات التي تحدد متى يتم التصعيد أو الإنذار.</p>
+                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{% trans "Controls" %}</p>
+                  <h2 class="text-lg font-bold text-slate-950 dark:text-white">{% trans "Financial Control Thresholds" %}</h2>
+                  <p class="mt-1 max-w-sm text-sm text-slate-600 dark:text-slate-400">{% trans "Set the thresholds that define when escalation or alerts should be triggered." %}</p>
                 </div>
               </div>
             </div>
@@ -355,7 +355,7 @@
             <div class="relative mt-6 space-y-4">
               <div class="grid gap-3 sm:grid-cols-2">
                 <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">الميزانية الشهرية</label>
+                  <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "Monthly Budget" %}</label>
                   <input x-model="settings.monthly_budget_limit" type="number" min="0" dir="ltr" placeholder="250000"
                          class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
                   <p class="text-xs text-slate-500 dark:text-slate-400">الليا</p>
@@ -834,15 +834,15 @@ function organizationSettingsPage() {
     },
 
     lastSavedText() {
-      if (!this.lastSavedAt) return 'لم يتم الحفظ بعد';
+      if (!this.lastSavedAt) return '{% trans "Not saved yet" %}';
       try {
-        return 'آخر ' + new Intl.DateTimeFormat('ar-SA', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(this.lastSavedAt));
-      } catch { return 'آخر الآن'; }
+        return '{% trans "Last" %} ' + new Intl.DateTimeFormat(APP_LOCALE, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(this.lastSavedAt));
+      } catch { return '{% trans "Last now" %}'; }
     },
 
     formatMoney(v) {
       try {
-        return new Intl.NumberFormat('ar-SA', {
+        return new Intl.NumberFormat(APP_LOCALE, {
           style: 'currency', currency: this.org.currency || 'SAR',
           minimumFractionDigits: 0, maximumFractionDigits: 0,
         }).format(Number(v || 0));

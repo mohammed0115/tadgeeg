@@ -597,6 +597,135 @@ class SalesReceiptValidation(models.Model):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# 8. Goods Receipt Note  — إشعار استلام البضاعة
+# ──────────────────────────────────────────────────────────────────────────────
+
+class GoodsReceiptNote(AuditMixin):
+    """
+    إشعار استلام البضاعة — GRN
+    Rules: GRN-M01 to GRN-M10
+    """
+
+    # ── Header ──
+    grn_number           = models.CharField(max_length=100, blank=True, db_index=True)
+    grn_date             = models.DateField(null=True, blank=True)
+    po_number            = models.CharField(max_length=100, blank=True, db_index=True)
+    po_id                = models.UUIDField(null=True, blank=True)
+    invoice_number       = models.CharField(max_length=100, blank=True)
+    vendor_name          = models.CharField(max_length=255, blank=True)
+    vendor_vat_number    = models.CharField(max_length=20, blank=True)
+    department           = models.CharField(max_length=100, blank=True)
+    received_by          = models.CharField(max_length=255, blank=True)
+    warehouse_location   = models.CharField(max_length=100, blank=True)
+    currency             = models.CharField(max_length=3, default="SAR")
+
+    # ── Quantities & Amounts ──
+    total_ordered_qty    = models.DecimalField(max_digits=18, decimal_places=4, default=0)
+    total_received_qty   = models.DecimalField(max_digits=18, decimal_places=4, default=0)
+    total_rejected_qty   = models.DecimalField(max_digits=18, decimal_places=4, default=0)
+    total_amount         = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    invoice_amount       = models.DecimalField(max_digits=18, decimal_places=2, null=True, blank=True)
+
+    # ── Line items (JSON) ──
+    line_items           = models.JSONField(
+        default=list,
+        help_text="[{item_code, description, ordered_qty, received_qty, rejected_qty, unit_price, total}]",
+    )
+
+    # ── Anomaly / validation flags ──
+    quantity_variance_pct   = models.FloatField(default=0.0, help_text="(received-ordered)/ordered × 100")
+    has_quantity_mismatch   = models.BooleanField(default=False)
+    has_price_deviation     = models.BooleanField(default=False)
+    rejection_rate_pct      = models.FloatField(default=0.0, help_text="rejected_qty/ordered_qty × 100")
+    delivery_date           = models.DateField(null=True, blank=True)
+    delivery_overdue        = models.BooleanField(default=False)
+    quality_inspection_done = models.BooleanField(default=False)
+    inspector_name          = models.CharField(max_length=255, blank=True)
+    approval_status         = models.CharField(max_length=20, default="pending")
+    approved_by             = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="approved_grns",
+    )
+
+    class Meta:
+        db_table = "goods_receipt_notes"
+        ordering = ["-grn_date"]
+        indexes = [
+            models.Index(fields=["organization", "grn_date"]),
+            models.Index(fields=["po_number"]),
+            models.Index(fields=["vendor_name"]),
+        ]
+
+    def __str__(self):
+        return f"GRN {self.grn_number} — {self.vendor_name}"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 9. Payment Voucher  — سند الصرف
+# ──────────────────────────────────────────────────────────────────────────────
+
+class PaymentVoucher(AuditMixin):
+    """
+    سند الصرف — Payment Voucher
+    Rules: PMT-M01 to PMT-M10
+    """
+
+    class PaymentMethod(models.TextChoices):
+        BANK_TRANSFER = "bank_transfer", "Bank Transfer"
+        CHEQUE        = "cheque",        "Cheque"
+        CASH          = "cash",          "Cash"
+        CARD          = "card",          "Card"
+        OTHER         = "other",         "Other"
+
+    # ── Header ──
+    payment_number       = models.CharField(max_length=100, blank=True, db_index=True)
+    payment_date         = models.DateField(null=True, blank=True)
+    payment_method       = models.CharField(max_length=20, choices=PaymentMethod.choices, default=PaymentMethod.BANK_TRANSFER)
+    payee_name           = models.CharField(max_length=255, blank=True)
+    payee_vat_number     = models.CharField(max_length=20, blank=True)
+    payee_iban           = models.CharField(max_length=34, blank=True)
+    currency             = models.CharField(max_length=3, default="SAR")
+
+    # ── Amounts ──
+    amount               = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    vat_amount           = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    total_amount         = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+
+    # ── References ──
+    linked_invoice_number = models.CharField(max_length=100, blank=True)
+    linked_invoice_id     = models.UUIDField(null=True, blank=True)
+    linked_po_number      = models.CharField(max_length=100, blank=True)
+    bank_reference        = models.CharField(max_length=100, blank=True)
+
+    # ── Approval & Classification ──
+    approval_status      = models.CharField(max_length=20, default="pending")
+    approved_by          = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="approved_payments",
+    )
+    cost_center          = models.CharField(max_length=50, blank=True)
+    account_code         = models.CharField(max_length=50, blank=True)
+
+    # ── Control flags ──
+    is_duplicate         = models.BooleanField(default=False)
+    exceeds_threshold    = models.BooleanField(default=False, help_text="Payment > org threshold")
+    is_advance_payment   = models.BooleanField(default=False)
+    advance_cleared      = models.BooleanField(default=False)
+    days_since_invoice   = models.IntegerField(default=0, help_text="payment_date - invoice_date in days")
+
+    class Meta:
+        db_table = "payment_vouchers"
+        ordering = ["-payment_date"]
+        indexes = [
+            models.Index(fields=["organization", "payment_date"]),
+            models.Index(fields=["payee_name"]),
+            models.Index(fields=["payment_method"]),
+            models.Index(fields=["is_duplicate"]),
+        ]
+
+    def __str__(self):
+        return f"Payment {self.payment_number} — {self.payee_name}"
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Document type registry — used by upload router
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -608,6 +737,8 @@ DOCUMENT_TYPE_MAP = {
     "vat_return":      VATReturn,
     "fixed_asset":     FixedAsset,
     "sales_receipt":   SalesReceipt,
+    "grn":             GoodsReceiptNote,
+    "payment":         PaymentVoucher,
     "invoice":         None,  # handled by apps/invoices
 }
 
@@ -620,4 +751,6 @@ DOCUMENT_TYPE_LABELS_AR = {
     "fixed_asset":    "سجل الأصول الثابتة",
     "sales_receipt":  "إيصال البيع",
     "invoice":        "فاتورة",
+    "grn":             "إشعار استلام البضاعة",
+    "payment":         "سند الصرف",
 }

@@ -1,7 +1,7 @@
 {% extends "layouts/base_vendor_dashboard.html" %}
 {% load i18n %}
-{% block page_title %}الإشعارات{% endblock %}
-{% block breadcrumb_current %}الإشعارات{% endblock %}
+{% block page_title %}{% trans "Notifications" %}{% endblock %}
+{% block breadcrumb_current %}{% trans "Notifications" %}{% endblock %}
 
 {% block content %}
 <div x-data="notificationsManager()" x-init="init()" class="space-y-5 fade-in">
@@ -9,12 +9,12 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">الإشعارات</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">جميع تنبيهاتك ورسائل النظام</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans "Notifications" %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans "All your alerts and system messages" %}</p>
     </div>
     <button @click="markAllRead()" x-show="unreadCount > 0" class="btn-ghost text-xs">
       <i data-lucide="check-check" class="w-4 h-4"></i>
-      تحديد الكل كمقروء
+      {% trans "Mark all as read" %}
     </button>
   </div>
 
@@ -24,7 +24,7 @@
       <button @click="filter = ''; load()"
               class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
               :class="filter === '' ? 'bg-primary-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'">
-        الكل
+        {% trans "All" %}
         <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black"
               :class="filter === '' ? 'bg-white/20' : 'bg-slate-200 dark:bg-slate-600'"
               x-text="total"></span>
@@ -32,7 +32,7 @@
       <button @click="filter = 'unread'; load()"
               class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
               :class="filter === 'unread' ? 'bg-primary-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'">
-        غير مقروءة
+        {% trans "Unread" %}
         <span class="ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black"
               :class="filter === 'unread' ? 'bg-white/20' : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'"
               x-text="unreadCount"></span>
@@ -40,19 +40,19 @@
       <button @click="filter = 'read'; load()"
               class="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
               :class="filter === 'read' ? 'bg-primary-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'">
-        مقروءة
+        {% trans "Read" %}
       </button>
     </div>
 
     <select x-model="typeFilter" @change="load()" class="select text-xs mr-auto">
-      <option value="">جميع الأنواع</option>
-      <option value="audit_complete">اكتمال مراجعة</option>
-      <option value="audit_failed">فشل مراجعة</option>
-      <option value="high_risk">مخاطر عالية</option>
-      <option value="compliance_alert">تنبيه امتثال</option>
-      <option value="storage_warning">تحذير تخزين</option>
-      <option value="new_team_member">عضو جديد</option>
-      <option value="system">نظام</option>
+      <option value="">{% trans "All types" %}</option>
+      <option value="audit_complete">{% trans "Audit complete" %}</option>
+      <option value="audit_failed">{% trans "Audit failed" %}</option>
+      <option value="high_risk">{% trans "High risk" %}</option>
+      <option value="compliance_alert">{% trans "Compliance alert" %}</option>
+      <option value="storage_warning">{% trans "Storage warning" %}</option>
+      <option value="new_team_member">{% trans "New team member" %}</option>
+      <option value="system">{% trans "System" %}</option>
     </select>
   </div>
 
@@ -76,8 +76,8 @@
   <template x-if="!loading && notifications.length === 0">
     <div class="card p-16 text-center">
       <i data-lucide="bell-off" class="w-14 h-14 mx-auto text-slate-300 dark:text-slate-600 mb-4"></i>
-      <p class="text-slate-500 text-sm font-medium">لا توجد إشعارات</p>
-      <p class="text-slate-400 text-xs mt-1" x-show="filter !== ''">جرّب تغيير الفلتر لعرض إشعارات أخرى</p>
+      <p class="text-slate-500 text-sm font-medium">{% trans "No notifications" %}</p>
+      <p class="text-slate-400 text-xs mt-1" x-show="filter !== ''">{% trans "Try changing the filter to show other notifications" %}</p>
     </div>
   </template>
 
@@ -114,7 +114,7 @@
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
                 <p class="text-sm font-semibold text-slate-800 dark:text-white"
-                   x-text="notif.title || typeLabelAr(notif.notification_type)"></p>
+                   x-text="notif.title || typeLabel(notif.notification_type)"></p>
                 <span x-show="!notif.is_read"
                       class="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0"></span>
                 <span class="badge text-[10px] uppercase flex-shrink-0"
@@ -125,7 +125,7 @@
                         'badge-blue':   notif.notification_type === 'new_team_member',
                         'badge-slate':  notif.notification_type === 'system' || !notif.notification_type,
                       }"
-                      x-text="typeLabelAr(notif.notification_type)"></span>
+                      x-text="typeLabel(notif.notification_type)"></span>
               </div>
               <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2"
                  x-text="notif.message || notif.body || ''"></p>
@@ -133,7 +133,7 @@
                 <a :href="notif.action_url" @click.stop
                    class="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-1 inline-flex items-center gap-1">
                   <i data-lucide="arrow-left" class="w-3 h-3"></i>
-                  <span x-text="notif.action_label || 'عرض التفاصيل'"></span>
+                  <span x-text="notif.action_label || '{% trans 'View details' %}'"></span>
                 </a>
               </template>
             </div>
@@ -154,7 +154,7 @@
       <!-- Pagination -->
       <template x-if="totalPages > 1">
         <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-700/30 flex items-center justify-between">
-          <p class="text-xs text-slate-500" x-text="'عرض ' + notifications.length + ' من ' + total"></p>
+          <p class="text-xs text-slate-500" x-text="'{% trans \"Showing\" %} ' + notifications.length + ' {% trans \"of\" %} ' + total"></p>
           <div class="flex items-center gap-2">
             <button @click="page--; load()" :disabled="page <= 1"
                     class="btn-ghost text-xs px-3 py-1.5 disabled:opacity-40">
@@ -213,7 +213,7 @@ function notificationsManager() {
           this.unreadCount = d.count ?? d.unread_count ?? 0;
         }
       } catch (e) {
-        notify('تعذّر تحميل الإشعارات', 'error');
+        notify('{% trans "Failed to load notifications" %}', 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());
@@ -235,10 +235,10 @@ function notificationsManager() {
       if (res && res.ok) {
         this.notifications.forEach(n => { n.is_read = true; });
         this.unreadCount = 0;
-        notify('تم تحديد جميع الإشعارات كمقروءة', 'success');
+        notify('{% trans "All notifications marked as read" %}', 'success');
         this.$nextTick(() => lucide.createIcons());
       } else {
-        notify('فشل تحديث الإشعارات', 'error');
+        notify('{% trans "Failed to update notifications" %}', 'error');
       }
     },
 
@@ -266,17 +266,17 @@ function notificationsManager() {
       return icons[type] || 'bell';
     },
 
-    typeLabelAr(type) {
+    typeLabel(type) {
       const labels = {
-        audit_complete:   'اكتمال مراجعة',
-        audit_failed:     'فشل مراجعة',
-        high_risk:        'مخاطر عالية',
-        compliance_alert: 'تنبيه امتثال',
-        storage_warning:  'تحذير تخزين',
-        new_team_member:  'عضو جديد',
-        system:           'نظام',
+        audit_complete:   '{% trans "Audit complete" %}',
+        audit_failed:     '{% trans "Audit failed" %}',
+        high_risk:        '{% trans "High risk" %}',
+        compliance_alert: '{% trans "Compliance alert" %}',
+        storage_warning:  '{% trans "Storage warning" %}',
+        new_team_member:  '{% trans "New team member" %}',
+        system:           '{% trans "System" %}',
       };
-      return labels[type] || 'إشعار';
+      return labels[type] || '{% trans "Notification" %}';
     },
 
     timeAgo(dateStr) {
@@ -284,11 +284,11 @@ function notificationsManager() {
       const mins  = Math.floor(diff / 60000);
       const hours = Math.floor(diff / 3600000);
       const days  = Math.floor(diff / 86400000);
-      if (mins < 1)   return 'الآن';
-      if (mins < 60)  return `منذ ${mins} دقيقة`;
-      if (hours < 24) return `منذ ${hours} ساعة`;
-      if (days < 7)   return `منذ ${days} يوم`;
-      return new Date(dateStr).toLocaleDateString('ar-SA');
+      if (mins < 1)   return '{% trans "Now" %}';
+      if (mins < 60)  return `${mins} {% trans "minutes ago" %}`;
+      if (hours < 24) return `${hours} {% trans "hours ago" %}`;
+      if (days < 7)   return `${days} {% trans "days ago" %}`;
+      return new Date(dateStr).toLocaleDateString(APP_LOCALE);
     },
   };
 }

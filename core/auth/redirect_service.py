@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from django.utils.translation import gettext as _
+
 
 def get_post_login_redirect(user, next_url: str | None = None) -> str:
     """Return the URL a user should reach after successful authentication."""
@@ -41,24 +43,22 @@ def get_context_label(user) -> dict:
     if is_platform_user(user):
         return {
             "context": "platform",
-            "label": "Get Solution Admin Console",
-            "label_ar": "لوحة تحكم المنصة",
+            "label": _("Get Solution Admin Console"),
             "color": "indigo",
         }
 
     if is_org_member(user):
         organization = getattr(user, "organization", None)
-        org_name = getattr(organization, "name", "Organization Dashboard") if organization else "Organization Dashboard"
+        org_name = getattr(organization, "name", None) or _("Organization Dashboard")
         return {
             "context": "vendor",
             "label": org_name,
-            "label_ar": getattr(organization, "name_ar", org_name) if organization else org_name,
+            "name_ar": getattr(organization, "name_ar", org_name) if organization else org_name,
             "color": "blue",
         }
 
     return {
         "context": "unknown",
-        "label": "Dashboard",
-        "label_ar": "لوحة التحكم",
+        "label": _("Dashboard"),
         "color": "slate",
     }

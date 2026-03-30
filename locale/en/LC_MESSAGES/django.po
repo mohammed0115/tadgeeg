@@ -12,3 +12,163 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+# --- Navigation: Platform Admin ---
+msgid "Main"
+msgstr "Main"
+
+msgid "Platform Overview"
+msgstr "Platform Overview"
+
+msgid "Organizations"
+msgstr "Organizations"
+
+msgid "Content"
+msgstr "Content"
+
+msgid "CMS Pages"
+msgstr "CMS Pages"
+
+msgid "Homepage"
+msgstr "Homepage"
+
+msgid "About Us"
+msgstr "About Us"
+
+msgid "Services"
+msgstr "Services"
+
+msgid "Pricing Plans"
+msgstr "Pricing Plans"
+
+msgid "FAQ"
+msgstr "FAQ"
+
+msgid "Intro Video"
+msgstr "Intro Video"
+
+msgid "Growth"
+msgstr "Growth"
+
+msgid "Jobs"
+msgstr "Jobs"
+
+msgid "Contact Leads"
+msgstr "Contact Leads"
+
+msgid "SEO"
+msgstr "SEO"
+
+msgid "Media Library"
+msgstr "Media Library"
+
+msgid "System"
+msgstr "System"
+
+msgid "Storage Providers"
+msgstr "Storage Providers"
+
+msgid "Platform Settings"
+msgstr "Platform Settings"
+
+msgid "System Monitoring"
+msgstr "System Monitoring"
+
+msgid "Activity Logs"
+msgstr "Activity Logs"
+
+# --- Navigation: Vendor Dashboard ---
+msgid "Organization Overview"
+msgstr "Organization Overview"
+
+msgid "Files"
+msgstr "Files"
+
+msgid "My Files"
+msgstr "My Files"
+
+msgid "Folders"
+msgstr "Folders"
+
+msgid "Upload Center"
+msgstr "Upload Center"
+
+msgid "Audit"
+msgstr "Audit"
+
+msgid "Audit Jobs"
+msgstr "Audit Jobs"
+
+msgid "Audit Results"
+msgstr "Audit Results"
+
+msgid "Reports"
+msgstr "Reports"
+
+msgid "Organization"
+msgstr "Organization"
+
+msgid "Team Members"
+msgstr "Team Members"
+
+msgid "Organization Settings"
+msgstr "Organization Settings"
+
+msgid "Storage Usage"
+msgstr "Storage Usage"
+
+msgid "Billing"
+msgstr "Billing"
+
+msgid "Notifications"
+msgstr "Notifications"
+
+# --- Dashboard context ---
+msgid "Get Solution Admin Console"
+msgstr "Get Solution Admin Console"
+
+msgid "Platform Dashboard"
+msgstr "Platform Dashboard"
+
+msgid "Organization Dashboard"
+msgstr "Organization Dashboard"
+
+msgid "Overview"
+msgstr "Overview"
+
+msgid "Theme"
+msgstr "Theme"
+
+# --- Document type labels ---
+msgid "Purchase Order"
+msgstr "Purchase Order"
+
+msgid "Bank Statement"
+msgstr "Bank Statement"
+
+msgid "Payroll Sheet"
+msgstr "Payroll Sheet"
+
+msgid "Expense Report"
+msgstr "Expense Report"
+
+msgid "VAT Return"
+msgstr "VAT Return"
+
+msgid "Fixed Asset Ledger"
+msgstr "Fixed Asset Ledger"
+
+msgid "Sales Receipt"
+msgstr "Sales Receipt"
+
+msgid "Invoice"
+msgstr "Invoice"
+
+msgid "Goods Receipt Note"
+msgstr "Goods Receipt Note"
+
+msgid "Payment Voucher"
+msgstr "Payment Voucher"
+
+# --- Error messages ---
+msgid "Processing error: %(detail)s"
+msgstr "Processing error: %(detail)s"

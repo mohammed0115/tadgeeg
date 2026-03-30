@@ -18,6 +18,7 @@ import uuid
 from decimal import Decimal
 from django.db import models
 from apps.authentication.models import User, Organization
+from django.utils.translation import gettext_lazy as _
 from .models import Document
 
 
@@ -753,4 +754,20 @@ DOCUMENT_TYPE_LABELS_AR = {
     "invoice":        "فاتورة",
     "grn":             "إشعار استلام البضاعة",
     "payment":         "سند الصرف",
+
+}
+
+# Translatable labels — use these in UI contexts (templates, API responses).
+# Django will resolve them to the active request language via gettext.
+DOCUMENT_TYPE_LABELS = {
+    "purchase_order": _("Purchase Order"),
+    "bank_statement": _("Bank Statement"),
+    "payroll":        _("Payroll Sheet"),
+    "expense_report": _("Expense Report"),
+    "vat_return":     _("VAT Return"),
+    "fixed_asset":    _("Fixed Asset Ledger"),
+    "sales_receipt":  _("Sales Receipt"),
+    "invoice":        _("Invoice"),
+    "grn":            _("Goods Receipt Note"),
+    "payment":        _("Payment Voucher"),
 }

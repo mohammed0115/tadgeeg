@@ -28,6 +28,7 @@ import io
 import os
 import time
 import logging
+from django.utils.translation import gettext as _
 import zipfile
 from decimal import Decimal
 
@@ -61,6 +62,7 @@ from .typed_models import (
     FixedAsset, FixedAssetValidation,
     SalesReceipt, SalesReceiptValidation,
     DOCUMENT_TYPE_MAP, DOCUMENT_TYPE_LABELS_AR,
+    DOCUMENT_TYPE_LABELS,
 )
 from .typed_serializers import (
     PurchaseOrderSerializer, PurchaseOrderListSerializer,
@@ -784,7 +786,8 @@ def _process_typed_document(file_obj, filename: str, doc_type: str, org, user, r
         "document_id":      str(typed_obj.id),
         "base_document_id": str(base_doc.id),
         "document_type":    doc_type,
-        "document_type_ar": DOCUMENT_TYPE_LABELS_AR.get(doc_type, doc_type),
+        "document_type_ar":    DOCUMENT_TYPE_LABELS_AR.get(doc_type, doc_type),
+        "document_type_label": str(DOCUMENT_TYPE_LABELS.get(doc_type, doc_type)),
         "filename":         filename,
         "success":          True,
         "validation_score": val_result["validation_score"],
@@ -1008,7 +1011,7 @@ class TypedDocumentUploadView(APIView):
                 logger.exception(f"Upload failed for {f.name}: {e}")
                 errors.append({
                     "filename": f.name, 
-                    "error": f"خطأ في المعالجة: {str(e)[:200]}"
+                    "error": _("Processing error: %(detail)s") % {"detail": str(e)[:200]},
                 })
 
         log_action(request, AuditLog.Action.DOCUMENT_UPLOAD, doc_type, "",
@@ -1016,7 +1019,8 @@ class TypedDocumentUploadView(APIView):
 
         return Response({
             "document_type":    doc_type,
-            "document_type_ar": DOCUMENT_TYPE_LABELS_AR.get(doc_type),
+            "document_type_ar":    DOCUMENT_TYPE_LABELS_AR.get(doc_type),
+            "document_type_label": str(DOCUMENT_TYPE_LABELS.get(doc_type, doc_type)),
             "total":    len(results) + len(errors),
             "processed": len(results),
             "failed":   len(errors),

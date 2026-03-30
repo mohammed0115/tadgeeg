@@ -28,11 +28,11 @@ from django.utils import timezone
 from rest_framework.test import APITestCase, APIClient
 from rest_framework import status
 
-from apps.organization_admin.models import Organization
-from apps.authentication.models import Role, User
-from apps.invoices.models import Invoice, InvoiceValidationResult
-from apps.reports.models import InvoiceAuditReport
-from apps.audit.models import AuditSession
+from apps.authentication.models import Organization, User
+from apps.reports.services.executive_ai_report_service import (
+    ExecutiveAIReportGenerator,
+    create_audit_data_from_dict,
+)
 
 
 User = get_user_model()
@@ -49,13 +49,9 @@ class TestReportBuildingEdgeCases(APITestCase):
         """Create test organization and user."""
         self.org = Organization.objects.create(
             name="Report Test Org",
-            slug="report-test-org",
         )
         
-        self.auditor_role = Role.objects.get_or_create(
-            name="Senior Auditor",
-            permission_level=80,
-        )[0]
+        self.auditor_role = User.Role.SENIOR_AUDITOR
         
         self.user = User.objects.create_user(
             username="report_auditor",
@@ -69,7 +65,7 @@ class TestReportBuildingEdgeCases(APITestCase):
         self.client.force_authenticate(user=self.user)
         self.report_url = "/api/v1/reports/invoice-audit/"
 
-    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditService.build")
+    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditReportService.build")
     def test_report_with_zero_invoices_disclaimer_opinion(self, mock_build):
         """
         Scenario 1: Generate report with 0 invoices
@@ -121,7 +117,7 @@ class TestReportBuildingEdgeCases(APITestCase):
         self.assertIn("report_id", response.data)
         self.assertEqual(response.data["report_header"]["opinion_type"], "disclaimer")
 
-    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditService.build")
+    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditReportService.build")
     def test_report_with_single_invoice(self, mock_build):
         """
         Scenario 2: Generate report with 1 invoice
@@ -188,7 +184,7 @@ class TestReportBuildingEdgeCases(APITestCase):
         self.assertEqual(response.data["summary"]["total_invoices"], 1)
         self.assertEqual(response.data["report_header"]["opinion_type"], "unqualified")
 
-    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditService.build")
+    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditReportService.build")
     def test_report_with_large_invoice_batch_100plus(self, mock_build):
         """
         Scenario 3: Generate report with 100+ invoices
@@ -279,13 +275,9 @@ class TestAllReportSections(APITestCase):
         """Create test organization and user."""
         self.org = Organization.objects.create(
             name="Report Sections Org",
-            slug="report-sections-org",
         )
         
-        self.auditor_role = Role.objects.get_or_create(
-            name="Auditor",
-            permission_level=70,
-        )[0]
+        self.auditor_role = User.Role.SENIOR_AUDITOR
         
         self.user = User.objects.create_user(
             username="sections_auditor",
@@ -299,7 +291,7 @@ class TestAllReportSections(APITestCase):
         self.client.force_authenticate(user=self.user)
         self.report_url = "/api/v1/reports/invoice-audit/"
 
-    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditService.build")
+    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditReportService.build")
     def test_all_15_sections_present_in_report(self, mock_build):
         """
         Scenario 4: Report contains all 15 sections with correct fields
@@ -413,13 +405,9 @@ class TestBilingualReportOutput(APITestCase):
         """Create test organization and user."""
         self.org = Organization.objects.create(
             name="Bilingual Report Org",
-            slug="bilingual-org",
         )
         
-        self.auditor_role = Role.objects.get_or_create(
-            name="Auditor",
-            permission_level=70,
-        )[0]
+        self.auditor_role = User.Role.SENIOR_AUDITOR
         
         self.user = User.objects.create_user(
             username="bilingual_auditor",
@@ -433,7 +421,7 @@ class TestBilingualReportOutput(APITestCase):
         self.client.force_authenticate(user=self.user)
         self.report_url = "/api/v1/reports/invoice-audit/"
 
-    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditService.build")
+    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditReportService.build")
     def test_arabic_report_output(self, mock_build):
         """
         Scenario 5: Generate report in Arabic
@@ -484,7 +472,7 @@ class TestBilingualReportOutput(APITestCase):
             "معتمد بدون تحفظ"
         )
 
-    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditService.build")
+    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditReportService.build")
     def test_english_report_output(self, mock_build):
         """
         Scenario 6: Generate report in English
@@ -531,13 +519,9 @@ class TestISA700OpinionTypes(APITestCase):
         """Create test organization and user."""
         self.org = Organization.objects.create(
             name="ISA700 Report Org",
-            slug="isa700-org",
         )
         
-        self.auditor_role = Role.objects.get_or_create(
-            name="Auditor",
-            permission_level=70,
-        )[0]
+        self.auditor_role = User.Role.SENIOR_AUDITOR
         
         self.user = User.objects.create_user(
             username="isa700_auditor",
@@ -551,7 +535,7 @@ class TestISA700OpinionTypes(APITestCase):
         self.client.force_authenticate(user=self.user)
         self.report_url = "/api/v1/reports/invoice-audit/"
 
-    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditService.build")
+    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditReportService.build")
     def test_unqualified_opinion_high_compliance(self, mock_build):
         """
         Scenario 7: Opinion = UNQUALIFIED when compliance ≥ 90%
@@ -583,7 +567,7 @@ class TestISA700OpinionTypes(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["report_header"]["opinion_type"], "unqualified")
 
-    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditService.build")
+    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditReportService.build")
     def test_qualified_opinion_medium_failures(self, mock_build):
         """
         Scenario 8: Opinion = QUALIFIED when 70% ≤ compliance < 90%
@@ -615,7 +599,7 @@ class TestISA700OpinionTypes(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["report_header"]["opinion_type"], "qualified")
 
-    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditService.build")
+    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditReportService.build")
     def test_adverse_opinion_high_failures(self, mock_build):
         """
         Scenario 9: Opinion = ADVERSE when compliance < 70%
@@ -659,13 +643,9 @@ class TestIAS7CashFlowInReport(APITestCase):
         """Create test organization and user."""
         self.org = Organization.objects.create(
             name="IAS7 Report Org",
-            slug="ias7-org",
         )
         
-        self.auditor_role = Role.objects.get_or_create(
-            name="Auditor",
-            permission_level=70,
-        )[0]
+        self.auditor_role = User.Role.SENIOR_AUDITOR
         
         self.user = User.objects.create_user(
             username="ias7_auditor",
@@ -679,7 +659,7 @@ class TestIAS7CashFlowInReport(APITestCase):
         self.client.force_authenticate(user=self.user)
         self.report_url = "/api/v1/reports/invoice-audit/"
 
-    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditService.build")
+    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditReportService.build")
     def test_ias7_classification_section_present(self, mock_build):
         """
         Scenario 10: Report includes IAS 7 cash flow classification
@@ -729,13 +709,9 @@ class TestISA701KAMsInReport(APITestCase):
         """Create test organization and user."""
         self.org = Organization.objects.create(
             name="KAM Report Org",
-            slug="kam-org",
         )
         
-        self.auditor_role = Role.objects.get_or_create(
-            name="Auditor",
-            permission_level=70,
-        )[0]
+        self.auditor_role = User.Role.SENIOR_AUDITOR
         
         self.user = User.objects.create_user(
             username="kam_auditor",
@@ -749,7 +725,7 @@ class TestISA701KAMsInReport(APITestCase):
         self.client.force_authenticate(user=self.user)
         self.report_url = "/api/v1/reports/invoice-audit/"
 
-    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditService.build")
+    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditReportService.build")
     def test_kams_section_present_when_material(self, mock_build):
         """
         Scenario 11: Report includes KAMs when material issues exist
@@ -785,7 +761,7 @@ class TestISA701KAMsInReport(APITestCase):
         self.assertIn("key_audit_matters", response.data)
         self.assertGreater(len(response.data["key_audit_matters"]), 0)
 
-    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditService.build")
+    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditReportService.build")
     def test_kams_section_empty_for_clean_audit(self, mock_build):
         """
         Scenario 12: Report has empty KAMs when audit is clean
@@ -821,13 +797,9 @@ class TestReportGenerationIntegration(APITestCase):
         """Create test organization and user."""
         self.org = Organization.objects.create(
             name="Integration Report Org",
-            slug="integration-report-org",
         )
         
-        self.auditor_role = Role.objects.get_or_create(
-            name="Auditor",
-            permission_level=70,
-        )[0]
+        self.auditor_role = User.Role.SENIOR_AUDITOR
         
         self.user = User.objects.create_user(
             username="integration_auditor",
@@ -841,7 +813,7 @@ class TestReportGenerationIntegration(APITestCase):
         self.client.force_authenticate(user=self.user)
         self.report_url = "/api/v1/reports/invoice-audit/"
 
-    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditService.build")
+    @patch("apps.reports.services.invoice_audit_service.InvoiceAuditReportService.build")
     def test_end_to_end_report_generation_flow(self, mock_build):
         """
         Integration: Generate comprehensive report with:
@@ -1006,6 +978,56 @@ class TestReportGenerationIntegration(APITestCase):
         self.assertEqual(response.data["summary"]["total_invoices"], 50)
         self.assertEqual(response.data["summary"]["compliance_rate"], 86.0)
         self.assertEqual(response.data["report_header"]["opinion_type"], "qualified")
+
+
+class TestExecutiveAIReportBilingualParity(TestCase):
+    """Service-level bilingual checks with real generation logic (minimal mocking)."""
+
+    def setUp(self):
+        self.generator = ExecutiveAIReportGenerator()
+        self.audit_data = create_audit_data_from_dict(
+            {
+                "document_type": "invoice",
+                "document_id": "inv-1",
+                "document_number": "INV-2026-001",
+                "company": "Parity Org",
+                "total_amount": 12500,
+                "currency": "SAR",
+                "compliance_score": 82,
+                "risk_score": 74,
+                "risk_level": "medium",
+                "rules_passed": 7,
+                "rules_failed": 2,
+                "failed_rules": [
+                    {
+                        "code": "INV-005",
+                        "name_ar": "بيانات مورد غير مكتملة",
+                        "name_en": "Incomplete supplier details",
+                        "reason": "Supplier VAT check failed",
+                        "severity": "High",
+                        "blocks_approval": True,
+                        "impact_ar": "يؤثر على الامتثال الضريبي",
+                        "impact_en": "Impacts tax compliance",
+                    }
+                ],
+                "supplier": {"name": "Vendor A", "vat_valid": False},
+                "zatca_compliance": 80,
+            }
+        )
+
+    def test_generate_report_in_english_contains_english_narrative(self):
+        report_en = self.generator.generate_report(self.audit_data, language="en")
+
+        self.assertIn("executive_summary", report_en)
+        self.assertIn("Immediate Actions", report_en["immediate_actions"])
+        self.assertIn("Incomplete supplier details", report_en["key_findings"])
+
+    def test_generate_report_in_arabic_contains_arabic_narrative(self):
+        report_ar = self.generator.generate_report(self.audit_data, language="ar")
+
+        self.assertIn("executive_summary", report_ar)
+        self.assertIn("إجراءات فورية", report_ar["immediate_actions"])
+        self.assertIn("بيانات مورد غير مكتملة", report_ar["key_findings"])
 
 
 if __name__ == "__main__":

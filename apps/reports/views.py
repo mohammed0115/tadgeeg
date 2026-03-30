@@ -5,6 +5,7 @@ import json
 from datetime import date
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import HttpResponse, JsonResponse
+from django.utils.translation import gettext as _
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -451,6 +452,24 @@ def _collect_rule_engine_data(org, date_from=None, date_to=None) -> dict:
             "avg_risk_contribution": round(float(r["avg_risk"] or 0), 2),
             "name_ar": translations.get(r["rule_code"], {}).get("ar", r["rule_code"]),
             "name_en": translations.get(r["rule_code"], {}).get("en", r["rule_code"]),
+            "explanation_sample": (
+                AuditResult.objects.filter(
+                    audit_run__in=runs_qs,
+                    status="fail",
+                    rule_code=r["rule_code"],
+                )
+                .exclude(explanation="")
+                .order_by("-executed_at")
+                .values_list("explanation", flat=True)
+                .first()
+                or ""
+            ),
+            "evidence_count": AuditResult.objects.filter(
+                audit_run__in=runs_qs,
+                status="fail",
+                rule_code=r["rule_code"],
+                evidence_items__isnull=False,
+            ).distinct().count(),
         }
         for r in top_failures_qs
     ]
@@ -496,13 +515,13 @@ def _extract_invoice_audit_section(report_data) -> dict:
     return report_data or {}
 
 
-def _weight_for_rule(rule_code):
+def _weight_for_rule(rule_code, is_ar=True):
     prefix = str(rule_code or "").split("-", 1)[0]
     if prefix in {"DUP", "VAT", "ANO"}:
-        return "مرتفع"
+        return "مرتفع" if is_ar else "High"
     if prefix in {"INV", "CTL"}:
-        return "متوسط"
-    return "منخفض"
+        return "متوسط" if is_ar else "Medium"
+    return "منخفض" if is_ar else "Low"
 
 
 def _failed_rules_with_invoice_refs(top_failed_rules, validations):
@@ -546,7 +565,7 @@ def _build_high_risk_violations(invoice_rows, validation_map, rule_catalog):
                     detail.get("reason")
                     or detail.get("message")
                     or detail.get("note")
-                    or "تم رصد مخالفة لهذه القاعدة وتحتاج مراجعة تفصيلية."
+                    or _("A rule violation was detected and requires detailed review.")
                 )
                 violations.append({
                     "rule_code": code,
@@ -572,6 +591,11 @@ def _build_invoice_audit_report_ui(report, org):
     source_data = _extract_invoice_audit_section(report.data or {})
     if not isinstance(source_data, dict):
         return None
+
+    is_ar = str(getattr(report, "language", "") or "").lower().startswith("ar")
+
+    def txt(ar_text, en_text):
+        return ar_text if is_ar else en_text
 
     validation_qs = InvoiceValidationResult.objects.filter(invoice__organization=org).select_related("invoice")
     if report.period_from:
@@ -600,7 +624,7 @@ def _build_invoice_audit_report_ui(report, org):
 
     risk_avg = float(overall.get("avg_risk_score") or 0)
     high_risk_count = int((overall.get("critical_count") or 0) + (overall.get("high_count") or 0))
-    report_status = "عالي المخاطر" if risk_avg >= 70 or high_risk_count > 0 else "يحتاج مراجعة" if risk_avg >= 40 else "متوافق"
+    report_status = "high_risk" if risk_avg >= 70 or high_risk_count > 0 else "review" if risk_avg >= 40 else "compliant"
 
     failed_rules = _failed_rules_with_invoice_refs(top_failed, validations)
     high_risk_invoices = _build_high_risk_violations(top_risk, validation_map, RULES)
@@ -613,17 +637,35 @@ def _build_invoice_audit_report_ui(report, org):
     compliance_matrix = [
         {
             "rule_code": row.get("rule_code"),
-            "status": "مخالف",
-            "weight": _weight_for_rule(row.get("rule_code")),
-            "note": row.get("description") or "فشل متكرر يتطلب إجراء فوري.",
+            "status": "violated",
+            "weight": _weight_for_rule(row.get("rule_code"), is_ar),
+            "note": row.get("description") or txt(
+                "إخفاق متكرر يتطلب إجراءً فوريًا.",
+                "Repeated failure requiring immediate action.",
+            ),
         }
         for row in top_failed[:6]
     ]
     if not compliance_matrix:
         compliance_matrix = [
-            {"rule_code": "INV-001", "status": "ممتثل", "weight": "متوسط", "note": "توفر رقم الفاتورة في معظم العينات."},
-            {"rule_code": "VAT-002", "status": "ممتثل", "weight": "مرتفع", "note": "نسبة جيدة من صحة حساب الضريبة."},
-            {"rule_code": "DUP-001", "status": "مخالف", "weight": "مرتفع", "note": "ظهرت حالات تكرار تحتاج تحقيق."},
+            {
+                "rule_code": "INV-001",
+                "status": "compliant",
+                "weight": txt("متوسط", "Medium"),
+                "note": txt("توفر رقم الفاتورة في معظم العينات.", "Invoice number is present in most sampled records."),
+            },
+            {
+                "rule_code": "VAT-002",
+                "status": "compliant",
+                "weight": txt("مرتفع", "High"),
+                "note": txt("دقة جيدة في حساب ضريبة القيمة المضافة.", "Good VAT calculation accuracy."),
+            },
+            {
+                "rule_code": "DUP-001",
+                "status": "violated",
+                "weight": txt("مرتفع", "High"),
+                "note": txt("ظهرت حالات تكرار تحتاج تحقيق.", "Duplicate patterns were detected and require investigation."),
+            },
         ]
 
     # ── Rule engine enrichment (if data exists in report) ─────────────────────
@@ -642,19 +684,30 @@ def _build_invoice_audit_report_ui(report, org):
 
     # Build human-readable key findings that incorporate rule engine data
     key_findings = [
-        f"عدد الفواتير عالية المخاطر: {high_risk_count}",
-        f"عدد الفواتير المكررة: {duplicate_count}",
-        f"متوسط درجة المخاطر: {risk_avg:.1f}",
+        txt(f"عدد الفواتير عالية المخاطر: {high_risk_count}", f"High-risk invoices: {high_risk_count}"),
+        txt(f"عدد الفواتير المكررة: {duplicate_count}", f"Duplicate invoices: {duplicate_count}"),
+        txt(f"متوسط درجة المخاطر: {risk_avg:.1f}", f"Average risk score: {risk_avg:.1f}"),
     ]
     if re_runs:
         key_findings += [
-            f"إجمالي المستندات المدقوقة بمحرك القواعد الذكي: {re_runs}",
-            f"القواعد المطبقة الإجمالية: {re_raw.get('total_rules_applied', 0)} — امتثال {re_compliance:.1f}%",
-            f"حالات تعطيل الاعتماد: {re_blocking}",
+            txt(
+                f"إجمالي المستندات المدقوقة بمحرك القواعد الذكي: {re_runs}",
+                f"Documents audited by the smart rule engine: {re_runs}",
+            ),
+            txt(
+                f"إجمالي القواعد المطبقة: {re_raw.get('total_rules_applied', 0)} — نسبة امتثال {re_compliance:.1f}%",
+                f"Total applied rules: {re_raw.get('total_rules_applied', 0)} — compliance {re_compliance:.1f}%",
+            ),
+            txt(f"حالات تعطيل الاعتماد: {re_blocking}", f"Blocking failures: {re_blocking}"),
         ]
         if re_top_rules:
             top_name = re_top_rules[0].get("name_ar") or re_top_rules[0].get("rule_code")
-            key_findings.append(f"القاعدة الأكثر إخفاقًا: {top_name} ({re_top_rules[0]['fail_count']} إخفاق)")
+            key_findings.append(
+                txt(
+                    f"القاعدة الأكثر إخفاقًا: {top_name} ({re_top_rules[0]['fail_count']} إخفاق)",
+                    f"Most failed rule: {top_name} ({re_top_rules[0]['fail_count']} failures)",
+                )
+            )
 
     # Determine effective compliance rate — prefer rule engine if available
     effective_compliance = re_compliance if re_runs else float(validation_summary.get("vat_compliance_pct") or compliance_pct)
@@ -682,7 +735,7 @@ def _build_invoice_audit_report_ui(report, org):
         }
 
     return {
-        "title": report.title or "تقرير تدقيق الفواتير",
+        "title": report.title or txt("تقرير تدقيق الفواتير", "Invoice Audit Report"),
         "organization_name": getattr(org, "name", "-") or "-",
         "generated_at": report.created_at,
         "report_type": "Invoice Audit Report",
@@ -696,12 +749,15 @@ def _build_invoice_audit_report_ui(report, org):
             "duplicate_count": duplicate_count,
         },
         "executive_summary": {
-            "conclusion": narrative.get("executive_summary") or "الصورة العامة تشير إلى ارتفاع نسبي في مخاطر الامتثال وتحتاج تدخل رقابي سريع.",
+            "conclusion": narrative.get("executive_summary") or txt(
+                "الصورة العامة تشير إلى ارتفاع نسبي في مخاطر الامتثال وتحتاج تدخلاً رقابياً سريعاً.",
+                "The overall posture indicates elevated compliance risk requiring near-term control action.",
+            ),
             "key_findings": key_findings,
             "recommendations": [
-                "إغلاق المخالفات ذات الأولوية العالية خلال دورة المراجعة الحالية.",
-                "تفعيل مراجعة استباقية على قواعد التكرار وضريبة القيمة المضافة.",
-                "رفع جودة بيانات الموردين لتقليل الإخفاقات المتكررة.",
+                txt("إغلاق المخالفات ذات الأولوية العالية خلال دورة المراجعة الحالية.", "Close high-priority violations within the current review cycle."),
+                txt("تفعيل مراجعة استباقية على قواعد التكرار وضريبة القيمة المضافة.", "Apply proactive checks on duplicate and VAT-related rules."),
+                txt("رفع جودة بيانات الموردين لتقليل الإخفاقات المتكررة.", "Improve vendor data quality to reduce repeated failures."),
             ],
         },
         "compliance_engine": {
@@ -725,22 +781,22 @@ def _build_invoice_audit_report_ui(report, org):
             "dominant_vendor": dominant_vendor.get("vendor_name") or "-",
             "vendor_dependency_pct": float(dominant_vendor.get("spend_share_pct") or 0),
             "patterns": [
-                {"label": "غياب رمز QR", "count": missing_qr_count, "severity": "high" if missing_qr_count else "low"},
-                {"label": "فواتير بخط يدوي", "count": handwritten_count, "severity": "review" if handwritten_count else "low"},
-                {"label": "موردون جدد غير معروفين", "count": new_vendor_count, "severity": "review" if new_vendor_count else "low"},
+                {"label": txt("غياب رمز QR", "Missing QR code"), "count": missing_qr_count, "severity": "high" if missing_qr_count else "low"},
+                {"label": txt("فواتير بخط يدوي", "Handwritten invoices"), "count": handwritten_count, "severity": "review" if handwritten_count else "low"},
+                {"label": txt("موردون جدد غير معروفين", "New unknown vendors"), "count": new_vendor_count, "severity": "review" if new_vendor_count else "low"},
             ],
         },
         "vendor_analysis": vendor_rows,
         "recommendations": {
             "immediate": [
-                "تصحيح فواتير QR غير المتوافقة قبل الإقفال المالي.",
-                "مراجعة المورد المسيطر وتدقيق معاملات العينة عالية القيمة.",
-                "التحقق من الرقم الضريبي للفواتير المرفوضة رقابيا.",
+                txt("تصحيح فواتير QR غير المتوافقة قبل الإقفال المالي.", "Fix non-compliant QR invoices before financial close."),
+                txt("مراجعة المورد المسيطر وتدقيق معاملات العينة عالية القيمة.", "Review dominant-vendor exposure and high-value sampled transactions."),
+                txt("التحقق من الرقم الضريبي للفواتير المرفوضة رقابياً.", "Verify VAT registration numbers for control-rejected invoices."),
             ],
             "future": [
-                "تطبيق مراقبة لحظية لقواعد التكرار قبل اعتماد الفاتورة.",
-                "تحسين جودة الإدخال وتدريب الفريق على متطلبات الامتثال.",
-                "إضافة حدود تنبيه تلقائية عند ارتفاع تركز الإنفاق على مورد واحد.",
+                txt("تطبيق مراقبة لحظية لقواعد التكرار قبل اعتماد الفاتورة.", "Enable real-time duplicate-rule monitoring before invoice approval."),
+                txt("تحسين جودة الإدخال وتدريب الفريق على متطلبات الامتثال.", "Improve data-entry quality and train the team on compliance controls."),
+                txt("إضافة حدود تنبيه تلقائية عند ارتفاع تركز الإنفاق على مورد واحد.", "Add threshold alerts for high spend concentration on a single vendor."),
             ],
         },
     }
@@ -1110,7 +1166,7 @@ class ReportPDFView(APIView):
         try:
             report = Report.objects.get(pk=pk, organization=request.user.organization)
         except Report.DoesNotExist:
-            return HttpResponse("التقرير غير موجود.", status=404)
+            return HttpResponse(_("Report not found."), status=404)
 
         from django.template.loader import render_to_string
         template_name = "reports/invoice_audit_report_pdf.html" if report.report_type == "invoice_audit" else "reports/report_pdf.html"
@@ -1135,7 +1191,7 @@ class ReportPDFView(APIView):
         except ModuleNotFoundError:
             logger.warning("WeasyPrint not installed", extra={"report_id": str(report.id)})
             return JsonResponse(
-                {"error": "خدمة PDF غير مهيأة على الخادم حاليًا. أعد نشر الخدمة بعد تثبيت مكتبة PDF."},
+                {"error": _("PDF service is not configured on this server. Redeploy after installing the PDF library.")},
                 status=503,
             )
         except OSError as e:
@@ -1144,7 +1200,7 @@ class ReportPDFView(APIView):
         except Exception:
             logger.exception("Report PDF generation failed", extra={"report_id": str(report.id)})
             return JsonResponse(
-                {"error": "تعذر توليد ملف PDF لهذا التقرير حاليًا. راجع سجل الخادم ثم أعد المحاولة."},
+                {"error": _("Failed to generate PDF for this report. Check the server log and try again.")},
                 status=500,
             )
 
@@ -1163,20 +1219,24 @@ class ReportExcelExportView(APIView):
         try:
             report = Report.objects.get(pk=pk, organization=request.user.organization)
         except Report.DoesNotExist:
-            return HttpResponse("التقرير غير موجود.", status=404)
+            return HttpResponse(_("Report not found."), status=404)
 
         try:
             import openpyxl
             from openpyxl.styles import Font, PatternFill, Alignment
         except ImportError:
-            return JsonResponse({"error": "openpyxl غير متاح على السيرفر."}, status=500)
+            return JsonResponse({"error": _("openpyxl not available on server.")}, status=500)
 
         import io
         wb = openpyxl.Workbook()
+        is_ar = str(getattr(report, "language", "") or "").lower().startswith("ar")
+
+        def label(ar_text, en_text):
+            return ar_text if is_ar else en_text
 
         # ── Sheet 1: Summary ────────────────────────────────────────────────
         ws = wb.active
-        ws.title = "Summary"
+        ws.title = label("الملخص", "Summary")
         header_font = Font(bold=True, color="FFFFFF")
         header_fill = PatternFill("solid", fgColor="2563EB")
 
@@ -1189,18 +1249,18 @@ class ReportExcelExportView(APIView):
 
         org = request.user.organization
         rows = [
-            ("Report Title", report.title),
-            ("Report Type", report.report_type),
-            ("Organization", org.name),
-            ("VAT Number", org.vat_number or ""),
-            ("Period From", str(report.period_from or "")),
-            ("Period To", str(report.period_to or "")),
-            ("Generated By", report.generated_by.full_name if report.generated_by else ""),
-            ("Generated At", report.created_at.strftime("%Y-%m-%d %H:%M")),
-            ("Language", report.language),
+            (label("عنوان التقرير", "Report Title"), report.title),
+            (label("نوع التقرير", "Report Type"), report.report_type),
+            (label("المنظمة", "Organization"), org.name),
+            (label("الرقم الضريبي", "VAT Number"), org.vat_number or ""),
+            (label("الفترة من", "Period From"), str(report.period_from or "")),
+            (label("الفترة إلى", "Period To"), str(report.period_to or "")),
+            (label("أُنشئ بواسطة", "Generated By"), report.generated_by.full_name if report.generated_by else ""),
+            (label("تاريخ الإنشاء", "Generated At"), report.created_at.strftime("%Y-%m-%d %H:%M")),
+            (label("اللغة", "Language"), report.language),
         ]
-        _hdr("A1", "Field")
-        _hdr("B1", "Value")
+        _hdr("A1", label("الحقل", "Field"))
+        _hdr("B1", label("القيمة", "Value"))
         for i, (k, v) in enumerate(rows, start=2):
             ws.cell(row=i, column=1, value=k)
             ws.cell(row=i, column=2, value=v)
@@ -1211,7 +1271,7 @@ class ReportExcelExportView(APIView):
         narrative = report.narrative or {}
         if narrative:
             ws.append([])
-            ws.append(["── Narrative KPIs ──"])
+            ws.append([label("── مؤشرات السرد ──", "── Narrative KPIs ──")])
             for key, val in narrative.items():
                 if not isinstance(val, (dict, list)):
                     ws.append([str(key), str(val)])
@@ -1219,9 +1279,18 @@ class ReportExcelExportView(APIView):
         # ── Sheet 2: Invoices ────────────────────────────────────────────────
         data = report.data or {}
         invoices_data = data.get("invoices", [])
-        ws2 = wb.create_sheet("Invoices")
-        inv_headers = ["Invoice Number", "Supplier", "Date", "Base Amount", "Tax Amount",
-                       "Total Amount", "Currency", "Status", "Compliance Status"]
+        ws2 = wb.create_sheet(label("الفواتير", "Invoices"))
+        inv_headers = [
+            label("رقم الفاتورة", "Invoice Number"),
+            label("المورّد", "Supplier"),
+            label("التاريخ", "Date"),
+            label("المبلغ الأساسي", "Base Amount"),
+            label("الضريبة", "Tax Amount"),
+            label("الإجمالي", "Total Amount"),
+            label("العملة", "Currency"),
+            label("الحالة", "Status"),
+            label("حالة الامتثال", "Compliance Status"),
+        ]
         for col, h in enumerate(inv_headers, 1):
             c = ws2.cell(row=1, column=col, value=h)
             c.font = header_font
@@ -1242,13 +1311,21 @@ class ReportExcelExportView(APIView):
             ws2.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 18
 
         # ── Sheet 3: Audit Cases / Findings ─────────────────────────────────
-        ws3 = wb.create_sheet("Findings")
+        ws3 = wb.create_sheet(label("الملاحظات", "Findings"))
         cases_qs = AuditCase.objects.filter(
             organization=request.user.organization
         ).values("case_number", "case_type", "priority", "status", "title",
                  "description", "created_at", "resolved_at")
-        case_headers = ["Case #", "Type", "Priority", "Status", "Title",
-                        "Description", "Created At", "Resolved At"]
+        case_headers = [
+            label("رقم الحالة", "Case #"),
+            label("النوع", "Type"),
+            label("الأولوية", "Priority"),
+            label("الحالة", "Status"),
+            label("العنوان", "Title"),
+            label("الوصف", "Description"),
+            label("تاريخ الإنشاء", "Created At"),
+            label("تاريخ الإغلاق", "Resolved At"),
+        ]
         for col, h in enumerate(case_headers, 1):
             c = ws3.cell(row=1, column=col, value=h)
             c.font = header_font
@@ -1266,9 +1343,15 @@ class ReportExcelExportView(APIView):
             ws3.column_dimensions[openpyxl.utils.get_column_letter(col)].width = 20
 
         # ── Sheet 4: Rule Summary ────────────────────────────────────────────
-        ws4 = wb.create_sheet("Rule Summary")
+        ws4 = wb.create_sheet(label("ملخص القواعد", "Rule Summary"))
         rule_summary = data.get("rule_group_summary", [])
-        rs_headers = ["Rule Group", "Passed", "Failed", "Total", "Pass Rate %"]
+        rs_headers = [
+            label("مجموعة القواعد", "Rule Group"),
+            label("ناجح", "Passed"),
+            label("فاشل", "Failed"),
+            label("الإجمالي", "Total"),
+            label("نسبة النجاح %", "Pass Rate %"),
+        ]
         for col, h in enumerate(rs_headers, 1):
             c = ws4.cell(row=1, column=col, value=h)
             c.font = header_font
@@ -1304,7 +1387,7 @@ class ReportEmailView(APIView):
         try:
             report = Report.objects.get(pk=pk, organization=request.user.organization)
         except Report.DoesNotExist:
-            return Response({"error": "التقرير غير موجود."}, status=404)
+            return Response({"error": _("Report not found.")}, status=404)
 
         from django.core.mail import EmailMessage
         from django.template.loader import render_to_string
@@ -1326,13 +1409,13 @@ class ReportEmailView(APIView):
             pdf_bytes = _render_report_pdf_bytes(html_str, request.build_absolute_uri("/"))
             msg = EmailMessage(
                 subject=f"[Tadgeeg AI] {report.title}",
-                body=f"مرفق تقرير: {report.title}\n\nتم إنشاؤه في {report.created_at.strftime('%Y-%m-%d %H:%M')}",
+                body=_("Attached report: %(title)s\n\nGenerated at %(dt)s") % {"title": report.title, "dt": report.created_at.strftime("%Y-%m-%d %H:%M")},
                 from_email=getattr(django_settings, "DEFAULT_FROM_EMAIL", "noreply@tadgeeg.com"),
                 to=[recipient],
             )
             msg.attach(f"{safe_title}.pdf", pdf_bytes, "application/pdf")
             msg.send()
-            return Response({"success": True, "message": f"تم إرسال التقرير إلى {recipient}"})
+            return Response({"success": True, "message": _("Report sent to %(recipient)s") % {"recipient": recipient}})
         except Exception as e:
             logger.exception("Report email failed for report %s", pk)
-            return Response({"error": "تعذر إرسال البريد الإلكتروني. راجع إعدادات SMTP."}, status=500)
+            return Response({"error": _("Failed to send email. Check SMTP settings.")}, status=500)

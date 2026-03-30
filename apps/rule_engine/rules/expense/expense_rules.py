@@ -186,3 +186,205 @@ class ExpenseTotalMatchRule(AuditRuleBase):
             "Expense total matches line item sum.",
             "الإجمالي المطالب يطابق مجموع البنود.",
         )
+
+
+# ─── Extended Expense Rules ───────────────────────────────────────────────────
+
+class DuplicateExpenseClaimRule(AuditRuleBase):
+    """EXP-M03 — Detects duplicate expense claims within the same or across reports."""
+    rule_code = "EXP-M03"
+    rule_name_en = "Duplicate Expense Claim Detected"
+    rule_name_ar = "مطالبة مصروف مكررة"
+    default_severity = "high"
+    rule_type = "anomaly"
+
+    def check_preconditions(self, doc: NormalizedDocument) -> bool:
+        return True
+
+    def execute(self, doc: NormalizedDocument) -> RuleResult:
+        duplicate_claims = doc.get("duplicate_claims") or []
+
+        if duplicate_claims:
+            return self._fail(
+                f"{len(duplicate_claims)} duplicate expense claim(s) detected.",
+                f"تم اكتشاف {len(duplicate_claims)} مطالبة مصروف مكررة.",
+                evidence=[EvidenceItem(
+                    evidence_type="comparison",
+                    field_name="duplicate_claims",
+                    field_name_ar="المطالبات المكررة",
+                    expected_value="No duplicates",
+                    actual_value=duplicate_claims[:5],
+                    description=f"{len(duplicate_claims)} duplicate expense claims.",
+                    description_ar=f"{len(duplicate_claims)} مطالبة مكررة.",
+                )]
+            )
+
+        # Live check within lines
+        lines = doc.get("expense_lines") or []
+        seen = {}
+        duplicates = []
+        for line in lines:
+            key = (
+                str(line.get("date", "")),
+                str(line.get("category", "")).lower(),
+                str(line.get("amount", "")),
+            )
+            if key in seen:
+                duplicates.append(key)
+            else:
+                seen[key] = True
+
+        if duplicates:
+            return self._fail(
+                f"{len(duplicates)} expense line(s) appear to be duplicated "
+                "(same date, category, and amount).",
+                f"{len(duplicates)} بند مصروف يبدو مكرراً "
+                "(نفس التاريخ والفئة والمبلغ).",
+                evidence=[EvidenceItem(
+                    evidence_type="comparison",
+                    field_name="expense_lines",
+                    field_name_ar="بنود المصروفات",
+                    expected_value="All unique lines",
+                    actual_value=str(duplicates[:3]),
+                    description=f"Duplicate expense lines detected: {duplicates[:3]}",
+                    description_ar=f"بنود مصروفات مكررة: {duplicates[:3]}",
+                )]
+            )
+        return self._pass(
+            "No duplicate expense claims detected.",
+            "لم يتم اكتشاف أي مطالبات مصروف مكررة.",
+        )
+
+
+class ExpenseSubmissionDeadlineRule(AuditRuleBase):
+    """EXP-M04 — Expense reports must be submitted within policy deadline."""
+    rule_code = "EXP-M04"
+    rule_name_en = "Expense Report Submitted Late"
+    rule_name_ar = "تأخر في تقديم تقرير المصروفات"
+    default_severity = "medium"
+    rule_type = "compliance"
+
+    WARN_DAYS = 30
+    FAIL_DAYS = 90
+
+    def check_preconditions(self, doc: NormalizedDocument) -> bool:
+        return (doc.get("submitted_date") is not None and
+                doc.get("report_period_to") is not None)
+
+    def execute(self, doc: NormalizedDocument) -> RuleResult:
+        from datetime import datetime, date as date_type
+        warn_days = int(self.get_config("warn_days", self.WARN_DAYS))
+        fail_days = int(self.get_config("fail_days", self.FAIL_DAYS))
+
+        try:
+            submitted_raw = doc.get("submitted_date")
+            period_to_raw = doc.get("report_period_to")
+            submitted = submitted_raw if isinstance(submitted_raw, date_type) else datetime.fromisoformat(str(submitted_raw)).date()
+            period_to = period_to_raw if isinstance(period_to_raw, date_type) else datetime.fromisoformat(str(period_to_raw)).date()
+        except (ValueError, TypeError):
+            return self._skipped("Cannot parse submission or period dates.")
+
+        delay_days = (submitted - period_to).days
+
+        if delay_days <= 0:
+            return self._pass(
+                f"Expense report submitted on time (period ended {period_to}, submitted {submitted}).",
+                f"تقرير المصروفات مُقدَّم في الوقت المحدد (انتهت الفترة {period_to}، تاريخ التقديم {submitted}).",
+            )
+
+        evidence = [EvidenceItem(
+            evidence_type="comparison",
+            field_name="submitted_date",
+            field_name_ar="تاريخ التقديم",
+            expected_value=f"Within {warn_days} days of period end",
+            actual_value=f"{delay_days} days late",
+            description=f"Submitted {delay_days} days after period end.",
+            description_ar=f"قُدِّم بعد {delay_days} يوماً من انتهاء الفترة.",
+        )]
+
+        if delay_days > fail_days:
+            return self._fail(
+                f"Expense report is {delay_days} days overdue (critical threshold: {fail_days} days).",
+                f"تأخر تقديم تقرير المصروفات {delay_days} يوماً (الحد الحرج: {fail_days} يوماً).",
+                evidence=evidence,
+            )
+        if delay_days > warn_days:
+            return self._warning(
+                f"Expense report is {delay_days} days late (warning threshold: {warn_days} days).",
+                f"تقرير المصروفات متأخر {delay_days} يوماً (حد التحذير: {warn_days} يوماً).",
+                evidence=evidence,
+            )
+        return self._pass(
+            f"Expense report submitted within acceptable timeframe ({delay_days} days).",
+            f"تقرير المصروفات مُقدَّم ضمن الإطار الزمني المقبول ({delay_days} يوماً).",
+        )
+
+
+class SplitTransactionRule(AuditRuleBase):
+    """EXP-M05 — Detects split expense claims used to circumvent policy limits."""
+    rule_code = "EXP-M05"
+    rule_name_en = "Expense Split Transaction Detected"
+    rule_name_ar = "اكتشاف تجزئة في مصروف"
+    default_severity = "high"
+    rule_type = "anomaly"
+
+    def check_preconditions(self, doc: NormalizedDocument) -> bool:
+        return True
+
+    def execute(self, doc: NormalizedDocument) -> RuleResult:
+        split_flags = doc.get("split_transaction_flags") or []
+
+        if split_flags:
+            return self._warning(
+                f"{len(split_flags)} potential split transaction(s) detected. "
+                "Splitting expenses avoids policy limits.",
+                f"تم اكتشاف {len(split_flags)} احتمال تجزئة مصروف. "
+                "تجزئة المصروفات تُستخدم للتحايل على الحدود السياساتية.",
+                evidence=[EvidenceItem(
+                    evidence_type="statistical",
+                    field_name="split_transaction_flags",
+                    field_name_ar="مؤشرات التجزئة",
+                    expected_value="No split flags",
+                    actual_value=split_flags[:5],
+                    description=f"{len(split_flags)} split transaction flags set.",
+                    description_ar=f"{len(split_flags)} مؤشر تجزئة مُعيَّن.",
+                )]
+            )
+
+        # Heuristic: multiple lines on same date + same category, each just below limit
+        limits = ExpensePolicyLimitRule.DEFAULT_LIMITS
+        lines = doc.get("expense_lines") or []
+        from collections import defaultdict
+        grouped = defaultdict(list)
+        for line in lines:
+            key = (str(line.get("date", "")), str(line.get("category", "other")).lower())
+            grouped[key].append(float(line.get("amount", 0) or 0))
+
+        suspicious = []
+        for (dt, cat), amounts in grouped.items():
+            if len(amounts) > 1:
+                limit = float(limits.get(cat, limits["other"]))
+                combined = sum(amounts)
+                if combined > limit and all(a < limit for a in amounts):
+                    suspicious.append(f"{dt}/{cat}: {amounts} (combined {combined:.0f} > limit {limit:.0f})")
+
+        if suspicious:
+            return self._warning(
+                f"Potential split-to-avoid-limit: {len(suspicious)} group(s) of same-day/"
+                "same-category expenses that individually pass limits but collectively exceed them.",
+                f"احتمال تجزئة للتهرب من الحد: {len(suspicious)} مجموعة مصروفات "
+                "تجتاز الحد بشكل منفرد لكن تتجاوزه مجتمعةً.",
+                evidence=[EvidenceItem(
+                    evidence_type="statistical",
+                    field_name="expense_lines",
+                    field_name_ar="بنود المصروفات",
+                    expected_value="No combined limit breach",
+                    actual_value=suspicious[:3],
+                    description="Expenses grouped by date+category exceed policy limits.",
+                    description_ar="مصروفات مجمَّعة بالتاريخ والفئة تتجاوز الحدود السياساتية.",
+                )]
+            )
+        return self._pass(
+            "No split transaction patterns detected.",
+            "لم يتم اكتشاف أنماط تجزئة مصروفات.",
+        )

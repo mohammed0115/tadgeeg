@@ -10,6 +10,10 @@
 <meta name="application-name" content="{{ product_name }}">
 <meta name="description" content="{{ product_description }}">
 
+<!-- Google Fonts: Cairo (Arabic) + Inter (English) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <!-- Tailwind -->
 <script src="{% static 'vendor/tailwind.browser.js' %}"></script>
 {% if bootstrap_tokens %}
@@ -26,7 +30,7 @@ tailwind.config = {
       vendor: { 50:'#f8fafc',100:'#f1f5f9',200:'#e2e8f0',300:'#cbd5e1',400:'#94a3b8',500:'#64748b',600:'#475569',700:'#334155',800:'#1e293b',900:'#0f172a' },
     },
     fontFamily: {
-      sans: ['"Segoe UI"', 'Tahoma', 'Arial', 'system-ui', 'sans-serif'],
+      sans: ['Cairo', 'Inter', '"Segoe UI"', 'system-ui', 'Arial', 'sans-serif'],
       mono: ['Consolas', '"Courier New"', 'monospace'],
     },
   }}
@@ -43,7 +47,21 @@ tailwind.config = {
 <script src="{% static 'vendor/lucide.min.js' %}"></script>
 
   <style>
-  * { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
+  /* Language-aware typography
+     Arabic (default): Cairo
+     English: Inter → system-ui stack
+     Mixed/fallback: Cairo covers both scripts */
+  * { font-family: 'Cairo', 'Inter', 'Segoe UI', system-ui, Arial, sans-serif; }
+  :root:lang(en) body,
+  :root:lang(en) p,
+  :root:lang(en) h1, :root:lang(en) h2, :root:lang(en) h3, :root:lang(en) h4,
+  :root:lang(en) td, :root:lang(en) th,
+  :root:lang(en) .card,
+  :root:lang(en) .btn, :root:lang(en) .btn-primary {
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, Arial, sans-serif;
+  }
+  /* Arabic text fragments always use Cairo regardless of page language */
+  *:lang(ar) { font-family: 'Cairo', Tahoma, Arial, sans-serif; }
   .font-mono { font-family: Consolas, 'Courier New', monospace; }
   [x-cloak] { display: none !important; }
 

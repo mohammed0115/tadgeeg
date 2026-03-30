@@ -2,13 +2,13 @@
 {% for section in platform_menu %}
   <div class="px-2 pb-1 pt-3" x-show="sidebarOpen">
     <p class="text-[10px] font-semibold uppercase tracking-[0.22em] text-platform-200/60">
-      {{ section.section_label_ar|default:section.section_ar }}
+      {{ section.section_label }}
     </p>
   </div>
   {% for item in section.items %}
     <a href="{% url item.route_name %}" class="platform-nav-item {% if active_key == item.key %}active{% endif %}">
       <i data-lucide="{{ item.icon }}" class="h-[18px] w-[18px] flex-shrink-0"></i>
-      <span x-show="sidebarOpen" class="truncate">{{ item.label_ar }}</span>
+      <span x-show="sidebarOpen" class="truncate">{{ item.label }}</span>
     </a>
   {% endfor %}
 {% endfor %}

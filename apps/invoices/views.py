@@ -477,6 +477,18 @@ def _process_single_file(file_obj, filename: str, org, user, batch=None, request
     except Exception as e:
         logger.warning(f"Audit engine failed for {filename}: {e}")
 
+    # ── Step 7b: New Rule Engine — full 97-rule AuditPipeline (async) ────────
+    try:
+        from apps.rule_engine.tasks.audit_tasks import run_audit_task
+        run_audit_task.delay(
+            document_id=str(invoice.id),
+            document_type="sales_invoice",
+            organization_id=str(org.id),
+            triggered_by="upload",
+        )
+    except Exception as e:
+        logger.warning(f"Rule engine pipeline trigger failed for {filename}: {e}")
+
     # ── Also run 30 ZATCA validation rules against the Invoice model fields ───
     if audit_session:
         AuditSessionService.advance_to_validating(audit_session)

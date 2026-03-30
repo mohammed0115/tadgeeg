@@ -233,19 +233,27 @@ class AuditRuleBase(abc.ABC):
             evidence=evidence or [],
         )
 
-    def _not_applicable(self, reason: str = "Not applicable to this document type") -> RuleResult:
+    def _not_applicable(
+        self,
+        reason_en: str = "Not applicable to this document type",
+        reason_ar: str = "غير قابل للتطبيق على هذا النوع من المستندات",
+    ) -> RuleResult:
         return RuleResult(
             status=RuleStatus.NOT_APPLICABLE,
-            explanation_en=reason,
-            explanation_ar="غير قابل للتطبيق على هذا النوع من المستندات",
+            explanation_en=reason_en,
+            explanation_ar=reason_ar or "غير قابل للتطبيق على هذا النوع من المستندات",
             risk_contribution=0.0,
         )
 
-    def _skipped(self, reason: str = "Preconditions not met") -> RuleResult:
+    def _skipped(
+        self,
+        reason_en: str = "Preconditions not met",
+        reason_ar: str = "تم تخطي القاعدة: البيانات المطلوبة غير متوفرة",
+    ) -> RuleResult:
         return RuleResult(
             status=RuleStatus.SKIPPED,
-            explanation_en=reason,
-            explanation_ar="تم تخطي القاعدة: البيانات المطلوبة غير متوفرة",
+            explanation_en=reason_en,
+            explanation_ar=reason_ar or "تم تخطي القاعدة: البيانات المطلوبة غير متوفرة",
             risk_contribution=0.0,
         )
 

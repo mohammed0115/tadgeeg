@@ -14,6 +14,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block page_title %}{% trans "Platform Admin" %}{% endblock %} | {{ console_label|default:"Get Solution Admin Console" }}</title>
 
+  <!-- Google Fonts: Cairo (Arabic) + Inter (English) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <script src="{% static 'vendor/tailwind.browser.js' %}"></script>
   <script>
     tailwind.config = {
@@ -32,7 +37,7 @@
             }
           },
           fontFamily: {
-            sans: ['"Segoe UI"', "Tahoma", "Arial", "system-ui", "sans-serif"]
+            sans: ["Cairo", "Inter", '"Segoe UI"', "Tahoma", "Arial", "system-ui", "sans-serif"]
           }
         }
       }
@@ -43,7 +48,7 @@
   <script src="{% static 'vendor/chart.umd.min.js' %}"></script>
 
   <style type="text/tailwindcss">
-    * { font-family: "Segoe UI", Tahoma, Arial, sans-serif; }
+    * { font-family: "Cairo", "Inter", "Segoe UI", Tahoma, Arial, sans-serif; }
     [x-cloak] { display: none !important; }
 
     .platform-shell {
@@ -196,7 +201,7 @@
         </div>
         <div x-show="sidebarOpen" class="min-w-0">
           <p class="truncate text-sm font-black text-white">Get Solution</p>
-          <p class="truncate text-[11px] font-semibold text-platform-200">{{ console_label_ar|default:"لوحة إدارة منصة Get Solution" }}</p>
+          <p class="truncate text-[11px] font-semibold text-platform-200">{{ console_label }}</p>
         </div>
         <button
           type="button"

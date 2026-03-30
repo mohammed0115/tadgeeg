@@ -28,8 +28,8 @@
               <i data-lucide="bar-chart-3" class="w-5 h-5 text-white"></i>
             </div>
             <div class="flex-1">
-              <p class="font-bold text-sm text-primary-700 dark:text-primary-300">تقرير إجمالي لجميع المستندات</p>
-              <p class="text-xs text-primary-500 mt-0.5">تحليل شامل لكل المستندات المرفوعة من هذا النوع</p>
+              <p class="font-bold text-sm text-primary-700 dark:text-primary-300">{% trans "General report for all documents" %}</p>
+              <p class="text-xs text-primary-500 mt-0.5">{% trans "Comprehensive analysis for all uploaded documents of this type" %}</p>
             </div>
             <i data-lucide="arrow-left" class="w-4 h-4 text-primary-500 flex-shrink-0"></i>
           </button>
@@ -37,7 +37,7 @@
 
         <!-- Divider -->
         <div class="px-6 py-3">
-          <p class="text-xs text-slate-400 font-semibold">أو اختر مستنداً محدداً</p>
+          <p class="text-xs text-slate-400 font-semibold">{% trans "Or choose a specific document" %}</p>
         </div>
 
         <template x-if="picker.loading">
@@ -46,7 +46,7 @@
         <template x-if="!picker.loading && picker.docs.length === 0">
           <div class="text-center py-8 text-slate-400">
             <i data-lucide="file-x" class="w-7 h-7 mx-auto mb-2"></i>
-            <p class="text-sm">لا توجد مستندات مرفوعة من هذا النوع</p>
+            <p class="text-sm">{% trans "No uploaded documents of this type" %}</p>
           </div>
         </template>
         <template x-if="!picker.loading && picker.docs.length > 0">
@@ -68,7 +68,7 @@
                         'bg-red-100 text-red-700':     d.audit_status==='rejected',
                         'bg-slate-100 text-slate-600': d.audit_status==='pending'||!d.audit_status
                       }"
-                      x-text="({validated:'تم التحقق',approved:'مُعتمَد',flagged:'مُعلَّق',rejected:'مرفوض',pending:'قيد الانتظار'})[d.audit_status]||d.audit_status||'—'"></span>
+                      x-text="({validated:i18n.statusValidated,approved:i18n.statusApproved,flagged:i18n.statusFlagged,rejected:i18n.statusRejected,pending:i18n.statusPending})[d.audit_status]||d.audit_status||'—'"></span>
               </button>
             </template>
           </div>
@@ -115,14 +115,14 @@
         <option value="risk_assessment">{% trans "Risk Assessment" %}</option>
         <option value="vendor_analysis">{% trans "Vendor Analysis" %}</option>
         <option value="spend_analysis">{% trans "Spend Analysis" %}</option>
-        <option value="document_audit_sales_invoice">تدقيق فاتورة المبيعات</option>
-        <option value="document_audit_purchase_order">تدقيق أمر الشراء</option>
-        <option value="document_audit_bank_statement">تدقيق كشف الحساب البنكي</option>
-        <option value="document_audit_payroll">تدقيق كشف الرواتب</option>
-        <option value="document_audit_expense_report">تدقيق تقرير المصروفات</option>
-        <option value="document_audit_vat_return">تدقيق إقرار ضريبة القيمة المضافة</option>
-        <option value="document_audit_fixed_asset">تدقيق الأصول الثابتة</option>
-        <option value="document_audit_sales_receipt">تدقيق إيصال المبيعات</option>
+        <option value="document_audit_sales_invoice">{% trans "Sales Invoice Audit" %}</option>
+        <option value="document_audit_purchase_order">{% trans "Purchase Order Audit" %}</option>
+        <option value="document_audit_bank_statement">{% trans "Bank Statement Audit" %}</option>
+        <option value="document_audit_payroll">{% trans "Payroll Audit" %}</option>
+        <option value="document_audit_expense_report">{% trans "Expense Report Audit" %}</option>
+        <option value="document_audit_vat_return">{% trans "VAT Return Audit" %}</option>
+        <option value="document_audit_fixed_asset">{% trans "Fixed Asset Audit" %}</option>
+        <option value="document_audit_sales_receipt">{% trans "Sales Receipt Audit" %}</option>
       </select>
     </div>
 
@@ -138,7 +138,7 @@
         <div class="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors">
           <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-violet-500 flex items-center justify-center text-white text-lg flex-shrink-0">📊</div>
           <div class="flex-1 min-w-0">
-            <p class="font-semibold text-slate-800 dark:text-white truncate" x-text="rep.title||i18n.untitledReport"></p>
+            <p class="font-semibold text-slate-800 dark:text-white truncate" x-text="reportTitle(rep)"></p>
             <p class="text-xs text-slate-400 mt-0.5">
               <span x-text="reportTypeLabel(rep.report_type)"></span>
               · <span x-text="rep.language==='ar' ? i18n.arabic : i18n.english"></span>
@@ -170,7 +170,7 @@
   <div x-show="activeReport" x-transition class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div @click.away="activeReport=null" class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[88vh] flex flex-col">
       <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
-        <h3 class="font-bold text-slate-800 dark:text-white" x-text="activeReport?.title||i18n.report"></h3>
+        <h3 class="font-bold text-slate-800 dark:text-white" x-text="reportTitle(activeReport)"></h3>
         <div class="flex items-center gap-2">
           <a x-show="hasFullReport(activeReport?.report_type)"
              :href="fullReportUrl(activeReport.id, activeReport.report_type)"
@@ -273,7 +273,7 @@ function reportsPage() {
       docLabel(d) {
         return d.po_number || d.invoice_number || d.bank_name || d.company_name ||
                d.report_reference || d.register_name || d.receipt_number ||
-               d.payroll_period_from || ('مستند — ' + (d.id||'').slice(0,8));
+               d.payroll_period_from || (this.i18n.document + ' — ' + (d.id||'').slice(0,8));
       },
       select(d)       { this.open = false; this._resolve && this._resolve(d.id); this._resolve = null; },
       selectGeneral() { this.open = false; this._resolve && this._resolve(null);  this._resolve = null; },
@@ -298,15 +298,21 @@ function reportsPage() {
       riskAssessment: "{% trans 'Risk Assessment' %}",
       vendorAnalysis: "{% trans 'Vendor Analysis' %}",
       spendAnalysis: "{% trans 'Spend Analysis' %}",
-      salesInvoiceAudit: "تدقيق فاتورة المبيعات",
-      purchaseOrderAudit: "تدقيق أمر الشراء",
-      bankStatementAudit: "تدقيق كشف الحساب البنكي",
-      payrollAudit: "تدقيق كشف الرواتب",
-      expenseReportAudit: "تدقيق تقرير المصروفات",
-      vatReturnAudit: "تدقيق إقرار ضريبة القيمة المضافة",
-      fixedAssetAudit: "تدقيق الأصول الثابتة",
-      salesReceiptAudit: "تدقيق إيصال المبيعات",
-      enterDocId: "أدخل معرّف المستند (UUID) للتدقيق:",
+      salesInvoiceAudit: "{% trans 'Sales Invoice Audit' %}",
+      purchaseOrderAudit: "{% trans 'Purchase Order Audit' %}",
+      bankStatementAudit: "{% trans 'Bank Statement Audit' %}",
+      payrollAudit: "{% trans 'Payroll Audit' %}",
+      expenseReportAudit: "{% trans 'Expense Report Audit' %}",
+      vatReturnAudit: "{% trans 'VAT Return Audit' %}",
+      fixedAssetAudit: "{% trans 'Fixed Asset Audit' %}",
+      salesReceiptAudit: "{% trans 'Sales Receipt Audit' %}",
+      enterDocId: "{% trans 'Enter document UUID for audit:' %}",
+      statusValidated: "{% trans 'Validated' %}",
+      statusApproved: "{% trans 'Approved' %}",
+      statusFlagged: "{% trans 'Flagged' %}",
+      statusRejected: "{% trans 'Rejected' %}",
+      statusPending: "{% trans 'Pending' %}",
+      document: "{% trans 'Document' %}",
     },
 
     async init() { await this.loadReports(); },
@@ -430,6 +436,19 @@ function reportsPage() {
         notify(this.i18n.downloadPdf, 'success');
       } catch(e) { notify(this.i18n.downloadFailed + ': ' + e.message, 'error'); }
       this.pdfLoading = false;
+    },
+
+    displayTitle(value) {
+      const raw = (value ?? '').toString().trim();
+      if (!raw) return this.i18n.untitledReport;
+      return raw.replace(/\s+None$/g, '').trim();
+    },
+
+    reportTitle(rep) {
+      if (!rep) return this.i18n.untitledReport;
+      const typed = this.reportTypeLabel(rep.report_type);
+      if (typed && typed !== rep.report_type) return typed;
+      return this.displayTitle(rep.title);
     },
 
     reportTypeLabel(type) {

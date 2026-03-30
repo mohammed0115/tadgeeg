@@ -1,29 +1,96 @@
 {% extends "base.html" %}
-{% block title %}قضايا التدقيق{% endblock %}
-{% block page_title %}قضايا التدقيق{% endblock %}
+{% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
+{% block title %}{% trans "Audit Cases" %}{% endblock %}
+{% block page_title %}{% trans "Audit Cases" %}{% endblock %}
 {% block nav_audit %}active{% endblock %}
 {% block content %}
-<div x-data="{cases:[],loading:true,async init(){try{const d=await apiFetch('/audit/cases/?page_size=50');this.cases=d.results||d||[]}catch(e){notify('فشل التحميل','error')}this.loading=false;this.$nextTick(()=>lucide.createIcons())}}" x-init="init()" class="space-y-4 max-w-screen-xl">
+<div x-data="auditList()" x-init="init()" class="space-y-4 max-w-screen-xl">
   <div class="card overflow-hidden">
-    <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/30"><h3 class="font-semibold text-slate-800 dark:text-white">قضايا التدقيق المالي</h3></div>
-    <div x-show="loading" class="flex justify-center py-16"><svg class="animate-spin w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg></div>
+    <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
+      <h3 class="font-semibold text-slate-800 dark:text-white">{% trans "Financial Audit Cases" %}</h3>
+    </div>
+    <div x-show="loading" class="flex justify-center py-16">
+      <svg class="animate-spin w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
+        <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+      </svg>
+    </div>
     <table x-show="!loading" class="data-table">
-      <thead><tr><th>رقم القضية</th><th>العنوان</th><th>النوع</th><th>الخطورة</th><th>الحالة</th><th>تاريخ الفتح</th><th>المعيّن لـ</th></tr></thead>
+      <thead>
+        <tr>
+          <th>{% trans "Case Number" %}</th>
+          <th>{% trans "Title" %}</th>
+          <th>{% trans "Type" %}</th>
+          <th>{% trans "Severity" %}</th>
+          <th>{% trans "Status" %}</th>
+          <th>{% trans "Opened" %}</th>
+          <th>{% trans "Assigned To" %}</th>
+        </tr>
+      </thead>
       <tbody>
         <template x-for="c in cases" :key="c.id">
           <tr class="cursor-pointer" @click="window.location='/audit/'+c.id+'/'">
             <td class="font-mono text-xs" x-text="c.case_number||c.id?.slice(0,8)"></td>
             <td class="font-medium text-slate-800 dark:text-white max-w-xs truncate" x-text="c.title||'—'"></td>
             <td><span class="badge badge-info text-xs" x-text="c.case_type||'—'"></span></td>
-            <td><span :class="'badge-'+c.severity||'badge-medium'" class="badge" x-text="{'critical':'حرج','high':'عالي','medium':'متوسط','low':'منخفض'}[c.severity]||c.severity||'—'"></span></td>
+            <td>
+              <span :class="'badge-'+(c.severity||'medium')" class="badge"
+                    x-text="severityLabel(c.severity)"></span>
+            </td>
             <td><span class="badge badge-info" x-text="c.status||'—'"></span></td>
             <td class="text-xs" x-text="(c.created_at||'').slice(0,10)"></td>
             <td class="text-xs" x-text="c.assigned_to_name||c.assigned_to||'—'"></td>
           </tr>
         </template>
-        <tr x-show="!cases.length&&!loading"><td colspan="7" class="text-center py-16 text-slate-400 text-sm"><i data-lucide="shield-alert" class="w-8 h-8 mx-auto mb-2"></i><p>لا توجد قضايا تدقيق</p></td></tr>
+        <tr x-show="!cases.length && !loading">
+          <td colspan="7" class="text-center py-16 text-slate-400 text-sm">
+            <i data-lucide="shield-alert" class="w-8 h-8 mx-auto mb-2"></i>
+            <p x-text="i18n.noCases"></p>
+          </td>
+        </tr>
       </tbody>
     </table>
   </div>
 </div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function auditList() {
+  return {
+    cases: [],
+    loading: true,
+    i18n: {
+      critical:   '{% trans "Critical" %}',
+      high:       '{% trans "High" %}',
+      medium:     '{% trans "Medium" %}',
+      low:        '{% trans "Low" %}',
+      loadFailed: '{% trans "Loading failed" %}',
+      noCases:    '{% trans "No audit cases" %}',
+    },
+
+    async init() {
+      try {
+        const d = await apiFetch('/audit/cases/?page_size=50');
+        this.cases = d.results || d || [];
+      } catch(e) {
+        notify(this.i18n.loadFailed, 'error');
+      }
+      this.loading = false;
+      this.$nextTick(() => lucide.createIcons());
+    },
+
+    severityLabel(s) {
+      return {
+        critical: this.i18n.critical,
+        high:     this.i18n.high,
+        medium:   this.i18n.medium,
+        low:      this.i18n.low,
+      }[s] ?? s ?? '—';
+    },
+  };
+}
+</script>
 {% endblock %}

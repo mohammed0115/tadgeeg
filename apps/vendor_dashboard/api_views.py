@@ -18,6 +18,7 @@ from apps.authentication.models import OrganizationSettings
 from apps.authentication.views import CurrentOrganizationView, ChangePasswordView
 from apps.audit_engine.models import AuditJob, AuditResult
 from apps.documents.models import Document
+from apps.documents.typed_models import DOCUMENT_TYPE_LABELS
 from apps.file_management.models import AuditFileProfile, Folder
 from apps.file_management.serializers import AuditFileListSerializer, FolderSerializer
 from apps.reports.models import Report
@@ -41,6 +42,10 @@ def _current_org(user):
     if organization is None:
         raise Http404("Organization context is required.")
     return organization
+
+
+def _document_type_label(doc_type: str) -> str:
+    return str(DOCUMENT_TYPE_LABELS.get(doc_type, doc_type))
 
 
 def _storage_payload(organization) -> dict:
@@ -69,7 +74,8 @@ def _storage_payload(organization) -> dict:
         "storage_breakdown": [
             {
                 "type": item["document_type"],
-                "label_ar": item["document_type"],
+                "label": _document_type_label(item["document_type"]),
+                "label_ar": _document_type_label(item["document_type"]),
                 "size_bytes": item["size"] or 0,
                 "size_human": _human_size(item["size"] or 0),
                 "count": item["count"],

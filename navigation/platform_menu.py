@@ -1,26 +1,24 @@
 """Sidebar navigation for the Get Solution platform admin console."""
 
+from django.utils.translation import gettext_lazy as _
+
 from navigation.route_names import PlatformAdminRoute
 
 
 PLATFORM_MENU = [
     {
         "section": "main",
-        "section_label": "Main",
-        "section_label_ar": "الرئيسية",
-        "section_ar": "الرئيسية",
+        "section_label": _("Main"),
         "items": [
             {
                 "key": "dashboard",
-                "label": "Platform Overview",
-                "label_ar": "الرئيسية",
+                "label": _("Platform Overview"),
                 "route_name": PlatformAdminRoute.DASHBOARD,
                 "icon": "layout-dashboard",
             },
             {
                 "key": "organizations",
-                "label": "Organizations",
-                "label_ar": "المنظمات",
+                "label": _("Organizations"),
                 "route_name": PlatformAdminRoute.ORGANIZATIONS,
                 "icon": "building-2",
             },
@@ -28,56 +26,47 @@ PLATFORM_MENU = [
     },
     {
         "section": "content",
-        "section_label": "Content",
-        "section_label_ar": "إدارة المحتوى",
-        "section_ar": "إدارة المحتوى",
+        "section_label": _("Content"),
         "items": [
             {
                 "key": "cms_pages",
-                "label": "CMS Pages",
-                "label_ar": "إدارة المحتوى",
+                "label": _("CMS Pages"),
                 "route_name": PlatformAdminRoute.CMS,
                 "icon": "file-text",
             },
             {
                 "key": "homepage",
-                "label": "Homepage",
-                "label_ar": "الصفحة الرئيسية",
+                "label": _("Homepage"),
                 "route_name": PlatformAdminRoute.HOMEPAGE,
                 "icon": "home",
             },
             {
                 "key": "about",
-                "label": "About Us",
-                "label_ar": "من نحن",
+                "label": _("About Us"),
                 "route_name": PlatformAdminRoute.ABOUT,
                 "icon": "info",
             },
             {
                 "key": "services",
-                "label": "Services",
-                "label_ar": "الخدمات",
+                "label": _("Services"),
                 "route_name": PlatformAdminRoute.SERVICES,
                 "icon": "layers-3",
             },
             {
                 "key": "pricing",
-                "label": "Pricing Plans",
-                "label_ar": "الأسعار",
+                "label": _("Pricing Plans"),
                 "route_name": PlatformAdminRoute.PRICING,
                 "icon": "badge-dollar-sign",
             },
             {
                 "key": "faq",
-                "label": "FAQ",
-                "label_ar": "الأسئلة الشائعة",
+                "label": _("FAQ"),
                 "route_name": PlatformAdminRoute.FAQ,
                 "icon": "help-circle",
             },
             {
                 "key": "intro_video",
-                "label": "Intro Video",
-                "label_ar": "الفيديو التعريفي",
+                "label": _("Intro Video"),
                 "route_name": PlatformAdminRoute.INTRO_VIDEO,
                 "icon": "play-circle",
             },
@@ -85,35 +74,29 @@ PLATFORM_MENU = [
     },
     {
         "section": "growth",
-        "section_label": "Growth",
-        "section_label_ar": "النمو والتشغيل",
-        "section_ar": "النمو والتشغيل",
+        "section_label": _("Growth"),
         "items": [
             {
                 "key": "jobs",
-                "label": "Jobs",
-                "label_ar": "الوظائف",
+                "label": _("Jobs"),
                 "route_name": PlatformAdminRoute.JOBS,
                 "icon": "briefcase",
             },
             {
                 "key": "leads",
-                "label": "Contact Leads",
-                "label_ar": "طلبات التواصل",
+                "label": _("Contact Leads"),
                 "route_name": PlatformAdminRoute.LEADS,
                 "icon": "inbox",
             },
             {
                 "key": "seo",
-                "label": "SEO",
-                "label_ar": "SEO",
+                "label": _("SEO"),
                 "route_name": PlatformAdminRoute.SEO,
                 "icon": "search",
             },
             {
                 "key": "media",
-                "label": "Media Library",
-                "label_ar": "مكتبة الوسائط",
+                "label": _("Media Library"),
                 "route_name": PlatformAdminRoute.MEDIA,
                 "icon": "images",
             },
@@ -121,35 +104,29 @@ PLATFORM_MENU = [
     },
     {
         "section": "system",
-        "section_label": "System",
-        "section_label_ar": "النظام",
-        "section_ar": "النظام",
+        "section_label": _("System"),
         "items": [
             {
                 "key": "storage",
-                "label": "Storage Providers",
-                "label_ar": "مزودي التخزين",
+                "label": _("Storage Providers"),
                 "route_name": PlatformAdminRoute.STORAGE,
                 "icon": "hard-drive",
             },
             {
                 "key": "settings",
-                "label": "Platform Settings",
-                "label_ar": "إعدادات المنصة",
+                "label": _("Platform Settings"),
                 "route_name": PlatformAdminRoute.SETTINGS,
                 "icon": "settings-2",
             },
             {
                 "key": "monitoring",
-                "label": "System Monitoring",
-                "label_ar": "مراقبة النظام",
+                "label": _("System Monitoring"),
                 "route_name": PlatformAdminRoute.MONITORING,
                 "icon": "activity",
             },
             {
                 "key": "activity_logs",
-                "label": "Activity Logs",
-                "label_ar": "سجل النشاط",
+                "label": _("Activity Logs"),
                 "route_name": PlatformAdminRoute.ACTIVITY_LOGS,
                 "icon": "scroll-text",
             },

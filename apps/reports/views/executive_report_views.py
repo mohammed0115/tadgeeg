@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.shortcuts import render
 from django.http import JsonResponse
+from django.utils.translation import get_language
 from ..services.executive_ai_report_service import (
     ExecutiveAIReportGenerator,
     create_audit_data_from_dict
@@ -36,7 +37,8 @@ def generate_executive_report_api(request):
         
         # توليد التقرير
         generator = ExecutiveAIReportGenerator()
-        report = generator.generate_report(audit_data)
+        language = getattr(request, 'LANGUAGE_CODE', None) or get_language() or 'ar'
+        report = generator.generate_report(audit_data, language=language)
         
         return Response({
             "status": "success",
@@ -79,7 +81,8 @@ class ExecutiveReportDetailView(APIView):
             
             # توليد التقرير
             generator = ExecutiveAIReportGenerator()
-            report = generator.generate_report(audit_data)
+            language = getattr(request, 'LANGUAGE_CODE', None) or get_language() or 'ar'
+            report = generator.generate_report(audit_data, language=language)
             
             return Response({
                 "status": "success",

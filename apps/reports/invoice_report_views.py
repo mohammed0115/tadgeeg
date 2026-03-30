@@ -21,6 +21,7 @@ import logging
 
 from django.http import HttpResponse
 from django.template.loader import render_to_string
+from django.utils.translation import gettext as _
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -156,12 +157,19 @@ class InvoiceAuditReportGenerateView(APIView):
         try:
             svc  = InvoiceAuditReportService(org, request.user)
             data = svc.build(date_from=date_from, date_to=date_to, language=language)
+            report_header = data.setdefault("report_header", {})
 
             if do_save:
+                report_title = (
+                    report_header.get("title")
+                    or report_header.get("title_en")
+                    or report_header.get("title_ar")
+                    or "Invoice Audit Report"
+                )
                 report_obj = Report.objects.create(
                     organization=org,
                     generated_by=request.user,
-                    title=data["report_header"]["title"],
+                    title=report_title,
                     report_type="invoice_audit",
                     language=language,
                     period_from=str(date_from) if date_from else "",
@@ -169,7 +177,7 @@ class InvoiceAuditReportGenerateView(APIView):
                     data=data,
                     narrative={},
                 )
-                data["report_header"]["report_id"] = str(report_obj.id)
+                report_header["report_id"] = str(report_obj.id)
 
             return Response(data, status=status.HTTP_201_CREATED)
 
@@ -252,7 +260,7 @@ class InvoiceAuditReportPDFView(_TenantReportMixin, APIView):
         except Exception as exc:
             logger.error("PDF generation failed for report %s: %s", pk, exc)
             return Response(
-                {"error": "PDF generation failed. Use the /html/ endpoint to view this report."},
+                {"error": _("PDF generation failed. Use the /html/ endpoint to view this report.")},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

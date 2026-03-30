@@ -421,14 +421,14 @@
       <div class="text-center mb-16">
         <div class="inline-flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-full px-4 py-2 text-sm font-semibold text-violet-700 mb-5">
           <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>
-          {% blocktrans with product=product_name %}لماذا تختار {{ product }}؟{% endblocktrans %}
+          {% blocktrans with product=product_name %}Why choose {{ product }}?{% endblocktrans %}
         </div>
         <h2 class="text-4xl lg:text-5xl font-black text-gray-900 mb-3">
-          {% trans "قدرات لا مثيل لها في" %}
-          <span class="text-grad">{% trans "التدقيق المالي" %}</span>
+          {% trans "Unmatched capabilities in" %}
+          <span class="text-grad">{% trans "financial auditing" %}</span>
         </h2>
         <p class="text-lg text-gray-500 max-w-xl mx-auto">
-          {% trans "اضغط على أي ميزة لاستكشاف التفاصيل — نظام شامل لمؤسسات الخليج" %}
+          {% trans "Tap any feature to explore the details — a complete platform for GCC organizations" %}
         </p>
       </div>
 
@@ -457,8 +457,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
               </svg>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">{% trans "أتمتة بنسبة 95%" %}</h3>
-            <p class="text-gray-500 text-sm leading-relaxed">{% trans "تشغيل آلي كامل لعمليات التدقيق والمراجعة دون تدخل يدوي." %}</p>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">{% blocktrans with pct="95%" %}{{ pct }} automation{% endblocktrans %}</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">{% trans "End-to-end automated auditing and review workflows with minimal manual intervention." %}</p>
             <!-- Expanded -->
             <div
               x-show="active === 1"
@@ -471,8 +471,8 @@
               class="mt-4 pt-4 border-t border-violet-100 space-y-2"
             >
               <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>{% trans "معالجة آلاف الفواتير في ثوانٍ" %}</p>
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>{% trans "تقليل الأخطاء البشرية بنسبة 99%" %}</p>
-              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>{% trans "توفير 80% من وقت الفريق المالي" %}</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>{% blocktrans with pct="99%" %}تقليل الأخطاء البشرية بنسبة {{ pct }}{% endblocktrans %}</p>
+              <p class="flex items-center gap-2 text-sm text-gray-600"><span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>{% blocktrans with pct="80%" %}توفير {{ pct }} من وقت الفريق المالي{% endblocktrans %}</p>
             </div>
           </div>
         </div>
@@ -497,8 +497,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
               </svg>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">{% trans "امتثال كامل لـ ZATCA" %}</h3>
-            <p class="text-gray-500 text-sm leading-relaxed">{% trans "توافق تام مع متطلبات الفوترة الإلكترونية المرحلة الثانية." %}</p>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">{% trans "Full ZATCA compliance" %}</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">{% trans "Fully aligned with phase-two e-invoicing requirements." %}</p>
             <div
               x-show="active === 2"
               x-transition:enter="transition ease-out duration-350"
@@ -536,8 +536,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
               </svg>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">{% trans "ذكاء اصطناعي متقدم" %}</h3>
-            <p class="text-gray-500 text-sm leading-relaxed">{% trans "نماذج GPT-4o وتعلم الآلة المتخصصة في البيانات المالية العربية." %}</p>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">{% trans "Advanced artificial intelligence" %}</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">{% trans "GPT-4o and machine-learning models specialized for Arabic financial data." %}</p>
             <div
               x-show="active === 3"
               x-transition:enter="transition ease-out duration-350"
@@ -575,8 +575,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
               </svg>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">{% trans "أمان عالي المستوى" %}</h3>
-            <p class="text-gray-500 text-sm leading-relaxed">{% trans "تشفير طرفي، إدارة هوية متعددة المستأجرين، وحماية بيانات حساسة." %}</p>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">{% trans "Enterprise-grade security" %}</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">{% trans "End-to-end encryption, multi-tenant identity controls, and protection for sensitive data." %}</p>
             <div
               x-show="active === 4"
               x-transition:enter="transition ease-out duration-350"
@@ -614,8 +614,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
               </svg>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">{% trans "كشف الاحتيال" %}</h3>
-            <p class="text-gray-500 text-sm leading-relaxed">{% trans "10 خوارزميات متخصصة لاكتشاف مؤشرات الاحتيال والمعاملات المشبوهة." %}</p>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">{% trans "Fraud detection" %}</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">{% trans "10 specialized algorithms to detect fraud indicators and suspicious transactions." %}</p>
             <div
               x-show="active === 5"
               x-transition:enter="transition ease-out duration-350"
@@ -653,8 +653,8 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/>
               </svg>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">{% trans "تحليلات تنبؤية" %}</h3>
-            <p class="text-gray-500 text-sm leading-relaxed">{% trans "نماذج توقعية تستشرف الأداء المالي وتحدد المخاطر قبل وقوعها." %}</p>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">{% trans "Predictive analytics" %}</h3>
+            <p class="text-gray-500 text-sm leading-relaxed">{% trans "Predictive models that forecast financial performance and identify risks before they materialize." %}</p>
             <div
               x-show="active === 6"
               x-transition:enter="transition ease-out duration-350"
@@ -708,7 +708,7 @@
                 <svg class="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
               </div>
               <div>
-                <div class="font-bold text-gray-900 mb-0.5">{% trans "تقليل تكاليف التدقيق بنسبة 70%" %}</div>
+                <div class="font-bold text-gray-900 mb-0.5">{% blocktrans with pct="70%" %}تقليل تكاليف التدقيق بنسبة {{ pct }}{% endblocktrans %}</div>
                 <div class="text-sm text-gray-500">{% trans "عبر أتمتة المهام المتكررة والتحقق التلقائي" %}</div>
               </div>
             </div>

@@ -49,13 +49,13 @@ class DocumentAuditData:
     document_number: str
     company: str
     total_amount: float
-    currency: str = "SAR"
     compliance_score: int  # 0-100
     risk_score: float  # 0-100
     risk_level: RiskLevel
     rules_passed: int
     rules_failed: int
     failed_rules: List[FailedRule]
+    currency: str = "SAR"
     supplier_name: Optional[str] = None
     supplier_vat_valid: Optional[bool] = None
     zatca_compliance: Optional[int] = None  # 0-100 (for invoices)
@@ -106,48 +106,61 @@ class ExecutiveAIReportGenerator:
             }
         }
 
-    def generate_report(self, audit_data: DocumentAuditData) -> Dict[str, str]:
+    # ------------------------------------------------------------------
+    # Bilingual helper
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _t(ar: str, en: str, language: str) -> str:
+        """Return the English string when language='en', Arabic otherwise."""
+        return en if language == "en" else ar
+
+    def generate_report(self, audit_data: DocumentAuditData, language: str = "ar") -> Dict[str, str]:
         """
-        توليد التقرير التنفيذي الكامل
-        Returns: dict with all report sections
+        Generate the full executive report.
+        :param audit_data: Audit data object.
+        :param language: 'ar' (default) or 'en'.
+        Returns: dict with all report sections.
         """
         return {
-            "executive_summary": self._generate_executive_summary(audit_data),
-            "key_findings": self._generate_key_findings(audit_data),
-            "risk_interpretation": self._generate_risk_interpretation(audit_data),
-            "business_impact": self._generate_business_impact(audit_data),
-            "decision": self._generate_decision(audit_data),
-            "immediate_actions": self._generate_immediate_actions(audit_data),
-            "process_improvements": self._generate_process_improvements(audit_data),
-            "ai_insight": self._generate_ai_insight(audit_data)
+            "executive_summary": self._generate_executive_summary(audit_data, language),
+            "key_findings": self._generate_key_findings(audit_data, language),
+            "risk_interpretation": self._generate_risk_interpretation(audit_data, language),
+            "business_impact": self._generate_business_impact(audit_data, language),
+            "decision": self._generate_decision(audit_data, language),
+            "immediate_actions": self._generate_immediate_actions(audit_data, language),
+            "process_improvements": self._generate_process_improvements(audit_data, language),
+            "ai_insight": self._generate_ai_insight(audit_data, language)
         }
 
-    def _generate_executive_summary(self, audit_data: DocumentAuditData) -> str:
-        """
-        1️⃣ الملخص التنفيذي
-        فقرة قصيرة تجيب على: ما الوضع؟ هل آمن؟ هل توجد مخاطر؟
-        """
-        doc_type = self.document_context[audit_data.document_type]["ar"]
+    def _generate_executive_summary(self, audit_data: DocumentAuditData, language: str = "ar") -> str:
+        """1 — Executive Summary."""
+        t = lambda ar, en: self._t(ar, en, language)
+        doc_type = self.document_context[audit_data.document_type][language if language in ("ar", "en") else "ar"]
         compliance = audit_data.compliance_score
         risk = audit_data.risk_score
+        amount = self._format_amount(audit_data.total_amount, language)
 
-        # تحديد الحالة
         if audit_data.rules_failed == 0 and compliance >= 95:
-            status = f"✅ **ممتاز** — يمكن الاعتماد الفوري"
-            tone = "إيجابي جداً"
+            status = t("✅ **ممتاز** — يمكن الاعتماد الفوري", "✅ **Excellent** — Ready for immediate approval")
         elif audit_data.rules_failed > 0 and any(r.blocks_approval for r in audit_data.failed_rules):
-            status = f"❌ **مرفوض** — يتطلب تصحيح فوري"
-            tone = "حرج"
+            status = t("❌ **مرفوض** — يتطلب تصحيح فوري", "❌ **Rejected** — Requires immediate correction")
         elif compliance >= 85:
-            status = f"⚠️ **مشروط** — يمكن الاعتماد مع مراقبة"
-            tone = "تحفظ"
+            status = t("⚠️ **مشروط** — يمكن الاعتماد مع مراقبة", "⚠️ **Conditional** — Approval with monitoring")
         else:
-            status = f"🔴 **ضعيف** — يتطلب مراجعة شاملة"
-            tone = "سلبي"
+            status = t("🔴 **ضعيف** — يتطلب مراجعة شاملة", "🔴 **Weak** — Requires comprehensive review")
 
-        summary = f"""{status}
+        if language == "en":
+            summary = f"""{status}
 
-{doc_type} #{audit_data.document_number} بقيمة ﷼ {self._format_amount(audit_data.total_amount)}.
+{doc_type} #{audit_data.document_number} — {amount}.
+
+Compliance score: {compliance}%{'.' if audit_data.rules_failed == 0 else f', with {audit_data.rules_failed} violation(s) that directly affect approval validity.'}
+
+**Calculated Risk**: {risk}% — Level: {audit_data.risk_level.value}"""
+        else:
+            summary = f"""{status}
+
+{doc_type} #{audit_data.document_number} بقيمة ﷼ {amount}.
 
 رغم تحقيق نسبة امتثال {compliance}%، {'إلا أن' if audit_data.rules_failed > 0 else 'و'} 
 {'المخالفات المكتشفة' if audit_data.rules_failed > 0 else 'الأداء الجيد'} 
@@ -157,78 +170,129 @@ class ExecutiveAIReportGenerator:
 
         return summary
 
-    def _generate_key_findings(self, audit_data: DocumentAuditData) -> str:
-        """
-        2️⃣ أهم النتائج (3-5 نقاط)
-        """
+    def _generate_key_findings(self, audit_data: DocumentAuditData, language: str = "ar") -> str:
+        """2 — Key Findings (3-5 bullet points)."""
+        t = lambda ar, en: self._t(ar, en, language)
         findings = []
+        total_rules = audit_data.rules_passed + audit_data.rules_failed
 
-        # نقاط القوة
         if audit_data.compliance_score >= 90:
-            findings.append(f"✅ **نسبة امتثال عالية**: {audit_data.compliance_score}%")
+            findings.append(f"✅ **{t('نسبة امتثال عالية', 'High Compliance Rate')}**: {audit_data.compliance_score}%")
 
         if audit_data.rules_passed >= 8:
-            findings.append(f"✅ **قواعس ناجحة**: {audit_data.rules_passed} من {audit_data.rules_passed + audit_data.rules_failed}")
+            findings.append(f"✅ **{t('قواعد ناجحة', 'Rules Passed')}**: {audit_data.rules_passed} {t('من', 'of')} {total_rules}")
 
         if audit_data.supplier_vat_valid:
-            findings.append(f"✅ **مورد موثوق**: {audit_data.supplier_name} (ضريبة سارية)")
+            findings.append(f"✅ **{t('مورد موثوق', 'Trusted Supplier')}**: {audit_data.supplier_name} ({t('ضريبة سارية', 'Valid VAT')})")
 
         if audit_data.zatca_compliance == 100:
-            findings.append(f"✅ **امتثال ZATCA كامل**: {audit_data.zatca_compliance}%")
+            findings.append(f"✅ **{t('امتثال ZATCA كامل', 'Full ZATCA Compliance')}**: {audit_data.zatca_compliance}%")
 
-        # نقاط الضعف
         if audit_data.rules_failed > 0:
             blocking = [r for r in audit_data.failed_rules if r.blocks_approval]
+            rule_name = lambda r: r.name_en if language == "en" and r.name_en else r.name_ar
             if blocking:
                 findings.append(
-                    f"❌ **مخالفات حرجة**: {len(blocking)} قاعدة تمنع الاعتماد\n"
-                    f"   • {chr(10).join([f'{r.code}: {r.name_ar}' for r in blocking])}"
+                    f"❌ **{t('مخالفات حرجة', 'Critical Violations')}**: "
+                    f"{len(blocking)} {t('قاعدة تمنع الاعتماد', 'rule(s) blocking approval')}\n"
+                    f"   • {chr(10).join([f'{r.code}: {rule_name(r)}' for r in blocking])}"
                 )
             else:
                 findings.append(
-                    f"⚠️ **مخالفات غير حرجة**: {audit_data.rules_failed} قاعدة لا تمنع الاعتماد"
+                    f"⚠️ **{t('مخالفات غير حرجة', 'Non-critical Violations')}**: "
+                    f"{audit_data.rules_failed} {t('قاعدة لا تمنع الاعتماد', 'rule(s) — approval not blocked')}"
                 )
 
         if audit_data.risk_score > 75:
-            findings.append(f"🔴 **مخاطرة مرتفعة**: درجة {audit_data.risk_score}%")
+            findings.append(f"🔴 **{t('مخاطرة مرتفعة', 'High Risk')}**: {t('درجة', 'Score')} {audit_data.risk_score}%")
 
         return "\n\n".join(findings)
 
-    def _generate_risk_interpretation(self, audit_data: DocumentAuditData) -> str:
-        """
-        3️⃣ تفسير المخاطر
-        لماذا خطير؟ لماذا يؤثر على القرار؟
-        """
+    def _generate_risk_interpretation(self, audit_data: DocumentAuditData, language: str = "ar") -> str:
+        """3 — Risk Interpretation."""
+        t = lambda ar, en: self._t(ar, en, language)
         if not audit_data.failed_rules:
-            return "✅ **لا توجد مخالفات** — جميع القواعس آمنة"
+            return f"✅ **{t('لا توجد مخالفات', 'No Violations')}** — {t('جميع القواعد آمنة', 'All rules passed')}"
 
         interpretation = []
+        rule_name = lambda r: (r.name_en if language == "en" and r.name_en else r.name_ar)
+        impact = lambda r: (
+            (r.impact_en if language == "en" and r.impact_en else r.impact_ar)
+            or t('يؤثر على صلاحية اعتماد المستند', 'Affects the validity of document approval')
+        )
+        risk_type = lambda r: (
+            t('رقابية', 'Control') if 'موافق' in r.code or 'توقيع' in r.code
+            else t('مالية', 'Financial') if 'مبلغ' in r.code
+            else t('قانونية', 'Legal')
+        )
 
-        for rule in audit_data.failed_rules[:3]:  # أهم 3 مخالفات
-            interpretation.append(f"""
-**{rule.code}: {rule.name_ar}**
+        for rule in audit_data.failed_rules[:3]:
+            blocks_label = (
+                f"⚠️ **{t('يمنع الاعتماد', 'Blocks Approval')}**"
+                if rule.blocks_approval
+                else f"✓ {t('لا يمنع الاعتماد', 'Does not block approval')}"
+            )
+            if language == "en":
+                interpretation.append(f"""
+**{rule.code}: {rule_name(rule)}**
+
+Issue: {rule.reason}
+
+Interpretation:
+- **Severity**: {rule.severity}
+- **Impact**: {impact(rule)}
+- **Risk Type**: {risk_type(rule)}
+
+{blocks_label}
+""")
+            else:
+                interpretation.append(f"""
+**{rule.code}: {rule_name(rule)}**
 
 المشكلة: {rule.reason}
 
 التفسير:
 - **الخطورة**: تصنيف {rule.severity}
-- **التأثير**: {rule.impact_ar or 'يؤثر على صلاحية اعتماد المستند'}
-- **نوع المخاطرة**: {'رقابية' if 'موافق' in rule.code or 'توقيع' in rule.code else 'مالية' if 'مبلغ' in rule.code else 'قانونية'}
+- **التأثير**: {impact(rule)}
+- **نوع المخاطرة**: {risk_type(rule)}
 
-{'⚠️ **يمنع الاعتماد**' if rule.blocks_approval else '✓ لا يمنع الاعتماد'}
+{blocks_label}
 """)
 
         return "\n".join(interpretation)
 
-    def _generate_business_impact(self, audit_data: DocumentAuditData) -> str:
-        """
-        4️⃣ تأثير الأعمال
-        ماذا يحدث إذا اعتمدنا؟ ما المخاطر؟
-        """
+    def _generate_business_impact(self, audit_data: DocumentAuditData, language: str = "ar") -> str:
+        """4 — Business Impact."""
+        t = lambda ar, en: self._t(ar, en, language)
         doc_type_info = self.document_context[audit_data.document_type]
+        amount = self._format_amount(audit_data.total_amount, language)
+        has_critical = any(r.blocks_approval for r in audit_data.failed_rules)
 
-        impact = f"""
-**المبلغ المالي**: ﷼ {self._format_amount(audit_data.total_amount)}
+        if language == "en":
+            impact = f"""
+**Financial Amount**: {amount}
+
+**Impact Scenarios:**
+
+| Scenario | Likelihood | Effect |
+|----------|-----------|--------|
+| Internal audit finds the issue | High | Compliance note |
+| External auditor escalates | High | Qualified audit opinion |
+| Regulatory audit | Medium | Fines / penalties |
+| Error reoccurrence | High | Weak control culture |
+
+**Business Impact:**
+{doc_type_info.get('decision_impact', '')}
+
+**Conclusion:**
+"""
+            if audit_data.total_amount > 1_000_000 and has_critical:
+                impact += f"⚠️ High-value document ({amount}) with critical violations — explicit documented approvals required."
+            else:
+                impact += "Risks are manageable with appropriate control measures in place."
+        else:
+            impact = f"""
+**المبلغ المالي**: ﷼ {amount}
 
 **سيناريوهات التأثير:**
 
@@ -240,161 +304,184 @@ class ExecutiveAIReportGenerator:
 | تكرار الخطأ | عالية | ضعف الثقافة الرقابية |
 
 **التأثير على الأعمال:**
-{doc_type_info['decision_impact']}
+{doc_type_info.get('decision_impact', '')}
 
 **الخلاصة:**
 """
-        # إضافة تحذير إذا كان المبلغ كبيراً والمخالفات حرجة
-        if audit_data.total_amount > 1_000_000 and any(r.blocks_approval for r in audit_data.failed_rules):
-            impact += f"⚠️ المبلغ كبير جداً (﷼ {self._format_amount(audit_data.total_amount)}) "
-            impact += "و وجود مخالفات حرجة يستدعي موافقات صريحة و موثقة."
-        else:
-            impact += "المخاطر محتملة لكن قابلة للإدارة مع اتخاذ إجراءات رقابية."
+            if audit_data.total_amount > 1_000_000 and has_critical:
+                impact += f"⚠️ المبلغ كبير جداً (﷼ {amount}) و وجود مخالفات حرجة يستدعي موافقات صريحة و موثقة."
+            else:
+                impact += "المخاطر محتملة لكن قابلة للإدارة مع اتخاذ إجراءات رقابية."
 
         return impact
 
-    def _generate_decision(self, audit_data: DocumentAuditData) -> str:
-        """
-        5️⃣ القرار النهائي
-        """
-        # تحديد القرار
+    def _generate_decision(self, audit_data: DocumentAuditData, language: str = "ar") -> str:
+        """5 — Final Decision."""
+        t = lambda ar, en: self._t(ar, en, language)
         blocking_rules = [r for r in audit_data.failed_rules if r.blocks_approval]
+        rule_name = lambda r: (r.name_en if language == "en" and r.name_en else r.name_ar)
 
         if blocking_rules:
-            decision = "❌ **مرفوض — في الوقت الحالي**"
-            reason = f"المخالفات الحرجة التالية تمنع الاعتماد:\n"
-            for rule in blocking_rules:
-                reason += f"• {rule.code}: {rule.name_ar}\n"
+            decision = t("❌ **مرفوض — في الوقت الحالي**", "❌ **Rejected — At This Time**")
+            reason_header = t(
+                "المخالفات الحرجة التالية تمنع الاعتماد:\n",
+                "The following critical violations block approval:\n"
+            )
+            reason = reason_header + "".join(f"• {r.code}: {rule_name(r)}\n" for r in blocking_rules)
+            doc_status = t("معطل حتى التصحيح", "On hold until corrected")
         elif audit_data.compliance_score < 70:
-            decision = "🔴 **مرفوض — يتطلب مراجعة شاملة**"
-            reason = f"نسبة الامتثال منخفضة جداً ({audit_data.compliance_score}%)"
+            decision = t("🔴 **مرفوض — يتطلب مراجعة شاملة**", "🔴 **Rejected — Requires Comprehensive Review**")
+            reason = t(
+                f"نسبة الامتثال منخفضة جداً ({audit_data.compliance_score}%)",
+                f"Compliance rate is too low ({audit_data.compliance_score}%)"
+            )
+            doc_status = t("معطل حتى المراجعة الشاملة", "On hold pending comprehensive review")
         elif audit_data.compliance_score < 85:
-            decision = "⚠️ **مشروط — مع شروط**"
-            reason = f"يمكن الاعتماد مع مراقبة الجوانب التالية:\n"
-            for rule in audit_data.failed_rules:
-                reason += f"• {rule.name_ar}\n"
+            decision = t("⚠️ **مشروط — مع شروط**", "⚠️ **Conditional — With Conditions**")
+            cond_header = t("يمكن الاعتماد مع مراقبة الجوانب التالية:\n", "Approval allowed with monitoring of the following:\n")
+            reason = cond_header + "".join(f"• {rule_name(r)}\n" for r in audit_data.failed_rules)
+            doc_status = t("معطل حتى تصحيح الملاحظات", "On hold until observations are resolved")
         else:
-            decision = "✅ **موافق — يمكن الاعتماد**"
-            reason = f"جميع المتطلبات الأساسية متوفرة"
+            decision = t("✅ **موافق — يمكن الاعتماد**", "✅ **Approved — Ready for Approval**")
+            reason = t("جميع المتطلبات الأساسية متوفرة", "All essential requirements are met")
+            doc_status = t("جاهز للاعتماد الفوري", "Ready for immediate approval")
 
+        status_label = t("الحالة", "Status")
+        reason_label = t("السبب", "Reason")
         return f"""
 {decision}
 
-**السبب:**
+**{reason_label}:**
 {reason}
 
-**الحالة:**
-المستند {'معطل حتى التصحيح' if 'مرفوض' in decision else 'معطل حتى تصحيح الملاحظات' if 'شروط' in decision else 'جاهز للاعتماد الفوري'}"""
+**{status_label}:**
+{doc_status}"""
 
-    def _generate_immediate_actions(self, audit_data: DocumentAuditData) -> str:
-        """
-        📋 إجراءات فورية
-        """
+    def _generate_immediate_actions(self, audit_data: DocumentAuditData, language: str = "ar") -> str:
+        """Immediate Actions."""
+        t = lambda ar, en: self._t(ar, en, language)
+        rule_name = lambda r: (r.name_en if language == "en" and r.name_en else r.name_ar)
+
         if not audit_data.failed_rules:
-            return "✅ لا توجد إجراءات فورية — المستند جاهز"
+            return f"✅ {t('لا توجد إجراءات فورية — المستند جاهز', 'No immediate actions required — document is ready')}"
 
-        actions = ["**إجراءات فورية (في الساعات القادمة):**\n"]
+        header = t("**إجراءات فورية (في الساعات القادمة):**", "**Immediate Actions (within the next few hours):**")
+        action_label = t("إجراء", "Action")
+        deadline_label = t("موعد", "Deadline")
+        actions = [header + "\n"]
 
         for idx, rule in enumerate(audit_data.failed_rules[:3], 1):
             if rule.blocks_approval:
-                actions.append(f"{idx}. **{rule.name_ar}**")
-                actions.append(f"   - إجراء: {self._get_action_for_rule(rule)}")
-                actions.append(f"   - موعد: {self._get_deadline_for_rule(rule)}\n")
+                actions.append(f"{idx}. **{rule_name(rule)}**")
+                actions.append(f"   - {action_label}: {self._get_action_for_rule(rule, language)}")
+                actions.append(f"   - {deadline_label}: {self._get_deadline_for_rule(rule, language)}\n")
 
         return "\n".join(actions)
 
-    def _generate_process_improvements(self, audit_data: DocumentAuditData) -> str:
-        """
-        📋 تحسينات العملية
-        """
-        improvements = ["**تحسينات العملية (مستقبلاً):**\n"]
-
+    def _generate_process_improvements(self, audit_data: DocumentAuditData, language: str = "ar") -> str:
+        """Process Improvements."""
+        t = lambda ar, en: self._t(ar, en, language)
         doc_type = audit_data.document_type.value
+        header = t("**تحسينات العملية (مستقبلاً):**", "**Process Improvements (Going Forward):**")
+        improvements = [header + "\n"]
 
         if doc_type == "purchase_order":
             improvements.extend([
-                "1. **تحديث نموذج أمر الشراء**",
-                "   - إضافة حقل إلزامي: 'موافق من'",
-                "   - النظام يرفض أي طلب بدون موافقة\n",
-                "2. **توضيح سلسلة الموافقات**",
-                "   - من يوافق على الطلبات < 1 مليون؟",
-                "   - من يوافق على الطلبات 1-5 مليون؟",
-                "   - من يوافق على الطلبات > 5 مليون؟\n",
-                "3. **تدريب المستخدمين**",
-                "   - الموافقة ليست اختيارية",
-                "   - يجب إكمالها قبل الإرسال"
+                f"1. **{t('تحديث نموذج أمر الشراء', 'Update Purchase Order Form')}**",
+                "   - " + t("إضافة حقل إلزامي: 'موافق من'", "Add mandatory field: 'Approved By'"),
+                f"   - {t('النظام يرفض أي طلب بدون موافقة', 'System rejects any request without approval')}\n",
+                f"2. **{t('توضيح سلسلة الموافقات', 'Clarify Approval Chain')}**",
+                "   - " + t("من يوافق على الطلبات < 1 مليون؟", "Who approves requests < 1M?"),
+                "   - " + t("من يوافق على الطلبات 1-5 مليون؟", "Who approves 1M-5M?"),
+                f"   - {t('من يوافق على الطلبات > 5 مليون؟', 'Who approves > 5M?')}\n",
+                f"3. **{t('تدريب المستخدمين', 'User Training')}**",
+                "   - " + t("الموافقة ليست اختيارية", "Approval is not optional"),
+                f"   - {t('يجب إكمالها قبل الإرسال', 'Must be completed before submission')}",
             ])
         elif doc_type == "invoice":
             improvements.extend([
-                "1. **تحديث نموذج الفاتورة**",
-                "   - إضافة تحقق آلي من QR ZATCA",
-                "   - التحقق من مطابقة الضريبة تلقائياً\n",
-                "2. **تفعيل التنبيهات**",
-                "   - تنبيه فوري عند كشف فاتورة مكررة",
-                "   - تنبيه عند انحراف الأسعار\n",
-                "3. **تحسين البيانات الأساسية**",
-                "   - التحقق من بيانات المورد قبل الإدخال",
-                "   - منع إدخال مورد بدون ضريبة سارية"
+                f"1. **{t('تحديث نموذج الفاتورة', 'Update Invoice Form')}**",
+                "   - " + t("إضافة تحقق آلي من QR ZATCA", "Add automatic ZATCA QR verification"),
+                f"   - {t('التحقق من مطابقة الضريبة تلقائياً', 'Auto-verify tax calculations')}\n",
+                f"2. **{t('تفعيل التنبيهات', 'Enable Alerts')}**",
+                "   - " + t("تنبيه فوري عند كشف فاتورة مكررة", "Instant alert on duplicate invoice detection"),
+                f"   - {t('تنبيه عند انحراف الأسعار', 'Alert on price deviation')}\n",
+                f"3. **{t('تحسين البيانات الأساسية', 'Improve Master Data')}**",
+                "   - " + t("التحقق من بيانات المورد قبل الإدخال", "Validate supplier data before entry"),
+                f"   - {t('منع إدخال مورد بدون ضريبة سارية', 'Block supplier entry without valid VAT')}",
             ])
         elif doc_type == "bank_statement":
             improvements.extend([
-                "1. **تفعيل المطابقة الآلية**",
-                "   - ربط تلقائي مع كشوفات البنك",
-                "   - تنبيهات فوري عند الاختلافات\n",
-                "2. **رصد المعاملات المريبة**",
-                "   - تنبيهات AML (مكافحة تبييض الأموال)",
-                "   - رصد العتبات المشبوهة\n",
-                "3. **توثيق أفضل**",
-                "   - قوائم مطابقات يومية",
-                "   - توثيق التسويات اليدوية"
+                f"1. **{t('تفعيل المطابقة الآلية', 'Enable Automated Reconciliation')}**",
+                "   - " + t("ربط تلقائي مع كشوفات البنك", "Automatic bank statement linkage"),
+                f"   - {t('تنبيهات فورية عند الاختلافات', 'Instant alerts on discrepancies')}\n",
+                f"2. **{t('رصد المعاملات المريبة', 'Monitor Suspicious Transactions')}**",
+                "   - " + t("تنبيهات AML (مكافحة تبييض الأموال)", "AML alerts (Anti-Money Laundering)"),
+                f"   - {t('رصد العتبات المشبوهة', 'Monitor suspicious thresholds')}\n",
+                f"3. **{t('توثيق أفضل', 'Improved Documentation')}**",
+                "   - " + t("قوائم مطابقات يومية", "Daily reconciliation lists"),
+                f"   - {t('توثيق التسويات اليدوية', 'Document manual adjustments')}",
             ])
 
         return "\n".join(improvements)
 
-    def _generate_ai_insight(self, audit_data: DocumentAuditData) -> str:
-        """
-        💡 الرؤية الذكية
-        هل المشكلة معزولة أم نظامية؟
-        """
-        insight = "**التحليل الذكي:**\n\n"
+    def _generate_ai_insight(self, audit_data: DocumentAuditData, language: str = "ar") -> str:
+        """AI Insight — isolated vs. systemic problem."""
+        t = lambda ar, en: self._t(ar, en, language)
+        insight = f"**{t('التحليل الذكي', 'AI Analysis')}:**\n\n"
 
-        # تحليل نمط المشاكل
         if not audit_data.failed_rules:
-            insight += "✅ **نمط صحي** — لا توجد مشاكل متكررة"
+            insight += f"✅ **{t('نمط صحي', 'Healthy Pattern')}** — {t('لا توجد مشاكل متكررة', 'No recurring issues')}"
         else:
             rule_codes = set(r.code[:3] for r in audit_data.failed_rules)
             if len(rule_codes) == 1:
-                insight += "🔴 **مشكلة نظامية** — نفس المشكلة تتكرر"
-                insight += f"\n- العامل: {list(rule_codes)[0]}"
-                insight += "\n- الحل: إعادة بناء العملية من الصفر"
+                insight += f"🔴 **{t('مشكلة نظامية', 'Systemic Issue')}** — {t('نفس المشكلة تتكرر', 'Same problem recurring')}"
+                insight += f"\n- {t('العامل', 'Factor')}: {list(rule_codes)[0]}"
+                insight += f"\n- {t('الحل', 'Recommendation')}: {t('إعادة بناء العملية من الصفر', 'Rebuild the process from scratch')}"
             else:
-                insight += "⚠️ **مشاكل متعددة** — عدة نقاط ضعف"
-                insight += f"\n- عدد المناطق المتأثرة: {len(rule_codes)}"
+                insight += f"⚠️ **{t('مشاكل متعددة', 'Multiple Issues')}** — {t('عدة نقاط ضعف', 'Several weak points')}"
+                insight += f"\n- {t('عدد المناطق المتأثرة', 'Affected areas')}: {len(rule_codes)}"
 
-        insight += "\n\n**الخلاصة المبدئية:**\n"
+        insight += f"\n\n**{t('الخلاصة المبدئية', 'Preliminary Conclusion')}:**\n"
 
         if audit_data.risk_score > 80:
-            insight += "⚠️ درجة المخاطرة المرتفعة تشير إلى **مشاكل هيكلية** في العملية"
+            insight += t(
+                "⚠️ درجة المخاطرة المرتفعة تشير إلى **مشاكل هيكلية** في العملية",
+                "⚠️ The elevated risk score indicates **structural issues** in the process"
+            )
         elif audit_data.compliance_score < 80:
-            insight += "📌 نسبة الامتثال المنخفضة تستدعي **تدريب محسّن** للمستخدمين"
+            insight += t(
+                "📌 نسبة الامتثال المنخفضة تستدعي **تدريب محسّن** للمستخدمين",
+                "📌 The low compliance rate calls for **improved user training**"
+            )
         else:
-            insight += "✅ الأداء جيد — تركيز على الجوانب المتبقية فقط"
+            insight += t(
+                "✅ الأداء جيد — تركيز على الجوانب المتبقية فقط",
+                "✅ Performance is good — focus on the remaining minor issues only"
+            )
 
         return insight
 
     # ========== Helper Methods ==========
 
-    def _format_amount(self, amount: float) -> str:
-        """تنسيق المبالغ المالية"""
-        if amount >= 1_000_000:
-            return f"{amount / 1_000_000:.1f} مليون"
-        elif amount >= 1_000:
-            return f"{amount / 1_000:.1f} ألف"
-        return f"{amount:.2f}"
+    def _format_amount(self, amount: float, language: str = "ar") -> str:
+        """Format monetary amounts with language-aware number words."""
+        if language == "en":
+            if amount >= 1_000_000:
+                return f"{amount / 1_000_000:.1f}M SAR"
+            elif amount >= 1_000:
+                return f"{amount / 1_000:.1f}K SAR"
+            return f"SAR {amount:.2f}"
+        else:
+            if amount >= 1_000_000:
+                return f"{amount / 1_000_000:.1f} مليون"
+            elif amount >= 1_000:
+                return f"{amount / 1_000:.1f} ألف"
+            return f"{amount:.2f}"
 
-    def _get_action_for_rule(self, rule: FailedRule) -> str:
-        """الإجراء الموصى به لكل قاعدة"""
-        actions = {
+    def _get_action_for_rule(self, rule: FailedRule, language: str = "ar") -> str:
+        """Recommended action per rule (bilingual)."""
+        actions_ar = {
             "PO-008": "الحصول على موافقة من السلطة المختصة",
             "INV-005": "التحقق من بيانات المورد وضريبته",
             "INV-007": "التحقق من عدم التكرار وإعادة الإرسال",
@@ -402,16 +489,26 @@ class ExecutiveAIReportGenerator:
             "QR-001": "إعادة توليد QR من النظام",
             "BNK-002": "مطابقة يدوية مع البنك",
         }
-        return actions.get(rule.code, f"تصحيح: {rule.reason}")
+        actions_en = {
+            "PO-008": "Obtain approval from the competent authority",
+            "INV-005": "Verify supplier data and VAT registration",
+            "INV-007": "Confirm no duplicate and resubmit",
+            "VAT-003": "Review and correct the tax calculation",
+            "QR-001": "Regenerate QR code from the system",
+            "BNK-002": "Perform manual bank reconciliation",
+        }
+        if language == "en":
+            return actions_en.get(rule.code, f"Correct: {rule.reason}")
+        return actions_ar.get(rule.code, f"تصحيح: {rule.reason}")
 
-    def _get_deadline_for_rule(self, rule: FailedRule) -> str:
-        """الموعد النهائي لكل إجراء"""
+    def _get_deadline_for_rule(self, rule: FailedRule, language: str = "ar") -> str:
+        """Deadline per rule (bilingual)."""
+        t = lambda ar, en: self._t(ar, en, language)
         if rule.severity == "Critical":
-            return "فوري (اليوم)"
+            return t("فوري (اليوم)", "Immediate (today)")
         elif rule.severity == "High":
-            return "24 ساعة"
-        else:
-            return "48 ساعة"
+            return t("24 ساعة", "24 hours")
+        return t("48 ساعة", "48 hours")
 
 
 # ========== Utility Functions ==========
@@ -451,6 +548,6 @@ def create_audit_data_from_dict(data: Dict) -> DocumentAuditData:
         supplier_vat_valid=data.get("supplier", {}).get("vat_valid"),
         zatca_compliance=data.get("zatca_compliance"),
         audit_date=data.get("audit_date", datetime.now()),
-        auditor_name=data.get("auditor_name", "نظام التدقيق الذكي"),
+        auditor_name=data.get("auditor_name", "AI Audit System"),
         custom_fields=data.get("custom_fields", {})
     )

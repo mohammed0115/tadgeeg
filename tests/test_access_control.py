@@ -133,9 +133,9 @@ class NavigationDefinitionTests(TestCase):
     def test_platform_menu_uses_platform_namespace_only(self):
         from navigation.platform_menu import PLATFORM_MENU
 
-        labels = [section["section_label_ar"] for section in PLATFORM_MENU]
-        self.assertIn("الرئيسية", labels)
-        self.assertIn("إدارة المحتوى", labels)
+        sections = [section["section"] for section in PLATFORM_MENU]
+        self.assertIn("main", sections)
+        self.assertIn("content", sections)
 
         route_names = [item["route_name"] for section in PLATFORM_MENU for item in section["items"]]
         self.assertTrue(all(route_name.startswith("platform_admin:") for route_name in route_names))
@@ -143,9 +143,9 @@ class NavigationDefinitionTests(TestCase):
     def test_vendor_menu_uses_vendor_namespace_only(self):
         from navigation.vendor_menu import VENDOR_MENU
 
-        labels = [section["section_label_ar"] for section in VENDOR_MENU]
-        self.assertIn("الرئيسية", labels)
-        self.assertIn("الملفات", labels)
+        sections = [section["section"] for section in VENDOR_MENU]
+        self.assertIn("main", sections)
+        self.assertIn("files", sections)
 
         route_names = [item["route_name"] for section in VENDOR_MENU for item in section["items"]]
         self.assertTrue(all(route_name.startswith("vendor_dashboard:") for route_name in route_names))

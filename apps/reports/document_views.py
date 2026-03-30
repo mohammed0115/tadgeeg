@@ -14,6 +14,7 @@ Endpoints:
 import logging
 from django.http import HttpResponse
 from django.template.loader import render_to_string
+from django.utils.translation import gettext as _
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -104,11 +105,13 @@ class DocumentReportGenerateView(APIView):
     @staticmethod
     def _report_title(data: dict, language: str, summary: bool = False) -> str:
         meta = data.get("report_meta", {})
-        doc_label = meta.get("document_type_label_ar") if language == "ar" else meta.get("document_type_label_en", "")
+        raw_label = meta.get("document_type_label_ar") if language == "ar" else meta.get("document_type_label_en", "")
+        doc_label = str(raw_label or "").strip()
         if summary:
             return f"تقرير إجمالي — {doc_label}".strip() if language == "ar" else \
                    f"Summary Report — {doc_label}".strip()
-        doc_num = data.get("key_fields", {}).get("document_number", "")
+        raw_doc_num = data.get("key_fields", {}).get("document_number", "")
+        doc_num = str(raw_doc_num or "").strip()
         return f"تقرير تدقيق — {doc_label} {doc_num}".strip() if language == "ar" else \
                f"Audit Report — {doc_label} {doc_num}".strip()
 
@@ -188,13 +191,13 @@ class DocumentReportPDFView(APIView):
         except OSError as exc:
             logger.warning("WeasyPrint OSError (missing system libs) for document report %s: %s", pk, exc)
             return Response(
-                {"error": "مكتبات PDF غير مهيأة على الخادم. استخدم رابط /html/ لعرض التقرير."},
+                {"error": _("PDF libraries are not configured on the server. Use the /html/ endpoint to view the report.")},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         except Exception as exc:
             logger.error("PDF generation failed for document report %s: %s", pk, exc)
             return Response(
-                {"error": "فشل توليد PDF. استخدم رابط /html/ لعرض التقرير."},
+                {"error": _("PDF generation failed. Use the /html/ endpoint to view the report.")},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
@@ -371,13 +374,13 @@ class ExecutiveReportPDFView(APIView):
         except OSError as exc:
             logger.warning("WeasyPrint OSError (missing system libs) for executive report %s: %s", pk, exc)
             return Response(
-                {"error": "مكتبات PDF غير مهيأة على الخادم. استخدم رابط /html/ لعرض التقرير."},
+                {"error": _("PDF libraries are not configured on the server. Use the /html/ endpoint to view the report.")},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         except Exception as exc:
             logger.error("PDF generation failed for executive report %s: %s", pk, exc)
             return Response(
-                {"error": "فشل توليد PDF. استخدم رابط /html/ لعرض التقرير."},
+                {"error": _("PDF generation failed. Use the /html/ endpoint to view the report.")},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

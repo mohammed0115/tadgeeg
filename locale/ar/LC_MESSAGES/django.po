@@ -1938,6 +1938,93 @@ msgstr "مع تكرارات"
 msgid "Vendor List"
 msgstr "قائمة الموردين"
 
+msgid "Compliance %(compliance)s%"
+msgstr "الامتثال %(compliance)s%"
+
+msgid "Smart Audit Rule Engine — %(total_rules)s rules applied across %(docs)s documents"
+msgstr "محرك التدقيق الذكي — تم تطبيق %(total_rules)s قاعدة عبر %(docs)s مستند"
+
+msgid "%(docs)s documents"
+msgstr "%(docs)s مستند"
+
+msgid "%(count)s blocking"
+msgstr "%(count)s تعطيل"
+
+msgid "Affected Invoices"
+msgstr "الفواتير المتأثرة"
+
+msgid "No invoice numbers available."
+msgstr "لا توجد أرقام فواتير متاحة."
+
+msgid "+ %(extra)s more"
+msgstr "+ %(extra)s أخرى"
+
+msgid "No failed-rule data available."
+msgstr "لا توجد بيانات إخفاقات متاحة."
+
+msgid "Recommendations & Actions"
+msgstr "التوصيات والإجراءات"
+
+msgid "Future Improvements"
+msgstr "تحسينات مستقبلية"
+
+msgid "Duplicate & Anomaly Detection"
+msgstr "كشف التكرار والشذوذ"
+
+msgid "Dominant Vendor"
+msgstr "المورد المهيمن"
+
+msgid "Vendor Dependency"
+msgstr "نسبة الاعتماد على المورد"
+
+msgid "Why choose %(product)s?"
+msgstr "لماذا تختار %(product)s؟"
+
+msgid "Unmatched capabilities in"
+msgstr "قدرات لا مثيل لها في"
+
+msgid "financial auditing"
+msgstr "التدقيق المالي"
+
+msgid "Tap any feature to explore the details — a complete platform for GCC organizations"
+msgstr "اضغط على أي ميزة لاستكشاف التفاصيل — نظام شامل لمؤسسات الخليج"
+
+msgid "%(pct)s automation"
+msgstr "أتمتة بنسبة %(pct)s"
+
+msgid "End-to-end automated auditing and review workflows with minimal manual intervention."
+msgstr "تشغيل آلي كامل لعمليات التدقيق والمراجعة دون تدخل يدوي."
+
+msgid "Full ZATCA compliance"
+msgstr "امتثال كامل لـ ZATCA"
+
+msgid "Fully aligned with phase-two e-invoicing requirements."
+msgstr "توافق تام مع متطلبات الفوترة الإلكترونية المرحلة الثانية."
+
+msgid "Advanced artificial intelligence"
+msgstr "ذكاء اصطناعي متقدم"
+
+msgid "GPT-4o and machine-learning models specialized for Arabic financial data."
+msgstr "نماذج GPT-4o وتعلم الآلة المتخصصة في البيانات المالية العربية."
+
+msgid "Enterprise-grade security"
+msgstr "أمان عالي المستوى"
+
+msgid "End-to-end encryption, multi-tenant identity controls, and protection for sensitive data."
+msgstr "تشفير طرفي، إدارة هوية متعددة المستأجرين، وحماية بيانات حساسة."
+
+msgid "Fraud detection"
+msgstr "كشف الاحتيال"
+
+msgid "10 specialized algorithms to detect fraud indicators and suspicious transactions."
+msgstr "10 خوارزميات متخصصة لاكتشاف مؤشرات الاحتيال والمعاملات المشبوهة."
+
+msgid "Predictive analytics"
+msgstr "تحليلات تنبؤية"
+
+msgid "Predictive models that forecast financial performance and identify risks before they materialize."
+msgstr "نماذج توقعية تستشرف الأداء المالي وتحدد المخاطر قبل وقوعها."
+
 msgid "Search by name..."
 msgstr "بحث بالاسم..."
 
@@ -1967,6 +2054,99 @@ msgstr "إعادة إرسال الرابط"
 
 msgid "Send recovery link"
 msgstr "إرسال رابط الاستعادة"
+
+msgid "Open Full Report"
+msgstr "فتح التقرير الكامل"
+
+msgid "General report for all documents"
+msgstr "تقرير إجمالي لجميع المستندات"
+
+msgid "Comprehensive analysis for all uploaded documents of this type"
+msgstr "تحليل شامل لكل المستندات المرفوعة من هذا النوع"
+
+msgid "Or choose a specific document"
+msgstr "أو اختر مستنداً محدداً"
+
+msgid "No uploaded documents of this type"
+msgstr "لا توجد مستندات مرفوعة من هذا النوع"
+
+msgid "Sales Invoice Audit"
+msgstr "تدقيق فاتورة المبيعات"
+
+msgid "Purchase Order Audit"
+msgstr "تدقيق أمر الشراء"
+
+msgid "Bank Statement Audit"
+msgstr "تدقيق كشف الحساب البنكي"
+
+msgid "Payroll Audit"
+msgstr "تدقيق كشف الرواتب"
+
+msgid "Expense Report Audit"
+msgstr "تدقيق تقرير المصروفات"
+
+msgid "VAT Return Audit"
+msgstr "تدقيق إقرار ضريبة القيمة المضافة"
+
+msgid "Fixed Asset Audit"
+msgstr "تدقيق الأصول الثابتة"
+
+msgid "Sales Receipt Audit"
+msgstr "تدقيق إيصال المبيعات"
+
+msgid "Enter document UUID for audit:"
+msgstr "أدخل معرّف المستند (UUID) للتدقيق:"
+
+msgid "VAT, totals, and ZATCA compliance"
+msgstr "ضريبة القيمة المضافة والمبالغ والامتثال لزاتكا"
+
+msgid "Vendor, budget, and approval flow"
+msgstr "المورد والميزانية وسير الاعتماد"
+
+msgid "Transactions, reconciliation, and Benford analysis"
+msgstr "المعاملات والتسوية وتحليل بنفورد"
+
+msgid "Salaries, deductions, and insurance compliance"
+msgstr "الرواتب والاستقطاعات والامتثال للتأمينات"
+
+msgid "Policy compliance, receipts, and categories"
+msgstr "الامتثال للسياسة والإيصالات والفئات"
+
+msgid "Input/output tax and reconciliation"
+msgstr "الضريبة المدخلة والمخرجة والتسوية"
+
+msgid "Depreciation, disposal, and register checks"
+msgstr "الإهلاك والتخلص من الأصول ومراجعة السجل"
+
+msgid "Payment, cash limits, and ZATCA QR"
+msgstr "الدفع والحدود النقدية ورمز زاتكا"
+
+msgid "Unified Financial Document Auditor"
+msgstr "المدقق الموحد للمستندات المالية"
+
+msgid "Smart financial auditor — comprehensive analysis for all financial document types"
+msgstr "مدقق مالي ذكي — تحليل شامل لجميع أنواع المستندات المالية"
+
+msgid "Upload any financial document — invoices, purchase orders, bank statements, payroll sheets, tax returns, and more — for full AI analysis, data extraction, anomaly detection, and ZATCA compliance checks."
+msgstr "ارفع أي مستند مالي — فواتير، أوامر شراء، كشوف حسابات بنكية، كشوف رواتب، إقرارات ضريبية، وغيرها — للحصول على تحليل ذكاء اصطناعي كامل، واستخراج بيانات، واكتشاف الشذوذ، وفحوصات التوافق مع هيئة الزكاة والضريبة والجمارك."
+
+msgid "Upload File"
+msgstr "رفع ملف"
+
+msgid "Text Extraction"
+msgstr "استخراج النص"
+
+msgid "AI Analysis"
+msgstr "تحليل الذكاء الاصطناعي"
+
+msgid "Results Report"
+msgstr "تقرير النتائج"
+
+msgid "Drag one or more files here, or click to choose"
+msgstr "اسحب ملفًا واحدًا أو أكثر هنا، أو انقر للاختيار"
+
+msgid "PDF, images, Excel, CSV, JSON, ZIP — up to 50 MB per file"
+msgstr "PDF، صور، Excel، CSV، JSON، ZIP — حتى 50 ميجابايت لكل ملف"
 
 msgid "Request a new link"
 msgstr "طلب رابط جديد"
@@ -2012,3 +2192,106 @@ msgstr "خطط مرنة لفرق التدقيق والامتثال"
 
 msgid "A financial auditing platform built for the GCC market"
 msgstr "منصة تدقيق مالي مصممة لسوق مجلس التعاون الخليجي"
+
+msgid "PDF libraries are not configured on the server. Use the /html/ endpoint to view the report."
+msgstr "مكتبات PDF غير مهيأة على الخادم. استخدم رابط /html/ لعرض التقرير."
+
+msgid "PDF generation failed. Use the /html/ endpoint to view the report."
+msgstr "فشل توليد PDF. استخدم رابط /html/ لعرض التقرير."
+
+msgid "PDF generation failed. Use the /html/ endpoint to view this report."
+msgstr "فشل توليد PDF. استخدم رابط /html/ لعرض هذا التقرير."
+
+msgid "Risk Interpretation"
+msgstr "تفسير المخاطر"
+
+msgid "Business Impact"
+msgstr "تأثير الأعمال"
+
+msgid "Decision"
+msgstr "القرار"
+
+msgid "Immediate Actions"
+msgstr "إجراءات فورية"
+
+msgid "Process Improvements"
+msgstr "تحسينات العملية"
+
+msgid "AI Insight"
+msgstr "رؤية الذكاء الاصطناعي"
+
+msgid "Generated"
+msgstr "تاريخ الإنشاء"
+
+msgid "Report Type"
+msgstr "نوع التقرير"
+
+msgid "Sample size"
+msgstr "حجم العينة"
+
+msgid "Total spend"
+msgstr "إجمالي الإنفاق"
+
+msgid "Control indicator"
+msgstr "المؤشر الرقابي"
+
+msgid "Avg Risk"
+msgstr "متوسط المخاطر"
+
+msgid "Requires immediate action"
+msgstr "يتطلب تدخلًا فوريًا"
+
+msgid "Suspected cases"
+msgstr "حالات مشتبه بها"
+
+msgid "Each invoice is examined through control rules to determine compliance score and risk classification."
+msgstr "يتم فحص كل فاتورة عبر قواعد رقابية لتحديد درجة الامتثال وتصنيف المخاطر."
+
+msgid "Highest Risk Invoices"
+msgstr "الفواتير الأعلى خطورة"
+
+msgid "Invoice #"
+msgstr "رقم الفاتورة"
+
+msgid "Violations"
+msgstr "المخالفات"
+
+msgid "Review"
+msgstr "مراجعة"
+
+msgid "Safe"
+msgstr "آمنة"
+
+msgid "Reason:"
+msgstr "السبب:"
+
+msgid "No violation details."
+msgstr "لا توجد تفاصيل مخالفات."
+
+msgid "No high-risk invoices."
+msgstr "لا توجد فواتير عالية المخاطر."
+
+# --- Reports: API error messages ---
+msgid "Report not found."
+msgstr "التقرير غير موجود."
+
+msgid "openpyxl not available on server."
+msgstr "openpyxl غير متاح على السيرفر."
+
+msgid "PDF service is not configured on this server. Redeploy after installing the PDF library."
+msgstr "خدمة PDF غير مهيأة على الخادم حاليًا. أعد نشر الخدمة بعد تثبيت مكتبة PDF."
+
+msgid "Failed to generate PDF for this report. Check the server log and try again."
+msgstr "تعذر توليد ملف PDF لهذا التقرير حاليًا. راجع سجل الخادم ثم أعد المحاولة."
+
+msgid "Attached report: %(title)s\n\nGenerated at %(dt)s"
+msgstr "مرفق تقرير: %(title)s\n\nتم إنشاؤه في %(dt)s"
+
+msgid "Report sent to %(recipient)s"
+msgstr "تم إرسال التقرير إلى %(recipient)s"
+
+msgid "Failed to send email. Check SMTP settings."
+msgstr "تعذر إرسال البريد الإلكتروني. راجع إعدادات SMTP."
+
+msgid "A rule violation was detected and requires detailed review."
+msgstr "تم رصد مخالفة لهذه القاعدة وتحتاج مراجعة تفصيلية."

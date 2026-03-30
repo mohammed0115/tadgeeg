@@ -1,4 +1,4 @@
-"""PAY-M04: Net Salary Arithmetic + PAY-M11: Duplicate Employee IDs"""
+"""PAY-M04: Net Salary Arithmetic + PAY-M11: Duplicate Employee IDs + PAY-M02/M05/M06 extended payroll rules"""
 from decimal import Decimal
 from apps.rule_engine.rules.base import AuditRuleBase, NormalizedDocument, RuleResult, EvidenceItem
 
@@ -225,3 +225,206 @@ class DuplicateEmployeeIDRule(AuditRuleBase):
                 )]
             )
         return self._pass("All employee IDs are unique.", "جميع معرّفات الموظفين فريدة.")
+
+
+class SalarySpikeRule(AuditRuleBase):
+    """PAY-M02 — Detect abnormal salary increases (>30% month-over-month) without documented justification."""
+    rule_code = "PAY-M02"
+    rule_name_en = "Unexplained Salary Spike Detected"
+    rule_name_ar = "ارتفاع مفاجئ غير مبرر في الراتب"
+    default_severity = "high"
+    rule_type = "anomaly"
+
+    DEFAULT_SPIKE_PCT = 30.0
+
+    def check_preconditions(self, doc: NormalizedDocument) -> bool:
+        employees = doc.get("employees", [])
+        return isinstance(employees, list) and len(employees) > 0
+
+    def execute(self, doc: NormalizedDocument) -> RuleResult:
+        threshold_pct = float(self.get_config("spike_threshold_pct", self.DEFAULT_SPIKE_PCT))
+        spike_flags = doc.get("salary_spike_flags") or []
+        employees = doc.get("employees", [])
+
+        spikes = []
+        evidence = []
+
+        # Fast path: use pre-computed flags if available
+        if spike_flags:
+            spikes.extend(spike_flags)
+            evidence.append(EvidenceItem(
+                evidence_type="reference",
+                field_name="salary_spike_flags",
+                field_name_ar="بيانات الارتفاع المفاجئ في الراتب",
+                expected_value=f"<= {threshold_pct}% increase",
+                actual_value=spike_flags[:5],
+                description=f"{len(spike_flags)} employee(s) flagged for salary spikes.",
+                description_ar=f"تم الإشارة إلى {len(spike_flags)} موظف بسبب ارتفاع مفاجئ في الراتب.",
+            ))
+
+        # Live check: compare current vs previous salary in employee records
+        for emp in employees:
+            emp_id = str(emp.get("id", "?"))
+            current = self.safe_decimal(emp.get("gross", emp.get("basic", 0)))
+            previous = self.safe_decimal(emp.get("previous_gross", emp.get("previous_basic", 0)))
+            if previous <= 0 or current <= 0:
+                continue
+            increase_pct = float((current - previous) / previous * 100)
+            if increase_pct > threshold_pct:
+                emp_name = emp.get("name", emp_id)
+                if emp_id not in spikes:  # avoid duplicates with pre-computed flags
+                    spikes.append(emp_id)
+                evidence.append(EvidenceItem(
+                    evidence_type="comparison",
+                    field_name="gross_salary",
+                    field_name_ar="الراتب الإجمالي",
+                    expected_value=f"<= {threshold_pct}% increase",
+                    actual_value=f"{increase_pct:.1f}% increase for {emp_name}",
+                    description=f"Employee {emp_name}: previous={float(previous):,.2f}, current={float(current):,.2f}, increase={increase_pct:.1f}%.",
+                    description_ar=f"الموظف {emp_name}: السابق={float(previous):,.2f}، الحالي={float(current):,.2f}، الزيادة={increase_pct:.1f}%.",
+                ))
+
+        if spikes:
+            return self._fail(
+                f"Unexplained salary spike(s) detected in {len(spikes)} employee record(s) "
+                f"(threshold: >{threshold_pct}% increase). Justification required.",
+                f"تم اكتشاف ارتفاع مفاجئ في رواتب {len(spikes)} موظف "
+                f"(الحد: >{threshold_pct}% زيادة). مطلوب توثيق المبرر.",
+                evidence=evidence,
+            )
+        return self._pass(
+            f"No salary spikes exceeding {threshold_pct}% detected.",
+            f"لا توجد ارتفاعات مفاجئة تتجاوز {threshold_pct}% في الرواتب.",
+        )
+
+
+class EmployeeCountConsistencyRule(AuditRuleBase):
+    """PAY-M05 — Headcount in the payroll list must match the declared employee_count field."""
+    rule_code = "PAY-M05"
+    rule_name_en = "Employee Headcount Inconsistency"
+    rule_name_ar = "تناقض في عدد الموظفين المُدرجين"
+    default_severity = "high"
+    rule_type = "validation"
+
+    def check_preconditions(self, doc: NormalizedDocument) -> bool:
+        employees = doc.get("employees", [])
+        return isinstance(employees, list) and len(employees) > 0
+
+    def execute(self, doc: NormalizedDocument) -> RuleResult:
+        employees = doc.get("employees", [])
+        actual_count = len(employees)
+
+        declared_count = doc.get("employee_count")
+        expected_count = doc.get_org("expected_employee_count")
+
+        issues = []
+        evidence = []
+
+        if declared_count is not None:
+            declared_count = int(declared_count)
+            if actual_count != declared_count:
+                issues.append(f"list count ({actual_count}) != declared count ({declared_count})")
+                evidence.append(EvidenceItem(
+                    evidence_type="comparison",
+                    field_name="employee_count",
+                    field_name_ar="عدد الموظفين المُعلن",
+                    expected_value=str(declared_count),
+                    actual_value=str(actual_count),
+                    description=f"Payroll list has {actual_count} employees but header declares {declared_count}.",
+                    description_ar=f"كشف الرواتب يحتوي على {actual_count} موظف لكن الرأسية تُعلن {declared_count}.",
+                ))
+
+        if expected_count is not None:
+            expected_count = int(expected_count)
+            variance = abs(actual_count - expected_count)
+            variance_pct = (variance / expected_count * 100) if expected_count > 0 else 0
+            tolerance_pct = float(self.get_config("headcount_tolerance_pct", 10.0))
+            if variance_pct > tolerance_pct:
+                issues.append(f"headcount {actual_count} deviates {variance_pct:.1f}% from org baseline {expected_count}")
+                evidence.append(EvidenceItem(
+                    evidence_type="comparison",
+                    field_name="employee_count",
+                    field_name_ar="عدد الموظفين",
+                    expected_value=f"{expected_count} ± {tolerance_pct}%",
+                    actual_value=str(actual_count),
+                    description=f"Headcount {actual_count} deviates {variance_pct:.1f}% from expected {expected_count}.",
+                    description_ar=f"عدد الموظفين {actual_count} ينحرف بنسبة {variance_pct:.1f}% عن المتوقع {expected_count}.",
+                ))
+
+        if issues:
+            return self._fail(
+                f"Employee headcount inconsistency: {'; '.join(issues)}.",
+                f"تناقض في عدد الموظفين: {'; '.join(issues)}.",
+                evidence=evidence,
+            )
+        return self._pass(
+            f"Employee headcount ({actual_count}) is consistent.",
+            f"عدد الموظفين ({actual_count}) متسق.",
+        )
+
+
+class PayrollPeriodOverlapRule(AuditRuleBase):
+    """PAY-M06 — Two payroll sheets must not cover the same period for the same organization."""
+    rule_code = "PAY-M06"
+    rule_name_en = "Duplicate Payroll Period Detected"
+    rule_name_ar = "تكرار فترة صرف رواتب"
+    default_severity = "critical"
+    rule_type = "compliance"
+
+    def check_preconditions(self, doc: NormalizedDocument) -> bool:
+        return bool(doc.get("payroll_period_start") and doc.get("payroll_period_end"))
+
+    def execute(self, doc: NormalizedDocument) -> RuleResult:
+        try:
+            from datetime import date as date_type, datetime
+            from apps.documents.typed_models import PayrollSheet
+
+            def _parse(val):
+                if isinstance(val, date_type):
+                    return val
+                return datetime.fromisoformat(str(val)).date()
+
+            period_start = _parse(doc.get("payroll_period_start"))
+            period_end = _parse(doc.get("payroll_period_end"))
+            org_id = doc.organization_id
+            doc_id = doc.document_id
+
+            if org_id is None:
+                return self._not_applicable(
+                    "No organization context — overlap check skipped.",
+                    "لا يوجد سياق مؤسسي — تم تخطي فحص التداخل.",
+                )
+
+            overlapping = PayrollSheet.objects.filter(
+                organization_id=org_id,
+                payroll_period_start__lte=period_end,
+                payroll_period_end__gte=period_start,
+            ).exclude(pk=doc_id).values_list("pk", "payroll_period_start", "payroll_period_end")
+
+            overlapping = list(overlapping)
+
+            if overlapping:
+                overlap_details = [
+                    f"Sheet {pk}: {s} to {e}" for pk, s, e in overlapping[:3]
+                ]
+                return self._fail(
+                    f"Payroll period {period_start} – {period_end} overlaps with {len(overlapping)} "
+                    f"existing sheet(s): {', '.join(overlap_details)}. Double-payment risk.",
+                    f"فترة الرواتب {period_start} – {period_end} تتداخل مع {len(overlapping)} "
+                    f"كشف موجود: {', '.join(overlap_details)}. خطر صرف مزدوج.",
+                    evidence=[EvidenceItem(
+                        evidence_type="reference",
+                        field_name="payroll_period",
+                        field_name_ar="فترة الرواتب",
+                        expected_value="No overlap with existing periods",
+                        actual_value=overlap_details,
+                        description=f"Period {period_start}–{period_end} conflicts with {len(overlapping)} payroll sheet(s).",
+                        description_ar=f"الفترة {period_start}–{period_end} تتعارض مع {len(overlapping)} كشف رواتب.",
+                    )]
+                )
+            return self._pass(
+                f"Payroll period {period_start} – {period_end} has no overlaps.",
+                f"فترة الرواتب {period_start} – {period_end} لا تتداخل مع أي كشف آخر.",
+            )
+        except Exception as e:
+            return self._error(e)

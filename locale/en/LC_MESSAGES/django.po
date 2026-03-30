@@ -138,6 +138,99 @@ msgstr "Overview"
 msgid "Theme"
 msgstr "Theme"
 
+msgid "Open Full Report"
+msgstr "Open Full Report"
+
+msgid "General report for all documents"
+msgstr "General report for all documents"
+
+msgid "Comprehensive analysis for all uploaded documents of this type"
+msgstr "Comprehensive analysis for all uploaded documents of this type"
+
+msgid "Or choose a specific document"
+msgstr "Or choose a specific document"
+
+msgid "No uploaded documents of this type"
+msgstr "No uploaded documents of this type"
+
+msgid "Sales Invoice Audit"
+msgstr "Sales Invoice Audit"
+
+msgid "Purchase Order Audit"
+msgstr "Purchase Order Audit"
+
+msgid "Bank Statement Audit"
+msgstr "Bank Statement Audit"
+
+msgid "Payroll Audit"
+msgstr "Payroll Audit"
+
+msgid "Expense Report Audit"
+msgstr "Expense Report Audit"
+
+msgid "VAT Return Audit"
+msgstr "VAT Return Audit"
+
+msgid "Fixed Asset Audit"
+msgstr "Fixed Asset Audit"
+
+msgid "Sales Receipt Audit"
+msgstr "Sales Receipt Audit"
+
+msgid "Enter document UUID for audit:"
+msgstr "Enter document UUID for audit:"
+
+msgid "VAT, totals, and ZATCA compliance"
+msgstr "VAT, totals, and ZATCA compliance"
+
+msgid "Vendor, budget, and approval flow"
+msgstr "Vendor, budget, and approval flow"
+
+msgid "Transactions, reconciliation, and Benford analysis"
+msgstr "Transactions, reconciliation, and Benford analysis"
+
+msgid "Salaries, deductions, and insurance compliance"
+msgstr "Salaries, deductions, and insurance compliance"
+
+msgid "Policy compliance, receipts, and categories"
+msgstr "Policy compliance, receipts, and categories"
+
+msgid "Input/output tax and reconciliation"
+msgstr "Input/output tax and reconciliation"
+
+msgid "Depreciation, disposal, and register checks"
+msgstr "Depreciation, disposal, and register checks"
+
+msgid "Payment, cash limits, and ZATCA QR"
+msgstr "Payment, cash limits, and ZATCA QR"
+
+msgid "Unified Financial Document Auditor"
+msgstr "Unified Financial Document Auditor"
+
+msgid "Smart financial auditor — comprehensive analysis for all financial document types"
+msgstr "Smart financial auditor — comprehensive analysis for all financial document types"
+
+msgid "Upload any financial document — invoices, purchase orders, bank statements, payroll sheets, tax returns, and more — for full AI analysis, data extraction, anomaly detection, and ZATCA compliance checks."
+msgstr "Upload any financial document — invoices, purchase orders, bank statements, payroll sheets, tax returns, and more — for full AI analysis, data extraction, anomaly detection, and ZATCA compliance checks."
+
+msgid "Upload File"
+msgstr "Upload File"
+
+msgid "Text Extraction"
+msgstr "Text Extraction"
+
+msgid "AI Analysis"
+msgstr "AI Analysis"
+
+msgid "Results Report"
+msgstr "Results Report"
+
+msgid "Drag one or more files here, or click to choose"
+msgstr "Drag one or more files here, or click to choose"
+
+msgid "PDF, images, Excel, CSV, JSON, ZIP — up to 50 MB per file"
+msgstr "PDF, images, Excel, CSV, JSON, ZIP — up to 50 MB per file"
+
 # --- Document type labels ---
 msgid "Purchase Order"
 msgstr "Purchase Order"
@@ -172,3 +265,391 @@ msgstr "Payment Voucher"
 # --- Error messages ---
 msgid "Processing error: %(detail)s"
 msgstr "Processing error: %(detail)s"
+
+msgid "PDF libraries are not configured on the server. Use the /html/ endpoint to view the report."
+msgstr "PDF libraries are not configured on the server. Use the /html/ endpoint to view the report."
+
+msgid "PDF generation failed. Use the /html/ endpoint to view the report."
+msgstr "PDF generation failed. Use the /html/ endpoint to view the report."
+
+msgid "PDF generation failed. Use the /html/ endpoint to view this report."
+msgstr "PDF generation failed. Use the /html/ endpoint to view this report."
+
+msgid "Risk Interpretation"
+msgstr "Risk Interpretation"
+
+msgid "Business Impact"
+msgstr "Business Impact"
+
+msgid "Decision"
+msgstr "Decision"
+
+msgid "Immediate Actions"
+msgstr "Immediate Actions"
+
+msgid "Process Improvements"
+msgstr "Process Improvements"
+
+msgid "AI Insight"
+msgstr "AI Insight"
+
+msgid "Generated"
+msgstr "Generated"
+
+msgid "Report Type"
+msgstr "Report Type"
+
+msgid "Sample size"
+msgstr "Sample size"
+
+msgid "Total spend"
+msgstr "Total spend"
+
+msgid "Control indicator"
+msgstr "Control indicator"
+
+msgid "Avg Risk"
+msgstr "Avg Risk"
+
+msgid "Requires immediate action"
+msgstr "Requires immediate action"
+
+msgid "Suspected cases"
+msgstr "Suspected cases"
+
+msgid "Each invoice is examined through control rules to determine compliance score and risk classification."
+msgstr "Each invoice is examined through control rules to determine compliance score and risk classification."
+
+msgid "Highest Risk Invoices"
+msgstr "Highest Risk Invoices"
+
+msgid "Invoice #"
+msgstr "Invoice #"
+
+msgid "Violations"
+msgstr "Violations"
+
+msgid "Review"
+msgstr "Review"
+
+msgid "Safe"
+msgstr "Safe"
+
+msgid "Reason:"
+msgstr "Reason:"
+
+msgid "No violation details."
+msgstr "No violation details."
+
+msgid "No high-risk invoices."
+msgstr "No high-risk invoices."
+
+msgid "الفواتير"
+msgstr "Invoices"
+
+msgid "فاتورة معالجة"
+msgstr "Processed invoices"
+
+msgid "المنظمات"
+msgstr "Organizations"
+
+msgid "منظمة نشطة"
+msgstr "Active organizations"
+
+msgid "أتمتة التدقيق"
+msgstr "Audit automation"
+
+msgid "تدقيق آلي"
+msgstr "Automated auditing"
+
+msgid "الدقة"
+msgstr "Accuracy"
+
+msgid "معدل الدقة"
+msgstr "Accuracy rate"
+
+msgid "🌍 نغطي منطقة الخليج العربي بالكامل"
+msgstr "🌍 We cover the GCC region end to end"
+
+msgid "امتثال ضريبي شامل في"
+msgstr "Comprehensive tax compliance across"
+
+msgid "دول الخليج"
+msgstr "the GCC"
+
+msgid "نظام مبني خصيصًا لمتطلبات الأنظمة الضريبية لكل دولة خليجية"
+msgstr "A platform built specifically for the tax and compliance requirements of each GCC country"
+
+msgid "المملكة العربية السعودية"
+msgstr "Saudi Arabia"
+
+msgid "الإمارات العربية المتحدة"
+msgstr "United Arab Emirates"
+
+msgid "الكويت"
+msgstr "Kuwait"
+
+msgid "قطر"
+msgstr "Qatar"
+
+msgid "البحرين"
+msgstr "Bahrain"
+
+msgid "سلطنة عُمان"
+msgstr "Oman"
+
+msgid "لماذا تختار %(product)s؟"
+msgstr "Why choose %(product)s?"
+
+msgid "قدرات لا مثيل لها في"
+msgstr "Unmatched capabilities in"
+
+msgid "التدقيق المالي"
+msgstr "financial auditing"
+
+msgid "اضغط على أي ميزة لاستكشاف التفاصيل — نظام شامل لمؤسسات الخليج"
+msgstr "Tap any feature to explore the details — a complete platform for GCC organizations"
+
+msgid "أتمتة بنسبة %(pct)s"
+msgstr "%(pct)s automation"
+
+msgid "تشغيل آلي كامل لعمليات التدقيق والمراجعة دون تدخل يدوي."
+msgstr "End-to-end automated auditing and review workflows with minimal manual intervention."
+
+msgid "معالجة آلاف الفواتير في ثوانٍ"
+msgstr "Process thousands of invoices in seconds"
+
+msgid "تقليل الأخطاء البشرية بنسبة %(pct)s"
+msgstr "Reduce human error by %(pct)s"
+
+msgid "توفير %(pct)s من وقت الفريق المالي"
+msgstr "Save %(pct)s of the finance team's time"
+
+msgid "امتثال كامل لـ ZATCA"
+msgstr "Full ZATCA compliance"
+
+msgid "توافق تام مع متطلبات الفوترة الإلكترونية المرحلة الثانية."
+msgstr "Fully aligned with phase-two e-invoicing requirements."
+
+msgid "رمز QR وفق معيار TLV"
+msgstr "TLV-compliant QR code"
+
+msgid "ربط مباشر مع بوابة فاتورة"
+msgstr "Direct integration with the Fatoora portal"
+
+msgid "تحقق تلقائي من ضريبة القيمة المضافة"
+msgstr "Automatic VAT validation"
+
+msgid "ذكاء اصطناعي متقدم"
+msgstr "Advanced artificial intelligence"
+
+msgid "نماذج GPT-4o وتعلم الآلة المتخصصة في البيانات المالية العربية."
+msgstr "GPT-4o and machine-learning models specialized for Arabic financial data."
+
+msgid "استخراج البيانات من PDF والصور"
+msgstr "Extract data from PDFs and images"
+
+msgid "معالجة اللغة العربية بدقة عالية"
+msgstr "High-accuracy Arabic language processing"
+
+msgid "OCR هجين متعدد المحركات"
+msgstr "Hybrid multi-engine OCR"
+
+msgid "أمان عالي المستوى"
+msgstr "Enterprise-grade security"
+
+msgid "تشفير طرفي، إدارة هوية متعددة المستأجرين، وحماية بيانات حساسة."
+msgstr "End-to-end encryption, multi-tenant identity controls, and protection for sensitive data."
+
+msgid "تشفير AES-256 للبيانات المخزنة"
+msgstr "AES-256 encryption for stored data"
+
+msgid "مصادقة ثنائية العوامل (2FA)"
+msgstr "Two-factor authentication (2FA)"
+
+msgid "سجل تدقيق كامل لجميع العمليات"
+msgstr "Complete audit trail for all operations"
+
+msgid "كشف الاحتيال"
+msgstr "Fraud detection"
+
+msgid "10 خوارزميات متخصصة لاكتشاف مؤشرات الاحتيال والمعاملات المشبوهة."
+msgstr "10 specialized algorithms to detect fraud indicators and suspicious transactions."
+
+msgid "تحليل قانون بنفورد للأرقام"
+msgstr "Benford's Law analysis"
+
+msgid "كشف الفواتير المكررة تلقائيًا"
+msgstr "Automatic duplicate invoice detection"
+
+msgid "تنبيهات فورية عند الاكتشاف"
+msgstr "Instant alerts on detection"
+
+msgid "تحليلات تنبؤية"
+msgstr "Predictive analytics"
+
+msgid "نماذج توقعية تستشرف الأداء المالي وتحدد المخاطر قبل وقوعها."
+msgstr "Predictive models that forecast financial performance and identify risks before they materialize."
+
+msgid "توقع التدفق النقدي للأشهر القادمة"
+msgstr "Cash-flow forecasting for the months ahead"
+
+msgid "تقييم مخاطر الموردين تلقائيًا"
+msgstr "Automatic vendor risk scoring"
+
+msgid "تقارير ذكية قابلة للتصدير"
+msgstr "Smart exportable reports"
+
+msgid "📊 نتائج موثقة وقابلة للقياس"
+msgstr "📊 Measurable, documented outcomes"
+
+msgid "نتائج قابلة للقياس"
+msgstr "Measurable results"
+
+msgid "من اليوم الأول"
+msgstr "from day one"
+
+msgid "لا تنتظر أشهرًا لرؤية الفرق. منصة %(product)s مصممة لتحقيق نتائج ملموسة فور التشغيل."
+msgstr "Do not wait months to see the difference. %(product)s is built to deliver tangible results from the moment it goes live."
+
+msgid "تقليل تكاليف التدقيق بنسبة %(pct)s"
+msgstr "Reduce audit costs by %(pct)s"
+
+msgid "عبر أتمتة المهام المتكررة والتحقق التلقائي"
+msgstr "By automating repetitive tasks and verification steps"
+
+msgid "من أسابيع إلى ساعات"
+msgstr "From weeks to hours"
+
+msgid "معالجة آلاف المستندات في وقت قياسي"
+msgstr "Process thousands of documents in record time"
+
+msgid "صفر مخالفات ضريبية"
+msgstr "Zero tax violations"
+
+msgid "التحقق الآلي الكامل من متطلبات ZATCA"
+msgstr "Complete automated validation against ZATCA requirements"
+
+msgid "اكتشاف 3× أكثر من الاحتيالات"
+msgstr "Detect 3× more fraud cases"
+
+msgid "مقارنةً بالأساليب التقليدية"
+msgstr "Compared with traditional methods"
+
+msgid "معتمد من ZATCA"
+msgstr "ZATCA-aligned"
+
+msgid "فحص متطلبات الامتثال الكاملة"
+msgstr "Full compliance requirement check"
+
+msgid "إعادة تشغيل الفحص"
+msgstr "Run the check again"
+
+msgid "التقدم الكلي"
+msgstr "Overall progress"
+
+msgid "مكتمل"
+msgstr "Complete"
+
+msgid "اجتاز جميع متطلبات ZATCA"
+msgstr "Passed all ZATCA requirements"
+
+msgid "جاهز للإرسال الرسمي للهيئة"
+msgstr "Ready for formal submission to the authority"
+
+msgid "ابدأ اليوم — الإعداد خلال 5 دقائق"
+msgstr "Start today — setup in 5 minutes"
+
+msgid "جاهز لتحويل"
+msgstr "Ready to transform"
+
+msgid "تدقيقك المالي؟"
+msgstr "your financial audit?"
+
+msgid "انضم إلى أكثر من 1,200 منظمة في منطقة الخليج تستخدم %(product)s لأتمتة تدقيقها المالي والامتثال لمتطلبات ZATCA."
+msgstr "Join more than 1,200 organizations across the GCC using %(product)s to automate financial auditing and stay aligned with ZATCA requirements."
+
+msgid "أدخل بريدك الإلكتروني"
+msgstr "Enter your email address"
+
+msgid "ابدأ مجانًا"
+msgstr "Start free"
+
+msgid "لا يلزم بطاقة ائتمانية · 14 يومًا تجريبيًا · إلغاء في أي وقت"
+msgstr "No credit card required · 14-day trial · Cancel anytime"
+
+msgid "المنتج"
+msgstr "Product"
+
+msgid "المميزات"
+msgstr "Features"
+
+msgid "الامتثال ZATCA"
+msgstr "ZATCA compliance"
+
+msgid "التسعير"
+msgstr "Pricing"
+
+msgid "التكاملات"
+msgstr "Integrations"
+
+msgid "واجهة برمجة التطبيقات"
+msgstr "API"
+
+msgid "الشركة"
+msgstr "Company"
+
+msgid "من نحن"
+msgstr "About us"
+
+msgid "الوظائف"
+msgstr "Careers"
+
+msgid "المدونة"
+msgstr "Blog"
+
+msgid "تواصل معنا"
+msgstr "Contact us"
+
+msgid "سياسة الخصوصية"
+msgstr "Privacy policy"
+
+msgid "معالجة الفواتير الإلكترونية"
+msgstr "Electronic invoice processing"
+
+msgid "التحقق من الأرقام الضريبية"
+msgstr "Tax number verification"
+
+msgid "حساب ضريبة القيمة المضافة"
+msgstr "VAT calculation"
+
+msgid "تقارير امتثال شاملة"
+msgstr "Comprehensive compliance reports"
+
+msgid "حماية البيانات المحلية"
+msgstr "Local data protection"
+
+# --- Reports: API error messages ---
+msgid "Report not found."
+msgstr "Report not found."
+
+msgid "openpyxl not available on server."
+msgstr "openpyxl not available on server."
+
+msgid "PDF service is not configured on this server. Redeploy after installing the PDF library."
+msgstr "PDF service is not configured on this server. Redeploy after installing the PDF library."
+
+msgid "Failed to generate PDF for this report. Check the server log and try again."
+msgstr "Failed to generate PDF for this report. Check the server log and try again."
+
+msgid "Attached report: %(title)s\n\nGenerated at %(dt)s"
+msgstr "Attached report: %(title)s\n\nGenerated at %(dt)s"
+
+msgid "Report sent to %(recipient)s"
+msgstr "Report sent to %(recipient)s"
+
+msgid "Failed to send email. Check SMTP settings."
+msgstr "Failed to send email. Check SMTP settings."
+
+msgid "A rule violation was detected and requires detailed review."
+msgstr "A rule violation was detected and requires detailed review."

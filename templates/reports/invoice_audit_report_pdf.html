@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n report_filters %}
 {% get_current_language as LANGUAGE_CODE %}
 {% get_current_language_bidi as LANGUAGE_BIDI %}
 <!DOCTYPE html>
@@ -132,7 +132,7 @@
     background: #0f172a;
     color: #ffffff;
     padding: 7pt 8pt;
-    text-align: right;
+    text-align: {% if LANGUAGE_BIDI %}right{% else %}left{% endif %};
     font-weight: 700;
   }
   table.data td {
@@ -197,48 +197,48 @@
 <div class="page">
   <section class="hero">
     <div>
-      <span class="eyebrow">Invoice Audit Report</span>
-      {% if invoice_audit_ui.status == "عالي المخاطر" %}
-        <span class="badge badge-high">عالي المخاطر</span>
-      {% elif invoice_audit_ui.status == "يحتاج مراجعة" %}
-        <span class="badge badge-review">يحتاج مراجعة</span>
+      <span class="eyebrow">{% trans "Invoice Audit Report" %}</span>
+      {% if invoice_audit_ui.status|is_high_risk_status %}
+        <span class="badge badge-high">{% trans "High Risk" %}</span>
+      {% elif invoice_audit_ui.status|is_review_status %}
+        <span class="badge badge-review">{% trans "Needs Review" %}</span>
       {% else %}
-        <span class="badge badge-safe">متوافق</span>
+        <span class="badge badge-safe">{% trans "Compliant" %}</span>
       {% endif %}
     </div>
-    <h1 class="title">تقرير تدقيق الفواتير</h1>
+    <h1 class="title">{% trans "Invoice Audit Report" %}</h1>
 
     <table class="meta-grid">
       <tr>
-        <td width="33.33%"><div class="meta-card"><div class="meta-label">اسم المنظمة</div><div class="meta-value">{{ invoice_audit_ui.organization_name }}</div></div></td>
-        <td width="33.33%"><div class="meta-card"><div class="meta-label">تاريخ الإنشاء</div><div class="meta-value">{{ invoice_audit_ui.generated_at|date:"Y-m-d H:i" }}</div></div></td>
-        <td width="33.33%"><div class="meta-card"><div class="meta-label">نوع التقرير</div><div class="meta-value">{{ invoice_audit_ui.report_type }}</div></div></td>
+        <td width="33.33%"><div class="meta-card"><div class="meta-label">{% trans "Organization" %}</div><div class="meta-value">{{ invoice_audit_ui.organization_name }}</div></div></td>
+        <td width="33.33%"><div class="meta-card"><div class="meta-label">{% trans "Generated" %}</div><div class="meta-value">{{ invoice_audit_ui.generated_at|date:"Y-m-d H:i" }}</div></div></td>
+        <td width="33.33%"><div class="meta-card"><div class="meta-label">{% trans "Report Type" %}</div><div class="meta-value">{{ invoice_audit_ui.report_type }}</div></div></td>
       </tr>
     </table>
   </section>
 
   <section class="section">
-    <div class="section-title">الملخص التنفيذي</div>
+    <div class="section-title">{% trans "Executive Summary" %}</div>
     <table class="kpi-table">
       <tr>
-        <td width="16.66%"><div class="kpi-card"><div class="kpi-label">إجمالي الفواتير</div><div class="kpi-value">{{ invoice_audit_ui.summary.total_invoices }}</div><div class="kpi-note">حجم العينة</div></div></td>
-        <td width="16.66%"><div class="kpi-card"><div class="kpi-label">إجمالي المبلغ</div><div class="kpi-value">{{ invoice_audit_ui.summary.total_amount|floatformat:2 }}</div><div class="kpi-note">إجمالي الإنفاق</div></div></td>
-        <td width="16.66%"><div class="kpi-card compliance"><div class="kpi-label">نسبة الامتثال</div><div class="kpi-value">{{ invoice_audit_ui.summary.compliance_rate|floatformat:1 }}%</div><div class="kpi-note">المؤشر الرقابي</div></div></td>
-        <td width="16.66%"><div class="kpi-card risk"><div class="kpi-label">متوسط المخاطر</div><div class="kpi-value">{{ invoice_audit_ui.summary.avg_risk_score|floatformat:1 }}</div><div class="kpi-note">Risk Score</div></div></td>
-        <td width="16.66%"><div class="kpi-card alert"><div class="kpi-label">عالية المخاطر</div><div class="kpi-value">{{ invoice_audit_ui.summary.high_risk_invoices }}</div><div class="kpi-note">تحتاج تدخل فوري</div></div></td>
-        <td width="16.66%"><div class="kpi-card duplicate"><div class="kpi-label">عدد التكرارات</div><div class="kpi-value">{{ invoice_audit_ui.summary.duplicate_count }}</div><div class="kpi-note">حالات مشتبه بها</div></div></td>
+        <td width="16.66%"><div class="kpi-card"><div class="kpi-label">{% trans "Total Invoices" %}</div><div class="kpi-value">{{ invoice_audit_ui.summary.total_invoices }}</div><div class="kpi-note">{% trans "Sample size" %}</div></div></td>
+        <td width="16.66%"><div class="kpi-card"><div class="kpi-label">{% trans "Total Amount" %}</div><div class="kpi-value">{{ invoice_audit_ui.summary.total_amount|floatformat:2 }}</div><div class="kpi-note">{% trans "Total spend" %}</div></div></td>
+        <td width="16.66%"><div class="kpi-card compliance"><div class="kpi-label">{% trans "Compliance Rate" %}</div><div class="kpi-value">{{ invoice_audit_ui.summary.compliance_rate|floatformat:1 }}%</div><div class="kpi-note">{% trans "Control indicator" %}</div></div></td>
+        <td width="16.66%"><div class="kpi-card risk"><div class="kpi-label">{% trans "Avg Risk" %}</div><div class="kpi-value">{{ invoice_audit_ui.summary.avg_risk_score|floatformat:1 }}</div><div class="kpi-note">{% trans "Risk Score" %}</div></div></td>
+        <td width="16.66%"><div class="kpi-card alert"><div class="kpi-label">{% trans "High Risk" %}</div><div class="kpi-value">{{ invoice_audit_ui.summary.high_risk_invoices }}</div><div class="kpi-note">{% trans "Requires immediate action" %}</div></div></td>
+        <td width="16.66%"><div class="kpi-card duplicate"><div class="kpi-label">{% trans "Duplicates" %}</div><div class="kpi-value">{{ invoice_audit_ui.summary.duplicate_count }}</div><div class="kpi-note">{% trans "Suspected cases" %}</div></div></td>
       </tr>
     </table>
 
     <div class="summary-box">
-      <div class="summary-heading">الخلاصة</div>
+      <div class="summary-heading">{% trans "Conclusion" %}</div>
       <div>{{ invoice_audit_ui.executive_summary.conclusion }}</div>
     </div>
     <table class="summary-grid">
       <tr>
         <td width="50%">
           <div class="summary-box">
-            <div class="summary-heading">النتائج الرئيسية</div>
+            <div class="summary-heading">{% trans "Key Findings" %}</div>
             <ul class="summary-list">
               {% for finding in invoice_audit_ui.executive_summary.key_findings %}
                 <li>{{ finding }}</li>
@@ -248,7 +248,7 @@
         </td>
         <td width="50%">
           <div class="summary-box">
-            <div class="summary-heading">التوصيات الرئيسية</div>
+            <div class="summary-heading">{% trans "Key Recommendations" %}</div>
             <ul class="summary-list">
               {% for item in invoice_audit_ui.executive_summary.recommendations %}
                 <li>{{ item }}</li>
@@ -261,30 +261,30 @@
   </section>
 
   <section class="section">
-    <div class="section-title">محرك الامتثال والقواعد الرقابية</div>
-    <div class="section-kicker">يتم فحص كل فاتورة عبر مجموعة من القواعد الرقابية لتحديد درجة الامتثال وتصنيف المخاطر.</div>
+    <div class="section-title">{% trans "Compliance Engine & Control Rules" %}</div>
+    <div class="section-kicker">{% trans "Each invoice is examined through control rules to determine compliance score and risk classification." %}</div>
     <table class="kpi-table">
       <tr>
-        <td width="25%"><div class="kpi-card"><div class="kpi-label">عدد القواعد المطبقة</div><div class="kpi-value">{{ invoice_audit_ui.compliance_engine.rules_applied }}</div></div></td>
-        <td width="25%"><div class="kpi-card compliance"><div class="kpi-label">قواعد ممتثلة</div><div class="kpi-value">{{ invoice_audit_ui.compliance_engine.rules_passed }}</div></div></td>
-        <td width="25%"><div class="kpi-card alert"><div class="kpi-label">قواعد مخالفة</div><div class="kpi-value">{{ invoice_audit_ui.compliance_engine.rules_failed }}</div></div></td>
-        <td width="25%"><div class="kpi-card risk"><div class="kpi-label">الامتثال العام</div><div class="kpi-value">{{ invoice_audit_ui.compliance_engine.compliance_rate|floatformat:1 }}%</div></div></td>
+        <td width="25%"><div class="kpi-card"><div class="kpi-label">{% trans "Rules Applied" %}</div><div class="kpi-value">{{ invoice_audit_ui.compliance_engine.rules_applied }}</div></div></td>
+        <td width="25%"><div class="kpi-card compliance"><div class="kpi-label">{% trans "Compliant Rules" %}</div><div class="kpi-value">{{ invoice_audit_ui.compliance_engine.rules_passed }}</div></div></td>
+        <td width="25%"><div class="kpi-card alert"><div class="kpi-label">{% trans "Violated Rules" %}</div><div class="kpi-value">{{ invoice_audit_ui.compliance_engine.rules_failed }}</div></div></td>
+        <td width="25%"><div class="kpi-card risk"><div class="kpi-label">{% trans "Overall Compliance" %}</div><div class="kpi-value">{{ invoice_audit_ui.compliance_engine.compliance_rate|floatformat:1 }}%</div></div></td>
       </tr>
     </table>
     <table class="data">
       <thead>
         <tr>
-          <th>القاعدة</th>
-          <th>الحالة</th>
-          <th>الوزن</th>
-          <th>الملاحظة</th>
+          <th>{% trans "Rule" %}</th>
+          <th>{% trans "Status" %}</th>
+          <th>{% trans "Weight" %}</th>
+          <th>{% trans "Note" %}</th>
         </tr>
       </thead>
       <tbody>
         {% for rule in invoice_audit_ui.compliance_engine.rules_matrix %}
           <tr>
             <td><strong>{{ rule.rule_code }}</strong></td>
-            <td>{% if rule.status == "ممتثل" %}<span class="badge badge-safe">ممتثل</span>{% else %}<span class="badge badge-high">مخالف</span>{% endif %}</td>
+            <td>{% if rule.status|is_compliant_status %}<span class="badge badge-safe">{% trans "Compliant" %}</span>{% else %}<span class="badge badge-high">{% trans "Violated" %}</span>{% endif %}</td>
             <td>{{ rule.weight }}</td>
             <td>{{ rule.note }}</td>
           </tr>
@@ -294,16 +294,16 @@
   </section>
 
   <section class="section">
-    <div class="section-title">الفواتير الأعلى خطورة</div>
+    <div class="section-title">{% trans "Highest Risk Invoices" %}</div>
     <table class="data">
       <thead>
         <tr>
-          <th>رقم الفاتورة</th>
-          <th>المبلغ</th>
-          <th>التاريخ</th>
-          <th>مستوى الخطر</th>
-          <th>درجة المخاطر</th>
-          <th>المخالفات</th>
+          <th>{% trans "Invoice #" %}</th>
+          <th>{% trans "Amount" %}</th>
+          <th>{% trans "Date" %}</th>
+          <th>{% trans "Risk Level" %}</th>
+          <th>{% trans "Risk Score" %}</th>
+          <th>{% trans "Violations" %}</th>
         </tr>
       </thead>
       <tbody>
@@ -314,11 +314,11 @@
             <td>{{ invoice.date }}</td>
             <td>
               {% if invoice.risk_level == 'critical' or invoice.risk_level == 'high' %}
-                <span class="badge badge-high">High Risk</span>
+                <span class="badge badge-high">{% trans "High Risk" %}</span>
               {% elif invoice.risk_level == 'medium' %}
-                <span class="badge badge-review">Review</span>
+                <span class="badge badge-review">{% trans "Review" %}</span>
               {% else %}
-                <span class="badge badge-safe">Safe</span>
+                <span class="badge badge-safe">{% trans "Safe" %}</span>
               {% endif %}
             </td>
             <td>{{ invoice.risk_score|floatformat:0 }}/100</td>
@@ -327,29 +327,29 @@
                 <div style="margin-bottom:5pt;">
                   <div class="rule-chip">{{ violation.rule_code }}</div>
                   <div><strong>{{ violation.description }}</strong></div>
-                  <div class="small">السبب: {{ violation.reason }}</div>
+                  <div class="small">{% trans "Reason:" %} {{ violation.reason }}</div>
                 </div>
               {% empty %}
-                <span class="small">لا توجد تفاصيل مخالفات.</span>
+                <span class="small">{% trans "No violation details." %}</span>
               {% endfor %}
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="6">لا توجد فواتير عالية المخاطر.</td></tr>
+          <tr><td colspan="6">{% trans "No high-risk invoices." %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </section>
 
   <section class="section">
-    <div class="section-title">أكثر قواعد التدقيق فشلًا</div>
+    <div class="section-title">{% trans "Most Failed Audit Rules" %}</div>
     <table class="data">
       <thead>
         <tr>
-          <th>رمز القاعدة</th>
-          <th>الوصف</th>
-          <th>عدد الإخفاقات</th>
-          <th>الفواتير المتأثرة</th>
+          <th>{% trans "Rule Code" %}</th>
+          <th>{% trans "Description" %}</th>
+          <th>{% trans "Failure Count" %}</th>
+          <th>{% trans "Affected Invoices" %}</th>
         </tr>
       </thead>
       <tbody>
@@ -364,39 +364,39 @@
                   <span class="pill">{{ inv }}</span>
                 {% endif %}
               {% empty %}
-                <span class="small">لا توجد أرقام فواتير.</span>
+                <span class="small">{% trans "No invoice numbers available." %}</span>
               {% endfor %}
               {% if rule.invoice_numbers|length > 8 %}
-                <span class="small">+ {{ rule.invoice_numbers|length|add:'-8' }} أخرى</span>
+                <span class="small">{% blocktrans with extra=rule.invoice_numbers|length|add:'-8' %}+ {{ extra }} more{% endblocktrans %}</span>
               {% endif %}
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="4">لا توجد بيانات إخفاقات متاحة.</td></tr>
+          <tr><td colspan="4">{% trans "No failed-rule data available." %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </section>
 
   <section class="section">
-    <div class="section-title">تحليل المخاطر</div>
+    <div class="section-title">{% trans "Risk Analysis" %}</div>
     <table class="kpi-table">
       <tr>
-        <td width="25%"><div class="kpi-card"><div class="kpi-label">متوسط درجة المخاطر</div><div class="kpi-value">{{ invoice_audit_ui.risk_analysis.avg_risk_score|floatformat:1 }}</div></div></td>
-        <td width="25%"><div class="kpi-card alert"><div class="kpi-label">عالية المخاطر</div><div class="kpi-value">{{ invoice_audit_ui.risk_analysis.high }}</div></div></td>
-        <td width="25%"><div class="kpi-card risk"><div class="kpi-label">تحتاج مراجعة</div><div class="kpi-value">{{ invoice_audit_ui.risk_analysis.review }}</div></div></td>
-        <td width="25%"><div class="kpi-card compliance"><div class="kpi-label">آمنة</div><div class="kpi-value">{{ invoice_audit_ui.risk_analysis.safe }}</div></div></td>
+        <td width="25%"><div class="kpi-card"><div class="kpi-label">{% trans "Average Risk Score" %}</div><div class="kpi-value">{{ invoice_audit_ui.risk_analysis.avg_risk_score|floatformat:1 }}</div></div></td>
+        <td width="25%"><div class="kpi-card alert"><div class="kpi-label">{% trans "High Risk" %}</div><div class="kpi-value">{{ invoice_audit_ui.risk_analysis.high }}</div></div></td>
+        <td width="25%"><div class="kpi-card risk"><div class="kpi-label">{% trans "Needs Review" %}</div><div class="kpi-value">{{ invoice_audit_ui.risk_analysis.review }}</div></div></td>
+        <td width="25%"><div class="kpi-card compliance"><div class="kpi-label">{% trans "Safe" %}</div><div class="kpi-value">{{ invoice_audit_ui.risk_analysis.safe }}</div></div></td>
       </tr>
     </table>
   </section>
 
   <section class="section">
-    <div class="section-title">كشف التكرار والشذوذ</div>
+    <div class="section-title">{% trans "Duplicate & Anomaly Detection" %}</div>
     <table class="insight-table">
       <tr>
-        <td width="33.33%"><div class="insight-card high"><div class="kpi-label">عدد الفواتير المكررة</div><div class="kpi-value">{{ invoice_audit_ui.duplicates_anomalies.duplicates }}</div></div></td>
-        <td width="33.33%"><div class="insight-card"><div class="kpi-label">المورد المهيمن</div><div class="kpi-value" style="font-size:14pt;">{{ invoice_audit_ui.duplicates_anomalies.dominant_vendor }}</div></div></td>
-        <td width="33.33%"><div class="insight-card review"><div class="kpi-label">نسبة الاعتماد على المورد</div><div class="kpi-value">{{ invoice_audit_ui.duplicates_anomalies.vendor_dependency_pct|floatformat:1 }}%</div></div></td>
+        <td width="33.33%"><div class="insight-card high"><div class="kpi-label">{% trans "Duplicate Invoices" %}</div><div class="kpi-value">{{ invoice_audit_ui.duplicates_anomalies.duplicates }}</div></div></td>
+        <td width="33.33%"><div class="insight-card"><div class="kpi-label">{% trans "Dominant Vendor" %}</div><div class="kpi-value" style="font-size:14pt;">{{ invoice_audit_ui.duplicates_anomalies.dominant_vendor }}</div></div></td>
+        <td width="33.33%"><div class="insight-card review"><div class="kpi-label">{% trans "Vendor Dependency" %}</div><div class="kpi-value">{{ invoice_audit_ui.duplicates_anomalies.vendor_dependency_pct|floatformat:1 }}%</div></div></td>
       </tr>
     </table>
     <table class="insight-table">
@@ -414,16 +414,16 @@
   </section>
 
   <section class="section">
-    <div class="section-title">تحليل الموردين</div>
+    <div class="section-title">{% trans "Vendor Analysis" %}</div>
     <table class="data">
       <thead>
         <tr>
-          <th>اسم المورد</th>
-          <th>عدد الفواتير</th>
-          <th>إجمالي الإنفاق</th>
-          <th>متوسط الفاتورة</th>
-          <th>حصة الإنفاق</th>
-          <th>فواتير مبلّغ عنها</th>
+          <th>{% trans "Vendor Name" %}</th>
+          <th>{% trans "Invoice Count" %}</th>
+          <th>{% trans "Total Spend" %}</th>
+          <th>{% trans "Average" %}</th>
+          <th>{% trans "Spend Share" %}</th>
+          <th>{% trans "Flagged Invoices" %}</th>
         </tr>
       </thead>
       <tbody>
@@ -437,19 +437,19 @@
             <td>{{ vendor.flagged_invoices }}</td>
           </tr>
         {% empty %}
-          <tr><td colspan="6">لا توجد بيانات موردين متاحة.</td></tr>
+          <tr><td colspan="6">{% trans "No vendor data available." %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </section>
 
   <section class="section">
-    <div class="section-title">التوصيات والإجراءات</div>
+    <div class="section-title">{% trans "Recommendations & Actions" %}</div>
     <table class="split-table">
       <tr>
         <td width="50%">
           <div class="action-box immediate">
-            <div class="summary-heading">إجراءات فورية</div>
+            <div class="summary-heading">{% trans "Immediate Actions" %}</div>
             <ul class="summary-list">
               {% for item in invoice_audit_ui.recommendations.immediate %}
                 <li>{{ item }}</li>
@@ -459,7 +459,7 @@
         </td>
         <td width="50%">
           <div class="action-box future">
-            <div class="summary-heading">تحسينات مستقبلية</div>
+            <div class="summary-heading">{% trans "Future Improvements" %}</div>
             <ul class="summary-list">
               {% for item in invoice_audit_ui.recommendations.future %}
                 <li>{{ item }}</li>

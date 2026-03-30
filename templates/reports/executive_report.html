@@ -4,9 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% if is_rtl %}التقرير التنفيذي الشامل{% else %}Executive Audit Report{% endif %} — {{ meta.organization_name }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+    /* Google Fonts loaded via <link> above for HTML rendering; PDF output uses system font fallbacks below */
     :root {
       --brand-primary:   #1e3a5f;
       --brand-secondary: #2563eb;
@@ -16,7 +19,7 @@
       --brand-danger:    #dc2626;
       --brand-critical:  #7c3aed;
     }
-    body { font-family: {% if is_rtl %}'Tajawal'{% else %}'Inter'{% endif %}, sans-serif; background:#f8fafc; color:#1e293b; }
+    body { font-family: {% if is_rtl %}'Tajawal', 'Noto Sans Arabic', Tahoma{% else %}'Inter', 'DejaVu Sans', Arial{% endif %}, sans-serif; background:#f8fafc; color:#1e293b; }
     .brand-gradient { background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 60%, var(--brand-accent) 100%); }
     .section-card { background:#fff; border-radius:1rem; box-shadow:0 1px 8px rgba(30,58,95,.08); border:1px solid #e2e8f0; }
     .kpi-card { background:#fff; border-radius:.875rem; box-shadow:0 2px 12px rgba(30,58,95,.1); border:1px solid #e2e8f0; transition:box-shadow .2s; }

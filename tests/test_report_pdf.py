@@ -69,3 +69,30 @@ class ReportPDFViewTests(TestCase):
             response.content,
             {"error": "خدمة PDF غير مهيأة على الخادم حاليًا. أعد نشر الخدمة بعد تثبيت مكتبة PDF."},
         )
+
+    def test_document_report_pdf_returns_503_when_system_pdf_libs_are_missing(self):
+        with patch("apps.reports.views._render_report_pdf_bytes", side_effect=OSError("missing cairo")):
+            response = self.client.get(f"/api/v1/reports/document/{self.report.id}/pdf/")
+
+        self.assertEqual(response.status_code, 503)
+        payload = response.json()
+        self.assertIn("/html/", payload.get("error", ""))
+        self.assertIn("PDF", payload.get("error", ""))
+
+    def test_executive_report_pdf_returns_500_on_generation_failure(self):
+        with patch("apps.reports.views._render_report_pdf_bytes", side_effect=RuntimeError("renderer failed")):
+            response = self.client.get(f"/api/v1/reports/executive/{self.report.id}/pdf/")
+
+        self.assertEqual(response.status_code, 500)
+        payload = response.json()
+        self.assertIn("/html/", payload.get("error", ""))
+        self.assertIn("PDF", payload.get("error", ""))
+
+    def test_invoice_audit_v2_pdf_returns_500_on_generation_failure(self):
+        with patch("apps.reports.views._render_report_pdf_bytes", side_effect=RuntimeError("renderer failed")):
+            response = self.client.get(f"/api/v1/reports/invoice-audit/{self.report.id}/pdf/")
+
+        self.assertEqual(response.status_code, 500)
+        payload = response.json()
+        self.assertIn("/html/", payload.get("error", ""))
+        self.assertIn("PDF", payload.get("error", ""))

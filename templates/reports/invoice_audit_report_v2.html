@@ -7,6 +7,9 @@
 <title>
   {% if is_rtl %}{{ header.title|default:"تقرير تدقيق الفواتير" }}{% else %}{{ header.title|default:"Invoice Audit Report" }}{% endif %}
 </title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   @media print {
@@ -19,7 +22,7 @@
   [dir="rtl"] table { direction: rtl; }
   [dir="rtl"] .text-left { text-align: right; }
   [dir="rtl"] .text-right { text-align: left; }
-  body { font-family: 'Segoe UI', 'Arial', sans-serif; background: #f8fafc; color: #1e293b; }
+  body { font-family: 'Cairo', 'Tajawal', 'Noto Sans Arabic', 'Segoe UI', 'Arial', sans-serif; background: #f8fafc; color: #1e293b; }
   :root {
     --brand: #1e40af; --brand-dark: #1e3a8a;
     --pass: #16a34a; --fail: #dc2626; --warn: #d97706;

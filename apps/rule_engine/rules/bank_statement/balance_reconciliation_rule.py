@@ -184,3 +184,250 @@ class StructuringDetectionRule(AuditRuleBase):
             "No structuring patterns detected.",
             "لا توجد أنماط تجزئة متعمدة.",
         )
+
+
+# ─── Extended Bank Statement Rules ───────────────────────────────────────────
+
+class BenfordsLawBankRule(AuditRuleBase):
+    """BNK-M02 — Benford's Law analysis on bank transaction amounts."""
+    rule_code = "BNK-M02"
+    rule_name_en = "Benford's Law Anomaly in Transactions"
+    rule_name_ar = "شذوذ قانون بنفورد في المعاملات البنكية"
+    default_severity = "high"
+    rule_type = "anomaly"
+
+    CRITICAL_MAD = 0.015
+    WARNING_MAD  = 0.010
+
+    def check_preconditions(self, doc: NormalizedDocument) -> bool:
+        return (doc.get("benford_deviation") is not None or
+                len(doc.get("transactions") or []) >= 30)
+
+    def execute(self, doc: NormalizedDocument) -> RuleResult:
+        critical_mad = float(self.get_config("critical_mad", self.CRITICAL_MAD))
+        warning_mad  = float(self.get_config("warning_mad",  self.WARNING_MAD))
+        mad = doc.get("benford_deviation")
+
+        if mad is None:
+            try:
+                import math
+                from collections import Counter
+                amounts = [abs(float(tx.get("amount", 0) or 0))
+                           for tx in (doc.get("transactions") or [])
+                           if tx.get("amount") not in (None, 0, "")]
+                if len(amounts) < 30:
+                    return self._skipped("Insufficient transactions for Benford's analysis.")
+                expected = {str(d): math.log10(1 + 1/d) for d in range(1, 10)}
+                first_digits = []
+                for a in amounts:
+                    s = str(a).replace(".", "").lstrip("0")
+                    if s:
+                        first_digits.append(s[0])
+                counter = Counter(first_digits)
+                total = len(first_digits)
+                if not total:
+                    return self._skipped("No valid amounts for Benford analysis.")
+                observed = {d: counter.get(d, 0) / total for d in [str(i) for i in range(1, 10)]}
+                mad = sum(abs(observed.get(d, 0) - expected[d]) for d in expected) / 9
+            except Exception:
+                return self._skipped("Error computing Benford distribution.")
+
+        mad = float(mad)
+        evidence = [EvidenceItem(
+            evidence_type="statistical",
+            field_name="benford_deviation",
+            field_name_ar="انحراف بنفورد",
+            expected_value=f"MAD < {warning_mad}",
+            actual_value=f"MAD = {mad:.4f}",
+            description=f"Benford MAD = {mad:.4f}",
+            description_ar=f"انحراف بنفورد = {mad:.4f}",
+        )]
+
+        if mad >= critical_mad:
+            return self._fail(
+                f"Benford's Law: MAD {mad:.4f} ≥ critical {critical_mad}. Possible transaction fraud.",
+                f"قانون بنفورد: MAD {mad:.4f} ≥ الحد الحرج {critical_mad}. احتمال احتيال في المعاملات.",
+                evidence=evidence,
+            )
+        if mad >= warning_mad:
+            return self._warning(
+                f"Benford's Law: MAD {mad:.4f} exceeds warning threshold {warning_mad}.",
+                f"قانون بنفورد: MAD {mad:.4f} يتجاوز حد التحذير {warning_mad}.",
+                evidence=evidence,
+            )
+        return self._pass(
+            f"Benford's Law: digit distribution is normal (MAD = {mad:.4f}).",
+            f"قانون بنفورد: توزيع الأرقام طبيعي (MAD = {mad:.4f}).",
+        )
+
+
+class RoundAmountClusterRule(AuditRuleBase):
+    """BNK-M03 — Flags accounts with unusually many round-number transactions."""
+    rule_code = "BNK-M03"
+    rule_name_en = "Unusual Round-Amount Transaction Cluster"
+    rule_name_ar = "تجمّع غير معتاد من المعاملات ذات مبالغ مُقرَّبة"
+    default_severity = "medium"
+    rule_type = "anomaly"
+
+    WARN_RATIO    = 0.30   # 30% of transactions are round numbers
+    WARN_MIN_COUNT = 5
+
+    def check_preconditions(self, doc: NormalizedDocument) -> bool:
+        return (doc.get("round_amount_count") is not None or
+                isinstance(doc.get("transactions"), list))
+
+    def execute(self, doc: NormalizedDocument) -> RuleResult:
+        warn_ratio = float(self.get_config("warn_ratio", self.WARN_RATIO))
+        min_count  = int(self.get_config("warn_min_count", self.WARN_MIN_COUNT))
+        round_count = doc.get("round_amount_count")
+        tx_count    = doc.get("transaction_count") or len(doc.get("transactions") or [])
+
+        if round_count is None:
+            transactions = doc.get("transactions") or []
+            round_count = sum(
+                1 for tx in transactions
+                if float(tx.get("amount", 0) or 0) % 1000 == 0 and float(tx.get("amount", 0) or 0) != 0
+            )
+            tx_count = len(transactions)
+
+        if tx_count == 0:
+            return self._skipped("No transactions to analyse.")
+
+        ratio = round_count / tx_count if tx_count else 0
+        evidence = [EvidenceItem(
+            evidence_type="statistical",
+            field_name="round_amount_count",
+            field_name_ar="عدد المعاملات ذات المبالغ المُقرَّبة",
+            expected_value=f"< {warn_ratio:.0%} of transactions",
+            actual_value=f"{round_count}/{tx_count} ({ratio:.0%})",
+            description=f"{round_count} round-amount transactions out of {tx_count}.",
+            description_ar=f"{round_count} معاملة بمبالغ مُقرَّبة من أصل {tx_count}.",
+        )]
+
+        if round_count >= min_count and ratio >= warn_ratio:
+            return self._warning(
+                f"{round_count} round-number transactions ({ratio:.0%} of total). "
+                "Unusual clustering may indicate fictitious or manipulated entries.",
+                f"{round_count} معاملة بمبالغ مُقرَّبة ({ratio:.0%} من الإجمالي). "
+                "التجمّع غير العادي قد يدل على قيود وهمية أو متلاعَب بها.",
+                evidence=evidence,
+            )
+        return self._pass(
+            f"Round-amount ratio {ratio:.0%} is within normal range.",
+            f"نسبة المبالغ المُقرَّبة {ratio:.0%} ضمن النطاق الطبيعي.",
+        )
+
+
+class WeekendTransactionRule(AuditRuleBase):
+    """BNK-M04 — Flags bank statements with many weekend transactions (Fri/Sat in GCC)."""
+    rule_code = "BNK-M04"
+    rule_name_en = "Unusual Weekend Transaction Activity"
+    rule_name_ar = "نشاط غير معتاد في معاملات عطلة الأسبوع"
+    default_severity = "medium"
+    rule_type = "anomaly"
+
+    WARN_COUNT = 3
+
+    def check_preconditions(self, doc: NormalizedDocument) -> bool:
+        return (doc.get("weekend_tx_count") is not None or
+                isinstance(doc.get("transactions"), list))
+
+    def execute(self, doc: NormalizedDocument) -> RuleResult:
+        warn_count = int(self.get_config("warn_count", self.WARN_COUNT))
+        weekend_count = doc.get("weekend_tx_count")
+
+        if weekend_count is None:
+            transactions = doc.get("transactions") or []
+            from datetime import datetime
+            weekend_count = 0
+            for tx in transactions:
+                try:
+                    d = str(tx.get("date", ""))
+                    if d:
+                        dt = datetime.fromisoformat(d)
+                        if dt.weekday() in (4, 5):  # Fri/Sat
+                            weekend_count += 1
+                except (ValueError, TypeError):
+                    pass
+
+        evidence = [EvidenceItem(
+            evidence_type="statistical",
+            field_name="weekend_tx_count",
+            field_name_ar="عدد معاملات العطلة",
+            expected_value=f"< {warn_count}",
+            actual_value=weekend_count,
+            description=f"{weekend_count} transactions on weekend days.",
+            description_ar=f"{weekend_count} معاملة في أيام العطلة.",
+        )]
+
+        if weekend_count >= warn_count:
+            return self._warning(
+                f"{weekend_count} transactions on weekend days (Friday/Saturday). "
+                "Weekend transactions may indicate unauthorised activity.",
+                f"{weekend_count} معاملة في أيام العطلة (الجمعة/السبت). "
+                "معاملات العطلة قد تدل على نشاط غير مصرَّح به.",
+                evidence=evidence,
+            )
+        return self._pass(
+            f"Weekend transaction count ({weekend_count}) is within normal range.",
+            f"عدد معاملات العطلة ({weekend_count}) ضمن النطاق الطبيعي.",
+        )
+
+
+class LateNightTransactionRule(AuditRuleBase):
+    """BNK-M05 — Flags transactions processed in late-night hours (23:00–05:00)."""
+    rule_code = "BNK-M05"
+    rule_name_en = "Late-Night Transaction Detected"
+    rule_name_ar = "معاملات في ساعات متأخرة من الليل"
+    default_severity = "medium"
+    rule_type = "anomaly"
+
+    WARN_COUNT   = 2
+    LATE_START_H = 23
+    LATE_END_H   = 5
+
+    def check_preconditions(self, doc: NormalizedDocument) -> bool:
+        return (doc.get("late_night_tx_count") is not None or
+                isinstance(doc.get("transactions"), list))
+
+    def execute(self, doc: NormalizedDocument) -> RuleResult:
+        warn_count = int(self.get_config("warn_count", self.WARN_COUNT))
+        late_count = doc.get("late_night_tx_count")
+
+        if late_count is None:
+            transactions = doc.get("transactions") or []
+            from datetime import datetime
+            late_count = 0
+            for tx in transactions:
+                try:
+                    t = tx.get("time") or tx.get("datetime") or ""
+                    if t:
+                        dt = datetime.fromisoformat(str(t))
+                        h = dt.hour
+                        if h >= self.LATE_START_H or h < self.LATE_END_H:
+                            late_count += 1
+                except (ValueError, TypeError):
+                    pass
+
+        evidence = [EvidenceItem(
+            evidence_type="statistical",
+            field_name="late_night_tx_count",
+            field_name_ar="عدد المعاملات الليلية",
+            expected_value=f"< {warn_count}",
+            actual_value=late_count,
+            description=f"{late_count} transactions between 23:00–05:00.",
+            description_ar=f"{late_count} معاملة بين الساعة 23:00 و05:00.",
+        )]
+
+        if late_count >= warn_count:
+            return self._warning(
+                f"{late_count} transaction(s) processed during late-night hours (23:00–05:00). "
+                "After-hours transactions carry elevated fraud risk.",
+                f"{late_count} معاملة مُعالَجة في ساعات متأخرة من الليل (23:00–05:00). "
+                "معاملات خارج أوقات العمل تحمل مخاطر احتيال أعلى.",
+                evidence=evidence,
+            )
+        return self._pass(
+            f"Late-night transaction count ({late_count}) is within acceptable range.",
+            f"عدد المعاملات الليلية ({late_count}) ضمن النطاق المقبول.",
+        )

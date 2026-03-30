@@ -1,19 +1,18 @@
 """Sidebar navigation for the organization dashboard."""
 
+from django.utils.translation import gettext_lazy as _
+
 from navigation.route_names import VendorDashboardRoute
 
 
 VENDOR_MENU = [
     {
         "section": "main",
-        "section_label": "Main",
-        "section_label_ar": "الرئيسية",
-        "section_ar": "الرئيسية",
+        "section_label": _("Main"),
         "items": [
             {
                 "key": "overview",
-                "label": "Organization Overview",
-                "label_ar": "الرئيسية",
+                "label": _("Organization Overview"),
                 "route_name": VendorDashboardRoute.DASHBOARD,
                 "icon": "layout-dashboard",
             },
@@ -21,28 +20,23 @@ VENDOR_MENU = [
     },
     {
         "section": "files",
-        "section_label": "Files",
-        "section_label_ar": "الملفات",
-        "section_ar": "الملفات",
+        "section_label": _("Files"),
         "items": [
             {
                 "key": "files",
-                "label": "My Files",
-                "label_ar": "ملفاتي",
+                "label": _("My Files"),
                 "route_name": VendorDashboardRoute.FILES,
                 "icon": "files",
             },
             {
                 "key": "folders",
-                "label": "Folders",
-                "label_ar": "المجلدات",
+                "label": _("Folders"),
                 "route_name": VendorDashboardRoute.FOLDERS,
                 "icon": "folder-tree",
             },
             {
                 "key": "upload",
-                "label": "Upload Center",
-                "label_ar": "رفع الملفات",
+                "label": _("Upload Center"),
                 "route_name": VendorDashboardRoute.UPLOAD,
                 "icon": "upload-cloud",
             },
@@ -50,28 +44,23 @@ VENDOR_MENU = [
     },
     {
         "section": "audit",
-        "section_label": "Audit",
-        "section_label_ar": "التدقيق والتقارير",
-        "section_ar": "التدقيق والتقارير",
+        "section_label": _("Audit"),
         "items": [
             {
                 "key": "audits",
-                "label": "Audit Jobs",
-                "label_ar": "مهام التدقيق",
+                "label": _("Audit Jobs"),
                 "route_name": VendorDashboardRoute.AUDITS,
                 "icon": "shield-check",
             },
             {
                 "key": "audit_results",
-                "label": "Audit Results",
-                "label_ar": "نتائج التدقيق",
+                "label": _("Audit Results"),
                 "route_name": VendorDashboardRoute.AUDIT_RESULTS,
                 "icon": "shield-alert",
             },
             {
                 "key": "reports",
-                "label": "Reports",
-                "label_ar": "التقارير",
+                "label": _("Reports"),
                 "route_name": VendorDashboardRoute.REPORTS,
                 "icon": "bar-chart-3",
             },
@@ -79,42 +68,35 @@ VENDOR_MENU = [
     },
     {
         "section": "organization",
-        "section_label": "Organization",
-        "section_label_ar": "المنظمة",
-        "section_ar": "المنظمة",
+        "section_label": _("Organization"),
         "items": [
             {
                 "key": "team",
-                "label": "Team Members",
-                "label_ar": "فريق العمل",
+                "label": _("Team Members"),
                 "route_name": VendorDashboardRoute.TEAM,
                 "icon": "users",
             },
             {
                 "key": "org_settings",
-                "label": "Organization Settings",
-                "label_ar": "إعدادات المنظمة",
+                "label": _("Organization Settings"),
                 "route_name": VendorDashboardRoute.SETTINGS,
                 "icon": "settings",
             },
             {
                 "key": "storage_usage",
-                "label": "Storage Usage",
-                "label_ar": "استخدام التخزين",
+                "label": _("Storage Usage"),
                 "route_name": VendorDashboardRoute.STORAGE,
                 "icon": "hard-drive",
             },
             {
                 "key": "billing",
-                "label": "Billing",
-                "label_ar": "الباقة / الفوترة",
+                "label": _("Billing"),
                 "route_name": VendorDashboardRoute.BILLING,
                 "icon": "credit-card",
             },
             {
                 "key": "notifications",
-                "label": "Notifications",
-                "label_ar": "الإشعارات",
+                "label": _("Notifications"),
                 "route_name": VendorDashboardRoute.NOTIFICATIONS,
                 "icon": "bell",
             },

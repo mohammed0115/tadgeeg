@@ -7,6 +7,9 @@
 <title>
   {% if is_rtl %}تقرير تدقيق — {{ meta.document_type_label_ar }}{% else %}Audit Report — {{ meta.document_type_label_en }}{% endif %}
 </title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   /* ── Print styles ─────────────────────────────── */
@@ -35,7 +38,7 @@
     --critical:   #7c3aed;
   }
 
-  body { font-family: 'Segoe UI', 'Arial', sans-serif; background: #f8fafc; color: #1e293b; }
+  body { font-family: 'Cairo', 'Tajawal', 'Noto Sans Arabic', 'Segoe UI', 'Arial', sans-serif; background: #f8fafc; color: #1e293b; }
 
   /* ── Status badge ─────────────────────────────── */
   .badge-pass     { background:#dcfce7; color:#166534; border:1px solid #bbf7d0; }
@@ -388,7 +391,19 @@
           <td class="font-semibold {% if doc.validation_score < 60 %}text-red-600{% elif doc.validation_score < 80 %}text-yellow-600{% else %}text-green-600{% endif %}">
             {{ doc.validation_score|floatformat:1 }}%
           </td>
-          <td><span class="pill pill-{% if doc.audit_status == 'flagged' %}fail{% elif doc.audit_status == 'approved' %}pass{% else %}warning{% endif %}">{{ doc.audit_status }}</span></td>
+          <td>
+            <span class="pill pill-{% if doc.audit_status == 'flagged' %}fail{% elif doc.audit_status == 'approved' %}pass{% else %}warning{% endif %}">
+              {% if doc.audit_status == 'approved' %}
+                {% if is_rtl %}معتمد{% else %}Approved{% endif %}
+              {% elif doc.audit_status == 'flagged' %}
+                {% if is_rtl %}مُعلّق{% else %}Flagged{% endif %}
+              {% elif doc.audit_status == 'rejected' %}
+                {% if is_rtl %}مرفوض{% else %}Rejected{% endif %}
+              {% else %}
+                {{ doc.audit_status }}
+              {% endif %}
+            </span>
+          </td>
           <td class="text-xs text-slate-500">{{ doc.failed_codes|join:", " }}</td>
         </tr>
         {% endfor %}
@@ -447,7 +462,19 @@
           <td class="font-semibold {% if doc.validation_score < 60 %}text-red-600{% elif doc.validation_score < 80 %}text-yellow-600{% else %}text-green-600{% endif %}">
             {{ doc.validation_score|floatformat:1 }}%
           </td>
-          <td><span class="pill pill-{% if doc.audit_status == 'flagged' %}fail{% elif doc.audit_status == 'approved' %}pass{% else %}warning{% endif %}">{{ doc.audit_status }}</span></td>
+          <td>
+            <span class="pill pill-{% if doc.audit_status == 'flagged' %}fail{% elif doc.audit_status == 'approved' %}pass{% else %}warning{% endif %}">
+              {% if doc.audit_status == 'approved' %}
+                {% if is_rtl %}معتمد{% else %}Approved{% endif %}
+              {% elif doc.audit_status == 'flagged' %}
+                {% if is_rtl %}مُعلّق{% else %}Flagged{% endif %}
+              {% elif doc.audit_status == 'rejected' %}
+                {% if is_rtl %}مرفوض{% else %}Rejected{% endif %}
+              {% else %}
+                {{ doc.audit_status }}
+              {% endif %}
+            </span>
+          </td>
           <td class="text-xs text-slate-400">{{ doc.created_at|slice:":10" }}</td>
         </tr>
         {% empty %}
@@ -613,9 +640,6 @@
             <div class="font-medium text-slate-800">
               {% if is_rtl %}{{ rule.rule_name_ar }}{% else %}{{ rule.rule_name_en }}{% endif %}
             </div>
-            {% if not is_rtl %}
-            <div class="text-slate-400 text-xs">{{ rule.rule_name_ar }}</div>
-            {% endif %}
           </td>
           <td>
             <span class="pill pill-{{ rule.status|lower }}">
@@ -787,56 +811,72 @@
 
     {% if narrative.executive_summary %}
     <div>
-      <h3 class="text-xs font-bold uppercase tracking-wide text-indigo-600 mb-2">EXECUTIVE_SUMMARY</h3>
+      <h3 class="text-xs font-bold uppercase tracking-wide text-indigo-600 mb-2">
+        {% if is_rtl %}الملخص التنفيذي{% else %}Executive Summary{% endif %}
+      </h3>
       <p>{{ narrative.executive_summary }}</p>
     </div>
     {% endif %}
 
     {% if narrative.scope_and_methodology %}
     <div>
-      <h3 class="text-xs font-bold uppercase tracking-wide text-indigo-600 mb-2">SCOPE_AND_METHODOLOGY</h3>
+      <h3 class="text-xs font-bold uppercase tracking-wide text-indigo-600 mb-2">
+        {% if is_rtl %}نطاق التدقيق والمنهجية{% else %}Scope and Methodology{% endif %}
+      </h3>
       <p>{{ narrative.scope_and_methodology }}</p>
     </div>
     {% endif %}
 
     {% if narrative.key_findings %}
     <div>
-      <h3 class="text-xs font-bold uppercase tracking-wide text-amber-600 mb-2">KEY_FINDINGS</h3>
+      <h3 class="text-xs font-bold uppercase tracking-wide text-amber-600 mb-2">
+        {% if is_rtl %}النتائج الرئيسية{% else %}Key Findings{% endif %}
+      </h3>
       <p>{{ narrative.key_findings }}</p>
     </div>
     {% endif %}
 
     {% if narrative.anomalies_section %}
     <div>
-      <h3 class="text-xs font-bold uppercase tracking-wide text-red-600 mb-2">ANOMALIES_SECTION</h3>
+      <h3 class="text-xs font-bold uppercase tracking-wide text-red-600 mb-2">
+        {% if is_rtl %}الأنماط الشاذة{% else %}Anomalies{% endif %}
+      </h3>
       <p>{{ narrative.anomalies_section }}</p>
     </div>
     {% endif %}
 
     {% if narrative.compliance_section %}
     <div>
-      <h3 class="text-xs font-bold uppercase tracking-wide text-blue-600 mb-2">COMPLIANCE_SECTION</h3>
+      <h3 class="text-xs font-bold uppercase tracking-wide text-blue-600 mb-2">
+        {% if is_rtl %}الامتثال{% else %}Compliance{% endif %}
+      </h3>
       <p>{{ narrative.compliance_section }}</p>
     </div>
     {% endif %}
 
     {% if narrative.recommendations %}
     <div>
-      <h3 class="text-xs font-bold uppercase tracking-wide text-green-600 mb-2">RECOMMENDATIONS</h3>
+      <h3 class="text-xs font-bold uppercase tracking-wide text-green-600 mb-2">
+        {% if is_rtl %}التوصيات{% else %}Recommendations{% endif %}
+      </h3>
       <p>{{ narrative.recommendations }}</p>
     </div>
     {% endif %}
 
     {% if narrative.conclusion %}
     <div>
-      <h3 class="text-xs font-bold uppercase tracking-wide text-slate-600 mb-2">CONCLUSION</h3>
+      <h3 class="text-xs font-bold uppercase tracking-wide text-slate-600 mb-2">
+        {% if is_rtl %}الخلاصة{% else %}Conclusion{% endif %}
+      </h3>
       <p>{{ narrative.conclusion }}</p>
     </div>
     {% endif %}
 
     {% if narrative.management_response_placeholder %}
     <div class="bg-slate-50 border border-dashed border-slate-300 rounded-lg p-4">
-      <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">MANAGEMENT_RESPONSE_PLACEHOLDER</h3>
+      <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
+        {% if is_rtl %}رد الإدارة{% else %}Management Response{% endif %}
+      </h3>
       <p class="text-slate-500 italic">{{ narrative.management_response_placeholder }}</p>
     </div>
     {% endif %}
@@ -1344,7 +1384,15 @@
       <div class="flex-1 min-w-0">
         <div class="flex items-center gap-2 flex-wrap mb-1">
           <span class="pill pill-{{ rec.priority }}">
-            {% if is_rtl %}{{ rec.priority|capfirst }}{% else %}{{ rec.priority|upper }}{% endif %}
+            {% if is_rtl %}
+              {% if rec.priority == 'critical' %}حرج
+              {% elif rec.priority == 'high' %}عالٍ
+              {% elif rec.priority == 'medium' %}متوسط
+              {% elif rec.priority == 'low' %}منخفض
+              {% else %}{{ rec.priority }}{% endif %}
+            {% else %}
+              {{ rec.priority|upper }}
+            {% endif %}
           </span>
           <span class="font-mono text-xs text-slate-400">{{ rec.rule_code }}</span>
         </div>
@@ -1521,7 +1569,7 @@
     <!-- Footer -->
     <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 flex-wrap gap-2">
       <span>
-        {% if is_rtl %}منصة تدقيق تدقيق — نظام الذكاء الاصطناعي للتدقيق المالي{% else %}Tadgeeg Audit Platform — AI-Powered Financial Auditing{% endif %}
+        {% if is_rtl %}منصة Tadgeeg للتدقيق — نظام ذكاء اصطناعي للتدقيق المالي{% else %}Tadgeeg Audit Platform — AI-Powered Financial Auditing{% endif %}
       </span>
       <span>{{ meta.generated_at }}</span>
     </div>

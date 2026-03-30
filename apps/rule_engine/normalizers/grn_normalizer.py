@@ -20,6 +20,22 @@ class GRNNormalizer(BaseNormalizer):
                 organization_id=str(organization_id),
             )
 
+        # Pull AI-extraction fields from the linked base Document if available
+        ai_fields = {}
+        try:
+            base_doc = grn.document
+            ai_fields = {
+                "ocr_confidence": getattr(base_doc, "ocr_confidence", None),
+                "is_handwritten": getattr(base_doc, "is_handwritten", False),
+                "has_alterations": getattr(base_doc, "has_alterations", False),
+                "clarity_score": getattr(base_doc, "ocr_confidence", None),
+                "content_fingerprint": getattr(base_doc, "content_hash", None),
+                "risk_score": None,
+                "ai_extracted_fields": list(grn.validation_details or []),
+            }
+        except Exception:
+            pass
+
         typed_data = {
             "grn_number": grn.grn_number,
             "grn_date": str(grn.grn_date) if grn.grn_date else None,
@@ -46,6 +62,10 @@ class GRNNormalizer(BaseNormalizer):
             "inspector_name": grn.inspector_name,
             "approval_status": grn.approval_status,
             "approved_by_id": str(grn.approved_by_id) if grn.approved_by_id else None,
+            "uploaded_by_id": str(grn.uploaded_by_id) if grn.uploaded_by_id else None,
+            "created_at": str(grn.created_at) if grn.created_at else None,
+            "updated_at": str(grn.updated_at) if grn.updated_at else None,
+            **ai_fields,
         }
 
         return NormalizedDocument(

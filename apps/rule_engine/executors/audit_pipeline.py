@@ -176,7 +176,20 @@ class AuditPipeline:
                 result.save()
 
                 # Persist evidence items
-                for ev in rule_result.evidence:
+                evidence_items = list(rule_result.evidence or [])
+                if result.status in (AuditResult.Status.FAIL, AuditResult.Status.WARNING) and not evidence_items:
+                    # Ensure failed/warning outcomes always carry at least one evidence row for reporting consistency.
+                    evidence_items = [{
+                        "evidence_type": "field_value",
+                        "field_name": "rule_code",
+                        "field_name_ar": "رمز القاعدة",
+                        "expected_value": "pass",
+                        "actual_value": result.status,
+                        "description": result.explanation,
+                        "description_ar": result.explanation_ar,
+                    }]
+
+                for ev in evidence_items:
                     ev_dict = ev.to_dict() if hasattr(ev, 'to_dict') else ev
                     AuditEvidence.objects.create(
                         audit_result=result,

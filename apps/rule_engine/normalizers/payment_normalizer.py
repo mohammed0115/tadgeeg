@@ -20,6 +20,22 @@ class PaymentNormalizer(BaseNormalizer):
                 organization_id=str(organization_id),
             )
 
+        # Pull AI-extraction fields from the linked base Document if available
+        ai_fields = {}
+        try:
+            base_doc = pmt.document
+            ai_fields = {
+                "ocr_confidence": getattr(base_doc, "ocr_confidence", None),
+                "is_handwritten": getattr(base_doc, "is_handwritten", False),
+                "has_alterations": getattr(base_doc, "has_alterations", False),
+                "clarity_score": getattr(base_doc, "ocr_confidence", None),
+                "content_fingerprint": getattr(base_doc, "content_hash", None),
+                "risk_score": None,
+                "ai_extracted_fields": list(pmt.validation_details or []),
+            }
+        except Exception:
+            pass
+
         typed_data = {
             "payment_number": pmt.payment_number,
             "payment_date": str(pmt.payment_date) if pmt.payment_date else None,
@@ -35,6 +51,7 @@ class PaymentNormalizer(BaseNormalizer):
             "bank_reference": pmt.bank_reference,
             "approval_status": pmt.approval_status,
             "approved_by_id": str(pmt.approved_by_id) if pmt.approved_by_id else None,
+            "uploaded_by_id": str(pmt.uploaded_by_id) if pmt.uploaded_by_id else None,
             "cost_center": pmt.cost_center,
             "account_code": pmt.account_code,
             "is_duplicate": pmt.is_duplicate,
@@ -42,6 +59,9 @@ class PaymentNormalizer(BaseNormalizer):
             "is_advance_payment": pmt.is_advance_payment,
             "advance_cleared": pmt.advance_cleared,
             "days_since_invoice": pmt.days_since_invoice,
+            "created_at": str(pmt.created_at) if pmt.created_at else None,
+            "updated_at": str(pmt.updated_at) if pmt.updated_at else None,
+            **ai_fields,
         }
 
         return NormalizedDocument(

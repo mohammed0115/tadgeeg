@@ -2521,3 +2521,7 @@ msgstr "ملخص سريع يوضح من أين ينبغي أن يبدأ فريق
 
 msgid "The goal is to support decisions, not replace human verification or formal reviews."
 msgstr "الهدف دعم اتخاذ القرارات لا إحلال التحقق البشري أو المراجعات الرسمية."
+
+# --- Login portal: step 03 ---
+msgid "Move directly into the %(product)s dashboard"
+msgstr "انتقل مباشرةً إلى لوحة تحكم %(product)s"

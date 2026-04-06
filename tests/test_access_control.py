@@ -175,8 +175,12 @@ class SplitDashboardIntegrationTests(TestCase):
     def setUp(self):
         self.client = Client()
 
-    def test_dashboard_url_resolves_to_vendor_namespace(self):
+    def test_dashboard_url_resolves_to_frontend_namespace(self):
         match = resolve("/dashboard/")
+        self.assertEqual(match.namespace, "frontend")
+
+    def test_vendor_subpages_resolve_to_vendor_namespace(self):
+        match = resolve("/dashboard/files/")
         self.assertEqual(match.namespace, "vendor_dashboard")
 
     def test_platform_admin_url_resolves_to_platform_namespace(self):
@@ -191,7 +195,7 @@ class SplitDashboardIntegrationTests(TestCase):
 
     def test_platform_user_cannot_access_vendor_dashboard(self):
         self.client.force_login(self.platform_user)
-        response = self.client.get("/dashboard/")
+        response = self.client.get("/dashboard/files/")
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/platform-admin/")
 
@@ -202,9 +206,16 @@ class SplitDashboardIntegrationTests(TestCase):
         self.assertContains(response, "/platform-admin/organizations/")
         self.assertNotContains(response, "/dashboard/files/")
 
-    def test_vendor_route_uses_vendor_layout_and_sidebar(self):
+    def test_frontend_dashboard_route_uses_executive_dashboard_layout(self):
         self.client.force_login(self.org_user)
         response = self.client.get("/dashboard/")
+        self.assertContains(response, 'class="dashboard-page')
+        self.assertContains(response, 'id="cashFlowChart"')
+        self.assertNotContains(response, 'data-console-context="vendor_dashboard"')
+
+    def test_vendor_route_uses_vendor_layout_and_sidebar(self):
+        self.client.force_login(self.org_user)
+        response = self.client.get("/dashboard/files/")
         self.assertContains(response, 'data-console-context="vendor_dashboard"')
         self.assertContains(response, "/dashboard/files/")
         self.assertContains(response, "Acme Org")

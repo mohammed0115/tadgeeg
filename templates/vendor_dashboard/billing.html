@@ -41,7 +41,7 @@
                       'badge-amber':  subscription.status === 'trial',
                       'badge-red':    subscription.status === 'expired' || subscription.status === 'cancelled',
                     }"
-                    x-text="subscription.status === 'active' ? '{% trans \"Active\" %}' : subscription.status === 'trial' ? '{% trans \"Trial\" %}' : subscription.status === 'expired' ? '{% trans \"Expired\" %}' : subscription.status || '—'">
+                    x-text="subscription.status === 'active' ? '{% trans 'Active' %}' : subscription.status === 'trial' ? '{% trans 'Trial' %}' : subscription.status === 'expired' ? '{% trans 'Expired' %}' : subscription.status || '—'">
               </span>
             </div>
             <p class="text-3xl font-black mt-2">
@@ -156,7 +156,7 @@
                               'badge-amber':  inv.status === 'pending',
                               'badge-red':    inv.status === 'failed',
                             }"
-                            x-text="inv.status === 'paid' ? '{% trans \"Paid\" %}' : inv.status === 'pending' ? '{% trans \"Pending\" %}' : '{% trans \"Failed\" %}'">
+                            x-text="inv.status === 'paid' ? '{% trans 'Paid' %}' : inv.status === 'pending' ? '{% trans 'Pending' %}' : '{% trans 'Failed' %}'">
                       </span>
                     </td>
                     <td>

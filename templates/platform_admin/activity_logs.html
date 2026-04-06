@@ -152,7 +152,7 @@
     <!-- Pagination -->
     <template x-if="!loading && totalPages > 1">
       <div class="px-5 py-3.5 border-t border-slate-100 dark:border-slate-700/30 flex items-center justify-between">
-        <p class="text-xs text-slate-500" x-text="'{% trans \"Page\" %} ' + page + ' {% trans \"of\" %} ' + totalPages + ' (' + total + ' {% trans \"logs\" %})'"></p>
+        <p class="text-xs text-slate-500" x-text="'{% trans 'Page' %} ' + page + ' {% trans 'of' %} ' + totalPages + ' (' + total + ' {% trans 'logs' %})'"></p>
         <div class="flex gap-2">
           <button @click="page--; load()" :disabled="page <= 1" class="btn-ghost text-xs px-3 py-1.5 disabled:opacity-40">
             <i data-lucide="chevron-right" class="w-4 h-4"></i>

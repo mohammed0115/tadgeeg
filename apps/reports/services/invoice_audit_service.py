@@ -267,6 +267,9 @@ class InvoiceAuditReportService:
 
         compliance_engine = self._build_compliance_engine(validations)
         anomalies         = self._build_anomalies(invoices, validations, risk_summaries)
+        executive_summary = self._build_executive_summary(summary, validations, language)
+        recommendations   = self._build_recommendations(summary, validations)
+        decision_support  = self._build_decision_support(summary, anomalies, recommendations)
 
         # KAMs — ISA 701
         from apps.reports.services.kams_service import KAMsService
@@ -301,7 +304,8 @@ class InvoiceAuditReportService:
         report = {
             "report_header":               self._build_header(date_from, date_to, language, summary),
             "summary":                     summary,
-            "executive_summary":           self._build_executive_summary(summary, validations, language),
+            "executive_summary":           executive_summary,
+            "decision_support":            decision_support,
             "compliance_engine":           compliance_engine,
             "high_risk_invoices":          self._build_high_risk_invoices(invoices, validations),
             "failed_rules_analysis":       self._build_failed_rules(validations),
@@ -313,7 +317,7 @@ class InvoiceAuditReportService:
             "isa700_auditor_opinion":      isa700_opinion_report,  # ISA 700 comprehensive report
             "ias7_cashflow_classification": ias7_classifications,   # IAS 7 cash flow statement
             "ias7_cashflow_statement":     ias7_cashflow_statement, # IAS 7:2017 structure
-            "actions_and_recommendations": self._build_recommendations(summary, validations),
+            "actions_and_recommendations": recommendations,
         }
         return _safe(report)
 
@@ -333,7 +337,7 @@ class InvoiceAuditReportService:
             "organization_name": getattr(self.org, "name", str(self.org)),
             "organization_id":  str(self.org.id),
             "created_at":       datetime.now(tz=dt_timezone.utc).isoformat(),
-            "created_by":       str(self.user) if self.user else None,
+            "created_by":       (getattr(self.user, "email", None) or str(self.user)) if self.user else None,
             "report_type":      "invoice_audit",
             "language":         language,
             "period_from":      date_from.isoformat() if date_from else None,
@@ -517,6 +521,141 @@ class InvoiceAuditReportService:
             "risk_level_ar":    RISK_LABEL_AR[risk],
             "risk_level_en":    RISK_LABEL_EN[risk],
             "key_findings":     findings,
+        }
+
+    def _build_decision_support(self, summary: Dict, anomalies: Dict, recommendations: Dict) -> Dict:
+        """Create a decision-focused brief for auditors and managers."""
+        compliance_score = float(summary.get("compliance_score") or 0)
+        overall_risk_score = float(summary.get("average_risk_score") or 0)
+        risk_level = summary.get("risk_level") or "safe"
+        high_risk_count = int(summary.get("high_risk_count") or 0)
+        duplicate_count = int(summary.get("duplicate_count") or 0)
+        flagged_count = int(summary.get("flagged_count") or 0)
+        total_invoices = max(int(summary.get("total_invoices") or 0), 1)
+
+        anomaly_summary = (anomalies or {}).get("summary", {}) if isinstance(anomalies, dict) else {}
+        dominant_supplier = (anomalies or {}).get("dominant_supplier") if isinstance(anomalies, dict) else None
+        anomaly_drivers = (anomalies or {}).get("anomaly_drivers", []) if isinstance(anomalies, dict) else []
+
+        if risk_level == "high_risk" or duplicate_count or compliance_score < 60:
+            decision = {
+                "code": "escalate_now",
+                "priority": "critical",
+                "label_ar": "تصعيد فوري للإدارة والمراجعة اليدوية",
+                "label_en": "Immediate escalation for management review",
+                "rationale_ar": "المؤشرات الحالية تُظهر تعرّضاً مرتفعاً للمخاطر أو مخالفات جوهرية قبل الصرف.",
+                "rationale_en": "Current indicators show elevated exposure or material exceptions before payment approval.",
+            }
+        elif risk_level == "review" or flagged_count:
+            decision = {
+                "code": "controlled_review",
+                "priority": "high",
+                "label_ar": "مراجعة رقابية موجهة قبل الاعتماد النهائي",
+                "label_en": "Targeted control review before final approval",
+                "rationale_ar": "هناك إشارات تستدعي مراجعة مركزة لكنها لا تمثل أزمة شاملة.",
+                "rationale_en": "Signals require focused review, but do not yet indicate a pervasive control failure.",
+            }
+        else:
+            decision = {
+                "code": "standard_processing",
+                "priority": "low",
+                "label_ar": "استمرار المعالجة ضمن الضوابط القياسية",
+                "label_en": "Continue under standard controls",
+                "rationale_ar": "الوضع العام مستقر ويمكن الاستمرار مع المتابعة الدورية المعتادة.",
+                "rationale_en": "Overall posture is stable and can continue under routine monitoring.",
+            }
+
+        key_findings = []
+        if high_risk_count:
+            key_findings.append({
+                "code": "DEC-HIGH-RISK",
+                "severity": "high",
+                "title_ar": f"{high_risk_count} فاتورة عالية المخاطر تتطلب قراراً قبل الصرف",
+                "title_en": f"{high_risk_count} high-risk invoice(s) require decision before payment",
+            })
+        if duplicate_count:
+            key_findings.append({
+                "code": "DEC-DUPLICATES",
+                "severity": "critical",
+                "title_ar": f"{duplicate_count} حالة تكرار قد تؤدي إلى صرف مزدوج",
+                "title_en": f"{duplicate_count} duplicate case(s) could lead to double payment",
+            })
+        if compliance_score < 85:
+            key_findings.append({
+                "code": "DEC-COMPLIANCE",
+                "severity": "medium" if compliance_score >= 60 else "critical",
+                "title_ar": f"درجة الامتثال الحالية {compliance_score:.1f}% أقل من المستوى المستهدف",
+                "title_en": f"Current compliance score of {compliance_score:.1f}% is below target",
+            })
+        if not key_findings:
+            key_findings.append({
+                "code": "DEC-STABLE",
+                "severity": "low",
+                "title_ar": "لا توجد مؤشرات جوهرية تؤثر على القرار التشغيلي حالياً",
+                "title_en": "No material indicators currently affect the operating decision",
+            })
+
+        ai_insights = []
+        if anomaly_summary.get("high_anomaly_count"):
+            ai_insights.append({
+                "title_ar": "الشذوذات المدعومة بالذكاء الاصطناعي",
+                "title_en": "AI-supported anomaly signal",
+                "detail_ar": f"تم رصد {anomaly_summary.get('high_anomaly_count', 0)} مستندات بشذوذ مرتفع ومتوسط درجة شذوذ {anomaly_summary.get('average_anomaly_score', 0):.1f}.",
+                "detail_en": f"{anomaly_summary.get('high_anomaly_count', 0)} documents were flagged with elevated anomaly patterns and an average anomaly score of {anomaly_summary.get('average_anomaly_score', 0):.1f}.",
+                "severity": "high",
+            })
+        if dominant_supplier:
+            ai_insights.append({
+                "title_ar": "تركيز إنفاق على مورد واحد",
+                "title_en": "Supplier concentration detected",
+                "detail_ar": f"المورد {dominant_supplier.get('supplier_name')} يمثل {dominant_supplier.get('spend_share_percent', 0)}% من الإنفاق ضمن الفترة.",
+                "detail_en": f"Supplier {dominant_supplier.get('supplier_name')} represents {dominant_supplier.get('spend_share_percent', 0)}% of the spend in scope.",
+                "severity": "medium",
+            })
+        if anomaly_drivers:
+            top_driver = anomaly_drivers[0]
+            ai_insights.append({
+                "title_ar": "أبرز محرك للمخاطر",
+                "title_en": "Top AI risk driver",
+                "detail_ar": f"المحرك الأكثر تكراراً هو {top_driver.get('code')} بعدد {top_driver.get('affected_count', 0)} حالات.",
+                "detail_en": f"The most frequent AI risk driver is {top_driver.get('code')} affecting {top_driver.get('affected_count', 0)} cases.",
+                "severity": "medium",
+            })
+        if not ai_insights:
+            ai_insights.append({
+                "title_ar": "الصورة التحليلية مستقرة",
+                "title_en": "Analytical posture is stable",
+                "detail_ar": "لم ترصد التحليلات الحالية أنماطاً شاذة جوهرية تتجاوز حدود المراجعة العادية.",
+                "detail_en": "Current analytics did not identify material patterns beyond normal review thresholds.",
+                "severity": "low",
+            })
+
+        impact_ratio = round(((high_risk_count + duplicate_count + flagged_count) / total_invoices) * 100, 1)
+        business_impact = {
+            "affected_invoices": high_risk_count + duplicate_count + flagged_count,
+            "high_risk_invoices": high_risk_count,
+            "duplicate_invoices": duplicate_count,
+            "flagged_invoices": flagged_count,
+            "exposure_ratio_pct": impact_ratio,
+            "impact_level": decision["priority"],
+            "narrative_ar": f"نطاق التأثير الحالي يشمل {impact_ratio:.1f}% من الفواتير ضمن العينة، ما قد يؤثر على قرارات الصرف والاعتماد والامتثال.",
+            "narrative_en": f"The current impact footprint covers {impact_ratio:.1f}% of invoices in scope and may influence payment, approval, and compliance decisions.",
+        }
+
+        action_items = list(recommendations.get("immediate_actions", [])[:3])
+        if not action_items:
+            action_items = list(recommendations.get("future_improvements", [])[:3])
+
+        return {
+            "overall_risk_score": round(overall_risk_score, 1),
+            "risk_level": risk_level,
+            "risk_level_ar": RISK_LABEL_AR.get(risk_level, risk_level),
+            "risk_level_en": RISK_LABEL_EN.get(risk_level, risk_level),
+            "decision": decision,
+            "key_findings": key_findings,
+            "ai_insights": ai_insights,
+            "business_impact": business_impact,
+            "actionable_recommendations": action_items,
         }
 
     # ── Section: compliance_engine ────────────────────────────────────────────
@@ -703,12 +842,15 @@ class InvoiceAuditReportService:
         avg_risk    = sum(risk_scores) / len(risk_scores) if risk_scores else 0.0
 
         return {
-            "safe_count":        safe_ct,
-            "review_count":      review_ct,
-            "high_risk_count":   high_risk_ct,
-            "safe_pct":          round(safe_ct      / total * 100, 1) if total else 0.0,
-            "review_pct":        round(review_ct    / total * 100, 1) if total else 0.0,
-            "high_risk_pct":     round(high_risk_ct / total * 100, 1) if total else 0.0,
+            "safe":             safe_ct,
+            "review":           review_ct,
+            "high_risk":        high_risk_ct,
+            "safe_count":       safe_ct,
+            "review_count":     review_ct,
+            "high_risk_count":  high_risk_ct,
+            "safe_pct":         round(safe_ct      / total * 100, 1) if total else 0.0,
+            "review_pct":       round(review_ct    / total * 100, 1) if total else 0.0,
+            "high_risk_pct":    round(high_risk_ct / total * 100, 1) if total else 0.0,
             "average_risk_score": round(avg_risk, 1),
             "thresholds": RISK_THRESHOLDS,
         }

@@ -252,3 +252,61 @@ class TestZATCAQRService:
             assert isinstance(result, dict)
         except Exception:
             pass  # Raising is acceptable — just not silently corrupt
+
+
+@pytest.mark.unit
+class TestStrictVATComplianceValidator:
+    def _validator(self):
+        from core.services.compliance.vat_validator import VATValidator
+        return VATValidator(country_code="SA")
+
+    def test_missing_required_field_makes_invoice_non_compliant(self):
+        result = self._validator().validate({
+            "document_type": "sales_invoice",
+            "subtotal": "1000",
+            "vat_rate": "15",
+            "tax_amount": "150",
+            "total_amount": "1150",
+            "currency": "SAR",
+            "document_number": "INV-001",
+            "date": "2026-01-15",
+            "has_qr_code": True,
+            # vendor_vat_number intentionally missing
+        })
+
+        assert result["vat_valid"] is False
+        assert result["compliance_score"] < 0.8
+        assert "vendor_vat_number" in result["missing_fields"]
+
+    def test_validator_returns_detailed_violations(self):
+        result = self._validator().validate({
+            "document_type": "sales_invoice",
+            "subtotal": "0",
+            "vat_rate": "0",
+            "tax_amount": "0",
+            "total_amount": "0",
+            "currency": "SAR",
+            "has_qr_code": False,
+        })
+
+        assert "violations" in result
+        assert isinstance(result["violations"], list)
+        assert any(v.get("field") == "vendor_vat_number" for v in result["violations"])
+        assert result.get("ComplianceScore") == pytest.approx(result["compliance_score"] * 100, rel=1e-6)
+
+
+@pytest.mark.unit
+class TestStrictDocumentComplianceSection:
+    def test_missing_mandatory_fields_cannot_show_zatca_compliant(self):
+        from core.services.document_report_service import DocumentReportService
+
+        compliance = DocumentReportService(organization=None)._build_compliance(
+            "sales_invoice",
+            {"vendor_vat_number": "", "has_qr_code": False, "cost_center": None},
+            results=[],
+        )
+
+        assert compliance["zatca_compliant"] is False
+        assert compliance["compliance_score"] < 80
+        assert "violations" in compliance
+        assert len(compliance["violations"]) >= 2

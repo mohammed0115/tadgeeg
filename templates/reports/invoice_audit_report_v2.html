@@ -203,6 +203,121 @@
 
 </div>
 
+{% if decision %}
+<div class="section-card">
+  <div class="section-header">
+    <div class="icon bg-indigo-100">🧭</div>
+    <h2 class="text-base font-bold text-slate-800">
+      {% if is_rtl %}ملخص القرار والتأثير{% else %}Decision-Focused Audit Brief{% endif %}
+    </h2>
+    <span class="ms-auto pill pill-{{ decision.decision.priority|default:'low' }}">
+      {% if is_rtl %}{{ decision.risk_level_ar }}{% else %}{{ decision.risk_level_en }}{% endif %}
+    </span>
+  </div>
+  <div class="section-body space-y-5">
+    <div class="grid lg:grid-cols-3 gap-4">
+      <div class="p-4 rounded-xl bg-slate-50 border border-slate-100">
+        <div class="text-xs text-slate-500 mb-1">{% if is_rtl %}درجة المخاطر{% else %}Risk Score{% endif %}</div>
+        <div class="text-3xl font-black {% if decision.overall_risk_score >= 75 %}text-red-600{% elif decision.overall_risk_score >= 40 %}text-yellow-600{% else %}text-green-600{% endif %}">
+          {{ decision.overall_risk_score|floatformat:1 }}
+        </div>
+      </div>
+      <div class="p-4 rounded-xl bg-blue-50 border border-blue-100 lg:col-span-2">
+        <div class="text-xs text-blue-600 font-semibold uppercase tracking-wide mb-1">
+          {% if is_rtl %}القرار الموصى به{% else %}Recommended Decision{% endif %}
+        </div>
+        <div class="text-sm font-bold text-slate-800 mb-1">
+          {% if is_rtl %}{{ decision.decision.label_ar }}{% else %}{{ decision.decision.label_en }}{% endif %}
+        </div>
+        <p class="text-sm text-slate-600 leading-6 mb-0">
+          {% if is_rtl %}{{ decision.decision.rationale_ar }}{% else %}{{ decision.decision.rationale_en }}{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-4">
+      <div class="p-4 rounded-xl bg-amber-50 border border-amber-100">
+        <div class="text-xs text-amber-700 font-semibold uppercase tracking-wide mb-2">
+          {% if is_rtl %}أهم النتائج{% else %}Key Findings{% endif %}
+        </div>
+        <div class="space-y-2">
+          {% for finding in decision.key_findings %}
+          <div class="flex items-start gap-2 text-sm text-slate-700">
+            <span class="pill pill-{{ finding.severity }} mt-0.5">{{ finding.severity|upper }}</span>
+            <span>{% if is_rtl %}{{ finding.title_ar }}{% else %}{{ finding.title_en }}{% endif %}</span>
+          </div>
+          {% empty %}
+          <div class="text-sm text-slate-500">{% if is_rtl %}لا توجد نتائج رئيسية{% else %}No key findings{% endif %}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
+        <div class="text-xs text-emerald-700 font-semibold uppercase tracking-wide mb-2">
+          {% if is_rtl %}الأثر التجاري{% else %}Business Impact{% endif %}
+        </div>
+        <div class="grid grid-cols-2 gap-3 mb-3 text-sm">
+          <div>
+            <div class="text-slate-500">{% if is_rtl %}فواتير متأثرة{% else %}Affected Invoices{% endif %}</div>
+            <div class="font-bold text-slate-800">{{ decision.business_impact.affected_invoices|default:0 }}</div>
+          </div>
+          <div>
+            <div class="text-slate-500">{% if is_rtl %}نسبة التعرض{% else %}Exposure Ratio{% endif %}</div>
+            <div class="font-bold text-slate-800">{{ decision.business_impact.exposure_ratio_pct|floatformat:1 }}%</div>
+          </div>
+        </div>
+        <p class="text-sm text-slate-600 leading-6 mb-0">
+          {% if is_rtl %}{{ decision.business_impact.narrative_ar }}{% else %}{{ decision.business_impact.narrative_en }}{% endif %}
+        </p>
+      </div>
+    </div>
+
+    <div class="grid lg:grid-cols-2 gap-4">
+      <div class="p-4 rounded-xl bg-violet-50 border border-violet-100">
+        <div class="text-xs text-violet-700 font-semibold uppercase tracking-wide mb-2">
+          {% if is_rtl %}رؤى الذكاء الاصطناعي{% else %}AI Insights{% endif %}
+        </div>
+        <div class="space-y-2">
+          {% for insight in decision.ai_insights %}
+          <div class="rounded-lg bg-white border border-violet-100 px-3 py-2">
+            <div class="text-sm font-semibold text-slate-800">
+              {% if is_rtl %}{{ insight.title_ar }}{% else %}{{ insight.title_en }}{% endif %}
+            </div>
+            <div class="text-xs text-slate-500 mt-1">
+              {% if is_rtl %}{{ insight.detail_ar }}{% else %}{{ insight.detail_en }}{% endif %}
+            </div>
+          </div>
+          {% empty %}
+          <div class="text-sm text-slate-500">{% if is_rtl %}لا توجد رؤى إضافية{% else %}No additional insights{% endif %}</div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="p-4 rounded-xl bg-red-50 border border-red-100">
+        <div class="text-xs text-red-700 font-semibold uppercase tracking-wide mb-2">
+          {% if is_rtl %}التوصيات العملية{% else %}Actionable Recommendations{% endif %}
+        </div>
+        <div class="space-y-2">
+          {% for rec in decision.actionable_recommendations %}
+          <div class="rounded-lg bg-white border border-red-100 px-3 py-2">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="pill pill-{{ rec.priority|default:'medium' }}">{{ rec.priority|upper }}</span>
+              <span class="text-xs text-slate-400 font-mono">{{ rec.code }}</span>
+            </div>
+            <div class="text-sm text-slate-700">
+              {% if is_rtl %}{{ rec.action_ar }}{% else %}{{ rec.action_en }}{% endif %}
+            </div>
+          </div>
+          {% empty %}
+          <div class="text-sm text-slate-500">{% if is_rtl %}لا توجد توصيات حالياً{% else %}No recommendations at this time{% endif %}</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 
 <!-- ═══════════════════════════════════════════════════════════════════════════
      SECTION 3 — EXECUTIVE SUMMARY

@@ -123,13 +123,13 @@
     </div>
     <!-- Pagination -->
     <div class="border-t border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
-      <p class="text-xs text-slate-400" x-text="'{% trans \"Showing\" %} ' + rows.length + ' {% trans \"of\" %} ' + totalCount + ' {% trans \"transactions\" %}'"></p>
+      <p class="text-xs text-slate-400" x-text="'{% trans 'Showing' %} ' + rows.length + ' {% trans 'of' %} ' + totalCount + ' {% trans 'transactions' %}'"></p>
       <div class="flex gap-2">
         <button @click="page = Math.max(1, page-1); load()" :disabled="page <= 1"
                 class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40">
           {% trans "Previous" %}
         </button>
-        <span class="text-xs px-3 py-1.5 text-slate-500" x-text="'{% trans \"Page\" %} ' + page"></span>
+        <span class="text-xs px-3 py-1.5 text-slate-500" x-text="'{% trans 'Page' %} ' + page"></span>
         <button @click="page++; load()" :disabled="rows.length < pageSize"
                 class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40">
           {% trans "Next" %}

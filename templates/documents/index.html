@@ -4,10 +4,11 @@
 {% block page_title %}{% trans "Document Management" %}{% endblock %}
 {% block nav_documents %}active{% endblock %}
 {% block content %}
-<div x-data="{docs:[],loading:true,async init(){try{const d=await apiFetch('/documents/?page_size=50');this.docs=d.results||d||[];}catch(e){notify('{% trans \"Load failed\" %}','error');}this.loading=false;this.$nextTick(()=>lucide.createIcons())}}" x-init="init()" class="space-y-4 max-w-screen-xl">
+<div x-data="{docs:[],loading:true,currentPage:1,pageSize:10,totalCount:0,async init(){await this.load();},async load(){this.loading=true;try{const d=await apiFetch('/documents/?page='+this.currentPage+'&page_size='+this.pageSize);this.docs=Array.isArray(d?.results)?d.results:(Array.isArray(d)?d:[]);this.totalCount=Number(d?.count??this.docs.length??0);}catch(e){notify('{% trans 'Load failed' %}','error');}this.loading=false;this.$nextTick(()=>lucide.createIcons())},get totalPages(){return Math.max(1,Math.ceil(this.totalCount/this.pageSize));},get pageStart(){return this.totalCount?((this.currentPage-1)*this.pageSize)+1:0;},get pageEnd(){return Math.min(this.currentPage*this.pageSize,this.totalCount);},async nextPage(){if(this.currentPage<this.totalPages){this.currentPage+=1;await this.load();}},async prevPage(){if(this.currentPage>1){this.currentPage-=1;await this.load();}}}" x-init="init()" class="space-y-4 max-w-screen-xl">
   <div class="card overflow-hidden">
     <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/30 flex items-center justify-between">
       <h3 class="font-semibold text-slate-800 dark:text-white">{% trans "Uploaded Documents" %}</h3>
+      <span class="text-xs text-slate-500" x-text="totalCount ? ('عرض ' + pageStart + '–' + pageEnd + ' من ' + totalCount) : ''"></span>
     </div>
     <div x-show="loading" class="flex justify-center py-12"><svg class="animate-spin w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg></div>
     <table x-show="!loading" class="data-table">
@@ -31,6 +32,13 @@
         <tr x-show="!docs.length&&!loading"><td colspan="6" class="text-center py-16 text-slate-400 text-sm"><i data-lucide="folder-open" class="w-8 h-8 mx-auto mb-2"></i><p>{% trans "No documents" %}</p></td></tr>
       </tbody>
     </table>
+    <div x-show="!loading && totalCount > pageSize" class="px-5 py-3 border-t border-slate-100 dark:border-slate-700/30 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-500">
+      <span x-text="'صفحة ' + currentPage + ' / ' + totalPages"></span>
+      <div class="flex items-center gap-2">
+        <button @click="prevPage()" :disabled="currentPage <= 1" class="btn-ghost px-3 py-1.5 rounded-lg disabled:opacity-50">السابق</button>
+        <button @click="nextPage()" :disabled="currentPage >= totalPages" class="btn-ghost px-3 py-1.5 rounded-lg disabled:opacity-50">التالي</button>
+      </div>
+    </div>
   </div>
 </div>
 {% endblock %}

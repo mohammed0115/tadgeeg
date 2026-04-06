@@ -627,8 +627,7 @@ class DocumentReportService:
         }
 
     def _build_compliance(self, document_type: str, canonical: dict, results: list, vd: dict = None) -> dict:
-        """Build ZATCA compliance section."""
-        # Use failed codes from AuditResults OR from validation_details rule_details
+        """Build a strict ZATCA/VAT compliance section."""
         if results:
             failed_codes = {r.rule_code for r in results if r.status == "fail"}
             warned_codes = {r.rule_code for r in results if r.status == "warning"}
@@ -637,41 +636,111 @@ class DocumentReportService:
             failed_codes = {r["code"] for r in rd if not r.get("passed")}
             warned_codes = set()
 
-        vat_validated   = "VAT-02" not in failed_codes
-        vat_rate_ok     = "VAT-01" not in failed_codes
-        vat_num_ok      = "VAT-04" not in failed_codes
-        qr_valid        = "VAT-05" not in failed_codes and canonical.get("qr_code_valid", True)
-        no_duplicate    = "DUP-01" not in failed_codes and not canonical.get("is_duplicate", False)
+        vendor_vat_present = bool(str(canonical.get("vendor_vat_number") or "").strip())
+        document_number_present = bool(str(canonical.get("document_number") or "").strip())
+        date_present = bool(canonical.get("date") or canonical.get("document_date"))
+        currency_present = bool(str(canonical.get("currency") or "").strip())
+        subtotal_present = canonical.get("subtotal") not in (None, "")
+        total_present = canonical.get("total_amount") not in (None, "")
+        tax_present = canonical.get("vat_amount", canonical.get("tax_amount")) not in (None, "")
+        vat_rate_present = canonical.get("vat_rate") not in (None, "")
+        qr_applicable = document_type in ("invoice", "sales_invoice", "sales_receipt")
+        has_qr = bool(canonical.get("has_qr_code"))
+        qr_content_valid = bool(canonical.get("qr_code_valid")) if has_qr else False
 
-        # Missing mandatory compliance fields
+        vat_validated = "VAT-02" not in failed_codes and subtotal_present and tax_present and total_present
+        vat_rate_ok = "VAT-01" not in failed_codes and vat_rate_present
+        vat_num_ok = "VAT-04" not in failed_codes and vendor_vat_present
+        qr_valid = (not qr_applicable) or ("VAT-05" not in failed_codes and has_qr and qr_content_valid)
+        no_duplicate = "DUP-01" not in failed_codes and not canonical.get("is_duplicate", False)
+
         missing_fields = []
-        if not canonical.get("vendor_vat_number") and document_type in ("sales_invoice", "purchase_order"):
-            missing_fields.append({"field": "vendor_vat_number", "label_ar": "الرقم الضريبي للمورد"})
-        if document_type == "sales_invoice" and not canonical.get("has_qr_code"):
-            missing_fields.append({"field": "qr_code", "label_ar": "رمز QR (ZATCA)"})
-        if document_type == "vat_return" and not canonical.get("zatca_reference"):
-            missing_fields.append({"field": "zatca_reference", "label_ar": "الرقم المرجعي للزكاة"})
 
+        def add_missing(field: str, label_ar: str, label_en: str):
+            missing_fields.append({"field": field, "label_ar": label_ar, "label_en": label_en})
+
+        if not document_number_present:
+            add_missing("document_number", "رقم الفاتورة", "Invoice number")
+        if not date_present:
+            add_missing("date", "تاريخ الفاتورة", "Invoice date")
+        if not currency_present:
+            add_missing("currency", "العملة", "Currency")
+        if not subtotal_present:
+            add_missing("subtotal", "الإجمالي قبل الضريبة", "Subtotal")
+        if not total_present:
+            add_missing("total_amount", "الإجمالي النهائي", "Total amount")
+        if not tax_present:
+            add_missing("tax_amount", "قيمة الضريبة", "VAT amount")
+        if document_type in ("invoice", "sales_invoice", "purchase_order") and not vendor_vat_present:
+            add_missing("vendor_vat_number", "الرقم الضريبي للمورد", "Vendor VAT number")
+        if qr_applicable and not has_qr:
+            add_missing("qr_code", "رمز QR (ZATCA)", "ZATCA QR code")
+        if document_type == "vat_return" and not canonical.get("zatca_reference"):
+            add_missing("zatca_reference", "الرقم المرجعي للزكاة", "ZATCA reference")
+
+        required_fields_ok = len(missing_fields) == 0
         compliance_checks = {
+            "required_fields_present": required_fields_ok,
             "vat_calculation_correct": vat_validated,
-            "vat_rate_15pct":          vat_rate_ok,
-            "vat_number_valid":        vat_num_ok,
-            "qr_code_valid":           qr_valid if document_type in ("sales_invoice", "sales_receipt") else None,
-            "no_duplicate":            no_duplicate,
-            "cost_center_assigned":    bool(canonical.get("cost_center")),
+            "vat_rate_15pct": vat_rate_ok,
+            "vat_number_valid": vat_num_ok,
+            "invoice_number_present": document_number_present,
+            "invoice_date_present": date_present,
+            "currency_present": currency_present,
+            "qr_code_valid": qr_valid if qr_applicable else None,
+            "no_duplicate": no_duplicate,
+            "cost_center_assigned": bool(canonical.get("cost_center")),
         }
-        # Compliance score
+
         applicable = {k: v for k, v in compliance_checks.items() if v is not None}
-        passed_count = sum(1 for v in applicable.values() if v)
-        compliance_score = round(passed_count / len(applicable) * 100, 1) if applicable else 100.0
+        if applicable:
+            passed_count = sum(1 for v in applicable.values() if v)
+            compliance_score = round(passed_count / len(applicable) * 100, 1)
+        else:
+            compliance_score = 0.0
+        if missing_fields:
+            compliance_score = min(compliance_score, 74.0)
+
+        violations = [
+            {
+                "type": "missing_field",
+                "severity": "critical",
+                "field": item["field"],
+                "message": f"Required field '{item['label_en']}' is missing.",
+                "message_ar": f"الحقل المطلوب '{item['label_ar']}' مفقود.",
+            }
+            for item in missing_fields
+        ]
+        violations.extend(
+            {
+                "type": "rule_failure",
+                "severity": "high",
+                "code": code,
+                "message": f"Compliance rule {code} failed.",
+            }
+            for code in sorted(failed_codes)
+        )
+        violations.extend(
+            {
+                "type": "rule_warning",
+                "severity": "medium",
+                "code": code,
+                "message": f"Compliance rule {code} needs review.",
+            }
+            for code in sorted(warned_codes)
+        )
+
+        zatca_compliant = required_fields_ok and not failed_codes and compliance_score >= 80
 
         return {
-            "zatca_compliant":   compliance_score >= 80,
-            "compliance_score":  compliance_score,
-            "checks":            compliance_checks,
-            "missing_fields":    missing_fields,
-            "failed_rules":      list(failed_codes),
-            "warning_rules":     list(warned_codes),
+            "zatca_compliant": zatca_compliant,
+            "compliance_score": compliance_score,
+            "required_fields_ok": required_fields_ok,
+            "checks": compliance_checks,
+            "missing_fields": missing_fields,
+            "failed_rules": sorted(failed_codes),
+            "warning_rules": sorted(warned_codes),
+            "violations": violations,
         }
 
     def _build_recommendations(self, results: list, document_type: str) -> list:

@@ -117,7 +117,7 @@
                 <td class="text-sm text-slate-600 dark:text-slate-400 max-w-xs truncate" x-text="lead.subject || lead.message?.substring(0, 50) || '—'"></td>
                 <td>
                   <span class="badge-slate text-[10px]"
-                        x-text="lead.source === 'contact_form' ? '{% trans \"Contact form\" %}' : lead.source === 'pricing_inquiry' ? '{% trans \"Pricing inquiry\" %}' : lead.source === 'demo_request' ? '{% trans \"Demo request\" %}' : lead.source || '—'">
+                        x-text="lead.source === 'contact_form' ? '{% trans 'Contact form' %}' : lead.source === 'pricing_inquiry' ? '{% trans 'Pricing inquiry' %}' : lead.source === 'demo_request' ? '{% trans 'Demo request' %}' : lead.source || '—'">
                   </span>
                 </td>
                 <td class="text-xs text-slate-400"
@@ -130,7 +130,7 @@
                           'badge-green':  lead.status === 'converted',
                           'badge-red':    lead.status === 'spam',
                         }"
-                        x-text="lead.status === 'new' ? '{% trans \"New\" %}' : lead.status === 'in_progress' ? '{% trans \"In progress\" %}' : lead.status === 'converted' ? '{% trans \"Converted\" %}' : '{% trans \"Spam\" %}'">
+                        x-text="lead.status === 'new' ? '{% trans 'New' %}' : lead.status === 'in_progress' ? '{% trans 'In progress' %}' : lead.status === 'converted' ? '{% trans 'Converted' %}' : '{% trans 'Spam' %}'">
                   </span>
                 </td>
                 <td>

@@ -1,7 +1,12 @@
-"""Forms for email OTP verification flow."""
+"""Forms for authentication and email OTP flows."""
 
 from django import forms
+from django.contrib.auth import get_user_model
+from django.contrib.auth.forms import PasswordResetForm
 from django.utils.translation import gettext_lazy as _
+
+
+User = get_user_model()
 
 
 class EmailOTPVerifyForm(forms.Form):
@@ -20,3 +25,13 @@ class EmailOTPVerifyForm(forms.Form):
 
 class EmailOTPResendForm(forms.Form):
     """Empty form kept for CSRF-protected resend requests."""
+
+
+class ExistingEmailPasswordResetForm(PasswordResetForm):
+    """Require the submitted email to belong to an active user account."""
+
+    def clean_email(self):
+        email = (self.cleaned_data.get("email") or "").strip().lower()
+        if not User.objects.filter(email__iexact=email, is_active=True).exists():
+            raise forms.ValidationError(_("No active account was found with this email address."))
+        return email

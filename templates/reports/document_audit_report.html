@@ -1,11 +1,13 @@
-{% load static report_filters %}
+{% load i18n static report_filters %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
 <!DOCTYPE html>
-<html lang="{{ meta.language|default:'ar' }}" dir="{{ is_rtl|yesno:'rtl,ltr' }}">
+<html lang="{{ meta.language|default:LANGUAGE_CODE|default:'ar' }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>
-  {% if is_rtl %}تقرير تدقيق — {{ meta.document_type_label_ar }}{% else %}Audit Report — {{ meta.document_type_label_en }}{% endif %}
+  {% trans "Document Audit Report" %} — {% if LANGUAGE_BIDI %}{{ meta.document_type_label_ar }}{% else %}{{ meta.document_type_label_en }}{% endif %}
 </title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

@@ -115,20 +115,20 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, attrs):
-        email = attrs.get("email")
+        email = (attrs.get("email") or "").strip().lower()
         password = attrs.get("password")
+        attrs["email"] = email
 
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            raise serializers.ValidationError({"email": _("Invalid credentials.")})
+        user = User.objects.filter(email__iexact=email).first()
+        if user is None:
+            raise serializers.ValidationError({"email": _("No account found with this email address.")})
 
         if user.is_locked():
             raise serializers.ValidationError(
                 {"non_field_errors": _("Account is temporarily locked. Please try again later.")}
             )
 
-        user_auth = authenticate(email=email, password=password)
+        user_auth = authenticate(email=user.email, password=password)
 
         if not user_auth:
             user.failed_login_attempts += 1

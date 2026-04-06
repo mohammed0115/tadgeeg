@@ -60,15 +60,19 @@ urlpatterns = [
         include("apps.platform_management.urls", namespace="platform_admin"),
     ),
 
+    # Frontend pages (includes the executive `/dashboard/` landing page).
+    # Keep this before the vendor dashboard include so the exact `/dashboard/`
+    # route resolves to `frontend:dashboard`, while `/dashboard/files/` and the
+    # rest of the organisation workspace still resolve to `vendor_dashboard:*`.
+    path('', include('apps.frontend.urls')),
+
     # ── Vendor / Organisation dashboard ─────────────────────────────────────
     # namespace = "vendor_dashboard"  →  reverse("vendor_dashboard:dashboard")
-    # IMPORTANT: must come before the frontend catch-all include
     path(
         "dashboard/",
         include("apps.vendor_dashboard.urls", namespace="vendor_dashboard"),
     ),
 
-    path('', include('apps.frontend.urls')),
     path("api/v1/invoices/", include("apps.invoices.urls")),
     path("api/v1/reports/", include("apps.reports.urls")),
     path("api/v1/rule-engine/", include("apps.rule_engine.api.urls")),

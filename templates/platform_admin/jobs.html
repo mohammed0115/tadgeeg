@@ -121,7 +121,7 @@
                             'badge-amber': job.status === 'draft',
                             'badge-slate': job.status === 'closed',
                           }"
-                          x-text="job.status === 'published' ? '{% trans \"Published\" %}' : job.status === 'draft' ? '{% trans \"Draft\" %}' : '{% trans \"Closed\" %}'">
+                          x-text="job.status === 'published' ? '{% trans 'Published' %}' : job.status === 'draft' ? '{% trans 'Draft' %}' : '{% trans 'Closed' %}'">
                     </span>
                   </td>
                   <td>
@@ -268,7 +268,7 @@
           <button @click="showJobModal=false" class="btn-ghost">{% trans "Cancel" %}</button>
           <button @click="saveJob()" :disabled="saving" class="btn-primary">
             <i data-lucide="save" class="w-4 h-4"></i>
-            <span x-text="saving ? '{% trans \"Saving...\" %}' : '{% trans \"Save\" %}'"></span>
+            <span x-text="saving ? '{% trans 'Saving...' %}' : '{% trans 'Save' %}'"></span>
           </button>
         </div>
       </div>

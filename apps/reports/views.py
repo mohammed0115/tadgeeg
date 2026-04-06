@@ -19,6 +19,7 @@ from apps.audit.models import AuditCase
 from apps.documents.models import Document
 from apps.compliance.models import ComplianceViolation
 from apps.invoices.models import Invoice, InvoiceValidationResult, VendorProfile
+from apps.reports.services.report_data_service import ReportDataService
 from .models import Report
 
 logger = logging.getLogger("finai")
@@ -66,317 +67,25 @@ _INDUSTRY_BENCHMARKS = {
 
 
 def _compute_big_four(vr_qs) -> dict:
-    """Build Big Four compliance breakdown from a validation result queryset."""
-    GROUP_CODES = ["INV", "DUP", "VAT", "ANO", "CTL", "DOC"]
-    counters = {code: {"passed": 0, "failed": 0, "total": 0} for code in GROUP_CODES}
-    for detail_payload in vr_qs.values_list("validation_details", flat=True):
-        if not isinstance(detail_payload, dict):
-            continue
-        for rule_code, detail in detail_payload.items():
-            group_code = str(rule_code or "").split("-", 1)[0]
-            if group_code not in counters:
-                continue
-            counters[group_code]["total"] += 1
-            if detail.get("passed") is True:
-                counters[group_code]["passed"] += 1
-            elif detail.get("passed") is False:
-                counters[group_code]["failed"] += 1
-
-    results = []
-    for firm, meta in _BIG_FOUR_MAPPING.items():
-        fp = ff = ft = 0
-        for code in meta["groups"]:
-            g = counters[code]
-            fp += g["passed"]
-            ff += g["failed"]
-            ft += g["total"]
-        rate = round(fp / ft * 100, 1) if ft else 0.0
-        results.append({
-            "firm": firm,
-            "label": meta["label"],
-            "standard": meta["standard"],
-            "pass_rate": rate,
-            "passed": fp,
-            "failed": ff,
-            "total": ft,
-            "status": "compliant" if rate >= 90 else "at_risk" if rate >= 70 else "non_compliant",
-        })
-
-    overall_p = sum(r["passed"] for r in results)
-    overall_t = sum(r["total"] for r in results)
-    overall_rate = round(overall_p / overall_t * 100, 1) if overall_t else 0.0
-    return {
-        "overall_pass_rate": overall_rate,
-        "overall_status": "compliant" if overall_rate >= 90 else "at_risk" if overall_rate >= 70 else "non_compliant",
-        "firms": results,
-    }
+    """Backward-compatible wrapper around the centralized report data service."""
+    return ReportDataService().compute_big_four(vr_qs)
 
 
 def _compute_benchmark(org, inv_qs) -> dict:
-    """Compare org invoice metrics against Saudi industry benchmarks."""
-    from django.db.models import Count, Avg, Q as _Q
-    from apps.invoices.models import InvoiceValidationResult as _IVR
-
-    industry_key = "services"
-    org_industry = (org.industry or "").lower()
-    for key in _INDUSTRY_BENCHMARKS:
-        if key in org_industry:
-            industry_key = key
-            break
-    benchmark = _INDUSTRY_BENCHMARKS[industry_key]
-
-    inv_stats = inv_qs.aggregate(
-        total=Count("id"),
-        compliant=Count("id", filter=_Q(status="approved")),
-        duplicate=Count("id", filter=_Q(is_duplicate=True)),
-        avg_risk=Avg("risk_score"),
-    )
-    total = inv_stats["total"] or 1
-    org_compliance = round((inv_stats["compliant"] or 0) / total * 100, 1)
-    org_duplicate  = round((inv_stats["duplicate"]  or 0) / total * 100, 1)
-    org_risk       = round(float(inv_stats["avg_risk"] or 0), 1)
-
-    vat_qs    = _IVR.objects.filter(invoice__in=inv_qs)
-    vat_total = vat_qs.count() or 1
-    org_vat   = round(vat_qs.filter(vat_rate_correct=True, vat_calculation_correct=True, vat_subtotal_correct=True).count() / vat_total * 100, 1)
-
-    def _delta(org_val, bench_val, higher_is_better=True):
-        diff = round(org_val - bench_val, 1)
-        if higher_is_better:
-            st = "above" if diff > 0 else "below" if diff < 0 else "at"
-        else:
-            st = "below" if diff > 0 else "above" if diff < 0 else "at"
-        return {"value": org_val, "benchmark": bench_val, "delta": diff, "status": st}
-
-    metrics = {
-        "compliance_rate_pct":     _delta(org_compliance, benchmark["compliance_rate_pct"]),
-        "duplicate_rate_pct":      _delta(org_duplicate,  benchmark["duplicate_rate_pct"],  higher_is_better=False),
-        "avg_risk_score":          _delta(org_risk,       benchmark["avg_risk_score"],       higher_is_better=False),
-        "vat_compliance_rate_pct": _delta(org_vat,        benchmark["vat_compliance_rate_pct"]),
-    }
-    above = sum(1 for m in metrics.values() if m["status"] == "above")
-    below = sum(1 for m in metrics.values() if m["status"] == "below")
-    return {
-        "industry": industry_key,
-        "industry_label": benchmark["label"],
-        "metrics": metrics,
-        "overall_position": "above_average" if above > below else "below_average" if below > above else "average",
-    }
+    """Backward-compatible wrapper around the centralized report data service."""
+    return ReportDataService().compute_benchmark(org, inv_qs)
 
 
 # ─── Helper: collect invoice section data ─────────────────────────────────────
 
 def _collect_invoice_data(org, date_from=None, date_to=None, audit_session_id=None) -> dict:
-    """Aggregate all invoice audit data for reports."""
-    inv_qs = Invoice.objects.filter(organization=org)
-    if audit_session_id:
-        inv_qs = inv_qs.filter(audit_session_id=audit_session_id)
-    if date_from:
-        inv_qs = inv_qs.filter(invoice_date__gte=date_from)
-    if date_to:
-        inv_qs = inv_qs.filter(invoice_date__lte=date_to)
-
-    # ── Overall stats ──────────────────────────────────────────────────────────
-    stats = inv_qs.aggregate(
-        total_invoices=Count("id"),
-        total_invoiced=Sum("total_amount"),
-        total_vat=Sum("vat_amount"),
-        avg_amount=Avg("total_amount"),
-        avg_risk_score=Avg("risk_score"),
-        flagged_count=Count("id", filter=Q(status="flagged")),
-        approved_count=Count("id", filter=Q(status="approved")),
-        rejected_count=Count("id", filter=Q(status="rejected")),
-        pending_count=Count("id", filter=Q(status__in=["pending", "processing"])),
-        duplicate_count=Count("id", filter=Q(is_duplicate=True)),
-        critical_count=Count("id", filter=Q(risk_level="critical")),
-        high_count=Count("id", filter=Q(risk_level="high")),
-        medium_count=Count("id", filter=Q(risk_level="medium")),
-        low_count=Count("id", filter=Q(risk_level="low")),
-        new_vendor_count=Count("id", filter=Q(extracted_data__has_key="is_new_vendor")),
-        missing_qr_count=Count("id", filter=Q(has_qr_code=False)),
-        handwritten_count=Count("id", filter=Q(is_handwritten=True)),
+    """Backward-compatible wrapper around the centralized report data service."""
+    return ReportDataService().collect_invoice_data(
+        org,
+        date_from=date_from,
+        date_to=date_to,
+        audit_session_id=audit_session_id,
     )
-
-    n = stats["total_invoices"] or 1  # avoid division by zero
-
-    # ── Validation scores summary ──────────────────────────────────────────────
-    val_stats = InvoiceValidationResult.objects.filter(
-        invoice__organization=org,
-        invoice__in=inv_qs,
-    ).aggregate(
-        avg_score=Avg("validation_score"),
-        perfect_score=Count("id", filter=Q(validation_score=100)),
-        below_50=Count("id", filter=Q(validation_score__lt=50)),
-        below_80=Count("id", filter=Q(validation_score__lt=80)),
-    )
-
-    # ── Failed rules frequency ─────────────────────────────────────────────────
-    from apps.invoices.models import InvoiceValidationResult as IVR
-    rule_failures = {}
-    for vr in IVR.objects.filter(invoice__organization=org, invoice__in=inv_qs).only("failed_rule_codes"):
-        for code in (vr.failed_rule_codes or []):
-            rule_failures[code] = rule_failures.get(code, 0) + 1
-
-    top_failures = sorted(rule_failures.items(), key=lambda x: -x[1])[:10]
-    from core.services.invoice_validator import RULES
-    top_failures_detail = [
-        {"rule_code": code, "failures": count, "description": RULES.get(code, code)}
-        for code, count in top_failures
-    ]
-
-    # ── Top risk invoices ──────────────────────────────────────────────────────
-    top_risk = list(
-        inv_qs.filter(risk_level__in=["high", "critical"]).order_by("-risk_score").values(
-            "id", "invoice_number", "vendor_name", "total_amount", "currency",
-            "invoice_date", "risk_level", "risk_score", "ai_summary", "status"
-        )[:15]
-    )
-    for i in top_risk:
-        i["id"] = str(i["id"])
-        i["total_amount"] = float(i["total_amount"] or 0)
-        i["invoice_date"] = str(i["invoice_date"]) if i["invoice_date"] else None
-
-    # ── Duplicate invoices ─────────────────────────────────────────────────────
-    duplicates = list(
-        inv_qs.filter(is_duplicate=True).values(
-            "id", "invoice_number", "vendor_name", "total_amount", "currency",
-            "invoice_date", "status", "duplicate_of_id"
-        )[:20]
-    )
-    for d in duplicates:
-        d["id"] = str(d["id"])
-        d["duplicate_of_id"] = str(d["duplicate_of_id"]) if d["duplicate_of_id"] else None
-        d["total_amount"] = float(d["total_amount"] or 0)
-        d["invoice_date"] = str(d["invoice_date"]) if d["invoice_date"] else None
-
-    # ── Vendor analysis ────────────────────────────────────────────────────────
-    vendor_stats = (
-        inv_qs.values("vendor_name")
-        .annotate(
-            invoice_count=Count("id"),
-            vendor_total=Sum("total_amount"),
-            avg_amount=Avg("total_amount"),
-            flagged=Count("id", filter=Q(risk_level__in=["high", "critical"])),
-            duplicates=Count("id", filter=Q(is_duplicate=True)),
-        )
-        .order_by("-vendor_total")[:15]
-    )
-    vendor_list = []
-    total_spend = float(stats["total_invoiced"] or 0)
-    for v in vendor_stats:
-        v_total = float(v["vendor_total"] or 0)
-        vendor_list.append({
-            "vendor_name": v["vendor_name"],
-            "invoice_count": v["invoice_count"],
-            "total_amount": round(v_total, 2),
-            "avg_amount": round(float(v["avg_amount"] or 0), 2),
-            "spend_share_pct": round(v_total / total_spend * 100, 2) if total_spend else 0,
-            "flagged_invoices": v["flagged"],
-            "duplicate_invoices": v["duplicates"],
-        })
-
-    # ── Monthly spend trend ────────────────────────────────────────────────────
-    monthly = list(
-        inv_qs.annotate(month=TruncMonth("invoice_date"))
-        .values("month")
-        .annotate(
-            total=Sum("total_amount"),
-            count=Count("id"),
-            flagged=Count("id", filter=Q(risk_level__in=["high", "critical"])),
-            duplicates=Count("id", filter=Q(is_duplicate=True)),
-        )
-        .order_by("month")
-    )
-    monthly_clean = [
-        {
-            "month": str(m["month"])[:7] if m["month"] else None,
-            "total_amount": round(float(m["total"] or 0), 2),
-            "invoice_count": m["count"],
-            "flagged_count": m["flagged"],
-            "duplicate_count": m["duplicates"],
-        }
-        for m in monthly
-    ]
-
-    # ── VAT compliance stats ───────────────────────────────────────────────────
-    vat_compliant = InvoiceValidationResult.objects.filter(
-        invoice__organization=org, invoice__in=inv_qs,
-        vat_rate_correct=True, vat_calculation_correct=True, vat_subtotal_correct=True
-    ).count()
-    vat_total = InvoiceValidationResult.objects.filter(invoice__organization=org, invoice__in=inv_qs).count()
-
-    # ── Rule group pass rates ──────────────────────────────────────────────────
-    vr_qs = InvoiceValidationResult.objects.filter(invoice__organization=org, invoice__in=inv_qs)
-    n_vr = vr_qs.count() or 1
-
-    def _pct(field_true):
-        return round(vr_qs.filter(**{field_true: True}).count() / n_vr * 100, 1)
-
-    rule_group_summary = {
-        "group1_header_validation": {
-            "has_invoice_number_pct":  _pct("has_invoice_number"),
-            "has_invoice_date_pct":    _pct("has_invoice_date"),
-            "has_vendor_name_pct":     _pct("has_vendor_name"),
-            "has_vendor_vat_pct":      _pct("has_vendor_vat"),
-            "has_total_amount_pct":    _pct("has_total_amount"),
-            "has_currency_pct":        _pct("has_currency"),
-            "total_greater_zero_pct":  _pct("total_greater_zero"),
-        },
-        "group2_duplicate_detection": {
-            "duplicate_invoice_number_pct":   round(vr_qs.filter(duplicate_invoice_number=True).count() / n_vr * 100, 1),
-            "duplicate_vendor_amount_date_pct": round(vr_qs.filter(duplicate_vendor_amount_date=True).count() / n_vr * 100, 1),
-            "duplicate_file_hash_pct":         round(vr_qs.filter(duplicate_file_hash=True).count() / n_vr * 100, 1),
-        },
-        "group3_vat_validation": {
-            "vat_rate_correct_pct":        _pct("vat_rate_correct"),
-            "vat_calculation_correct_pct": _pct("vat_calculation_correct"),
-            "vat_subtotal_correct_pct":    _pct("vat_subtotal_correct"),
-            "vat_number_present_pct":      _pct("vat_number_present"),
-            "qr_code_valid_pct":           _pct("qr_code_valid"),
-        },
-        "group4_anomaly_detection": {
-            "amount_unusually_high_pct":    round(vr_qs.filter(amount_unusually_high=True).count() / n_vr * 100, 1),
-            "new_unknown_vendor_pct":       round(vr_qs.filter(new_unknown_vendor=True).count() / n_vr * 100, 1),
-            "many_invoices_same_day_pct":   round(vr_qs.filter(many_invoices_same_day=True).count() / n_vr * 100, 1),
-            "vendor_dominates_pct":         round(vr_qs.filter(vendor_dominates_invoices=True).count() / n_vr * 100, 1),
-        },
-        "group5_financial_controls": {
-            "has_cost_center_pct":  _pct("has_cost_center"),
-            "has_account_code_pct": _pct("has_account_code"),
-            "has_approver_pct":     _pct("has_approver"),
-        },
-        "group6_document_quality": {
-            "document_clear_pct":   _pct("document_is_clear"),
-            "appears_genuine_pct":  _pct("appears_genuine"),
-            "no_alterations_pct":   _pct("no_alterations"),
-            "has_qr_code_pct":      _pct("has_qr_code"),
-        },
-    }
-
-    return {
-        "overall_stats": {
-            **stats,
-            "total_amount":    round(float(stats["total_invoiced"]  or 0), 2),
-            "total_vat":       round(float(stats["total_vat"]     or 0), 2),
-            "avg_amount":      round(float(stats["avg_amount"]    or 0), 2),
-            "avg_risk_score":  round(float(stats["avg_risk_score"] or 0), 2),
-            "flag_rate_pct":   round(stats["flagged_count"] / n * 100, 2),
-            "duplicate_rate_pct": round(stats["duplicate_count"] / n * 100, 2),
-        },
-        "validation_summary": {
-            **val_stats,
-            "avg_score":       round(float(val_stats["avg_score"] or 0), 2),
-            "vat_compliance_pct": round(vat_compliant / vat_total * 100, 2) if vat_total else 0,
-        },
-        "top_failed_rules":    top_failures_detail,
-        "rule_group_summary":  rule_group_summary,
-        "top_risk_invoices":   top_risk,
-        "duplicate_invoices":  duplicates,
-        "vendor_analysis":     vendor_list,
-        "monthly_trend":       monthly_clean,
-        "big_four":            _compute_big_four(vr_qs),
-        "benchmark":           _compute_benchmark(org, inv_qs),
-    }
 
 
 def _collect_rule_engine_data(org, date_from=None, date_to=None) -> dict:

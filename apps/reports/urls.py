@@ -29,6 +29,7 @@ urlpatterns = [
     # POST: generate invoice audit report from InvoiceAuditReportService
     path("invoice-audit/", iv.InvoiceAuditReportGenerateView.as_view(), name="invoice-audit-generate"),
     # GET: retrieve full saved report as JSON
+    path("invoice-audit/<uuid:pk>", iv.InvoiceAuditReportDetailView.as_view()),
     path("invoice-audit/<uuid:pk>/", iv.InvoiceAuditReportDetailView.as_view(), name="invoice-audit-detail"),
     # GET: view report as HTML
     path("invoice-audit/<uuid:pk>/html/", iv.InvoiceAuditReportHTMLView.as_view(), name="invoice-audit-html"),

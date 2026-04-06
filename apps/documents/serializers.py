@@ -72,11 +72,17 @@ class DocumentAnalysisResultSerializer(serializers.ModelSerializer):
     Full Financial AI + Audit pipeline output.
     Returned by /api/documents/{pk}/analysis/ endpoint.
     """
-    rule_results = serializers.SerializerMethodField()
-    fraud_patterns  = serializers.SerializerMethodField()
+    rule_results      = serializers.SerializerMethodField()
+    fraud_patterns    = serializers.SerializerMethodField()
     duplicate_reasons = serializers.SerializerMethodField()
     compliance_issues = serializers.SerializerMethodField()
-    missing_fields  = serializers.SerializerMethodField()
+    compliance_violations = serializers.SerializerMethodField()
+    missing_fields    = serializers.SerializerMethodField()
+    # Anomaly detection fields (sourced from analysis_data JSON)
+    anomaly_score       = serializers.SerializerMethodField()
+    anomaly_explanation = serializers.SerializerMethodField()
+    anomaly_findings    = serializers.SerializerMethodField()
+    anomaly_methods     = serializers.SerializerMethodField()
 
     class Meta:
         model  = DocumentAnalysisResult
@@ -97,7 +103,10 @@ class DocumentAnalysisResultSerializer(serializers.ModelSerializer):
             "rule_results",
             # Intelligence detail (computed)
             "fraud_patterns", "duplicate_reasons",
-            "compliance_issues", "missing_fields",
+            "compliance_issues", "compliance_violations", "missing_fields",
+            # Anomaly detection (computed from analysis_data)
+            "anomaly_score", "anomaly_explanation",
+            "anomaly_findings", "anomaly_methods",
             # Pipeline meta
             "pipeline_version", "processing_errors", "processing_time_ms",
             "created_at", "updated_at",
@@ -116,8 +125,23 @@ class DocumentAnalysisResultSerializer(serializers.ModelSerializer):
     def get_compliance_issues(self, obj):
         return obj.analysis_data.get("compliance_issues", [])
 
+    def get_compliance_violations(self, obj):
+        return obj.analysis_data.get("compliance_violations", [])
+
     def get_missing_fields(self, obj):
         return obj.analysis_data.get("missing_fields", [])
+
+    def get_anomaly_score(self, obj):
+        return obj.analysis_data.get("anomaly_score", 0)
+
+    def get_anomaly_explanation(self, obj):
+        return obj.analysis_data.get("anomaly_explanation", "")
+
+    def get_anomaly_findings(self, obj):
+        return obj.analysis_data.get("anomaly_findings", [])
+
+    def get_anomaly_methods(self, obj):
+        return obj.analysis_data.get("anomaly_methods", [])
 
 
 class DocumentListSerializer(serializers.ModelSerializer):
@@ -183,6 +207,7 @@ class DocumentSerializer(serializers.ModelSerializer):
         """Lightweight summary from DocumentAnalysisResult (no heavy JSON fields)."""
         try:
             ar = obj.analysis_result
+            analysis_data = ar.analysis_data or {}
             return {
                 "ai_document_type":          ar.ai_document_type,
                 "risk_level":                ar.risk_level,
@@ -190,6 +215,7 @@ class DocumentSerializer(serializers.ModelSerializer):
                 "fraud_score":               ar.fraud_score,
                 "duplicate_score":           ar.duplicate_score,
                 "compliance_score":          ar.compliance_score,
+                "compliance_violations":     analysis_data.get("compliance_violations", []),
                 "is_duplicate":              ar.is_duplicate,
                 "requires_review":           ar.requires_review,
                 "escalate":                  ar.escalate,
@@ -197,6 +223,9 @@ class DocumentSerializer(serializers.ModelSerializer):
                 "document_number":           ar.document_number,
                 "total_amount":              str(ar.total_amount) if ar.total_amount else None,
                 "classification_confidence": ar.classification_confidence,
+                # Anomaly summary fields
+                "anomaly_score":       analysis_data.get("anomaly_score", 0),
+                "anomaly_explanation": analysis_data.get("anomaly_explanation", ""),
             }
         except DocumentAnalysisResult.DoesNotExist:
             return None

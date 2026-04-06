@@ -156,6 +156,80 @@ class TestBatchUpload(APITestCase):
         finally:
             os.unlink(tmp.name)
 
+    @patch("apps.invoices.views._process_single_file")
+    def test_large_csv_upload_uses_async_chunk_mode(self, mock_process_single):
+        mock_process_single.return_value = {
+            "success": True,
+            "invoice_id": "test-id",
+            "filename": "row.json",
+            "validation_score": 92,
+            "rules_failed": [],
+            "risk_level": "low",
+            "is_duplicate": False,
+            "fraud_score": 0,
+            "status": "validated",
+            "processing_ms": 1,
+        }
+        rows = ["invoice_number,vendor_name,total_amount,currency"] + [
+            f"INV-{i:04d},Vendor {i},100.{i % 10},SAR" for i in range(120)
+        ]
+        upload = SimpleUploadedFile("bulk.csv", "\n".join(rows).encode("utf-8"), content_type="text/csv")
+
+        with patch("apps.invoices.views.process_invoice_rows_chunk_task", create=True) as mock_task:
+            mock_task.delay.return_value = MagicMock(id="task-123")
+            response = self.client.post(
+                "/api/v1/invoices/upload/",
+                {"file": upload, "async": "true", "chunk_size": "25"},
+                format="multipart",
+            )
+
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.data.get("processing_mode"), "async_chunked")
+        self.assertGreaterEqual(response.data.get("queued_chunks", 0), 2)
+
+    @patch("apps.invoices.views._process_single_file")
+    def test_large_excel_upload_uses_async_chunk_mode(self, mock_process_single):
+        mock_process_single.return_value = {
+            "success": True,
+            "invoice_id": "test-id",
+            "filename": "row.json",
+            "validation_score": 92,
+            "rules_failed": [],
+            "risk_level": "low",
+            "is_duplicate": False,
+            "fraud_score": 0,
+            "status": "validated",
+            "processing_ms": 1,
+        }
+        from openpyxl import Workbook
+
+        wb = Workbook()
+        ws = wb.active
+        ws.append(["invoice_number", "vendor_name", "total_amount", "currency"])
+        for i in range(80):
+            ws.append([f"XLS-{i:04d}", f"Excel Vendor {i}", 250 + i, "SAR"])
+
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        upload = SimpleUploadedFile(
+            "bulk.xlsx",
+            buffer.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+        with patch("apps.invoices.views.process_invoice_rows_chunk_task", create=True) as mock_task:
+            mock_task.delay.return_value = MagicMock(id="task-456")
+            response = self.client.post(
+                "/api/v1/invoices/upload/",
+                {"file": upload, "async": "true", "chunk_size": "20"},
+                format="multipart",
+            )
+
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.data.get("processing_mode"), "async_chunked")
+        self.assertGreaterEqual(response.data.get("queued_chunks", 0), 2)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TEST 3: Error Handling

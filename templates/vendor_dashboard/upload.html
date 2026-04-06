@@ -112,7 +112,7 @@
                      'text-red-500':     item.status === 'error',
                      'text-slate-400':   item.status === 'pending',
                    }"
-                   x-text="item.status === 'done' ? '{% trans \"Uploaded successfully\" %}' : item.status === 'error' ? (item.error || '{% trans \"Upload failed\" %}') : '{% trans \"Pending\" %}'"></p>
+                   x-text="item.status === 'done' ? '{% trans 'Uploaded successfully' %}' : item.status === 'error' ? (item.error || '{% trans 'Upload failed' %}') : '{% trans 'Pending' %}'"></p>
               </template>
             </div>
             <div class="flex-shrink-0 text-right">

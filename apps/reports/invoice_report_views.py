@@ -34,6 +34,11 @@ from .invoice_serializers import (
     InvoiceAuditReportSerializer,
 )
 
+try:
+    from apps.reports.tasks import generate_invoice_audit_report
+except Exception:  # pragma: no cover - Celery may be unavailable in lightweight test runs
+    generate_invoice_audit_report = None
+
 logger = logging.getLogger("finai")
 
 
@@ -92,6 +97,7 @@ def _build_template_context(data: dict) -> dict:
         "header":        hdr,
         "summary":       data.get("summary", {}),
         "executive":     data.get("executive_summary", {}),
+        "decision":      data.get("decision_support", {}),
         "compliance":    data.get("compliance_engine", {}),
         "high_risk":     data.get("high_risk_invoices", []),
         "failed_rules":  data.get("failed_rules_analysis", []),
@@ -141,8 +147,10 @@ class InvoiceAuditReportGenerateView(APIView):
         use_async = req_ser.validated_data.get("use_async", False)
 
         if use_async:
-            from apps.reports.tasks import generate_invoice_audit_report
-            task = generate_invoice_audit_report.delay(
+            task_runner = generate_invoice_audit_report
+            if task_runner is None:
+                from apps.reports.tasks import generate_invoice_audit_report as task_runner
+            task = task_runner.delay(
                 org_id=str(org.id),
                 user_id=str(request.user.id),
                 date_from=str(date_from) if date_from else None,

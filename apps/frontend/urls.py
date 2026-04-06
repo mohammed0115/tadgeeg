@@ -3,6 +3,7 @@ from django.conf import settings
 from django.contrib.auth import views as auth_views
 from django.urls import path, reverse_lazy
 
+from apps.authentication.forms import ExistingEmailPasswordResetForm
 from . import views
 
 app_name = 'frontend'
@@ -28,6 +29,7 @@ urlpatterns = [
         'forgot-password/',
         auth_views.PasswordResetView.as_view(
             template_name='auth/password_reset_form.html',
+            form_class=ExistingEmailPasswordResetForm,
             email_template_name='auth/emails/password_reset_email.txt',
             subject_template_name='auth/emails/password_reset_subject.txt',
             extra_email_context={

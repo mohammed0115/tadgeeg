@@ -87,46 +87,76 @@ class VATValidator:
         Returns:
             {
               compliance_score: float (0–1),
+              ComplianceScore: float (0–100),
               vat_valid: bool,
+              is_compliant: bool,
               missing_fields: list[str],
               issues: list[str],
+              violations: list[dict],
               checks: dict[str, bool]
             }
         """
         checks: dict[str, bool] = {}
         issues: list[str] = []
         missing_fields: list[str] = []
+        violations: list[dict] = []
+        document_type = str(document.get("document_type") or "invoice").strip().lower()
 
         # ── C01: VAT rate ─────────────────────────────────────────────────────
         declared_rate = self._to_decimal(document.get("vat_rate", 0))
         rate_ok = self._check_vat_rate(declared_rate)
         checks["C01_vat_rate"] = rate_ok
         if not rate_ok:
-            issues.append(
+            message = (
                 f"VAT rate {declared_rate}% does not match expected "
                 f"{self.expected_vat_rate}% for {self.country_code}"
+            )
+            self._append_issue(issues, message)
+            self._add_violation(
+                violations,
+                code="C01",
+                message=message,
+                severity="high",
+                field="vat_rate",
+                check="C01_vat_rate",
             )
 
         # ── C02: VAT calculation ──────────────────────────────────────────────
         subtotal = self._to_decimal(document.get("subtotal", 0))
-        tax_amount = self._to_decimal(document.get("tax_amount", 0))
+        tax_amount = self._to_decimal(document.get("tax_amount", document.get("vat_amount", 0)))
         total_amount = self._to_decimal(document.get("total_amount", 0))
 
         calc_ok = self._check_vat_calculation(subtotal, declared_rate, tax_amount)
         checks["C02_vat_calculation"] = calc_ok
         if not calc_ok and subtotal > 0:
             expected_tax = (subtotal * declared_rate / 100).quantize(Decimal("0.01"))
-            issues.append(
+            message = (
                 f"VAT calculation error: subtotal {subtotal} × "
                 f"{declared_rate}% = {expected_tax}, declared {tax_amount}"
+            )
+            self._append_issue(issues, message)
+            self._add_violation(
+                violations,
+                code="C02",
+                message=message,
+                severity="critical",
+                field="tax_amount",
+                check="C02_vat_calculation",
             )
 
         # ── C03: Subtotal + VAT = total ───────────────────────────────────────
         total_ok = self._check_total_consistency(subtotal, tax_amount, total_amount)
         checks["C03_total_consistency"] = total_ok
         if not total_ok and total_amount > 0:
-            issues.append(
-                f"Total inconsistency: {subtotal} + {tax_amount} ≠ {total_amount}"
+            message = f"Total inconsistency: {subtotal} + {tax_amount} ≠ {total_amount}"
+            self._append_issue(issues, message)
+            self._add_violation(
+                violations,
+                code="C03",
+                message=message,
+                severity="critical",
+                field="total_amount",
+                check="C03_total_consistency",
             )
 
         # ── C04: Vendor VAT number format ─────────────────────────────────────
@@ -135,50 +165,115 @@ class VATValidator:
         checks["C04_vat_number_format"] = vat_num_ok
         if not vat_num_ok:
             if not vat_num:
-                missing_fields.append("vendor_vat_number")
-                issues.append("Vendor VAT registration number is missing")
+                if "vendor_vat_number" not in missing_fields:
+                    missing_fields.append("vendor_vat_number")
+                message = "Vendor VAT registration number is missing"
             else:
-                issues.append(
+                message = (
                     f"Vendor VAT number '{vat_num}' does not match "
                     f"{self.country_code} format"
                 )
+            self._append_issue(issues, message)
+            self._add_violation(
+                violations,
+                code="C04",
+                message=message,
+                severity="critical",
+                field="vendor_vat_number",
+                check="C04_vat_number_format",
+            )
 
         # ── C05: ZATCA QR code ────────────────────────────────────────────────
         has_qr = document.get("has_qr_code", False)
-        qr_ok = bool(has_qr) if self.country_code == "SA" else True
+        qr_required = self.country_code == "SA" and document_type in {"invoice", "sales_invoice", "sales_receipt"}
+        qr_ok = bool(has_qr) if qr_required else True
         checks["C05_qr_code"] = qr_ok
         if not qr_ok:
-            issues.append("ZATCA QR code is missing (required for Saudi e-invoices)")
+            if "has_qr_code" not in missing_fields:
+                missing_fields.append("has_qr_code")
+            message = "ZATCA QR code is missing (required for Saudi e-invoices)"
+            self._append_issue(issues, message)
+            self._add_violation(
+                violations,
+                code="C05",
+                message=message,
+                severity="critical",
+                field="has_qr_code",
+                check="C05_qr_code",
+            )
 
         # ── C06: Invoice number ───────────────────────────────────────────────
         inv_num = document.get("document_number", "")
         inv_ok = bool(inv_num and inv_num.strip())
         checks["C06_invoice_number"] = inv_ok
         if not inv_ok:
-            missing_fields.append("document_number")
-            issues.append("Invoice number is missing")
+            if "document_number" not in missing_fields:
+                missing_fields.append("document_number")
+            message = "Invoice number is missing"
+            self._append_issue(issues, message)
+            self._add_violation(
+                violations,
+                code="C06",
+                message=message,
+                severity="critical",
+                field="document_number",
+                check="C06_invoice_number",
+            )
 
         # ── C07: Invoice date ─────────────────────────────────────────────────
         inv_date = document.get("date")
         date_ok = bool(inv_date)
         checks["C07_invoice_date"] = date_ok
         if not date_ok:
-            missing_fields.append("date")
-            issues.append("Invoice date is missing")
+            if "date" not in missing_fields:
+                missing_fields.append("date")
+            message = "Invoice date is missing"
+            self._append_issue(issues, message)
+            self._add_violation(
+                violations,
+                code="C07",
+                message=message,
+                severity="critical",
+                field="date",
+                check="C07_invoice_date",
+            )
 
         # ── C08: Currency code ────────────────────────────────────────────────
         currency = (document.get("currency") or "").upper()
         currency_ok = currency in ISO_CURRENCIES
         checks["C08_currency"] = currency_ok
         if not currency_ok:
-            issues.append(f"Currency '{currency}' is not a recognised ISO 4217 code")
+            if not currency:
+                if "currency" not in missing_fields:
+                    missing_fields.append("currency")
+                message = "Currency is missing"
+            else:
+                message = f"Currency '{currency}' is not a recognised ISO 4217 code"
+            self._append_issue(issues, message)
+            self._add_violation(
+                violations,
+                code="C08",
+                message=message,
+                severity="high",
+                field="currency",
+                check="C08_currency",
+            )
 
         # ── C09: Line item VAT consistency ────────────────────────────────────
         line_items = document.get("line_items", [])
         line_ok = self._check_line_item_vat(line_items, declared_rate)
         checks["C09_line_item_vat"] = line_ok
         if not line_ok:
-            issues.append("Line item VAT rates are inconsistent with header VAT rate")
+            message = "Line item VAT rates are inconsistent with header VAT rate"
+            self._append_issue(issues, message)
+            self._add_violation(
+                violations,
+                code="C09",
+                message=message,
+                severity="medium",
+                field="line_items",
+                check="C09_line_item_vat",
+            )
 
         # ── C10: Customer VAT number for B2B ─────────────────────────────────
         customer_vat = document.get("customer_vat_number", "")
@@ -186,29 +281,159 @@ class VATValidator:
         if total_amount > B2B_THRESHOLD and self.country_code == "SA":
             customer_ok = bool(customer_vat)
             if not customer_ok:
-                issues.append(
+                message = (
                     "Customer VAT number required for B2B invoices above "
                     f"{B2B_THRESHOLD} SAR"
                 )
+                self._append_issue(issues, message)
+                self._add_violation(
+                    violations,
+                    code="C10",
+                    message=message,
+                    severity="high",
+                    field="customer_vat_number",
+                    check="C10_customer_vat",
+                )
         checks["C10_customer_vat"] = customer_ok
 
+        # ── Additional required fields for strict compliance ──────────────────
+        required_presence_checks = {
+            "C11_subtotal_present": (self._has_value(document.get("subtotal")), "subtotal", "Subtotal is missing"),
+            "C12_tax_amount_present": (
+                self._has_value(document.get("tax_amount", document.get("vat_amount"))),
+                "tax_amount",
+                "VAT amount is missing",
+            ),
+            "C13_total_amount_present": (self._has_value(document.get("total_amount")), "total_amount", "Total amount is missing"),
+        }
+        if document_type == "vat_return":
+            required_presence_checks["C14_zatca_reference"] = (
+                bool(document.get("zatca_reference")),
+                "zatca_reference",
+                "ZATCA reference is missing",
+            )
+
+        for check_name, (passed, field_name, message) in required_presence_checks.items():
+            checks[check_name] = bool(passed)
+            if not passed:
+                if field_name not in missing_fields:
+                    missing_fields.append(field_name)
+                self._append_issue(issues, message)
+                self._add_violation(
+                    violations,
+                    code=check_name.split("_")[0],
+                    message=message,
+                    severity="critical",
+                    field=field_name,
+                    check=check_name,
+                )
+
         # ── Compliance score ──────────────────────────────────────────────────
-        total_checks = len(checks)
+        check_weights = {
+            "C01_vat_rate": Decimal("1.0"),
+            "C02_vat_calculation": Decimal("2.0"),
+            "C03_total_consistency": Decimal("2.0"),
+            "C04_vat_number_format": Decimal("2.0"),
+            "C05_qr_code": Decimal("2.0"),
+            "C06_invoice_number": Decimal("1.5"),
+            "C07_invoice_date": Decimal("1.5"),
+            "C08_currency": Decimal("1.0"),
+            "C09_line_item_vat": Decimal("1.0"),
+            "C10_customer_vat": Decimal("1.5"),
+            "C11_subtotal_present": Decimal("1.0"),
+            "C12_tax_amount_present": Decimal("1.0"),
+            "C13_total_amount_present": Decimal("1.0"),
+            "C14_zatca_reference": Decimal("1.5"),
+        }
+        total_weight = sum(check_weights.get(name, Decimal("1.0")) for name in checks)
+        passed_weight = sum(
+            check_weights.get(name, Decimal("1.0"))
+            for name, passed in checks.items()
+            if passed
+        )
+        compliance_score = round(float(passed_weight / max(total_weight, Decimal("1.0"))), 4)
+        if missing_fields:
+            compliance_score = min(compliance_score, 0.74)
+
+        critical_failures = [
+            code
+            for code in self._critical_checks(document_type)
+            if code in checks and not checks.get(code, False)
+        ]
+        vat_valid = not critical_failures and not missing_fields
+        is_compliant = vat_valid and compliance_score >= 0.80
         passed_checks = sum(1 for v in checks.values() if v)
-        compliance_score = round(passed_checks / max(total_checks, 1), 4)
-        vat_valid = checks.get("C02_vat_calculation", False) and checks.get("C03_total_consistency", False)
+        total_checks = len(checks)
 
         return {
             "compliance_score": compliance_score,
+            "ComplianceScore": round(compliance_score * 100, 2),
             "vat_valid": vat_valid,
+            "is_compliant": is_compliant,
             "missing_fields": missing_fields,
             "issues": issues,
+            "violations": violations,
             "checks": checks,
+            "failed_checks": critical_failures,
+            "required_fields_ok": not missing_fields,
             "passed_checks": passed_checks,
             "total_checks": total_checks,
             "country_code": self.country_code,
             "expected_vat_rate": float(self.expected_vat_rate),
         }
+
+    def _critical_checks(self, document_type: str) -> set[str]:
+        critical = {
+            "C01_vat_rate",
+            "C02_vat_calculation",
+            "C03_total_consistency",
+            "C04_vat_number_format",
+            "C06_invoice_number",
+            "C07_invoice_date",
+            "C08_currency",
+            "C11_subtotal_present",
+            "C12_tax_amount_present",
+            "C13_total_amount_present",
+        }
+        if self.country_code == "SA" and document_type in {"invoice", "sales_invoice", "sales_receipt"}:
+            critical.add("C05_qr_code")
+        if document_type == "vat_return":
+            critical.add("C14_zatca_reference")
+        return critical
+
+    @staticmethod
+    def _append_issue(issues: list[str], message: str) -> None:
+        if message not in issues:
+            issues.append(message)
+
+    @staticmethod
+    def _has_value(value) -> bool:
+        if value is None:
+            return False
+        if isinstance(value, str):
+            return bool(value.strip())
+        return True
+
+    @staticmethod
+    def _add_violation(
+        violations: list[dict],
+        *,
+        code: str,
+        message: str,
+        severity: str,
+        field: Optional[str] = None,
+        check: Optional[str] = None,
+    ) -> None:
+        violation = {
+            "code": code,
+            "message": message,
+            "severity": severity,
+        }
+        if field:
+            violation["field"] = field
+        if check:
+            violation["check"] = check
+        violations.append(violation)
 
     # ── Check implementations ─────────────────────────────────────────────────
 

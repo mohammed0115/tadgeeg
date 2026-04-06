@@ -274,6 +274,8 @@ def _first_error(errors, *, flow="generic"):
                 lowered = first_email_error.lower()
                 if "valid email" in lowered:
                     return _("The email address is invalid.")
+                if "no account found" in lowered or "not found" in lowered:
+                    return _("No account was found for this email address.")
                 return _("The email address or password is incorrect.")
             if "non_field_errors" in errors:
                 first_non_field_error = _stringify_error(errors["non_field_errors"])

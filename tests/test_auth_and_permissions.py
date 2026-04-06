@@ -156,6 +156,15 @@ class TestLogin:
         assert resp_wrong_pw.status_code == resp_no_user.status_code
 
 
+@pytest.mark.django_db
+def test_password_reset_unknown_email_shows_validation_message():
+    client = Client()
+    response = client.post("/forgot-password/", {"email": "ghost@test.finai"})
+
+    assert response.status_code == 200
+    assert "No active account was found with this email address." in response.content.decode()
+
+
 # ─── Account lockout ─────────────────────────────────────────────────────────
 
 @pytest.mark.django_db

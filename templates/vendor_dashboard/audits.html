@@ -158,7 +158,7 @@
                           'badge-green':  audit.status === 'completed',
                           'badge-red':    audit.status === 'failed',
                         }"
-                        x-text="audit.status === 'pending' ? '{% trans \"Pending\" %}' : audit.status === 'running' ? '{% trans \"Running\" %}' : audit.status === 'completed' ? '{% trans \"Completed\" %}' : '{% trans \"Failed\" %}'">
+                        x-text="audit.status === 'pending' ? '{% trans 'Pending' %}' : audit.status === 'running' ? '{% trans 'Running' %}' : audit.status === 'completed' ? '{% trans 'Completed' %}' : '{% trans 'Failed' %}'">
                   </span>
                 </td>
                 <td class="text-xs text-slate-400"

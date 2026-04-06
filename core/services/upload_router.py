@@ -144,7 +144,7 @@ class DocumentUploadRouter:
         so the invoice runs through all 30 audit rules, AI extraction, and ZATCA
         compliance checks, and is saved as an Invoice record visible at /invoices/.
         """
-        from apps.invoices.views import _process_single_file
+        from apps.invoices.views import _process_single_file, _process_structured_upload
         from apps.audit.services import AuditSessionService
         from apps.invoices.models import InvoiceBatch
         from django.utils import timezone
@@ -176,6 +176,47 @@ class DocumentUploadRouter:
             )
             batch.audit_session = audit_session
             batch.save(update_fields=["audit_session"])
+
+            structured = _process_structured_upload(
+                uploaded_file,
+                uploaded_file.name,
+                org,
+                user,
+                batch=batch,
+                request=None,
+                audit_session=audit_session,
+            )
+            if structured and structured.get("handled"):
+                if structured.get("mode") == "async_chunked":
+                    return UploadRouterResult(
+                        success=True,
+                        pipeline="invoice",
+                        object_id=str(batch.id),
+                        result_url=f"/invoices/?batch_id={batch.id}",
+                        error=None,
+                    )
+
+                chunk_results = structured.get("results", [])
+                chunk_errors = structured.get("errors", [])
+                if len(chunk_results) == 1 and not chunk_errors:
+                    invoice_id = chunk_results[0].get("invoice_id")
+                    if invoice_id and org:
+                        _trigger_rule_engine(invoice_id, "invoice", org.id)
+                    return UploadRouterResult(
+                        success=True,
+                        pipeline="invoice",
+                        object_id=invoice_id or str(batch.id),
+                        result_url=f"/invoices/{invoice_id}/" if invoice_id else f"/invoices/?batch_id={batch.id}",
+                        error=None,
+                    )
+
+                return UploadRouterResult(
+                    success=bool(chunk_results),
+                    pipeline="invoice",
+                    object_id=str(batch.id),
+                    result_url=f"/invoices/?batch_id={batch.id}",
+                    error=chunk_errors[0].get("error") if chunk_errors and not chunk_results else None,
+                )
 
             result = _process_single_file(
                 uploaded_file,

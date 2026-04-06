@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
 {% block title %}{% trans "Anomaly Detection" %}{% endblock %}
 {% block page_title %}{% trans "Anomaly Detection Analytics" %}{% endblock %}
 {% block nav_analytics %}active{% endblock %}
@@ -90,7 +91,7 @@
     <table class="data-table">
       <thead><tr>
         <th>{% trans "Vendor" %}</th><th>{% trans "Invoice #" %}</th><th>{% trans "Date" %}</th>
-        <th class="text-left">{% trans "Total" %}</th><th>{% trans "Risk Score" %}</th><th>{% trans "Risk Level" %}</th><th>{% trans "Reason" %}</th>
+        <th class="text-left">{% trans "Total" %}</th><th>{% trans "Risk Score" %}</th><th>{% trans "Risk Level" %}</th><th>{% if LANGUAGE_CODE == 'ar' %}السبب{% else %}{% trans "Reason" %}{% endif %}</th>
       </tr></thead>
       <tbody>
         <template x-for="inv in riskInvoices" :key="inv.id">
@@ -108,7 +109,7 @@
               </div>
             </td>
             <td><span :class="'badge-'+inv.risk_level" class="badge" x-text="{critical:i18n.critical,high:i18n.high,medium:i18n.medium,low:i18n.low}[inv.risk_level]||inv.risk_level"></span></td>
-            <td class="text-xs text-slate-500 max-w-xs truncate" x-text="(inv.ai_summary||'').slice(0,60)"></td>
+            <td class="text-xs text-slate-500 max-w-xs truncate" x-text="riskReason(inv)"></td>
           </tr>
         </template>
         <tr x-show="!riskInvoices.length">
@@ -139,13 +140,58 @@ function analyticsPage() {
       anomalies: '{% trans "anomalies" %}',
       scanFailed: '{% trans "Scan failed:" %}',
       benfordFailed: '{% trans "Benford analysis failed:" %}',
+      riskLoadFailed: '{% trans "Failed to load risk invoices:" %}',
+    },
+
+    isArabicUi() {
+      return (document.documentElement.lang || '').toLowerCase().startsWith('ar');
     },
 
     anomalyDescription(anom) {
       if (!anom) return '';
-      const isArabic = (document.documentElement.lang || '').toLowerCase().startsWith('ar');
-      if (isArabic) return anom.description_ar || anom.description || anom.message || '';
+      if (this.isArabicUi()) return anom.description_ar || anom.description || anom.message || '';
       return anom.description_en || anom.description || anom.message || '';
+    },
+
+    translateRiskReason(text) {
+      if (!text) return '—';
+      let output = String(text).trim();
+      if (!this.isArabicUi() || /[\u0600-\u06FF]/.test(output)) {
+        return output.length > 80 ? output.slice(0, 80) + '…' : output;
+      }
+
+      const months = {
+        January: 'يناير', February: 'فبراير', March: 'مارس', April: 'أبريل',
+        May: 'مايو', June: 'يونيو', July: 'يوليو', August: 'أغسطس',
+        September: 'سبتمبر', October: 'أكتوبر', November: 'نوفمبر', December: 'ديسمبر'
+      };
+      Object.entries(months).forEach(([en, ar]) => {
+        output = output.replace(new RegExp(en, 'gi'), ar);
+      });
+
+      const replacements = [
+        [/^This is a clear invoice dated\s+/i, 'هذه فاتورة واضحة بتاريخ '],
+        [/^This is an invoice from\s+/i, 'هذه فاتورة من '],
+        [/^Invoice from\s+/i, 'فاتورة من '],
+        [/\s+to\s+/gi, ' إلى '],
+        [/\s+dated\s+/gi, ' بتاريخ '],
+        [/\s+for\s+/gi, ' بخصوص '],
+        [/with no items listed/gi, 'بدون بنود مفصلة'],
+        [/clear invoice/gi, 'فاتورة واضحة'],
+        [/high risk/gi, 'عالية المخاطر'],
+        [/duplicate/gi, 'مكررة'],
+        [/unknown vendor/gi, 'مورد غير معروف'],
+      ];
+      replacements.forEach(([pattern, value]) => {
+        output = output.replace(pattern, value);
+      });
+
+      return output.length > 80 ? output.slice(0, 80) + '…' : output;
+    },
+
+    riskReason(inv) {
+      const raw = inv?.reason_display_ar || inv?.reason_display || inv?.ai_summary || '';
+      return this.translateRiskReason(raw);
     },
 
     benfordInterpretation() {
@@ -161,15 +207,24 @@ function analyticsPage() {
 
     async loadRiskInvoices() {
       try {
-        const d = await apiFetch('/invoices/reports/risk/?page_size=20');
-        this.riskInvoices = d.results || d || [];
-      } catch(e) {}
+        const d = await apiFetch(`{% url 'invoice-risk-report' %}?page_size=20`);
+        this.riskInvoices = Array.isArray(d?.results)
+          ? d.results
+          : Array.isArray(d?.invoices)
+            ? d.invoices
+            : Array.isArray(d)
+              ? d
+              : [];
+      } catch(e) {
+        this.riskInvoices = [];
+        notify(this.i18n.riskLoadFailed + ' ' + e.message, 'error');
+      }
     },
 
     async runAnomaly() {
       this.loadingAnomaly = true;
       try {
-        const d = await apiFetch('/analytics/detect-anomalies/', { method:'POST' });
+        const d = await apiFetch(`{% url 'detect-anomalies' %}`, { method:'POST' });
         this.anomalies = d.anomalies || d.results || d || [];
         notify(`${this.i18n.detected} ${this.anomalies.length} ${this.i18n.anomalies}`, this.anomalies.length ? 'warning' : 'success');
       } catch(e) { notify(this.i18n.scanFailed + ' ' + e.message, 'error'); }
@@ -179,7 +234,7 @@ function analyticsPage() {
     async runBenford() {
       this.loadingBenford = true;
       try {
-        const d = await apiFetch('/analytics/benford-analysis/', { method:'POST' });
+        const d = await apiFetch(`{% url 'benford-analysis' %}`, { method:'POST' });
         this.benfordResult = d;
         this.$nextTick(() => this.buildBenfordChart(d));
       } catch(e) { notify(this.i18n.benfordFailed + ' ' + e.message, 'error'); }

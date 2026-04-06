@@ -106,7 +106,7 @@
                     </template>
                     <span class="badge"
                           :class="provider.is_active ? 'badge-green' : 'badge-slate'"
-                          x-text="provider.is_active ? '{% trans \"Active\" %}' : '{% trans \"Disabled\" %}'"></span>
+                          x-text="provider.is_active ? '{% trans 'Active' %}' : '{% trans 'Disabled' %}'"></span>
                   </div>
                   <p class="text-xs text-slate-400 mt-0.5"
                      x-text="(provider.backend || 'local').toUpperCase() + ' — ' + (provider.bucket || provider.path || '—')"></p>
@@ -202,7 +202,7 @@
           <button @click="showModal=false" class="btn-ghost">{% trans "Cancel" %}</button>
           <button @click="save()" :disabled="saving" class="btn-primary">
             <i data-lucide="save" class="w-4 h-4"></i>
-            <span x-text="saving ? '{% trans \"Saving...\" %}' : '{% trans \"Save\" %}'"></span>
+            <span x-text="saving ? '{% trans 'Saving...' %}' : '{% trans 'Save' %}'"></span>
           </button>
         </div>
       </div>

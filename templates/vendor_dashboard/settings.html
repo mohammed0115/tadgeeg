@@ -92,7 +92,7 @@
       <div class="flex justify-end pt-2">
         <button @click="saveProfile()" :disabled="saving" class="btn-primary">
           <i data-lucide="save" class="w-4 h-4"></i>
-          <span x-text="saving ? '{% trans \"Saving...\" %}' : '{% trans \"Save Profile\" %}'"></span>
+          <span x-text="saving ? '{% trans 'Saving...' %}' : '{% trans 'Save Profile' %}'"></span>
         </button>
       </div>
     </div>
@@ -124,7 +124,7 @@
         <div class="flex justify-end pt-2">
           <button @click="changePassword()" :disabled="saving" class="btn-primary">
             <i data-lucide="shield" class="w-4 h-4"></i>
-            <span x-text="saving ? '{% trans \"Updating...\" %}' : '{% trans \"Change Password\" %}'"></span>
+            <span x-text="saving ? '{% trans 'Updating...' %}' : '{% trans 'Change Password' %}'"></span>
           </button>
         </div>
       </div>

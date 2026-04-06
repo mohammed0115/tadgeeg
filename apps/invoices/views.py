@@ -4,7 +4,9 @@ Supports: single file, multiple files, ZIP archive upload.
 Runs all 30 validation rules + AI analysis on each invoice.
 """
 
+import csv
 import io
+import json
 import logging
 import os
 import time
@@ -13,7 +15,7 @@ from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 
 from django.core.files.base import ContentFile
-from django.db.models import Avg, Count, Max, Min, Q, Sum
+from django.db.models import Avg, Count, F, Max, Min, Q, Sum
 from django.http import FileResponse
 from django.shortcuts import render
 from rest_framework import mixins
@@ -68,6 +70,15 @@ ALLOWED_MIME = {"application/pdf", "image/jpeg", "image/png", "image/tiff",
                 "application/csv", "application/octet-stream"}
 ALLOWED_EXT  = {".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif", ".zip",
                 ".xlsx", ".xls", ".json", ".csv", ".tsv"}
+
+DEFAULT_BULK_CHUNK_SIZE = 250
+MIN_BULK_CHUNK_SIZE = 25
+MAX_BULK_CHUNK_SIZE = 1000
+AUTO_ASYNC_FILE_SIZE = 512 * 1024
+STRUCTURED_BULK_EXTENSIONS = {".csv", ".tsv", ".json", ".xlsx", ".xls"}
+
+# Loaded lazily to avoid circular imports while still allowing tests to patch it.
+process_invoice_rows_chunk_task = None
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -644,6 +655,345 @@ def _handle_processing_result(result: dict, filename: str, batch, results: list,
         AuditSessionService.record_failure(audit_session, message)
 
 
+def _is_truthy(value) -> bool:
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _parse_chunk_size(raw_value) -> int:
+    try:
+        numeric = int(raw_value or DEFAULT_BULK_CHUNK_SIZE)
+    except (TypeError, ValueError):
+        numeric = DEFAULT_BULK_CHUNK_SIZE
+    return max(MIN_BULK_CHUNK_SIZE, min(numeric, MAX_BULK_CHUNK_SIZE))
+
+
+def _should_queue_async_processing(request=None, uploaded_file=None) -> bool:
+    if request is not None:
+        if _is_truthy(getattr(request, "data", {}).get("async") if hasattr(request, "data") else None):
+            return True
+        if _is_truthy(getattr(request, "data", {}).get("use_async") if hasattr(request, "data") else None):
+            return True
+        if hasattr(request, "query_params"):
+            if _is_truthy(request.query_params.get("async")) or _is_truthy(request.query_params.get("use_async")):
+                return True
+    return bool(uploaded_file and getattr(uploaded_file, "size", 0) >= AUTO_ASYNC_FILE_SIZE)
+
+
+def _serialize_structured_value(value):
+    if value is None:
+        return ""
+    if isinstance(value, Decimal):
+        return format(value, "f")
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    cleaned = str(value).strip()
+    return "" if cleaned.lower() in {"", "none", "nan", "nat"} else cleaned
+
+
+def _normalize_structured_mapping(raw_mapping: dict) -> dict:
+    normalized = {}
+    for key, value in (raw_mapping or {}).items():
+        key_name = str(key or "").strip()
+        if not key_name or key_name.lower().startswith("unnamed"):
+            continue
+        cleaned_value = _serialize_structured_value(value)
+        if cleaned_value != "":
+            normalized[key_name] = cleaned_value
+    return normalized
+
+
+def _detect_csv_delimiter(sample: str) -> str:
+    try:
+        dialect = csv.Sniffer().sniff(sample or "", delimiters=",;\t|")
+        return dialect.delimiter
+    except Exception:
+        counts = {",": sample.count(","), ";": sample.count(";"), "\t": sample.count("\t"), "|": sample.count("|")}
+        return max(counts, key=counts.get) if any(counts.values()) else ","
+
+
+def _iter_csv_records(csv_file):
+    csv_file.seek(0)
+    sample = csv_file.read(4096).decode("utf-8", errors="replace")
+    csv_file.seek(0)
+    delimiter = _detect_csv_delimiter(sample)
+    wrapper = io.TextIOWrapper(csv_file, encoding="utf-8-sig", newline="")
+    try:
+        reader = csv.DictReader(wrapper, delimiter=delimiter)
+        for row_number, row in enumerate(reader, start=2):
+            payload = _normalize_structured_mapping(row)
+            if payload:
+                yield row_number, payload
+    finally:
+        try:
+            wrapper.detach()
+        except Exception:
+            pass
+        csv_file.seek(0)
+
+
+def _iter_excel_records(spreadsheet_file, ext: str):
+    spreadsheet_file.seek(0)
+    if ext == ".xlsx":
+        from openpyxl import load_workbook
+
+        workbook = load_workbook(spreadsheet_file, read_only=True, data_only=True)
+        try:
+            for worksheet in workbook.worksheets:
+                row_iter = worksheet.iter_rows(values_only=True)
+                headers = next(row_iter, None)
+                if not headers:
+                    continue
+                header_names = [str(h).strip() if h not in (None, "") else f"column_{i + 1}" for i, h in enumerate(headers)]
+                for row_number, row_values in enumerate(row_iter, start=2):
+                    payload = _normalize_structured_mapping(dict(zip(header_names, row_values)))
+                    if payload:
+                        yield row_number, payload
+        finally:
+            workbook.close()
+            spreadsheet_file.seek(0)
+        return
+
+    import pandas as pd
+
+    data_frame = pd.read_excel(spreadsheet_file, dtype=str)
+    spreadsheet_file.seek(0)
+    for row_number, row in enumerate(data_frame.to_dict(orient="records"), start=2):
+        payload = _normalize_structured_mapping(row)
+        if payload:
+            yield row_number, payload
+
+
+def _iter_json_records(json_file):
+    try:
+        raw = json_file.read()
+        json_file.seek(0)
+        data = json.loads(raw.decode("utf-8", errors="replace").lstrip("\xef\xbb\xbf"))
+    except Exception:
+        return
+
+    if not isinstance(data, list):
+        return
+
+    for row_number, item in enumerate(data, start=1):
+        if isinstance(item, dict):
+            payload = _normalize_structured_mapping(item)
+            if payload:
+                yield row_number, payload
+
+
+def _iter_structured_records(uploaded_file, filename: str):
+    ext = os.path.splitext(filename)[1].lower()
+    if ext in {".csv", ".tsv"}:
+        return _iter_csv_records(uploaded_file)
+    if ext in {".xlsx", ".xls"}:
+        return _iter_excel_records(uploaded_file, ext)
+    if ext == ".json":
+        return _iter_json_records(uploaded_file)
+    return None
+
+
+def _get_invoice_chunk_task():
+    global process_invoice_rows_chunk_task
+    if process_invoice_rows_chunk_task is None:
+        from .tasks import process_invoice_rows_chunk_task as imported_task
+        process_invoice_rows_chunk_task = imported_task
+    return process_invoice_rows_chunk_task
+
+
+def _process_structured_rows_chunk(
+    rows,
+    *,
+    base_name: str,
+    org,
+    user,
+    batch,
+    request=None,
+    audit_session=None,
+    persist_batch_progress: bool = True,
+):
+    results, errors = [], []
+    success_count = failure_count = duplicate_count = high_risk_count = review_required_count = 0
+    last_error = ""
+
+    for item in rows:
+        row_number = item.get("row_number") or (success_count + failure_count + 1)
+        payload = item.get("payload") or {}
+        if not payload:
+            continue
+
+        row_name = f"{base_name}_row{row_number}.json"
+        item_bytes = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        file_like = io.BytesIO(item_bytes)
+        file_like.name = row_name
+        file_like.size = len(item_bytes)
+        file_like.content_type = "application/json"
+
+        try:
+            result = _process_single_file(file_like, row_name, org, user, batch, request, audit_session)
+        except Exception as exc:
+            logger.error("Structured row %s failed: %s", row_name, exc)
+            result = {"success": False, "error": str(exc)}
+
+        if result.get("success"):
+            results.append(result)
+            success_count += 1
+            if result.get("is_duplicate"):
+                duplicate_count += 1
+            if result.get("risk_level") in {"high", "critical"}:
+                high_risk_count += 1
+            if result.get("status") == Invoice.Status.FLAGGED or bool(result.get("rules_failed")):
+                review_required_count += 1
+        else:
+            message = result.get("error") or "Processing failed"
+            errors.append({"filename": row_name, "error": message})
+            failure_count += 1
+            last_error = message
+            if audit_session:
+                AuditSessionService.record_failure(audit_session, message)
+
+    if persist_batch_progress and batch is not None and (success_count or failure_count):
+        batch.processed_files += success_count
+        batch.failed_files += failure_count
+
+    return {
+        "results": results,
+        "errors": errors,
+        "success_count": success_count,
+        "failure_count": failure_count,
+        "duplicate_count": duplicate_count,
+        "high_risk_count": high_risk_count,
+        "review_required_count": review_required_count,
+        "last_error": last_error,
+    }
+
+
+def _process_structured_upload(uploaded_file, filename: str, org, user, batch, request=None, audit_session=None):
+    row_iter = _iter_structured_records(uploaded_file, filename)
+    if row_iter is None:
+        return None
+
+    base_name = os.path.splitext(filename)[0]
+    chunk_size = _parse_chunk_size(getattr(request, "data", {}).get("chunk_size") if request is not None and hasattr(request, "data") else None)
+    prefer_async = _should_queue_async_processing(request, uploaded_file)
+
+    results, errors = [], []
+    pending_chunks = []
+    current_chunk = []
+    total_rows = 0
+
+    for row_number, payload in row_iter:
+        total_rows += 1
+        current_chunk.append({"row_number": row_number, "payload": payload})
+        if len(current_chunk) >= chunk_size:
+            if prefer_async:
+                pending_chunks.append(current_chunk)
+            else:
+                outcome = _process_structured_rows_chunk(
+                    current_chunk,
+                    base_name=base_name,
+                    org=org,
+                    user=user,
+                    batch=batch,
+                    request=request,
+                    audit_session=audit_session,
+                )
+                results.extend(outcome["results"])
+                errors.extend(outcome["errors"])
+            current_chunk = []
+
+    if current_chunk:
+        if prefer_async:
+            pending_chunks.append(current_chunk)
+        else:
+            outcome = _process_structured_rows_chunk(
+                current_chunk,
+                base_name=base_name,
+                org=org,
+                user=user,
+                batch=batch,
+                request=request,
+                audit_session=audit_session,
+            )
+            results.extend(outcome["results"])
+            errors.extend(outcome["errors"])
+
+    if total_rows == 0:
+        return None
+
+    batch.total_files += max(total_rows - 1, 0)
+    if audit_session:
+        AuditSessionService.sync_expected_total(audit_session, batch.total_files)
+
+    if prefer_async and pending_chunks:
+        batch.status = InvoiceBatch.BatchStatus.PROCESSING
+        if audit_session:
+            AuditSessionService.advance_to_extracting(audit_session)
+
+        queued_task_ids = []
+        for chunk in pending_chunks:
+            try:
+                task = _get_invoice_chunk_task()
+                async_result = task.delay(
+                    rows=chunk,
+                    base_name=base_name,
+                    org_id=str(org.id),
+                    user_id=str(user.id),
+                    batch_id=str(batch.id),
+                    audit_session_id=str(audit_session.id) if audit_session else None,
+                )
+                queued_task_ids.append(getattr(async_result, "id", ""))
+            except Exception as exc:
+                logger.warning("Async chunk dispatch failed for %s; falling back to inline processing: %s", filename, exc)
+                inline = _process_structured_rows_chunk(
+                    chunk,
+                    base_name=base_name,
+                    org=org,
+                    user=user,
+                    batch=batch,
+                    request=request,
+                    audit_session=audit_session,
+                )
+                results.extend(inline["results"])
+                errors.extend(inline["errors"])
+
+        if queued_task_ids:
+            log_entry = {
+                "mode": "async_chunked",
+                "source_file": filename,
+                "queued_rows": total_rows,
+                "queued_chunks": len(queued_task_ids),
+                "chunk_size": chunk_size,
+                "task_ids": queued_task_ids,
+                "streaming": True,
+            }
+            batch.processing_log = list(batch.processing_log or []) + [log_entry]
+            batch.save(update_fields=["status", "total_files", "processed_files", "failed_files", "processing_log"])
+            return {
+                "handled": True,
+                "mode": "async_chunked",
+                "results": results,
+                "errors": errors,
+                "queued_rows": total_rows,
+                "queued_chunks": len(queued_task_ids),
+                "task_ids": queued_task_ids,
+                "chunk_size": chunk_size,
+                "streaming": True,
+            }
+
+    return {
+        "handled": True,
+        "mode": "sync_chunked",
+        "results": results,
+        "errors": errors,
+        "queued_rows": 0,
+        "queued_chunks": 0,
+        "task_ids": [],
+        "chunk_size": chunk_size,
+        "streaming": True,
+        "processed_rows": total_rows,
+    }
+
+
 # ─── Views ────────────────────────────────────────────────────────────────────
 
 class InvoiceUploadView(APIView):
@@ -702,6 +1052,7 @@ class InvoiceUploadView(APIView):
 
         results = []
         errors  = []
+        async_jobs = []
 
         for uploaded_file in uploaded_files:
             filename = uploaded_file.name
@@ -715,87 +1066,101 @@ class InvoiceUploadView(APIView):
 
             # ── ZIP: extract and process each file inside ─────────────────────
             if ext == ".zip":
-                zip_results, zip_errors = _process_zip(uploaded_file, org, request.user, batch, request, audit_session)
+                zip_results, zip_errors, zip_async_jobs = _process_zip(uploaded_file, org, request.user, batch, request, audit_session)
                 results.extend(zip_results)
                 errors.extend(zip_errors)
-                batch.total_files += len(zip_results) + len(zip_errors) - 1
-                AuditSessionService.sync_expected_total(audit_session, batch.total_files)
-            # ── CSV/TSV: process each row as a separate invoice ───────────────
-            elif ext in {".csv", ".tsv"}:
-                csv_results, csv_errors = _process_csv_rows(uploaded_file, filename, org, request.user, batch, request, audit_session)
-                if csv_results or csv_errors:
-                    results.extend(csv_results)
-                    errors.extend(csv_errors)
-                    batch.total_files += len(csv_results) + len(csv_errors) - 1
-                    AuditSessionService.sync_expected_total(audit_session, batch.total_files)
-                else:
-                    try:
-                        r = _process_single_file(uploaded_file, filename, org, request.user, batch, request, audit_session)
-                        _handle_processing_result(r, filename, batch, results, errors, audit_session)
-                    except Exception as e:
-                        logger.error(f"Failed processing {filename}: {e}")
-                        errors.append({"filename": filename, "error": str(e)})
-                        batch.failed_files += 1
-                        AuditSessionService.record_failure(audit_session, str(e))
-            # ── JSON array: process each dict as a separate invoice ────────────
-            elif ext == ".json":
-                json_results, json_errors = _process_json_list(uploaded_file, filename, org, request.user, batch, request, audit_session)
-                if json_results or json_errors:
-                    results.extend(json_results)
-                    errors.extend(json_errors)
-                    batch.total_files += len(json_results) + len(json_errors) - 1
-                    AuditSessionService.sync_expected_total(audit_session, batch.total_files)
-                else:
-                    # Not a list — process as single file
-                    try:
-                        r = _process_single_file(uploaded_file, filename, org, request.user, batch, request, audit_session)
-                        _handle_processing_result(r, filename, batch, results, errors, audit_session)
-                    except Exception as e:
-                        logger.error(f"Failed processing {filename}: {e}")
-                        errors.append({"filename": filename, "error": str(e)})
-                        batch.failed_files += 1
-                        AuditSessionService.record_failure(audit_session, str(e))
-            else:
-                try:
-                    r = _process_single_file(uploaded_file, filename, org, request.user, batch, request, audit_session)
-                    _handle_processing_result(r, filename, batch, results, errors, audit_session)
-                except Exception as e:
-                    logger.error(f"Failed processing {filename}: {e}")
-                    errors.append({"filename": filename, "error": str(e)})
-                    batch.failed_files += 1
-                    AuditSessionService.record_failure(audit_session, str(e))
+                async_jobs.extend(zip_async_jobs)
+                continue
 
-        # Finalize batch
+            # ── Structured bulk uploads: CSV / TSV / JSON list / Excel ───────
+            if ext in STRUCTURED_BULK_EXTENSIONS:
+                structured = _process_structured_upload(uploaded_file, filename, org, request.user, batch, request, audit_session)
+                if structured and structured.get("handled"):
+                    results.extend(structured.get("results", []))
+                    errors.extend(structured.get("errors", []))
+                    if structured.get("mode") == "async_chunked":
+                        async_jobs.append({
+                            "filename": filename,
+                            "queued_rows": structured.get("queued_rows", 0),
+                            "queued_chunks": structured.get("queued_chunks", 0),
+                            "task_ids": structured.get("task_ids", []),
+                            "chunk_size": structured.get("chunk_size"),
+                            "streaming": structured.get("streaming", True),
+                        })
+                    continue
+
+            try:
+                r = _process_single_file(uploaded_file, filename, org, request.user, batch, request, audit_session)
+                _handle_processing_result(r, filename, batch, results, errors, audit_session)
+            except Exception as e:
+                logger.error(f"Failed processing {filename}: {e}")
+                errors.append({"filename": filename, "error": str(e)})
+                batch.failed_files += 1
+                AuditSessionService.record_failure(audit_session, str(e))
+
+        # Finalize or keep running when async chunks were queued.
+        batch.processing_log = list(batch.processing_log or []) + results + errors
+        if async_jobs:
+            batch.status = InvoiceBatch.BatchStatus.PROCESSING if not errors else InvoiceBatch.BatchStatus.PARTIAL
+            batch.save(update_fields=["status", "total_files", "processed_files", "failed_files", "processing_log"])
+            AuditSessionService.sync_expected_total(audit_session, batch.total_files)
+
+            log_action(request, AuditLog.Action.DOCUMENT_UPLOAD, "invoice_batch", str(batch.id), {
+                "files": len(results),
+                "errors": len(errors),
+                "async_jobs": len(async_jobs),
+                "chunked": True,
+            })
+
+            return Response({
+                "batch_id": str(batch.id),
+                "audit_session_id": str(audit_session.id),
+                "batch_name": batch_name,
+                "total_files": batch.total_files,
+                "processed": batch.processed_files,
+                "failed": batch.failed_files,
+                "status": batch.status,
+                "processing_mode": "async_chunked",
+                "streaming": True,
+                "queued_chunks": sum(job.get("queued_chunks", 0) for job in async_jobs),
+                "queued_rows": sum(job.get("queued_rows", 0) for job in async_jobs),
+                "async_jobs": async_jobs,
+                "results": results,
+                "errors": errors,
+            }, status=status.HTTP_202_ACCEPTED)
+
         batch.status = (
-            InvoiceBatch.BatchStatus.COMPLETED  if not errors else
-            InvoiceBatch.BatchStatus.PARTIAL    if results else
+            InvoiceBatch.BatchStatus.COMPLETED if not errors else
+            InvoiceBatch.BatchStatus.PARTIAL if results else
             InvoiceBatch.BatchStatus.FAILED
         )
         batch.completed_at = timezone.now()
-        batch.processing_log = results + errors
-        batch.save()
+        batch.save(update_fields=["status", "completed_at", "total_files", "processed_files", "failed_files", "processing_log"])
         AuditSessionService.sync_expected_total(audit_session, batch.total_files)
         AuditSessionService.finalize_if_ready(audit_session)
 
         log_action(request, AuditLog.Action.DOCUMENT_UPLOAD, "invoice_batch", str(batch.id),
-                   {"files": len(results), "errors": len(errors)})
+                   {"files": len(results), "errors": len(errors), "chunked": True})
 
         return Response({
             "batch_id":      str(batch.id),
             "audit_session_id": str(audit_session.id),
             "batch_name":    batch_name,
-            "total_files":   len(results) + len(errors),
+            "total_files":   batch.total_files,
             "processed":     len(results),
             "failed":        len(errors),
             "status":        batch.status,
+            "processing_mode": "sync_chunked",
+            "streaming": True,
             "results":       results,
             "errors":        errors,
         }, status=status.HTTP_201_CREATED)
 
 
-def _process_zip(zip_file, org, user, batch, request, audit_session=None) -> tuple[list, list]:
+def _process_zip(zip_file, org, user, batch, request, audit_session=None) -> tuple[list, list, list]:
     """Extract and process all invoice files inside a ZIP archive."""
-    results, errors = [], []
+    results, errors, async_jobs = [], [], []
+    member_count = 0
     try:
         # Validate ZIP before extraction (bomb detection)
         zip_file.seek(0)
@@ -805,8 +1170,8 @@ def _process_zip(zip_file, org, user, batch, request, audit_session=None) -> tup
             errors.append({"filename": zip_file.name, "error": str(e)})
             if audit_session:
                 AuditSessionService.record_failure(audit_session, str(e))
-            return results, errors
-        
+            return results, errors, async_jobs
+
         zip_file.seek(0)
         with zipfile.ZipFile(io.BytesIO(zip_file.read()), "r") as zf:
             for member in zf.infolist():
@@ -814,13 +1179,32 @@ def _process_zip(zip_file, org, user, batch, request, audit_session=None) -> tup
                     continue
                 name = os.path.basename(member.filename)
                 ext = os.path.splitext(name)[1].lower()
-                if ext not in {".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif", ".xlsx", ".xls", ".json"}:
+                if ext not in {".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif", ".xlsx", ".xls", ".json", ".csv", ".tsv"}:
                     continue
+                member_count += 1
                 try:
                     data = zf.read(member)
                     file_like = io.BytesIO(data)
                     file_like.name = name
+                    file_like.size = len(data)
                     file_like.content_type = _guess_mime(ext)
+
+                    if ext in STRUCTURED_BULK_EXTENSIONS:
+                        structured = _process_structured_upload(file_like, name, org, user, batch, request, audit_session)
+                        if structured and structured.get("handled"):
+                            results.extend(structured.get("results", []))
+                            errors.extend(structured.get("errors", []))
+                            if structured.get("mode") == "async_chunked":
+                                async_jobs.append({
+                                    "filename": name,
+                                    "queued_rows": structured.get("queued_rows", 0),
+                                    "queued_chunks": structured.get("queued_chunks", 0),
+                                    "task_ids": structured.get("task_ids", []),
+                                    "chunk_size": structured.get("chunk_size"),
+                                    "streaming": structured.get("streaming", True),
+                                })
+                            continue
+
                     r = _process_single_file(file_like, name, org, user, batch, request, audit_session)
                     _handle_processing_result(r, name, batch, results, errors, audit_session)
                 except Exception as e:
@@ -837,7 +1221,13 @@ def _process_zip(zip_file, org, user, batch, request, audit_session=None) -> tup
         errors.append({"filename": zip_file.name, "error": str(e)})
         if audit_session:
             AuditSessionService.record_failure(audit_session, str(e))
-    return results, errors
+
+    if member_count:
+        batch.total_files += max(member_count - 1, 0)
+        if audit_session:
+            AuditSessionService.sync_expected_total(audit_session, batch.total_files)
+
+    return results, errors, async_jobs
 
 
 def _process_csv_rows(csv_file, filename: str, org, user, batch, request, audit_session=None) -> tuple[list, list]:
@@ -1320,24 +1710,43 @@ class InvoiceRiskReportView(APIView):
             qs = qs.filter(invoice_date__gte=v)
         if v := request.query_params.get("date_to"):
             qs = qs.filter(invoice_date__lte=v)
-        if v := request.query_params.get("risk_level"):
-            qs = qs.filter(risk_level=v)
-        else:
-            qs = qs.filter(risk_level__in=["high", "critical"])
 
-        invoices = qs.order_by("-risk_score").values(
-            "id", "invoice_number", "vendor_name", "total_amount", "currency",
-            "invoice_date", "risk_level", "risk_score", "ai_summary",
-            "is_duplicate", "status", "ai_recommendations",
+        high_risk_filter = (
+            Q(risk_level__in=["high", "critical"])
+            | Q(risk_score__gte=60)
+            | Q(status=Invoice.Status.FLAGGED)
         )
+        if v := request.query_params.get("risk_level"):
+            normalized = str(v).strip().lower()
+            if normalized in {"high_risk", "high", "critical"}:
+                qs = qs.filter(high_risk_filter)
+            else:
+                qs = qs.filter(risk_level=normalized)
+        else:
+            qs = qs.filter(high_risk_filter)
+
+        try:
+            page_size = min(max(int(request.query_params.get("page_size", 20) or 20), 1), 100)
+        except (TypeError, ValueError):
+            page_size = 20
+
         stats = qs.aggregate(
             count=Count("id"), total=Sum("total_amount"), avg_risk=Avg("risk_score")
+        )
+        items = list(
+            qs.order_by("-risk_score", "-invoice_date").values(
+                "id", "invoice_number", "vendor_name", "total_amount", "currency",
+                "invoice_date", "risk_level", "risk_score", "ai_summary",
+                "is_duplicate", "status", "ai_recommendations",
+            )[:page_size]
         )
         return Response({
             "report_type": "risk_report",
             "generated_at": timezone.now().isoformat(),
+            "count": stats.get("count") or 0,
             "stats": stats,
-            "invoices": list(invoices),
+            "results": items,
+            "invoices": items,
         })
 
 

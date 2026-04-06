@@ -130,10 +130,12 @@ class AIInsightsSerializer(serializers.Serializer):
 class ComplianceSerializer(serializers.Serializer):
     zatca_compliant   = serializers.BooleanField()
     compliance_score  = serializers.FloatField()
+    required_fields_ok = serializers.BooleanField(required=False)
     checks            = serializers.DictField()
     missing_fields    = serializers.ListField(child=serializers.DictField())
     failed_rules      = serializers.ListField(child=serializers.CharField())
     warning_rules     = serializers.ListField(child=serializers.CharField())
+    violations        = serializers.ListField(child=serializers.DictField(), required=False)
 
 
 # ─────────────────────────────────────────────────────────────

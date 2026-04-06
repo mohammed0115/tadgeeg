@@ -92,10 +92,11 @@ class FinancialAnalysisResult:
     anomaly_methods: list = field(default_factory=list)
 
     # ── Compliance ────────────────────────────────────────────────────────────
-    compliance_score: float = 1.0
-    vat_valid: bool = True
+    compliance_score: float = 0.0
+    vat_valid: bool = False
     missing_fields: list = field(default_factory=list)
     compliance_issues: list = field(default_factory=list)
+    compliance_violations: list = field(default_factory=list)
 
     # ── Risk ──────────────────────────────────────────────────────────────────
     risk_score: int = 0
@@ -147,6 +148,7 @@ class FinancialAnalysisResult:
             "vat_valid": self.vat_valid,
             "missing_fields": self.missing_fields,
             "compliance_issues": self.compliance_issues,
+            "compliance_violations": self.compliance_violations,
             "risk_score": self.risk_score,
             "risk_level": self.risk_level,
             "risk_factors": self.risk_factors,
@@ -353,10 +355,11 @@ class FinancialAIEngine:
         validator = VATValidator(country_code=self.country_code)
         comp_result = validator.validate(document)
 
-        result.compliance_score = float(comp_result.get("compliance_score", 1.0))
-        result.vat_valid = bool(comp_result.get("vat_valid", True))
+        result.compliance_score = float(comp_result.get("compliance_score", 0.0))
+        result.vat_valid = bool(comp_result.get("vat_valid", False))
         result.missing_fields = comp_result.get("missing_fields", [])
         result.compliance_issues = comp_result.get("issues", [])
+        result.compliance_violations = comp_result.get("violations", [])
 
     def _step_risk(self, result: FinancialAnalysisResult):
         from core.services.scoring.risk_engine import RiskEngine

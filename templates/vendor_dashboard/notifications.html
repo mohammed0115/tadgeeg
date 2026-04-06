@@ -154,7 +154,7 @@
       <!-- Pagination -->
       <template x-if="totalPages > 1">
         <div class="px-5 py-3 border-t border-slate-100 dark:border-slate-700/30 flex items-center justify-between">
-          <p class="text-xs text-slate-500" x-text="'{% trans \"Showing\" %} ' + notifications.length + ' {% trans \"of\" %} ' + total"></p>
+          <p class="text-xs text-slate-500" x-text="'{% trans 'Showing' %} ' + notifications.length + ' {% trans 'of' %} ' + total"></p>
           <div class="flex items-center gap-2">
             <button @click="page--; load()" :disabled="page <= 1"
                     class="btn-ghost text-xs px-3 py-1.5 disabled:opacity-40">

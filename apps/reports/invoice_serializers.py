@@ -164,6 +164,18 @@ class ActionsSerializer(serializers.Serializer):
     future_improvements = RecommendationSerializer(many=True)
 
 
+class DecisionSupportSerializer(serializers.Serializer):
+    overall_risk_score = serializers.FloatField()
+    risk_level = serializers.CharField()
+    risk_level_ar = serializers.CharField()
+    risk_level_en = serializers.CharField()
+    decision = serializers.DictField()
+    key_findings = KeyFindingSerializer(many=True)
+    ai_insights = serializers.ListField(child=serializers.DictField())
+    business_impact = serializers.DictField()
+    actionable_recommendations = serializers.ListField(child=serializers.DictField())
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Root serializer — complete invoice audit report
 # ─────────────────────────────────────────────────────────────────────────────
@@ -188,6 +200,7 @@ class InvoiceAuditReportSerializer(serializers.Serializer):
     report_header               = ReportHeaderSerializer()
     summary                     = InvoiceAuditSummarySerializer()
     executive_summary           = ExecutiveSummarySerializer()
+    decision_support            = DecisionSupportSerializer(required=False)
     compliance_engine           = ComplianceEngineSerializer()
     high_risk_invoices          = HighRiskInvoiceSerializer(many=True)
     failed_rules_analysis       = FailedRuleSerializer(many=True)

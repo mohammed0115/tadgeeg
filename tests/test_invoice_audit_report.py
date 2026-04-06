@@ -239,7 +239,7 @@ class InvoiceAuditServiceBuildTests(TestCase):
         data = self._patched_build()
         required_keys = [
             "report_header", "summary", "executive_summary",
-            "compliance_engine", "high_risk_invoices",
+            "decision_support", "compliance_engine", "high_risk_invoices",
             "failed_rules_analysis", "supplier_analysis",
             "risk_analysis", "anomalies", "actions_and_recommendations",
         ]

@@ -131,3 +131,11 @@ class I18nTemplateTests(SimpleTestCase):
         self.assertNotIn(">RECOMMENDATIONS<", tpl)
         self.assertNotIn(">CONCLUSION<", tpl)
         self.assertNotIn(">MANAGEMENT_RESPONSE_PLACEHOLDER<", tpl)
+
+    def test_document_audit_template_uses_django_i18n_tags(self):
+        base = Path(settings.BASE_DIR)
+        tpl = (base / "templates" / "reports" / "document_audit_report.html").read_text(encoding="utf-8")
+
+        self.assertIn("{% load i18n", tpl)
+        self.assertIn("{% get_current_language_bidi as LANGUAGE_BIDI %}", tpl)
+        self.assertIn('{% trans "Document Audit Report" %}', tpl)

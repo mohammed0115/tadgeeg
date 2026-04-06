@@ -16,16 +16,16 @@
   <div class="card p-4 mb-4 flex flex-wrap items-center gap-3">
     <div class="flex-1 relative min-w-48">
       <i data-lucide="search" class="absolute right-3 top-2.5 w-4 h-4 text-slate-400"></i>
-      <input x-model="q" @input.debounce.400ms="load()" placeholder="بحث..."
+      <input x-model="q" @input.debounce.400ms="load(true)" placeholder="بحث..."
              class="input-field pr-9 w-full text-sm"/>
     </div>
-    <select x-model="filterStatus" @change="load()" class="input-field text-sm w-36">
+    <select x-model="filterStatus" @change="load(true)" class="input-field text-sm w-36">
       <option value="">كل الحالات</option>
       <option value="validated">تم التحقق</option>
       <option value="flagged">مُعلَّق</option>
       <option value="approved">مُعتمَد</option>
     </select>
-    <select x-model="filterRisk" @change="load()" class="input-field text-sm w-36">
+    <select x-model="filterRisk" @change="load(true)" class="input-field text-sm w-36">
       <option value="">كل مستويات الخطر</option>
       <option value="critical">حرج</option>
       <option value="high">عالي</option>
@@ -86,6 +86,17 @@
       </table>
     </div>
   </div>
+
+  <div x-show="!loading && totalCount > pageSize" class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-500">
+    <p>
+      عرض <span x-text="pageStart"></span>–<span x-text="pageEnd"></span> من <span x-text="totalCount"></span>
+    </p>
+    <div class="flex items-center gap-2">
+      <button @click="prevPage()" :disabled="currentPage <= 1" class="btn-ghost px-3 py-1.5 rounded-lg disabled:opacity-50">السابق</button>
+      <span x-text="'صفحة ' + currentPage + ' / ' + totalPages"></span>
+      <button @click="nextPage()" :disabled="currentPage >= totalPages" class="btn-ghost px-3 py-1.5 rounded-lg disabled:opacity-50">التالي</button>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -93,24 +104,33 @@
 <script>
 function pageList() {
   return {
-    rows: [], stats: {}, loading: true, q: '', filterStatus: '', filterRisk: '',
+    rows: [], stats: {}, loading: true, q: '', filterStatus: '', filterRisk: '', currentPage: 1, pageSize: 10, totalCount: 0,
     detailUrl: '/documents/vat-returns/',
-    async load() {
+    async load(resetPage = false) {
+      if (resetPage) this.currentPage = 1;
       this.loading = true;
       const p = new URLSearchParams();
+      p.set('page', this.currentPage);
+      p.set('page_size', this.pageSize);
       if (this.q) p.set('search', this.q);
       if (this.filterStatus) p.set('status', this.filterStatus);
       if (this.filterRisk)   p.set('risk_level', this.filterRisk);
       try {
         const [r1, r2] = await Promise.all([
-          apiFetch('/documents/vat-returns/?' + p),
+          apiFetch('/documents/vat-returns/?' + p.toString()),
           apiFetch('/documents/stats/'),
         ]);
-        this.rows  = r1.results ?? r1;
+        this.rows  = Array.isArray(r1?.results) ? r1.results : (Array.isArray(r1) ? r1 : []);
+        this.totalCount = Number(r1?.count ?? this.rows.length ?? 0);
         this.stats = r2['vat_returns'] ?? {};
       } catch(e) { notify('خطأ في تحميل البيانات', 'error'); }
       finally { this.loading = false; this.$nextTick(() => lucide.createIcons()); }
     },
+    get totalPages() { return Math.max(1, Math.ceil(this.totalCount / this.pageSize)); },
+    get pageStart() { return this.totalCount ? ((this.currentPage - 1) * this.pageSize) + 1 : 0; },
+    get pageEnd() { return Math.min(this.currentPage * this.pageSize, this.totalCount); },
+    async nextPage() { if (this.currentPage < this.totalPages) { this.currentPage += 1; await this.load(); } },
+    async prevPage() { if (this.currentPage > 1) { this.currentPage -= 1; await this.load(); } },
     fmtCurrency(v, c='SAR') { return v ? Number(v).toLocaleString(APP_LOCALE, {maximumFractionDigits:2}) + ' ' + c : '—'; },
     scoreColor(s) { return s>=85?'bg-green-500':s>=70?'bg-amber-400':s>=50?'bg-orange-500':'bg-red-500'; },
     riskLabel(l) { return {'critical':'حرج','high':'عالي','medium':'متوسط','low':'منخفض'}[l]??l; },

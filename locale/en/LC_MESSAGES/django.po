@@ -882,3 +882,231 @@ msgstr "The goal is to support decisions, not replace human verification or form
 
 msgid "Return directly to %(product)s and continue your work."
 msgstr "Return directly to %(product)s and continue your work."
+
+# --- Report partials ---
+msgid "Most Failed Audit Rules"
+msgstr "Most Failed Audit Rules"
+
+msgid "Affected Invoice Numbers"
+msgstr "Affected Invoice Numbers"
+
+msgid "No invoice numbers."
+msgstr "No invoice numbers."
+
+msgid "Show More"
+msgstr "Show More"
+
+msgid "Hide"
+msgstr "Hide"
+
+msgid "No rule failure data."
+msgstr "No rule failure data."
+
+msgid "Report sample size"
+msgstr "Report sample size"
+
+msgid "Total spend for submitted invoices"
+msgstr "Total spend for submitted invoices"
+
+msgid "Compliance Rate"
+msgstr "Compliance Rate"
+
+msgid "Overall regulatory compliance"
+msgstr "Overall regulatory compliance"
+
+msgid "Avg. Risk Score"
+msgstr "Avg. Risk Score"
+
+msgid "Higher score = higher risk"
+msgstr "Higher score = higher risk"
+
+msgid "Require direct audit intervention"
+msgstr "Require direct audit intervention"
+
+msgid "Duplicate Count"
+msgstr "Duplicate Count"
+
+msgid "Suspected duplication cases"
+msgstr "Suspected duplication cases"
+
+msgid "Recommendations & Actions"
+msgstr "Recommendations & Actions"
+
+msgid "No immediate actions."
+msgstr "No immediate actions."
+
+msgid "Future Improvements"
+msgstr "Future Improvements"
+
+msgid "No future improvements."
+msgstr "No future improvements."
+
+msgid "Invoice Audit Report"
+msgstr "Invoice Audit Report"
+
+msgid "Needs Review"
+msgstr "Needs Review"
+
+msgid "Compliant"
+msgstr "Compliant"
+
+msgid "Organization Name"
+msgstr "Organization Name"
+
+msgid "Generated At"
+msgstr "Generated At"
+
+msgid "Print"
+msgstr "Print"
+
+msgid "Export PDF"
+msgstr "Export PDF"
+
+msgid "Share"
+msgstr "Share"
+
+msgid "Back to Dashboard"
+msgstr "Back to Dashboard"
+
+msgid "Invoice No."
+msgstr "Invoice No."
+
+msgid "No high risk invoices."
+msgstr "No high risk invoices."
+
+# --- Auditing partials ---
+msgid "Document Type"
+msgstr "Document Type"
+
+msgid "Detected by AI"
+msgstr "Detected by AI"
+
+msgid "Per user selection"
+msgstr "Per user selection"
+
+msgid "Bilingual"
+msgstr "Bilingual"
+
+msgid "Detected document language"
+msgstr "Detected document language"
+
+msgid "Confidence Score"
+msgstr "Confidence Score"
+
+msgid "Requires immediate review"
+msgstr "Requires immediate review"
+
+msgid "Review recommended"
+msgstr "Review recommended"
+
+msgid "No notable risks"
+msgstr "No notable risks"
+
+msgid "Financial Validation Results"
+msgstr "Financial Validation Results"
+
+msgid "Result"
+msgstr "Result"
+
+msgid "Check"
+msgstr "Check"
+
+msgid "Pass"
+msgstr "Pass"
+
+msgid "Warning"
+msgstr "Warning"
+
+msgid "Fail"
+msgstr "Fail"
+
+msgid "Detected Anomalies"
+msgstr "Detected Anomalies"
+
+msgid "anomalies detected"
+msgstr "anomalies detected"
+
+# --- Auditing result page ---
+msgid "Audit Report"
+msgstr "Audit Report"
+
+msgid "Financial Audit Report"
+msgstr "Financial Audit Report"
+
+msgid "Back to History"
+msgstr "Back to History"
+
+msgid "New Document"
+msgstr "New Document"
+
+msgid "Detected Type:"
+msgstr "Detected Type:"
+
+msgid "Language:"
+msgstr "Language:"
+
+msgid "Completed"
+msgstr "Completed"
+
+msgid "Processing"
+msgstr "Processing"
+
+msgid "Pending"
+msgstr "Pending"
+
+msgid "Executive Summary"
+msgstr "Executive Summary"
+
+msgid "Hide Details"
+msgstr "Hide Details"
+
+msgid "Show Details"
+msgstr "Show Details"
+
+msgid "Processing Error"
+msgstr "Processing Error"
+
+msgid "Compliance Review"
+msgstr "Compliance Review"
+
+msgid "Audit Readiness"
+msgstr "Audit Readiness"
+
+msgid "Traceability"
+msgstr "Traceability"
+
+msgid "Completeness"
+msgstr "Completeness"
+
+msgid "Complete"
+msgstr "Complete"
+
+msgid "Partial"
+msgstr "Partial"
+
+msgid "Incomplete"
+msgstr "Incomplete"
+
+msgid "Missing Elements:"
+msgstr "Missing Elements:"
+
+msgid "Recommendations"
+msgstr "Recommendations"
+
+msgid "Extracted Data"
+msgstr "Extracted Data"
+
+msgid "Extracted Financial Data"
+msgstr "Extracted Financial Data"
+
+msgid "Full JSON"
+msgstr "Full JSON"
+
+msgid "Full AI Result"
+msgstr "Full AI Result"
+
+msgid "No audit findings"
+msgstr "No audit findings"
+
+msgid "No anomalies or violations were detected in this document."
+msgstr "No anomalies or violations were detected in this document."

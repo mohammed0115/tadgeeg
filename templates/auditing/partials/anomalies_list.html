@@ -1,3 +1,4 @@
+{% load i18n %}
 {# Anomalies list — uses ai_result.anomalies (raw AI data) + anomaly_findings (DB records) #}
 {% with all_anomalies=anomalies %}
 {% if all_anomalies %}
@@ -10,11 +11,11 @@
   >
     <div class="flex items-center gap-2">
       <i data-lucide="chevron-down" class="h-4 w-4 text-slate-400 transition-transform" :class="open ? '' : '-rotate-90'"></i>
-      <span class="text-xs text-slate-500">{{ all_anomalies|length }} شذوذ</span>
+      <span class="text-xs text-slate-500">{{ all_anomalies|length }} {% trans "anomalies detected" %}</span>
     </div>
     <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
       <i data-lucide="alert-triangle" class="h-5 w-5 text-amber-500"></i>
-      الشذوذات المكتشفة
+      {% trans "Detected Anomalies" %}
     </h3>
   </button>
   <div x-show="open" x-cloak class="divide-y divide-slate-100">
@@ -24,11 +25,11 @@
         <div>
           {% with sev=anomaly.severity %}
           {% if sev == "high" %}
-            <span class="inline-block rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-700">مرتفع</span>
+            <span class="inline-block rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-700">{% trans "High" %}</span>
           {% elif sev == "medium" %}
-            <span class="inline-block rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-700">متوسط</span>
+            <span class="inline-block rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-700">{% trans "Medium" %}</span>
           {% else %}
-            <span class="inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600">منخفض</span>
+            <span class="inline-block rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-bold text-slate-600">{% trans "Low" %}</span>
           {% endif %}
           {% endwith %}
         </div>

@@ -1,6 +1,7 @@
+{% load i18n %}
 <section class="card p-6 rounded-2xl shadow-sm border-2 border-amber-200 bg-gradient-to-b from-amber-50/60 to-white space-y-4 print-break-avoid">
   <div class="flex items-center justify-between">
-    <h2 class="text-xl font-extrabold text-slate-900">أكثر قواعد التدقيق فشلًا</h2>
+    <h2 class="text-xl font-extrabold text-slate-900">{% trans "Most Failed Audit Rules" %}</h2>
     <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200">
       Rule Failure Focus
     </span>
@@ -10,10 +11,10 @@
     <table class="min-w-full text-sm">
       <thead class="bg-slate-900 text-white">
         <tr>
-          <th class="px-4 py-3 text-right">رمز القاعدة</th>
-          <th class="px-4 py-3 text-right">الوصف</th>
-          <th class="px-4 py-3 text-right">عدد الإخفاقات</th>
-          <th class="px-4 py-3 text-right">أرقام الفواتير المتأثرة</th>
+          <th class="px-4 py-3 text-right">{% trans "Rule Code" %}</th>
+          <th class="px-4 py-3 text-right">{% trans "Description" %}</th>
+          <th class="px-4 py-3 text-right">{% trans "Failure Count" %}</th>
+          <th class="px-4 py-3 text-right">{% trans "Affected Invoice Numbers" %}</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-200">
@@ -33,13 +34,13 @@
                     <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">{{ inv }}</span>
                   {% endif %}
                 {% empty %}
-                  <span class="text-xs text-slate-500">لا توجد أرقام فواتير.</span>
+                  <span class="text-xs text-slate-500">{% trans "No invoice numbers." %}</span>
                 {% endfor %}
 
                 {% if rule.invoice_numbers|length > 6 %}
                   <button @click="expanded = !expanded" class="print-hidden inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-primary-100 text-primary-700 border border-primary-200">
-                    <span x-show="!expanded">عرض المزيد</span>
-                    <span x-show="expanded">إخفاء</span>
+                    <span x-show="!expanded">{% trans "Show More" %}</span>
+                    <span x-show="expanded">{% trans "Hide" %}</span>
                   </button>
                 {% endif %}
               </div>
@@ -56,7 +57,7 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="4" class="px-4 py-6 text-center text-slate-500">لا توجد بيانات لإخفاقات القواعد.</td></tr>
+          <tr><td colspan="4" class="px-4 py-6 text-center text-slate-500">{% trans "No rule failure data." %}</td></tr>
         {% endfor %}
       </tbody>
     </table>

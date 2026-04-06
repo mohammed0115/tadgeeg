@@ -706,6 +706,13 @@ RULE_CATALOG = [
      "Invoice-PO amount mismatch detected.", "تعارض مبالغ الفاتورة وأمر الشراء.",
      "راجع أمر الشراء والفاتورة وحدد مصدر الفارق."),
 
+    ("CDR-02", "reconciliation", "reconciliation", "cross_document", "critical", True, True,
+     "apps.rule_engine.rules.cross_document.three_way_match_rule.ThreeWayMatchRule",
+     "Three-Way Match (PO ↔ Invoice ↔ GRN)", "المطابقة الثلاثية (أمر الشراء ↔ الفاتورة ↔ مذكرة الاستلام)",
+     "Quantity, unit price, total amount, and vendor must be consistent across PO, Invoice, and GRN.",
+     "Three-way match mismatch detected.", "تعارض في المطابقة الثلاثية.",
+     "راجع أمر الشراء والفاتورة ومذكرة الاستلام وحدد مصدر الفارق."),
+
     ("CDR-03", "reconciliation", "reconciliation", "cross_document", "critical", True, True,
      "apps.rule_engine.rules.cross_document.invoice_po_match_rule.PayrollBankReconciliationRule",
      "Payroll–Bank Transfer Reconciliation", "تسوية إجمالي الرواتب مع التحويل البنكي",
@@ -868,6 +875,9 @@ SYSTEM_ASSIGNMENTS = [
     # Cross-document rules
     *[("CDR-01", "sales_invoice", "conditional", None),
       ("CDR-01", "purchase_order", "full", None),
+      ("CDR-02", "purchase_order", "full", None),
+      ("CDR-02", "invoice", "conditional", None),
+      ("CDR-02", "goods_receipt", "conditional", None),
       ("CDR-03", "payroll", "full", None),
       ("CDR-03", "bank_statement", "conditional", None)],
 

@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}تقرير التدقيق — {{ document.original_name }}{% endblock %}
-{% block page_title %}تقرير التدقيق المالي{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Audit Report" %} — {{ document.original_name }}{% endblock %}
+{% block page_title %}{% trans "Financial Audit Report" %}{% endblock %}
 {% block nav_ai_auditor %}active{% endblock %}
 
 {% block content %}
 <div
   class="max-w-5xl mx-auto space-y-6"
-  dir="rtl"
   x-data="{
     showExtracted: false,
     showRawAI: false,
@@ -22,12 +22,12 @@
       <a href="{% url 'auditor:history' %}"
          class="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50 transition-colors">
         <i data-lucide="arrow-right" class="h-4 w-4"></i>
-        العودة للسجل
+        {% trans "Back to History" %}
       </a>
       <a href="{% url 'auditor:upload' %}"
          class="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors">
         <i data-lucide="plus" class="h-4 w-4"></i>
-        مستند جديد
+        {% trans "New Document" %}
       </a>
     </div>
     <div class="text-sm text-slate-500 text-right">
@@ -47,12 +47,12 @@
         <div>
           <p class="text-base font-bold text-slate-800">{{ document.original_name }}</p>
           <p class="text-xs text-slate-500 mt-0.5">
-            النوع المكتشف:
+            {% trans "Detected Type:" %}
             <span class="font-semibold text-slate-700">{{ document.doc_type_display }}</span>
             {% if document.language and document.language != "unknown" %}
-            · اللغة:
+            · {% trans "Language:" %}
             <span class="font-semibold text-slate-700">
-              {% if document.language == "ar" %}عربي{% elif document.language == "en" %}إنجليزي{% elif document.language == "ar-en" %}ثنائي{% else %}{{ document.language }}{% endif %}
+              {% if document.language == "ar" %}{% trans "Arabic" %}{% elif document.language == "en" %}{% trans "English" %}{% elif document.language == "ar-en" %}{% trans "Bilingual" %}{% else %}{{ document.language }}{% endif %}
             </span>
             {% endif %}
           </p>
@@ -62,19 +62,19 @@
         <!-- Status Badge -->
         {% if document.status == "completed" %}
           <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-700">
-            <i data-lucide="check-circle-2" class="h-3.5 w-3.5"></i> مكتمل
+            <i data-lucide="check-circle-2" class="h-3.5 w-3.5"></i> {% trans "Completed" %}
           </span>
         {% elif document.status == "processing" %}
           <span class="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1.5 text-xs font-bold text-blue-700">
-            <i data-lucide="loader-2" class="h-3.5 w-3.5 animate-spin"></i> قيد المعالجة
+            <i data-lucide="loader-2" class="h-3.5 w-3.5 animate-spin"></i> {% trans "Processing" %}
           </span>
         {% elif document.status == "failed" %}
           <span class="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-bold text-red-700">
-            <i data-lucide="x-circle" class="h-3.5 w-3.5"></i> فشل
+            <i data-lucide="x-circle" class="h-3.5 w-3.5"></i> {% trans "Failed" %}
           </span>
         {% else %}
           <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600">
-            <i data-lucide="clock" class="h-3.5 w-3.5"></i> انتظار
+            <i data-lucide="clock" class="h-3.5 w-3.5"></i> {% trans "Pending" %}
           </span>
         {% endif %}
       </div>
@@ -92,7 +92,7 @@
         <i data-lucide="file-text" class="h-5 w-5"></i>
       </div>
       <div>
-        <h3 class="text-base font-bold text-blue-900 mb-2">الملخص التنفيذي</h3>
+        <h3 class="text-base font-bold text-blue-900 mb-2">{% trans "Executive Summary" %}</h3>
         <p class="text-sm text-blue-800 leading-relaxed">{{ executive_summary }}</p>
       </div>
     </div>
@@ -104,11 +104,11 @@
   <div class="rounded-2xl border border-red-200 bg-red-50 p-5 text-right shadow-sm">
     <div class="flex items-center justify-between mb-3">
       <button @click="showError = !showError" class="text-xs font-semibold text-red-600 hover:underline">
-        <span x-text="showError ? 'إخفاء التفاصيل' : 'عرض التفاصيل'"></span>
+        <span x-text="showError ? '{% trans "Hide Details" %}' : '{% trans "Show Details" %}'"></span>
       </button>
       <h3 class="text-sm font-bold text-red-800 flex items-center gap-2">
         <i data-lucide="x-circle" class="h-4 w-4"></i>
-        خطأ في المعالجة
+        {% trans "Processing Error" %}
       </h3>
     </div>
     <div x-show="showError" x-cloak class="mt-2">
@@ -129,7 +129,7 @@
     <div class="border-b border-slate-100 px-6 py-4 text-right">
       <h3 class="text-base font-bold text-slate-800 flex items-center justify-end gap-2">
         <i data-lucide="shield" class="h-5 w-5 text-violet-500"></i>
-        مراجعة الامتثال
+        {% trans "Compliance Review" %}
       </h3>
     </div>
     <div class="p-6 text-right">
@@ -137,42 +137,42 @@
 
         <!-- Audit Readiness -->
         <div class="rounded-xl border border-slate-100 bg-slate-50 p-3 text-center">
-          <p class="text-xs text-slate-500 mb-1">جاهزية التدقيق</p>
+          <p class="text-xs text-slate-500 mb-1">{% trans "Audit Readiness" %}</p>
           {% with level=compliance_review.audit_readiness %}
           {% if level == "high" %}
-            <span class="text-xs font-bold text-emerald-600">✓ مرتفعة</span>
+            <span class="text-xs font-bold text-emerald-600">✓ {% trans "High" %}</span>
           {% elif level == "medium" %}
-            <span class="text-xs font-bold text-amber-600">⚠ متوسطة</span>
+            <span class="text-xs font-bold text-amber-600">⚠ {% trans "Medium" %}</span>
           {% else %}
-            <span class="text-xs font-bold text-red-600">✗ منخفضة</span>
+            <span class="text-xs font-bold text-red-600">✗ {% trans "Low" %}</span>
           {% endif %}
           {% endwith %}
         </div>
 
         <!-- Traceability -->
         <div class="rounded-xl border border-slate-100 bg-slate-50 p-3 text-center">
-          <p class="text-xs text-slate-500 mb-1">قابلية التتبع</p>
+          <p class="text-xs text-slate-500 mb-1">{% trans "Traceability" %}</p>
           {% with level=compliance_review.traceability %}
           {% if level == "high" %}
-            <span class="text-xs font-bold text-emerald-600">✓ مرتفعة</span>
+            <span class="text-xs font-bold text-emerald-600">✓ {% trans "High" %}</span>
           {% elif level == "medium" %}
-            <span class="text-xs font-bold text-amber-600">⚠ متوسطة</span>
+            <span class="text-xs font-bold text-amber-600">⚠ {% trans "Medium" %}</span>
           {% else %}
-            <span class="text-xs font-bold text-red-600">✗ منخفضة</span>
+            <span class="text-xs font-bold text-red-600">✗ {% trans "Low" %}</span>
           {% endif %}
           {% endwith %}
         </div>
 
         <!-- Completeness -->
         <div class="rounded-xl border border-slate-100 bg-slate-50 p-3 text-center">
-          <p class="text-xs text-slate-500 mb-1">الاكتمال</p>
+          <p class="text-xs text-slate-500 mb-1">{% trans "Completeness" %}</p>
           {% with level=compliance_review.completeness %}
           {% if level == "high" %}
-            <span class="text-xs font-bold text-emerald-600">✓ مكتمل</span>
+            <span class="text-xs font-bold text-emerald-600">✓ {% trans "Complete" %}</span>
           {% elif level == "medium" %}
-            <span class="text-xs font-bold text-amber-600">⚠ جزئي</span>
+            <span class="text-xs font-bold text-amber-600">⚠ {% trans "Partial" %}</span>
           {% else %}
-            <span class="text-xs font-bold text-red-600">✗ ناقص</span>
+            <span class="text-xs font-bold text-red-600">✗ {% trans "Incomplete" %}</span>
           {% endif %}
           {% endwith %}
         </div>
@@ -181,7 +181,7 @@
 
       {% if compliance_review.key_missing_elements %}
       <div class="mb-3">
-        <p class="text-xs font-semibold text-slate-600 mb-2">العناصر المفقودة:</p>
+        <p class="text-xs font-semibold text-slate-600 mb-2">{% trans "Missing Elements:" %}</p>
         <div class="flex flex-wrap gap-1.5">
           {% for item in compliance_review.key_missing_elements %}
           <span class="inline-block rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-xs text-red-700">{{ item }}</span>
@@ -212,7 +212,7 @@
     <div class="border-b border-emerald-100 bg-emerald-50 px-6 py-4 text-right">
       <h3 class="text-base font-bold text-emerald-800 flex items-center justify-end gap-2">
         <i data-lucide="lightbulb" class="h-5 w-5 text-emerald-600"></i>
-        التوصيات
+        {% trans "Recommendations" %}
       </h3>
     </div>
     <ul class="divide-y divide-slate-100">
@@ -236,11 +236,11 @@
     >
       <div class="flex items-center gap-2">
         <i data-lucide="chevron-down" class="h-4 w-4 text-slate-400 transition-transform" :class="showExtracted ? '' : '-rotate-90'"></i>
-        <span class="text-xs text-slate-500">البيانات المستخرجة</span>
+        <span class="text-xs text-slate-500">{% trans "Extracted Data" %}</span>
       </div>
       <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
         <i data-lucide="database" class="h-5 w-5 text-slate-500"></i>
-        البيانات المالية المستخرجة
+        {% trans "Extracted Financial Data" %}
       </h3>
     </button>
     <div x-show="showExtracted" x-cloak class="p-6 pt-0">
@@ -259,11 +259,11 @@
     >
       <div class="flex items-center gap-2">
         <i data-lucide="chevron-down" class="h-4 w-4 text-slate-400 transition-transform" :class="showRawAI ? '' : '-rotate-90'"></i>
-        <span class="text-xs text-slate-500">JSON كامل</span>
+        <span class="text-xs text-slate-500">{% trans "Full JSON" %}</span>
       </div>
       <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
         <i data-lucide="code-2" class="h-5 w-5 text-slate-500"></i>
-        نتيجة الذكاء الاصطناعي الكاملة
+        {% trans "Full AI Result" %}
       </h3>
     </button>
     <div x-show="showRawAI" x-cloak class="p-6 pt-0">
@@ -280,8 +280,8 @@
         <i data-lucide="check-circle-2" class="h-7 w-7"></i>
       </div>
       <div>
-        <h4 class="text-base font-bold text-emerald-800">لا توجد ملاحظات تدقيقية</h4>
-        <p class="mt-1 text-sm text-emerald-700">لم يُكتشف أي شذوذ أو مخالفة في هذا المستند.</p>
+        <h4 class="text-base font-bold text-emerald-800">{% trans "No audit findings" %}</h4>
+        <p class="mt-1 text-sm text-emerald-700">{% trans "No anomalies or violations were detected in this document." %}</p>
       </div>
     </div>
   </div>

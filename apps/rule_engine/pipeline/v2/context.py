@@ -46,6 +46,9 @@ class PipelineContext:
     history_context: dict = field(default_factory=dict)  # past document runs
     erp_context: dict = field(default_factory=dict)      # budget / cost-centre
 
+    # ── Stage 2.5: ThreeWayMatchStage ──────────────────────────────────────────
+    three_way_match: dict = field(default_factory=dict)   # MatchResult.to_dict()
+
     # ── Stage 3: RuleEngineStage ────────────────────────────────────────────────
     rule_results: list = field(default_factory=list)      # list[AuditResult ORM]
     rule_assignments: list = field(default_factory=list)  # list[RuleAssignment ORM]

@@ -14,6 +14,8 @@ class CrossDocumentLink(models.Model):
 
     class LinkType(models.TextChoices):
         PO_TO_INVOICE = "po_to_invoice", "Purchase Order → Invoice"
+        GRN_TO_PO = "grn_to_po", "Goods Receipt → Purchase Order"
+        GRN_TO_INVOICE = "grn_to_invoice", "Goods Receipt → Invoice"
         INVOICE_TO_PAYMENT = "invoice_to_payment", "Invoice → Payment"
         PAYROLL_TO_BANK = "payroll_to_bank", "Payroll → Bank Statement"
         TAX_TO_INVOICE = "tax_to_invoice", "Tax Return → Invoice"

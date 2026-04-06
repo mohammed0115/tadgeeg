@@ -2528,3 +2528,204 @@ msgstr "انتقل مباشرةً إلى لوحة تحكم %(product)s"
 
 msgid "Return directly to %(product)s and continue your work."
 msgstr "عُد مباشرةً إلى %(product)s وواصل عملك."
+
+# --- Report partials ---
+msgid "Affected Invoice Numbers"
+msgstr "أرقام الفواتير المتأثرة"
+
+msgid "No invoice numbers."
+msgstr "لا توجد أرقام فواتير."
+
+msgid "Show More"
+msgstr "عرض المزيد"
+
+msgid "Hide"
+msgstr "إخفاء"
+
+msgid "No rule failure data."
+msgstr "لا توجد بيانات لإخفاقات القواعد."
+
+msgid "Report sample size"
+msgstr "حجم العينة المعتمدة بالتقرير"
+
+msgid "Total spend for submitted invoices"
+msgstr "إجمالي الإنفاق للفواتير المدخلة"
+
+msgid "Overall regulatory compliance"
+msgstr "الامتثال الرقابي العام"
+
+msgid "Avg. Risk Score"
+msgstr "متوسط درجة المخاطر"
+
+msgid "Higher score = higher risk"
+msgstr "كلما ارتفع الرقم زادت الخطورة"
+
+msgid "Require direct audit intervention"
+msgstr "تحتاج تدخل تدقيقي مباشر"
+
+msgid "Duplicate Count"
+msgstr "عدد التكرارات"
+
+msgid "Suspected duplication cases"
+msgstr "حالات مشتبه بها بالتكرار"
+
+msgid "No immediate actions."
+msgstr "لا توجد إجراءات فورية حالياً."
+
+msgid "No future improvements."
+msgstr "لا توجد تحسينات مستقبلية حالياً."
+
+msgid "Needs Review"
+msgstr "يحتاج مراجعة"
+
+msgid "Compliant"
+msgstr "متوافق"
+
+msgid "Organization Name"
+msgstr "اسم المنظمة"
+
+msgid "Generated At"
+msgstr "تاريخ الإنشاء"
+
+msgid "Print"
+msgstr "طباعة"
+
+msgid "Export PDF"
+msgstr "تصدير PDF"
+
+msgid "Share"
+msgstr "مشاركة"
+
+msgid "Back to Dashboard"
+msgstr "الرجوع للداشبورد"
+
+msgid "Invoice No."
+msgstr "رقم الفاتورة"
+
+msgid "No high risk invoices."
+msgstr "لا توجد فواتير عالية المخاطر حالياً."
+
+# --- Auditing partials ---
+msgid "Document Type"
+msgstr "نوع المستند"
+
+msgid "Detected by AI"
+msgstr "مكتشف بالذكاء الاصطناعي"
+
+msgid "Per user selection"
+msgstr "حسب اختيار المستخدم"
+
+msgid "Bilingual"
+msgstr "ثنائي"
+
+msgid "Detected document language"
+msgstr "لغة المستند المكتشفة"
+
+msgid "Confidence Score"
+msgstr "درجة الثقة"
+
+msgid "Requires immediate review"
+msgstr "يتطلب مراجعة فورية"
+
+msgid "Review recommended"
+msgstr "يُنصح بالمراجعة"
+
+msgid "No notable risks"
+msgstr "لا توجد مخاطر بارزة"
+
+msgid "Financial Validation Results"
+msgstr "نتائج التحقق المالي"
+
+msgid "Result"
+msgstr "النتيجة"
+
+msgid "Check"
+msgstr "الفحص"
+
+msgid "Pass"
+msgstr "نجاح"
+
+msgid "Warning"
+msgstr "تحذير"
+
+msgid "Fail"
+msgstr "فشل"
+
+msgid "Detected Anomalies"
+msgstr "الشذوذات المكتشفة"
+
+msgid "anomalies detected"
+msgstr "شذوذات مكتشفة"
+
+# --- Auditing result page ---
+msgid "Audit Report"
+msgstr "تقرير التدقيق"
+
+msgid "Financial Audit Report"
+msgstr "تقرير التدقيق المالي"
+
+msgid "Back to History"
+msgstr "العودة للسجل"
+
+msgid "New Document"
+msgstr "مستند جديد"
+
+msgid "Detected Type:"
+msgstr "النوع المكتشف:"
+
+msgid "Language:"
+msgstr "اللغة:"
+
+msgid "Hide Details"
+msgstr "إخفاء التفاصيل"
+
+msgid "Show Details"
+msgstr "عرض التفاصيل"
+
+msgid "Processing Error"
+msgstr "خطأ في المعالجة"
+
+msgid "Compliance Review"
+msgstr "مراجعة الامتثال"
+
+msgid "Audit Readiness"
+msgstr "جاهزية التدقيق"
+
+msgid "Traceability"
+msgstr "قابلية التتبع"
+
+msgid "Completeness"
+msgstr "الاكتمال"
+
+msgid "Complete"
+msgstr "مكتمل"
+
+msgid "Partial"
+msgstr "جزئي"
+
+msgid "Incomplete"
+msgstr "ناقص"
+
+msgid "Missing Elements:"
+msgstr "العناصر المفقودة:"
+
+msgid "Recommendations"
+msgstr "التوصيات"
+
+msgid "Extracted Data"
+msgstr "البيانات المستخرجة"
+
+msgid "Extracted Financial Data"
+msgstr "البيانات المالية المستخرجة"
+
+msgid "Full JSON"
+msgstr "JSON كامل"
+
+msgid "Full AI Result"
+msgstr "نتيجة الذكاء الاصطناعي الكاملة"
+
+msgid "No audit findings"
+msgstr "لا توجد ملاحظات تدقيقية"
+
+msgid "No anomalies or violations were detected in this document."
+msgstr "لم يُكتشف أي شذوذ أو مخالفة في هذا المستند."

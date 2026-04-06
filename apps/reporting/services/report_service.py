@@ -84,11 +84,16 @@ class ReportService:
             avg_score_val = results_qs.aggregate(avg=Avg("overall_score"))["avg"]
             avg_score = round(float(avg_score_val), 1) if avg_score_val is not None else 0.0
 
+            # Anomaly summary — sourced from RiskScoreSummary.score_breakdown
+            anomaly_summary, top_anomalous = self._build_anomaly_summary(organization)
+
             report.report_data = {
                 "total_jobs": jobs_qs.count(),
                 "avg_score": avg_score,
                 "risk_distribution": risk_distribution,
                 "issue_counts_by_severity": issue_counts,
+                "anomaly_summary": anomaly_summary,
+                "top_anomalous_documents": top_anomalous,
                 "generated_at": date.today().isoformat(),
             }
             report.status = Report.Status.READY
@@ -223,6 +228,75 @@ class ReportService:
 
         report.save()
         return report
+
+    # ------------------------------------------------------------------ #
+    # Anomaly aggregation
+    # ------------------------------------------------------------------ #
+
+    @staticmethod
+    def _build_anomaly_summary(
+        organization,
+        high_threshold: float = 70.0,
+        top_n: int = 10,
+    ) -> tuple[dict, list]:
+        """
+        Aggregate anomaly scores from RiskScoreSummary.score_breakdown.
+
+        Returns
+        -------
+        anomaly_summary      dict with documents_scored, high_anomaly_count,
+                             max_anomaly_score, avg_anomaly_score
+        top_anomalous_docs   list of top_n dicts ordered by anomaly_score desc,
+                             each with document_id, document_type, anomaly_score,
+                             explanation, flags
+        """
+        from apps.rule_engine.models.risk import RiskScoreSummary
+
+        qs = RiskScoreSummary.objects.filter(organization=organization)
+
+        scored: list[dict] = []
+        for row in qs:
+            breakdown = row.score_breakdown or {}
+            raw_score = breakdown.get("anomaly_score")
+            if raw_score is None:
+                continue
+            try:
+                score = float(raw_score)
+            except (TypeError, ValueError):
+                continue
+            scored.append({
+                "document_id":   str(row.document_id),
+                "document_type": row.document_type,
+                "anomaly_score": score,
+                "explanation":   breakdown.get("anomaly_explanation", ""),
+                "flags":         breakdown.get("anomaly_flags", []),
+            })
+
+        if not scored:
+            return (
+                {
+                    "documents_scored":   0,
+                    "high_anomaly_count": 0,
+                    "max_anomaly_score":  0.0,
+                    "avg_anomaly_score":  0.0,
+                },
+                [],
+            )
+
+        scores       = [d["anomaly_score"] for d in scored]
+        high_count   = sum(1 for s in scores if s >= high_threshold)
+        max_score    = max(scores)
+        avg_score    = round(sum(scores) / len(scores), 2)
+
+        top_docs = sorted(scored, key=lambda d: d["anomaly_score"], reverse=True)[:top_n]
+
+        anomaly_summary = {
+            "documents_scored":   len(scored),
+            "high_anomaly_count": high_count,
+            "max_anomaly_score":  max_score,
+            "avg_anomaly_score":  avg_score,
+        }
+        return anomaly_summary, top_docs
 
     # ------------------------------------------------------------------ #
     # Export helpers

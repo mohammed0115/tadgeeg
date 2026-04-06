@@ -131,6 +131,73 @@ class ERPContextModifier:
         return risk_data
 
 
+class AnomalyModifier:
+    """
+    Runs statistical anomaly detection (z-score, IQR, duplicate patterns,
+    frequency analysis, vendor checks) and merges findings into risk_data.
+
+    Contributions
+    -------------
+      anomaly_score ≥ 70  → additional +15 pts on the composite risk score
+      anomaly_score ≥ 40  → additional +8 pts
+      anomaly findings    → stored in risk_data["anomaly_findings"] so that
+                            RiskScoreSummary.fraud_indicators is populated
+      score_breakdown     → anomaly_score / anomaly_explanation / anomaly_flags
+                            written for ReportService aggregation
+    """
+
+    def apply(self, risk_data: dict, context: "PipelineContext") -> dict:
+        doc = context.normalized_doc
+        if not doc:
+            return risk_data
+
+        try:
+            from apps.rule_engine.anomaly.detector import AnomalyDetector
+
+            result = AnomalyDetector().detect_with_db_history(
+                doc=doc,
+                history_context=getattr(context, "history_context", {}),
+                vendor_context=getattr(context, "vendor_context", {}),
+            )
+
+            # Merge anomaly data into score_breakdown for ReportService
+            breakdown = dict(risk_data.get("score_breakdown", {}))
+            breakdown.update({
+                "anomaly_score":       result.anomaly_score,
+                "anomaly_explanation": result.explanation,
+                "anomaly_flags": [
+                    f["code"] for f in result.findings
+                ],
+            })
+            risk_data = dict(risk_data)
+            risk_data["score_breakdown"]   = breakdown
+            risk_data["anomaly_findings"]  = result.findings
+            risk_data["anomaly_methods"]   = result.methods_used
+            risk_data["anomaly_score"]     = result.anomaly_score
+            risk_data["anomaly_explanation"] = result.explanation
+
+            # Inflate the composite risk score based on anomaly severity
+            if result.anomaly_score >= 70:
+                risk_data = _apply_adjustment(
+                    risk_data, 15.0, [f"anomaly_high:{result.anomaly_score:.0f}"]
+                )
+            elif result.anomaly_score >= 40:
+                risk_data = _apply_adjustment(
+                    risk_data, 8.0, [f"anomaly_moderate:{result.anomaly_score:.0f}"]
+                )
+
+            logger.info(
+                "[risk_engine] Anomaly score=%.1f findings=%d methods=%s",
+                result.anomaly_score,
+                len(result.findings),
+                result.methods_used,
+            )
+        except Exception as exc:
+            logger.warning("[risk_engine] AnomalyModifier failed (skipped): %s", exc)
+
+        return risk_data
+
+
 # ── Stage ──────────────────────────────────────────────────────────────────────
 
 class RiskEngineStage(BaseStage):
@@ -142,8 +209,14 @@ class RiskEngineStage(BaseStage):
     name = "risk_engine"
 
     # Instantiate modifiers once at class level (they are stateless).
+    # Execution order matters: BaseRiskModifier must run first so subsequent
+    # modifiers can adjust the already-computed baseline score.
     _MODIFIER_CHAIN = [
         BaseRiskModifier(),
+        AnomalyModifier(),
+        VendorRiskModifier(),
+        FrequencyModifier(),
+        ERPContextModifier(),
     ]
 
     def _run(self, context: "PipelineContext") -> "PipelineContext":

@@ -1,34 +1,35 @@
+{% load i18n %}
 {# Summary stat cards: document type, language, confidence, risk level #}
 <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
 
   <!-- Document Type -->
   <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-right">
-    <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">نوع المستند</p>
+    <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">{% trans "Document Type" %}</p>
     <p class="text-sm font-bold text-slate-800 leading-snug">{{ document.doc_type_display }}</p>
     {% if document.detected_doc_type %}
-    <p class="text-xs text-slate-400 mt-1">مكتشف بالذكاء الاصطناعي</p>
+    <p class="text-xs text-slate-400 mt-1">{% trans "Detected by AI" %}</p>
     {% else %}
-    <p class="text-xs text-slate-400 mt-1">حسب اختيار المستخدم</p>
+    <p class="text-xs text-slate-400 mt-1">{% trans "Per user selection" %}</p>
     {% endif %}
   </div>
 
   <!-- Language -->
   <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-right">
-    <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">اللغة</p>
+    <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">{% trans "Language" %}</p>
     <p class="text-sm font-bold text-slate-800">
-      {% if document.language == "ar" %}عربي 🇸🇦
-      {% elif document.language == "en" %}English 🇺🇸
-      {% elif document.language == "ar-en" %}ثنائي 🔀
+      {% if document.language == "ar" %}{% trans "Arabic" %} 🇸🇦
+      {% elif document.language == "en" %}{% trans "English" %} 🇺🇸
+      {% elif document.language == "ar-en" %}{% trans "Bilingual" %} 🔀
       {% elif document.language %}{{ document.language }}
       {% else %}—
       {% endif %}
     </p>
-    <p class="text-xs text-slate-400 mt-1">لغة المستند المكتشفة</p>
+    <p class="text-xs text-slate-400 mt-1">{% trans "Detected document language" %}</p>
   </div>
 
   <!-- Confidence -->
   <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-right">
-    <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">درجة الثقة</p>
+    <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">{% trans "Confidence Score" %}</p>
     <p class="text-2xl font-extrabold
       {% if confidence_pct >= 75 %}text-emerald-600
       {% elif confidence_pct >= 40 %}text-amber-600
@@ -46,22 +47,22 @@
 
   <!-- Risk Level -->
   <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm text-right">
-    <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">مستوى المخاطر</p>
-    {% if document.overall_risk_level == "high" %}
+    <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">{% trans "Risk Level" %}</p>
+    {% if document.overall_risk_level == "high" or document.overall_risk_level == "critical" %}
       <span class="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1.5 text-xs font-bold text-red-700">
-        <i data-lucide="alert-triangle" class="h-3.5 w-3.5"></i> مرتفع
+        <i data-lucide="alert-triangle" class="h-3.5 w-3.5"></i> {% trans "High" %}
       </span>
-      <p class="mt-2 text-xs text-red-600">يتطلب مراجعة فورية</p>
+      <p class="mt-2 text-xs text-red-600">{% trans "Requires immediate review" %}</p>
     {% elif document.overall_risk_level == "medium" %}
       <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-700">
-        <i data-lucide="alert-circle" class="h-3.5 w-3.5"></i> متوسط
+        <i data-lucide="alert-circle" class="h-3.5 w-3.5"></i> {% trans "Medium" %}
       </span>
-      <p class="mt-2 text-xs text-amber-600">يُنصح بالمراجعة</p>
+      <p class="mt-2 text-xs text-amber-600">{% trans "Review recommended" %}</p>
     {% elif document.overall_risk_level == "low" %}
       <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1.5 text-xs font-bold text-emerald-700">
-        <i data-lucide="shield-check" class="h-3.5 w-3.5"></i> منخفض
+        <i data-lucide="shield-check" class="h-3.5 w-3.5"></i> {% trans "Low" %}
       </span>
-      <p class="mt-2 text-xs text-emerald-600">لا توجد مخاطر بارزة</p>
+      <p class="mt-2 text-xs text-emerald-600">{% trans "No notable risks" %}</p>
     {% else %}
       <span class="text-sm font-bold text-slate-500">—</span>
     {% endif %}

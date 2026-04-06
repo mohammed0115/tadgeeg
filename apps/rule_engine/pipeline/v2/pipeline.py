@@ -5,6 +5,7 @@ Stage execution order
 ---------------------
   1. DocumentNormalizerStage  (CriticalStage — aborts on failure)
   2. ContextBuilderStage      (BaseStage     — failure logged, pipeline continues)
+  2.5 ThreeWayMatchStage      (BaseStage     — skipped for non-procurement types)
   3. RuleEngineStage          (CriticalStage — aborts on failure)
   4. RiskEngineStage          (BaseStage     — failure logged)
   5. AIEngineStage            (BaseStage     — skipped for low-risk docs)
@@ -46,12 +47,13 @@ from django.utils import timezone
 
 from apps.rule_engine.models import AuditRun
 from apps.rule_engine.pipeline.v2.context import PipelineContext
-from apps.rule_engine.pipeline.stages.normalizer      import DocumentNormalizerStage
-from apps.rule_engine.pipeline.stages.context_builder import ContextBuilderStage
-from apps.rule_engine.pipeline.stages.rule_engine     import RuleEngineStage
-from apps.rule_engine.pipeline.stages.risk_engine     import RiskEngineStage
-from apps.rule_engine.pipeline.stages.ai_engine       import AIEngineStage
-from apps.rule_engine.pipeline.stages.decision_engine import DecisionEngineStage
+from apps.rule_engine.pipeline.stages.normalizer         import DocumentNormalizerStage
+from apps.rule_engine.pipeline.stages.context_builder    import ContextBuilderStage
+from apps.rule_engine.pipeline.stages.three_way_match_stage import ThreeWayMatchStage
+from apps.rule_engine.pipeline.stages.rule_engine        import RuleEngineStage
+from apps.rule_engine.pipeline.stages.risk_engine        import RiskEngineStage
+from apps.rule_engine.pipeline.stages.ai_engine          import AIEngineStage
+from apps.rule_engine.pipeline.stages.decision_engine    import DecisionEngineStage
 
 logger = logging.getLogger("rule_engine.pipeline")
 
@@ -73,6 +75,7 @@ class AuditPipelineV2:
     STAGE_CLASSES = [
         DocumentNormalizerStage,
         ContextBuilderStage,
+        ThreeWayMatchStage,      # Stage 2.5 — procurement triplet resolution
         RuleEngineStage,
         RiskEngineStage,
         AIEngineStage,

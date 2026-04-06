@@ -50,9 +50,12 @@ class InvoiceValidationResultAdmin(TenantAwareModelAdmin):
 
 @admin.register(VendorProfile)
 class VendorProfileAdmin(TenantAwareModelAdmin):
-    list_display = ["vendor_name", "vendor_vat_number", "risk_tier", "updated_at"]
+    list_display = [
+        "vendor_name", "vendor_vat_number", "risk_score", "risk_tier",
+        "transaction_frequency_30d", "compliance_issue_count", "updated_at",
+    ]
     search_fields = ["vendor_name", "vendor_vat_number"]
-    list_filter = ["risk_tier", "updated_at"]
+    list_filter = ["risk_tier", "is_approved", "updated_at"]
 
 
 @admin.register(InvoiceAuditEvent)

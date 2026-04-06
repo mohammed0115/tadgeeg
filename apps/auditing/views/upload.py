@@ -13,7 +13,10 @@ from ..forms import AuditDocumentUploadForm
 from ..models import AuditDocument
 from ..repositories.document_repository import DocumentRepository
 from ..selectors.document_selector import DocumentSelector
-from ..services.audit_processing_service import AuditProcessingService
+# Routed through V2 pipeline via compatibility adapter (Prompt 1.3 migration).
+from apps.rule_engine.services.compatibility.legacy_audit_adapter import (
+    LegacyAuditProcessingServiceAdapter as AuditProcessingService,
+)
 from core.services.upload_router import DocumentUploadRouter
 from core.services.zip_validator import validate_zip_bomb_silent
 

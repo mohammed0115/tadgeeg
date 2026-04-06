@@ -18,7 +18,7 @@ know the inversion logic.
 from __future__ import annotations
 
 import logging
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import date, datetime, timezone as dt_timezone
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
@@ -26,6 +26,34 @@ from typing import Any, Dict, List, Optional
 from django.utils import timezone
 
 logger = logging.getLogger("finai")
+
+# Lazy model placeholders so tests can patch them and imports stay app-safe.
+Invoice = None
+InvoiceValidationResult = None
+VendorProfile = None
+RiskScoreSummary = None
+
+
+def _get_report_models():
+    global Invoice, InvoiceValidationResult, VendorProfile, RiskScoreSummary
+
+    if Invoice is None or InvoiceValidationResult is None or VendorProfile is None:
+        from apps.invoices.models import (
+            Invoice as InvoiceModel,
+            InvoiceValidationResult as ValidationModel,
+            VendorProfile as VendorProfileModel,
+        )
+
+        Invoice = Invoice or InvoiceModel
+        InvoiceValidationResult = InvoiceValidationResult or ValidationModel
+        VendorProfile = VendorProfile or VendorProfileModel
+
+    if RiskScoreSummary is None:
+        from apps.rule_engine.models import RiskScoreSummary as RiskScoreSummaryModel
+
+        RiskScoreSummary = RiskScoreSummaryModel
+
+    return Invoice, InvoiceValidationResult, VendorProfile, RiskScoreSummary
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -193,7 +221,7 @@ class InvoiceAuditReportService:
           3. One queryset for vendor profiles
         No N+1, no per-invoice queries.
         """
-        from apps.invoices.models import Invoice, InvoiceValidationResult, VendorProfile
+        Invoice, InvoiceValidationResult, VendorProfile, RiskScoreSummary = _get_report_models()
 
         # ── 1. Tenant-scoped invoice queryset ─────────────────────────────────
         inv_qs = (
@@ -223,11 +251,22 @@ class InvoiceAuditReportService:
             for vp in VendorProfile.objects.filter(organization=self.org)
         }
 
-        # ── 4. Assemble sections ───────────────────────────────────────────────
+        # ── 4. Risk summary map {document_id → RiskScoreSummary} ──────────────
+        risk_summaries: Dict[str, Any] = {}
+        if invoice_ids:
+            risk_summaries = {
+                str(rs.document_id): rs
+                for rs in RiskScoreSummary.objects.filter(
+                    organization=self.org,
+                    document_id__in=invoice_ids,
+                )
+            }
+
+        # ── 5. Assemble sections ───────────────────────────────────────────────
         summary = self._build_summary(invoices, validations)
 
         compliance_engine = self._build_compliance_engine(validations)
-        anomalies         = self._build_anomalies(invoices, validations)
+        anomalies         = self._build_anomalies(invoices, validations, risk_summaries)
 
         # KAMs — ISA 701
         from apps.reports.services.kams_service import KAMsService
@@ -676,7 +715,14 @@ class InvoiceAuditReportService:
 
     # ── Section: anomalies ────────────────────────────────────────────────────
 
-    def _build_anomalies(self, invoices: List, validations: Dict) -> Dict:
+    def _build_anomalies(
+        self,
+        invoices: List,
+        validations: Dict,
+        risk_summaries: Optional[Dict[str, Any]] = None,
+    ) -> Dict:
+        risk_summaries = risk_summaries or {}
+
         # Duplicate invoices list
         dup_invoices = [
             {
@@ -724,6 +770,48 @@ class InvoiceAuditReportService:
                 })
         abnormal_patterns.sort(key=lambda x: x["affected_count"], reverse=True)
 
+        # Explainable anomaly roll-up from RiskScoreSummary
+        anomaly_scores: List[float] = []
+        top_anomalous_documents: List[Dict[str, Any]] = []
+        anomaly_driver_counter: Counter = Counter()
+
+        for inv in invoices:
+            risk_summary = risk_summaries.get(str(inv.id))
+            breakdown = (getattr(risk_summary, "score_breakdown", None) or {})
+            anomaly_score = float(breakdown.get("anomaly_score") or 0)
+            explanation = breakdown.get("anomaly_explanation") or ""
+            flags = list(breakdown.get("anomaly_flags") or [])
+
+            for flag in flags:
+                anomaly_driver_counter[str(flag)] += 1
+
+            if anomaly_score > 0 or explanation:
+                anomaly_scores.append(anomaly_score)
+                top_anomalous_documents.append({
+                    "id": str(inv.id),
+                    "invoice_number": inv.invoice_number or "—",
+                    "supplier": inv.vendor_name or "—",
+                    "amount": float(inv.total_amount or 0),
+                    "currency": inv.currency or "SAR",
+                    "risk_level": getattr(inv, "risk_level", None) or "unknown",
+                    "risk_score": float(getattr(inv, "risk_score", 0) or 0),
+                    "anomaly_score": round(anomaly_score, 1),
+                    "explanation": explanation,
+                    "flags": flags,
+                })
+
+        top_anomalous_documents.sort(key=lambda item: item["anomaly_score"], reverse=True)
+        anomaly_summary = {
+            "documents_scored": len(top_anomalous_documents),
+            "high_anomaly_count": sum(1 for item in top_anomalous_documents if item["anomaly_score"] >= 60),
+            "average_anomaly_score": round(sum(anomaly_scores) / len(anomaly_scores), 1) if anomaly_scores else 0.0,
+            "max_anomaly_score": round(max(anomaly_scores), 1) if anomaly_scores else 0.0,
+        }
+        anomaly_drivers = [
+            {"code": code, "affected_count": count}
+            for code, count in anomaly_driver_counter.most_common(10)
+        ]
+
         # ── Benford's Law analysis on invoice amounts ─────────────────────────
         # Requires ≥ 30 samples for a statistically meaningful chi-square test.
         benford_result: Dict = {}
@@ -737,10 +825,13 @@ class InvoiceAuditReportService:
                 logger.warning("Benford analysis skipped: %s", exc)
 
         return {
-            "duplicate_invoices":  dup_invoices,
-            "dominant_supplier":   dominant,
-            "abnormal_patterns":   abnormal_patterns,
-            "benford_analysis":    benford_result,
+            "summary": anomaly_summary,
+            "duplicate_invoices": dup_invoices,
+            "dominant_supplier": dominant,
+            "abnormal_patterns": abnormal_patterns,
+            "anomaly_drivers": anomaly_drivers,
+            "top_anomalous_documents": top_anomalous_documents[:10],
+            "benford_analysis": benford_result,
         }
 
     # ── Section: root_cause_analysis ─────────────────────────────────────────

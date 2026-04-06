@@ -29,24 +29,55 @@ _UPLOAD_TYPE_TO_RE_TYPE = {
 }
 
 
+def _has_active_run(document_id: str, document_type: str, organization_id: str) -> bool:
+    """
+    Return True when a PENDING/RUNNING/COMPLETED AuditRun already exists for
+    this document within the last hour — prevents double-dispatch.
+    """
+    try:
+        from datetime import timedelta
+        from django.utils import timezone
+        from apps.rule_engine.models import AuditRun
+        cutoff = timezone.now() - timedelta(hours=1)
+        return AuditRun.objects.filter(
+            document_id=str(document_id),
+            document_type=document_type,
+            organization_id=str(organization_id),
+            status__in=[
+                AuditRun.Status.PENDING,
+                AuditRun.Status.RUNNING,
+                AuditRun.Status.COMPLETED,
+            ],
+            started_at__gte=cutoff,
+        ).exists()
+    except Exception:
+        return False  # fail open — allow dispatch if check errors
+
+
 def _trigger_rule_engine(document_id: str, document_type: str, organization_id: str, triggered_by: str = "upload") -> None:
     """
-    Fire the asynchronous audit task if the new rule engine is enabled.
-    Never raises — failures are logged and swallowed so the upload result
-    is not affected.
+    Fire the asynchronous V2 audit task via run_audit_compat_task.
+    Deduplication guard prevents double-dispatch within a 1-hour window.
+    Never raises — failures are logged and swallowed so the upload is unaffected.
     """
-    if not getattr(settings, "USE_NEW_RULE_ENGINE", False):
-        return
     re_type = _UPLOAD_TYPE_TO_RE_TYPE.get(document_type, "other")
+
+    if triggered_by != "reprocess" and _has_active_run(str(document_id), re_type, str(organization_id)):
+        logger.info(
+            "[RuleEngine] Skipping duplicate dispatch: doc=%s type=%s already running/completed",
+            document_id, re_type,
+        )
+        return
+
     try:
-        from apps.rule_engine.tasks.audit_tasks import run_audit_task
-        run_audit_task.delay(
+        from apps.rule_engine.tasks.audit_tasks_v2 import run_audit_compat_task
+        run_audit_compat_task.delay(
             document_id=str(document_id),
             document_type=re_type,
             organization_id=str(organization_id),
             triggered_by=triggered_by,
         )
-        logger.info("[RuleEngine] Queued audit: doc=%s type=%s", document_id, re_type)
+        logger.info("[RuleEngine] Queued V2 audit: doc=%s type=%s", document_id, re_type)
     except Exception as exc:
         logger.warning("[RuleEngine] Could not queue audit task for %s: %s", document_id, exc)
 

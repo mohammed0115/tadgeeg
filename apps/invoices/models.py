@@ -388,7 +388,7 @@ class InvoiceValidationResult(models.Model):
 # ─── Vendor Profile ───────────────────────────────────────────────────────────
 
 class VendorProfile(models.Model):
-    """Aggregated vendor intelligence for risk analysis."""
+    """Aggregated, tenant-isolated vendor intelligence used by audit and risk scoring."""
 
     class RiskTier(models.TextChoices):
         LOW      = "low",      "Low Risk"
@@ -396,33 +396,51 @@ class VendorProfile(models.Model):
         HIGH     = "high",     "High Risk"
         BLOCKED  = "blocked",  "Blocked"
 
-    id                = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    organization      = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="vendor_profiles")
-    vendor_name       = models.CharField(max_length=255)
-    vendor_vat_number = models.CharField(max_length=20, blank=True)
-    vendor_cr_number  = models.CharField(max_length=20, blank=True)
-    first_seen        = models.DateField(null=True, blank=True)
-    last_seen         = models.DateField(null=True, blank=True)
-    invoice_count     = models.PositiveIntegerField(default=0)
-    total_amount      = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    id                 = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization       = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="vendor_profiles")
+    vendor_name        = models.CharField(max_length=255)
+    vendor_vat_number  = models.CharField(max_length=20, blank=True)
+    vendor_cr_number   = models.CharField(max_length=20, blank=True)
+    first_seen         = models.DateField(null=True, blank=True)
+    last_seen          = models.DateField(null=True, blank=True)
+    invoice_count      = models.PositiveIntegerField(default=0)
+    total_amount       = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     avg_invoice_amount = models.DecimalField(max_digits=18, decimal_places=2, default=0)
     max_invoice_amount = models.DecimalField(max_digits=18, decimal_places=2, default=0)
-    duplicate_count   = models.PositiveIntegerField(default=0)
-    flagged_count     = models.PositiveIntegerField(default=0)
-    is_new            = models.BooleanField(default=True)     # new = first time vendor
-    is_suspicious     = models.BooleanField(default=False)
-    risk_tier         = models.CharField(max_length=10, choices=RiskTier.choices, default=RiskTier.LOW)
-    risk_notes        = models.TextField(blank=True)
-    tags              = models.JSONField(default=list)
-    updated_at        = models.DateTimeField(auto_now=True)
+    duplicate_count    = models.PositiveIntegerField(default=0)
+    flagged_count      = models.PositiveIntegerField(default=0)
+    compliance_issue_count = models.PositiveIntegerField(default=0)
+    high_risk_audit_count = models.PositiveIntegerField(default=0)
+    transaction_frequency_30d = models.FloatField(default=0.0, help_text="Recent document frequency for this vendor over the last 30 days.")
+    last_transaction_amount = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    is_new             = models.BooleanField(default=True)     # new = first time vendor
+    is_suspicious      = models.BooleanField(default=False)
+    is_approved        = models.BooleanField(null=True, blank=True)
+    risk_score         = models.FloatField(default=0.0, help_text="Dynamic vendor risk score (0-100) derived from audit history.")
+    risk_tier          = models.CharField(max_length=10, choices=RiskTier.choices, default=RiskTier.LOW)
+    risk_notes         = models.TextField(blank=True)
+    tags               = models.JSONField(default=list)
+    transaction_history = models.JSONField(default=dict, blank=True)
+    compliance_history  = models.JSONField(default=dict, blank=True)
+    last_audit_at      = models.DateTimeField(null=True, blank=True)
+    last_compliance_issue_at = models.DateTimeField(null=True, blank=True)
+    updated_at         = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "vendor_profiles"
         unique_together = [("organization", "vendor_name")]
-        ordering = ["-total_amount"]
+        ordering = ["-risk_score", "-total_amount"]
+
+    @property
+    def vendor_risk_score(self):
+        return float(self.risk_score or 0)
+
+    @property
+    def average_transaction_value(self):
+        return self.avg_invoice_amount
 
     def __str__(self):
-        return f"{self.vendor_name} | {self.risk_tier} | {self.invoice_count} invoices"
+        return f"{self.vendor_name} | score={self.risk_score:.1f} | {self.risk_tier}"
 
 
 # ─── Invoice Audit Trail ──────────────────────────────────────────────────────

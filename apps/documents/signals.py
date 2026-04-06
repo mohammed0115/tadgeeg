@@ -35,13 +35,43 @@ def _should_trigger(instance) -> bool:
     return status.lower() in _READY_STATUSES or status == ""
 
 
+def _has_active_run(doc_id: str, document_type: str, org_id: str) -> bool:
+    """Deduplication guard — returns True if a run is already active/recent."""
+    try:
+        from datetime import timedelta
+        from django.utils import timezone
+        from apps.rule_engine.models import AuditRun
+        cutoff = timezone.now() - timedelta(hours=1)
+        return AuditRun.objects.filter(
+            document_id=doc_id,
+            document_type=document_type,
+            organization_id=org_id,
+            status__in=[
+                AuditRun.Status.PENDING,
+                AuditRun.Status.RUNNING,
+                AuditRun.Status.COMPLETED,
+            ],
+            started_at__gte=cutoff,
+        ).exists()
+    except Exception:
+        return False  # fail open
+
+
 def _dispatch_audit(instance, document_type: str) -> None:
-    """Fire run_audit_task.delay() in a non-blocking, fault-tolerant way."""
+    """Fire run_audit_compat_task.delay() in a non-blocking, fault-tolerant way."""
     try:
         org_id = str(instance.organization_id)
         doc_id = str(instance.pk)
-        from apps.rule_engine.tasks.audit_tasks import run_audit_task
-        run_audit_task.delay(
+
+        if _has_active_run(doc_id, document_type, org_id):
+            logger.info(
+                "[Signal] Skipping duplicate dispatch: type=%s doc=%s already active",
+                document_type, doc_id,
+            )
+            return
+
+        from apps.rule_engine.tasks.audit_tasks_v2 import run_audit_compat_task
+        run_audit_compat_task.delay(
             document_id=doc_id,
             document_type=document_type,
             organization_id=org_id,

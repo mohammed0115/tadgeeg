@@ -85,6 +85,12 @@ class FinancialAnalysisResult:
     fraud_patterns: list = field(default_factory=list)
     requires_review: bool = False
 
+    # ── Explainable anomaly detection ─────────────────────────────────────────
+    anomaly_score: float = 0.0
+    anomaly_explanation: str = ""
+    anomaly_findings: list = field(default_factory=list)
+    anomaly_methods: list = field(default_factory=list)
+
     # ── Compliance ────────────────────────────────────────────────────────────
     compliance_score: float = 1.0
     vat_valid: bool = True
@@ -133,6 +139,10 @@ class FinancialAnalysisResult:
             "fraud_score": self.fraud_score,
             "fraud_patterns": self.fraud_patterns,
             "requires_review": self.requires_review,
+            "anomaly_score": self.anomaly_score,
+            "anomaly_explanation": self.anomaly_explanation,
+            "anomaly_findings": self.anomaly_findings,
+            "anomaly_methods": self.anomaly_methods,
             "compliance_score": self.compliance_score,
             "vat_valid": self.vat_valid,
             "missing_fields": self.missing_fields,
@@ -229,21 +239,28 @@ class FinancialAIEngine:
             result.processing_errors.append(f"Duplicate detection error: {exc}")
             logger.warning("[FinancialAIEngine] Duplicate detection failed: %s", exc)
 
-        # ── Step 4: Fraud Detection ────────────────────────────────────────────
+        # ── Step 4: Explainable Anomaly Detection ────────────────────────────
+        try:
+            self._step_anomaly(result, extracted)
+        except Exception as exc:
+            result.processing_errors.append(f"Anomaly detection error: {exc}")
+            logger.warning("[FinancialAIEngine] Anomaly detection failed: %s", exc)
+
+        # ── Step 5: Fraud Detection ────────────────────────────────────────────
         try:
             self._step_fraud(result, extracted)
         except Exception as exc:
             result.processing_errors.append(f"Fraud detection error: {exc}")
             logger.warning("[FinancialAIEngine] Fraud detection failed: %s", exc)
 
-        # ── Step 5: Compliance Validation ─────────────────────────────────────
+        # ── Step 6: Compliance Validation ─────────────────────────────────────
         try:
             self._step_compliance(result, extracted)
         except Exception as exc:
             result.processing_errors.append(f"Compliance validation error: {exc}")
             logger.warning("[FinancialAIEngine] Compliance validation failed: %s", exc)
 
-        # ── Step 6: Risk Scoring ───────────────────────────────────────────────
+        # ── Step 7: Risk Scoring ───────────────────────────────────────────────
         try:
             self._step_risk(result)
         except Exception as exc:
@@ -254,12 +271,13 @@ class FinancialAIEngine:
 
         logger.info(
             "[FinancialAIEngine] Analysed %s | type=%s | risk=%s (%d) | "
-            "dup=%.2f | fraud=%.2f | compliance=%.2f | %dms",
+            "dup=%.2f | anomaly=%.1f | fraud=%.2f | compliance=%.2f | %dms",
             result.source_file,
             result.document_type,
             result.risk_level,
             result.risk_score,
             result.duplicate_score,
+            result.anomaly_score,
             result.fraud_score,
             result.compliance_score,
             result.processing_time_ms,
@@ -304,6 +322,21 @@ class FinancialAIEngine:
         result.duplicate_reasons = dup_result.get("duplicate_reasons", [])
         result.matched_document_ids = dup_result.get("matched_document_ids", [])
 
+    def _step_anomaly(self, result: FinancialAnalysisResult, document: dict):
+        from core.services.detection.anomaly_detector import AnomalyDetector
+
+        detector = AnomalyDetector(
+            organization_id=self.organization_id,
+            enable_ml=self.use_ai,
+        )
+        anomaly_result = detector.detect(document)
+
+        result.anomaly_score = float(anomaly_result.get("anomaly_score", 0.0))
+        result.anomaly_explanation = str(anomaly_result.get("explanation", ""))
+        result.anomaly_findings = anomaly_result.get("findings", [])
+        result.anomaly_methods = anomaly_result.get("methods_used", [])
+        result.requires_review = bool(anomaly_result.get("requires_review", False)) or result.requires_review
+
     def _step_fraud(self, result: FinancialAnalysisResult, document: dict):
         from core.services.detection.fraud_detector import FraudDetector
 
@@ -312,7 +345,7 @@ class FinancialAIEngine:
 
         result.fraud_score = float(fraud_result.get("fraud_score", 0.0))
         result.fraud_patterns = fraud_result.get("fraud_patterns", [])
-        result.requires_review = bool(fraud_result.get("requires_review", False))
+        result.requires_review = bool(fraud_result.get("requires_review", False)) or result.requires_review
 
     def _step_compliance(self, result: FinancialAnalysisResult, document: dict):
         from core.services.compliance.vat_validator import VATValidator
@@ -335,6 +368,12 @@ class FinancialAIEngine:
                 "duplicate_score": result.duplicate_score,
                 "duplicate_reasons": result.duplicate_reasons,
             },
+            anomaly_result={
+                "anomaly_score": result.anomaly_score,
+                "explanation": result.anomaly_explanation,
+                "findings": result.anomaly_findings,
+                "methods_used": result.anomaly_methods,
+            },
             fraud_result={
                 "fraud_score": result.fraud_score,
                 "fraud_patterns": result.fraud_patterns,
@@ -348,6 +387,7 @@ class FinancialAIEngine:
         result.risk_score = risk_result.get("risk_score", 0)
         result.risk_level = risk_result.get("risk_level", "low")
         result.risk_factors = risk_result.get("risk_factors", [])
+        result.requires_review = bool(risk_result.get("requires_review", False)) or result.requires_review
         result.escalate = bool(risk_result.get("escalate", False))
 
     # ── Helpers ───────────────────────────────────────────────────────────────
@@ -387,6 +427,7 @@ class FinancialAIEngine:
     def _result_to_doc(self, result: FinancialAnalysisResult) -> dict:
         """Convert FinancialAnalysisResult to a plain dict for risk engine."""
         return {
+            "document_type": result.document_type,
             "vendor_name": result.vendor_name,
             "vendor_vat_number": result.vendor_vat_number,
             "document_number": result.document_number,
@@ -398,6 +439,8 @@ class FinancialAIEngine:
             "total_amount": result.total_amount,
             "line_items": result.line_items,
             "missing_fields": result.missing_fields,
+            "is_duplicate": result.is_duplicate,
+            "matched_document_ids": result.matched_document_ids,
         }
 
 

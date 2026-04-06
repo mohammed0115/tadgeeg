@@ -1,3 +1,7 @@
+# DEPRECATED: AccountingRulesEngine is superseded by AuditPipelineV2 + GAAP rules.
+# Run: python manage.py seed_gaap_rule_definitions
+# to register GAAP rules in the V2 pipeline. This file will be removed in a future release.
+
 from apps.auditing.accounting_rules.enums import AccountingStandard, EntityType, RuleCategory, RuleStatus
 from apps.auditing.accounting_rules.policies import get_global_policy, get_policy
 from apps.auditing.accounting_rules.registry import AccountingRuleRegistry

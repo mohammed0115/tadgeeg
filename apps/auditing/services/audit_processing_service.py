@@ -1,4 +1,16 @@
-"""Audit Processing Service — orchestrate the full AI audit pipeline."""
+"""
+Audit Processing Service — orchestrate the full AI audit pipeline.
+
+.. deprecated::
+    This service is DEPRECATED as of AuditPipeline V2.
+    All new code should use:
+
+        from apps.rule_engine.services.compatibility.legacy_audit_adapter import (
+            LegacyAuditProcessingServiceAdapter as AuditProcessingService,
+        )
+
+    This file is retained for backward compatibility only.
+"""
 
 import logging
 

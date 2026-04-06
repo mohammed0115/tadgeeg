@@ -1,6 +1,22 @@
 """
 Financial Audit Rule Engine
 
+.. deprecated::
+    This module is DEPRECATED as of AuditPipeline V2.
+    All new code should use:
+
+        from apps.rule_engine.pipeline.v2.compat import run_audit_compat
+
+    Or the drop-in adapter:
+
+        from apps.rule_engine.services.compatibility.legacy_audit_adapter import (
+            LegacyAuditEngineAdapter as AuditEngine,
+            run_audit_compat_legacy as run_audit,
+        )
+
+    This file is retained for backward compatibility and will be removed
+    in a future release after all callers have been migrated.
+
 The rule engine evaluates a financial document against a registry of
 modular audit rules and produces a structured AuditReport.
 

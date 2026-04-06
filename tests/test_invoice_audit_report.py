@@ -267,6 +267,13 @@ class InvoiceAuditServiceBuildTests(TestCase):
         self.assertIn("review", risk)
         self.assertIn("high_risk", risk)
 
+    def test_build_anomalies_contains_explainable_summary(self):
+        data = self._patched_build()
+        anomalies = data["anomalies"]
+
+        self.assertIn("summary", anomalies)
+        self.assertIn("top_anomalous_documents", anomalies)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 4. InvoiceAuditReportService._build_summary() — 3 tests (mock data)

@@ -113,12 +113,15 @@ class AuditRunSummarySerializer(serializers.ModelSerializer):
     failed_blocking = serializers.SerializerMethodField()
     top_failures = serializers.SerializerMethodField()
     pass_rate = serializers.SerializerMethodField()
+    anomaly_score = serializers.SerializerMethodField()
+    anomaly_explanation = serializers.SerializerMethodField()
 
     class Meta:
         model = AuditRun
         fields = [
             "id", "document_type", "document_id",
             "status", "risk_score", "risk_level",
+            "anomaly_score", "anomaly_explanation",
             "total_rules", "passed_rules", "failed_rules",
             "warning_rules", "skipped_rules", "error_rules",
             "blocks_approval", "requires_manual_review",
@@ -145,18 +148,39 @@ class AuditRunSummarySerializer(serializers.ModelSerializer):
             return None
         return round(obj.passed_rules / evaluated * 100, 1)
 
+    def get_anomaly_score(self, obj):
+        try:
+            return obj.risk_summary.score_breakdown.get("anomaly_score")
+        except Exception:
+            return None
+
+    def get_anomaly_explanation(self, obj):
+        try:
+            return obj.risk_summary.score_breakdown.get("anomaly_explanation")
+        except Exception:
+            return None
+
 
 class RiskScoreSummarySerializer(serializers.ModelSerializer):
+    anomaly_score = serializers.SerializerMethodField()
+    anomaly_explanation = serializers.SerializerMethodField()
     class Meta:
         model = RiskScoreSummary
         fields = [
             "document_type", "document_id",
             "risk_score", "risk_level",
+            "anomaly_score", "anomaly_explanation",
             "fraud_indicators", "compliance_failures", "blocking_failures",
             "requires_manual_review", "blocks_approval",
             "top_failed_rules", "score_breakdown",
             "last_calculated_at",
         ]
+
+    def get_anomaly_score(self, obj):
+        return (obj.score_breakdown or {}).get("anomaly_score")
+
+    def get_anomaly_explanation(self, obj):
+        return (obj.score_breakdown or {}).get("anomaly_explanation")
 
 
 class DocumentCanonicalDataSerializer(serializers.Serializer):

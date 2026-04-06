@@ -166,6 +166,21 @@ class TestFinancialAIEngine:
         assert 'document_type' in data_dict
         assert 'classification_confidence' in data_dict
 
+    def test_analyse_includes_anomaly_explainability(self):
+        """Should expose anomaly score and explanation for downstream reporting"""
+        ingestion = _make_ingestion_result(
+            "Invoice INV-900 from Unusual Vendor for 999999 SAR on 2026-03-15"
+        )
+        engine = FinancialAIEngine(use_ai=False)
+        result = engine.analyse(ingestion)
+
+        data_dict = result.to_dict()
+
+        assert "anomaly_score" in data_dict
+        assert "anomaly_explanation" in data_dict
+        assert isinstance(data_dict["anomaly_score"], (int, float))
+        assert isinstance(data_dict["anomaly_explanation"], str)
+
 
 # ─── Audit Engine Tests ──────────────────────────────────────────────────
 

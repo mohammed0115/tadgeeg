@@ -96,8 +96,10 @@ def audit_high_risk_documents(self):
     Only re-runs the AuditEngine (Stage 3) — does NOT re-OCR or re-call OpenAI.
     """
     from apps.documents.models import Document, DocumentAnalysisResult
-    from apps.audit.audit_engine import AuditEngine
-    from core.services.pipeline import _serialise_audit_report
+    # Route through V2 pipeline via the legacy adapter (Prompt 1.3 migration).
+    from apps.rule_engine.services.compatibility.legacy_audit_adapter import (
+        LegacyAuditEngineAdapter,
+    )
 
     yesterday = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
     high_risk = DocumentAnalysisResult.objects.filter(
@@ -111,27 +113,24 @@ def audit_high_risk_documents(self):
         doc = ar.document
         try:
             doc_dict = ar.analysis_data or {}
-            context = {
-                "duplicate_result": {
-                    "duplicate_score": ar.duplicate_score,
-                    "is_duplicate":    ar.is_duplicate,
-                    "duplicate_reasons": doc_dict.get("duplicate_reasons", []),
-                },
-                "compliance_result": {
-                    "compliance_score": ar.compliance_score,
-                    "vat_valid":        doc_dict.get("vat_valid", True),
-                    "issues":           doc_dict.get("compliance_issues", []),
-                    "missing_fields":   doc_dict.get("missing_fields", []),
-                },
-            }
-            engine = AuditEngine(organization_id=doc.organization_id)
-            report = engine.evaluate(document=doc_dict, context=context)
+            engine = LegacyAuditEngineAdapter(organization_id=doc.organization_id)
+            report = engine.evaluate(
+                document=doc_dict,
+                invoice_id=doc.pk,
+                context={},
+            )
 
             # Persist any newly-created audit cases for escalated findings
             if report.escalate:
                 engine.save_audit_issues(report, invoice=None, created_by=None)
 
-            ar.audit_report = _serialise_audit_report(report)
+            # Store compact result snapshot on DocumentAnalysisResult
+            ar.audit_report = {
+                "audit_run_id": report.audit_run_id,
+                "risk_score":   report.risk_score,
+                "risk_level":   report.risk_level,
+                "escalate":     report.escalate,
+            }
             ar.save(update_fields=["audit_report", "updated_at"])
             audited += 1
 

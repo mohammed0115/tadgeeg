@@ -1,3 +1,7 @@
+# DEPRECATED: AuditOrchestrator is superseded by AuditPipelineV2.
+# Use apps.rule_engine.services.compatibility.legacy_audit_adapter.LegacyAuditOrchestratorAdapter
+# as a drop-in replacement. This file will be removed after all callers are migrated.
+
 import logging
 import os
 import time

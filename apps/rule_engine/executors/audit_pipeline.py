@@ -82,8 +82,13 @@ class AuditPipeline:
                 result = self._execute_single_rule(audit_run, assignment, normalized_doc)
                 results.append(result)
 
-            # Step 4: Aggregate risk
-            risk_data = self.aggregator.compute(results, assignments)
+            # Step 4: Aggregate risk with contextual document signals
+            risk_data = self.aggregator.compute(
+                results,
+                assignments,
+                normalized_doc=normalized_doc,
+            )
+            self._update_vendor_intelligence(normalized_doc, risk_data)
 
             # Step 5: Update counters
             status_counts = self._count_statuses(results)
@@ -222,6 +227,14 @@ class AuditPipeline:
         result.save()
         return result
 
+    @staticmethod
+    def _update_vendor_intelligence(normalized_doc, risk_data: dict) -> None:
+        try:
+            from apps.invoices.services.vendor_intelligence import VendorIntelligenceService
+            VendorIntelligenceService().update_after_audit(normalized_doc, risk_data)
+        except Exception as exc:
+            logger.warning("[AuditPipeline] Vendor intelligence update skipped: %s", exc)
+
     def _upsert_risk_summary(self, audit_run: AuditRun, risk_data: dict):
         """Create or update RiskScoreSummary for the document."""
         try:
@@ -233,6 +246,7 @@ class AuditPipeline:
                     "latest_audit_run": audit_run,
                     "risk_score": risk_data["risk_score"],
                     "risk_level": risk_data["risk_level"],
+                    "fraud_indicators": len(risk_data.get("anomaly_findings", [])),
                     "blocking_failures": audit_run.results.filter(
                         status="fail", blocks_approval=True
                     ).count(),

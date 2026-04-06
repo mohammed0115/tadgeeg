@@ -80,6 +80,7 @@ class RiskEngine:
         self,
         document: dict,
         duplicate_result: dict = None,
+        anomaly_result: dict = None,
         fraud_result: dict = None,
         compliance_result: dict = None,
         audit_rule_results: list[dict] = None,
@@ -104,6 +105,7 @@ class RiskEngine:
             }
         """
         duplicate_result = duplicate_result or {}
+        anomaly_result = anomaly_result or {}
         fraud_result = fraud_result or {}
         compliance_result = compliance_result or {}
         audit_rule_results = audit_rule_results or []
@@ -150,6 +152,20 @@ class RiskEngine:
             missing_names = [f for f in REQUIRED_FIELDS if not document.get(f)]
             risk_factors.append(f"Missing required fields: {', '.join(missing_names)}")
 
+        # ── 6. Explainable anomaly signal ─────────────────────────────────────
+        anomaly_score = float(anomaly_result.get("anomaly_score", 0.0) or 0.0)
+        anomaly_component = min(max(anomaly_score, 0.0), 100.0) * 0.20
+        signal_breakdown["anomaly"] = round(anomaly_component, 2)
+
+        anomaly_explanation = str(anomaly_result.get("explanation") or "")
+        if anomaly_score >= 40:
+            if anomaly_explanation:
+                risk_factors.append(anomaly_explanation)
+            for finding in anomaly_result.get("findings", [])[:3]:
+                description = finding.get("description")
+                if description:
+                    risk_factors.append(description)
+
         # ── Composite score ───────────────────────────────────────────────────
         raw_score = sum(signal_breakdown.values())
 
@@ -161,15 +177,25 @@ class RiskEngine:
         if has_critical_rule:
             raw_score = max(raw_score, LEVEL_HIGH + 1)
 
+        if anomaly_score >= 80:
+            raw_score = max(raw_score, LEVEL_HIGH)
+        elif anomaly_score >= 60:
+            raw_score = max(raw_score, LEVEL_MEDIUM + 10)
+
         risk_score = min(int(round(raw_score)), 100)
         risk_level = self._to_level(risk_score)
         escalate = risk_level in ("high", "critical")
+        requires_review = escalate or anomaly_score >= 40 or fraud_score >= 0.40
 
         return {
             "risk_score": risk_score,
             "risk_level": risk_level,
             "risk_factors": list(dict.fromkeys(risk_factors)),  # Deduplicate, preserve order
             "escalate": escalate,
+            "requires_review": requires_review,
+            "anomaly_score": round(anomaly_score, 2),
+            "anomaly_explanation": anomaly_explanation,
+            "anomaly_findings": anomaly_result.get("findings", []),
             "signal_breakdown": signal_breakdown,
         }
 

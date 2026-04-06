@@ -19,6 +19,11 @@ urlpatterns = [
     path("batches/",                    views.InvoiceBatchListView.as_view(),        name="batch-list"),
     path("batches/<uuid:pk>/",          views.InvoiceBatchDetailView.as_view(),      name="batch-detail"),
 
+    # ── Vendor Intelligence ───────────────────────────────────────────────────
+    path("vendors/",                    views.VendorListView.as_view(),              name="vendor-list"),
+    path("vendors/high-risk/",          views.HighRiskVendorListView.as_view(),      name="vendor-high-risk-list"),
+    path("vendors/<uuid:pk>/",          views.VendorDetailView.as_view(),            name="vendor-detail"),
+
     # ── Reports ────────────────────────────────────────────────────────────────
     path("reports/risk/",               views.InvoiceRiskReportView.as_view(),       name="invoice-risk-report"),
     path("reports/duplicates/",         views.DuplicateInvoiceReportView.as_view(),  name="invoice-duplicate-report"),

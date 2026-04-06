@@ -1,116 +1,150 @@
 """
-Risk Aggregator — computes a normalized risk score (0–100) from AuditResult list.
+Compatibility wrapper around the dynamic `RiskEngine`.
 
-Scoring model:
-  - Each FAIL result contributes its severity weight
-  - Each WARNING result contributes 50% of its severity weight
-  - PASS, SKIPPED, NOT_APPLICABLE, ERROR contribute 0
-  - Final score = (total fail weight / total possible weight) * 100
-  - CRITICAL failure always results in risk_level=critical regardless of score
+Historically the pipeline called `RiskAggregator.compute(results, assignments)`.
+To preserve that interface while fixing under-scoring of critical documents,
+this adapter now delegates to the explainable, contextual `RiskEngine`.
 """
-from decimal import Decimal
+from __future__ import annotations
+
 import logging
+from datetime import timedelta
+from types import SimpleNamespace
+from typing import Optional
+
+from django.utils import timezone
+
+from apps.rule_engine.risk.risk_engine import RiskEngine
 
 logger = logging.getLogger("rule_engine")
 
-SEVERITY_WEIGHTS = {
-    "critical": Decimal("40.0"),
-    "high":     Decimal("25.0"),
-    "medium":   Decimal("10.0"),
-    "low":      Decimal("5.0"),
-    "info":     Decimal("1.0"),
-}
-
-RISK_THRESHOLDS = {
-    "critical": 75,
-    "high":     50,
-    "medium":   25,
-}
-
-WARNING_WEIGHT_FACTOR = Decimal("0.5")
-MANUAL_REVIEW_THRESHOLD = 50  # risk_score >= this triggers manual review
-
 
 class RiskAggregator:
+    """
+    Backward-compatible adapter for the dynamic risk scoring engine.
 
-    def compute(self, results: list, assignments: list) -> dict:
-        """
-        Compute risk score from a list of AuditResult objects.
+    Optional contextual inputs let callers enrich the score with document amount,
+    approval state, vendor posture, and behavioral history without breaking the
+    older `(results, assignments)` call pattern.
+    """
 
-        Returns dict with:
-          risk_score (float 0–100)
-          risk_level (str: low/medium/high/critical)
-          blocks_approval (bool)
-          requires_manual_review (bool)
-          score_breakdown (dict)
-          top_failed_rules (list)
-        """
-        raw_score = Decimal("0")
-        max_possible = Decimal("0")
-        blocks_approval = False
-        has_critical_fail = False
-        score_breakdown = {k: 0.0 for k in SEVERITY_WEIGHTS}
-        failed_rules = []
+    def __init__(self, engine: Optional[RiskEngine] = None):
+        self.engine = engine or RiskEngine()
 
-        assignment_map = {a.rule.rule_code: a for a in assignments}
+    def compute(
+        self,
+        results: list,
+        assignments: list,
+        normalized_doc=None,
+        vendor_context: Optional[dict] = None,
+        history_context: Optional[dict] = None,
+        erp_context: Optional[dict] = None,
+    ) -> dict:
+        vendor_context = vendor_context if vendor_context is not None else self._derive_vendor_context(normalized_doc)
+        history_context = history_context if history_context is not None else self._derive_history_context(normalized_doc)
 
-        for result in results:
-            status = result.status if isinstance(result.status, str) else result.status.value
-            if status in ("skipped", "not_applicable", "error"):
-                continue
+        context = SimpleNamespace(
+            normalized_doc=normalized_doc,
+            rule_results=results or [],
+            rule_assignments=assignments or [],
+            vendor_context=vendor_context or {},
+            history_context=history_context or {},
+            erp_context=erp_context or {},
+        )
+        return self.engine.compute(context).to_dict()
 
-            severity = result.applied_severity
-            weight = SEVERITY_WEIGHTS.get(severity, Decimal("0"))
-            max_possible += weight
+    def _derive_vendor_context(self, normalized_doc) -> dict:
+        if normalized_doc is None:
+            return {}
 
-            if status == "fail":
-                raw_score += weight
-                score_breakdown[severity] = score_breakdown.get(severity, 0) + float(weight)
+        try:
+            from apps.invoices.services.vendor_intelligence import VendorIntelligenceService
 
-                if severity == "critical":
-                    has_critical_fail = True
+            vendor_name = str(
+                getattr(normalized_doc, "counterparty_name", None)
+                or normalized_doc.get("vendor_name")
+                or normalized_doc.get("payee_name")
+                or ""
+            ).strip()
+            vendor_tax_id = str(
+                getattr(normalized_doc, "tax_id", None)
+                or normalized_doc.get("vendor_vat_number")
+                or normalized_doc.get("payee_vat_number")
+                or ""
+            ).strip()
 
-                if result.blocks_approval:
-                    blocks_approval = True
+            vendor_context = VendorIntelligenceService().build_vendor_context(
+                organization_id=normalized_doc.organization_id,
+                vendor_name=vendor_name,
+                tax_id=vendor_tax_id,
+            )
+            if vendor_context:
+                return vendor_context
 
-                failed_rules.append({
-                    "rule_code": result.rule_code,
-                    "severity": severity,
-                    "risk_contribution": float(result.risk_contribution),
-                })
+            approved_registry = {
+                str(value).strip().lower()
+                for value in (normalized_doc.get_org("approved_vendor_ids") or [])
+                if str(value).strip()
+            }
+            blocked_registry = {
+                str(value).strip().lower()
+                for value in (normalized_doc.get_org("blocked_vendor_ids") or [])
+                if str(value).strip()
+            }
+            identifiers = [value.lower() for value in (vendor_name, vendor_tax_id) if value]
+            is_approved = None
+            if identifiers and any(value in approved_registry for value in identifiers):
+                is_approved = True
+            elif identifiers and any(value in blocked_registry for value in identifiers):
+                is_approved = False
 
-            elif status == "warning":
-                partial = weight * WARNING_WEIGHT_FACTOR
-                raw_score += partial
-                score_breakdown[severity] = score_breakdown.get(severity, 0) + float(partial)
+            flags = []
+            if identifiers and any(value in blocked_registry for value in identifiers):
+                flags.append("blocked_vendor")
 
-        # Normalize to 0–100
-        if max_possible > 0:
-            risk_score = (raw_score / max_possible) * Decimal("100")
-        else:
-            risk_score = Decimal("0")
+            prior_risk = self._safe_float(normalized_doc.get("risk_score"))
+            if prior_risk is not None and prior_risk >= 70:
+                flags.append("historically_high_risk")
 
-        risk_score = min(risk_score, Decimal("100"))
+            return {
+                "is_approved": is_approved,
+                "flags": flags,
+                "counterparty_name": vendor_name or vendor_tax_id or "unknown",
+                "risk_score": prior_risk,
+            }
+        except Exception as exc:
+            logger.debug("[RiskAggregator] Vendor context derivation skipped: %s", exc)
+            return {}
 
-        # Determine risk level
-        score_float = float(risk_score)
-        if has_critical_fail or score_float >= RISK_THRESHOLDS["critical"]:
-            risk_level = "critical"
-        elif score_float >= RISK_THRESHOLDS["high"]:
-            risk_level = "high"
-        elif score_float >= RISK_THRESHOLDS["medium"]:
-            risk_level = "medium"
-        else:
-            risk_level = "low"
+    def _derive_history_context(self, normalized_doc) -> dict:
+        if normalized_doc is None:
+            return {}
 
-        # Sort top failed rules by contribution
-        top_failed = sorted(failed_rules, key=lambda x: x["risk_contribution"], reverse=True)[:5]
+        try:
+            from apps.rule_engine.models import AuditRun
 
-        return {
-            "risk_score": round(score_float, 2),
-            "risk_level": risk_level,
-            "blocks_approval": blocks_approval,
-            "requires_manual_review": score_float >= MANUAL_REVIEW_THRESHOLD,
-            "score_breakdown": score_breakdown,
-            "top_failed_rules": top_failed,
-        }
+            lookback_days = 90
+            since = timezone.now() - timedelta(days=lookback_days)
+            qs = AuditRun.objects.filter(
+                organization_id=normalized_doc.organization_id,
+                document_type=normalized_doc.document_type,
+                started_at__gte=since,
+            )
+            return {
+                "recent_run_count": qs.count(),
+                "high_risk_count": qs.filter(risk_level__in=["high", "critical"]).count(),
+                "lookback_days": lookback_days,
+            }
+        except Exception as exc:
+            logger.debug("[RiskAggregator] History context derivation skipped: %s", exc)
+            return {}
+
+    @staticmethod
+    def _safe_float(value):
+        if value in (None, ""):
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+

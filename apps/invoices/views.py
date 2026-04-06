@@ -620,39 +620,13 @@ def _save_canonical_invoice(invoice: Invoice) -> None:
 
 
 def _update_vendor_profile(org, invoice: Invoice):
-    """Update or create vendor profile after processing an invoice."""
+    """Update vendor intelligence after processing an invoice."""
     if not invoice.vendor_name:
         return
     try:
-        stats = Invoice.objects.filter(
-            organization=org, vendor_name=invoice.vendor_name
-        ).aggregate(
-            cnt=Count("id"),
-            total=Sum("total_amount"),
-            avg=Avg("total_amount"),
-            max_a=Max("total_amount"),
-            flagged=Count("id", filter=Q(risk_level__in=["high", "critical"])),
-            dups=Count("id", filter=Q(is_duplicate=True)),
-        )
-        vp, _ = VendorProfile.objects.update_or_create(
-            organization=org,
-            vendor_name=invoice.vendor_name,
-            defaults={
-                "vendor_vat_number": invoice.vendor_vat_number or "",
-                "vendor_cr_number":  invoice.vendor_cr_number or "",
-                "invoice_count":    stats["cnt"] or 0,
-                "total_amount":     stats["total"] or 0,
-                "avg_invoice_amount": stats["avg"] or 0,
-                "max_invoice_amount": stats["max_a"] or 0,
-                "flagged_count":    stats["flagged"] or 0,
-                "duplicate_count":  stats["dups"] or 0,
-                "is_new":           (stats["cnt"] or 0) <= 1,
-                "last_seen":        invoice.invoice_date or date.today(),
-            }
-        )
-        if not vp.first_seen:
-            vp.first_seen = invoice.invoice_date or date.today()
-            vp.save(update_fields=["first_seen"])
+        from apps.invoices.services.vendor_intelligence import VendorIntelligenceService
+
+        VendorIntelligenceService().update_from_invoice(org, invoice)
     except Exception as e:
         logger.warning(f"Vendor profile update failed: {e}")
 
@@ -1388,35 +1362,109 @@ class DuplicateInvoiceReportView(APIView):
 
 
 class VendorRiskReportView(APIView):
-    """Report: Vendor risk analysis."""
+    """Report: Vendor intelligence and supplier risk analysis."""
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(tags=["Invoices"], summary="Vendor risk analysis report")
+    @extend_schema(tags=["Invoices"], summary="Vendor intelligence risk analysis report")
     def get(self, request):
         org = request.user.organization
-        vendors = VendorProfile.objects.filter(organization=org).order_by("-total_amount")
+        if not org:
+            return Response({"report_type": "vendor_risk_report", "summary": {}, "vendors": []})
+
+        vendors = VendorProfile.objects.filter(organization=org).order_by("-risk_score", "-total_amount")
+        if search := request.query_params.get("search"):
+            vendors = vendors.filter(vendor_name__icontains=search)
+        if risk_tier := request.query_params.get("risk_tier"):
+            vendors = vendors.filter(risk_tier=risk_tier)
+
+        limit = min(int(request.query_params.get("limit", 100) or 100), 250)
+        summary = vendors.aggregate(
+            total_vendors=Count("id"),
+            high_risk_vendors=Count("id", filter=Q(risk_tier__in=["high", "blocked"])),
+            blocked_vendors=Count("id", filter=Q(risk_tier="blocked")),
+            unapproved_vendors=Count("id", filter=Q(is_approved=False)),
+            avg_risk_score=Avg("risk_score"),
+            avg_frequency_30d=Avg("transaction_frequency_30d"),
+            compliance_issue_total=Sum("compliance_issue_count"),
+        )
+        top_risky = vendors[:5]
+
         return Response({
             "report_type": "vendor_risk_report",
             "generated_at": timezone.now().isoformat(),
-            "vendors": VendorProfileSerializer(vendors, many=True).data,
+            "summary": {
+                "total_vendors": summary.get("total_vendors") or 0,
+                "high_risk_vendors": summary.get("high_risk_vendors") or 0,
+                "blocked_vendors": summary.get("blocked_vendors") or 0,
+                "unapproved_vendors": summary.get("unapproved_vendors") or 0,
+                "avg_risk_score": round(float(summary.get("avg_risk_score") or 0), 2),
+                "avg_frequency_30d": round(float(summary.get("avg_frequency_30d") or 0), 2),
+                "compliance_issue_total": summary.get("compliance_issue_total") or 0,
+            },
+            "top_risky": VendorProfileSerializer(top_risky, many=True).data,
+            "vendors": VendorProfileSerializer(vendors[:limit], many=True).data,
         })
 
 
 class VendorListView(APIView):
-    """Compatibility vendor list endpoint for dashboard consumers."""
+    """Compatibility vendor list endpoint for dashboard and API consumers."""
 
     permission_classes = [IsAuthenticated]
 
-    @extend_schema(tags=["Invoices"], summary="List vendor profiles for the current organization")
+    @extend_schema(tags=["Invoices"], summary="List vendor intelligence profiles for the current organization")
     def get(self, request):
         org = request.user.organization
         if not org:
             return Response({"count": 0, "results": []})
 
-        vendors = VendorProfile.objects.filter(organization=org).order_by("-total_amount", "vendor_name")
+        vendors = VendorProfile.objects.filter(organization=org).order_by("-risk_score", "-total_amount", "vendor_name")
         if search := request.query_params.get("search"):
             vendors = vendors.filter(vendor_name__icontains=search)
+        if risk_tier := request.query_params.get("risk_tier"):
+            vendors = vendors.filter(risk_tier=risk_tier)
+        if approved := request.query_params.get("is_approved"):
+            if approved.lower() in {"true", "1", "yes"}:
+                vendors = vendors.filter(is_approved=True)
+            elif approved.lower() in {"false", "0", "no"}:
+                vendors = vendors.filter(is_approved=False)
+
         return Response({"count": vendors.count(), "results": VendorProfileSerializer(vendors[:100], many=True).data})
+
+
+class HighRiskVendorListView(APIView):
+    """List only high-risk vendor intelligence profiles for the current organization."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Invoices"], summary="List high-risk vendors for the current organization")
+    def get(self, request):
+        org = request.user.organization
+        if not org:
+            return Response({"count": 0, "results": []})
+
+        vendors = VendorProfile.objects.filter(
+            organization=org,
+            risk_tier__in=["high", "blocked"],
+        ).order_by("-risk_score", "-updated_at")
+        return Response({"count": vendors.count(), "results": VendorProfileSerializer(vendors[:100], many=True).data})
+
+
+class VendorDetailView(APIView):
+    """Detailed Vendor Intelligence profile for a single tenant-scoped vendor."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Invoices"], summary="Get vendor intelligence details for a single supplier")
+    def get(self, request, pk):
+        org = request.user.organization
+        vendor = VendorProfile.objects.filter(organization=org, pk=pk).first()
+        if not vendor:
+            return Response({"detail": "Not found."}, status=404)
+
+        payload = VendorProfileSerializer(vendor).data
+        payload["recent_documents"] = (vendor.transaction_history or {}).get("recent_documents", [])
+        payload["compliance_summary"] = vendor.compliance_history or {}
+        return Response(payload)
 
 
 class SpendAnalysisReportView(APIView):

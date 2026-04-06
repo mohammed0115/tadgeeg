@@ -8,7 +8,7 @@
 <div x-data="vendorsPage()" x-init="init()" class="space-y-5 max-w-screen-2xl">
 
   <!-- Stats -->
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
     <div class="card p-5">
       <div class="text-2xl font-bold font-mono text-slate-800 dark:text-white" x-text="stats.total">—</div>
       <div class="text-sm text-slate-400 mt-1">{% trans "Total Vendors" %}</div>
@@ -18,12 +18,16 @@
       <div class="text-sm text-slate-400 mt-1">{% trans "High Risk" %}</div>
     </div>
     <div class="card p-5 border-r-4 border-r-blue-500">
-      <div class="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400" x-text="stats.new_vendors">—</div>
-      <div class="text-sm text-slate-400 mt-1">{% trans "New Vendors" %}</div>
+      <div class="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400" x-text="formatNumber(stats.avg_risk_score)">—</div>
+      <div class="text-sm text-slate-400 mt-1">{% trans "Average Risk Score" %}</div>
     </div>
     <div class="card p-5 border-r-4 border-r-amber-400">
-      <div class="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400" x-text="stats.with_duplicates">—</div>
-      <div class="text-sm text-slate-400 mt-1">{% trans "With Duplicates" %}</div>
+      <div class="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400" x-text="formatNumber(stats.with_compliance)">—</div>
+      <div class="text-sm text-slate-400 mt-1">{% trans "Compliance Issues" %}</div>
+    </div>
+    <div class="card p-5 border-r-4 border-r-emerald-500">
+      <div class="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400" x-text="formatNumber(stats.avg_frequency)">—</div>
+      <div class="text-sm text-slate-400 mt-1">{% trans "Average Frequency" %}</div>
     </div>
   </div>
 
@@ -59,6 +63,9 @@
           <th>{% trans "Vendor" %}</th>
           <th>{% trans "VAT Number" %}</th>
           <th>{% trans "Invoices" %}</th>
+          <th>{% trans "Risk Score" %}</th>
+          <th>{% trans "Frequency" %}</th>
+          <th>{% trans "Compliance" %}</th>
           <th class="text-left">{% trans "Total Spend" %}</th>
           <th>{% trans "Average Invoice" %}</th>
           <th>{% trans "Duplicates" %}</th>
@@ -79,6 +86,17 @@
             </td>
             <td class="font-mono text-xs" x-text="v.vendor_vat_number||'—'"></td>
             <td class="font-mono font-semibold" x-text="v.invoice_count||0"></td>
+            <td>
+              <span class="badge bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
+                    x-text="formatNumber(v.risk_score || v.vendor_risk_score || 0)"></span>
+            </td>
+            <td class="font-mono text-xs" x-text="formatNumber(v.transaction_frequency_30d||0)"></td>
+            <td>
+              <span x-show="(v.compliance_issue_count||0)>0"
+                    class="badge bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300"
+                    x-text="v.compliance_issue_count"></span>
+              <span x-show="!(v.compliance_issue_count>0)" class="text-slate-300 dark:text-slate-600">—</span>
+            </td>
             <td class="text-left font-mono font-bold text-slate-800 dark:text-white" x-text="formatMoney(v.total_amount||0)"></td>
             <td class="font-mono text-xs" x-text="formatNumber(v.avg_invoice_amount||0)"></td>
             <td>
@@ -108,7 +126,7 @@
           </tr>
         </template>
         <tr x-show="!loading&&!filteredVendors().length">
-          <td colspan="9" class="text-center py-12 text-slate-400">
+          <td colspan="12" class="text-center py-12 text-slate-400">
             <i data-lucide="building-2" class="w-8 h-8 mx-auto mb-2"></i>
             <p class="text-sm">{% trans "No vendors found" %}</p>
           </td>
@@ -124,7 +142,7 @@
 function vendorsPage() {
   return {
     vendors: [], loading: true, search: '', riskFilter: '',
-    stats: { total:0, high_risk:0, new_vendors:0, with_duplicates:0 },
+    stats: { total:0, high_risk:0, avg_risk_score:0, with_compliance:0, avg_frequency:0 },
     i18n: {
       sar: "{% trans 'SAR' %}",
       loadFailed: "{% trans 'Failed to load vendors' %}",
@@ -136,12 +154,13 @@ function vendorsPage() {
 
     async init() {
       try {
-        const d = await apiFetch('/invoices/reports/vendors/?page_size=500');
+        const d = await apiFetch('/invoices/reports/vendors/?limit=500');
         this.vendors = d.vendors || d.results || d || [];
-        this.stats.total          = this.vendors.length;
-        this.stats.high_risk      = this.vendors.filter(v=>v.risk_tier==='high'||v.risk_tier==='blocked').length;
-        this.stats.new_vendors    = this.vendors.filter(v=>v.is_new).length;
-        this.stats.with_duplicates= this.vendors.filter(v=>v.duplicate_count>0).length;
+        this.stats.total = d.summary?.total_vendors ?? this.vendors.length;
+        this.stats.high_risk = d.summary?.high_risk_vendors ?? this.vendors.filter(v=>v.risk_tier==='high'||v.risk_tier==='blocked').length;
+        this.stats.avg_risk_score = d.summary?.avg_risk_score ?? average(this.vendors.map(v => Number(v.risk_score || v.vendor_risk_score || 0)));
+        this.stats.with_compliance = d.summary?.compliance_issue_total ?? this.vendors.reduce((sum, v) => sum + Number(v.compliance_issue_count || 0), 0);
+        this.stats.avg_frequency = d.summary?.avg_frequency_30d ?? average(this.vendors.map(v => Number(v.transaction_frequency_30d || 0)));
       } catch(e) { notify(this.i18n.loadFailed,'error'); }
       this.loading = false;
       this.$nextTick(() => lucide.createIcons());
@@ -175,6 +194,12 @@ function vendorsPage() {
       return `${this.formatNumber(value)} ${this.i18n.sar}`;
     },
   }
+}
+
+function average(values) {
+  const nums = (values || []).filter(v => !Number.isNaN(v));
+  if (!nums.length) return 0;
+  return nums.reduce((sum, v) => sum + v, 0) / nums.length;
 }
 </script>
 {% endblock %}

@@ -65,9 +65,25 @@ class InvoiceBatchSerializer(serializers.ModelSerializer):
 
 
 class VendorProfileSerializer(serializers.ModelSerializer):
+    vendor_risk_score = serializers.FloatField(read_only=True)
+    average_transaction_value = serializers.DecimalField(max_digits=18, decimal_places=2, read_only=True)
+
     class Meta:
         model = VendorProfile
-        exclude = ["id", "organization"]
+        fields = [
+            "id",
+            "vendor_name", "vendor_vat_number", "vendor_cr_number",
+            "first_seen", "last_seen",
+            "invoice_count", "total_amount", "avg_invoice_amount", "average_transaction_value",
+            "max_invoice_amount", "last_transaction_amount",
+            "duplicate_count", "flagged_count", "compliance_issue_count", "high_risk_audit_count",
+            "transaction_frequency_30d",
+            "is_new", "is_suspicious", "is_approved",
+            "risk_score", "vendor_risk_score", "risk_tier", "risk_notes",
+            "tags", "transaction_history", "compliance_history",
+            "last_audit_at", "last_compliance_issue_at", "updated_at",
+        ]
+        read_only_fields = fields
 
 
 class InvoiceAuditEventSerializer(serializers.ModelSerializer):

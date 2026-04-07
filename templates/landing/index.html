@@ -9,8 +9,9 @@
   <meta name="description" content="{{ product_signature }}">
   <title>{{ product_name }} — {{ product_tagline }}</title>
 
-  <!-- Tailwind CSS CDN -->
-  <script src="{% static 'vendor/tailwind.browser.js' %}"></script>
+  <!-- Tailwind CSS runtime -->
+  <script>window.tailwind = window.tailwind || {};</script>
+  <script src="{% static 'vendor/tailwind.browser.js' %}" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com'"></script>
 
   <!-- Alpine.js CDN -->
   <script defer src="{% static 'vendor/alpine.min.js' %}"></script>
@@ -18,7 +19,8 @@
 
   <!-- ─── Tailwind Config ─────────────────────────────────────── -->
   <script>
-    tailwind.config = {
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = {
       theme: {
         extend: {
           fontFamily: { sans: ['Segoe UI', 'Tahoma', 'Arial', 'ui-sans-serif', 'system-ui'] },
@@ -43,7 +45,8 @@
           },
         },
       },
-    }
+    };
+    window.tailwind.refresh?.();
   </script>
 
   <!-- ─── Custom CSS ──────────────────────────────────────────── -->

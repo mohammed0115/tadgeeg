@@ -8,7 +8,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% if auth_mode == 'register' %}{% trans "Create Account" %} - {{ product_name }}{% else %}{% trans "Login" %} - {{ product_name }}{% endif %}</title>
   <meta name="description" content="{{ product_signature }}">
-<script src="{% static 'vendor/tailwind.browser.js' %}"></script>
+<script>window.tailwind = window.tailwind || {};</script>
+<script src="{% static 'vendor/tailwind.browser.js' %}" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com'"></script>
 <script defer src="{% static 'vendor/alpine.min.js' %}"></script>
   <style>
     * { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }

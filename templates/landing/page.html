@@ -7,13 +7,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ page_title }} | {{ product_name }}</title>
-  <script src="{% static 'vendor/tailwind.browser.js' %}"></script>
+  <script>window.tailwind = window.tailwind || {};</script>
+  <script src="{% static 'vendor/tailwind.browser.js' %}" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com'"></script>
   <script defer src="{% static 'vendor/alpine.min.js' %}"></script>
   <style>
     body { font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
   </style>
   <script>
-    tailwind.config = {
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = {
       theme: {
         extend: {
           colors: {
@@ -25,7 +27,8 @@
           },
         },
       },
-    }
+    };
+    window.tailwind.refresh?.();
   </script>
 </head>
 <body class="min-h-screen bg-[radial-gradient(circle_at_top_right,_rgba(124,58,237,0.12),_transparent_30%),radial-gradient(circle_at_bottom_left,_rgba(59,130,246,0.1),_transparent_24%),linear-gradient(180deg,_#ffffff,_#f8fafc)] text-slate-900">

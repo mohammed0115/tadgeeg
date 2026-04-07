@@ -14,9 +14,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block page_title %}{% trans "Dashboard" %}{% endblock %} | {{ org_name|default:"Organization Dashboard" }}</title>
 
-  <script src="{% static 'vendor/tailwind.browser.js' %}"></script>
+  <script>window.tailwind = window.tailwind || {};</script>
+  <script src="{% static 'vendor/tailwind.browser.js' %}" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com'"></script>
   <script>
-    tailwind.config = {
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = {
       darkMode: "class",
       theme: {
         extend: {
@@ -37,6 +39,7 @@
         }
       }
     };
+    window.tailwind.refresh?.();
   </script>
   <script defer src="{% static 'vendor/alpine.min.js' %}"></script>
   <script src="{% static 'vendor/lucide.min.js' %}"></script>

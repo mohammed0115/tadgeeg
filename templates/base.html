@@ -15,12 +15,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <!-- Tailwind -->
-<script src="{% static 'vendor/tailwind.browser.js' %}"></script>
+<script>window.tailwind = window.tailwind || {};</script>
+<script src="{% static 'vendor/tailwind.browser.js' %}" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com'"></script>
 {% if bootstrap_tokens %}
 {{ bootstrap_tokens|json_script:"bootstrap-auth-tokens" }}
 {% endif %}
 <script>
-tailwind.config = {
+window.tailwind = window.tailwind || {};
+window.tailwind.config = {
   darkMode: 'class',
   theme: { extend: {
     colors: {
@@ -34,7 +36,8 @@ tailwind.config = {
       mono: ['Consolas', '"Courier New"', 'monospace'],
     },
   }}
-}
+};
+window.tailwind.refresh?.();
 </script>
 
 <!-- Alpine -->

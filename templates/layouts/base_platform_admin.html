@@ -19,9 +19,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-  <script src="{% static 'vendor/tailwind.browser.js' %}"></script>
+  <script>window.tailwind = window.tailwind || {};</script>
+  <script src="{% static 'vendor/tailwind.browser.js' %}" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com'"></script>
   <script>
-    tailwind.config = {
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = {
       darkMode: "class",
       theme: {
         extend: {
@@ -42,6 +44,7 @@
         }
       }
     };
+    window.tailwind.refresh?.();
   </script>
   <script defer src="{% static 'vendor/alpine.min.js' %}"></script>
   <script src="{% static 'vendor/lucide.min.js' %}"></script>

@@ -299,18 +299,46 @@ class ZATCAQRService:
 
 def generate_invoice_qr(
     invoice,
-    previous_invoice_hash: Optional[str] = None
+    previous_invoice_hash: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    Convenience function to generate QR code for an invoice.
-    
-    Usage:
-        from apps.compliance.zatca_qr_service import generate_invoice_qr
-        
-        result = generate_invoice_qr(invoice_obj)
-        if result['status'] == 'success':
-            invoice.qr_code_image = result['qr_base64']
-            invoice.save()
+    Generate a ZATCA QR code dict for *invoice* without mutating it.
+
+    Returns a dict with keys: status, qr_base64, tlv_data, [message on error].
+    The caller is responsible for persisting the result onto the invoice.
     """
     service = ZATCAQRService()
     return service.generate_qr_code(invoice, previous_invoice_hash)
+
+
+def attach_qr_to_invoice(invoice, save: bool = True) -> Dict[str, Any]:
+    """
+    Generate a ZATCA QR code and apply it to *invoice*.
+
+    This is the canonical replacement for ``Invoice.generate_zatca_qr()``,
+    which was removed from the model to keep models as pure data containers.
+
+    Args:
+        invoice:  Invoice model instance to update.
+        save:     If True (default), call ``invoice.save()`` with the QR fields
+                  after a successful generation.
+
+    Returns:
+        The result dict from ``generate_invoice_qr``.
+    """
+    previous_hash = (invoice.extracted_data or {}).get("file_hash") if invoice.extracted_data else None
+    result = generate_invoice_qr(invoice, previous_invoice_hash=previous_hash)
+
+    if result.get("status") == "success":
+        invoice.qr_code_image = result["qr_base64"]
+        invoice.qr_code_data = result["tlv_data"]
+        invoice.has_qr_code = True
+        invoice.qr_code_valid = True
+    else:
+        invoice.has_qr_code = False
+        invoice.qr_code_valid = False
+
+    if save:
+        invoice.save(update_fields=["qr_code_image", "qr_code_data", "has_qr_code", "qr_code_valid", "updated_at"])
+
+    return result

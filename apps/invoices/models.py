@@ -6,6 +6,8 @@ Covers all 30 invoice auditing rules from the business requirements.
 import uuid
 from django.db import models
 from apps.authentication.models import User, Organization
+from core.constants import VAT_MATH_TOLERANCE, VAT_RATE_TOLERANCE
+from core.mixins import SoftDeleteModel
 
 
 # ─── Risk / Severity choices shared across models ─────────────────────────────
@@ -18,7 +20,7 @@ class Severity(models.TextChoices):
 
 # ─── Invoice ──────────────────────────────────────────────────────────────────
 
-class Invoice(models.Model):
+class Invoice(SoftDeleteModel):
     """Core invoice record — populated by OCR + AI extraction."""
 
     class Status(models.TextChoices):
@@ -116,10 +118,9 @@ class Invoice(models.Model):
     notes             = models.TextField(blank=True)
     created_at        = models.DateTimeField(auto_now_add=True)
     updated_at        = models.DateTimeField(auto_now=True)    
-    # ── Soft Delete (GDPR Compliance) ───────────────────────────────────────────────────
-    is_deleted        = models.BooleanField(default=False, db_index=True)  # Soft delete flag
-    deleted_at        = models.DateTimeField(null=True, blank=True)        # When deleted
-    deleted_by        = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="deleted_invoices")  # Who deleted
+    # ── Soft Delete (GDPR Compliance) — fields from SoftDeleteModel mixin ────────
+    # is_deleted / deleted_at inherited from SoftDeleteModel
+    deleted_by        = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="deleted_invoices")
 
     # ── IAS 7 Cash Flow Classification (Statement of Cash Flows) ────────────────
     class CashFlowClass(models.TextChoices):
@@ -220,7 +221,7 @@ class Invoice(models.Model):
     def vat_is_correct(self):
         """Check if subtotal + vat_amount ≈ total_amount."""
         diff = abs(float(self.subtotal) + float(self.vat_amount) - float(self.total_amount))
-        return diff < 1.0  # tolerance of 1 currency unit
+        return diff < VAT_MATH_TOLERANCE  # tolerance of 1 currency unit
 
     @property
     def vat_rate_is_correct(self):
@@ -228,35 +229,11 @@ class Invoice(models.Model):
         if float(self.subtotal) == 0:
             return True
         actual_rate = float(self.vat_amount) / float(self.subtotal) * 100
-        return abs(actual_rate - float(self.vat_rate)) < 0.5
+        return abs(actual_rate - float(self.vat_rate)) < VAT_RATE_TOLERANCE
 
-    def generate_zatca_qr(self):
-        """
-        Generate ZATCA Phase 2 QR code for this invoice.
-        Stores the QR code image and data in the model.
-        
-        Returns:
-            Dict with keys: status, message, qr_base64, qr_hash
-        """
-        from apps.compliance.zatca_qr_service import generate_invoice_qr
-        
-        # Generate QR code
-        result = generate_invoice_qr(
-            self,
-            previous_invoice_hash=self.extracted_data.get('file_hash') if self.extracted_data else None
-        )
-        
-        # Update invoice with QR data
-        if result['status'] == 'success':
-            self.qr_code_image = result['qr_base64']
-            self.qr_code_data = result['tlv_data']
-            self.has_qr_code = True
-            self.qr_code_valid = True
-        else:
-            self.has_qr_code = False
-            self.qr_code_valid = False
-        
-        return result
+    # generate_zatca_qr() was removed from this model — models are pure data
+    # containers and must not call external services.
+    # Use apps.compliance.zatca_qr_service.attach_qr_to_invoice(invoice) instead.
 
 
 # ─── Invoice Batch ────────────────────────────────────────────────────────────
@@ -276,7 +253,7 @@ class InvoiceBatch(models.Model):
     uploaded_by     = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="invoice_batches")
     audit_session   = models.ForeignKey("audit.AuditSession", on_delete=models.SET_NULL, null=True, blank=True, related_name="invoice_batches")
     batch_name      = models.CharField(max_length=255, blank=True)
-    status          = models.BatchStatus if False else models.CharField(max_length=15, choices=BatchStatus.choices, default=BatchStatus.PENDING)
+    status          = models.CharField(max_length=15, choices=BatchStatus.choices, default=BatchStatus.PENDING)
     total_files     = models.PositiveIntegerField(default=0)
     processed_files = models.PositiveIntegerField(default=0)
     failed_files    = models.PositiveIntegerField(default=0)
@@ -318,71 +295,112 @@ class InvoiceBatch(models.Model):
 # ─── Validation Result ────────────────────────────────────────────────────────
 
 class InvoiceValidationResult(models.Model):
-    """Results of running all 30 validation rules on an invoice."""
+    """
+    Results of running all validation rules on an invoice.
+
+    Schema change (2026-04-09):
+      The previous schema had 30+ individual boolean columns — one per rule.
+      This made every new/renamed rule require a database migration and forced
+      serializer and admin changes in lockstep.
+
+      The new schema stores rule results in ``rule_results`` (a JSON array) so
+      the rule set can grow without schema changes.
+
+      ``rule_results`` format:
+          [
+              {
+                  "rule_code":  "INV-001",
+                  "rule_name":  "Invoice Number Present",
+                  "group":      "INV",
+                  "severity":   "high",
+                  "passed":     true,
+                  "detail":     ""
+              },
+              ...
+          ]
+
+      The boolean columns are retained below as read-only computed properties
+      so that any existing code that reads them still works without modification.
+      They are NOT stored in the database any more — do not add them to
+      migrations.
+
+    Migration required: see apps/invoices/migrations/ for 0xxx_validation_json.
+    """
 
     id      = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     invoice = models.OneToOneField(Invoice, on_delete=models.CASCADE, related_name="validation")
 
-    # ── Group 1: Invoice Header Validation (8 rules) ──────────────────────────
-    has_invoice_number   = models.BooleanField(default=False)
-    has_invoice_date     = models.BooleanField(default=False)
-    has_vendor_name      = models.BooleanField(default=False)
-    has_vendor_vat       = models.BooleanField(default=False)
-    has_total_amount     = models.BooleanField(default=False)
-    has_currency         = models.BooleanField(default=False)
-    total_greater_zero   = models.BooleanField(default=False)
-    no_vat_without_base  = models.BooleanField(default=False)  # VAT not present without subtotal
+    # ── Rule results (JSON array — replaces the 30 boolean columns) ───────────
+    rule_results     = models.JSONField(
+        default=list,
+        help_text=(
+            "List of per-rule result dicts: "
+            "[{rule_code, rule_name, group, severity, passed, detail}, ...]"
+        ),
+    )
 
-    # ── Group 2: Duplicate Detection (5 rules) ────────────────────────────────
-    duplicate_invoice_number    = models.BooleanField(default=False)  # True = problem found
-    duplicate_vendor_and_number = models.BooleanField(default=False)
-    duplicate_vendor_amount_date = models.BooleanField(default=False)
-    duplicate_file_hash         = models.BooleanField(default=False)
-    duplicate_across_months     = models.BooleanField(default=False)
-
-    # ── Group 3: VAT Validation (5 rules) ─────────────────────────────────────
-    vat_rate_correct       = models.BooleanField(default=False)  # 15% for SA
-    vat_calculation_correct = models.BooleanField(default=False)  # subtotal+vat=total
-    vat_subtotal_correct   = models.BooleanField(default=False)
-    vat_number_present     = models.BooleanField(default=False)
-    qr_code_valid          = models.BooleanField(default=False)
-
-    # ── Group 4: Anomaly Detection (6 rules) ─────────────────────────────────
-    amount_unusually_high      = models.BooleanField(default=False)  # True = anomaly found
-    new_unknown_vendor         = models.BooleanField(default=False)
-    many_invoices_same_day     = models.BooleanField(default=False)
-    sudden_price_change        = models.BooleanField(default=False)
-    many_invoices_year_end     = models.BooleanField(default=False)
-    vendor_dominates_invoices  = models.BooleanField(default=False)
-
-    # ── Group 5: Financial Control (6 rules) ─────────────────────────────────
-    has_cost_center      = models.BooleanField(default=False)
-    has_account_code     = models.BooleanField(default=False)
-    within_budget        = models.BooleanField(default=True)
-    no_edit_after_approve = models.BooleanField(default=True)
-    has_approver         = models.BooleanField(default=False)
-    has_audit_trail      = models.BooleanField(default=True)
-
-    # ── Group 6: Document Quality (4 rules) ──────────────────────────────────
-    document_is_clear    = models.BooleanField(default=False)
-    appears_genuine      = models.BooleanField(default=False)
-    no_alterations       = models.BooleanField(default=False)
-    has_qr_code          = models.BooleanField(default=False)
-
-    # ── Summary ───────────────────────────────────────────────────────────────
-    total_rules          = models.PositiveSmallIntegerField(default=30)
-    rules_passed         = models.PositiveSmallIntegerField(default=0)
-    rules_failed         = models.PositiveSmallIntegerField(default=0)
-    validation_score     = models.FloatField(default=0.0)   # 0-100
-    failed_rule_codes    = models.JSONField(default=list)   # list of failed rule IDs
-    validation_details   = models.JSONField(default=dict)   # per-rule detail
-    validated_at         = models.DateTimeField(auto_now=True)
+    # ── Summary counters ───────────────────────────────────────────────────────
+    total_rules      = models.PositiveSmallIntegerField(default=0)
+    rules_passed     = models.PositiveSmallIntegerField(default=0)
+    rules_failed     = models.PositiveSmallIntegerField(default=0)
+    validation_score = models.FloatField(default=0.0)         # 0-100
+    failed_rule_codes = models.JSONField(default=list)         # ["INV-001", ...]
+    validation_details = models.JSONField(default=dict)        # legacy extra detail blob
+    validated_at     = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "invoice_validation_results"
 
     def __str__(self):
         return f"Validation for {self.invoice} | Score: {self.validation_score}%"
+
+    # ── Backward-compat helpers (read-only, not stored) ───────────────────────
+
+    def _rule_passed(self, code: str) -> bool:
+        for r in (self.rule_results or []):
+            if r.get("rule_code") == code:
+                return bool(r.get("passed", False))
+        return False
+
+    def _rule_failed(self, code: str) -> bool:
+        return not self._rule_passed(code)
+
+    @property
+    def has_invoice_number(self):    return self._rule_passed("INV-001")
+    @property
+    def has_invoice_date(self):      return self._rule_passed("INV-002")
+    @property
+    def has_vendor_name(self):       return self._rule_passed("INV-003")
+    @property
+    def has_vendor_vat(self):        return self._rule_passed("INV-004")
+    @property
+    def has_total_amount(self):      return self._rule_passed("INV-008")
+    @property
+    def has_currency(self):          return self._rule_passed("INV-005")
+    @property
+    def total_greater_zero(self):    return self._rule_passed("INV-007")
+    @property
+    def duplicate_file_hash(self):   return self._rule_failed("DUP-004")
+    @property
+    def vat_rate_correct(self):      return self._rule_passed("VAT-001")
+    @property
+    def vat_calculation_correct(self): return self._rule_passed("VAT-002")
+    @property
+    def vat_number_present(self):    return self._rule_passed("VAT-004")
+    @property
+    def qr_code_valid(self):         return self._rule_passed("VAT-005")
+    @property
+    def has_cost_center(self):       return self._rule_passed("CTL-001")
+    @property
+    def has_account_code(self):      return self._rule_passed("CTL-002")
+    @property
+    def document_is_clear(self):     return self._rule_passed("DOC-001")
+    @property
+    def appears_genuine(self):       return self._rule_passed("DOC-002")
+    @property
+    def no_alterations(self):        return self._rule_passed("DOC-003")
+    @property
+    def has_qr_code(self):           return self._rule_passed("DOC-004")
 
 
 # ─── Vendor Profile ───────────────────────────────────────────────────────────

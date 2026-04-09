@@ -43,6 +43,7 @@ import traceback as tb
 from datetime import timedelta
 from typing import Optional
 
+from django.db import transaction
 from django.utils import timezone
 
 from apps.rule_engine.models import AuditRun
@@ -136,7 +137,7 @@ class AuditPipelineV2:
         # ── Create AuditRun ─────────────────────────────────────────────────
         audit_run: Optional[AuditRun] = None
         if not dry_run:
-            audit_run = AuditRun.objects.create(
+            audit_run = AuditRun.objects.create(  # wrapped in atomic block below
                 organization_id=organization_id,
                 document_type=document_type,
                 document_id=document_id,
@@ -148,20 +149,21 @@ class AuditPipelineV2:
             ctx.audit_run_id = str(audit_run.id)
             logger.info("[pipeline_v2] Created AuditRun %s.", audit_run.id)
 
-        # ── Execute stages ──────────────────────────────────────────────────
+        # ── Execute stages (wrapped in atomic so partial writes are rolled back) ──
         try:
-            for stage in self._stages:
-                ctx = stage.execute(ctx)
+            with transaction.atomic():
+                for stage in self._stages:
+                    ctx = stage.execute(ctx)
 
-            if audit_run and not dry_run:
-                audit_run.status = AuditRun.Status.COMPLETED
-                audit_run.completed_at = timezone.now()
-                audit_run.processing_time_ms = int(
-                    (audit_run.completed_at - audit_run.started_at).total_seconds() * 1000
-                )
-                audit_run.save(update_fields=[
-                    "status", "completed_at", "processing_time_ms",
-                ])
+                if audit_run and not dry_run:
+                    audit_run.status = AuditRun.Status.COMPLETED
+                    audit_run.completed_at = timezone.now()
+                    audit_run.processing_time_ms = int(
+                        (audit_run.completed_at - audit_run.started_at).total_seconds() * 1000
+                    )
+                    audit_run.save(update_fields=[
+                        "status", "completed_at", "processing_time_ms",
+                    ])
 
             logger.info(
                 "[pipeline_v2] Completed — run=%s risk=%s/%s decision=%s "
@@ -175,11 +177,17 @@ class AuditPipelineV2:
             )
 
         except Exception as exc:
+            # Atomic block already rolled back stage writes.
+            # Update the AuditRun status outside the failed transaction.
             if audit_run and not dry_run:
-                audit_run.status = AuditRun.Status.FAILED
-                audit_run.error_log = [{"error": str(exc), "traceback": tb.format_exc()}]
-                audit_run.completed_at = timezone.now()
-                audit_run.save(update_fields=["status", "error_log", "completed_at"])
+                try:
+                    AuditRun.objects.filter(pk=audit_run.pk).update(
+                        status=AuditRun.Status.FAILED,
+                        error_log=[{"error": str(exc), "traceback": tb.format_exc()}],
+                        completed_at=timezone.now(),
+                    )
+                except Exception:
+                    pass  # Best-effort status update — don't mask original error
             logger.exception(
                 "[pipeline_v2] Fatal error for document %s: %s", document_id, exc
             )

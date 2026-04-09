@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from celery import shared_task
+from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
 
@@ -60,7 +61,6 @@ def process_invoice_rows_chunk_task(
     from apps.audit.models import AuditSession
     from apps.authentication.models import Organization, User
     from apps.invoices.models import InvoiceBatch
-    from apps.invoices.views import _process_structured_rows_chunk
 
     logger.info(
         "[Task:invoice_chunk] Processing batch=%s rows=%s base=%s",
@@ -74,7 +74,9 @@ def process_invoice_rows_chunk_task(
     batch = InvoiceBatch.objects.get(pk=batch_id)
     session = AuditSession.objects.filter(pk=audit_session_id).first() if audit_session_id else None
 
-    outcome = _process_structured_rows_chunk(
+    from apps.invoices.services.processor import process_structured_rows_chunk
+
+    outcome = process_structured_rows_chunk(
         rows,
         base_name=base_name,
         org=org,
@@ -92,24 +94,25 @@ def process_invoice_rows_chunk_task(
     review_required_count = int(outcome.get("review_required_count") or 0)
     last_error = outcome.get("last_error") or ""
 
-    InvoiceBatch.objects.filter(pk=batch_id).update(
-        processed_files=F("processed_files") + success_count,
-        failed_files=F("failed_files") + failure_count,
-        status=InvoiceBatch.BatchStatus.PROCESSING,
-    )
+    with transaction.atomic():
+        InvoiceBatch.objects.filter(pk=batch_id).update(
+            processed_files=F("processed_files") + success_count,
+            failed_files=F("failed_files") + failure_count,
+            status=InvoiceBatch.BatchStatus.PROCESSING,
+        )
 
-    if session:
-        update_kwargs = {
-            "processed_count": F("processed_count") + success_count + failure_count,
-            "success_count": F("success_count") + success_count,
-            "failed_count": F("failed_count") + failure_count,
-            "duplicate_count": F("duplicate_count") + duplicate_count,
-            "high_risk_count": F("high_risk_count") + high_risk_count,
-            "review_required_count": F("review_required_count") + review_required_count,
-        }
-        if last_error:
-            update_kwargs["last_error"] = last_error
-        AuditSession.objects.filter(pk=audit_session_id).update(**update_kwargs)
+        if session:
+            update_kwargs = {
+                "processed_count": F("processed_count") + success_count + failure_count,
+                "success_count": F("success_count") + success_count,
+                "failed_count": F("failed_count") + failure_count,
+                "duplicate_count": F("duplicate_count") + duplicate_count,
+                "high_risk_count": F("high_risk_count") + high_risk_count,
+                "review_required_count": F("review_required_count") + review_required_count,
+            }
+            if last_error:
+                update_kwargs["last_error"] = last_error
+            AuditSession.objects.filter(pk=audit_session_id).update(**update_kwargs)
 
     _finalize_batch_if_ready(batch_id, audit_session_id)
 

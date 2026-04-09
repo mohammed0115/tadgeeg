@@ -4,9 +4,10 @@ import uuid
 from django.db import models
 from apps.authentication.models import User, Organization
 from apps.transactions.models import Transaction
+from core.mixins import SoftDeleteModel
 
 
-class AuditSession(models.Model):
+class AuditSession(SoftDeleteModel):
     """Tracks the lifecycle and aggregate progress of a related audit upload."""
 
     class Status(models.TextChoices):
@@ -55,9 +56,7 @@ class AuditSession(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    # ── Soft Delete (GDPR Compliance) ─────────────────────────────────────────
-    is_deleted = models.BooleanField(default=False, db_index=True)
-    deleted_at = models.DateTimeField(null=True, blank=True)
+    # ── Soft Delete (GDPR Compliance) — is_deleted / deleted_at from SoftDeleteModel
     deleted_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name="deleted_audit_sessions"
     )
@@ -89,14 +88,7 @@ class AuditSession(models.Model):
         )
         return count
 
-    def delete(self, *args, **kwargs):
-        """Override delete() to perform soft delete (GDPR Article 17)."""
-        from django.utils import timezone
-        self.is_deleted = True
-        self.deleted_at = timezone.now()
-        if 'user' in kwargs:
-            self.deleted_by = kwargs.pop('user')
-        self.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by', 'updated_at'])
+    # delete() inherited from SoftDeleteModel — handles user kwarg and updated_at
 
 
 class AuditFinding(models.Model):
@@ -187,7 +179,7 @@ class AuditFinding(models.Model):
         return f"{self.rule_code} ({self.severity})"
 
 
-class AuditCase(models.Model):
+class AuditCase(SoftDeleteModel):
     """An audit case created from an anomaly or manual finding."""
 
     class Priority(models.TextChoices):
@@ -250,9 +242,7 @@ class AuditCase(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    # ── Soft Delete (GDPR Compliance) ─────────────────────────────────────────
-    is_deleted = models.BooleanField(default=False, db_index=True)
-    deleted_at = models.DateTimeField(null=True, blank=True)
+    # ── Soft Delete (GDPR Compliance) — is_deleted / deleted_at from SoftDeleteModel
     deleted_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name="deleted_audit_cases"
     )
@@ -272,19 +262,22 @@ class AuditCase(models.Model):
     def save(self, *args, **kwargs):
         if not self.case_number:
             import datetime
-            count = AuditCase.objects.filter(organization=self.organization).count()
-            year = datetime.datetime.now().year
-            self.case_number = f"CASE-{year}-{count + 1:04d}"
-        super().save(*args, **kwargs)
+            from django.db import transaction
+            with transaction.atomic():
+                # Lock the org's existing cases to prevent concurrent inserts
+                # from generating the same case number.
+                count = (
+                    AuditCase.objects.select_for_update()
+                    .filter(organization=self.organization)
+                    .count()
+                )
+                year = datetime.datetime.now().year
+                self.case_number = f"CASE-{year}-{count + 1:04d}"
+                super().save(*args, **kwargs)
+        else:
+            super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):
-        """Override delete() to perform soft delete (GDPR Article 17)."""
-        from django.utils import timezone
-        self.is_deleted = True
-        self.deleted_at = timezone.now()
-        if 'user' in kwargs:
-            self.deleted_by = kwargs.pop('user')
-        self.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by', 'updated_at'])
+    # delete() inherited from SoftDeleteModel
 
 
 class CaseComment(models.Model):
@@ -367,68 +360,25 @@ class CustomRuleDefinition(models.Model):
 
     def save(self, *args, **kwargs):
         if self.pk:
-            # Auto-increment version on update
-            CustomRuleDefinition.objects.filter(pk=self.pk).update(version=models.F("version") + 1)
-            self.version = CustomRuleDefinition.objects.get(pk=self.pk).version
+            # Increment version atomically and fetch back the new value in one
+            # round-trip, avoiding the read-then-write race of the old pattern.
+            from django.db import transaction
+            with transaction.atomic():
+                updated = (
+                    CustomRuleDefinition.objects.select_for_update()
+                    .filter(pk=self.pk)
+                    .first()
+                )
+                if updated:
+                    self.version = updated.version + 1
         super().save(*args, **kwargs)
 
     def evaluate(self, invoice: dict) -> dict:
         """
-        Evaluate this custom rule against an invoice dict.
-        Returns {"passed": bool, "explanation": str}
+        Evaluate this rule against an invoice dict.
+
+        Delegates to CustomRuleEvaluator in apps/audit/services/rule_evaluator.py
+        to keep the model as a pure data container.
         """
-        import re
-        ct = self.condition_type
-        params = self.condition_params or {}
-
-        try:
-            if ct == self.ConditionType.MISSING_FIELD:
-                field = params.get("field", "")
-                value = invoice.get(field)
-                passed = bool(value and str(value).strip())
-                return {"passed": passed, "explanation": "" if passed else f"شرط '{field}' مفقود أو فارغ."}
-
-            elif ct == self.ConditionType.AMOUNT_THRESHOLD:
-                amount = float(invoice.get("total_amount") or invoice.get("amount") or 0)
-                min_a = float(params.get("min_amount", 0))
-                max_a = float(params.get("max_amount", float("inf")))
-                passed = min_a <= amount <= max_a
-                return {"passed": passed, "explanation": "" if passed else f"المبلغ {amount} خارج النطاق المسموح [{min_a} – {max_a}]."}
-
-            elif ct == self.ConditionType.DATE_CHECK:
-                from datetime import date
-                raw = invoice.get("invoice_date") or invoice.get("date")
-                if not raw:
-                    return {"passed": False, "explanation": "تاريخ الفاتورة مفقود."}
-                inv_date = raw if isinstance(raw, date) else date.fromisoformat(str(raw)[:10])
-                today = date.today()
-                if params.get("no_future_dates") and inv_date > today:
-                    return {"passed": False, "explanation": f"تاريخ الفاتورة {inv_date} في المستقبل."}
-                max_days = params.get("max_days_old")
-                if max_days and (today - inv_date).days > int(max_days):
-                    return {"passed": False, "explanation": f"تاريخ الفاتورة {inv_date} أقدم من {max_days} يوم."}
-                return {"passed": True, "explanation": ""}
-
-            elif ct == self.ConditionType.DUPLICATE_CHECK:
-                from apps.invoices.models import Invoice as InvoiceModel
-                inv_number = invoice.get("invoice_number", "")
-                if not inv_number:
-                    return {"passed": True, "explanation": ""}
-                exists = InvoiceModel.objects.filter(
-                    organization_id=self.organization_id, invoice_number=inv_number
-                ).count() > 1
-                return {"passed": not exists, "explanation": "" if not exists else f"رقم الفاتورة '{inv_number}' مكرر."}
-
-            elif ct == self.ConditionType.PATTERN_MATCH:
-                field = params.get("field", "invoice_number")
-                pattern = params.get("pattern", "")
-                must_match = params.get("must_match", True)
-                value = str(invoice.get(field, "") or "")
-                matched = bool(re.search(pattern, value)) if pattern else True
-                passed = matched if must_match else not matched
-                return {"passed": passed, "explanation": "" if passed else f"'{field}' لا يطابق النمط المطلوب: {pattern}"}
-
-        except Exception as e:
-            return {"passed": False, "explanation": f"خطأ في تقييم القاعدة: {e}"}
-
-        return {"passed": True, "explanation": ""}
+        from apps.audit.services.rule_evaluator import CustomRuleEvaluator
+        return CustomRuleEvaluator.evaluate(self, invoice)

@@ -63,7 +63,7 @@ SECRET_KEY = os.environ.get(
     os.environ.get("DJANGO_SECRET_KEY", _SECRET_KEY_FALLBACK),
 )
 
-DEBUG = os.environ.get("DEBUG", "False") == "True"
+DEBUG = os.environ.get("DEBUG", "True") == "True"
 
 # ── Production safety guards ────────────────────────────────────────────────
 # Raise hard errors if dangerous defaults are used outside local development.

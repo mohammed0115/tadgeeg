@@ -26,11 +26,54 @@
     submitting: false,
     error: '',
     selectedType: '',
+    uploadPercent: 0,
+    uploadedBytes: 0,
+    totalUploadBytes: 0,
+    fileProgress: [],
+    uploadStage: '',   // 'uploading' | 'processing' | ''
+    _submitTimeout: null,
+    _xhr: null,
 
     formatSize(bytes) {
       if (bytes < 1024) return bytes + ' B';
       if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
       return (bytes / 1048576).toFixed(1) + ' MB';
+    },
+
+    syncFileInput(files) {
+      if (!this.$refs.fileInput || typeof DataTransfer === 'undefined') return;
+      try {
+        const transfer = new DataTransfer();
+        Array.from(files || []).forEach((file) => transfer.items.add(file));
+        this.$refs.fileInput.files = transfer.files;
+      } catch (error) {
+        console.debug('Could not sync dropped files to input', error);
+      }
+    },
+
+    scheduleSubmitTimeout() {
+      clearTimeout(this._submitTimeout);
+      this._submitTimeout = setTimeout(() => {
+        if (this._xhr) this._xhr.abort();
+        this.finishSubmitWithError('{% trans "The upload is taking too long. Please check your connection and try again." %}');
+      }, 300000);
+    },
+
+    resetSubmitState() {
+      clearTimeout(this._submitTimeout);
+      this._submitTimeout = null;
+      this._xhr = null;
+      this.submitting = false;
+      this.uploadStage = '';
+      this.uploadPercent = 0;
+      this.uploadedBytes = 0;
+      this.totalUploadBytes = 0;
+      this.resetFileProgress();
+    },
+
+    finishSubmitWithError(message) {
+      this.resetSubmitState();
+      this.error = message;
     },
 
     onDrop(e) {
@@ -43,13 +86,70 @@
       if (e.target.files.length) this.setFiles(e.target.files);
     },
 
+    resetFileProgress() {
+      this.fileProgress = this.selectedFiles.map((file, index) => ({
+        id: index,
+        name: file.name,
+        size: file.size || 0,
+        loadedBytes: 0,
+        progress: 0,
+        status: 'pending',
+      }));
+    },
+
+    updateFileProgress(totalLoaded, totalBytes) {
+      let remainingLoaded = Math.max(0, totalLoaded || 0);
+      const hasKnownTotal = (totalBytes || this.totalUploadBytes || 0) > 0;
+
+      this.fileProgress = this.fileProgress.map((entry, index) => {
+        const fileSize = Math.max(1, entry.size || 0);
+        const fileLoaded = Math.max(0, Math.min(fileSize, remainingLoaded));
+        remainingLoaded = Math.max(0, remainingLoaded - fileSize);
+
+        let status = 'pending';
+        if (this.uploadStage === 'processing') {
+          status = 'processing';
+        } else if (fileLoaded >= fileSize && hasKnownTotal) {
+          status = 'uploaded';
+        } else if (fileLoaded > 0) {
+          status = 'uploading';
+        } else if (this.uploadStage === 'uploading' && index === 0 && totalLoaded === 0) {
+          status = 'uploading';
+        }
+
+        return {
+          ...entry,
+          loadedBytes: fileLoaded,
+          progress: Math.max(0, Math.min(100, Math.round((fileLoaded / fileSize) * 100))),
+          status,
+        };
+      });
+    },
+
+    markFilesAsProcessing() {
+      this.fileProgress = this.fileProgress.map((entry) => ({
+        ...entry,
+        loadedBytes: entry.size,
+        progress: 100,
+        status: 'processing',
+      }));
+    },
+
+    fileStatusLabel(status) {
+      if (status === 'uploading') return '{% trans "Uploading" %}';
+      if (status === 'uploaded') return '{% trans "Uploaded" %}';
+      if (status === 'processing') return '{% trans "Analyzing" %}';
+      return '{% trans "Waiting" %}';
+    },
+
     setFiles(files) {
       const allowed = ['.pdf','.jpg','.jpeg','.png','.tiff','.tif','.bmp','.webp','.xlsx','.xls','.xlsm','.csv','.tsv','.json','.jsonl','.zip'];
-      this.selectedFiles = [];
+      const incomingFiles = Array.from(files || []);
+      const acceptedFiles = [];
       let totalBytes = 0;
       let names = [];
       
-      for (let f of files) {
+      for (let f of incomingFiles) {
         const ext = '.' + f.name.split('.').pop().toLowerCase();
         if (!allowed.includes(ext)) {
           this.error = '{% trans "Unsupported file type:" %} ' + ext + '. {% trans "Allowed formats: PDF, images, Excel, CSV, JSON, ZIP" %}';
@@ -59,38 +159,166 @@
           this.error = '{% trans "File exceeds maximum size (50 MB):" %} ' + f.name;
           return;
         }
-        this.selectedFiles.push(f);
+        acceptedFiles.push(f);
         totalBytes += f.size;
         names.push(f.name);
       }
       
+      this.selectedFiles = acceptedFiles;
+      this.syncFileInput(acceptedFiles);
       this.error = '';
       this.fileNames = names.length === 1 ? names[0] : names.length + ' {% trans "files" %}';
       this.totalSize = this.formatSize(totalBytes);
+      this.resetFileProgress();
     },
 
-    submitForm(e) {
-      if (!this.selectedFiles || this.selectedFiles.length === 0) {
-        this.error = '{% trans "Please choose one or more files first." %}';
-        e.preventDefault();
+    buildFormData() {
+      const formData = new FormData(this.$refs.uploadForm);
+      formData.delete('file');
+      this.selectedFiles.forEach((file) => formData.append('file', file, file.name));
+      return formData;
+    },
+
+    renderServerResponse(xhr) {
+      const responseType = xhr.getResponseHeader('content-type') || '';
+      if (responseType.includes('text/html') && xhr.responseText) {
+        document.open();
+        document.write(xhr.responseText);
+        document.close();
+        return true;
+      }
+      return false;
+    },
+
+    handleSuccessfulSubmit(xhr) {
+      clearTimeout(this._submitTimeout);
+      this._submitTimeout = null;
+      this.uploadPercent = 100;
+      this.uploadedBytes = this.totalUploadBytes || this.uploadedBytes;
+      this.uploadStage = 'processing';
+      this.markFilesAsProcessing();
+
+      const currentUrl = new URL(window.location.href);
+      let responseUrl = currentUrl;
+
+      try {
+        responseUrl = xhr.responseURL
+          ? new URL(xhr.responseURL, window.location.origin)
+          : currentUrl;
+      } catch (error) {
+        responseUrl = currentUrl;
+      }
+
+      const samePage = responseUrl.pathname === currentUrl.pathname && responseUrl.search === currentUrl.search;
+      if (!samePage) {
+        window.location.assign(responseUrl.toString());
         return;
       }
-      this.submitting = true;
-      this.uploadStage = 'uploading';
-      // F-14/F-15 fix: safety timeout — reset after 90s to prevent permanent stuck state
-      this._submitTimeout = setTimeout(() => {
-        this.submitting = false;
-        this.uploadStage = '';
-        this.error = '{% trans "The request is taking too long. Please check your connection and try again." %}';
-      }, 90000);
+
+      if (!this.renderServerResponse(xhr)) {
+        this.resetSubmitState();
+      }
     },
 
-    uploadStage: '',   // 'uploading' | 'processing' | ''
+    submitForm() {
+      if (this.submitting) return;
+
+      if (!this.selectedFiles || this.selectedFiles.length === 0) {
+        this.error = '{% trans "Please choose one or more files first." %}';
+        return;
+      }
+
+      this.error = '';
+      this.submitting = true;
+      this.uploadStage = 'uploading';
+      this.uploadPercent = 0;
+      this.uploadedBytes = 0;
+      this.totalUploadBytes = this.selectedFiles.reduce((sum, file) => sum + (file.size || 0), 0);
+      this.resetFileProgress();
+
+      const xhr = new XMLHttpRequest();
+      this._xhr = xhr;
+      this.scheduleSubmitTimeout();
+
+      xhr.open(this.$refs.uploadForm.method || 'POST', this.$refs.uploadForm.action || window.location.href, true);
+      xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+      xhr.upload.addEventListener('loadstart', () => {
+        this.uploadStage = 'uploading';
+        this.uploadPercent = this.totalUploadBytes > 0 ? 1 : 0;
+        this.updateFileProgress(0, this.totalUploadBytes);
+      });
+
+      xhr.upload.addEventListener('progress', (event) => {
+        this.scheduleSubmitTimeout();
+        if (event.lengthComputable && event.total > 0) {
+          this.totalUploadBytes = event.total;
+          this.uploadedBytes = event.loaded;
+          this.uploadPercent = Math.max(1, Math.min(100, Math.round((event.loaded / event.total) * 100)));
+          this.updateFileProgress(event.loaded, event.total);
+        } else if (this.uploadPercent < 95) {
+          this.uploadPercent += 1;
+          const estimatedLoaded = Math.round((this.totalUploadBytes || 0) * (this.uploadPercent / 100));
+          this.updateFileProgress(estimatedLoaded, this.totalUploadBytes);
+        }
+      });
+
+      xhr.addEventListener('readystatechange', () => {
+        if (xhr.readyState >= XMLHttpRequest.HEADERS_RECEIVED) {
+          this.scheduleSubmitTimeout();
+        }
+        if (xhr.readyState === XMLHttpRequest.LOADING) {
+          this.uploadPercent = 100;
+          this.uploadedBytes = this.totalUploadBytes || this.uploadedBytes;
+          this.uploadStage = 'processing';
+          this.markFilesAsProcessing();
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 400) {
+          this.handleSuccessfulSubmit(xhr);
+          return;
+        }
+
+        if (this.renderServerResponse(xhr)) return;
+
+        this.finishSubmitWithError(
+          xhr.status >= 500
+            ? '{% trans "The server could not complete the upload right now. Please try again shortly." %}'
+            : '{% trans "Upload failed. Please review the form and try again." %}'
+        );
+      });
+
+      xhr.addEventListener('error', () => {
+        this.finishSubmitWithError('{% trans "Upload failed. Please check your connection and try again." %}');
+      });
+
+      xhr.addEventListener('abort', () => {
+        this.finishSubmitWithError('{% trans "Upload was interrupted. Please try again." %}');
+      });
+
+      xhr.send(this.buildFormData());
+    },
 
     get uploadStageLabel() {
-      if (this.uploadStage === 'uploading') return '{% trans "Uploading..." %}';
-      if (this.uploadStage === 'processing') return '{% trans "Analyzing..." %}';
+      if (this.uploadStage === 'uploading') return '{% trans "Uploading" %} ' + this.uploadPercent + '%';
+      if (this.uploadStage === 'processing') return '{% trans "Upload complete — analyzing..." %}';
       return '{% trans "Start Audit" %}';
+    },
+
+    get uploadProgressWidth() {
+      return Math.max(0, Math.min(100, this.uploadPercent)) + '%';
+    },
+
+    get uploadProgressHint() {
+      if (this.uploadStage === 'processing') {
+        return '{% trans "The files are now on the server and audit analysis is running." %}';
+      }
+      if (this.totalUploadBytes > 0) {
+        return this.formatSize(this.uploadedBytes) + ' / ' + this.formatSize(this.totalUploadBytes);
+      }
+      return '{% trans "Preparing files for secure upload..." %}';
     }
   }"
   x-init="
@@ -99,9 +327,100 @@
     {% if upload_attempted or form.errors %}
     submitting = false;
     uploadStage = '';
+    uploadPercent = 0;
+    uploadedBytes = 0;
+    totalUploadBytes = 0;
     {% endif %}
   "
 >
+
+  <div
+    x-show="submitting"
+    x-transition.opacity
+    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm"
+    style="display: none;"
+  >
+    <div class="w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+      <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 px-6 py-5 text-white">
+        <div class="flex items-center gap-4">
+          <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm">
+            <template x-if="uploadStage === 'uploading'">
+              <svg class="h-6 w-6 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+              </svg>
+            </template>
+            <template x-if="uploadStage === 'processing'">
+              <i data-lucide="sparkles" class="h-6 w-6 animate-pulse"></i>
+            </template>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-semibold text-blue-100" x-text="fileNames || '{% trans "Selected files" %}'"></p>
+            <h3 class="mt-0.5 text-xl font-extrabold tracking-tight" x-text="uploadStageLabel"></h3>
+            <p class="mt-1 text-sm text-blue-100" x-text="uploadProgressHint"></p>
+          </div>
+          <div class="rounded-2xl bg-white/15 px-3 py-2 text-right shadow-inner">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-blue-100">{% trans "Progress" %}</p>
+            <p class="text-2xl font-black" x-text="uploadPercent + '%'">0%</p>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 py-5">
+        <div class="overflow-hidden rounded-full bg-slate-100 shadow-inner">
+          <div
+            class="relative h-4 rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-400 transition-all duration-300 ease-out"
+            :style="'width: ' + uploadProgressWidth"
+          >
+            <div class="absolute inset-0 animate-pulse bg-white/20"></div>
+          </div>
+        </div>
+        <div class="mt-3 flex items-center justify-between gap-3 text-xs font-semibold text-slate-500">
+          <span x-text="uploadStage === 'uploading' ? '{% trans "Sending files securely" %}' : '{% trans "Waiting for audit result" %}'"></span>
+          <span x-text="uploadProgressHint"></span>
+        </div>
+        <template x-if="fileProgress.length">
+          <div class="mt-5 space-y-3 border-t border-slate-100 pt-4">
+            <div class="flex items-center justify-between gap-3 text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
+              <span>{% trans "Files" %}</span>
+              <span x-text="fileProgress.length + ' {% trans "items" %}'"></span>
+            </div>
+            <div class="max-h-56 space-y-3 overflow-y-auto pr-1">
+              <template x-for="file in fileProgress" :key="file.id + '-' + file.name">
+                <div class="rounded-2xl border border-slate-100 bg-slate-50/80 px-3 py-3 shadow-sm">
+                  <div class="mb-2 flex items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                      <p class="truncate text-sm font-bold text-slate-700" x-text="file.name"></p>
+                      <p class="mt-0.5 text-[11px] text-slate-500">
+                        <span x-text="formatSize(file.size)"></span>
+                        <span class="mx-1">•</span>
+                        <span x-text="fileStatusLabel(file.status)"></span>
+                      </p>
+                    </div>
+                    <div class="rounded-xl bg-white px-2.5 py-1 text-right shadow-sm">
+                      <p class="text-xs font-black text-blue-600" x-text="file.progress + '%'">0%</p>
+                    </div>
+                  </div>
+                  <div class="overflow-hidden rounded-full bg-white">
+                    <div
+                      class="relative h-2.5 rounded-full transition-all duration-300 ease-out"
+                      :class="file.status === 'processing' ? 'bg-gradient-to-r from-violet-500 via-indigo-500 to-cyan-400' : 'bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-400'"
+                      :style="'width: ' + file.progress + '%'"
+                    >
+                      <div class="absolute inset-0 animate-pulse bg-white/20"></div>
+                    </div>
+                  </div>
+                  <div class="mt-2 flex items-center justify-between gap-3 text-[11px] text-slate-500">
+                    <span x-text="fileStatusLabel(file.status)"></span>
+                    <span x-text="formatSize(file.loadedBytes) + ' / ' + formatSize(file.size)"></span>
+                  </div>
+                </div>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
 
   <!-- ═══ Hero Banner ═══ -->
   <div class="rounded-2xl bg-gradient-to-l from-blue-600 to-indigo-700 p-6 text-white shadow-lg">
@@ -152,7 +471,8 @@
   <form
     method="post"
     enctype="multipart/form-data"
-    @submit="submitForm($event)"
+    x-ref="uploadForm"
+    @submit.prevent="submitForm"
     class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
   >
     {% csrf_token %}
@@ -334,10 +654,32 @@
 
     <!-- Submit -->
     <div class="border-t border-slate-100 bg-slate-50 px-5 py-4">
-      <div class="flex items-center justify-between gap-4">
-        <p class="text-xs text-slate-500">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div class="min-w-0 flex-1 space-y-3">
+          <p class="text-xs text-slate-500">
           {% trans "Analysis is performed fully on the server. Your data is secure and protected." %}
-        </p>
+          </p>
+          <template x-if="submitting">
+            <div class="rounded-2xl border border-blue-100 bg-white px-4 py-3 shadow-sm">
+              <div class="mb-2 flex items-center justify-between gap-3 text-xs font-semibold text-slate-600">
+                <span x-text="uploadStageLabel"></span>
+                <span class="text-blue-600" x-text="uploadPercent + '%'">0%</span>
+              </div>
+              <div class="overflow-hidden rounded-full bg-slate-100">
+                <div
+                  class="relative h-2.5 rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-400 transition-all duration-300 ease-out"
+                  :style="'width: ' + uploadProgressWidth"
+                >
+                  <div class="absolute inset-0 animate-pulse bg-white/25"></div>
+                </div>
+              </div>
+              <div class="mt-2 flex items-center justify-between gap-3 text-[11px] font-medium text-slate-500">
+                <span x-text="uploadStage === 'uploading' ? '{% trans "Uploading selected files" %}' : '{% trans "Running server analysis" %}'"></span>
+                <span x-text="uploadProgressHint"></span>
+              </div>
+            </div>
+          </template>
+        </div>
         <button
           type="submit"
           :disabled="submitting"

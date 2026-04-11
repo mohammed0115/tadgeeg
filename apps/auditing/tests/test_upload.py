@@ -92,6 +92,29 @@ class AuditDocumentUploadViewTests(TestCase):
         self.assertIsNotNone(form)
         self.assertIn("file", form.errors)
 
+    @patch("apps.auditing.views.upload.DocumentUploadRouter")
+    def test_blank_selected_type_passes_auto_to_router(self, mock_router_cls):
+        self.client.force_login(self.user)
+
+        mock_router_cls.AUTO_DETECT_TYPE = "auto"
+        router = mock_router_cls.return_value
+        router.route.return_value = MagicMock(success=True, result_url="/documents/purchase-orders/typed-1/")
+
+        pdf_file = SimpleUploadedFile(
+            "auto-detect.pdf",
+            _make_pdf_bytes(),
+            content_type="application/pdf",
+        )
+
+        response = self.client.post(self.upload_url, {
+            "file": pdf_file,
+            "selected_doc_type": "",
+            "doc_language": "auto",
+        })
+
+        self.assertIn(response.status_code, [301, 302])
+        self.assertEqual(router.route.call_args.kwargs["document_type"], "auto")
+
     @patch("apps.auditing.views.upload.AuditProcessingService")
     def test_valid_pdf_upload_creates_document_and_redirects(self, mock_service_cls):
         """A valid PDF upload should create an AuditDocument and redirect to result."""

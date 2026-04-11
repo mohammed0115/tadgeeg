@@ -8,10 +8,13 @@ Invoice → Invoice pipeline (AuditProcessingService with INVOICE type)
 All others → Document pipeline (AuditProcessingService)
 """
 from __future__ import annotations
-import logging
-from typing import Optional
 
-from django.conf import settings
+import json
+import logging
+import os
+from pathlib import Path
+import tempfile
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +111,23 @@ class DocumentUploadRouter:
     """
 
     INVOICE_TYPES = {"invoice"}
+    AUTO_DETECT_TYPE = "auto"
+    ROUTABLE_DOCUMENT_TYPES = {
+        "invoice",
+        "purchase_order",
+        "bank_statement",
+        "payroll",
+        "expense_report",
+        "tax_declaration",
+        "fixed_asset",
+        "sales_receipt",
+        "other",
+    }
+    OPENAI_TYPE_ALIASES = {
+        "receipt": "sales_receipt",
+        "vat_return": "tax_declaration",
+        "tax_return": "tax_declaration",
+    }
 
     def route(
         self,
@@ -131,10 +151,142 @@ class DocumentUploadRouter:
         Returns:
             UploadRouterResult with object_id and result_url for redirect
         """
-        if document_type in self.INVOICE_TYPES:
+        resolved_type = self._resolve_document_type(uploaded_file, document_type)
+
+        if resolved_type in self.INVOICE_TYPES:
             return self._route_invoice(uploaded_file, user, language, organization)
-        else:
-            return self._route_document(uploaded_file, document_type, user, language)
+        if resolved_type == "other":
+            return self._route_document_fallback(uploaded_file, resolved_type, user, language)
+        return self._route_document(uploaded_file, resolved_type, user, language)
+
+    def _resolve_document_type(self, uploaded_file, document_type: Optional[str]) -> str:
+        normalized_type = self._normalise_document_type(document_type)
+        if normalized_type != self.AUTO_DETECT_TYPE:
+            return normalized_type
+
+        detected_type = self._detect_document_type(uploaded_file)
+        logger.info(
+            "[UploadRouter] Auto-detected %s for %s",
+            detected_type,
+            getattr(uploaded_file, "name", "uploaded-file"),
+        )
+        return detected_type
+
+    def _normalise_document_type(self, document_type: Optional[str]) -> str:
+        normalized_type = str(document_type or "").strip().lower()
+        if not normalized_type:
+            return self.AUTO_DETECT_TYPE
+
+        normalized_type = self.OPENAI_TYPE_ALIASES.get(normalized_type, normalized_type)
+        if normalized_type == self.AUTO_DETECT_TYPE:
+            return normalized_type
+        if normalized_type in self.ROUTABLE_DOCUMENT_TYPES:
+            return normalized_type
+
+        logger.warning(
+            "[UploadRouter] Unsupported document type '%s'; defaulting to other.",
+            document_type,
+        )
+        return "other"
+
+    def _detect_document_type(self, uploaded_file) -> str:
+        raw_text, structured = self._extract_detection_input(uploaded_file)
+        detection_text = raw_text or self._structured_to_text(structured)
+        if not detection_text:
+            return "other"
+
+        try:
+            from core.services.ai.openai_extractor import classify_document
+
+            result = classify_document(
+                detection_text,
+                allowed_types=sorted(self.ROUTABLE_DOCUMENT_TYPES),
+                aliases=self.OPENAI_TYPE_ALIASES,
+            )
+            detected_type = self._normalise_document_type(result.get("document_type"))
+            if detected_type != "other":
+                return detected_type
+        except Exception as exc:
+            logger.warning(
+                "[UploadRouter] OpenAI document classification failed for %s: %s",
+                getattr(uploaded_file, "name", "uploaded-file"),
+                exc,
+            )
+
+        return self._fallback_detect_document_type(raw_text, structured)
+
+    def _fallback_detect_document_type(self, raw_text: str, structured: Optional[dict]) -> str:
+        try:
+            from core.services.classification.document_classifier import DocumentClassifier
+
+            result = DocumentClassifier().classify(
+                raw_text=raw_text,
+                structured=structured or {},
+                use_ai=False,
+            )
+            return self._normalise_document_type(result.get("document_type"))
+        except Exception as exc:
+            logger.warning("[UploadRouter] Fallback document classification failed: %s", exc)
+            return "other"
+
+    def _extract_detection_input(self, uploaded_file) -> tuple[str, dict]:
+        temp_path = None
+        try:
+            if hasattr(uploaded_file, "seek"):
+                uploaded_file.seek(0)
+
+            suffix = Path(getattr(uploaded_file, "name", "upload")).suffix or ".bin"
+            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temp_file:
+                if hasattr(uploaded_file, "chunks"):
+                    for chunk in uploaded_file.chunks():
+                        temp_file.write(chunk)
+                else:
+                    temp_file.write(uploaded_file.read())
+                temp_path = temp_file.name
+
+            from core.services.document_engine import DocumentEngine
+
+            ingestion = DocumentEngine(use_ai=False).ingest(temp_path, use_ai=False)
+            raw_text = (getattr(ingestion, "raw_text", "") or "").strip()
+            structured = (
+                getattr(ingestion, "structured", None)
+                or getattr(ingestion, "normalized", None)
+                or {}
+            )
+            return raw_text, structured
+        except Exception as exc:
+            logger.warning(
+                "[UploadRouter] Could not prepare auto-detect input for %s: %s",
+                getattr(uploaded_file, "name", "uploaded-file"),
+                exc,
+            )
+            return "", {}
+        finally:
+            try:
+                if hasattr(uploaded_file, "seek"):
+                    uploaded_file.seek(0)
+            except Exception:
+                pass
+
+            if temp_path:
+                try:
+                    os.remove(temp_path)
+                except OSError:
+                    pass
+
+    @staticmethod
+    def _structured_to_text(structured: Optional[dict]) -> str:
+        if not structured:
+            return ""
+
+        try:
+            return json.dumps(structured, ensure_ascii=False, default=str)
+        except TypeError:
+            return " ".join(
+                str(value)
+                for value in structured.values()
+                if value not in (None, "", [], {})
+            )
 
     def _route_invoice(self, uploaded_file, user, language, organization) -> UploadRouterResult:
         """

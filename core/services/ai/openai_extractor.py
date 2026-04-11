@@ -83,6 +83,17 @@ Return ONLY this JSON structure:
 MAX_RETRIES = 3
 BASE_RETRY_DELAY = 2   # seconds
 
+DEFAULT_CLASSIFICATION_TYPES = [
+    "invoice",
+    "purchase_order",
+    "bank_statement",
+    "receipt",
+    "expense_report",
+    "payroll",
+    "vat_return",
+    "other",
+]
+
 
 # ── Client factory ────────────────────────────────────────────────────────────
 
@@ -258,7 +269,11 @@ def extract_with_vision(image_path: str, document_type: str = None) -> dict:
     return result
 
 
-def classify_document(raw_text: str) -> dict:
+def classify_document(
+    raw_text: str,
+    allowed_types: Optional[list[str]] = None,
+    aliases: Optional[dict[str, str]] = None,
+) -> dict:
     """
     Classify a document type from raw text.
 
@@ -268,14 +283,38 @@ def classify_document(raw_text: str) -> dict:
     if not raw_text:
         return {"document_type": "other", "confidence": 0.0}
 
+    canonical_types: list[str] = []
+    for document_type in allowed_types or DEFAULT_CLASSIFICATION_TYPES:
+        normalized_type = str(document_type or "").strip().lower()
+        if normalized_type and normalized_type not in canonical_types:
+            canonical_types.append(normalized_type)
+    if "other" not in canonical_types:
+        canonical_types.append("other")
+
+    normalized_aliases = {
+        str(source).strip().lower(): str(target).strip().lower()
+        for source, target in (aliases or {}).items()
+        if source and target
+    }
+    alias_instructions = ""
+    if normalized_aliases:
+        alias_lines = "\n".join(
+            f"- {source} -> {target}"
+            for source, target in sorted(normalized_aliases.items())
+        )
+        alias_instructions = (
+            "\nNormalise synonyms and near-matches to these canonical types:\n"
+            f"{alias_lines}\n"
+        )
+
     messages = [
         {
             "role": "system",
             "content": (
                 "You are a financial document classifier. "
                 "Classify the document type from the text provided.\n"
-                "Possible types: invoice, purchase_order, bank_statement, "
-                "receipt, expense_report, payroll, vat_return, other.\n"
+                f"Possible types: {', '.join(canonical_types)}."
+                f"{alias_instructions}"
                 'Return JSON: {"document_type": "...", "confidence": 0.0-1.0, '
                 '"classification_reason": "..."}'
             ),
@@ -286,8 +325,13 @@ def classify_document(raw_text: str) -> dict:
     raw = _chat_with_retry(messages, json_mode=True)
     result = _parse_json_response(raw)
 
+    detected_type = str(result.get("document_type", "other") or "other").strip().lower()
+    detected_type = normalized_aliases.get(detected_type, detected_type)
+    if detected_type not in canonical_types:
+        detected_type = "other"
+
     return {
-        "document_type": result.get("document_type", "other"),
+        "document_type": detected_type,
         "confidence": float(result.get("confidence", 0.0)),
         "reason": result.get("classification_reason", ""),
     }

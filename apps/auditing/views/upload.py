@@ -10,7 +10,6 @@ from django.shortcuts import redirect, render
 from django.views import View
 
 from ..forms import AuditDocumentUploadForm
-from ..models import AuditDocument
 from ..repositories.document_repository import DocumentRepository
 from ..selectors.document_selector import DocumentSelector
 # Routed through V2 pipeline via compatibility adapter (Prompt 1.3 migration).
@@ -49,7 +48,10 @@ class AuditDocumentUploadView(LoginRequiredMixin, View):
             return render(request, self.template_name, {"form": form, "recent": recent})
 
         uploaded_files = form.cleaned_data["file"]  # Now a list of files
-        selected_type = form.cleaned_data.get("selected_doc_type") or AuditDocument.DocumentType.OTHER
+        selected_type = (
+            form.cleaned_data.get("selected_doc_type")
+            or DocumentUploadRouter.AUTO_DETECT_TYPE
+        )
         language = form.cleaned_data.get("doc_language") or "auto"
 
         router = DocumentUploadRouter()

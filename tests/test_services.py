@@ -20,6 +20,7 @@ from apps.audit.audit_engine import AuditEngine
 from core.services.parsers.pdf_parser import PDFParser
 from core.utils.file_validation import validate_uploaded_file, ValidationError
 from core.services.upload_router import DocumentUploadRouter, UploadRouterResult
+from core.services.ai.openai_extractor import classify_document
 
 
 def _make_ingestion_result(raw_text: str = "") -> IngestionResult:
@@ -431,6 +432,82 @@ class TestDocumentUploadRouter:
         mock_fallback.assert_called_once()
         assert result.pipeline == "document_fallback"
 
+    def test_route_auto_detects_invoice_via_openai(self):
+        router = DocumentUploadRouter()
+        file_obj = Mock()
+        file_obj.name = "inv.pdf"
+        user = Mock()
+        user.organization = Mock()
+
+        invoice_result = UploadRouterResult(
+            success=True,
+            pipeline="invoice",
+            object_id="inv-1",
+            result_url="/invoices/inv-1/",
+        )
+        with patch.object(router, "_detect_document_type", return_value="invoice") as mock_detect, \
+             patch.object(router, "_route_invoice", return_value=invoice_result) as mock_route_invoice:
+            result = router.route(
+                uploaded_file=file_obj,
+                document_type="auto",
+                user=user,
+                language="auto",
+                organization=user.organization,
+            )
+
+        mock_detect.assert_called_once_with(file_obj)
+        mock_route_invoice.assert_called_once_with(file_obj, user, "auto", user.organization)
+        assert result.pipeline == "invoice"
+
+    def test_detect_document_type_maps_receipt_alias_to_sales_receipt(self):
+        router = DocumentUploadRouter()
+        file_obj = Mock()
+        file_obj.name = "receipt.pdf"
+
+        with patch.object(router, "_extract_detection_input", return_value=("Retail receipt", {})), \
+             patch("core.services.ai.openai_extractor.classify_document", return_value={"document_type": "receipt", "confidence": 0.91}) as mock_classify:
+            detected_type = router._detect_document_type(file_obj)
+
+        assert detected_type == "sales_receipt"
+        assert "sales_receipt" in mock_classify.call_args.kwargs["allowed_types"]
+        assert mock_classify.call_args.kwargs["aliases"]["receipt"] == "sales_receipt"
+
+    def test_detect_document_type_maps_vat_return_alias_to_tax_declaration(self):
+        router = DocumentUploadRouter()
+        file_obj = Mock()
+        file_obj.name = "vat.pdf"
+
+        with patch.object(router, "_extract_detection_input", return_value=("VAT return", {})), \
+             patch("core.services.ai.openai_extractor.classify_document", return_value={"document_type": "vat_return", "confidence": 0.84}):
+            detected_type = router._detect_document_type(file_obj)
+
+        assert detected_type == "tax_declaration"
+
+    def test_route_other_uses_fallback_pipeline_even_with_org(self):
+        router = DocumentUploadRouter()
+        file_obj = Mock()
+        file_obj.name = "mystery.pdf"
+        user = Mock()
+        user.organization = Mock()
+
+        fallback_result = UploadRouterResult(
+            success=True,
+            pipeline="document_fallback",
+            object_id="fb-2",
+            result_url="/auditor/result/fb-2/",
+        )
+        with patch.object(router, "_route_document_fallback", return_value=fallback_result) as mock_fallback:
+            result = router.route(
+                uploaded_file=file_obj,
+                document_type="other",
+                user=user,
+                language="auto",
+                organization=user.organization,
+            )
+
+        mock_fallback.assert_called_once_with(file_obj, "other", user, "auto")
+        assert result.pipeline == "document_fallback"
+
     def test_route_document_success_builds_detail_url(self):
         router = DocumentUploadRouter()
         file_obj = Mock()
@@ -458,6 +535,21 @@ class TestDocumentUploadRouter:
         assert result.success is False
         assert result.pipeline == "document"
         assert result.result_url == "/documents/bank-statements/"
+
+    def test_classify_document_normalises_aliases_to_allowed_types(self):
+        with patch("core.services.ai.openai_extractor._chat_with_retry", return_value=json.dumps({
+            "document_type": "receipt",
+            "confidence": 0.88,
+            "classification_reason": "Retail sale summary",
+        })):
+            result = classify_document(
+                "Retail receipt text",
+                allowed_types=["sales_receipt", "other"],
+                aliases={"receipt": "sales_receipt"},
+            )
+
+        assert result["document_type"] == "sales_receipt"
+        assert result["confidence"] == pytest.approx(0.88)
 
 
 # ─── Performance Tests ──────────────────────────────────────────────────────

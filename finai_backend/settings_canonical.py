@@ -35,9 +35,9 @@ try:
 except ImportError:
     pass  # Sentry not installed, error tracking disabled
 
-PRODUCT_NAME = "Tadgeeg AI"
+PRODUCT_NAME = "Tadgeeg"
 COMPANY_NAME = "Get Solution Company"
-COMPANY_NAME_AR = "شركة Get Solution"
+COMPANY_NAME_AR = "شركة احصل الحل"
 PRODUCT_TAGLINE_AR = "منصة الذكاء الاصطناعي للتدقيق المالي والامتثال"
 PRODUCT_TAGLINE_EN = "AI platform for financial auditing and compliance"
 PRODUCT_DESCRIPTION_AR = "منصة الذكاء الاصطناعي الرائدة للتدقيق المالي والامتثال"

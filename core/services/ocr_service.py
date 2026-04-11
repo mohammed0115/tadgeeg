@@ -368,7 +368,8 @@ For an invoice, extract:
   "vendor_trn": "",
   "zatca_compliant": false,
   "notes": ""
-}""",
+}
+
 IMPORTANT: If you see a QR code anywhere on the invoice image, set qr_code_detected to true and extract the base64 TLV string into zatca_qr_string. Also extract the 15-digit Saudi TRN into vendor_trn.""",
         "receipt": base + """
 For a receipt, extract:

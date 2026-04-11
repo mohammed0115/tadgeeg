@@ -1,6 +1,7 @@
 .env
 .env.*
 !.env.example
+!.env.development.example
 .secret.env
 deployment/docker/env/*.env
 !deployment/docker/env/*.env.example

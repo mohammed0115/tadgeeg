@@ -140,7 +140,7 @@ def forward(apps, schema_editor):
 
         offset += BATCH_SIZE
 
-    print(f"[0006_backfill] Backfilled {total} AuditCase records → AuditRun + AuditResult")
+    print(f"[0006_backfill] Backfilled {total} AuditCase records -> AuditRun + AuditResult")
 
 
 def backward(apps, schema_editor):

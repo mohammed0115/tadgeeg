@@ -1,18 +1,9 @@
+"""Settings package entry point.
+
+`DJANGO_SETTINGS_MODULE=finai_backend.settings` is documented throughout the
+project and should behave like the canonical settings module. Re-export the
+base settings here so the package import stays backward compatible while the
+environment-specific modules remain available.
 """
-finai_backend/settings/__init__.py
-====================================
-Settings package entry point.
 
-This package provides environment-specific settings modules that layer
-on top of the canonical settings.py file in the parent directory.
-
-Usage:
-  DJANGO_SETTINGS_MODULE=finai_backend.settings           → uses canonical settings.py (backward-compat)
-  DJANGO_SETTINGS_MODULE=finai_backend.settings.base      → base shared settings
-  DJANGO_SETTINGS_MODULE=finai_backend.settings.production → production overrides
-  DJANGO_SETTINGS_MODULE=finai_backend.settings.test       → test overrides
-
-The canonical finai_backend/settings.py is still the primary settings file
-and remains fully functional. This package adds an overlay layer for
-environments that need explicit separation.
-"""
+from .base import *  # noqa: F401,F403

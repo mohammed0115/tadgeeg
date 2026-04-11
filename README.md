@@ -65,8 +65,10 @@ FinAI automates financial document auditing for Saudi Arabia and GCC businesses.
 ### 1. Configure environment
 
 ```bash
-cp .env.example .env
+cp .env.development.example .env
 ```
+
+For Docker or production-style deployments, keep using `.env.example` as the base.
 
 Edit `.env` and set at minimum:
 

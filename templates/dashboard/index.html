@@ -194,7 +194,15 @@
         </div>
 
         <div class="mt-5 space-y-3">
-          <template x-for="(alert, index) in alerts" :key="alert.title + '-' + index">
+          <!-- F-24: empty state message when no real alerts -->
+        <div x-show="alerts.length === 1 && alerts[0].type === 'success'"
+             class="flex flex-col items-center gap-2 py-4 text-center">
+          <i data-lucide="shield-check" class="h-8 w-8 text-green-300"></i>
+          <p class="text-sm font-medium text-slate-500">{% trans "No alerts at this time" %}</p>
+          <p class="text-xs text-slate-400">{% trans "All audit checks are passing normally" %}</p>
+        </div>
+        <template x-show="!(alerts.length === 1 && alerts[0].type === 'success')"
+                  x-for="(alert, index) in alerts" :key="alert.title + '-' + index">
             <div class="dashboard-alert-item transition-all" 
                  :class="[
                    alertClass(alert.type),
@@ -286,7 +294,14 @@
         </div>
 
         <div class="relative mt-6 h-[360px] lg:h-[420px]">
-          <canvas id="cashFlowChart" x-show="!loadingChart"></canvas>
+          <canvas id="cashFlowChart" x-show="!loadingChart && cashTrend.length > 0"></canvas>
+          <!-- F-23: empty state when no data -->
+          <div x-show="!loadingChart && cashTrend.length === 0"
+               class="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50">
+            <i data-lucide="bar-chart-2" class="h-8 w-8 text-slate-300"></i>
+            <p class="text-sm font-medium text-slate-400">{% trans "No cash flow data available yet" %}</p>
+            <a href="{% url 'frontend:upload' %}" class="mt-1 text-xs text-blue-500 hover:underline">{% trans "Upload invoices to see monthly trends" %}</a>
+          </div>
           <!-- Skeleton placeholder while chart loads -->
           <div x-show="loadingChart" class="absolute inset-0 rounded-3xl bg-gradient-to-b from-slate-100 to-slate-50 p-6">
             <div class="flex flex-col gap-4 h-full justify-center">
@@ -549,10 +564,23 @@
             </div>
           </template>
         </div>
+
+        <!-- F-25: contextual guidance when Big Four shows 0% / non-compliant -->
+        <div x-show="bigFourFirms.length > 0 && bigFourOverall === 0"
+             class="mt-5 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <i data-lucide="info" class="mt-0.5 h-4 w-4 shrink-0 text-amber-500"></i>
+          <div>
+            <p class="font-semibold">{% trans "Big Four compliance requires invoice data" %}</p>
+            <p class="mt-0.5 text-xs leading-5">
+              {% trans "Upload at least one validated invoice to calculate compliance rates against KPMG, Deloitte, PwC, and EY methodologies." %}
+              <a href="{% url 'frontend:upload' %}" class="ml-1 font-bold underline hover:text-amber-900">{% trans "Upload now →" %}</a>
+            </p>
+          </div>
+        </div>
       </div>
 
       {# Industry Benchmark Panel #}
-      <div class="dashboard-surface p-6" x-show="benchmarkMetrics.length">
+      <div class="dashboard-surface p-6" x-show="benchmarkMetrics.length && stats.total_invoices > 0">
         <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div class="text-right">
             <h2 class="text-2xl font-bold text-slate-900">{% trans "Industry Benchmark" %}</h2>
@@ -642,6 +670,7 @@ function dashboard() {
       below: '{% trans "Below" %}',
       equal: '{% trans "Equal" %}',
       noCriticalAlerts: '{% trans "No critical alerts" %}',
+      noBaselineData: '{% trans "No baseline data yet" %}',
       auditStable: '{% trans "Audit and compliance are currently operating normally." %}',
       cashFlowTotal: '{% trans "Total flow" %}',
       noExecutiveSummary: '{% trans "No recent audit sessions are available for an executive summary." %}',
@@ -705,6 +734,9 @@ function dashboard() {
     },
 
     get growthDescription() {
+      // F-03 fix: never show growth % when there are no invoices as baseline
+      const total = Number(this.stats.total_invoices || 0);
+      if (total === 0) return this.i18n.noBaselineData || 'No baseline data';
       return `${this.growthPillText} ${this.i18n.thisMonth}`;
     },
 
@@ -750,7 +782,16 @@ function dashboard() {
     },
 
     formatSar(value) {
-      return `${document.documentElement.lang === 'ar' ? 'ر.س' : 'SAR'} ${Number(value || 0).toLocaleString(window.APP_LOCALE || document.documentElement.lang || 'en-US', { maximumFractionDigits: 1 })}`;
+      // F-22 fix: use org currency if set, fallback to SAR
+      const currency = (window.ORG_CURRENCY || 'SAR').trim();
+      const displayCurrency = document.documentElement.lang === 'ar' && currency === 'SAR' ? 'ر.س' : currency;
+      const formatted = Number(value || 0).toLocaleString(
+        window.APP_LOCALE || document.documentElement.lang || 'en-US',
+        { maximumFractionDigits: 1 }
+      );
+      // F-22 fix: show em-dash instead of "0" when no data loaded yet
+      if (Number(value || 0) === 0 && this.stats.total_invoices === 0) return '—';
+      return `${displayCurrency} ${formatted}`;
     },
 
     formatAmount(value, currency) {
@@ -843,12 +884,22 @@ function dashboard() {
       this.initRuleGroups();
       Promise.all([this.loadSpendReport(), this.loadReviewQueues(), this.loadAuditOverview()])
         .finally(() => this.$nextTick(() => lucide.createIcons()));
+      // F-16 fix: poll every 30s so metrics stay current without manual refresh
+      this._pollInterval = setInterval(() => {
+        this.loadSpendReport();
+        this.loadReviewQueues();
+      }, 30000);
+    },
+
+    destroy() {
+      if (this._pollInterval) clearInterval(this._pollInterval);
     },
 
     updateDerivedMetrics() {
       const total = Number(this.stats.total_invoices || 0);
       const flagged = Number(this.stats.flagged || 0);
-      this.stats.compliance_rate = total ? Math.max(0, ((total - flagged) / total) * 100) : 100;
+      // F-02 fix: when no invoices exist compliance is 0 (unknown), not 100
+      this.stats.compliance_rate = total > 0 ? Math.max(0, ((total - flagged) / total) * 100) : 0;
       this.buildAlerts();
     },
 
@@ -943,14 +994,18 @@ function dashboard() {
     },
 
     computeMonthlyGrowth(trend) {
+      // F-03 fix: only compute growth when both current and previous have real data
       if (trend.length >= 2) {
         const previous = Number(trend[trend.length - 2].total || 0);
         const current = Number(trend[trend.length - 1].total || 0);
-        if (previous > 0) {
+        if (previous > 0 && current > 0) {
           return ((current - previous) / previous) * 100;
         }
+        if (previous === 0 && current === 0) return 0;
       }
-      return Number(this.growthOverride || 0);
+      // Only fall back to override when we have actual invoice data
+      const total = Number(this.stats.total_invoices || 0);
+      return total > 0 ? Number(this.growthOverride || 0) : 0;
     },
 
     buildAlerts() {

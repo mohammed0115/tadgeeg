@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% block title %}{% trans "Audit Report" %} — {{ document.original_name }}{% endblock %}
+{% block title %}{% trans "Audit Report" %} — {{ document.original_name|default:_("Unnamed Document") }}{% endblock %}
 {% block page_title %}{% trans "Financial Audit Report" %}{% endblock %}
 {% block nav_ai_auditor %}active{% endblock %}
 
@@ -31,7 +31,7 @@
       </a>
     </div>
     <div class="text-sm text-slate-500 text-right">
-      <span class="font-semibold text-slate-700">{{ document.original_name }}</span>
+      <span class="font-semibold text-slate-700">{{ document.original_name|default:_("Unnamed Document") }}</span>
       <span class="mx-1">·</span>
       <span>{{ document.created_at|date:"Y/m/d H:i" }}</span>
     </div>
@@ -45,7 +45,7 @@
           <i data-lucide="file-text" class="h-6 w-6"></i>
         </div>
         <div>
-          <p class="text-base font-bold text-slate-800">{{ document.original_name }}</p>
+          <p class="text-base font-bold text-slate-800">{{ document.original_name|default:_("Unnamed Document") }}</p>
           <p class="text-xs text-slate-500 mt-0.5">
             {% trans "Detected Type:" %}
             <span class="font-semibold text-slate-700">{{ document.doc_type_display }}</span>

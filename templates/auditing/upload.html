@@ -5,6 +5,16 @@
 {% block nav_ai_auditor %}active{% endblock %}
 
 {% block content %}
+{% if upload_attempted and not form.errors and not error %}
+<div x-data="{show:true}" x-show="show" x-init="setTimeout(()=>show=false,5000)"
+     class="mb-4 flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800 shadow-sm">
+  <i data-lucide="check-circle-2" class="h-4 w-4 shrink-0 text-green-600"></i>
+  <span>{% trans "Files uploaded successfully — analysis is in progress." %}</span>
+  <button @click="show=false" class="ml-auto text-green-500 hover:text-green-700">
+    <i data-lucide="x" class="h-4 w-4"></i>
+  </button>
+</div>
+{% endif %}
 <div
   class="max-w-4xl mx-auto space-y-6"
   dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}"
@@ -66,9 +76,31 @@
         return;
       }
       this.submitting = true;
+      this.uploadStage = 'uploading';
+      // F-14/F-15 fix: safety timeout — reset after 90s to prevent permanent stuck state
+      this._submitTimeout = setTimeout(() => {
+        this.submitting = false;
+        this.uploadStage = '';
+        this.error = '{% trans "The request is taking too long. Please check your connection and try again." %}';
+      }, 90000);
+    },
+
+    uploadStage: '',   // 'uploading' | 'processing' | ''
+
+    get uploadStageLabel() {
+      if (this.uploadStage === 'uploading') return '{% trans "Uploading..." %}';
+      if (this.uploadStage === 'processing') return '{% trans "Analyzing..." %}';
+      return '{% trans "Start Audit" %}';
     }
   }"
-  x-init="$nextTick(() => lucide.createIcons())"
+  x-init="
+    $nextTick(() => lucide.createIcons());
+    // F-14/F-15 fix: if server returned errors on the same page, reset submitting
+    {% if upload_attempted or form.errors %}
+    submitting = false;
+    uploadStage = '';
+    {% endif %}
+  "
 >
 
   <!-- ═══ Hero Banner ═══ -->
@@ -276,7 +308,7 @@
       <div class="space-y-2">
         <label class="block text-sm font-bold text-slate-700">{% trans "Document Language" %}</label>
         <select
-          name="language"
+          name="doc_language"
           class="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
         >
           <option value="auto">🌐 {% trans "Auto Detect" %}</option>
@@ -320,7 +352,7 @@
               <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
             </svg>
           </template>
-          <span x-text="submitting ? '{% trans 'Analyzing...' %}' : '{% trans 'Start Audit' %}'"></span>
+          <span x-text="submitting ? uploadStageLabel : '{% trans "Start Audit" %}'"></span>
         </button>
       </div>
     </div>

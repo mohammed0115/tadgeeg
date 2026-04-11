@@ -364,9 +364,12 @@ For an invoice, extract:
   "total_amount": 0,
   "payment_terms": "",
   "qr_code_detected": false,
+  "zatca_qr_string": "",
+  "vendor_trn": "",
   "zatca_compliant": false,
   "notes": ""
 }""",
+IMPORTANT: If you see a QR code anywhere on the invoice image, set qr_code_detected to true and extract the base64 TLV string into zatca_qr_string. Also extract the 15-digit Saudi TRN into vendor_trn.""",
         "receipt": base + """
 For a receipt, extract:
 {
@@ -519,9 +522,29 @@ def _basic_parse(text: str, document_type: str) -> dict:
     if inv_match:
         result["reference_number"] = inv_match.group(1)
 
-    # VAT number (Saudi format: 15 digits)
+    # TRN / VAT number (Saudi ZATCA format: 15 digits starting and ending with 3)
+    # Pattern 1: strict format 3XXXXXXXXXXXXX3
     vat_match = re.search(r"\b3\d{13}3\b", text)
     if vat_match:
         result["vat_number"] = vat_match.group(0)
+    else:
+        # Pattern 2: labeled TRN — handles "TRN:", "VAT No:", "الرقم الضريبي:", etc.
+        labeled = re.search(
+            r"(?:TRN|VAT\s*(?:No|Number|Reg(?:istration)?)?|"
+            r"Tax\s*Registration\s*(?:No|Number)?|"
+            r"الرقم\s*الضريبي|رقم\s*التسجيل\s*الضريبي)"
+            r"[:\s#\-]*([0-9]{10,15})",
+            text, re.IGNORECASE
+        )
+        if labeled:
+            candidate = labeled.group(1).strip()
+            # Accept 10-digit (ZATCA simplified) or 15-digit
+            if len(candidate) in (10, 15):
+                result["vat_number"] = candidate
+        else:
+            # Pattern 3: any standalone 15-digit number (last resort)
+            fallback = re.search(r"(?<![\d])([0-9]{15})(?![\d])", text)
+            if fallback:
+                result["vat_number"] = fallback.group(1)
 
     return result

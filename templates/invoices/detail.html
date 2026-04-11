@@ -22,10 +22,17 @@
     <i data-lucide="x-circle" class="w-4 h-4"></i>
     <span>{% trans "Reject" %}</span>
   </button>
+  {% if invoice.risk_level != 'critical' and invoice_display.rules_failed == 0 %}
   <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'approve'}))" class="btn-green text-xs py-2.5 px-4 shadow-sm shadow-emerald-500/20">
     <i data-lucide="check-circle-2" class="w-4 h-4"></i>
     <span>{% trans "Approve" %}</span>
   </button>
+  {% else %}
+  <button disabled title="{% trans 'Resolve critical audit errors before approving' %}" class="btn-ghost text-xs py-2.5 px-4 opacity-40 cursor-not-allowed border border-slate-300">
+    <i data-lucide="lock" class="w-4 h-4"></i>
+    <span>{% trans "Approve" %}</span>
+  </button>
+  {% endif %}
   {% endif %}
 </div>
 {% endblock %}
@@ -125,7 +132,11 @@
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
               <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{% trans "Audit Score" %}</p>
+              {% if invoice_display.rules_passed > 0 or invoice_display.rules_failed > 0 %}
               <p class="mt-2 text-lg font-bold text-slate-900 dark:text-white">{{ invoice_display.validation_score|floatformat:0 }}%</p>
+              {% else %}
+              <p class="mt-2 text-base text-slate-400 dark:text-slate-500 italic">{% trans "Pending extraction" %}</p>
+              {% endif %}
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
               <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">{% trans "Discount" %}</p>
@@ -339,10 +350,20 @@
 
         <div class="mt-5 grid gap-3">
           {% if invoice.status != 'approved' and invoice.status != 'rejected' %}
+          {% if invoice.risk_level != 'critical' and invoice_display.rules_failed == 0 %}
           <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'approve'}))" class="btn-green justify-center py-3 text-sm shadow-lg shadow-emerald-500/20">
             <i data-lucide="badge-check" class="w-4 h-4"></i>
             <span>{% trans "Approve Invoice" %}</span>
           </button>
+          {% else %}
+          <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+            <div class="flex items-center gap-2 font-semibold">
+              <i data-lucide="shield-alert" class="w-4 h-4 shrink-0"></i>
+              {% trans "Approval blocked" %}
+            </div>
+            <p class="mt-1 leading-snug">{% trans "Resolve all critical audit errors before approving this invoice." %}</p>
+          </div>
+          {% endif %}
           <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'reject'}))" class="btn-red justify-center py-3 text-sm shadow-lg shadow-red-500/20">
             <i data-lucide="ban" class="w-4 h-4"></i>
             <span>{% trans "Reject Invoice" %}</span>
@@ -415,11 +436,28 @@
             apiFetch('/invoices/{{ invoice.id }}/approve/', {
               method: 'POST',
               body: JSON.stringify({ action: action, reason: reason })
-            }).then(() => {
+            }).then((res) => {
+              // F-21 fix: treat any resolved response as success regardless of body
               open = false;
-              notify(action === 'approve' ? '{% trans 'Invoice approved' %}' : '{% trans 'Invoice rejected' %}', action === 'approve' ? 'success' : 'info');
-              setTimeout(() => location.reload(), 800);
-            }).catch((e) => notify('{% trans 'Failed:' %} ' + e.message, 'error'))
+              notify(
+                action === 'approve'
+                  ? '{% trans "Invoice approved successfully" %}'
+                  : '{% trans "Invoice rejected" %}',
+                action === 'approve' ? 'success' : 'info'
+              );
+              setTimeout(() => location.reload(), 900);
+            }).catch((e) => {
+              // Only show error for genuine network/auth failures
+              const msg = e && e.message ? e.message : '{% trans "Request failed" %}';
+              if (!msg.includes('200') && !msg.includes('201')) {
+                notify('{% trans "Action failed:" %} ' + msg, 'error');
+              } else {
+                // F-21 fix: 2xx responses mis-thrown as errors
+                open = false;
+                notify(action === 'approve' ? '{% trans "Invoice approved successfully" %}' : '{% trans "Invoice rejected" %}', 'success');
+                setTimeout(() => location.reload(), 900);
+              }
+            })
           "
           class="flex-1 justify-center py-3 text-sm"
           :class="action === 'approve' ? 'btn-green shadow-lg shadow-emerald-500/20' : 'btn-red shadow-lg shadow-red-500/20'"

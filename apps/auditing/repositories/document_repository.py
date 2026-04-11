@@ -10,10 +10,12 @@ logger = logging.getLogger(__name__)
 class DocumentRepository:
     @staticmethod
     def create(*, uploaded_by, file, original_name, selected_doc_type, language) -> AuditDocument:
+        # Guard against None/empty name that would render as "- null" in templates
+        safe_name = (original_name or "").strip() or "Unnamed Document"
         return AuditDocument.objects.create(
             uploaded_by=uploaded_by,
             file=file,
-            original_name=original_name,
+            original_name=safe_name,
             selected_doc_type=selected_doc_type,
             language=language,
         )

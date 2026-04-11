@@ -120,8 +120,18 @@ class DuplicateDetector:
 
     def _check_exact_number(self, doc: dict) -> tuple[float, list, str]:
         """Exact match on document_number + normalised vendor_name."""
-        doc_number = self._normalise_doc_number(doc.get("document_number", ""))
-        vendor = self._normalise_vendor(doc.get("vendor_name", ""))
+        # F-11 fix: support both "document_number" (canonical) and
+        # "invoice_number" / "reference_number" (pipeline variants)
+        raw_num = (
+            doc.get("document_number")
+            or doc.get("invoice_number")
+            or doc.get("reference_number")
+            or ""
+        )
+        doc_number = self._normalise_doc_number(raw_num)
+        vendor = self._normalise_vendor(
+            doc.get("vendor_name") or doc.get("counterparty_name") or ""
+        )
 
         if not doc_number or not vendor:
             return 0.0, [], ""
@@ -154,7 +164,13 @@ class DuplicateDetector:
 
     def _check_fuzzy_number(self, doc: dict) -> tuple[float, list, str]:
         """Fuzzy match on document number (catches typos)."""
-        doc_number = self._normalise_doc_number(doc.get("document_number", ""))
+        raw_num = (
+            doc.get("document_number")
+            or doc.get("invoice_number")
+            or doc.get("reference_number")
+            or ""
+        )
+        doc_number = self._normalise_doc_number(raw_num)
         if not doc_number or len(doc_number) < 3:
             return 0.0, [], ""
 

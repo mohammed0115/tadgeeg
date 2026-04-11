@@ -67,7 +67,9 @@ class AuditDocumentUploadForm(forms.Form):
         required=False,
         label="Document Type",
     )
-    language = forms.ChoiceField(
+    # F-12/13 fix: renamed from "language" to "doc_language" to avoid
+    # collision with Django's built-in language session key handling
+    doc_language = forms.ChoiceField(
         choices=[
             ("auto", "Auto"),
             ("ar", "Arabic"),
@@ -76,7 +78,7 @@ class AuditDocumentUploadForm(forms.Form):
         ],
         required=False,
         initial="auto",
-        label="Language",
+        label="Document Language",
     )
 
     def clean(self):

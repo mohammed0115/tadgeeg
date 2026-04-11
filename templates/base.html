@@ -517,7 +517,13 @@ window.tailwind.refresh?.();
           {% if request.user.is_authenticated %}{{ request.user.email|first|upper }}{% else %}?{% endif %}
         </div>
         <span x-show="sidebarOpen" class="whitespace-nowrap text-xs truncate max-w-[140px]">
-          {% if request.user.is_authenticated %}{{ request.user.email|truncatechars:22 }}{% endif %}
+          {% if request.user.is_authenticated %}
+          <span
+            title="{{ request.user.email }}"
+            class="block max-w-[11rem] overflow-hidden text-ellipsis whitespace-nowrap"
+            style="direction:ltr;text-align:left;"
+          >{{ request.user.email }}</span>
+          {% endif %}
         </span>
       </a>
     </div>
@@ -569,10 +575,32 @@ function shell() {
     mobileNavOpen: false,
     isDesktop: window.innerWidth >= 1024,
     isRtl: document.documentElement.dir === 'rtl',
+
+  // F-20 fix: JS-based sidebar highlight fallback based on current URL path
+  _syncSidebarActive() {
+    const path = window.location.pathname;
+    const map = [
+      { pattern: /^\/dashboard/, block: 'nav_dashboard' },
+      { pattern: /^\/auditor\/upload|^\/documents\/upload/, block: 'nav_upload' },
+      { pattern: /^\/invoices/, block: 'nav_invoices' },
+      { pattern: /^\/batches/, block: 'nav_batches' },
+      { pattern: /^\/reports/, block: 'nav_reports' },
+      { pattern: /^\/compliance/, block: 'nav_compliance' },
+      { pattern: /^\/auditor\/history/, block: 'nav_history' },
+      { pattern: /^\/documents/, block: 'nav_documents' },
+      { pattern: /^\/settings/, block: 'nav_settings' },
+    ];
+    map.forEach(({ pattern, block }) => {
+      document.querySelectorAll(`.nav-item[data-nav="${block}"]`).forEach(el => {
+        if (pattern.test(path)) el.classList.add('active');
+      });
+    });
+  },
     get sidebarOpen() {
       return this.isDesktop ? this.desktopSidebarOpen : true;
     },
     init() {
+      this._syncSidebarActive();
       this.handleResize();
       window.addEventListener('resize', () => this.handleResize());
     },

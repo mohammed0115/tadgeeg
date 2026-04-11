@@ -213,6 +213,11 @@ LOCALE_PATHS = [BASE_DIR / "locale"]
 TIME_ZONE = "Asia/Riyadh"
 USE_I18N = True
 USE_TZ = True
+# F-12/13 fix: persist user language choice across requests (including POSTs)
+LANGUAGE_COOKIE_NAME = "tadgeeg_language"
+LANGUAGE_COOKIE_AGE = 60 * 60 * 24 * 365  # 1 year
+LANGUAGE_COOKIE_HTTPONLY = False           # JS needs to read it for dynamic UI
+LANGUAGE_COOKIE_SAMESITE = "Lax"
 
 # ─── Static / Media ───────────────────────────────────────────────────────────
 STATIC_URL = "/static/"

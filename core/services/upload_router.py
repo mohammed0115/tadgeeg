@@ -151,6 +151,9 @@ class DocumentUploadRouter:
         Returns:
             UploadRouterResult with object_id and result_url for redirect
         """
+        # Phase 1: EngineRouter delegates back to existing pipelines.
+        # Phase 2: EngineRouter will own the routing decision directly.
+        # No functional change is introduced here in Phase 1.
         resolved_type = self._resolve_document_type(uploaded_file, document_type)
 
         if resolved_type in self.INVOICE_TYPES:

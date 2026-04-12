@@ -115,6 +115,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "apps.authentication",
+    "apps.core_engine",
     "apps.documents",
     "apps.transactions",
     "apps.audit",

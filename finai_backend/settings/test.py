@@ -15,6 +15,14 @@ from finai_backend.settings.base import *  # noqa: F401, F403
 # ── Core ──────────────────────────────────────────────────────────────────────
 DEBUG = False  # Tests should behave like production
 SECRET_KEY = "test-secret-key-not-for-production-use"  # noqa: S105
+SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+globals().pop("STATICFILES_STORAGE", None)
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+}
 
 # ── Database — use in-memory SQLite for speed unless CI sets a real DB ────────
 import os

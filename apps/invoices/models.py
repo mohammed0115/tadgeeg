@@ -477,6 +477,7 @@ class InvoiceAuditEvent(models.Model):
         COMMENTED  = "commented",  "Comment Added"
         EXPORTED   = "exported",   "Exported"
         REPROCESSED = "reprocessed", "Re-processed"
+        DELETED     = "deleted",     "Deleted (Soft)"
 
     id         = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     invoice    = models.ForeignKey(Invoice, on_delete=models.CASCADE, related_name="audit_events")

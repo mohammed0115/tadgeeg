@@ -49,6 +49,7 @@ from core.services.validation_pipeline import ValidationPipelineService
 from core.services.zip_validator import validate_zip_bomb, ZipValidationError
 from core.utils.audit import log_action, record_invoice_event
 from apps.authentication.models import AuditLog
+from apps.rule_engine.models import RiskScoreSummary
 
 from .models import (
     Invoice, InvoiceAuditEvent, InvoiceBatch, InvoiceValidationResult, VendorProfile
@@ -499,7 +500,7 @@ class InvoiceListView(generics.ListAPIView):
         return qs.order_by("-created_at")
 
 
-class InvoiceDetailView(mixins.DestroyModelMixin, generics.RetrieveUpdateAPIView):
+class InvoiceDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = InvoiceDetailSerializer
     permission_classes = [IsAuthenticated, IsOwnOrganization]
     authentication_classes = [JWTAuthentication, SessionAuthentication]
@@ -611,14 +612,73 @@ class InvoiceApproveView(APIView):
         if action not in ("approve", "reject"):
             return Response({"error": _("action must be 'approve' or 'reject'")}, status=400)
 
+        # ── Approval Gate (Golden Rule) ────────────────────────────────────────
+        if action == "approve":
+            try:
+                risk = RiskScoreSummary.objects.get(document_id=invoice.id)
+                has_blocking = risk.blocks_approval
+            except RiskScoreSummary.DoesNotExist:
+                risk = None
+                has_blocking = True  # conservative: no audit run yet = block
+
+            is_override = (
+                request.data.get("override") is True
+                and request.user.has_perm("invoices.can_override_approval")
+            )
+
+            if has_blocking and not is_override:
+                return Response({
+                    "error": "لا يمكن الاعتماد — يوجد أخطاء حرجة تمنع الاعتماد.",
+                    "error_en": "Approval blocked — critical audit failures exist.",
+                    "blocking_count": risk.blocking_failures if risk is not None else 0,
+                }, status=403)
+
+            if is_override:
+                override_reason = request.data.get("override_reason", "").strip()
+                if not override_reason:
+                    return Response({
+                        "error": "سبب الاستثناء مطلوب. / Override reason is required.",
+                    }, status=400)
+                # Log override to AuditLog immediately before status change
+                AuditLog.objects.create(
+                    user=request.user,
+                    organization=request.user.organization,
+                    action=AuditLog.Action.CONFIG_CHANGED,
+                    resource_type="invoice",
+                    resource_id=str(invoice.id),
+                    ip_address=_get_client_ip(request),
+                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                    details={
+                        "event": "approval_override",
+                        "override_reason": override_reason,
+                        "blocking_count": risk.blocking_failures if risk is not None else 0,
+                        "before_status": invoice.status,
+                        "approver": request.user.full_name,
+                    },
+                )
+        # ── End Approval Gate ──────────────────────────────────────────────────
+
         before = {"status": invoice.status}
 
         if action == "approve":
+            override_reason = request.data.get("override_reason", "").strip()
             invoice.status      = Invoice.Status.APPROVED
             invoice.approved_by = request.user
             invoice.approved_at = timezone.now()
             event_type          = InvoiceAuditEvent.EventType.APPROVED
-            msg                 = f"Approved by {request.user.full_name}"
+            msg = (
+                f"Approved with override by {request.user.full_name}: {override_reason}"
+                if override_reason
+                else f"Approved by {request.user.full_name}"
+            )
+            # Log workflow transition
+            try:
+                from apps.workflow.engine import WorkflowTransitionService, WorkflowState
+                workflow_svc = WorkflowTransitionService()
+                workflow_svc.transition(invoice, WorkflowState.APPROVED, request.user, context={"override_reason": override_reason} if override_reason else {})
+            except Exception as e:
+                import logging
+                logging.warning(f"Workflow transition logging skipped for invoice {invoice.id}: {e}")
         else:
             reason = request.data.get("reason", "")
             if not reason:
@@ -627,12 +687,64 @@ class InvoiceApproveView(APIView):
             invoice.rejected_reason = reason
             event_type              = InvoiceAuditEvent.EventType.REJECTED
             msg                     = f"Rejected: {reason}"
+            # Log workflow transition for rejection
+            try:
+                from apps.workflow.engine import WorkflowTransitionService, WorkflowState
+                workflow_svc = WorkflowTransitionService()
+                workflow_svc.transition(invoice, WorkflowState.REJECTED, request.user, context={"reason": reason})
+            except Exception as e:
+                import logging
+                logging.warning(f"Workflow transition logging skipped for rejected invoice {invoice.id}: {e}")
 
         invoice.save()
         _save_audit_event(invoice, request.user, event_type, msg,
                           before=before, after={"status": invoice.status}, request=request)
 
         return Response({"invoice_id": str(invoice.id), "status": invoice.status, "message": msg})
+
+
+class InvoiceEscalateView(APIView):
+    """Escalate an invoice to senior review (Scenario 5: high risk / high fraud score)."""
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Invoices"],
+        summary="Escalate an invoice to senior review",
+        request={"type": "object", "properties": {
+            "reason": {"type": "string", "description": "Escalation reason"},
+        }},
+    )
+    def post(self, request, pk):
+        try:
+            invoice = Invoice.objects.get(pk=pk, organization=request.user.organization)
+        except Invoice.DoesNotExist:
+            return Response({"error": _("Invoice not found.")}, status=404)
+
+        if invoice.status in (Invoice.Status.APPROVED, Invoice.Status.REJECTED):
+            return Response(
+                {"error": _("Cannot escalate an approved or rejected invoice.")},
+                status=400,
+            )
+
+        reason = request.data.get("reason", "").strip()
+        before = {"status": invoice.status}
+        invoice.status = Invoice.Status.FLAGGED
+        invoice.save(update_fields=["status", "updated_at"])
+
+        _save_audit_event(
+            invoice,
+            request.user,
+            InvoiceAuditEvent.EventType.FLAGGED,
+            f"Escalated for senior review: {reason}" if reason else "Escalated for senior review",
+            before=before,
+            after={"status": invoice.status},
+            request=request,
+        )
+        return Response({
+            "invoice_id": str(invoice.id),
+            "status": invoice.status,
+            "message": "تم إرسال الفاتورة للمراجعة الإضافية. / Invoice escalated for senior review.",
+        })
 
 
 class InvoiceRevalidateView(APIView):

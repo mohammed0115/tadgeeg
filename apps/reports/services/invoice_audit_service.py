@@ -916,6 +916,7 @@ class InvoiceAuditReportService:
         anomaly_scores: List[float] = []
         top_anomalous_documents: List[Dict[str, Any]] = []
         anomaly_driver_counter: Counter = Counter()
+        all_methods_used: set = set()
 
         for inv in invoices:
             risk_summary = risk_summaries.get(str(inv.id))
@@ -923,9 +924,12 @@ class InvoiceAuditReportService:
             anomaly_score = float(breakdown.get("anomaly_score") or 0)
             explanation = breakdown.get("anomaly_explanation") or ""
             flags = list(breakdown.get("anomaly_flags") or [])
+            methods = list(breakdown.get("anomaly_methods") or [])
 
             for flag in flags:
                 anomaly_driver_counter[str(flag)] += 1
+            for method in methods:
+                all_methods_used.add(str(method))
 
             if anomaly_score > 0 or explanation:
                 anomaly_scores.append(anomaly_score)
@@ -966,6 +970,13 @@ class InvoiceAuditReportService:
             except Exception as exc:
                 logger.warning("Benford analysis skipped: %s", exc)
 
+        explainability = {
+            "scoring_scale": "0-100",
+            "methods_used": sorted(all_methods_used) or ["z_score", "iqr", "duplicate_pattern", "frequency"],
+            "threshold_high_anomaly": 60,
+            "note": "Anomaly scores aggregate statistical outlier detection, duplicate patterns, and frequency analysis.",
+        }
+
         return {
             "summary": anomaly_summary,
             "duplicate_invoices": dup_invoices,
@@ -974,6 +985,7 @@ class InvoiceAuditReportService:
             "anomaly_drivers": anomaly_drivers,
             "top_anomalous_documents": top_anomalous_documents[:10],
             "benford_analysis": benford_result,
+            "explainability": explainability,
         }
 
     # ── Section: root_cause_analysis ─────────────────────────────────────────

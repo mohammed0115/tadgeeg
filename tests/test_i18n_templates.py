@@ -38,7 +38,8 @@ class I18nTemplateTests(SimpleTestCase):
 
         self.assertEqual(response.status_code, 200)
         content = response.content.decode("utf-8")
-        self.assertIn("Tadgeeg AI", content)
+        # Brand name changed from "Tadgeeg AI" to "Tadgeeg"
+        self.assertIn("Tadgeeg", content)
         self.assertTrue(settings.COMPANY_NAME in content or settings.COMPANY_NAME_AR in content)
 
     @override_settings(LANGUAGE_CODE="en")
@@ -76,7 +77,8 @@ class I18nTemplateTests(SimpleTestCase):
 
         self.assertEqual(response.status_code, 200)
         content = response.content.decode("utf-8")
-        self.assertIn("Tadgeeg AI", content)
+        # Brand name changed from "Tadgeeg AI" to "Tadgeeg"
+        self.assertIn("Tadgeeg", content)
 
     def test_audit_templates_include_i18n_and_bidi_tags(self):
         base = Path(settings.BASE_DIR)

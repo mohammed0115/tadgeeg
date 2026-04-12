@@ -17,22 +17,52 @@
     <i data-lucide="refresh-cw" class="w-4 h-4"></i>
     <span>{% trans "Re-run Audit" %}</span>
   </button>
-  {% if invoice.status != 'approved' and invoice.status != 'rejected' %}
-  <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'reject'}))" class="btn-red text-xs py-2.5 px-4 shadow-sm shadow-red-500/20">
-    <i data-lucide="x-circle" class="w-4 h-4"></i>
-    <span>{% trans "Reject" %}</span>
-  </button>
-  {% if invoice.risk_level != 'critical' and invoice_display.rules_failed == 0 %}
-  <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'approve'}))" class="btn-green text-xs py-2.5 px-4 shadow-sm shadow-emerald-500/20">
-    <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-    <span>{% trans "Approve" %}</span>
-  </button>
+  {# ── 7-Scenario Approval Logic — Header Bar ─────────────────────────────── #}
+  {% if invoice.status == 'approved' or invoice.status == 'rejected' %}
+    {# SCENARIO 6 — LOCKED: no approve/reject buttons in header #}
   {% else %}
-  <button disabled title="{% trans 'Resolve critical audit errors before approving' %}" class="btn-ghost text-xs py-2.5 px-4 opacity-40 cursor-not-allowed border border-slate-300">
-    <i data-lucide="lock" class="w-4 h-4"></i>
-    <span>{% trans "Approve" %}</span>
-  </button>
-  {% endif %}
+    <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'reject'}))" class="btn-red text-xs py-2.5 px-4 shadow-sm shadow-red-500/20">
+      <i data-lucide="x-circle" class="w-4 h-4"></i>
+      <span>{% trans "Reject" %}</span>
+    </button>
+    {% if not invoice_display.has_real_audit %}
+      {# SCENARIO 0 — NO AUDIT YET #}
+      <button disabled class="btn-ghost text-xs py-2.5 px-4 opacity-50 cursor-not-allowed border border-slate-300">
+        <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
+        <span>{% trans "Analyzing..." %}</span>
+      </button>
+    {% elif invoice_display.has_blocking %}
+      {# SCENARIOS 3 / 4 — BLOCKING FAILURES #}
+      <button disabled title="{% trans 'Approval blocked — resolve critical audit failures first' %}" class="btn-ghost text-xs py-2.5 px-4 opacity-40 cursor-not-allowed border border-slate-300">
+        <i data-lucide="lock" class="w-4 h-4"></i>
+        <span>{% trans "Approve" %}</span>
+      </button>
+      {% if user_can_override %}
+      {# SCENARIO 7 — OVERRIDE ALLOWED #}
+      <button onclick="document.getElementById('overrideModal').dispatchEvent(new Event('open'))" class="inline-flex items-center gap-1.5 rounded-xl border border-red-400 px-4 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 dark:border-red-500 dark:text-red-400 dark:hover:bg-red-950/30 shadow-sm">
+        <i data-lucide="shield-alert" class="w-4 h-4"></i>
+        <span>{% trans "Approve with Exception" %}</span>
+      </button>
+      {% endif %}
+    {% elif invoice_display.needs_senior %}
+      {# SCENARIO 5 — HIGH RISK / FRAUD: route to escalation #}
+      <button onclick="document.getElementById('escalateModal').dispatchEvent(new Event('open'))" class="inline-flex items-center gap-1.5 rounded-xl border border-amber-400 px-4 py-2.5 text-xs font-semibold text-amber-700 hover:bg-amber-50 dark:border-amber-500 dark:text-amber-400 dark:hover:bg-amber-950/30 shadow-sm">
+        <i data-lucide="arrow-up-circle" class="w-4 h-4"></i>
+        <span>{% trans "Send for Senior Review" %}</span>
+      </button>
+    {% elif invoice_display.has_warnings %}
+      {# SCENARIO 2 — WARNINGS ONLY: approve with confirmation #}
+      <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'approve_warning'}))" class="btn-green text-xs py-2.5 px-4 shadow-sm shadow-emerald-500/20">
+        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+        <span>{% trans "Approve" %}</span>
+      </button>
+    {% else %}
+      {# SCENARIO 1 — ALL PASS: approve immediately #}
+      <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'approve'}))" class="btn-green text-xs py-2.5 px-4 shadow-sm shadow-emerald-500/20">
+        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+        <span>{% trans "Approve" %}</span>
+      </button>
+    {% endif %}
   {% endif %}
 </div>
 {% endblock %}
@@ -49,7 +79,7 @@
             <div class="flex flex-wrap items-center gap-2">
               <span class="badge-info">{% trans "Invoice File" %}</span>
               <span class="{{ invoice_display.risk_badge_class }}">{{ invoice_display.risk_label_ar }}</span>
-              <span class="{{ invoice_display.status_badge_class }}">{{ invoice_display.status_label }}</span>
+              <span class="{{ invoice_display.status_badge_class }}">{{ invoice_display.status_label_ar }}</span>
               {% if invoice.is_duplicate %}
               <span class="badge-medium">{% trans "Duplicate Invoice" %}</span>
               {% endif %}
@@ -333,7 +363,7 @@
       <section class="card p-6">
         <div class="flex items-center justify-between gap-3">
           <h3 class="text-lg font-bold text-slate-900 dark:text-white">{% trans "Status and Actions" %}</h3>
-          <span class="{{ invoice_display.status_badge_class }}">{{ invoice_display.status_label }}</span>
+          <span class="{{ invoice_display.status_badge_class }}">{{ invoice_display.status_label_ar }}</span>
         </div>
 
         {% if invoice_display.status_mismatch %}
@@ -348,27 +378,148 @@
         </div>
         {% endif %}
 
+        {# ── 7-Scenario Approval Logic — Sidebar ─────────────────────────────── #}
         <div class="mt-5 grid gap-3">
-          {% if invoice.status != 'approved' and invoice.status != 'rejected' %}
-          {% if invoice.risk_level != 'critical' and invoice_display.rules_failed == 0 %}
-          <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'approve'}))" class="btn-green justify-center py-3 text-sm shadow-lg shadow-emerald-500/20">
+
+          {% if invoice.status == 'approved' or invoice.status == 'rejected' %}
+          {# ── SCENARIO 6 — LOCKED ──────────────────────────────────────────── #}
+          <a href="#audit-trail" class="btn-ghost justify-center py-3 text-sm border border-slate-200 dark:border-slate-700/60">
+            <i data-lucide="clock" class="w-4 h-4"></i>
+            <span>{% trans "View Audit Trail" %}</span>
+          </a>
+          {% if perms.invoices.can_reopen_invoice %}
+          <button onclick="alert('{% trans 'Reopen request sent to administrator.' %}')" class="btn-ghost justify-center py-3 text-sm border border-amber-300 text-amber-700 dark:border-amber-700 dark:text-amber-400">
+            <i data-lucide="refresh-ccw" class="w-4 h-4"></i>
+            <span>{% trans "Request Reopen" %}</span>
+          </button>
+          {% endif %}
+
+          {% elif not invoice_display.has_real_audit %}
+          {# ── SCENARIO 0 — NO AUDIT YET ────────────────────────────────────── #}
+          <div class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-xs text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300">
+            <div class="flex items-center gap-2 font-semibold">
+              <i data-lucide="loader" class="w-4 h-4 shrink-0 animate-spin"></i>
+              {% trans "Audit Pending" %} / جاري التحليل...
+            </div>
+            <p class="mt-1 leading-snug">{% trans "Approval is disabled until the audit run completes." %}</p>
+          </div>
+          <button disabled class="btn-ghost justify-center py-3 text-sm opacity-40 cursor-not-allowed border border-slate-200 dark:border-slate-700/60">
             <i data-lucide="badge-check" class="w-4 h-4"></i>
             <span>{% trans "Approve Invoice" %}</span>
           </button>
-          {% else %}
+          <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'reject'}))" class="btn-red justify-center py-3 text-sm shadow-lg shadow-red-500/20">
+            <i data-lucide="ban" class="w-4 h-4"></i>
+            <span>{% trans "Reject Invoice" %}</span>
+          </button>
+
+          {% elif invoice_display.has_blocking %}
+          {# ── SCENARIOS 3 / 4 — BLOCKING FAILURES ─────────────────────────── #}
+          {% if invoice_display.blocking_count == 1 %}
+          {# SCENARIO 3 — ONE BLOCKING FAILURE #}
           <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
             <div class="flex items-center gap-2 font-semibold">
               <i data-lucide="shield-alert" class="w-4 h-4 shrink-0"></i>
-              {% trans "Approval blocked" %}
+              لا يمكن الاعتماد بسبب وجود خطأ حرج / Approval Blocked
             </div>
-            <p class="mt-1 leading-snug">{% trans "Resolve all critical audit errors before approving this invoice." %}</p>
+            <p class="mt-1 leading-snug">{% trans "Resolve the critical audit failure before approving this invoice." %}</p>
+            {% if invoice_display.blocking_rules %}
+            <a href="#rule-{{ invoice_display.blocking_rules.0.rule_code }}"
+               class="mt-2 inline-flex items-center gap-1 font-semibold underline hover:no-underline">
+              <i data-lucide="arrow-down-circle" class="w-3.5 h-3.5"></i>
+              اذهب إلى المشكلة / Go to Issue
+              ({{ invoice_display.blocking_rules.0.rule_code }})
+            </a>
+            {% endif %}
           </div>
+          {% else %}
+          {# SCENARIO 4 — MULTIPLE BLOCKING FAILURES #}
+          <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+            <div class="flex items-center gap-2 font-semibold mb-2">
+              <i data-lucide="shield-x" class="w-4 h-4 shrink-0"></i>
+              Audit Failed — {{ invoice_display.blocking_count }} {% trans "blocking failures" %}
+            </div>
+            {% if invoice_display.blocking_rules %}
+            <ol class="list-decimal list-inside space-y-1 leading-snug">
+              {% for rule in invoice_display.blocking_rules %}
+              <li>
+                <span class="font-mono font-semibold">{{ rule.rule_code }}</span>
+                {% if rule.explanation %} — {{ rule.explanation }}{% endif %}
+              </li>
+              {% endfor %}
+            </ol>
+            {% endif %}
+          </div>
+          {% endif %}
+          <button disabled class="btn-ghost justify-center py-3 text-sm opacity-40 cursor-not-allowed border border-slate-200 dark:border-slate-700/60">
+            <i data-lucide="lock" class="w-4 h-4"></i>
+            <span>{% trans "Approve Invoice" %}</span>
+          </button>
+          {% if user_can_override %}
+          {# SCENARIO 7 — OVERRIDE ALLOWED #}
+          <button onclick="document.getElementById('overrideModal').dispatchEvent(new Event('open'))" class="inline-flex items-center justify-center gap-2 rounded-xl border border-red-400 px-4 py-3 text-sm font-semibold text-red-600 hover:bg-red-50 dark:border-red-500 dark:text-red-400 dark:hover:bg-red-950/30 shadow-sm">
+            <i data-lucide="shield-alert" class="w-4 h-4"></i>
+            <span>{% trans "Approve with Exception" %}</span>
+          </button>
           {% endif %}
           <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'reject'}))" class="btn-red justify-center py-3 text-sm shadow-lg shadow-red-500/20">
             <i data-lucide="ban" class="w-4 h-4"></i>
             <span>{% trans "Reject Invoice" %}</span>
           </button>
+
+          {% elif invoice_display.needs_senior %}
+          {# ── SCENARIO 5 — HIGH RISK / FRAUD ──────────────────────────────── #}
+          <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+            <div class="flex items-center gap-2 font-semibold">
+              <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0"></i>
+              Needs Senior Review
+            </div>
+            <p class="mt-1 leading-snug">{% trans "High risk or fraud indicators detected. Escalate to a senior auditor before approving." %}</p>
+          </div>
+          <button onclick="document.getElementById('escalateModal').dispatchEvent(new Event('open'))" class="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-400 px-4 py-3 text-sm font-semibold text-amber-700 hover:bg-amber-50 dark:border-amber-500 dark:text-amber-400 dark:hover:bg-amber-950/30 shadow-sm">
+            <i data-lucide="arrow-up-circle" class="w-4 h-4"></i>
+            <span>إرسال للمراجعة الإضافية / Send for Senior Review</span>
+          </button>
+          <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'reject'}))" class="btn-red justify-center py-3 text-sm shadow-lg shadow-red-500/20">
+            <i data-lucide="ban" class="w-4 h-4"></i>
+            <span>{% trans "Reject Invoice" %}</span>
+          </button>
+
+          {% elif invoice_display.has_warnings %}
+          {# ── SCENARIO 2 — WARNINGS ONLY ───────────────────────────────────── #}
+          <div class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+            <div class="flex items-center gap-2 font-semibold">
+              <i data-lucide="alert-circle" class="w-4 h-4 shrink-0"></i>
+              {% trans "Warnings Present" %}
+            </div>
+            <p class="mt-1 leading-snug">{% trans "Approval is allowed but confirmation is required." %}</p>
+          </div>
+          <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'approve_warning'}))" class="btn-green justify-center py-3 text-sm shadow-lg shadow-emerald-500/20">
+            <i data-lucide="badge-check" class="w-4 h-4"></i>
+            <span>{% trans "Approve Invoice" %}</span>
+          </button>
+          <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'reject'}))" class="btn-red justify-center py-3 text-sm shadow-lg shadow-red-500/20">
+            <i data-lucide="ban" class="w-4 h-4"></i>
+            <span>{% trans "Reject Invoice" %}</span>
+          </button>
+
+          {% else %}
+          {# ── SCENARIO 1 — ALL PASS ─────────────────────────────────────────── #}
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-xs text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300">
+            <div class="flex items-center gap-2 font-semibold">
+              <i data-lucide="check-circle-2" class="w-4 h-4 shrink-0"></i>
+              Ready for Approval — <span class="badge-low ml-1">{% trans "Low Risk" %}</span>
+            </div>
+          </div>
+          <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'approve'}))" class="btn-green justify-center py-3 text-sm shadow-lg shadow-emerald-500/20">
+            <i data-lucide="badge-check" class="w-4 h-4"></i>
+            <span>{% trans "Approve Invoice" %}</span>
+          </button>
+          <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'reject'}))" class="btn-red justify-center py-3 text-sm shadow-lg shadow-red-500/20">
+            <i data-lucide="ban" class="w-4 h-4"></i>
+            <span>{% trans "Reject Invoice" %}</span>
+          </button>
           {% endif %}
+
           <button onclick="document.getElementById('revalidateBtn').click()" class="btn-ghost justify-center py-3 text-sm border border-slate-200 dark:border-slate-700/60">
             <i data-lucide="rotate-cw" class="w-4 h-4"></i>
             <span>{% trans "Re-run Audit" %}</span>
@@ -411,58 +562,206 @@
     </aside>
   </div>
 
+  {# ══ MODAL: Approve / Reject / Approve-with-Warning ═══════════════════════ #}
   <div id="approveModal"
-       x-data="{ open:false, action:'approve', reason:'' }"
-       @open="open=true; action=$event.detail; reason=''"
+       x-data="{ open:false, action:'approve', reason:'', warningConfirmed:false }"
+       @open="open=true; action=$event.detail; reason=''; warningConfirmed=false"
        x-show="open"
        class="modal-backdrop"
        x-transition:enter="transition duration-200"
        x-transition:enter-start="opacity-0"
        x-transition:enter-end="opacity-100">
     <div @click.away="open=false" class="modal-box p-6 animate-[fadeIn_.2s_ease]">
-      <h3 class="text-lg font-bold text-slate-900 dark:text-white" x-text="action === 'approve' ? '{% trans 'Approve Invoice' %}' : '{% trans 'Reject Invoice' %}'"></h3>
+
+      <h3 class="text-lg font-bold text-slate-900 dark:text-white"
+          x-text="action === 'reject'
+            ? '{% trans 'Reject Invoice' %}'
+            : action === 'approve_warning'
+              ? '{% trans 'Approve Invoice with Warnings' %}'
+              : '{% trans 'Approve Invoice' %}'">
+      </h3>
       <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ invoice_display.vendor_name }} — {{ invoice_display.invoice_number }}</p>
 
+      {# Rejection reason field #}
       <div x-show="action === 'reject'" class="mt-5">
         <label class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">{% trans "Rejection Reason" %}</label>
         <textarea x-model="reason" rows="4" class="input resize-none" placeholder="{% trans 'Write the rejection reason clearly...' %}"></textarea>
       </div>
 
+      {# Scenario 2 — warning confirmation checkbox #}
+      <div x-show="action === 'approve_warning'" class="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/60 dark:bg-amber-950/30">
+        <p class="text-sm font-semibold text-amber-800 dark:text-amber-200">
+          يمكن الاعتماد مع وجود تحذيرات / Approval Allowed With Warning
+        </p>
+        <p class="mt-1 text-xs text-amber-700 dark:text-amber-300">{% trans "This invoice has non-blocking audit warnings. You must confirm you have reviewed them." %}</p>
+        <label class="mt-3 flex cursor-pointer items-center gap-2 text-sm font-medium text-amber-800 dark:text-amber-200">
+          <input type="checkbox" x-model="warningConfirmed" class="h-4 w-4 rounded border-amber-400 text-amber-600 accent-amber-500">
+          {% trans "I have reviewed all warnings and confirm approval." %}
+        </label>
+      </div>
+
       <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
         <button @click="open=false" class="btn-ghost flex-1 justify-center py-3">{% trans "Cancel" %}</button>
         <button
+          :disabled="action === 'approve_warning' && !warningConfirmed"
+          :class="{
+            'btn-green shadow-lg shadow-emerald-500/20': action !== 'reject',
+            'btn-red shadow-lg shadow-red-500/20': action === 'reject',
+            'opacity-40 cursor-not-allowed': action === 'approve_warning' && !warningConfirmed
+          }"
+          class="flex-1 justify-center py-3 text-sm"
           @click="
             if (action === 'reject' && !reason.trim()) { alert('{% trans 'Please enter a rejection reason' %}'); return; }
+            if (action === 'approve_warning' && !warningConfirmed) return;
+            const payload = { action: action === 'approve_warning' ? 'approve' : action, reason: reason };
             apiFetch('/invoices/{{ invoice.id }}/approve/', {
               method: 'POST',
-              body: JSON.stringify({ action: action, reason: reason })
-            }).then((res) => {
-              // F-21 fix: treat any resolved response as success regardless of body
+              body: JSON.stringify(payload)
+            }).then(() => {
               open = false;
               notify(
-                action === 'approve'
-                  ? '{% trans "Invoice approved successfully" %}'
-                  : '{% trans "Invoice rejected" %}',
-                action === 'approve' ? 'success' : 'info'
+                action === 'reject'
+                  ? '{% trans "Invoice rejected" %}'
+                  : '{% trans "Invoice approved successfully" %}',
+                action === 'reject' ? 'info' : 'success'
               );
               setTimeout(() => location.reload(), 900);
             }).catch((e) => {
-              // Only show error for genuine network/auth failures
               const msg = e && e.message ? e.message : '{% trans "Request failed" %}';
               if (!msg.includes('200') && !msg.includes('201')) {
                 notify('{% trans "Action failed:" %} ' + msg, 'error');
               } else {
-                // F-21 fix: 2xx responses mis-thrown as errors
                 open = false;
-                notify(action === 'approve' ? '{% trans "Invoice approved successfully" %}' : '{% trans "Invoice rejected" %}', 'success');
+                notify(action === 'reject' ? '{% trans "Invoice rejected" %}' : '{% trans "Invoice approved successfully" %}', 'success');
                 setTimeout(() => location.reload(), 900);
               }
             })
           "
-          class="flex-1 justify-center py-3 text-sm"
-          :class="action === 'approve' ? 'btn-green shadow-lg shadow-emerald-500/20' : 'btn-red shadow-lg shadow-red-500/20'"
-          x-text="action === 'approve' ? '{% trans 'Confirm Approval' %}' : '{% trans 'Confirm Rejection' %}'"
+          x-text="action === 'reject'
+            ? '{% trans 'Confirm Rejection' %}'
+            : action === 'approve_warning'
+              ? '{% trans 'Confirm Approval with Warning' %}'
+              : '{% trans 'Confirm Approval' %}'"
         ></button>
+      </div>
+    </div>
+  </div>
+
+  {# ══ MODAL: Approve with Override (Scenario 7) ════════════════════════════ #}
+  {% if user_can_override %}
+  <div id="overrideModal"
+       x-data="{ open:false, overrideReason:'' }"
+       @open="open=true; overrideReason=''"
+       x-show="open"
+       class="modal-backdrop"
+       x-transition:enter="transition duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100">
+    <div @click.away="open=false" class="modal-box p-6 animate-[fadeIn_.2s_ease]">
+      <div class="flex items-center gap-3 mb-1">
+        <i data-lucide="shield-alert" class="w-5 h-5 text-red-500"></i>
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">{% trans "Approve with Exception" %}</h3>
+      </div>
+      <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ invoice_display.vendor_name }} — {{ invoice_display.invoice_number }}</p>
+
+      <div class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+        <div class="flex items-center gap-2 font-semibold mb-1">
+          <i data-lucide="alert-triangle" class="w-4 h-4 shrink-0"></i>
+          {% trans "This invoice has" %} {{ invoice_display.blocking_count }} {% trans "blocking audit failure(s)." %}
+        </div>
+        <p>{% trans "Override approval will be permanently logged to the audit trail." %}</p>
+      </div>
+
+      <div class="mt-5">
+        <label class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">
+          سبب الاستثناء / Override Reason <span class="text-red-500">*</span>
+        </label>
+        <textarea x-model="overrideReason" rows="4" class="input resize-none"
+                  placeholder="{% trans 'Provide a detailed justification for overriding the audit block...' %}"></textarea>
+      </div>
+
+      <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
+        <button @click="open=false" class="btn-ghost flex-1 justify-center py-3">{% trans "Cancel" %}</button>
+        <button
+          :disabled="!overrideReason.trim()"
+          :class="overrideReason.trim() ? 'btn-red shadow-lg shadow-red-500/20' : 'btn-ghost opacity-40 cursor-not-allowed border border-slate-300'"
+          class="flex-1 justify-center py-3 text-sm"
+          @click="
+            if (!overrideReason.trim()) { alert('سبب الاستثناء مطلوب. / Override reason is required.'); return; }
+            apiFetch('/invoices/{{ invoice.id }}/approve/', {
+              method: 'POST',
+              body: JSON.stringify({ action: 'approve', override: true, override_reason: overrideReason })
+            }).then(() => {
+              open = false;
+              notify('{% trans "Invoice approved with override — logged to audit trail." %}', 'success');
+              setTimeout(() => location.reload(), 900);
+            }).catch((e) => {
+              const msg = e && e.message ? e.message : '{% trans "Request failed" %}';
+              if (!msg.includes('200') && !msg.includes('201')) {
+                notify('{% trans "Action failed:" %} ' + msg, 'error');
+              } else {
+                open = false;
+                notify('{% trans "Invoice approved with override — logged to audit trail." %}', 'success');
+                setTimeout(() => location.reload(), 900);
+              }
+            })
+          "
+        >{% trans "Approve with Exception" %}</button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ══ MODAL: Escalate to Senior Review (Scenario 5) ════════════════════════ #}
+  <div id="escalateModal"
+       x-data="{ open:false, reason:'' }"
+       @open="open=true; reason=''"
+       x-show="open"
+       class="modal-backdrop"
+       x-transition:enter="transition duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100">
+    <div @click.away="open=false" class="modal-box p-6 animate-[fadeIn_.2s_ease]">
+      <div class="flex items-center gap-3 mb-1">
+        <i data-lucide="arrow-up-circle" class="w-5 h-5 text-amber-500"></i>
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">إرسال للمراجعة الإضافية / Send for Senior Review</h3>
+      </div>
+      <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ invoice_display.vendor_name }} — {{ invoice_display.invoice_number }}</p>
+
+      <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+        <p class="font-semibold">Needs Senior Review</p>
+        <p class="mt-1">{% trans "High risk or fraud indicators have been detected. This invoice will be flagged for senior auditor review." %}</p>
+      </div>
+
+      <div class="mt-5">
+        <label class="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-300">{% trans "Escalation Reason (optional)" %}</label>
+        <textarea x-model="reason" rows="3" class="input resize-none" placeholder="{% trans 'Add any notes for the senior auditor...' %}"></textarea>
+      </div>
+
+      <div class="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
+        <button @click="open=false" class="btn-ghost flex-1 justify-center py-3">{% trans "Cancel" %}</button>
+        <button
+          class="flex-1 justify-center py-3 text-sm border border-amber-400 text-amber-700 font-semibold rounded-xl hover:bg-amber-50 dark:border-amber-500 dark:text-amber-400 dark:hover:bg-amber-950/30 shadow-sm"
+          @click="
+            apiFetch('/invoices/{{ invoice.id }}/escalate/', {
+              method: 'POST',
+              body: JSON.stringify({ reason: reason })
+            }).then(() => {
+              open = false;
+              notify('{% trans "Invoice escalated for senior review." %}', 'info');
+              setTimeout(() => location.reload(), 900);
+            }).catch((e) => {
+              const msg = e && e.message ? e.message : '{% trans "Request failed" %}';
+              if (!msg.includes('200') && !msg.includes('201')) {
+                notify('{% trans "Action failed:" %} ' + msg, 'error');
+              } else {
+                open = false;
+                notify('{% trans "Invoice escalated for senior review." %}', 'info');
+                setTimeout(() => location.reload(), 900);
+              }
+            })
+          "
+        >إرسال للمراجعة / Escalate</button>
       </div>
     </div>
   </div>

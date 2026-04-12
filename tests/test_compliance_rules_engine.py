@@ -57,7 +57,7 @@ class TestHeaderValidationRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="",  # Missing
-            amount=Decimal("1000.00"),
+            total_amount=Decimal("1000.00"),
         )
         
         # Validate would mark as failed
@@ -74,7 +74,7 @@ class TestHeaderValidationRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-2024-001-VALID",
-            amount=Decimal("1000.00"),
+            total_amount=Decimal("1000.00"),
         )
         
         self.assertIsNotNone(invoice.invoice_number)
@@ -92,12 +92,12 @@ class TestHeaderValidationRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-FUTURE",
-            amount=Decimal("1000.00"),
-            date=future_date,
+            total_amount=Decimal("1000.00"),
+            invoice_date=future_date,
         )
         
         # Validation rule should flag this
-        self.assertGreater(invoice.date, timezone.now())
+        self.assertGreater(invoice.invoice_date, timezone.now())
 
     def test_header_rule_valid_recent_date(self):
         """
@@ -111,13 +111,13 @@ class TestHeaderValidationRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-VALID-DATE",
-            amount=Decimal("1000.00"),
-            date=past_date,
+            total_amount=Decimal("1000.00"),
+            invoice_date=past_date,
         )
         
         # Should be valid
-        self.assertLess(invoice.date, timezone.now())
-        days_old = (timezone.now() - invoice.date).days
+        self.assertLess(invoice.invoice_date, timezone.now())
+        days_old = (timezone.now() - invoice.invoice_date).days
         self.assertLessEqual(days_old, 90)
 
     def test_header_rule_vendor_name_presence(self):
@@ -130,7 +130,7 @@ class TestHeaderValidationRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-NO-VENDOR",
-            amount=Decimal("1000.00"),
+            total_amount=Decimal("1000.00"),
         )
         
         # If has vendor field
@@ -149,7 +149,7 @@ class TestHeaderValidationRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-VAT-15",
-            amount=Decimal("1000.00"),
+            total_amount=Decimal("1000.00"),
         )
         
         # VAT rate validation
@@ -167,10 +167,10 @@ class TestHeaderValidationRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-POSITIVE-AMT",
-            amount=Decimal("5000.00"),
+            total_amount=Decimal("5000.00"),
         )
         
-        self.assertGreater(invoice.amount, Decimal('0'))
+        self.assertGreater(invoice.total_amount, Decimal('0'))
 
     def test_header_rule_zero_or_negative_amount(self):
         """
@@ -183,10 +183,10 @@ class TestHeaderValidationRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-ZERO",
-            amount=Decimal("0.00"),
+            total_amount=Decimal("0.00"),
         )
         
-        self.assertFalse(invoice1.amount > Decimal('0'))
+        self.assertFalse(invoice1.total_amount > Decimal('0'))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -215,7 +215,7 @@ class TestDuplicateDetectionRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-DUP-001",
-            amount=Decimal("5000.00"),
+            total_amount=Decimal("5000.00"),
         )
 
     def test_duplicate_rule_same_invoice_number(self):
@@ -229,7 +229,7 @@ class TestDuplicateDetectionRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-DUP-001",  # Same as first_invoice
-            amount=Decimal("6000.00"),
+            total_amount=Decimal("6000.00"),
         )
         
         # In real validation, this should fail
@@ -247,7 +247,7 @@ class TestDuplicateDetectionRules(TestCase):
         Scenario: Two invoices: same vendor, same amount, same date (suspicious)
         Expected: Second flagged as duplicate
         """
-        same_date = self.first_invoice.date
+        same_date = self.first_invoice.invoice_date
         same_vendor = "Acme Corp"
         same_amount = Decimal("5000.00")
         
@@ -255,12 +255,12 @@ class TestDuplicateDetectionRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-DUP-002",
-            amount=same_amount,
-            date=same_date,
+            total_amount=same_amount,
+            invoice_date=same_date,
         )
         
         # Both have same vendor, amount, date pattern
-        self.assertEqual(second.amount, same_amount)
+        self.assertEqual(second.total_amount, same_amount)
 
     def test_duplicate_rule_file_hash_comparison(self):
         """
@@ -275,7 +275,7 @@ class TestDuplicateDetectionRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-HASH-001",
-            amount=Decimal("1000.00"),
+            total_amount=Decimal("1000.00"),
         )
         
         # If system stores file_hash
@@ -301,16 +301,16 @@ class TestDuplicateDetectionRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-ACME-001",
-            amount=Decimal("5000.00"),
-            date=timezone.now() - timedelta(days=15),
+            total_amount=Decimal("5000.00"),
+            invoice_date=timezone.now() - timedelta(days=15),
         )
         
         acme_inv2 = Invoice.objects.create(
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-ACME-002",
-            amount=Decimal("5000.00"),
-            date=timezone.now(),
+            total_amount=Decimal("5000.00"),
+            invoice_date=timezone.now(),
         )
         
         # Both exist in system
@@ -353,13 +353,13 @@ class TestAnomalyDetectionRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-HIGH-AMOUNT",
-            amount=Decimal("100000.00"),  # Unusually high
+            total_amount=Decimal("100000.00"),  # Unusually high
         )
         
         # Anomaly check: is amount > threshold?
         typical_max = Decimal("50000.00")
-        if invoice.amount > typical_max:
-            self.assertGreater(invoice.amount, typical_max)
+        if invoice.total_amount > typical_max:
+            self.assertGreater(invoice.total_amount, typical_max)
 
     def test_anomaly_rule_unknown_vendor(self):
         """
@@ -371,7 +371,7 @@ class TestAnomalyDetectionRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-UNKNOWN-VENDOR",
-            amount=Decimal("5000.00"),
+            total_amount=Decimal("5000.00"),
         )
         
         # If system tracks known vendors
@@ -392,14 +392,14 @@ class TestAnomalyDetectionRules(TestCase):
                 organization=self.org,
                 uploaded_by=self.user,
                 invoice_number=f"INV-CLUSTER-{i:02d}",
-                amount=Decimal("1000.00"),
-                date=today,
+                total_amount=Decimal("1000.00"),
+                invoice_date=today,
             )
         
         # Count same-day invoices
         same_day_count = Invoice.objects.filter(
             organization=self.org,
-            date=today
+            invoice_date=today
         ).count()
         
         self.assertGreaterEqual(same_day_count, 6)
@@ -416,7 +416,7 @@ class TestAnomalyDetectionRules(TestCase):
                 organization=self.org,
                 uploaded_by=self.user,
                 invoice_number=f"INV-NORMAL-{i:02d}",
-                amount=Decimal("5000.00"),
+                total_amount=Decimal("5000.00"),
             )
         
         # Then spike
@@ -424,13 +424,13 @@ class TestAnomalyDetectionRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-SPIKE",
-            amount=Decimal("15000.00"),
+            total_amount=Decimal("15000.00"),
         )
         
         # Spike detection: 3x of normal
         normal_avg = Decimal("5000.00")
-        if spike.amount > normal_avg * 3:
-            self.assertGreater(spike.amount, normal_avg * 2)
+        if spike.total_amount > normal_avg * 3:
+            self.assertGreater(spike.total_amount, normal_avg * 2)
 
     def test_anomaly_rule_year_end_surge(self):
         """
@@ -446,14 +446,14 @@ class TestAnomalyDetectionRules(TestCase):
                 organization=self.org,
                 uploaded_by=self.user,
                 invoice_number=f"INV-YE-{i:03d}",
-                amount=Decimal("1000.00"),
-                date=year_end,
+                total_amount=Decimal("1000.00"),
+                invoice_date=year_end,
             )
         
         year_end_invoices = Invoice.objects.filter(
             organization=self.org,
-            date__month=12,
-            date__day__gte=15
+            invoice_date__month=12,
+            invoice_date__day__gte=15
         ).count()
         
         self.assertGreater(year_end_invoices, 10)
@@ -469,22 +469,23 @@ class TestAnomalyDetectionRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-ACME-BIG",
-            amount=Decimal("60000.00"),
+            total_amount=Decimal("60000.00"),
         )
         
         Invoice.objects.create(
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-OTHER",
-            amount=Decimal("40000.00"),
+            total_amount=Decimal("40000.00"),
         )
         
+        from django.db.models import Sum as _Sum
         total = Invoice.objects.filter(
             organization=self.org
         ).aggregate(
-            total=Decimal('0')
+            total=_Sum('total_amount')
         )
-        
+
         # Acme dominance check
         self.assertIsNotNone(total)
 
@@ -521,7 +522,7 @@ class TestValidationRuleIntegration(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-BOTH-001",
-            amount=Decimal("100000.00"),  # Also anomalous
+            total_amount=Decimal("100000.00"),  # Also anomalous
         )
         
         # Try duplicate with same invoice number
@@ -529,7 +530,7 @@ class TestValidationRuleIntegration(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-BOTH-001",  # Duplicate
-            amount=Decimal("100000.00"),    # Also high
+            total_amount=Decimal("100000.00"),    # Also high
         )
         
         # Duplicate should be primary error
@@ -547,11 +548,11 @@ class TestValidationRuleIntegration(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-MULTI-VIOLATION",
-            amount=Decimal("100000.00"),  # Violation 1: High amount
+            total_amount=Decimal("100000.00"),  # Violation 1: High amount
         )
         
         # Violations accumulate
-        self.assertGreater(invoice.amount, Decimal("50000.00"))
+        self.assertGreater(invoice.total_amount, Decimal("50000.00"))
 
     def test_rule_engine_bilingual_error_messages(self):
         """
@@ -562,13 +563,13 @@ class TestValidationRuleIntegration(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-BILINGUAL-ERR",
-            amount=Decimal("0.00"),  # Violates positive amount rule
+            total_amount=Decimal("0.00"),  # Violates positive amount rule
         )
         
         # Bilingual validation (if system supports)
         # error_message_ar = "المبلغ يجب أن يكون موجباً"
         # error_message_en = "Amount must be positive"
-        self.assertLessEqual(invoice.amount, Decimal('0'))
+        self.assertLessEqual(invoice.total_amount, Decimal('0'))
 
     def test_rule_engine_risk_score_calculation(self):
         """
@@ -580,11 +581,11 @@ class TestValidationRuleIntegration(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-RISK-SCORE",
-            amount=Decimal("100000.00"),  # High-risk field
+            total_amount=Decimal("100000.00"),  # High-risk field
         )
         
         # Risk scoring: higher amount = higher risk
-        if invoice.amount > Decimal("50000.00"):
+        if invoice.total_amount > Decimal("50000.00"):
             risk_score = 60  # Example
             self.assertGreater(risk_score, 0)
 
@@ -601,13 +602,13 @@ class TestValidationRuleIntegration(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-CLEAN-001",
-            amount=Decimal("5000.00"),
-            date=timezone.now() - timedelta(days=10),
+            total_amount=Decimal("5000.00"),
+            invoice_date=timezone.now() - timedelta(days=10),
         )
         
         # Validation checks pass
-        self.assertGreater(clean_invoice.amount, Decimal('0'))
-        self.assertLess(clean_invoice.date, timezone.now())
+        self.assertGreater(clean_invoice.total_amount, Decimal('0'))
+        self.assertLess(clean_invoice.invoice_date, timezone.now())
 
     def test_rule_engine_batch_processing_all_rules(self):
         """
@@ -620,14 +621,14 @@ class TestValidationRuleIntegration(TestCase):
                 organization=self.org,
                 uploaded_by=self.user,
                 invoice_number=f"INV-BATCH-{i:03d}",
-                amount=Decimal(f"{1000 + i * 500}.00"),
+                total_amount=Decimal(f"{1000 + i * 500}.00"),
             )
             invoices.append(inv)
         
         # All should be processed
         self.assertEqual(len(invoices), 10)
         for inv in invoices:
-            self.assertGreater(inv.amount, Decimal('0'))
+            self.assertGreater(inv.total_amount, Decimal('0'))
 
     def test_rule_engine_performance_1000_invoices(self):
         """
@@ -642,7 +643,7 @@ class TestValidationRuleIntegration(TestCase):
                 organization=self.org,
                 uploaded_by=self.user,
                 invoice_number=f"INV-PERF-{i:05d}",
-                amount=Decimal(f"{1000 + i * 10}.00"),
+                total_amount=Decimal(f"{1000 + i * 10}.00"),
             )
         
         # Verify all created
@@ -684,7 +685,7 @@ class TestControlAndDocumentRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-NO-COSTCENTER",
-            amount=Decimal("5000.00"),
+            total_amount=Decimal("5000.00"),
         )
         
         # Cost center check
@@ -702,12 +703,12 @@ class TestControlAndDocumentRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-OVER-BUDGET",
-            amount=Decimal("20000.00"),
+            total_amount=Decimal("20000.00"),
         )
         
         budget_limit = Decimal("15000.00")
-        if invoice.amount > budget_limit:
-            self.assertGreater(invoice.amount, budget_limit)
+        if invoice.total_amount > budget_limit:
+            self.assertGreater(invoice.total_amount, budget_limit)
 
     def test_document_rule_qr_code_validation(self):
         """
@@ -719,7 +720,7 @@ class TestControlAndDocumentRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-QR-VALID",
-            amount=Decimal("5000.00"),
+            total_amount=Decimal("5000.00"),
         )
         
         # QR code check (if present)
@@ -738,7 +739,7 @@ class TestControlAndDocumentRules(TestCase):
             organization=self.org,
             uploaded_by=self.user,
             invoice_number="INV-APPROVED-LOCKED",
-            amount=Decimal("5000.00"),
+            total_amount=Decimal("5000.00"),
             status="approved",
         )
         

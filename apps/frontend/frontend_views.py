@@ -128,6 +128,7 @@ def invoice_detail(request, pk):
         return redirect('frontend:invoices')
 
     ctx = _ctx(request, 'invoices', invoice=invoice, audit_trail=audit_trail)
+    ctx['can_reopen_invoice'] = request.user.has_perm('invoices.can_reopen_invoice')
     return render(request, 'invoices/detail.html', ctx)
 
 

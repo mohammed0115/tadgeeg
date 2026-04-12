@@ -130,7 +130,10 @@ class DuplicateDetector:
         )
         doc_number = self._normalise_doc_number(raw_num)
         vendor = self._normalise_vendor(
-            doc.get("vendor_name") or doc.get("counterparty_name") or ""
+            doc.get("vendor_name")
+            or doc.get("counterparty_name")
+            or doc.get("supplier_name")
+            or ""
         )
 
         if not doc_number or not vendor:
@@ -200,9 +203,18 @@ class DuplicateDetector:
 
     def _check_amount_date(self, doc: dict) -> tuple[float, list, str]:
         """Same vendor + similar amount + same date window."""
-        vendor = self._normalise_vendor(doc.get("vendor_name", ""))
+        vendor = self._normalise_vendor(
+            doc.get("vendor_name")
+            or doc.get("counterparty_name")
+            or doc.get("supplier_name")
+            or ""
+        )
         total = doc.get("total_amount", 0)
-        date_str = doc.get("date")
+        date_str = (
+            doc.get("document_date")
+            or doc.get("invoice_date")
+            or doc.get("date")
+        )
 
         if not vendor or not total or not date_str:
             return 0.0, [], ""
@@ -250,7 +262,11 @@ class DuplicateDetector:
 
     def _check_file_hash(self, doc: dict) -> tuple[float, list, str]:
         """Check if the file hash (SHA-256) already exists."""
-        file_hash = doc.get("metadata", {}).get("file_hash")
+        file_hash = (
+            doc.get("file_hash")
+            or doc.get("metadata", {}).get("file_hash")
+            or (doc.get("extracted_data") or {}).get("file_hash")
+        )
         if not file_hash:
             return 0.0, [], ""
 
@@ -258,7 +274,7 @@ class DuplicateDetector:
             from apps.invoices.models import InvoiceValidationResult
 
             qs = InvoiceValidationResult.objects.filter(
-                details__file_hash=file_hash
+                validation_details__file_hash=file_hash
             )
             if self.organization_id:
                 qs = qs.filter(invoice__organization_id=self.organization_id)
@@ -277,8 +293,17 @@ class DuplicateDetector:
 
     def _check_cross_month(self, doc: dict) -> tuple[float, list, str]:
         """Same document number appearing in different months (re-used numbers)."""
-        doc_number = self._normalise_doc_number(doc.get("document_number", ""))
-        date_str = doc.get("date")
+        doc_number = self._normalise_doc_number(
+            doc.get("document_number")
+            or doc.get("invoice_number")
+            or doc.get("reference_number")
+            or ""
+        )
+        date_str = (
+            doc.get("document_date")
+            or doc.get("invoice_date")
+            or doc.get("date")
+        )
 
         if not doc_number or not date_str:
             return 0.0, [], ""

@@ -47,40 +47,32 @@ class ValidationPipelineService:
         validation_result.setdefault("failed_rule_codes", failed_rule_codes)
         validation_result.setdefault("rule_details", rule_details)
 
+        # Build rule_results JSON array from rule details
+        rule_results_array = []
+        for code in passed_rule_codes:
+            rule_results_array.append({
+                "rule_code": code,
+                "rule_name": rule_details.get(code, {}).get("description", code),
+                "group": code.split("-")[0],
+                "severity": rule_details.get(code, {}).get("severity", "medium"),
+                "passed": True,
+                "detail": rule_details.get(code, {}).get("detail", "")
+            })
+        for code in failed_rule_codes:
+            rule_results_array.append({
+                "rule_code": code,
+                "rule_name": rule_details.get(code, {}).get("description", code),
+                "group": code.split("-")[0],
+                "severity": rule_details.get(code, {}).get("severity", "medium"),
+                "passed": False,
+                "detail": rule_details.get(code, {}).get("detail", "")
+            })
+
         InvoiceValidationResult.objects.update_or_create(
             invoice=invoice,
             defaults={
-                "has_invoice_number": "INV-001" in passed_rule_codes,
-                "has_invoice_date": "INV-002" in passed_rule_codes,
-                "has_vendor_name": "INV-003" in passed_rule_codes,
-                "has_vendor_vat": "INV-004" in passed_rule_codes,
-                "has_total_amount": "INV-005" in passed_rule_codes,
-                "has_currency": "INV-006" in passed_rule_codes,
-                "total_greater_zero": "INV-007" in passed_rule_codes,
-                "no_vat_without_base": "INV-008" in passed_rule_codes,
-                "duplicate_invoice_number": "DUP-001" in failed_rule_codes,
-                "duplicate_vendor_and_number": "DUP-002" in failed_rule_codes,
-                "duplicate_vendor_amount_date": "DUP-003" in failed_rule_codes,
-                "duplicate_file_hash": "DUP-004" in failed_rule_codes,
-                "duplicate_across_months": "DUP-005" in failed_rule_codes,
-                "vat_rate_correct": "VAT-001" in passed_rule_codes,
-                "vat_calculation_correct": "VAT-002" in passed_rule_codes,
-                "vat_subtotal_correct": "VAT-003" in passed_rule_codes,
-                "vat_number_present": "VAT-004" in passed_rule_codes,
-                "qr_code_valid": "VAT-005" in passed_rule_codes,
-                "amount_unusually_high": "ANO-001" in failed_rule_codes,
-                "new_unknown_vendor": "ANO-002" in failed_rule_codes,
-                "many_invoices_same_day": "ANO-003" in failed_rule_codes,
-                "sudden_price_change": "ANO-004" in failed_rule_codes,
-                "many_invoices_year_end": "ANO-005" in failed_rule_codes,
-                "vendor_dominates_invoices": "ANO-006" in failed_rule_codes,
-                "has_cost_center": "CTL-001" in passed_rule_codes,
-                "has_account_code": "CTL-002" in passed_rule_codes,
-                "has_approver": "CTL-005" in passed_rule_codes,
-                "document_is_clear": "DOC-001" in passed_rule_codes,
-                "appears_genuine": "DOC-002" in passed_rule_codes,
-                "no_alterations": "DOC-003" in passed_rule_codes,
-                "has_qr_code": "DOC-004" in passed_rule_codes,
+                "rule_results": rule_results_array,
+                "total_rules": len(rule_results_array),
                 "rules_passed": validation_result["rules_passed"],
                 "rules_failed": validation_result["rules_failed"],
                 "validation_score": validation_result["validation_score"],

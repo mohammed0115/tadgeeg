@@ -358,6 +358,7 @@ window.tailwind.refresh?.();
       </div>
 
       <a href="{% url 'frontend:dashboard' %}"
+         data-nav="nav_dashboard"
          class="nav-item {% block nav_dashboard %}{% endblock %}">
         <i data-lucide="layout-dashboard" class="w-[18px] h-[18px] flex-shrink-0"></i>
         <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Dashboard" %}</span>
@@ -369,12 +370,14 @@ window.tailwind.refresh?.();
       </div>
 
       <a href="{% url 'auditor:upload' %}"
+         data-nav="nav_upload"
          class="nav-item {% block nav_upload %}{% endblock %}">
         <i data-lucide="upload-cloud" class="w-[18px] h-[18px] flex-shrink-0"></i>
         <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Upload Document" %}</span>
       </a>
 
       <a href="{% url 'frontend:invoices' %}"
+         data-nav="nav_invoices"
          class="nav-item {% block nav_invoices %}{% endblock %}">
         <i data-lucide="file-text" class="w-[18px] h-[18px] flex-shrink-0"></i>
         <span x-show="sidebarOpen" class="whitespace-nowrap flex-1">{% trans "Invoices" %}</span>
@@ -382,6 +385,7 @@ window.tailwind.refresh?.();
       </a>
 
       <a href="{% url 'frontend:batches' %}"
+         data-nav="nav_batches"
          class="nav-item {% block nav_batches %}{% endblock %}">
         <i data-lucide="layers" class="w-[18px] h-[18px] flex-shrink-0"></i>
         <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Batches" %}</span>
@@ -393,36 +397,42 @@ window.tailwind.refresh?.();
       </div>
 
       <a href="{% url 'frontend:reports' %}"
+         data-nav="nav_reports"
          class="nav-item {% block nav_reports %}{% endblock %}">
         <i data-lucide="bar-chart-3" class="w-[18px] h-[18px] flex-shrink-0"></i>
         <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Reports" %}</span>
       </a>
 
       <a href="{% url 'frontend:vendors' %}"
+         data-nav="nav_vendors"
          class="nav-item {% block nav_vendors %}{% endblock %}">
         <i data-lucide="building-2" class="w-[18px] h-[18px] flex-shrink-0"></i>
         <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Vendors" %}</span>
       </a>
 
       <a href="{% url 'frontend:analytics' %}"
+         data-nav="nav_analytics"
          class="nav-item {% block nav_analytics %}{% endblock %}">
         <i data-lucide="scan-search" class="w-[18px] h-[18px] flex-shrink-0"></i>
         <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Anomaly Detection" %}</span>
       </a>
 
       <a href="{% url 'frontend:audit' %}"
+         data-nav="nav_audit"
          class="nav-item {% block nav_audit %}{% endblock %}">
         <i data-lucide="shield-alert" class="w-[18px] h-[18px] flex-shrink-0"></i>
         <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Audit Cases" %}</span>
       </a>
 
       <a href="{% url 'auditor:upload' %}"
+         data-nav="nav_ai_auditor"
          class="nav-item {% block nav_ai_auditor %}{% endblock %}">
         <i data-lucide="scan-search" class="w-[18px] h-[18px] flex-shrink-0"></i>
         <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "AI Auditor" %}</span>
       </a>
 
       <a href="{% url 'frontend:compliance' %}"
+         data-nav="nav_compliance"
          class="nav-item {% block nav_compliance %}{% endblock %}">
         <i data-lucide="shield-check" class="w-[18px] h-[18px] flex-shrink-0"></i>
         <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Compliance" %}</span>
@@ -430,6 +440,7 @@ window.tailwind.refresh?.();
 
       <!-- Documents section — collapsible -->
       <a href="{% url 'frontend:transactions' %}"
+         data-nav="nav_transactions"
          class="nav-item {% block nav_transactions %}{% endblock %}">
         <i data-lucide="wallet" class="w-[18px] h-[18px] flex-shrink-0"></i>
         <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Transactions" %}</span>
@@ -488,12 +499,14 @@ window.tailwind.refresh?.();
         </div>
       </div>
       <a href="{% url 'frontend:users' %}"
+         data-nav="nav_users"
          class="nav-item {% block nav_users %}{% endblock %}">
         <i data-lucide="users" class="w-[18px] h-[18px] flex-shrink-0"></i>
         <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Users" %}</span>
       </a>
 
       <a href="{% url 'frontend:settings' %}"
+         data-nav="nav_settings"
          class="nav-item {% block nav_settings %}{% endblock %}">
         <i data-lucide="settings" class="w-[18px] h-[18px] flex-shrink-0"></i>
         <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Settings" %}</span>

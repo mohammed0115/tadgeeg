@@ -136,6 +136,9 @@ class RuleEngineStage(CriticalStage):
             result.status = status_val
             result.explanation = rule_result.explanation_en
             result.explanation_ar = rule_result.explanation_ar
+            result.blocks_approval = bool(
+                result.blocks_approval or getattr(rule_result, "is_blocking", False)
+            )
             result.risk_contribution = rule_result.risk_contribution
             result.raw_output = rule_result.to_dict()
             result.execution_time_ms = int((time.monotonic() - t0) * 1000)

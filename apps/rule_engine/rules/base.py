@@ -56,15 +56,40 @@ class RuleResult:
     status: RuleStatus
     explanation_en: str
     explanation_ar: str = ""
+    rule_code: str = ""
+    catalog_code: str = ""
+    legacy_rule_code: str = ""
+    is_blocking: bool = False
     risk_contribution: float = 0.0
     evidence: list = field(default_factory=list)  # list[EvidenceItem]
     raw_data: dict = field(default_factory=dict)
+
+    def __post_init__(self):
+        identifier = self.legacy_rule_code or self.rule_code
+        if not identifier:
+            return
+        try:
+            from apps.rule_engine.catalog import resolve_rule_catalog_metadata
+
+            entry = resolve_rule_catalog_metadata(identifier)
+            self.catalog_code = entry.rule_code
+            self.rule_code = entry.rule_code
+            if not self.legacy_rule_code:
+                self.legacy_rule_code = identifier
+            self.is_blocking = bool(self.is_blocking or entry.is_blocking)
+        except Exception:
+            if not self.catalog_code:
+                self.catalog_code = self.rule_code
 
     def to_dict(self) -> dict:
         return {
             "status": self.status.value if isinstance(self.status, RuleStatus) else self.status,
             "explanation_en": self.explanation_en,
             "explanation_ar": self.explanation_ar,
+            "rule_code": self.rule_code,
+            "catalog_code": self.catalog_code,
+            "legacy_rule_code": self.legacy_rule_code,
+            "is_blocking": self.is_blocking,
             "risk_contribution": float(self.risk_contribution),
             "evidence_count": len(self.evidence),
             "evidence": [e.to_dict() if hasattr(e, 'to_dict') else e for e in self.evidence],
@@ -158,11 +183,35 @@ class AuditRuleBase(abc.ABC):
     rule_name_ar: str = ""
     default_severity: str = "medium"
     rule_type: str = "validation"  # validation, compliance, anomaly, reconciliation, risk
+    catalog_code: str = ""
+    is_blocking: bool = False
 
     # List of canonical field_codes this rule requires.
     # If set, the pipeline skips the rule when ANY listed field is absent from
     # the document's DocumentCanonicalData record.
     field_dependencies: list = []
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if cls.__name__ == "AuditRuleBase":
+            return
+        identifier = getattr(cls, "rule_code", "")
+        if not identifier:
+            return
+        try:
+            from apps.rule_engine.catalog import resolve_rule_catalog_metadata
+
+            entry = resolve_rule_catalog_metadata(
+                identifier,
+                rule_name=getattr(cls, "rule_name_en", "") or getattr(cls, "rule_name_ar", ""),
+                rule_type=getattr(cls, "rule_type", ""),
+                severity=getattr(cls, "default_severity", "medium"),
+            )
+            cls.catalog_code = entry.rule_code
+            cls.is_blocking = entry.is_blocking
+        except Exception:
+            cls.catalog_code = identifier
+            cls.is_blocking = str(getattr(cls, "default_severity", "")).lower() == "critical"
 
     def __init__(self, config: Optional[dict] = None):
         self.config = config or {}
@@ -199,6 +248,10 @@ class AuditRuleBase(abc.ABC):
             status=RuleStatus.PASS,
             explanation_en=explanation_en,
             explanation_ar=explanation_ar or explanation_en,
+            rule_code=self.catalog_code or self.rule_code,
+            catalog_code=self.catalog_code or self.rule_code,
+            legacy_rule_code=self.rule_code,
+            is_blocking=self.is_blocking,
             risk_contribution=0.0,
             evidence=evidence or [],
         )
@@ -214,6 +267,10 @@ class AuditRuleBase(abc.ABC):
             status=RuleStatus.FAIL,
             explanation_en=explanation_en,
             explanation_ar=explanation_ar or explanation_en,
+            rule_code=self.catalog_code or self.rule_code,
+            catalog_code=self.catalog_code or self.rule_code,
+            legacy_rule_code=self.rule_code,
+            is_blocking=self.is_blocking,
             risk_contribution=risk,
             evidence=evidence or [],
         )
@@ -229,6 +286,10 @@ class AuditRuleBase(abc.ABC):
             status=RuleStatus.WARNING,
             explanation_en=explanation_en,
             explanation_ar=explanation_ar or explanation_en,
+            rule_code=self.catalog_code or self.rule_code,
+            catalog_code=self.catalog_code or self.rule_code,
+            legacy_rule_code=self.rule_code,
+            is_blocking=self.is_blocking,
             risk_contribution=risk,
             evidence=evidence or [],
         )
@@ -242,6 +303,10 @@ class AuditRuleBase(abc.ABC):
             status=RuleStatus.NOT_APPLICABLE,
             explanation_en=reason_en,
             explanation_ar=reason_ar or "غير قابل للتطبيق على هذا النوع من المستندات",
+            rule_code=self.catalog_code or self.rule_code,
+            catalog_code=self.catalog_code or self.rule_code,
+            legacy_rule_code=self.rule_code,
+            is_blocking=self.is_blocking,
             risk_contribution=0.0,
         )
 
@@ -254,6 +319,10 @@ class AuditRuleBase(abc.ABC):
             status=RuleStatus.SKIPPED,
             explanation_en=reason_en,
             explanation_ar=reason_ar or "تم تخطي القاعدة: البيانات المطلوبة غير متوفرة",
+            rule_code=self.catalog_code or self.rule_code,
+            catalog_code=self.catalog_code or self.rule_code,
+            legacy_rule_code=self.rule_code,
+            is_blocking=self.is_blocking,
             risk_contribution=0.0,
         )
 
@@ -263,6 +332,10 @@ class AuditRuleBase(abc.ABC):
             status=RuleStatus.ERROR,
             explanation_en=f"Rule execution failed: {type(exc).__name__}: {exc}",
             explanation_ar="فشل تنفيذ القاعدة بسبب خطأ تقني",
+            rule_code=self.catalog_code or self.rule_code,
+            catalog_code=self.catalog_code or self.rule_code,
+            legacy_rule_code=self.rule_code,
+            is_blocking=self.is_blocking,
             risk_contribution=0.0,
         )
 

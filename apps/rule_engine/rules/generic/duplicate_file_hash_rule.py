@@ -16,48 +16,27 @@ class DuplicateFileHashRule(AuditRuleBase):
 
     def execute(self, doc: NormalizedDocument) -> RuleResult:
         try:
-            from apps.invoices.models import Invoice
-            from apps.auditing.models import AuditDocument
+            from apps.documents.models import Document
             file_hash = doc.file_hash
 
-            # Check across invoices
-            inv_dup = Invoice.objects.filter(
+            # Check for duplicate by file_hash stored in extracted_data.structured_data
+            exists = Document.objects.filter(
                 organization_id=doc.organization_id,
-                file_hash=file_hash,
-            ).exclude(id=doc.document_id).first()
+                extracted_data__structured_data__file_hash=file_hash,
+            ).exclude(id=doc.document_id).exists()
 
-            if inv_dup:
+            if exists:
                 return self._fail(
-                    f"Identical file already exists (Invoice #{inv_dup.invoice_number}).",
-                    f"ملف مطابق موجود مسبقًا (فاتورة #{inv_dup.invoice_number}).",
+                    "Identical file content already uploaded in this organisation.",
+                    "تم رفع ملف بنفس المحتوى مسبقًا في هذه المنظمة.",
                     evidence=[EvidenceItem(
                         evidence_type="comparison",
                         field_name="file_hash",
                         field_name_ar="بصمة الملف",
                         expected_value="Unique hash",
                         actual_value=file_hash,
-                        description=f"Duplicate of invoice {inv_dup.id}",
-                        description_ar=f"مكرر للفاتورة {inv_dup.id}",
-                    )]
-                )
-
-            # Check across audit documents
-            audit_dup = AuditDocument.objects.filter(
-                ai_result__file_hash=file_hash
-            ).exclude(id=doc.document_id).first()
-
-            if audit_dup:
-                return self._fail(
-                    f"Identical file already uploaded as document '{audit_dup.original_name}'.",
-                    f"الملف مكرر، تم رفعه مسبقًا باسم '{audit_dup.original_name}'.",
-                    evidence=[EvidenceItem(
-                        evidence_type="comparison",
-                        field_name="file_hash",
-                        field_name_ar="بصمة الملف",
-                        expected_value="Unique hash",
-                        actual_value=file_hash,
-                        description=f"Duplicate of audit document {audit_dup.id}",
-                        description_ar=f"مكرر للمستند {audit_dup.id}",
+                        description="Duplicate file detected via content hash.",
+                        description_ar="تم اكتشاف ملف مكرر عبر بصمة المحتوى.",
                     )]
                 )
 

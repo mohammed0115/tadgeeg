@@ -25,11 +25,16 @@ from apps.rule_engine.models.audit_execution import (  # noqa: F401
     AuditResult,
     AuditRun,
 )
+from apps.rule_engine.rules.base import RuleResult  # noqa: F401
 from apps.rule_engine.models.risk import RiskScoreSummary  # noqa: F401
 from apps.rule_engine.models.review import ManualReviewDecision  # noqa: F401
 from apps.rule_engine.models.cross_document import CrossDocumentLink  # noqa: F401
 from apps.rule_engine.models.rule_field_dependency import RuleFieldDependency  # noqa: F401
 from apps.rule_engine.models.audit_run_v2 import AuditRunV2Metadata  # noqa: F401
+
+# Legacy compatibility aliases used by older tests and callers.
+ValidationRule = RuleDefinition
+RuleGroup = RuleCategory
 
 __all__ = [
     # rule_definition
@@ -49,6 +54,7 @@ __all__ = [
     "AuditEvidence",
     "AuditResult",
     "AuditRun",
+    "RuleResult",
     # risk
     "RiskScoreSummary",
     # review
@@ -59,4 +65,7 @@ __all__ = [
     "RuleFieldDependency",
     # audit_run_v2
     "AuditRunV2Metadata",
+    # legacy aliases
+    "ValidationRule",
+    "RuleGroup",
 ]

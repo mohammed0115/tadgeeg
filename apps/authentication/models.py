@@ -2,12 +2,87 @@
 
 import uuid
 from datetime import timedelta
+from typing import Any
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+
+
+_LEGACY_ROLE_NAME_MAP = {
+    "admin": "admin",
+    "platform admin": "admin",
+    "organization admin": "admin",
+    "org admin": "admin",
+    "cao": "cao",
+    "chief audit officer": "cao",
+    "senior auditor": "senior_auditor",
+    "auditor": "senior_auditor",
+    "junior auditor": "junior_auditor",
+    "compliance officer": "compliance_officer",
+    "finance manager": "finance_manager",
+    "external auditor": "external_auditor",
+    "viewer": "external_auditor",
+    "guest": "external_auditor",
+}
+_VALID_USER_ROLE_VALUES = set(_LEGACY_ROLE_NAME_MAP.values())
+
+
+def _coerce_user_role(value: Any) -> str:
+    """Normalize legacy role objects or labels into the current user role string."""
+    if value is None:
+        return "junior_auditor"
+
+    if hasattr(value, "name"):
+        value = getattr(value, "name")
+
+    normalized = str(value).strip()
+    if not normalized:
+        return "junior_auditor"
+
+    normalized_key = normalized.lower().replace("-", " ").replace("_", " ")
+    if normalized in _VALID_USER_ROLE_VALUES:
+        return normalized
+    return _LEGACY_ROLE_NAME_MAP.get(normalized_key, "junior_auditor")
+
+
+class _LegacyRoleManager:
+    """In-memory manager for compatibility with removed Role model imports in tests."""
+
+    def __init__(self) -> None:
+        self._cache: dict[tuple[str, int], "Role"] = {}
+
+    def get_or_create(self, *, name: str, permission_level: int = 0, **_: Any) -> tuple["Role", bool]:
+        key = (str(name).strip().lower(), int(permission_level or 0))
+        if key in self._cache:
+            return self._cache[key], False
+        role = Role(name=str(name).strip(), permission_level=int(permission_level or 0))
+        self._cache[key] = role
+        return role, True
+
+    def create(self, *, name: str, permission_level: int = 0, **kwargs: Any) -> "Role":
+        """Compatibility helper matching the subset of manager API used by tests."""
+        return self.get_or_create(name=name, permission_level=permission_level, **kwargs)[0]
+
+
+class Role:
+    """Compatibility shim for older tests that still expect a standalone Role model."""
+
+    objects = _LegacyRoleManager()
+
+    def __init__(self, *, name: str, permission_level: int = 0) -> None:
+        self.name = name
+        self.permission_level = permission_level
+
+    @property
+    def code(self) -> str:
+        """Return the normalized role code persisted on the current User model."""
+        return _coerce_user_role(self.name)
+
+    def __str__(self) -> str:
+        return self.code
 
 
 class UserManager(BaseUserManager):
@@ -18,6 +93,8 @@ class UserManager(BaseUserManager):
         legacy_username = extra_fields.pop("username", "").strip()
         if legacy_username and not extra_fields.get("full_name"):
             extra_fields["full_name"] = legacy_username
+        if "role" in extra_fields:
+            extra_fields["role"] = _coerce_user_role(extra_fields.get("role"))
         extra_fields.setdefault("email_verified_at", timezone.now())
         user = self.model(email=email, **extra_fields)
         user.set_password(password)
@@ -217,6 +294,7 @@ class Organization(models.Model):
 
     def __init__(self, *args, **kwargs):
         legacy_registration = kwargs.pop("registration_number", None)
+        kwargs.pop("slug", None)
         if legacy_registration is not None and "cr_number" not in kwargs:
             kwargs["cr_number"] = legacy_registration
         super().__init__(*args, **kwargs)

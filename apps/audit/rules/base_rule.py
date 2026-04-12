@@ -45,14 +45,39 @@ class RuleResult:
     rule_name: str
     severity: Severity
     result: RuleStatus
+    rule_code: str = ""
+    catalog_code: str = ""
+    legacy_rule_code: str = ""
+    is_blocking: bool = False
     explanation: str = ""
     details: dict = field(default_factory=dict)
     document_id: Optional[int] = None
+
+    def __post_init__(self):
+        identifier = self.legacy_rule_code or self.rule_code or self.rule_id
+        if not identifier:
+            return
+        try:
+            from apps.rule_engine.catalog import resolve_rule_catalog_metadata
+
+            entry = resolve_rule_catalog_metadata(identifier, severity=self.severity)
+            self.catalog_code = entry.rule_code
+            self.rule_code = entry.rule_code
+            if not self.legacy_rule_code:
+                self.legacy_rule_code = identifier
+            self.is_blocking = bool(self.is_blocking or entry.is_blocking)
+        except Exception:
+            if not self.catalog_code:
+                self.catalog_code = self.rule_code or identifier
 
     def to_dict(self) -> dict:
         return {
             "rule_id": self.rule_id,
             "rule_name": self.rule_name,
+            "rule_code": self.rule_code,
+            "catalog_code": self.catalog_code,
+            "legacy_rule_code": self.legacy_rule_code,
+            "is_blocking": self.is_blocking,
             "severity": self.severity.value if isinstance(self.severity, Severity) else self.severity,
             "result": self.result.value if isinstance(self.result, RuleStatus) else self.result,
             "explanation": self.explanation,
@@ -87,6 +112,29 @@ class AuditRule(abc.ABC):
     severity: Severity = Severity.MEDIUM
     applies_to: set[str] = set()  # Empty = all document types
     description: str = ""
+    catalog_code: str = ""
+    is_blocking: bool = False
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if cls.__name__ == "AuditRule":
+            return
+        identifier = getattr(cls, "rule_id", "")
+        if not identifier:
+            return
+        try:
+            from apps.rule_engine.catalog import resolve_rule_catalog_metadata
+
+            entry = resolve_rule_catalog_metadata(
+                identifier,
+                rule_name=getattr(cls, "rule_name", ""),
+                severity=getattr(cls, "severity", Severity.MEDIUM),
+            )
+            cls.catalog_code = entry.rule_code
+            cls.is_blocking = entry.is_blocking
+        except Exception:
+            cls.catalog_code = identifier
+            cls.is_blocking = getattr(cls, "severity", Severity.MEDIUM) == Severity.CRITICAL
 
     @abc.abstractmethod
     def evaluate(
@@ -120,6 +168,10 @@ class AuditRule(abc.ABC):
             rule_name=self.rule_name,
             severity=self.severity,
             result=RuleStatus.PASSED,
+            rule_code=self.catalog_code or self.rule_id,
+            catalog_code=self.catalog_code or self.rule_id,
+            legacy_rule_code=self.rule_id,
+            is_blocking=self.is_blocking,
             explanation="",
             details=details or {},
             document_id=doc_id,
@@ -131,6 +183,10 @@ class AuditRule(abc.ABC):
             rule_name=self.rule_name,
             severity=self.severity,
             result=RuleStatus.FAILED,
+            rule_code=self.catalog_code or self.rule_id,
+            catalog_code=self.catalog_code or self.rule_id,
+            legacy_rule_code=self.rule_id,
+            is_blocking=self.is_blocking,
             explanation=explanation,
             details=details or {},
             document_id=doc_id,
@@ -142,6 +198,10 @@ class AuditRule(abc.ABC):
             rule_name=self.rule_name,
             severity=self.severity,
             result=RuleStatus.SKIPPED,
+            rule_code=self.catalog_code or self.rule_id,
+            catalog_code=self.catalog_code or self.rule_id,
+            legacy_rule_code=self.rule_id,
+            is_blocking=self.is_blocking,
             explanation=reason,
         )
 
@@ -152,5 +212,9 @@ class AuditRule(abc.ABC):
             rule_name=self.rule_name,
             severity=self.severity,
             result=RuleStatus.ERROR,
+            rule_code=self.catalog_code or self.rule_id,
+            catalog_code=self.catalog_code or self.rule_id,
+            legacy_rule_code=self.rule_id,
+            is_blocking=self.is_blocking,
             explanation=f"Rule evaluation failed: {exc}",
         )

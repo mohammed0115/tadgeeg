@@ -41,6 +41,7 @@ from core.services.invoice_validator import compute_file_hash
 from core.services.normalization import NormalizationService
 from core.services.ocr_service import pdf_to_images
 from core.services.parsers.structured import iter_structured_records
+from core.services.qr_scanner import enrich_invoice_qr
 from core.services.validation_pipeline import ValidationPipelineService
 from core.services.zip_validator import validate_zip_bomb, ZipValidationError
 from core.utils.audit import record_invoice_event
@@ -342,6 +343,27 @@ def process_single_file(
         invoice.line_items        = serialized_normalized.get("line_items") or ai_data.get("line_items", [])
         invoice.has_qr_code       = bool(normalized.get("has_qr_code", False))
         invoice.qr_code_valid     = bool(ai_data.get("qr_code_valid", False))
+
+        try:
+            qr_result = enrich_invoice_qr(file_path)
+            if qr_result.get("found"):
+                invoice.has_qr_code = True
+                tlv = qr_result.get("tlv_data", {})
+                qr_vat = str(tlv.get("vat_number", "") or "")
+
+                # Use QR-extracted TRN only when OCR/AI extraction missed it.
+                if not invoice.vendor_vat_number and qr_vat:
+                    invoice.vendor_vat_number = qr_vat
+                    logger.info("[QR] TRN enriched from QR code: %s", qr_vat)
+
+                # Accept 10-digit simplified or 15-digit ZATCA TRN formats.
+                invoice.qr_code_valid = bool(qr_vat and len(qr_vat) in (10, 15))
+            else:
+                logger.debug("[QR] No QR code found in %s: %s", filename, qr_result.get("error"))
+        except Exception as exc:
+            # Never let QR scan failures interrupt invoice processing.
+            logger.warning("[QR] QR scan failed for %s: %s", filename, exc)
+
         invoice.is_handwritten    = bool(ai_data.get("is_handwritten") or ingestion.metadata.get("is_handwritten", False))
         invoice.is_clear          = bool(ai_data.get("is_clear", True))
         invoice.has_alterations   = bool(ai_data.get("has_alterations", False))

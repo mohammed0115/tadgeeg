@@ -10,15 +10,32 @@ import base64
 import io
 import logging
 import os
-from typing import Optional
+from typing import Any, Optional
 
 logger = logging.getLogger("finai.qr_scanner")
 
+_PYZBAR_UNAVAILABLE_LOGGED = False
 
-def _decode_zatca_tlv(raw_bytes: bytes) -> dict:
-    """Decode ZATCA TLV binary into a structured dict."""
-    result = {}
-    TAG_NAMES = {
+
+def _empty_result(error: Optional[str] = None) -> dict[str, Any]:
+    """Create a normalized QR scan result payload."""
+    return {
+        "found": False,
+        "raw_data": "",
+        "tlv_data": {},
+        "vat_number": "",
+        "error": error,
+    }
+
+
+def _decode_zatca_tlv(raw_bytes: bytes) -> dict[str, str]:
+    """
+    Decode ZATCA TLV (Tag-Length-Value) binary into a structured dict.
+
+    Tags: 1=seller_name, 2=vat_number, 3=invoice_date,
+    4=total_with_vat, 5=vat_amount, 6=invoice_hash
+    """
+    tag_names = {
         1: "seller_name",
         2: "vat_number",
         3: "invoice_date",
@@ -26,6 +43,7 @@ def _decode_zatca_tlv(raw_bytes: bytes) -> dict:
         5: "vat_amount",
         6: "invoice_hash",
     }
+    result: dict[str, str] = {}
     i = 0
     while i < len(raw_bytes) - 1:
         tag = raw_bytes[i]
@@ -37,9 +55,9 @@ def _decode_zatca_tlv(raw_bytes: bytes) -> dict:
             i += 1
         if i + length > len(raw_bytes):
             break
-        value = raw_bytes[i: i + length]
+        value = raw_bytes[i:i + length]
         i += length
-        key = TAG_NAMES.get(tag, f"tag_{tag}")
+        key = tag_names.get(tag, f"tag_{tag}")
         try:
             result[key] = value.decode("utf-8")
         except UnicodeDecodeError:
@@ -47,138 +65,147 @@ def _decode_zatca_tlv(raw_bytes: bytes) -> dict:
     return result
 
 
-def scan_image_for_qr(image_path: str) -> dict:
-    """
-    Scan an image file for QR codes. Returns decoded ZATCA TLV data.
-
-    Strategy:
-      1. pyzbar on original image
-      2. PIL contrast enhancement + pyzbar retry
-      3. cv2 adaptive threshold + pyzbar (if cv2 available)
-
-    Returns:
-        {
-            "found": bool,
-            "raw_data": str,          # raw QR string
-            "tlv_data": dict,         # decoded ZATCA TLV fields
-            "vat_number": str,        # extracted TRN if present
-            "error": str | None,
-        }
-    """
-    result = {"found": False, "raw_data": "", "tlv_data": {}, "vat_number": "", "error": None}
-
-    if not image_path or not os.path.exists(image_path):
-        result["error"] = "Image file not found"
-        return result
-
-    try:
-        from PIL import Image
-        img = Image.open(image_path)
-        # Convert to RGB if needed (handles RGBA, palette modes)
-        if img.mode not in ("RGB", "L", "1"):
-            img = img.convert("RGB")
-    except Exception as exc:
-        result["error"] = f"Cannot open image: {exc}"
-        return result
-
-    # ── Strategy 1: pyzbar on original ───────────────────────────────────────
-    decoded = _pyzbar_scan(img)
-
-    # ── Strategy 2: contrast-enhanced retry ──────────────────────────────────
-    if not decoded:
-        try:
-            from PIL import ImageEnhance, ImageFilter
-            enhanced = ImageEnhance.Contrast(img).enhance(2.0)
-            enhanced = enhanced.filter(ImageFilter.SHARPEN)
-            decoded = _pyzbar_scan(enhanced)
-        except Exception as exc:
-            logger.debug("QR contrast enhancement failed: %s", exc)
-
-    # ── Strategy 3: grayscale + binarize ─────────────────────────────────────
-    if not decoded:
-        try:
-            gray = img.convert("L")
-            bw = gray.point(lambda x: 0 if x < 128 else 255, "1")
-            decoded = _pyzbar_scan(bw.convert("L"))
-        except Exception as exc:
-            logger.debug("QR binarize scan failed: %s", exc)
-
-    if not decoded:
-        result["error"] = "No QR code detected in image"
-        return result
-
-    raw = decoded[0]
-    result["found"] = True
-    result["raw_data"] = raw
-
-    # Try to decode as ZATCA TLV (base64-encoded binary)
+def _decode_raw_payload(raw: str) -> dict[str, Any]:
+    """Decode a raw QR payload into TLV fields when it matches ZATCA format."""
+    result = {
+        "found": True,
+        "raw_data": raw,
+        "tlv_data": {},
+        "vat_number": "",
+        "error": None,
+    }
     try:
         tlv_bytes = base64.b64decode(raw)
         tlv = _decode_zatca_tlv(tlv_bytes)
         result["tlv_data"] = tlv
         result["vat_number"] = tlv.get("vat_number", "")
     except Exception:
-        # Not a ZATCA TLV QR — treat as plain text
         result["tlv_data"] = {"raw_text": raw}
-
     return result
 
 
-def _pyzbar_scan(img) -> list:
-    """Run pyzbar decode, return list of decoded QR data strings."""
+def _pyzbar_scan(img: Any) -> list[str]:
+    """Run pyzbar QR decoder. Returns list of decoded string data."""
+    global _PYZBAR_UNAVAILABLE_LOGGED
     try:
-        from pyzbar.pyzbar import decode as pyzbar_decode
-        from pyzbar.pyzbar import ZBarSymbol
+        from pyzbar.pyzbar import ZBarSymbol, decode as pyzbar_decode
+
         codes = pyzbar_decode(img, symbols=[ZBarSymbol.QRCODE])
-        return [c.data.decode("utf-8", errors="replace") for c in codes if c.data]
+        return [code.data.decode("utf-8", errors="replace") for code in codes if code.data]
     except ImportError:
-        logger.info("pyzbar not installed — QR scanning requires: pip install pyzbar")
+        if not _PYZBAR_UNAVAILABLE_LOGGED:
+            logger.warning("pyzbar not installed — QR scanning disabled. Run: pip install pyzbar")
+            _PYZBAR_UNAVAILABLE_LOGGED = True
+        return []
+    except OSError as exc:
+        if not _PYZBAR_UNAVAILABLE_LOGGED:
+            logger.warning("pyzbar/zbar unavailable — QR scanning disabled: %s", exc)
+            _PYZBAR_UNAVAILABLE_LOGGED = True
         return []
     except Exception as exc:
         logger.debug("pyzbar decode error: %s", exc)
         return []
 
 
-def scan_pdf_for_qr(pdf_path: str, max_pages: int = 5) -> dict:
-    """
-    Rasterize PDF pages and scan each for QR codes.
-    Stops at first QR code found.
+def _scan_pil_image(img: Any) -> dict[str, Any]:
+    """Internal: scan a PIL Image object directly (used by PDF scanner)."""
+    decoded = _pyzbar_scan(img)
 
-    Returns same structure as scan_image_for_qr.
+    if not decoded:
+        try:
+            from PIL import ImageEnhance, ImageFilter
+
+            enhanced = ImageEnhance.Contrast(img).enhance(2.0)
+            enhanced = enhanced.filter(ImageFilter.SHARPEN)
+            decoded = _pyzbar_scan(enhanced)
+        except Exception as exc:
+            logger.debug("QR contrast scan failed: %s", exc)
+
+    if not decoded:
+        try:
+            gray = img.convert("L")
+            bw = gray.point(lambda value: 0 if value < 128 else 255, "1")
+            decoded = _pyzbar_scan(bw.convert("L"))
+        except Exception as exc:
+            logger.debug("QR binarize scan failed: %s", exc)
+
+    if not decoded:
+        return _empty_result("No QR code detected")
+
+    return _decode_raw_payload(decoded[0])
+
+
+def scan_image_for_qr(image_path: str) -> dict[str, Any]:
     """
-    result = {"found": False, "raw_data": "", "tlv_data": {}, "vat_number": "", "error": None}
+    Scan an image file for ZATCA QR codes using 3 strategies.
+
+    Strategy 1: pyzbar on original image
+    Strategy 2: PIL contrast enhancement + sharpen + pyzbar
+    Strategy 3: Grayscale binarize + pyzbar
+
+    Returns:
+        {
+            "found": bool,
+            "raw_data": str,
+            "tlv_data": dict,
+            "vat_number": str,
+            "error": str | None,
+        }
+    """
+    if not image_path or not os.path.exists(image_path):
+        return _empty_result("Image file not found")
+
+    try:
+        from PIL import Image
+
+        with Image.open(image_path) as opened_img:
+            if opened_img.mode not in ("RGB", "L", "1"):
+                img = opened_img.convert("RGB")
+            else:
+                img = opened_img.copy()
+    except Exception as exc:
+        return _empty_result(f"Cannot open image: {exc}")
+
+    return _scan_pil_image(img)
+
+
+def scan_pdf_for_qr(pdf_path: str, max_pages: int = 5) -> dict[str, Any]:
+    """
+    Rasterize PDF pages at 2x zoom and scan each for QR codes.
+    Stops at first QR code found.
+    """
+    result = _empty_result()
 
     try:
         import fitz  # PyMuPDF
     except ImportError:
-        result["error"] = "PyMuPDF (fitz) not installed — cannot scan PDF for QR"
+        result["error"] = "PyMuPDF not installed. Run: pip install pymupdf"
         return result
 
     try:
         doc = fitz.open(pdf_path)
-        for page_num in range(min(len(doc), max_pages)):
-            page = doc[page_num]
-            # Render at 2x zoom for better QR resolution
-            mat = fitz.Matrix(2, 2)
-            pix = page.get_pixmap(matrix=mat, alpha=False)
-            img_bytes = pix.tobytes("png")
-
+        scanned_pages = min(len(doc), max_pages)
+        try:
             from PIL import Image
-            img = Image.open(io.BytesIO(img_bytes))
-            codes = _pyzbar_scan(img)
-            if codes:
-                raw = codes[0]
-                result["found"] = True
-                result["raw_data"] = raw
-                try:
-                    tlv_bytes = base64.b64decode(raw)
-                    tlv = _decode_zatca_tlv(tlv_bytes)
-                    result["tlv_data"] = tlv
-                    result["vat_number"] = tlv.get("vat_number", "")
-                except Exception:
-                    result["tlv_data"] = {"raw_text": raw}
-                return result
-        result["error"] = f"No QR code found in first {min(len(doc), max_pages)} pages"
+
+            for page_num in range(scanned_pages):
+                page = doc[page_num]
+                mat = fitz.Matrix(2, 2)
+                pix = page.get_pixmap(matrix=mat, alpha=False)
+
+                with Image.open(io.BytesIO(pix.tobytes("png"))) as opened_img:
+                    if opened_img.mode not in ("RGB", "L", "1"):
+                        img = opened_img.convert("RGB")
+                    else:
+                        img = opened_img.copy()
+
+                page_result = _scan_pil_image(img)
+                if page_result.get("found"):
+                    return page_result
+        finally:
+            doc.close()
+
+        result["error"] = f"No QR code found in first {scanned_pages} pages"
     except Exception as exc:
         logger.warning("PDF QR scan failed for %s: %s", pdf_path, exc)
         result["error"] = str(exc)
@@ -186,18 +213,17 @@ def scan_pdf_for_qr(pdf_path: str, max_pages: int = 5) -> dict:
     return result
 
 
-def enrich_invoice_qr(invoice_path: str) -> dict:
+def enrich_invoice_qr(invoice_path: str) -> dict[str, Any]:
     """
     Unified entry point: detect file type, scan for QR, return enriched data.
-    Suitable for calling during invoice ingestion pipeline.
+    Call this during invoice ingestion pipeline.
     """
     if not invoice_path or not os.path.exists(invoice_path):
-        return {"found": False, "error": "File not found"}
+        return _empty_result("File not found")
 
     ext = os.path.splitext(invoice_path)[1].lower()
     if ext == ".pdf":
         return scan_pdf_for_qr(invoice_path)
-    elif ext in {".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp", ".webp"}:
+    if ext in {".jpg", ".jpeg", ".png", ".tiff", ".tif", ".bmp", ".webp"}:
         return scan_image_for_qr(invoice_path)
-    else:
-        return {"found": False, "error": f"Unsupported format for QR scan: {ext}"}
+    return _empty_result(f"Unsupported format for QR scan: {ext}")

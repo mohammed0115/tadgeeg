@@ -5,6 +5,38 @@ from django.db.models.functions import TruncMonth
 
 from apps.invoices.models import Invoice, InvoiceValidationResult
 
+# Maps legacy boolean-field names to (rule_code, passed_means_true).
+# passed_means_true=True  → "field=True" means the rule passed → NOT in failed_rule_codes
+# passed_means_true=False → "field=True" means the rule failed → IS  in failed_rule_codes
+_FIELD_RULE_MAP = {
+    "has_invoice_number":           ("INV-001", True),
+    "has_invoice_date":             ("INV-002", True),
+    "has_vendor_name":              ("INV-003", True),
+    "has_vendor_vat":               ("INV-004", True),
+    "has_total_amount":             ("INV-008", True),
+    "has_currency":                 ("INV-005", True),
+    "total_greater_zero":           ("INV-007", True),
+    "duplicate_file_hash":          ("DUP-004", False),
+    "duplicate_invoice_number":     ("DUP-001", False),
+    "duplicate_vendor_amount_date": ("DUP-002", False),
+    "vat_rate_correct":             ("VAT-001", True),
+    "vat_calculation_correct":      ("VAT-002", True),
+    "vat_subtotal_correct":         ("VAT-003", True),
+    "vat_number_present":           ("VAT-004", True),
+    "qr_code_valid":                ("VAT-005", True),
+    "has_cost_center":              ("CTL-001", True),
+    "has_account_code":             ("CTL-002", True),
+    "has_approver":                 ("CTL-003", True),
+    "document_is_clear":            ("DOC-001", True),
+    "appears_genuine":              ("DOC-002", True),
+    "no_alterations":               ("DOC-003", True),
+    "has_qr_code":                  ("DOC-004", True),
+    "amount_unusually_high":        ("ANO-001", False),
+    "new_unknown_vendor":           ("ANO-002", False),
+    "many_invoices_same_day":       ("ANO-003", False),
+    "vendor_dominates_invoices":    ("ANO-004", False),
+}
+
 
 _BIG_FOUR_MAPPING = {
     "KPMG": {"label": "KPMG — Invoice Completeness", "groups": ["INV"], "standard": "ISA 500"},
@@ -97,13 +129,14 @@ class ReportDataService:
         org_risk = round(float(inv_stats["avg_risk"] or 0), 1)
 
         vat_qs = InvoiceValidationResult.objects.filter(invoice__in=invoices_queryset)
-        vat_total = vat_qs.count() or 1
+        vat_failed_list = list(vat_qs.values_list("failed_rule_codes", flat=True))
+        vat_total = len(vat_failed_list) or 1
+        _VAT_CORE = {"VAT-001", "VAT-002", "VAT-003"}
+        # Count invoices where none of the three core VAT rules appear in failed_rule_codes
         org_vat = round(
-            vat_qs.filter(
-                vat_rate_correct=True,
-                vat_calculation_correct=True,
-                vat_subtotal_correct=True,
-            ).count() / vat_total * 100,
+            sum(1 for codes in vat_failed_list if not _VAT_CORE.intersection(codes or []))
+            / vat_total
+            * 100,
             1,
         )
 
@@ -274,20 +307,29 @@ class ReportDataService:
             for item in monthly
         ]
 
-        vat_compliant = InvoiceValidationResult.objects.filter(
-            invoice__organization=org,
-            invoice__in=inv_qs,
-            vat_rate_correct=True,
-            vat_calculation_correct=True,
-            vat_subtotal_correct=True,
-        ).count()
-        vat_total = InvoiceValidationResult.objects.filter(invoice__organization=org, invoice__in=inv_qs).count()
-
         validation_results = InvoiceValidationResult.objects.filter(invoice__organization=org, invoice__in=inv_qs)
-        total_validation_results = validation_results.count() or 1
+        # Fetch all failed_rule_codes lists once for in-memory computation (cross-DB compatible)
+        all_failed_codes = list(validation_results.values_list("failed_rule_codes", flat=True))
+        total_validation_results = len(all_failed_codes) or 1
+
+        _VAT_CORE = {"VAT-001", "VAT-002", "VAT-003"}
+        vat_total = total_validation_results
+        vat_compliant = sum(
+            1 for codes in all_failed_codes
+            if not _VAT_CORE.intersection(codes or [])
+        )
 
         def _pct(field_name):
-            return round(validation_results.filter(**{field_name: True}).count() / total_validation_results * 100, 1)
+            """Return pass-rate % for a legacy boolean-field name using failed_rule_codes."""
+            mapping = _FIELD_RULE_MAP.get(field_name)
+            if not mapping:
+                return 0.0
+            rule_code, passed_means_true = mapping
+            if passed_means_true:
+                count = sum(1 for codes in all_failed_codes if rule_code not in (codes or []))
+            else:
+                count = sum(1 for codes in all_failed_codes if rule_code in (codes or []))
+            return round(count / total_validation_results * 100, 1)
 
         rule_group_summary = {
             "group1_header_validation": {
@@ -300,9 +342,9 @@ class ReportDataService:
                 "total_greater_zero_pct": _pct("total_greater_zero"),
             },
             "group2_duplicate_detection": {
-                "duplicate_invoice_number_pct": round(validation_results.filter(duplicate_invoice_number=True).count() / total_validation_results * 100, 1),
-                "duplicate_vendor_amount_date_pct": round(validation_results.filter(duplicate_vendor_amount_date=True).count() / total_validation_results * 100, 1),
-                "duplicate_file_hash_pct": round(validation_results.filter(duplicate_file_hash=True).count() / total_validation_results * 100, 1),
+                "duplicate_invoice_number_pct": _pct("duplicate_invoice_number"),
+                "duplicate_vendor_amount_date_pct": _pct("duplicate_vendor_amount_date"),
+                "duplicate_file_hash_pct": _pct("duplicate_file_hash"),
             },
             "group3_vat_validation": {
                 "vat_rate_correct_pct": _pct("vat_rate_correct"),
@@ -312,10 +354,10 @@ class ReportDataService:
                 "qr_code_valid_pct": _pct("qr_code_valid"),
             },
             "group4_anomaly_detection": {
-                "amount_unusually_high_pct": round(validation_results.filter(amount_unusually_high=True).count() / total_validation_results * 100, 1),
-                "new_unknown_vendor_pct": round(validation_results.filter(new_unknown_vendor=True).count() / total_validation_results * 100, 1),
-                "many_invoices_same_day_pct": round(validation_results.filter(many_invoices_same_day=True).count() / total_validation_results * 100, 1),
-                "vendor_dominates_pct": round(validation_results.filter(vendor_dominates_invoices=True).count() / total_validation_results * 100, 1),
+                "amount_unusually_high_pct": _pct("amount_unusually_high"),
+                "new_unknown_vendor_pct": _pct("new_unknown_vendor"),
+                "many_invoices_same_day_pct": _pct("many_invoices_same_day"),
+                "vendor_dominates_pct": _pct("vendor_dominates_invoices"),
             },
             "group5_financial_controls": {
                 "has_cost_center_pct": _pct("has_cost_center"),

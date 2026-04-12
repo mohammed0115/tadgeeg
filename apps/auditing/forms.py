@@ -63,7 +63,7 @@ class AuditDocumentUploadForm(forms.Form):
         required=True,
     )
     selected_doc_type = forms.ChoiceField(
-        choices=[("", "Auto Detect")] + AuditDocument.DocumentType.choices,
+        choices=[("", "Auto Detect"), ("auto", "Auto Detect")] + AuditDocument.DocumentType.choices,
         required=False,
         label="Document Type",
     )
@@ -81,6 +81,11 @@ class AuditDocumentUploadForm(forms.Form):
         label="Document Language",
     )
 
+    def clean_selected_doc_type(self):
+        """Accept both blank and explicit 'auto' as auto-detect mode."""
+        value = (self.cleaned_data.get("selected_doc_type") or "").strip().lower()
+        return "auto" if value in {"", "auto"} else value
+
     def clean(self):
         """Validate all uploaded files (supports multiple)."""
         cleaned_data = super().clean()
@@ -88,26 +93,29 @@ class AuditDocumentUploadForm(forms.Form):
         # Get all files directly from request
         files = self.files.getlist('file')
         if not files:
-            raise forms.ValidationError("Please select at least one file.")
+            self.add_error("file", "Please select at least one file.")
+            return cleaned_data
         
         validated_files = []
         for f in files:
             ext = os.path.splitext(f.name)[1].lower()
             if ext not in ALLOWED_EXTENSIONS:
-                raise forms.ValidationError(f"File type '{ext}' is not supported: {f.name}")
+                self.add_error("file", f"File type '{ext}' is not supported: {f.name}")
+                continue
             if f.size > MAX_FILE_SIZE_MB * 1024 * 1024:
-                raise forms.ValidationError(
-                    f"File '{f.name}' exceeds {MAX_FILE_SIZE_MB}MB limit."
-                )
+                self.add_error("file", f"File '{f.name}' exceeds {MAX_FILE_SIZE_MB}MB limit.")
+                continue
             # Validate ZIP contents if it's a ZIP file
             if ext == '.zip':
                 try:
                     validate_zip_contents(f)
                     f.seek(0)  # Reset after validation
-                except forms.ValidationError:
-                    raise  # Re-raise form validation errors
+                except forms.ValidationError as exc:
+                    self.add_error("file", exc)
+                    continue
                 except Exception as e:
-                    raise forms.ValidationError(f"ZIP validation error: {str(e)}")
+                    self.add_error("file", f"ZIP validation error: {str(e)}")
+                    continue
             
             # Log upload with hash
             log_file_upload(f, f.name)

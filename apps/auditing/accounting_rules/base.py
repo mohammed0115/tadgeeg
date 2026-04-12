@@ -24,6 +24,32 @@ class AccountingRule(abc.ABC):
     applies_to: tuple[EntityType, ...] = tuple()
     enabled_by_default: bool = True
     config_key: str | None = None
+    catalog_code: str = ""
+    is_blocking: bool = False
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if cls.__name__ == "AccountingRule":
+            return
+        identifier = getattr(cls, "code", "")
+        if not identifier:
+            return
+        try:
+            from apps.rule_engine.catalog import resolve_rule_catalog_metadata
+
+            category = getattr(getattr(cls, "category", None), "value", "")
+            severity = getattr(getattr(cls, "severity", None), "value", getattr(cls, "severity", "medium"))
+            entry = resolve_rule_catalog_metadata(
+                identifier,
+                rule_name=getattr(cls, "title", ""),
+                rule_type=str(category),
+                severity=severity,
+            )
+            cls.catalog_code = entry.rule_code
+            cls.is_blocking = entry.is_blocking
+        except Exception:
+            cls.catalog_code = identifier
+            cls.is_blocking = False
 
     def __init__(self, config: dict[str, Any] | None = None):
         self.config = config or {}

@@ -115,6 +115,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     "apps.authentication",
+    "apps.core_engine",
     "apps.documents",
     "apps.transactions",
     "apps.audit",
@@ -187,6 +188,7 @@ CHANNEL_LAYERS = {
 
 # ─── Database ─────────────────────────────────────────────────────────────────
 _RUNNING_PYTEST = "pytest" in Path(sys.argv[0]).name.lower() or "pytest" in sys.modules
+_RUNNING_TESTS = _RUNNING_PYTEST or any(arg == "test" for arg in sys.argv[1:])
 if _RUNNING_PYTEST:
     DATABASE_BACKEND, _default_database = build_test_database(BASE_DIR, os.environ)
 else:
@@ -262,7 +264,10 @@ SECURE_HSTS_PRELOAD = os.environ.get("SECURE_HSTS_PRELOAD", "True" if not DEBUG 
 SECURE_BROWSER_XSS_FILTER = True
 HEALTH_REDIS_REQUIRED = os.environ.get("HEALTH_REDIS_REQUIRED", "False") == "True"
 
-SECURE_SSL_REDIRECT = os.environ.get("SECURE_SSL_REDIRECT", "True" if not DEBUG else "False") == "True"
+SECURE_SSL_REDIRECT = (
+    False if _RUNNING_TESTS
+    else os.environ.get("SECURE_SSL_REDIRECT", "True" if not DEBUG else "False") == "True"
+)
 
 if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000

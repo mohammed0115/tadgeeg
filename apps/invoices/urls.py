@@ -13,6 +13,7 @@ urlpatterns = [
     path("<uuid:pk>/download/",         views.InvoiceDownloadView.as_view(),         name="invoice-download"),
     path("<uuid:pk>/review/",           views.InvoiceManualReviewView.as_view(),     name="invoice-review"),
     path("<uuid:pk>/approve/",          views.InvoiceApproveView.as_view(),          name="invoice-approve"),
+    path("<uuid:pk>/escalate/",         views.InvoiceEscalateView.as_view(),         name="invoice-escalate"),
     path("<uuid:pk>/revalidate/",       views.InvoiceRevalidateView.as_view(),       name="invoice-revalidate"),
 
     # ── Batches ────────────────────────────────────────────────────────────────

@@ -411,15 +411,19 @@ def _risk_band(score):
 
 
 def _status_meta(status):
+    # (label_en, label_ar, badge_class)
     mapping = {
-        "approved": (_("Approved"), "status-approved"),
-        "rejected": (_("Rejected"), "status-rejected"),
-        "flagged": (_("Needs Review"), "status-flagged"),
-        "validated": (_("Validated"), "status-validated"),
-        "processing": (_("Processing"), "status-processing"),
-        "pending": (_("Pending"), "status-pending"),
+        "approved":   (_("Approved"),   "تمت الموافقة",  "status-approved"),
+        "rejected":   (_("Rejected"),   "مرفوض",         "status-rejected"),
+        "flagged":    (_("Needs Review"), "تحتاج مراجعة", "status-flagged"),
+        "validated":  (_("Validated"),  "تم التحقق",     "status-validated"),
+        "processing": (_("Processing"), "قيد المعالجة",  "status-processing"),
+        "pending":    (_("Pending"),    "قيد الانتظار",  "status-pending"),
     }
-    return mapping.get(status, (status or _("Unknown"), "status-pending"))
+    label_en, label_ar, badge = mapping.get(
+        status, (status or _("Unknown"), status or "", "status-pending")
+    )
+    return label_en, label_ar, badge
 
 
 def _build_invoice_display(invoice):
@@ -444,7 +448,7 @@ def _build_invoice_display(invoice):
     effective_status = invoice.status
     if invoice.status not in {"approved", "rejected"} and risk_score >= 70:
         effective_status = "flagged"
-    status_label, status_badge_class = _status_meta(effective_status)
+    status_label, status_label_ar, status_badge_class = _status_meta(effective_status)
 
     vendor_name = _first_present(
         invoice.vendor_name,
@@ -526,6 +530,25 @@ def _build_invoice_display(invoice):
     def _format_date(date_value):
         return date_value.strftime("%Y-%m-%d") if date_value else "—"
 
+    # ── Risk-gate fields for approval scenarios ───────────────────────────────
+    from apps.rule_engine.models import RiskScoreSummary  # lazy to avoid circular
+    _risk_summary   = RiskScoreSummary.objects.filter(document_id=invoice.id).first()
+    _has_blocking   = _risk_summary.blocks_approval   if _risk_summary else False
+    _blocking_count = _risk_summary.blocking_failures if _risk_summary else 0
+    _fraud_score    = float(_risk_summary.score_breakdown.get("fraud_score", 0)) if _risk_summary else 0.0
+    _risk_level_key = _risk_summary.risk_level        if _risk_summary else "low"
+    _blocking_rules = (
+        [r for r in _risk_summary.top_failed_rules if r.get("rule_code")]
+        if _risk_summary else []
+    )
+    _rules_passed_n = int(getattr(validation, "rules_passed", 0) or 0)
+    _rules_failed_n = int(getattr(validation, "rules_failed", 0) or 0)
+    _has_real_audit = (_rules_passed_n + _rules_failed_n) > 0
+    _has_warnings   = _rules_failed_n > 0 and not _has_blocking
+    _needs_senior   = not _has_blocking and (
+        _fraud_score > 70 or _risk_level_key in ("high", "critical")
+    )
+
     return {
         "vendor_name": vendor_name,
         "vendor_vat_number": vendor_vat_number,
@@ -552,9 +575,20 @@ def _build_invoice_display(invoice):
         "risk_text_class": risk["text_class"],
         "risk_ring_color": risk["ring_color"],
         "validation_score": round(audit_score, 2),
-        "rules_passed": int(getattr(validation, "rules_passed", 0) or 0),
-        "rules_failed": int(getattr(validation, "rules_failed", 0) or 0),
+        "rules_passed": _rules_passed_n,
+        "rules_failed": _rules_failed_n,
+        # ── Approval gate fields (7-scenario logic) ───────────────────────────
+        "has_blocking":    _has_blocking,
+        "blocking_count":  _blocking_count,
+        "fraud_score":     _fraud_score,
+        "risk_level":      _risk_level_key,
+        "has_warnings":    _has_warnings,
+        "needs_senior":    _needs_senior,
+        "has_real_audit":  _has_real_audit,
+        "blocking_rules":  _blocking_rules,
+        # ─────────────────────────────────────────────────────────────────────
         "status_label": status_label,
+        "status_label_ar": status_label_ar,
         "status_badge_class": status_badge_class,
         "effective_status": effective_status,
         "status_mismatch": effective_status != invoice.status,
@@ -1048,11 +1082,18 @@ def invoice_detail(request, pk):
     except Exception:
         return redirect("frontend:invoices")
 
-    invoice_display = _build_invoice_display(invoice)
+    invoice_display   = _build_invoice_display(invoice)
+    user_can_override = request.user.has_perm("invoices.can_override_approval")
     return render(
         request,
         "invoices/detail_premium.html",
-        _ctx(request, "invoices", invoice=invoice, invoice_display=invoice_display, audit_trail=audit_trail),
+        _ctx(
+            request, "invoices",
+            invoice=invoice,
+            invoice_display=invoice_display,
+            audit_trail=audit_trail,
+            user_can_override=user_can_override,
+        ),
     )
 
 

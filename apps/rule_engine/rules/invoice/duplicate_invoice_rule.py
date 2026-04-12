@@ -45,6 +45,48 @@ class DuplicateDocumentNumberRule(AuditRuleBase):
             return self._error(e)
 
 
+class DuplicateInvoiceRule(AuditRuleBase):
+    """
+    DUP-02: Detect duplicate invoices.
+
+    Checks both:
+    1. The ``is_duplicate`` flag on typed_data (fast path set by upstream detector).
+    2. A DB lookup for a matching invoice_number in the same organisation.
+    """
+
+    rule_code = "DUP-02"
+    rule_name_en = "Duplicate Invoice"
+    rule_name_ar = "فاتورة مكررة"
+    default_severity = "high"
+    rule_type = "validation"
+
+    def execute(self, doc: NormalizedDocument) -> RuleResult:
+        # Fast path: upstream already flagged this document
+        if getattr(doc, "typed_data", {}).get("is_duplicate"):
+            return self._fail(
+                "Invoice is flagged as a duplicate.",
+                "الفاتورة مُعلَّمة كمكررة.",
+            )
+        try:
+            from apps.invoices.models import Invoice
+            exists = Invoice.objects.filter(
+                organization_id=doc.organization_id,
+                invoice_number=doc.document_number,
+            ).exclude(id=doc.document_id).exists()
+
+            if exists:
+                return self._fail(
+                    f"Invoice number '{doc.document_number}' already exists.",
+                    f"رقم الفاتورة '{doc.document_number}' موجود مسبقًا.",
+                )
+            return self._pass(
+                f"Invoice number '{doc.document_number}' is unique.",
+                f"رقم الفاتورة '{doc.document_number}' فريد.",
+            )
+        except Exception as e:
+            return self._error(e)
+
+
 class AmountAnomalyRule(AuditRuleBase):
     rule_code = "ANO-01"
     rule_name_en = "Amount Unusually High"

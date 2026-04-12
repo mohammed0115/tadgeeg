@@ -7,6 +7,7 @@ import io
 import json
 import logging
 import os
+import re
 import shutil
 import time
 from pathlib import Path
@@ -503,9 +504,42 @@ def _detect_language(text: str) -> str:
     return "mixed"
 
 
+def _extract_trn(text: str) -> str:
+    """
+    Extract Saudi TRN (Tax Registration Number) using 3-tier fallback.
+
+    ZATCA format: 15 digits, starts and ends with 3.
+    Simplified format: 10 digits (also accepted).
+    """
+    # Tier 1: Strict ZATCA format — 15 digits starting and ending with 3
+    match = re.search(r"\b3\d{13}3\b", text)
+    if match:
+        return match.group(0)
+
+    # Tier 2: Labeled TRN — handles Arabic + English label variations
+    match = re.search(
+        r"(?:TRN|VAT\s*(?:No\.?|Number|Reg(?:istration)?)?|"
+        r"Tax\s*Reg(?:istration)?\s*(?:No\.?|Number)?|"
+        r"الرقم\s*الضريبي|رقم\s*(?:التسجيل\s*)?الضريبي)"
+        r"[:\s#\-\.]*([0-9]{10,15})",
+        text,
+        re.IGNORECASE,
+    )
+    if match:
+        candidate = match.group(1).strip()
+        if len(candidate) in (10, 15):
+            return candidate
+
+    # Tier 3: Any standalone 15-digit number as last resort
+    match = re.search(r"(?<!\d)([0-9]{15})(?!\d)", text)
+    if match:
+        return match.group(1)
+
+    return ""
+
+
 def _basic_parse(text: str, document_type: str) -> dict:
     """Lightweight regex-based parsing fallback when OpenAI is unavailable."""
-    import re
     result = {"document_type": document_type, "raw_extracted": True}
 
     # Amount patterns
@@ -523,29 +557,8 @@ def _basic_parse(text: str, document_type: str) -> dict:
     if inv_match:
         result["reference_number"] = inv_match.group(1)
 
-    # TRN / VAT number (Saudi ZATCA format: 15 digits starting and ending with 3)
-    # Pattern 1: strict format 3XXXXXXXXXXXXX3
-    vat_match = re.search(r"\b3\d{13}3\b", text)
-    if vat_match:
-        result["vat_number"] = vat_match.group(0)
-    else:
-        # Pattern 2: labeled TRN — handles "TRN:", "VAT No:", "الرقم الضريبي:", etc.
-        labeled = re.search(
-            r"(?:TRN|VAT\s*(?:No|Number|Reg(?:istration)?)?|"
-            r"Tax\s*Registration\s*(?:No|Number)?|"
-            r"الرقم\s*الضريبي|رقم\s*التسجيل\s*الضريبي)"
-            r"[:\s#\-]*([0-9]{10,15})",
-            text, re.IGNORECASE
-        )
-        if labeled:
-            candidate = labeled.group(1).strip()
-            # Accept 10-digit (ZATCA simplified) or 15-digit
-            if len(candidate) in (10, 15):
-                result["vat_number"] = candidate
-        else:
-            # Pattern 3: any standalone 15-digit number (last resort)
-            fallback = re.search(r"(?<![\d])([0-9]{15})(?![\d])", text)
-            if fallback:
-                result["vat_number"] = fallback.group(1)
+    trn = _extract_trn(text)
+    if trn:
+        result["vat_number"] = trn
 
     return result

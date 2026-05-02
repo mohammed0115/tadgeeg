@@ -1,7 +1,7 @@
 {% extends "layouts/base_platform_admin.html" %}
 {% load i18n %}
-{% block page_title %}مراقبة النظام{% endblock %}
-{% block breadcrumb_current %}مراقبة النظام{% endblock %}
+{% block page_title %}{% trans 'System Monitoring' %}{% endblock %}
+{% block breadcrumb_current %}{% trans 'System Monitoring' %}{% endblock %}
 
 {% block content %}
 <div x-data="systemMonitoring()" x-init="init()" class="space-y-6 fade-in">
@@ -9,17 +9,17 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">مراقبة النظام</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">حالة الخوادم والخدمات في الوقت الفعلي</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans 'System Monitoring' %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans 'Server and service status in real time' %}</p>
     </div>
     <div class="flex items-center gap-3">
       <div class="flex items-center gap-2 text-xs">
         <div class="w-2 h-2 rounded-full" :class="allHealthy ? 'bg-emerald-500 animate-pulse' : 'bg-red-500 animate-pulse'"></div>
-        <span x-text="allHealthy ? 'جميع الخدمات تعمل' : 'يوجد مشكلة'"></span>
+        <span x-text="allHealthy ? 'All services are running' : 'There is an issue'"></span>
       </div>
       <button @click="refresh()" :disabled="loading" class="btn-ghost text-xs">
         <i data-lucide="refresh-cw" class="w-4 h-4" :class="loading ? 'animate-spin' : ''"></i>
-        تحديث
+        {% trans 'Update' %}
       </button>
     </div>
   </div>
@@ -60,7 +60,7 @@
              'text-amber-600':   service.status === 'degraded',
              'text-slate-400':   !service.status,
            }"
-           x-text="service.status === 'healthy' ? 'يعمل بشكل طبيعي' : service.status === 'down' ? 'متوقف' : service.status === 'degraded' ? 'أداء منخفض' : 'جاري الفحص...'">
+           x-text="service.status === 'healthy' ? 'Running normally' : service.status === 'down' ? 'Down' : service.status === 'degraded' ? 'Degraded performance' : 'Checking...'">
         </p>
         <template x-if="service.latency">
           <p class="text-[10px] text-slate-400 mt-1" x-text="service.latency + ' ms'"></p>
@@ -76,7 +76,7 @@
       <div class="flex items-center justify-between">
         <h4 class="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
           <i data-lucide="cpu" class="w-4 h-4 text-indigo-500"></i>
-          المعالج CPU
+          {% trans 'CPU' %}
         </h4>
         <template x-if="loading">
           <div class="h-5 w-12 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
@@ -100,7 +100,7 @@
              }"
              :style="'width:' + (metrics.cpu_percent || 0) + '%'"></div>
       </div>
-      <p class="text-xs text-slate-400" x-text="(metrics.cpu_cores || 0) + ' أنوية'"></p>
+      <p class="text-xs text-slate-400" x-text="(metrics.cpu_cores || 0) + " " + "{% trans 'cores' %}""></p>
     </div>
 
     <!-- Memory -->
@@ -108,7 +108,7 @@
       <div class="flex items-center justify-between">
         <h4 class="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
           <i data-lucide="memory-stick" class="w-4 h-4 text-violet-500"></i>
-          الذاكرة RAM
+          {% trans 'RAM' %}
         </h4>
         <template x-if="!loading">
           <span class="text-lg font-black"
@@ -137,7 +137,7 @@
       <div class="flex items-center justify-between">
         <h4 class="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
           <i data-lucide="hard-drive" class="w-4 h-4 text-blue-500"></i>
-          القرص الصلب
+          {% trans 'Disk' %}
         </h4>
         <template x-if="!loading">
           <span class="text-lg font-black"
@@ -162,10 +162,10 @@
     <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
       <h3 class="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
         <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500"></i>
-        آخر الأخطاء والتحذيرات
+        {% trans 'Recent errors and warnings' %}
       </h3>
       <a href="/platform-admin/activity-logs/" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
-        عرض كل السجلات
+        {% trans 'View all logs' %}
       </a>
     </div>
     <template x-if="loading">
@@ -178,7 +178,7 @@
     <template x-if="!loading && recentErrors.length === 0">
       <div class="px-5 py-10 text-center">
         <i data-lucide="check-circle-2" class="w-10 h-10 mx-auto text-emerald-500 mb-2"></i>
-        <p class="text-slate-500 text-sm">لا توجد أخطاء مؤخراً</p>
+        <p class="text-slate-500 text-sm">{% trans 'No recent errors' %}</p>
       </div>
     </template>
     <template x-if="!loading && recentErrors.length > 0">
@@ -258,7 +258,7 @@ function systemMonitoring() {
           this.recentErrors = Array.isArray(data) ? data : (data.results || []);
         }
       } catch (e) {
-        notify('تعذّر تحميل بيانات المراقبة', 'error');
+        notify('Failed to load monitoring data', 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());

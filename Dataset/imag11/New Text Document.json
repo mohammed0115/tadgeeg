@@ -1,0 +1,31 @@
+{
+  "invoice_metadata": {
+    "bill_type": "فاتورة مياه وصرف صحي",
+    "region": "أمانة العاصمة",
+    "account_number": "948737",
+    "billing_period": "يناير 2024",
+    "reading_date": "2024-01-26",
+    "due_date": "2024-01-28"
+  },
+  "customer_details": {
+    "name": "طه علي أحمد السراجي",
+    "address": "الدائري التوحيد حارة التعاون",
+    "unit_count": 5
+  },
+  "meter_reading": {
+    "current_reading": 570,
+    "previous_reading": 561,
+    "consumption": 9
+  },
+  "service_breakdown": {
+    "water_value": 1350.00,
+    "sanitation": 5000.00,
+    "arrears": 4689.86,
+    "local_council_fee": 190.50,
+    "total_monthly_consumption": 6350.00
+  },
+  "payments": {
+    "paid_amount": 4000.00,
+    "grand_total_due": 7955.36
+  }
+}

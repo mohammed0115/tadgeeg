@@ -1,0 +1,823 @@
+{% load static i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}{% trans "Dashboard" %}{% endblock %} | {{ product_name }}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
+
+  <script defer src="{% static 'vendor/alpine.min.js' %}" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
+
+  {# Tailwind is needed by some legacy partials (e.g. report KPI cards). Loaded once here so any dashboard page can use utility classes. #}
+  <script src="{% static 'vendor/tailwind.browser.js' %}" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com'"></script>
+  <script>
+    // Tailwind palette aliases — keeps `text-primary-*` / `bg-primary-*` working
+    // in pages that were migrated from the old base.html (where primary was a navy/blue scale).
+    window.tailwind = window.tailwind || {};
+    window.tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {
+        colors: {
+          primary: { 50:'#e6f0fa',100:'#cce0f5',400:'#3366a3',500:'#003366',600:'#002b57',700:'#002244',900:'#001a33' },
+          accent:  { 50:'#ecfdf5',100:'#d1fae5',400:'#34d399',500:'#10b981',600:'#059669',700:'#047857' },
+        },
+        fontFamily: {
+          sans: ['Tajawal', 'Cairo', 'Inter', 'system-ui', 'Arial', 'sans-serif'],
+          mono: ['Consolas', '"Courier New"', 'monospace'],
+        },
+      }}
+    };
+    if (window.tailwind && typeof window.tailwind.refresh === 'function') window.tailwind.refresh();
+  </script>
+
+  {# Lucide icons used by detail pages (data-lucide attributes) — auto-rendered on page load by lucide.createIcons(). #}
+  <script src="{% static 'vendor/lucide.min.js' %}" onerror="this.onerror=null;this.src='https://unpkg.com/lucide@latest'"></script>
+
+  {% block head_extra %}{% endblock %}
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --primary: #003366;
+      --primary-dark: #002244;
+      --primary-light: #1a4d80;
+      --accent: #10B981;
+      --accent-dark: #059669;
+      --accent-light: #34d399;
+      --bg: #ffffff;
+      --bg-soft: #f8fafc;
+      --bg-softer: #f1f5f9;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      --border: #e2e8f0;
+      --border-soft: #f1f5f9;
+      --success: #10B981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --info: #3b82f6;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 51, 102, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 51, 102, 0.08), 0 2px 4px -2px rgba(0, 51, 102, 0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 51, 102, 0.1), 0 4px 6px -4px rgba(0, 51, 102, 0.05);
+    }
+
+    body { font-family: 'Tajawal', sans-serif; color: var(--text); background: var(--bg-soft); line-height: 1.6; min-height: 100vh; }
+    a { text-decoration: none; color: inherit; }
+    button { font-family: inherit; cursor: pointer; border: none; background: none; }
+
+    .app { display: flex; min-height: 100vh; }
+
+    /* === Sidebar === */
+    /* `border-inline-end` flips with `dir`: right-edge in LTR, left-edge in RTL. */
+    .sidebar { width: 260px; background: white; border-inline-end: 1px solid var(--border); position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; flex-shrink: 0; z-index: 50; }
+    .sidebar-header { padding: 24px 20px; border-bottom: 1px solid var(--border-soft); }
+    .logo { display: flex; align-items: center; gap: 12px; }
+    .logo-mark { width: 44px; height: 44px; }
+    .logo-mark svg { width: 100%; height: 100%; }
+    .logo-text { display: flex; flex-direction: column; line-height: 1; }
+    .logo-text .ar { font-family: 'Cairo', sans-serif; font-size: 22px; font-weight: 800; color: var(--primary); }
+    .logo-text .en { font-family: 'Cairo', sans-serif; font-size: 16px; font-weight: 700; color: var(--primary); margin-top: 2px; }
+    .sidebar-nav { flex: 1; padding: 20px 14px; overflow-y: auto; }
+    .nav-group { margin-bottom: 24px; }
+    .nav-group-title { font-size: 11px; font-weight: 700; color: var(--text-light); letter-spacing: 0.5px; margin-bottom: 8px; padding: 0 12px; text-transform: uppercase; }
+    /* `text-align: start` follows the document direction — right in RTL, left in LTR. */
+    .nav-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 10px; color: var(--text-muted); font-size: 14px; font-weight: 600; transition: all 0.2s ease; cursor: pointer; width: 100%; text-align: start; }
+    .nav-item:hover { background: var(--bg-soft); color: var(--primary); }
+    .nav-item.active { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(0, 51, 102, 0.25); }
+    .nav-item svg { flex-shrink: 0; }
+    .sidebar-footer { padding: 16px; border-top: 1px solid var(--border-soft); }
+
+    /* === Main === */
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .topbar { height: 68px; background: white; border-bottom: 1px solid var(--border-soft); padding: 0 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 40; }
+    .topbar-left { display: flex; align-items: center; gap: 12px; color: var(--text-muted); font-size: 13px; font-weight: 600; }
+    .topbar-right { display: flex; align-items: center; gap: 20px; }
+    .icon-btn { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all 0.2s ease; position: relative; cursor: pointer; }
+    .icon-btn:hover { background: var(--bg-soft); color: var(--primary); }
+    .notification-dot { position: absolute; top: 6px; left: 6px; min-width: 18px; height: 18px; padding: 0 5px; background: var(--danger); color: white; border-radius: 100px; border: 2px solid white; font-size: 10px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+    [x-cloak] { display: none !important; }
+
+    /* Notification dropdown */
+    .notif-wrap { position: relative; }
+    .notif-panel {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      width: 380px;
+      max-width: calc(100vw - 32px);
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 18px 40px -12px rgba(0,51,102,0.18);
+      z-index: 60;
+      max-height: 500px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .notif-header { padding: 16px 18px; border-bottom: 1px solid var(--border-soft); display: flex; align-items: center; justify-content: space-between; }
+    .notif-title { font-family: 'Cairo', sans-serif; font-weight: 800; color: var(--primary); font-size: 14px; }
+    .notif-mark-all { font-size: 11px; font-weight: 700; color: var(--accent-dark); padding: 4px 8px; border-radius: 6px; transition: all 0.2s ease; }
+    .notif-mark-all:hover { background: rgba(16,185,129,0.06); }
+    .notif-list { flex: 1; overflow-y: auto; }
+    .notif-item {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-soft);
+      transition: background 0.15s ease;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+    }
+    .notif-item:hover { background: var(--bg-soft); }
+    .notif-item.unread { background: rgba(0, 51, 102, 0.025); }
+    .notif-item:last-child { border-bottom: none; }
+    .notif-icon {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .notif-icon.info     { background: #dbeafe; color: #1e40af; }
+    .notif-icon.success  { background: #dcfce7; color: #166534; }
+    .notif-icon.warning  { background: #fef3c7; color: #92400e; }
+    .notif-icon.danger   { background: #fee2e2; color: #991b1b; }
+    .notif-icon.critical { background: #fee2e2; color: #7f1d1d; }
+    .notif-body { flex: 1; min-width: 0; }
+    .notif-item-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 2px; line-height: 1.4; }
+    .notif-item-msg { font-size: 12px; color: var(--text-muted); line-height: 1.5; word-wrap: break-word; }
+    .notif-time { font-size: 10px; color: var(--text-light); margin-top: 4px; }
+    .notif-unread-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; margin-top: 8px; }
+    .notif-empty {
+      padding: 48px 24px; text-align: center;
+      color: var(--text-muted);
+    }
+    .notif-empty svg { color: var(--text-light); margin-bottom: 14px; }
+    .notif-empty-title { font-family: 'Cairo', sans-serif; font-weight: 800; color: var(--text); font-size: 14px; margin-bottom: 4px; }
+    .notif-empty-sub { font-size: 12px; }
+    .notif-footer { padding: 12px 18px; border-top: 1px solid var(--border-soft); text-align: center; }
+    .notif-footer a { font-size: 12px; font-weight: 700; color: var(--primary); }
+    [dir="ltr"] .notif-panel { left: auto; right: 0; }
+    .user-pill { display: flex; align-items: center; gap: 12px; padding: 6px 14px 6px 6px; border-radius: 100px; background: var(--bg-soft); border: 1px solid var(--border-soft); }
+    .user-info { text-align: left; }
+    .user-name { font-size: 12px; font-weight: 700; color: var(--text); }
+    .user-role { font-size: 10px; color: var(--text-muted); }
+    .user-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
+
+    .menu-toggle { display: none; width: 40px; height: 40px; border-radius: 10px; align-items: center; justify-content: center; color: var(--primary); background: var(--bg-soft); }
+
+    /* === Page === */
+    .page { flex: 1; padding: 32px; max-width: 100%; overflow-x: hidden; animation: fadeIn 0.5s ease both; }
+    .page-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 32px; flex-wrap: wrap; gap: 16px; }
+    .page-title { font-family: 'Cairo', sans-serif; font-size: 28px; font-weight: 900; color: var(--primary); letter-spacing: -0.5px; }
+    .page-subtitle { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+
+    /* === Buttons === */
+    .btn { padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 700; transition: all 0.25s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; font-family: inherit; }
+    .btn-primary { background: var(--accent); color: white; box-shadow: 0 4px 14px rgba(16,185,129,0.35); }
+    .btn-primary:hover { background: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,0.45); }
+    .btn-light { background: var(--bg-soft); color: var(--text-muted); border: 1px solid var(--border); }
+    .btn-light:hover { background: white; color: var(--primary); }
+    .btn-dark { background: var(--primary); color: white; }
+    .btn-dark:hover { background: var(--primary-dark); transform: translateY(-1px); }
+    .btn-outline { background: white; color: var(--primary); border: 1.5px solid var(--border); }
+    .btn-outline:hover { border-color: var(--primary); background: var(--bg-soft); }
+    .btn-icon { width: 40px; height: 40px; padding: 0; border-radius: 10px; }
+    .btn-lg { padding: 14px 26px; font-size: 15px; border-radius: 12px; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* Semantic action buttons (used by invoice detail / approval flow) — keep API,
+       but route colors through the new design tokens (navy + emerald). */
+    .btn-ghost, .btn-red, .btn-green {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 18px; border-radius: 10px; font-size: 14px; font-weight: 700;
+      font-family: inherit; white-space: nowrap; transition: all 0.25s ease; cursor: pointer;
+    }
+    .btn-ghost { background: var(--bg-soft); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost:hover:not(:disabled) { background: white; color: var(--primary); border-color: var(--primary); }
+    .btn-green { background: var(--accent); color: white; border: 1px solid var(--accent); box-shadow: 0 4px 14px rgba(16,185,129,0.30); }
+    .btn-green:hover:not(:disabled) { background: var(--accent-dark); border-color: var(--accent-dark); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,0.40); }
+    .btn-red { background: #ef4444; color: white; border: 1px solid #ef4444; box-shadow: 0 4px 14px rgba(239,68,68,0.25); }
+    .btn-red:hover:not(:disabled) { background: #dc2626; border-color: #dc2626; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(239,68,68,0.35); }
+    .btn-ghost:disabled, .btn-green:disabled, .btn-red:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    /* Language toggle button in the topbar */
+    .lang-toggle {
+      padding: 6px 14px; border-radius: 10px; border: 1.5px solid var(--border);
+      background: var(--bg-soft); color: var(--text); font-size: 12px;
+      font-weight: 800; cursor: pointer; transition: all 0.2s;
+      font-family: 'Cairo', 'Tajawal', sans-serif;
+    }
+    .lang-toggle:hover { background: white; border-color: var(--primary); color: var(--primary); }
+
+    /* Form input field utility used by detail/notes views */
+    .input-field { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--bg-soft); font-family: inherit; font-size: 13px; color: var(--text); transition: all 0.2s; }
+    .input-field:focus { outline: none; border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(0,51,102,0.08); }
+    .input-field::placeholder { color: var(--text-light); }
+
+    /* === Cards & badges === */
+    .card { background: white; border: 1px solid var(--border-soft); border-radius: 18px; padding: 24px; box-shadow: var(--shadow-sm); }
+    .card-title { font-family: 'Cairo', sans-serif; font-weight: 800; color: var(--primary); font-size: 16px; margin-bottom: 16px; }
+
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; }
+    .badge-success { background: #dcfce7; color: #166534; }
+    .badge-warning { background: #fef3c7; color: #92400e; }
+    .badge-danger  { background: #fee2e2; color: #991b1b; }
+    .badge-info    { background: #dbeafe; color: #1e40af; }
+
+    /* === Stat card === */
+    .stat-card { background: white; border: 1px solid var(--border-soft); border-radius: 18px; padding: 22px; position: relative; overflow: hidden; transition: all 0.3s ease; }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+    .stat-card-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+    .stat-card.blue .stat-card-icon { background: #dbeafe; color: var(--info); }
+    .stat-card.blue .stat-card-value { color: var(--info); }
+    .stat-card.green .stat-card-icon { background: #dcfce7; color: var(--success); }
+    .stat-card.green .stat-card-value { color: var(--success); }
+    .stat-card.red .stat-card-icon { background: #fee2e2; color: var(--danger); }
+    .stat-card.red .stat-card-value { color: var(--danger); }
+    .stat-card.amber .stat-card-icon { background: #fef3c7; color: var(--warning); }
+    .stat-card.amber .stat-card-value { color: var(--warning); }
+    .stat-card-label { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
+    .stat-card-value { font-family: 'Cairo', sans-serif; font-size: 30px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
+    .stat-card-sub { font-size: 11px; color: var(--text-light); margin-top: 8px; }
+
+    /* === Data table === */
+    .table-card { padding: 0; overflow: hidden; }
+    .table-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 1px solid var(--border-soft); }
+    .table-wrap { overflow-x: auto; }
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th { text-align: start; padding: 14px 24px; background: var(--bg-soft); font-size: 12px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.3px; text-transform: uppercase; }
+    .data-table td { padding: 16px 24px; border-top: 1px solid var(--border-soft); font-size: 14px; }
+    .data-table tr:hover td { background: var(--bg-soft); }
+    .file-name { display: flex; align-items: center; gap: 12px; font-weight: 600; color: var(--text); }
+    .file-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--bg-soft); display: flex; align-items: center; justify-content: center; color: var(--text-muted); }
+    .file-icon.pdf { background: #fee2e2; color: #991b1b; }
+    .file-icon.xlsx { background: #dcfce7; color: #166534; }
+    .file-icon.csv { background: #dbeafe; color: #1e40af; }
+    .text-muted { color: var(--text-muted); }
+
+    .row-action { width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-light); transition: all 0.2s ease; }
+    .row-action:hover { background: var(--bg-softer); color: var(--primary); }
+
+    /* Empty state */
+    .empty-state { text-align: center; padding: 64px 24px; }
+    .empty-state-icon {
+      width: 80px; height: 80px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, rgba(0,51,102,0.05), rgba(16,185,129,0.05));
+      color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .empty-state h3 { font-family: 'Cairo', sans-serif; font-size: 18px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+    .empty-state p { color: var(--text-muted); font-size: 14px; max-width: 360px; margin: 0 auto 20px; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media (max-width: 1024px) {
+      .sidebar { position: fixed; right: -260px; transition: right 0.3s ease; box-shadow: -10px 0 30px rgba(0,0,0,0.1); }
+      .sidebar.open { right: 0; }
+      .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 49; }
+      .sidebar-overlay.open { display: block; }
+      .menu-toggle { display: flex; }
+      .topbar { padding: 0 20px; }
+      .page { padding: 20px; }
+      .user-info { display: none; }
+    }
+    @media (max-width: 640px) {
+      .page-title { font-size: 22px; }
+    }
+
+    /* ============================================================
+       AI Loading Animations — orbit, pulse, shimmer, glow, scan
+       ============================================================ */
+    @keyframes ai-orbit-cw  { from { transform: rotate(0deg); }   to { transform: rotate(360deg);  } }
+    @keyframes ai-orbit-ccw { from { transform: rotate(360deg); } to { transform: rotate(0deg);    } }
+    @keyframes ai-pulse    { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.08); opacity: 0.85; } }
+    @keyframes ai-glow     { 0%,100% { box-shadow: 0 0 32px rgba(16,185,129,.45), 0 0 64px rgba(16,185,129,.18); } 50% { box-shadow: 0 0 50px rgba(16,185,129,.7), 0 0 100px rgba(16,185,129,.3); } }
+    @keyframes ai-shimmer  { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+    @keyframes ai-fade-in-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes ai-dot-bounce { 0%,80%,100% { transform: scale(.6); opacity: .4; } 40% { transform: scale(1); opacity: 1; } }
+    @keyframes ai-progress-shine { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+    @keyframes ai-scan-line { 0% { transform: translateY(-100%); opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { transform: translateY(100%); opacity: 0; } }
+
+    .ai-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px 16px; }
+    .ai-loader-core { position: relative; width: 160px; height: 160px; display: flex; align-items: center; justify-content: center; margin-bottom: 28px; }
+    .ai-loader-glow { position: absolute; inset: 30px; border-radius: 50%; background: radial-gradient(circle, rgba(16,185,129,.5) 0%, transparent 70%); filter: blur(12px); animation: ai-glow 2.4s ease-in-out infinite; }
+    .ai-loader-center { position: relative; z-index: 4; width: 64px; height: 64px; border-radius: 22px; background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 14px 36px rgba(0,51,102,.4), inset 0 1px 0 rgba(255,255,255,.25); animation: ai-pulse 2s ease-in-out infinite; }
+    .ai-loader-center svg { width: 30px; height: 30px; }
+    .ai-loader-ring { position: absolute; inset: 0; border-radius: 50%; border: 2px solid transparent; pointer-events: none; }
+    .ai-loader-ring--1 { border-top-color: var(--accent); border-right-color: rgba(16,185,129,.35); animation: ai-orbit-cw 3s linear infinite; }
+    .ai-loader-ring--2 { inset: 16px; border-top-color: var(--primary); border-left-color: rgba(0,51,102,.35); animation: ai-orbit-ccw 4.5s linear infinite; }
+    .ai-loader-ring--3 { inset: 32px; border-bottom-color: var(--accent-light); border-right-color: rgba(52,211,153,.4); animation: ai-orbit-cw 6s linear infinite; }
+    .ai-loader-orbit { position: absolute; inset: 0; animation: ai-orbit-cw 5s linear infinite; pointer-events: none; }
+    .ai-loader-orbit--reverse { animation: ai-orbit-ccw 7s linear infinite; }
+    .ai-loader-particle { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px rgba(16,185,129,.8); }
+    .ai-loader-particle--top { top: -4px; left: 50%; transform: translateX(-50%); }
+    .ai-loader-particle--right { right: -4px; top: 50%; transform: translateY(-50%); background: var(--primary); box-shadow: 0 0 10px rgba(0,51,102,.7); }
+    .ai-loader-particle--bottom { bottom: -4px; left: 50%; transform: translateX(-50%); background: var(--accent-light); }
+    .ai-loader-particle--left { left: -4px; top: 50%; transform: translateY(-50%); background: var(--accent); }
+
+    .ai-loader-label {
+      font-family: 'Cairo', sans-serif; font-size: 18px; font-weight: 800; margin-bottom: 6px;
+      background: linear-gradient(90deg, var(--text) 0%, var(--accent) 25%, var(--primary) 50%, var(--accent) 75%, var(--text) 100%);
+      background-size: 200% auto; -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+      animation: ai-shimmer 2.6s linear infinite;
+    }
+    .ai-loader-status { font-size: 13px; color: var(--text-muted); line-height: 1.6; max-width: 380px; min-height: 22px; margin: 0 auto; }
+
+    .ai-dots { display: inline-flex; gap: 4px; margin-right: 6px; vertical-align: middle; }
+    .ai-dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: ai-dot-bounce 1.2s infinite ease-in-out; }
+    .ai-dots span:nth-child(2) { animation-delay: .15s; }
+    .ai-dots span:nth-child(3) { animation-delay: .30s; }
+
+    .ai-progress { position: relative; width: 100%; max-width: 380px; height: 6px; background: var(--bg-soft); border-radius: 100px; overflow: hidden; margin: 24px auto 0; }
+    .ai-progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary) 0%, var(--accent) 50%, var(--accent-light) 100%); border-radius: 100px; transition: width .6s cubic-bezier(.4,0,.2,1); position: relative; overflow: hidden; }
+    .ai-progress-fill::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.6) 50%, transparent 100%); width: 30%; animation: ai-progress-shine 1.6s linear infinite; }
+
+    .ai-stages { display: flex; align-items: flex-start; justify-content: center; gap: 0; margin-top: 28px; flex-wrap: nowrap; max-width: 100%; overflow-x: auto; padding: 4px 8px; }
+    .ai-stage { display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; flex-shrink: 0; min-width: 76px; }
+    .ai-stage-circle { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; background: var(--bg-soft); border: 2px solid var(--border); color: var(--text-light); transition: all .3s ease; }
+    .ai-stage.active .ai-stage-circle { background: var(--accent); border-color: var(--accent); color: white; animation: ai-pulse 1.4s infinite; box-shadow: 0 0 0 6px rgba(16,185,129,.18); }
+    .ai-stage.done .ai-stage-circle { background: var(--accent-dark); border-color: var(--accent-dark); color: white; }
+    .ai-stage-line { position: absolute; top: 14px; left: 50%; width: 100%; height: 2px; background: var(--border); z-index: -1; transition: background .4s ease; }
+    .ai-stage.done .ai-stage-line { background: var(--accent); }
+    .ai-stage:last-child .ai-stage-line { display: none; }
+    .ai-stage-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-align: center; white-space: nowrap; }
+    .ai-stage.active .ai-stage-label { color: var(--accent-dark); }
+    .ai-stage.done .ai-stage-label { color: var(--text); }
+
+    .ai-overlay { position: fixed; inset: 0; background: rgba(255,255,255,.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 999; display: flex; align-items: center; justify-content: center; animation: ai-fade-in-up .3s ease; }
+    .ai-overlay-card { background: white; border-radius: 24px; padding: 40px 32px; max-width: 480px; width: calc(100% - 32px); box-shadow: 0 30px 80px -20px rgba(0,51,102,.25), 0 0 0 1px rgba(0,51,102,.05); position: relative; }
+    .ai-overlay-close { position: absolute; top: 16px; left: 16px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all .2s ease; }
+    .ai-overlay-close:hover { background: var(--bg-soft); color: var(--danger); }
+
+    .ai-skeleton { background: linear-gradient(90deg, var(--bg-soft) 0%, var(--bg-softer) 50%, var(--bg-soft) 100%); background-size: 200% 100%; animation: ai-shimmer 1.6s linear infinite; border-radius: 8px; }
+    .ai-skeleton-line { height: 12px; margin-bottom: 8px; }
+
+    {% block extra_styles %}{% endblock %}
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <!-- ===== Sidebar ===== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="{% url 'frontend:dashboard' %}" class="logo">
+          <div class="logo-mark">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="50" r="40" stroke="#003366" stroke-width="8" fill="none"/>
+              <path d="M28 50 L44 66 L72 36" stroke="#10B981" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="logo-text">
+            <span class="ar">تدقيق</span>
+            <span class="en">{{ product_name }}</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-group">
+          <div class="nav-group-title">{% trans "Main" %}</div>
+          <a href="{% url 'frontend:dashboard' %}" class="nav-item {% block nav_dashboard %}{% endblock %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+            {% trans "Dashboard" %}
+          </a>
+          <a href="{% url 'frontend:upload' %}" class="nav-item {% block nav_upload %}{% endblock %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            {% trans "Upload Documents" %}
+          </a>
+          <a href="{% url 'frontend:invoices' %}" class="nav-item {% block nav_invoices %}{% endblock %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            {% trans "Invoices" %}
+          </a>
+          <a href="{% url 'frontend:reports' %}" class="nav-item {% block nav_reports %}{% endblock %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            {% trans "Reports" %}
+          </a>
+          <a href="{% url 'frontend:documents' %}" class="nav-item {% block nav_documents %}{% endblock %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+            {% trans "Documents" %}
+          </a>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-group-title">{% trans "Analysis" %}</div>
+          <a href="{% url 'frontend:audit' %}" class="nav-item {% block nav_audit %}{% endblock %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+            {% trans "Audit Cases" %}
+          </a>
+          <a href="{% url 'frontend:compliance' %}" class="nav-item {% block nav_compliance %}{% endblock %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6l-8-4z"/></svg>
+            {% trans "Compliance" %}
+          </a>
+          <a href="{% url 'frontend:analytics' %}" class="nav-item {% block nav_analytics %}{% endblock %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            {% trans "Analytics" %}
+          </a>
+          <a href="{% url 'frontend:vendors' %}" class="nav-item {% block nav_vendors %}{% endblock %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            {% trans "Vendors" %}
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="{% url 'frontend:settings' %}" class="nav-item {% block nav_settings %}{% endblock %}">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H2a2 2 0 010-4h.09A1.65 1.65 0 004.6 8a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V2a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H22a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          {% trans "Settings" %}
+        </a>
+        <a href="{% url 'frontend:logout' %}" class="nav-item">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          {% trans "Sign Out" %}
+        </a>
+      </div>
+    </aside>
+    <div class="sidebar-overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <!-- ===== Main ===== -->
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" onclick="toggleSidebar()">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          {% block breadcrumb %}
+            <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+          {% endblock %}
+        </div>
+
+        <div class="topbar-right">
+          <div class="notif-wrap" x-data="notificationsBell()" x-init="init()" @click.away="open = false">
+            <button class="icon-btn" @click="toggle" :aria-expanded="open" aria-label="{% trans 'Notifications' %}">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+              <span class="notification-dot" x-show="unreadCount > 0" x-text="unreadCount > 99 ? '99+' : unreadCount" x-cloak></span>
+            </button>
+
+            <div class="notif-panel" x-show="open" x-cloak x-transition>
+              <div class="notif-header">
+                <div class="notif-title">{% trans "Notifications" %} <span x-show="unreadCount > 0" x-text="`(${unreadCount})`" style="color: var(--accent-dark)"></span></div>
+                <button class="notif-mark-all" @click="markAllRead" x-show="unreadCount > 0">{% trans "Mark all read" %}</button>
+              </div>
+
+              <div class="notif-list" x-show="items.length > 0">
+                <template x-for="n in items" :key="n.id">
+                  <a :href="n.link || '#'" class="notif-item" :class="{ unread: !n.is_read }" @click="markRead(n)">
+                    <div class="notif-icon" :class="n.severity">
+                      <template x-if="n.severity === 'success'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></template>
+                      <template x-if="n.severity === 'info'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></template>
+                      <template x-if="n.severity === 'warning'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></template>
+                      <template x-if="n.severity === 'danger' || n.severity === 'critical'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></template>
+                    </div>
+                    <div class="notif-body">
+                      <div class="notif-item-title" x-text="n.title"></div>
+                      <div class="notif-item-msg" x-text="n.message" x-show="n.message"></div>
+                      <div class="notif-time" x-text="formatTime(n.created_at)"></div>
+                    </div>
+                    <div class="notif-unread-dot" x-show="!n.is_read"></div>
+                  </a>
+                </template>
+              </div>
+
+              <div class="notif-empty" x-show="items.length === 0">
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+                <div class="notif-empty-title">{% trans "No notifications yet" %}</div>
+                <div class="notif-empty-sub">{% trans "You'll see audit alerts and uploads here." %}</div>
+              </div>
+
+              <div class="notif-footer" x-show="items.length > 0">
+                <a href="#" @click.prevent="reload">{% trans "Refresh" %}</a>
+              </div>
+            </div>
+          </div>
+
+          {% comment %}
+Language switcher — POSTs to /i18n/setlang/ which is mounted via
+Django's set_language view. Django persists the choice in a
+cookie + session so subsequent pages render in the new language.
+{% endcomment %}
+          <form action="{% url 'set_language' %}" method="post" style="display:inline-flex;align-items:center;">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <button type="submit" name="language" value="{% if LANGUAGE_CODE == 'ar' %}en{% else %}ar{% endif %}"
+                    class="lang-toggle" title="{% trans 'Switch language' %}">
+              {% if LANGUAGE_CODE == 'ar' %}EN{% else %}عربي{% endif %}
+            </button>
+          </form>
+
+          <div class="user-pill">
+            <div class="user-info">
+              <div class="user-name">{{ user.email|default:"user@tadgeeg.com" }}</div>
+              <div class="user-role">{% if user.is_staff %}{% trans "System Admin" %}{% else %}{% trans "User" %}{% endif %}</div>
+            </div>
+            <div class="user-avatar">{{ user.email|default:"U"|slice:":2"|upper }}</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="page">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+
+    {% include "partials/i18n_strings.html" %}
+
+    {# ── AI Assistant floating button + drawer ──────────────────────────── #}
+    <div id="ai-assistant" x-data="aiAssistant()" x-cloak>
+      <button class="ai-fab" @click="toggle()" :title="open ? '{% trans 'Close' %}' : '{% trans 'AI Assistant' %}'">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><circle cx="9" cy="10" r="1" fill="currentColor"/><circle cx="13" cy="10" r="1" fill="currentColor"/><circle cx="17" cy="10" r="1" fill="currentColor"/></svg>
+      </button>
+      <div class="ai-panel" x-show="open" x-transition>
+        <div class="ai-panel-header">
+          <div>
+            <div class="ai-panel-title">{% trans "Tadgeeg AI" %}</div>
+            <div class="ai-panel-sub">{% trans "Ask about your invoices, audits, or compliance" %}</div>
+          </div>
+          <button class="ai-panel-close" @click="reset()" title="{% trans 'Reset' %}" style="margin-inline-end:6px;font-size:14px;">⟲</button>
+          <button class="ai-panel-close" @click="open=false">×</button>
+        </div>
+        <div class="ai-panel-body" x-ref="body">
+          <template x-for="(m, i) in messages" :key="i">
+            <div class="ai-msg" :class="m.role">
+              <div class="ai-msg-bubble" x-text="m.text"></div>
+            </div>
+          </template>
+          <div class="ai-msg assistant" x-show="loading">
+            <div class="ai-msg-bubble">
+              <span class="ai-typing"><i></i><i></i><i></i></span>
+            </div>
+          </div>
+        </div>
+        <form class="ai-panel-input" @submit.prevent="send()">
+          <input type="text" x-model="input" placeholder="{% trans 'Ask anything…' %}" :disabled="loading" autofocus>
+          <button type="submit" :disabled="loading || !input.trim()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+    <style>
+      [x-cloak] { display: none !important; }
+      .ai-fab { position: fixed; bottom: 24px; left: 24px; width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(0,51,102,0.35); cursor: pointer; transition: transform 0.2s; z-index: 1000; border: none; }
+      .ai-fab:hover { transform: scale(1.08); }
+      [dir="ltr"] .ai-fab { left: auto; right: 24px; }
+      .ai-panel { position: fixed; bottom: 96px; left: 24px; width: 380px; max-width: calc(100vw - 48px); height: 540px; max-height: calc(100vh - 140px); background: white; border-radius: 18px; box-shadow: 0 20px 48px rgba(0,51,102,0.22); display: flex; flex-direction: column; z-index: 1001; border: 1px solid var(--border); overflow: hidden; }
+      [dir="ltr"] .ai-panel { left: auto; right: 24px; }
+      .ai-panel-header { padding: 18px 20px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+      .ai-panel-title { font-family: 'Cairo', sans-serif; font-weight: 800; font-size: 16px; }
+      .ai-panel-sub { font-size: 11px; opacity: 0.85; margin-top: 2px; }
+      .ai-panel-close { background: rgba(255,255,255,0.18); color: white; width: 30px; height: 30px; border-radius: 50%; font-size: 22px; line-height: 1; cursor: pointer; border: none; }
+      .ai-panel-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; background: var(--bg-soft); }
+      .ai-msg { display: flex; }
+      .ai-msg.user { justify-content: flex-end; }
+      .ai-msg.assistant { justify-content: flex-start; }
+      .ai-msg-bubble { max-width: 78%; padding: 10px 14px; border-radius: 14px; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; }
+      .ai-msg.user .ai-msg-bubble { background: var(--primary); color: white; border-bottom-right-radius: 4px; }
+      [dir="ltr"] .ai-msg.user .ai-msg-bubble { border-bottom-right-radius: 14px; border-bottom-left-radius: 4px; }
+      .ai-msg.assistant .ai-msg-bubble { background: white; border: 1px solid var(--border-soft); color: var(--text); border-bottom-left-radius: 4px; }
+      [dir="ltr"] .ai-msg.assistant .ai-msg-bubble { border-bottom-left-radius: 14px; border-bottom-right-radius: 4px; }
+      .ai-typing { display: inline-flex; gap: 4px; }
+      .ai-typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted); display: inline-block; animation: ai-bounce 1.2s infinite ease-in-out; }
+      .ai-typing i:nth-child(2) { animation-delay: 0.15s; }
+      .ai-typing i:nth-child(3) { animation-delay: 0.3s; }
+      @keyframes ai-bounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+      .ai-panel-input { padding: 14px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: white; }
+      .ai-panel-input input { flex: 1; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 13px; font-family: inherit; background: var(--bg-soft); }
+      .ai-panel-input input:focus { outline: none; border-color: var(--primary); background: white; }
+      .ai-panel-input button { background: var(--accent); color: white; border: none; border-radius: 10px; padding: 0 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+      .ai-panel-input button:disabled { opacity: 0.4; cursor: not-allowed; }
+    </style>
+    <script>
+      function aiAssistant() {
+        return {
+          open: false,
+          input: '',
+          loading: false,
+          messages: [
+            { role: 'assistant', text: '{% trans "مرحباً! أسألني عن فواتيرك أو نتائج التدقيق." %}' },
+          ],
+          async toggle() {
+            this.open = !this.open;
+            if (this.open) {
+              // First-open: try to restore prior conversation from server cache.
+              if (this.messages.length <= 1 && !this._historyLoaded) {
+                this._historyLoaded = true;
+                try {
+                  const r = await fetch('/api/v1/assistant/history/', { credentials: 'same-origin' });
+                  const d = await r.json();
+                  if (Array.isArray(d.messages) && d.messages.length) {
+                    this.messages = d.messages.map(m => ({
+                      role: m.role === 'user' ? 'user' : 'assistant',
+                      text: m.content,
+                    }));
+                  }
+                } catch (e) { /* ignore — start fresh */ }
+              }
+              this.$nextTick(() => this.scrollDown());
+            }
+          },
+          async reset() {
+            try {
+              await fetch('/api/v1/assistant/reset/', {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                credentials: 'same-origin',
+              });
+            } catch (e) {}
+            this.messages = [
+              { role: 'assistant', text: '{% trans "تم مسح المحادثة. كيف أساعدك؟" %}' },
+            ];
+            this._historyLoaded = true;
+          },
+          scrollDown() { try { this.$refs.body.scrollTop = this.$refs.body.scrollHeight; } catch (e) {} },
+          // If the user is on an invoice detail page like /invoices/<uuid>/,
+          // attach focus_invoice_id so the assistant gets full context for
+          // that document (failed rules, matched PO, evidence, …).
+          _detectFocus() {
+            const m = window.location.pathname.match(
+              /\/invoices\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i
+            );
+            return m ? { focus_invoice_id: m[1] } : {};
+          },
+          async send() {
+            const msg = this.input.trim();
+            if (!msg || this.loading) return;
+            this.messages.push({ role: 'user', text: msg });
+            this.input = '';
+            this.loading = true;
+            this.$nextTick(() => this.scrollDown());
+            try {
+              const r = await fetch('/api/v1/assistant/chat/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+                credentials: 'same-origin',
+                body: JSON.stringify({ message: msg, ...this._detectFocus() }),
+              });
+              const data = await r.json();
+              this.messages.push({
+                role: 'assistant',
+                text: data.answer || data.error || '{% trans "Something went wrong." %}'
+              });
+            } catch (e) {
+              this.messages.push({ role: 'assistant', text: '{% trans "Connection error." %}' });
+            } finally {
+              this.loading = false;
+              this.$nextTick(() => this.scrollDown());
+            }
+          },
+        };
+      }
+    </script>
+  </div>
+
+  <script>
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('overlay').classList.toggle('open');
+    }
+
+    // Auto-render Lucide icons (used by some pages via data-lucide="icon-name")
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide && typeof lucide.createIcons === 'function') {
+        try { lucide.createIcons(); } catch (e) {}
+      }
+    });
+
+    function getCookie(name) {
+      const c = `; ${document.cookie}`.split(`; ${name}=`);
+      return c.length === 2 ? c.pop().split(';').shift() : '';
+    }
+
+    // ── API helper (shared by all dashboard pages) ──
+    async function apiFetch(path, opts = {}) {
+      const isFormData = typeof FormData !== 'undefined' && opts.body instanceof FormData;
+      const baseHeaders = {
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
+        'X-CSRFToken': getCookie('csrftoken'),
+        ...(opts.headers || {}),
+      };
+      const url = path.startsWith('/api/') ? path : '/api/v1' + path;
+      const res = await fetch(url, {
+        ...opts,
+        credentials: 'same-origin',
+        headers: baseHeaders,
+      });
+      if (res.status === 401) {
+        if (!window._authRedirecting) {
+          window._authRedirecting = true;
+          window.location.href = '/login/?next=' + encodeURIComponent(window.location.pathname);
+        }
+        return null;
+      }
+      if (res.status === 204) return null;
+      const contentType = res.headers.get('content-type') || '';
+      const data = contentType.includes('application/json') ? await res.json() : await res.text();
+      if (!res.ok) throw new Error((data && (data.detail || data.error)) || data || `HTTP ${res.status}`);
+      return data;
+    }
+
+    // Lightweight notify() — uses native alert as a fallback toast.
+    function notify(messageOrOptions, type = 'info') {
+      const msg = typeof messageOrOptions === 'string'
+        ? messageOrOptions
+        : (messageOrOptions && messageOrOptions.message) || '';
+      if (!msg) return;
+      // Pages that ship a richer toast component can listen for this event.
+      window.dispatchEvent(new CustomEvent('notify', { detail: { message: msg, type } }));
+      try {
+        const host = document.getElementById('toast-host') || (() => {
+          const el = document.createElement('div');
+          el.id = 'toast-host';
+          el.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;';
+          document.body.appendChild(el);
+          return el;
+        })();
+        const t = document.createElement('div');
+        const colors = { success:'#10B981', error:'#EF4444', warning:'#F59E0B', info:'#003366' };
+        t.style.cssText = `background:${colors[type]||colors.info};color:white;padding:12px 18px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);font-size:13px;font-weight:600;max-width:360px;`;
+        t.textContent = msg;
+        host.appendChild(t);
+        setTimeout(() => { t.style.transition = 'opacity .3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3500);
+      } catch (e) {}
+    }
+
+    function notificationsBell() {
+      return {
+        open: false,
+        unreadCount: 0,
+        items: [],
+        pollHandle: null,
+
+        init() {
+          this.reload();
+          // Poll every 30 seconds while the page is open
+          this.pollHandle = setInterval(() => this.reload(), 30_000);
+        },
+
+        toggle() { this.open = !this.open; if (this.open) this.reload(); },
+
+        async reload() {
+          try {
+            const r = await fetch('/api/v1/notifications/unread-count/', {
+              headers: { 'X-Requested-With': 'XMLHttpRequest' },
+              credentials: 'same-origin',
+            });
+            if (!r.ok) return;
+            const data = await r.json();
+            this.unreadCount = data.unread_count || 0;
+            this.items = data.recent || [];
+          } catch (e) { /* silent */ }
+        },
+
+        async markRead(n) {
+          if (n.is_read) return;
+          try {
+            await fetch(`/api/v1/notifications/${n.id}/read/`, {
+              method: 'POST',
+              headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' },
+              credentials: 'same-origin',
+            });
+            n.is_read = true;
+            this.unreadCount = Math.max(0, this.unreadCount - 1);
+          } catch (e) {}
+        },
+
+        async markAllRead() {
+          try {
+            const r = await fetch('/api/v1/notifications/mark-all-read/', {
+              method: 'POST',
+              headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' },
+              credentials: 'same-origin',
+            });
+            if (r.ok) {
+              this.items.forEach(n => n.is_read = true);
+              this.unreadCount = 0;
+            }
+          } catch (e) {}
+        },
+
+        formatTime(iso) {
+          if (!iso) return '';
+          const d = new Date(iso);
+          const diff = (Date.now() - d.getTime()) / 1000;
+          if (diff < 60) return '{% trans "Just now" %}';
+          if (diff < 3600) return Math.floor(diff/60) + 'm';
+          if (diff < 86400) return Math.floor(diff/3600) + 'h';
+          if (diff < 604800) return Math.floor(diff/86400) + 'd';
+          return d.toLocaleDateString();
+        },
+      };
+    }
+  </script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

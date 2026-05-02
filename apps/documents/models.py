@@ -212,4 +212,21 @@ from .typed_models import (
     FixedAssetValidation,
     SalesReceipt,
     SalesReceiptValidation,
+    GoodsReceiptNote,
+    PaymentVoucher,
+)
+
+# Phase-2 typed document models — see apps/documents/typed_models_v2.py.
+from .typed_models_v2 import (  # noqa: F401  (re-exported for migrations + admin)
+    SalesOrder,
+    Quotation,
+    ProformaInvoice,
+    ReceiptVoucher,
+    CashVoucher,
+    GeneralLedger,
+    Ledger,
+    Contract,
+    SupplierStatement,
+    CustomerStatement,
+    JournalEntry,
 )

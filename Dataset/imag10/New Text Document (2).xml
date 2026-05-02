@@ -1,0 +1,20 @@
+<PurchaseOrder>
+    <OrderInfo>
+        <PONumber>PQR00003</PONumber>
+        <Date>2020-11-03</Date>
+        <Project>ASDFG</Project>
+    </OrderInfo>
+    <Financials>
+        <Currency>SAR</Currency>
+        <SubTotal>840523088.00</SubTotal>
+        <TotalSAR>844213841.50</TotalSAR>
+    </Financials>
+    <Items>
+        <Item>
+            <Description>Apple In-Ear Headphones</Description>
+            <Quantity>5272505</Quantity>
+            <UnitPrice>70.00</UnitPrice>
+            <LineTotal>369075350.00</LineTotal>
+        </Item>
+    </Items>
+</PurchaseOrder>

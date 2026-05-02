@@ -110,9 +110,10 @@ class DocumentUploadRouter:
     Selects the correct processing pipeline based on document_type.
     """
 
-    INVOICE_TYPES = {"invoice"}
+    INVOICE_TYPES = {"invoice", "sales_invoice"}
     AUTO_DETECT_TYPE = "auto"
     ROUTABLE_DOCUMENT_TYPES = {
+        # Phase 1
         "invoice",
         "purchase_order",
         "bank_statement",
@@ -121,12 +122,34 @@ class DocumentUploadRouter:
         "tax_declaration",
         "fixed_asset",
         "sales_receipt",
+        # Phase 2/3 — full 20-type catalog
+        "sales_invoice",
+        "purchase_invoice",
+        "sales_order",
+        "quotation",
+        "proforma_invoice",
+        "goods_receipt_note",
+        "payment_voucher",
+        "receipt_voucher",
+        "cash_voucher",
+        "journal_entry",
+        "general_ledger",
+        "ledger",
+        "contract",
+        "supplier_statement",
+        "customer_statement",
         "other",
     }
     OPENAI_TYPE_ALIASES = {
         "receipt": "sales_receipt",
         "vat_return": "tax_declaration",
         "tax_return": "tax_declaration",
+        "tax_vat_document": "tax_declaration",
+        "grn": "goods_receipt_note",
+        "goods_receipt": "goods_receipt_note",
+        "po": "purchase_order",
+        "so": "sales_order",
+        "sales_invoice": "invoice",  # SI uses the canonical invoice pipeline
     }
 
     def route(
@@ -412,24 +435,48 @@ class DocumentUploadRouter:
 
     # Map document types to their frontend list URLs
     _DOC_TYPE_LIST_URLS = {
-        "purchase_order":  "/documents/purchase-orders/",
-        "bank_statement":  "/documents/bank-statements/",
-        "payroll":         "/documents/payroll/",
-        "expense_report":  "/documents/expense-reports/",
-        "tax_declaration": "/documents/vat-returns/",
-        "fixed_asset":     "/documents/fixed-assets/",
-        "sales_receipt":   "/documents/sales-receipts/",
+        # Phase 1
+        "purchase_order":      "/documents/purchase-orders/",
+        "bank_statement":      "/documents/bank-statements/",
+        "payroll":             "/documents/payroll/",
+        "expense_report":      "/documents/expense-reports/",
+        "tax_declaration":     "/documents/vat-returns/",
+        "fixed_asset":         "/documents/fixed-assets/",
+        "sales_receipt":       "/documents/sales-receipts/",
+        # Phase 2 — typed-models v2
+        "sales_order":         "/documents/sales-orders/",
+        "quotation":           "/documents/quotations/",
+        "proforma_invoice":    "/documents/proforma-invoices/",
+        "receipt_voucher":     "/documents/receipt-vouchers/",
+        "cash_voucher":        "/documents/cash-vouchers/",
+        "general_ledger":      "/documents/general-ledgers/",
+        "ledger":              "/documents/ledgers/",
+        "contract":            "/documents/contracts/",
+        "supplier_statement":  "/documents/supplier-statements/",
+        "customer_statement":  "/documents/customer-statements/",
     }
 
     # Map document types to their frontend detail URL patterns
     _DOC_TYPE_DETAIL_URLS = {
-        "purchase_order":  "/documents/purchase-orders/{pk}/",
-        "bank_statement":  "/documents/bank-statements/{pk}/",
-        "payroll":         "/documents/payroll/{pk}/",
-        "expense_report":  "/documents/expense-reports/{pk}/",
-        "tax_declaration": "/documents/vat-returns/{pk}/",
-        "fixed_asset":     "/documents/fixed-assets/{pk}/",
-        "sales_receipt":   "/documents/sales-receipts/{pk}/",
+        # Phase 1
+        "purchase_order":      "/documents/purchase-orders/{pk}/",
+        "bank_statement":      "/documents/bank-statements/{pk}/",
+        "payroll":             "/documents/payroll/{pk}/",
+        "expense_report":      "/documents/expense-reports/{pk}/",
+        "tax_declaration":     "/documents/vat-returns/{pk}/",
+        "fixed_asset":         "/documents/fixed-assets/{pk}/",
+        "sales_receipt":       "/documents/sales-receipts/{pk}/",
+        # Phase 2 — typed-models v2
+        "sales_order":         "/documents/sales-orders/{pk}/",
+        "quotation":           "/documents/quotations/{pk}/",
+        "proforma_invoice":    "/documents/proforma-invoices/{pk}/",
+        "receipt_voucher":     "/documents/receipt-vouchers/{pk}/",
+        "cash_voucher":        "/documents/cash-vouchers/{pk}/",
+        "general_ledger":      "/documents/general-ledgers/{pk}/",
+        "ledger":              "/documents/ledgers/{pk}/",
+        "contract":            "/documents/contracts/{pk}/",
+        "supplier_statement":  "/documents/supplier-statements/{pk}/",
+        "customer_statement":  "/documents/customer-statements/{pk}/",
     }
 
     def _route_document(self, uploaded_file, document_type, user, language) -> UploadRouterResult:

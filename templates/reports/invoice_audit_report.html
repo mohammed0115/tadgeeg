@@ -1,17 +1,25 @@
-{% extends "base.html" %}
+{% extends "layouts/dashboard_base.html" %}
 {% load i18n report_filters %}
 {% get_current_language as LANGUAGE_CODE %}
 {% get_current_language_bidi as LANGUAGE_BIDI %}
-{% block title %}{% trans "Invoice Audit Report" %}{% endblock %}
-{% block page_title %}{% trans "Invoice Audit Report" %}{% endblock %}
+{% block title %}{{ report_title|default:_("Invoice Audit Report") }}{% endblock %}
 {% block nav_reports %}active{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <a href="{% url 'frontend:reports' %}" style="color:var(--text-muted)">{% trans "Reports" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{{ report_title|default:_("Invoice Audit") }}</span>
+{% endblock %}
 
 {% block content %}
 <div class="max-w-screen-2xl mx-auto space-y-6 print:space-y-4" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
   <style>
     @media print {
-      .app-sidebar, .print-hidden, header, nav { display: none !important; }
-      main { margin: 0 !important; padding: 0 !important; }
+      .sidebar, .topbar, .print-hidden, header.topbar, nav { display: none !important; }
+      .main, main { margin: 0 !important; padding: 0 !important; }
+      .page { padding: 0 !important; }
       .card { box-shadow: none !important; border-color: #d1d5db !important; }
       .print-break-avoid { break-inside: avoid; page-break-inside: avoid; }
       .print-compact { padding: 0.75rem !important; }
@@ -20,10 +28,50 @@
 
   {% include "reports/partials/_report_header.html" %}
 
+  {# ── Banner: only when the doc type isn't natively supported yet ────── #}
+  {% if not is_first_class_report %}
+    <div class="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 flex items-start gap-3 print-break-avoid">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <div>
+        <div style="font-family:'Cairo',sans-serif; font-weight:800; color:#92400e; margin-bottom:2px;">
+          {% blocktrans %}Showing invoice-level analytics — dedicated reports for "{{ type_label }}" are coming soon.{% endblocktrans %}
+        </div>
+        <div style="font-size:12px; color:#78350f;">
+          {% trans "The same audit rules and KPIs apply to all document types in the meantime." %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  {# ── Empty state: no documents uploaded yet ─────────────────────────── #}
+  {% if is_empty %}
+    <section class="card p-12 rounded-2xl shadow-sm border-2 border-dashed border-slate-300 text-center print-break-avoid">
+      <div style="width:84px; height:84px; margin:0 auto 22px; border-radius:24px; background:linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color:white; display:flex; align-items:center; justify-content:center;">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      </div>
+      <h2 style="font-family:'Cairo',sans-serif; font-size:24px; font-weight:900; color:var(--primary); margin-bottom:10px;">
+        {% trans "No documents to audit yet" %}
+      </h2>
+      <p style="font-size:15px; color:var(--text-muted); max-width:520px; margin:0 auto 24px; line-height:1.7;">
+        {% blocktrans %}This is the "{{ kind_label }}" report. It will populate automatically once you upload {{ type_label }} for analysis. AI extraction, audit rules, fraud detection, and ZATCA compliance run automatically on every upload.{% endblocktrans %}
+      </p>
+      <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+        <a href="{% url 'frontend:upload' %}?type={{ selected_type }}" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          {% trans "Upload Documents" %}
+        </a>
+        <a href="{% url 'frontend:reports' %}?type={{ selected_type }}" class="btn btn-light">
+          {% trans "Back to Reports" %} ←
+        </a>
+      </div>
+    </section>
+  {% else %}{# end empty state, start regular content #}
+
+  {% if 'executive' in sections %}
   <section class="card p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-5 print-break-avoid">
     <div class="flex items-center justify-between">
       <h2 class="text-xl font-extrabold text-slate-900">{% trans "Executive Summary" %}</h2>
-      <span class="text-xs px-3 py-1 rounded-full bg-slate-100 text-slate-600">Executive Summary</span>
+      <span class="text-xs px-3 py-1 rounded-full bg-slate-100 text-slate-600">{{ kind_label|default:"Executive Summary" }}</span>
     </div>
 
     {% include "reports/partials/_kpi_cards.html" %}
@@ -57,7 +105,17 @@
       </div>
     </article>
   </section>
+  {% endif %}{# end executive #}
 
+  {# ── AI Insights — aggregated per-doc AI summaries / recommendations ─ #}
+  {% include "reports/partials/_ai_insights.html" %}
+
+  {# ── Findings Register — main audit deliverable ─────────────────────── #}
+  {% if 'failed_rules' in sections %}
+    {% include "reports/partials/_findings_register.html" %}
+  {% endif %}
+
+  {% if 'compliance' in sections %}
   <section class="card p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-5 print-break-avoid">
     <div class="flex items-center justify-between">
       <h2 class="text-xl font-extrabold text-slate-900">{% trans "Compliance Engine & Control Rules" %}</h2>
@@ -120,11 +178,12 @@
       </table>
     </div>
   </section>
+  {% endif %}{# end compliance #}
 
   {# ── Rule Engine Smart Audit Section ─────────────────────────────────────── #}
-  {% if report.rule_engine %}
+  {% if report.rule_engine and 'rule_engine' in sections %}
   {% with re=report.rule_engine %}
-  <section class="card p-6 rounded-2xl shadow-sm border border-violet-200/80 space-y-6 print-break-avoid">
+  <section class="card p-6 rounded-2xl shadow-sm border border-primary-200/80 space-y-6 print-break-avoid">
     <div class="flex items-center justify-between flex-wrap gap-3">
       <div>
         <h2 class="text-xl font-extrabold text-slate-900">{% trans "Smart Audit Rule Engine" %}</h2>
@@ -217,7 +276,7 @@
       <h3 class="text-sm font-bold text-slate-800 mb-3">{% trans "Most Failed Rules" %}</h3>
       <div class="overflow-x-auto rounded-2xl border border-slate-200">
         <table class="min-w-full text-sm">
-          <thead class="bg-violet-900 text-white">
+          <thead class="bg-primary-900 text-white">
             <tr>
               <th class="px-4 py-3 text-right">{% trans "Rule Code" %}</th>
               <th class="px-4 py-3 text-right">{% trans "Rule Name" %}</th>
@@ -229,7 +288,7 @@
             {% for rule in re.top_failed_rules %}
               <tr class="hover:bg-slate-50">
                 <td class="px-4 py-3">
-                  <span class="font-mono text-xs font-bold bg-violet-100 text-violet-800 px-2 py-0.5 rounded">{{ rule.rule_code }}</span>
+                  <span class="font-mono text-xs font-bold bg-primary-100 text-primary-800 px-2 py-0.5 rounded">{{ rule.rule_code }}</span>
                 </td>
                 <td class="px-4 py-3 text-slate-800 font-medium">{{ rule.name_ar|default:rule.rule_code }}</td>
                 <td class="px-4 py-3">
@@ -243,7 +302,7 @@
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-2">
                     <div class="w-20 bg-slate-200 rounded-full h-1.5">
-                      <div class="bg-violet-500 h-1.5 rounded-full" style="width: {% widthratio rule.avg_risk_contribution 1 100 %}%"></div>
+                      <div class="bg-primary-500 h-1.5 rounded-full" style="width: {% widthratio rule.avg_risk_contribution 1 100 %}%"></div>
                     </div>
                     <span class="text-xs text-slate-600">{{ rule.avg_risk_contribution|floatformat:2 }}</span>
                   </div>
@@ -283,9 +342,14 @@
   {% endif %}
   {# ── End Rule Engine Section ──────────────────────────────────────────────── #}
 
-  {% include "reports/partials/_high_risk_invoices_table.html" %}
-  {% include "reports/partials/_failed_rules_table.html" %}
+  {% if 'high_risk' in sections %}
+    {% include "reports/partials/_high_risk_invoices_table.html" %}
+  {% endif %}
+  {% if 'failed_rules' in sections %}
+    {% include "reports/partials/_failed_rules_table.html" %}
+  {% endif %}
 
+  {% if 'risk' in sections %}
   <section class="card p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-5 print-break-avoid">
   <h2 class="text-xl font-extrabold text-slate-900">{% trans "Risk Analysis" %}</h2>
 
@@ -325,7 +389,9 @@
       </div>
     {% endwith %}
   </section>
+  {% endif %}{# end risk #}
 
+  {% if 'duplicates' in sections %}
   <section class="card p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-5 print-break-avoid">
   <h2 class="text-xl font-extrabold text-slate-900">{% trans "Duplicate & Anomaly Detection" %}</h2>
 
@@ -357,7 +423,9 @@
       {% endfor %}
     </div>
   </section>
+  {% endif %}{# end duplicates #}
 
+  {% if 'vendor' in sections %}
   <section class="card p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-5 print-break-avoid">
   <h2 class="text-xl font-extrabold text-slate-900">{% trans "Vendor Analysis" %}</h2>
 
@@ -394,7 +462,50 @@
       </table>
     </div>
   </section>
+  {% endif %}{# end vendor #}
 
-  {% include "reports/partials/_recommendations.html" %}
+  {# ── ISA 700 Audit Opinion Section ─────────────────────────────────────── #}
+  {% if 'isa700' in sections and report.isa700 %}
+  {% with op=report.isa700 %}
+  <section class="card p-6 rounded-2xl shadow-sm border border-slate-200/80 space-y-5 print-break-avoid">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+      <h2 class="text-xl font-extrabold text-slate-900">{% trans "ISA 700 — Audit Opinion" %}</h2>
+      <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold
+        {% if op.opinion == 'Unqualified' %}bg-emerald-100 text-emerald-800 border border-emerald-200
+        {% elif op.opinion == 'Qualified' %}bg-amber-100 text-amber-800 border border-amber-200
+        {% else %}bg-red-100 text-red-800 border border-red-200{% endif %}">
+        {{ op.opinion_ar }} — {{ op.opinion }}
+      </span>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-3">
+      <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <p class="text-xs text-slate-500">{% trans "Compliance Rate" %}</p>
+        <p class="text-3xl font-black text-slate-900 mt-1">{{ op.compliance_pct|floatformat:1 }}%</p>
+      </div>
+      <div class="rounded-xl border border-red-200 bg-red-50 p-4">
+        <p class="text-xs text-red-700">{% trans "Critical Findings" %}</p>
+        <p class="text-3xl font-black text-red-700 mt-1">{{ op.critical_findings }}</p>
+      </div>
+      <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <p class="text-xs text-amber-700">{% trans "High Findings" %}</p>
+        <p class="text-3xl font-black text-amber-700 mt-1">{{ op.high_findings }}</p>
+      </div>
+    </div>
+
+    <article class="rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
+      <h3 class="text-sm font-bold text-slate-900 mb-2">{% trans "Basis of Opinion" %}</h3>
+      <p class="text-sm leading-7 text-slate-700">{{ op.basis_ar }}</p>
+      <p class="text-sm leading-7 text-slate-500 mt-2">{{ op.basis }}</p>
+    </article>
+  </section>
+  {% endwith %}
+  {% endif %}{# end isa700 #}
+
+  {% if 'recommendations' in sections %}
+    {% include "reports/partials/_recommendations.html" %}
+  {% endif %}
+
+  {% endif %}{# end is_empty else #}
 </div>
 {% endblock %}

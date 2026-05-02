@@ -1,0 +1,19 @@
+<SimplifiedTaxInvoice>
+    <Header>
+        <InvoiceNumber>RR-INV-0001</InvoiceNumber>
+        <IssueDate>2023-02-08</IssueDate>
+        <SupplyDate>2022-02-13</SupplyDate>
+    </Header>
+    <InvoiceLine>
+        <ItemName>Premium Television</ItemName>
+        <InvoicedQuantity>2.0</InvoicedQuantity>
+        <LineNetAmount>1800.00</LineNetAmount>
+        <VATRate>15.00</VATRate>
+        <VATAmount>270.00</VATAmount>
+    </InvoiceLine>
+    <Summary>
+        <TotalAmountWithoutVAT>1710.00</TotalAmountWithoutVAT>
+        <TotalVATAmount>256.50</TotalVATAmount>
+        <TotalWithVAT>1966.50</TotalWithVAT>
+    </Summary>
+</SimplifiedTaxInvoice>

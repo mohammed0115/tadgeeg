@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تقرير التحليل | تدقيق - Tadgeeg</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Report banner */
+    .report-banner {
+      background: white;
+      border: 1px solid var(--border-soft);
+      border-radius: 18px;
+      padding: 22px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+    .report-banner-info {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .report-banner-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: #dcfce7;
+      color: #166534;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .report-banner-text h3 {
+      font-family: 'Cairo', sans-serif;
+      font-weight: 800;
+      color: var(--text);
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+    .report-banner-text p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .report-actions { display: flex; gap: 8px; }
+
+    /* Summary stats grid */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+    .summary-card {
+      background: white;
+      border: 1px solid var(--border-soft);
+      border-radius: 18px;
+      padding: 22px;
+      transition: all 0.3s ease;
+    }
+    .summary-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+
+    .summary-card.dark {
+      background: linear-gradient(135deg, var(--primary) 0%, #002244 100%);
+      color: white;
+      border: none;
+      position: relative;
+      overflow: hidden;
+    }
+    .summary-card.dark::before {
+      content: '';
+      position: absolute;
+      top: -40px;
+      left: -40px;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+      opacity: 0.4;
+    }
+
+    .summary-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .summary-card-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .summary-card.green .summary-card-header { color: var(--success); }
+    .summary-card.blue .summary-card-header { color: var(--info); }
+    .summary-card.amber .summary-card-header { color: var(--warning); }
+    .summary-card.dark .summary-card-header { color: var(--accent-light); }
+
+    .summary-card-value {
+      font-family: 'Cairo', sans-serif;
+      font-weight: 900;
+      font-size: 24px;
+      color: var(--text);
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+    .summary-card.dark .summary-card-value { color: white; }
+    .summary-card-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+    .summary-card.dark .summary-card-sub { color: rgba(255,255,255,0.7); }
+
+    /* Two-column layout */
+    .report-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+    }
+
+    /* Data table */
+    .data-rows {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border-soft);
+      border-radius: 0 0 18px 18px;
+      overflow: hidden;
+    }
+    .data-row {
+      background: white;
+      padding: 18px 24px;
+    }
+    .data-row-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .data-row-value {
+      font-family: 'Cairo', sans-serif;
+      font-weight: 800;
+      color: var(--text);
+      font-size: 15px;
+    }
+    .data-row-value.highlight {
+      color: var(--accent);
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 2px;
+      display: inline-block;
+    }
+
+    .card-with-header {
+      background: white;
+      border: 1px solid var(--border-soft);
+      border-radius: 18px;
+      overflow: hidden;
+    }
+    .card-section-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border-soft);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-section-header h4 {
+      font-family: 'Cairo', sans-serif;
+      font-weight: 800;
+      color: var(--primary);
+      font-size: 16px;
+    }
+    .card-section-body { padding: 24px; }
+
+    /* Compliance grid */
+    .compliance-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .compliance-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      background: rgba(16, 185, 129, 0.06);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: 12px;
+    }
+    .compliance-item svg { color: var(--success); flex-shrink: 0; }
+    .compliance-text {
+      font-size: 12px;
+      font-weight: 700;
+      color: #14532d;
+    }
+    .compliance-text small {
+      display: block;
+      color: var(--success);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    /* Sidebar cards */
+    .fraud-card {
+      background: white;
+      border: 1px solid var(--border-soft);
+      border-radius: 18px;
+      padding: 24px;
+    }
+    .fraud-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--warning);
+      font-family: 'Cairo', sans-serif;
+      font-weight: 800;
+      font-size: 15px;
+      margin-bottom: 16px;
+    }
+    .fraud-meter {
+      padding: 16px;
+      background: rgba(245, 158, 11, 0.06);
+      border: 1px solid rgba(245, 158, 11, 0.2);
+      border-radius: 14px;
+      margin-bottom: 14px;
+    }
+    .fraud-level {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .fraud-level-text {
+      font-size: 12px;
+      font-weight: 700;
+      color: #78350f;
+    }
+    .fraud-score {
+      font-family: 'Cairo', sans-serif;
+      font-weight: 900;
+      color: var(--warning);
+      font-size: 18px;
+    }
+    .fraud-bar {
+      width: 100%;
+      height: 6px;
+      background: rgba(245, 158, 11, 0.15);
+      border-radius: 100px;
+      overflow: hidden;
+    }
+    .fraud-bar-fill {
+      width: 35%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--success) 0%, var(--warning) 100%);
+      border-radius: 100px;
+    }
+    .fraud-quote {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-style: italic;
+      line-height: 1.7;
+      padding: 14px;
+      background: var(--bg-soft);
+      border-radius: 12px;
+      border-right: 3px solid var(--accent);
+    }
+
+    .total-card {
+      background: linear-gradient(135deg, var(--primary) 0%, #002244 100%);
+      color: white;
+      border-radius: 18px;
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .total-card::before {
+      content: '';
+      position: absolute;
+      top: -60px;
+      left: -60px;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+      opacity: 0.3;
+    }
+    .total-label {
+      color: var(--accent-light);
+      font-family: 'Cairo', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 8px;
+      position: relative;
+    }
+    .total-value {
+      font-family: 'Cairo', sans-serif;
+      font-weight: 900;
+      font-size: 36px;
+      letter-spacing: -1px;
+      position: relative;
+    }
+    .total-vat {
+      font-size: 11px;
+      opacity: 0.7;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255,255,255,0.15);
+      position: relative;
+    }
+
+    /* Recommendations */
+    .recommendations {
+      background: white;
+      border: 1px solid var(--border-soft);
+      border-radius: 18px;
+      padding: 24px;
+    }
+    .recommendations h4 {
+      font-family: 'Cairo', sans-serif;
+      font-weight: 800;
+      color: var(--primary);
+      font-size: 15px;
+      margin-bottom: 16px;
+    }
+    .rec-list { display: flex; flex-direction: column; gap: 12px; }
+    .rec-item {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: 12px;
+      color: var(--text);
+      line-height: 1.7;
+    }
+    .rec-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(0, 51, 102, 0.08);
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 11px;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 1024px) {
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      .report-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .summary-grid { grid-template-columns: 1fr; }
+      .data-rows, .compliance-grid { grid-template-columns: 1fr; }
+      .report-banner { flex-direction: column; align-items: stretch; }
+      .report-actions { justify-content: stretch; }
+      .report-actions .btn { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <!-- ===== Sidebar ===== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <a href="dashboard.html" class="logo">
+          <div class="logo-mark">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="50" r="40" stroke="#003366" stroke-width="8" fill="none"/>
+              <path d="M28 50 L44 66 L72 36" stroke="#10B981" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="logo-text">
+            <span class="ar">تدقيق</span>
+            <span class="en">Tadgeeg</span>
+          </div>
+        </a>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-group">
+          <div class="nav-group-title">الرئيسية</div>
+          <a href="dashboard.html" class="nav-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>
+            </svg>
+            لوحة التحكم
+          </a>
+          <a href="upload.html" class="nav-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            رفع المستندات
+          </a>
+          <a href="reports.html" class="nav-item active">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            التقارير والنتائج
+          </a>
+        </div>
+
+        <div class="nav-group">
+          <div class="nav-group-title">التحليل</div>
+          <button class="nav-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            كشف الشذوذ
+          </button>
+          <button class="nav-item">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+            </svg>
+            حالات التدقيق
+          </button>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="login.html" class="nav-item">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          تسجيل الخروج
+        </a>
+      </div>
+    </aside>
+    <div class="sidebar-overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <!-- ===== Main ===== -->
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" onclick="toggleSidebar()">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <a href="dashboard.html" style="color:var(--text-muted)">لوحة التحكم</a>
+          <span style="color:var(--text-light)">/</span>
+          <a href="reports.html" style="color:var(--text-muted)">التقارير</a>
+          <span style="color:var(--text-light)">/</span>
+          <span style="color:var(--primary);font-weight:700">Invoice_7782.pdf</span>
+        </div>
+        <div class="topbar-right">
+          <button class="icon-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
+            </svg>
+            <span class="notification-dot"></span>
+          </button>
+          <div class="user-pill">
+            <div class="user-info">
+              <div class="user-name">gscompany@user.sa</div>
+              <div class="user-role">مدير النظام</div>
+            </div>
+            <div class="user-avatar">GS</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="page animate-fade">
+
+        <!-- ===== Banner ===== -->
+        <div class="report-banner">
+          <div class="report-banner-info">
+            <div class="report-banner-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+            </div>
+            <div class="report-banner-text">
+              <h3>تقرير التحليل النهائي: Invoice_7782_GlobalSolutions.pdf</h3>
+              <p>تم المعالجة بنجاح في 45 ثانية · 14 مايو 2025</p>
+            </div>
+          </div>
+          <div class="report-actions">
+            <button class="btn btn-light btn-icon" title="مشاركة">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+            </button>
+            <button class="btn btn-light btn-icon" title="طباعة">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+              </svg>
+            </button>
+            <button class="btn btn-dark">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              تحميل PDF
+            </button>
+          </div>
+        </div>
+
+        <!-- ===== Summary Cards ===== -->
+        <div class="summary-grid">
+          <div class="summary-card green">
+            <div class="summary-card-header">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6l-8-4z"/><path d="M9 12l2 2 4-4"/>
+              </svg>
+              <span class="summary-card-label">حالة الامتثال</span>
+            </div>
+            <div class="summary-card-value">متوافق</div>
+            <p class="summary-card-sub">متوافق مع ZATCA المرحلة الثانية</p>
+          </div>
+
+          <div class="summary-card blue">
+            <div class="summary-card-header">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+              </svg>
+              <span class="summary-card-label">دقة التحليل</span>
+            </div>
+            <div class="summary-card-value">98.5%</div>
+            <p class="summary-card-sub">بناءً على مطابقة النصوص (OCR)</p>
+          </div>
+
+          <div class="summary-card amber">
+            <div class="summary-card-header">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              <span class="summary-card-label">مخاطر الاحتيال</span>
+            </div>
+            <div class="summary-card-value">منخفض</div>
+            <p class="summary-card-sub">لم يتم اكتشاف أي شذوذ مالي</p>
+          </div>
+
+          <div class="summary-card dark">
+            <div class="summary-card-header">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.21 15.89A10 10 0 118 2.83"/><path d="M22 12A10 10 0 0012 2v10z"/>
+              </svg>
+              <span class="summary-card-label">إجمالي المبلغ</span>
+            </div>
+            <div class="summary-card-value">45,250 ر.س</div>
+            <p class="summary-card-sub">شامل ضريبة القيمة المضافة</p>
+          </div>
+        </div>
+
+        <!-- ===== Two Column Layout ===== -->
+        <div class="report-grid">
+
+          <!-- Left: Main Details -->
+          <div style="display:flex; flex-direction:column; gap:24px">
+
+            <!-- Extracted Data -->
+            <div class="card-with-header">
+              <div class="card-section-header">
+                <h4>البيانات المستخرجة من المستند</h4>
+                <span class="badge badge-info">تدقيق ذكي نشط</span>
+              </div>
+              <div class="data-rows">
+                <div class="data-row">
+                  <div class="data-row-label">اسم المورد / الشركة</div>
+                  <div class="data-row-value">شركة حلول العالم المحدودة</div>
+                </div>
+                <div class="data-row">
+                  <div class="data-row-label">الرقم الضريبي (VAT ID)</div>
+                  <div class="data-row-value highlight">310122394800003</div>
+                </div>
+                <div class="data-row">
+                  <div class="data-row-label">تاريخ الفاتورة</div>
+                  <div class="data-row-value">14 مايو 2025</div>
+                </div>
+                <div class="data-row">
+                  <div class="data-row-label">رقم الفاتورة</div>
+                  <div class="data-row-value">INV-2025-7782</div>
+                </div>
+                <div class="data-row">
+                  <div class="data-row-label">صافي المبلغ (قبل الضريبة)</div>
+                  <div class="data-row-value">38,462.50 ر.س</div>
+                </div>
+                <div class="data-row">
+                  <div class="data-row-label">إجمالي الضريبة (15%)</div>
+                  <div class="data-row-value">6,787.50 ر.س</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Compliance -->
+            <div class="card-with-header">
+              <div class="card-section-header">
+                <h4>حالة الامتثال لـ ZATCA المرحلة الثانية</h4>
+                <span class="badge badge-success">✓ مكتمل بنجاح</span>
+              </div>
+              <div class="card-section-body">
+                <div class="compliance-grid">
+                  <div class="compliance-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <div class="compliance-text">
+                      رمز الاستجابة السريعة QR
+                      <small>متوافق تماماً</small>
+                    </div>
+                  </div>
+                  <div class="compliance-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <div class="compliance-text">
+                      التوقيع الرقمي
+                      <small>تم التحقق منه</small>
+                    </div>
+                  </div>
+                  <div class="compliance-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <div class="compliance-text">
+                      بصمة الفاتورة Hash
+                      <small>SHA-256 صالح</small>
+                    </div>
+                  </div>
+                  <div class="compliance-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <div class="compliance-text">
+                      الطابع الزمني
+                      <small>14 مايو 2025 - 14:32</small>
+                    </div>
+                  </div>
+                  <div class="compliance-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <div class="compliance-text">
+                      تطابق الحسابات
+                      <small>صحة العمليات الحسابية</small>
+                    </div>
+                  </div>
+                  <div class="compliance-item">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    <div class="compliance-text">
+                      الرقم التسلسلي UUID
+                      <small>فريد وغير مكرر</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Sidebar -->
+          <div style="display:flex; flex-direction:column; gap:24px">
+
+            <!-- Fraud Detection -->
+            <div class="fraud-card">
+              <div class="fraud-header">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                كشف الاحتيال
+              </div>
+              <div class="fraud-meter">
+                <div class="fraud-level">
+                  <span class="fraud-level-text">مستوى المخاطر: منخفض</span>
+                  <span class="fraud-score">65/100</span>
+                </div>
+                <div class="fraud-bar">
+                  <div class="fraud-bar-fill"></div>
+                </div>
+              </div>
+              <p class="fraud-quote">
+                لم يتم العثور على شذوذ في المبالغ أو الموردين المذكورين. تم تشغيل 10+ خوارزميات للتحقق وكلها أعطت نتائج طبيعية.
+              </p>
+            </div>
+
+            <!-- Total Card -->
+            <div class="total-card">
+              <div class="total-label">إجمالي الفاتورة</div>
+              <div class="total-value">45,250.00 ر.س</div>
+              <div class="total-vat">
+                صافي: 38,462.50 ر.س + ضريبة (15%): 6,787.50 ر.س
+              </div>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="recommendations">
+              <h4>التوصيات النهائية</h4>
+              <div class="rec-list">
+                <div class="rec-item">
+                  <div class="rec-num">1</div>
+                  <span>يمكنك المضي قدماً في دفع هذه الفاتورة بأمان.</span>
+                </div>
+                <div class="rec-item">
+                  <div class="rec-num">2</div>
+                  <span>تمت إضافة هذه البيانات تلقائياً إلى مسودة الإقرار الضريبي للربع الثاني.</span>
+                </div>
+                <div class="rec-item">
+                  <div class="rec-num">3</div>
+                  <span>يُنصح بالاحتفاظ بنسخة موقعة لمدة 6 سنوات وفقاً لنظام ZATCA.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <script>
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('overlay').classList.toggle('open');
+    }
+  </script>
+</body>
+</html>

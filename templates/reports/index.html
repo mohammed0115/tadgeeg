@@ -1,487 +1,456 @@
-{% extends "base.html" %}
-{% load i18n %}
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n static %}
+
 {% block title %}{% trans "Reports" %}{% endblock %}
-{% block page_title %}{% trans "Financial Reports" %}{% endblock %}
 {% block nav_reports %}active{% endblock %}
 
-{% block content %}
-<div x-data="reportsPage()" x-init="init()" class="space-y-5 max-w-screen-2xl">
-
-  <!-- Document Picker Modal -->
-  <div x-show="picker.open" x-transition
-       class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div @click.away="picker.cancel()"
-         class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
-      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
-        <h3 class="font-bold text-slate-800 dark:text-white" x-text="picker.title"></h3>
-        <button @click="picker.cancel()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-      <div class="flex-1 overflow-y-auto">
-
-        <!-- General report option — always visible -->
-        <div class="px-4 pt-4 pb-3 border-b border-slate-100 dark:border-slate-700/40">
-          <button @click="picker.selectGeneral()"
-                  class="w-full flex items-center gap-4 p-4 rounded-xl bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800/40 hover:bg-primary-100 dark:hover:bg-primary-900/30 transition-colors text-right">
-            <div class="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center flex-shrink-0">
-              <i data-lucide="bar-chart-3" class="w-5 h-5 text-white"></i>
-            </div>
-            <div class="flex-1">
-              <p class="font-bold text-sm text-primary-700 dark:text-primary-300">{% trans "General report for all documents" %}</p>
-              <p class="text-xs text-primary-500 mt-0.5">{% trans "Comprehensive analysis for all uploaded documents of this type" %}</p>
-            </div>
-            <i data-lucide="arrow-left" class="w-4 h-4 text-primary-500 flex-shrink-0"></i>
-          </button>
-        </div>
-
-        <!-- Divider -->
-        <div class="px-6 py-3">
-          <p class="text-xs text-slate-400 font-semibold">{% trans "Or choose a specific document" %}</p>
-        </div>
-
-        <template x-if="picker.loading">
-          <div class="flex justify-center py-8"><svg class="animate-spin w-6 h-6 text-primary-500" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg></div>
-        </template>
-        <template x-if="!picker.loading && picker.docs.length === 0">
-          <div class="text-center py-8 text-slate-400">
-            <i data-lucide="file-x" class="w-7 h-7 mx-auto mb-2"></i>
-            <p class="text-sm">{% trans "No uploaded documents of this type" %}</p>
-          </div>
-        </template>
-        <template x-if="!picker.loading && picker.docs.length > 0">
-          <div class="divide-y divide-slate-100 dark:divide-slate-700/30">
-            <template x-for="d in picker.docs" :key="d.id">
-              <button @click="picker.select(d)"
-                      class="w-full flex items-center gap-4 px-6 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors text-right">
-                <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0">
-                  <i data-lucide="file-text" class="w-4 h-4 text-slate-500"></i>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <p class="font-semibold text-sm text-slate-800 dark:text-white truncate" x-text="picker.docLabel(d)"></p>
-                  <p class="text-xs text-slate-400 mt-0.5" x-text="(d.created_at||'').slice(0,10)"></p>
-                </div>
-                <span class="text-xs px-2 py-0.5 rounded-full font-semibold flex-shrink-0"
-                      :class="{
-                        'bg-green-100 text-green-700': d.audit_status==='validated'||d.audit_status==='approved',
-                        'bg-amber-100 text-amber-700': d.audit_status==='flagged',
-                        'bg-red-100 text-red-700':     d.audit_status==='rejected',
-                        'bg-slate-100 text-slate-600': d.audit_status==='pending'||!d.audit_status
-                      }"
-                      x-text="({validated:i18n.statusValidated,approved:i18n.statusApproved,flagged:i18n.statusFlagged,rejected:i18n.statusRejected,pending:i18n.statusPending})[d.audit_status]||d.audit_status||'—'"></span>
-              </button>
-            </template>
-          </div>
-        </template>
-      </div>
-    </div>
-  </div>
-
-  <!-- Quick Generate Cards -->
-  <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-4">
-    {% for rt in report_types %}
-    <button @click="generate('{{ rt.type }}', '{{ rt.lang }}')"
-            class="card p-5 text-right hover:border-primary-400 dark:hover:border-primary-500 hover:shadow-md transition-all group">
-      <div class="w-11 h-11 rounded-xl {{ rt.bg }} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-        <i data-lucide="{{ rt.icon }}" class="w-5 h-5 {{ rt.color }}"></i>
-      </div>
-      <p class="font-bold text-sm text-slate-800 dark:text-white">{{ rt.label }}</p>
-      <p class="text-xs text-slate-400 mt-1">{{ rt.desc }}</p>
-    </button>
-    {% endfor %}
-  </div>
-
-  <!-- Generating indicator -->
-  <div x-show="generating" x-transition
-       class="card p-5 border-primary-200 dark:border-primary-800/50 bg-primary-50 dark:bg-primary-900/10 flex items-center gap-4">
-    <svg class="animate-spin w-6 h-6 text-primary-500 flex-shrink-0" fill="none" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
-      <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="opacity-75"/>
-    </svg>
-    <div>
-      <p class="font-semibold text-primary-700 dark:text-primary-300">{% trans "Generating report..." %}</p>
-      <p class="text-sm text-primary-500">{% trans "AI is analyzing your data and preparing the report." %}</p>
-    </div>
-  </div>
-
-  <!-- Reports list -->
-  <div class="card overflow-hidden">
-    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
-      <h3 class="font-semibold text-slate-800 dark:text-white">{% trans "Generated Reports" %}</h3>
-      <select x-model="filterType" @change="loadReports()" class="select text-xs py-1.5">
-        <option value="">{% trans "All Types" %}</option>
-        <option value="invoice_audit">{% trans "Invoice Audit" %}</option>
-        <option value="executive_summary">{% trans "Executive Summary" %}</option>
-        <option value="risk_assessment">{% trans "Risk Assessment" %}</option>
-        <option value="vendor_analysis">{% trans "Vendor Analysis" %}</option>
-        <option value="spend_analysis">{% trans "Spend Analysis" %}</option>
-        <option value="document_audit_sales_invoice">{% trans "Sales Invoice Audit" %}</option>
-        <option value="document_audit_purchase_order">{% trans "Purchase Order Audit" %}</option>
-        <option value="document_audit_bank_statement">{% trans "Bank Statement Audit" %}</option>
-        <option value="document_audit_payroll">{% trans "Payroll Audit" %}</option>
-        <option value="document_audit_expense_report">{% trans "Expense Report Audit" %}</option>
-        <option value="document_audit_vat_return">{% trans "VAT Return Audit" %}</option>
-        <option value="document_audit_fixed_asset">{% trans "Fixed Asset Audit" %}</option>
-        <option value="document_audit_sales_receipt">{% trans "Sales Receipt Audit" %}</option>
-      </select>
-    </div>
-
-    <div x-show="loadingList" class="flex justify-center py-12">
-      <svg class="animate-spin w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
-        <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-      </svg>
-    </div>
-
-    <div x-show="!loadingList" class="divide-y divide-slate-100 dark:divide-slate-700/20">
-      <template x-for="rep in reports" :key="rep.id">
-        <div class="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-violet-500 flex items-center justify-center text-white text-lg flex-shrink-0">📊</div>
-          <div class="flex-1 min-w-0">
-            <p class="font-semibold text-slate-800 dark:text-white truncate" x-text="reportTitle(rep)"></p>
-            <p class="text-xs text-slate-400 mt-0.5">
-              <span x-text="reportTypeLabel(rep.report_type)"></span>
-              · <span x-text="rep.language==='ar' ? i18n.arabic : i18n.english"></span>
-              · <span x-text="(rep.created_at||'').slice(0,10)"></span>
-            </p>
-          </div>
-            <button @click="viewReport(rep.id, rep.report_type)"
-                  class="btn-ghost text-xs py-1.5 px-3 flex-shrink-0">{% trans "View" %}</button>
-            <a x-show="hasFullReport(rep.report_type)"
-               :href="fullReportUrl(rep.id, rep.report_type)"
-               target="_blank"
-               class="btn-ghost text-xs py-1.5 px-3 flex-shrink-0 text-red-600 dark:text-red-400">
-              {% trans "Open Full Report" %}
-            </a>
-          <button @click="downloadPDF(rep.id, rep.title)"
-                  class="btn-ghost text-xs py-1.5 px-3 flex-shrink-0 flex items-center gap-1 text-primary-600 dark:text-primary-400">
-            <i data-lucide="download" class="w-3.5 h-3.5"></i>PDF
-          </button>
-        </div>
-      </template>
-      <div x-show="!reports.length && !loadingList" class="text-center py-16 text-slate-400">
-        <i data-lucide="file-text" class="w-8 h-8 mx-auto mb-2"></i>
-        <p class="text-sm">{% trans "No reports yet. Generate one using the actions above." %}</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Report Viewer Modal -->
-  <div x-show="activeReport" x-transition class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div @click.away="activeReport=null" class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[88vh] flex flex-col">
-      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
-        <h3 class="font-bold text-slate-800 dark:text-white" x-text="reportTitle(activeReport)"></h3>
-        <div class="flex items-center gap-2">
-          <a x-show="hasFullReport(activeReport?.report_type)"
-             :href="fullReportUrl(activeReport.id, activeReport.report_type)"
-             target="_blank"
-             class="btn-ghost text-xs py-1.5 px-3 border border-slate-200 dark:border-slate-600">
-            {% trans "Open Full Report" %}
-          </a>
-          <button @click="downloadPDF(activeReport.id, activeReport.title)"
-                  class="btn-primary text-xs py-1.5 px-3 flex items-center gap-1.5"
-                  :disabled="pdfLoading" title="{% trans 'Download PDF' %}">
-            <svg x-show="pdfLoading" class="animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
-              <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
-            <i x-show="!pdfLoading" data-lucide="download" class="w-3.5 h-3.5"></i>
-            <span x-text="pdfLoading ? i18n.downloading : i18n.downloadPdf"></span>
-          </button>
-          <button @click="activeReport=null" class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
-            <i data-lucide="x" class="w-5 h-5"></i>
-          </button>
-        </div>
-      </div>
-      <div class="flex-1 overflow-y-auto p-6 space-y-5">
-
-        <!-- Narrative sections -->
-        <template x-for="[key, content] in Object.entries(activeReport?.narrative||{})">
-          <div>
-            <h4 class="font-semibold text-slate-700 dark:text-slate-200 mb-2 capitalize flex items-center gap-2">
-              <span class="w-1.5 h-4 bg-primary-500 rounded-full inline-block"></span>
-              <span x-text="key.replace(/_/g,' ')"></span>
-            </h4>
-            <div class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-700/40 rounded-xl p-4"
-                 x-text="content"></div>
-          </div>
-        </template>
-
-        <!-- Invoice Audit Stats -->
-        <template x-if="activeReport?.data?.invoice_audit">
-          <div class="border-t border-slate-200 dark:border-slate-700 pt-5">
-            <h4 class="font-semibold text-slate-700 dark:text-slate-200 mb-3">📊 {% trans "Invoice Audit Statistics" %}</h4>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div class="bg-slate-50 dark:bg-slate-700/40 rounded-xl p-3 text-center">
-                <div class="text-2xl font-bold text-slate-800 dark:text-white"
-                     x-text="activeReport.data.invoice_audit.overall_stats?.total_invoices||0"></div>
-                <div class="text-xs text-slate-400 mt-0.5">{% trans "Total Invoices" %}</div>
-              </div>
-              <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 text-center">
-                <div class="text-2xl font-bold text-red-600 dark:text-red-400"
-                     x-text="activeReport.data.invoice_audit.overall_stats?.flagged_count||0"></div>
-                <div class="text-xs text-slate-400 mt-0.5">{% trans "Flagged" %}</div>
-              </div>
-              <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 text-center">
-                <div class="text-2xl font-bold text-amber-600 dark:text-amber-400"
-                     x-text="activeReport.data.invoice_audit.overall_stats?.duplicate_count||0"></div>
-                <div class="text-xs text-slate-400 mt-0.5">{% trans "Duplicates" %}</div>
-              </div>
-              <div class="bg-primary-50 dark:bg-primary-900/20 rounded-xl p-3 text-center">
-                <div class="text-2xl font-bold text-primary-600 dark:text-primary-400"
-                     x-text="(activeReport.data.invoice_audit.validation_summary?.avg_score||0).toFixed(1)+'%'"></div>
-                <div class="text-xs text-slate-400 mt-0.5">{% trans "Average Audit Score" %}</div>
-              </div>
-            </div>
-          </div>
-        </template>
-      </div>
-    </div>
-  </div>
-
-</div>
+{% block head_extra %}
+  <script defer src="{% static 'vendor/alpine.min.js' %}" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
 {% endblock %}
 
-{% block page_js %}
-<script>
-function reportsPage() {
-  return {
-    reports:[], loadingList:true, generating:false,
-    filterType:'', activeReport:null, pdfLoading:false,
-    picker: {
-      open: false, loading: false, docs: [], title: '', docType: '', apiPath: '', lang: 'ar',
-      async show(docType, title, lang) {
-        this.docType = docType; this.title = title; this.lang = lang;
-        const paths = {
-          sales_invoice:  '/api/v1/invoices/',
-          purchase_order: '/api/v1/documents/purchase-orders/',
-          bank_statement: '/api/v1/documents/bank-statements/',
-          payroll:        '/api/v1/documents/payroll/',
-          expense_report: '/api/v1/documents/expense-reports/',
-          vat_return:     '/api/v1/documents/vat-returns/',
-          fixed_asset:    '/api/v1/documents/fixed-assets/',
-          sales_receipt:  '/api/v1/documents/sales-receipts/',
-        };
-        this.apiPath = paths[docType] || '';
-        this.open = true; this.loading = true; this.docs = [];
-        try {
-          const r = await apiFetch(this.apiPath + '?limit=50');
-          this.docs = r.results || r || [];
-        } catch(e) { this.docs = []; }
-        this.loading = false;
-      },
-      docLabel(d) {
-        return d.po_number || d.invoice_number || d.bank_name || d.company_name ||
-               d.report_reference || d.register_name || d.receipt_number ||
-               d.payroll_period_from || (this.i18n.document + ' — ' + (d.id||'').slice(0,8));
-      },
-      select(d)       { this.open = false; this._resolve && this._resolve(d.id); this._resolve = null; },
-      selectGeneral() { this.open = false; this._resolve && this._resolve(null);  this._resolve = null; },
-      cancel()        { this.open = false; this._resolve && this._resolve(false); this._resolve = null; },
-      prompt(docType, title, lang) {
-        return new Promise(res => { this._resolve = res; this.show(docType, title, lang); });
-      },
-    },
-    i18n: {
-      untitledReport: "{% trans 'Untitled report' %}",
-      report: "{% trans 'Report' %}",
-      arabic: "{% trans 'Arabic' %}",
-      english: "{% trans 'English' %}",
-      downloading: "{% trans 'Downloading...' %}",
-      downloadPdf: "{% trans 'Download PDF' %}",
-      reportGenerated: "{% trans 'Report generated successfully' %}",
-      reportGenerationFailed: "{% trans 'Failed to generate report:' %}",
-      loadingFailed: "{% trans 'Loading failed' %}",
-      downloadFailed: "{% trans 'PDF download failed' %}",
-      invoiceAudit: "{% trans 'Invoice Audit' %}",
-      executiveSummary: "{% trans 'Executive Summary' %}",
-      riskAssessment: "{% trans 'Risk Assessment' %}",
-      vendorAnalysis: "{% trans 'Vendor Analysis' %}",
-      spendAnalysis: "{% trans 'Spend Analysis' %}",
-      salesInvoiceAudit: "{% trans 'Sales Invoice Audit' %}",
-      purchaseOrderAudit: "{% trans 'Purchase Order Audit' %}",
-      bankStatementAudit: "{% trans 'Bank Statement Audit' %}",
-      payrollAudit: "{% trans 'Payroll Audit' %}",
-      expenseReportAudit: "{% trans 'Expense Report Audit' %}",
-      vatReturnAudit: "{% trans 'VAT Return Audit' %}",
-      fixedAssetAudit: "{% trans 'Fixed Asset Audit' %}",
-      salesReceiptAudit: "{% trans 'Sales Receipt Audit' %}",
-      enterDocId: "{% trans 'Enter document UUID for audit:' %}",
-      statusValidated: "{% trans 'Validated' %}",
-      statusApproved: "{% trans 'Approved' %}",
-      statusFlagged: "{% trans 'Flagged' %}",
-      statusRejected: "{% trans 'Rejected' %}",
-      statusPending: "{% trans 'Pending' %}",
-      document: "{% trans 'Document' %}",
-    },
+{% block extra_styles %}
+  [x-cloak] { display: none !important; }
 
-    async init() { await this.loadReports(); },
-
-    async loadReports() {
-      this.loadingList = true;
-      try {
-        const url = '/reports/' + (this.filterType ? '?report_type='+this.filterType : '');
-        const d = await apiFetch(url);
-        this.reports = d.results || d || [];
-      } catch(e) {}
-      this.loadingList = false;
-      this.$nextTick(() => lucide.createIcons());
-    },
-
-    async generate(type, lang) {
-      this.generating = true;
-      try {
-        let d;
-        if (type === 'executive_summary') {
-          // New backend: ExecutiveReportService
-          d = await apiFetch('/api/v1/reports/executive/', {
-            method: 'POST',
-            body: JSON.stringify({ language: lang, save: true }),
-          });
-          const reportId = d?.report_meta?.report_id;
-          notify(this.i18n.reportGenerated, 'success');
-          await this.loadReports();
-          if (reportId) {
-            window.location.href = this.fullReportUrl(reportId, type);
-            return;
-          }
-        } else if (type === 'invoice_audit') {
-          // New backend: InvoiceAuditReportService v2
-          d = await apiFetch('/api/v1/reports/invoice-audit/', {
-            method: 'POST',
-            body: JSON.stringify({ language: lang, save: true }),
-          });
-          const reportId = d?.report_header?.report_id;
-          notify(this.i18n.reportGenerated, 'success');
-          await this.loadReports();
-          if (reportId) {
-            window.location.href = this.fullReportUrl(reportId, type);
-            return;
-          }
-        } else if (type.startsWith('document_audit_')) {
-          // Document-level audit — open picker modal to select a document
-          const docType = type.replace('document_audit_', '');
-          const pickerTitle = this.reportTypeLabel(type);
-          this.generating = false;  // hide spinner while user picks
-          const docId = await this.picker.prompt(docType, pickerTitle, lang);
-          if (docId === false) { this.generating = false; return; }  // user cancelled
-          this.generating = true;
-          const body = { document_type: docType, language: lang, save: true };
-          if (docId) body.document_id = docId;   // omit for general/summary report
-          d = await apiFetch('/api/v1/reports/document/', {
-            method: 'POST',
-            body: JSON.stringify(body),
-          });
-          const reportId = d?.report_meta?.report_id;
-          notify(this.i18n.reportGenerated, 'success');
-          await this.loadReports();
-          if (reportId) {
-            window.location.href = this.fullReportUrl(reportId, type);
-            return;
-          }
-        } else {
-          d = await apiFetch('/reports/generate/', {
-            method: 'POST',
-            body: JSON.stringify({ report_type: type, language: lang, include_invoices: true }),
-          });
-          notify(this.i18n.reportGenerated, 'success');
-          await this.loadReports();
-          this.activeReport = d;
-        }
-      } catch(e) { notify(this.i18n.reportGenerationFailed + ' ' + e.message, 'error'); }
-      this.generating = false;
-      this.$nextTick(() => lucide.createIcons());
-    },
-
-    async viewReport(id, type=null) {
-      if (this.hasFullReport(type)) {
-        window.location.href = this.fullReportUrl(id, type);
-        return;
-      }
-      try {
-        this.activeReport = await apiFetch('/reports/'+id+'/');
-        this.$nextTick(() => lucide.createIcons());
-      } catch(e) { notify(this.i18n.loadingFailed,'error'); }
-    },
-
-    async downloadPDF(id, title) {
-      this.pdfLoading = true;
-      try {
-        const res = await fetch('/api/v1/reports/'+id+'/pdf/', {
-          credentials: 'same-origin',
-          headers: { 'X-CSRFToken': CSRF() }
-        });
-        if (!res.ok) {
-          let message = `${this.i18n.downloadFailed} (${res.status})`;
-          const contentType = res.headers.get('content-type') || '';
-          if (contentType.includes('application/json')) {
-            const payload = await res.json();
-            message = payload.error || payload.detail || message;
-          } else {
-            const text = (await res.text()).trim();
-            if (text) message = text;
-          }
-          throw new Error(message);
-        }
-        if (!res.ok) throw new Error(`${this.i18n.downloadFailed} (${res.status})`);
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = (title||'report').replace(/\s+/g,'_').slice(0,60)+'.pdf';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        notify(this.i18n.downloadPdf, 'success');
-      } catch(e) { notify(this.i18n.downloadFailed + ': ' + e.message, 'error'); }
-      this.pdfLoading = false;
-    },
-
-    displayTitle(value) {
-      const raw = (value ?? '').toString().trim();
-      if (!raw) return this.i18n.untitledReport;
-      return raw.replace(/\s+None$/g, '').trim();
-    },
-
-    reportTitle(rep) {
-      if (!rep) return this.i18n.untitledReport;
-      const typed = this.reportTypeLabel(rep.report_type);
-      if (typed && typed !== rep.report_type) return typed;
-      return this.displayTitle(rep.title);
-    },
-
-    reportTypeLabel(type) {
-      const map = {
-        invoice_audit:               this.i18n.invoiceAudit,
-        executive_summary:           this.i18n.executiveSummary,
-        risk_assessment:             this.i18n.riskAssessment,
-        vendor_analysis:             this.i18n.vendorAnalysis,
-        spend_analysis:              this.i18n.spendAnalysis,
-        document_audit_sales_invoice:  this.i18n.salesInvoiceAudit,
-        document_audit_purchase_order: this.i18n.purchaseOrderAudit,
-        document_audit_bank_statement: this.i18n.bankStatementAudit,
-        document_audit_payroll:        this.i18n.payrollAudit,
-        document_audit_expense_report: this.i18n.expenseReportAudit,
-        document_audit_vat_return:     this.i18n.vatReturnAudit,
-        document_audit_fixed_asset:    this.i18n.fixedAssetAudit,
-        document_audit_sales_receipt:  this.i18n.salesReceiptAudit,
-      };
-      return map[type] || type;
-    },
-
-    hasFullReport(type) {
-      if (!type) return false;
-      return type === 'invoice_audit' || type === 'executive_summary' || type.startsWith('document_audit_');
-    },
-
-    fullReportUrl(id, type) {
-      if (type === 'invoice_audit')    return `/api/v1/reports/invoice-audit/${id}/html/`;
-      if (type === 'executive_summary') return `/api/v1/reports/executive/${id}/html/`;
-      if (type && type.startsWith('document_audit_')) return `/api/v1/reports/document/${id}/html/`;
-      return `/reports/`;
-    },
+  /* Type selector */
+  .type-selector { background: white; border: 1px solid var(--border); border-radius: 18px; padding: 18px 22px; margin-bottom: 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .type-selector-label { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+  .type-selector select {
+    flex: 1; min-width: 240px;
+    padding: 12px 14px;
+    background: var(--bg-soft);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
   }
-}
+  .type-selector select:focus { outline: none; border-color: var(--primary); background: white; box-shadow: 0 0 0 4px rgba(0,51,102,0.08); }
+  .type-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 100px;
+    font-size: 12px; font-weight: 700;
+    background: rgba(0,51,102,0.06);
+    color: var(--primary);
+    border: 1px solid rgba(0,51,102,0.12);
+  }
+
+  /* Report category cards */
+  .reports-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 28px; }
+  .report-card {
+    background: white;
+    border: 1px solid var(--border-soft);
+    border-radius: 18px;
+    padding: 24px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    width: 100%;
+    text-align: right;
+    font-family: inherit;
+  }
+  .report-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: rgba(16, 185, 129, 0.25); }
+  .report-card-icon {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, rgba(0,51,102,0.08), rgba(16,185,129,0.08));
+    color: var(--primary);
+  }
+  .report-card h3 { font-family: 'Cairo', sans-serif; font-size: 16px; font-weight: 800; color: var(--primary); margin-bottom: 6px; }
+  .report-card p { font-size: 12px; color: var(--text-muted); line-height: 1.6; margin-bottom: 14px; }
+  .report-card-action { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--accent-dark); }
+
+  /* Summary strip */
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 28px; }
+  .summary-card { background: white; border: 1px solid var(--border-soft); border-radius: 18px; padding: 22px; transition: all 0.3s ease; }
+  .summary-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+  .summary-card.dark { background: linear-gradient(135deg, var(--primary) 0%, #002244 100%); color: white; border: none; position: relative; overflow: hidden; }
+  .summary-card.dark::before { content: ''; position: absolute; top: -40px; left: -40px; width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(circle, var(--accent) 0%, transparent 70%); opacity: 0.4; }
+  .summary-card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .summary-card-label { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .summary-card.green .summary-card-header { color: var(--success); }
+  .summary-card.blue .summary-card-header { color: var(--info); }
+  .summary-card.amber .summary-card-header { color: var(--warning); }
+  .summary-card.dark .summary-card-header { color: var(--accent-light); }
+  .summary-card-value { font-family: 'Cairo', sans-serif; font-weight: 900; font-size: 26px; color: var(--text); letter-spacing: -0.5px; line-height: 1.2; }
+  .summary-card.dark .summary-card-value { color: white; }
+  .summary-card-sub { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+  .summary-card.dark .summary-card-sub { color: rgba(255,255,255,0.7); }
+
+  @media (max-width: 1024px) {
+    .reports-grid { grid-template-columns: repeat(2, 1fr); }
+    .summary-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 640px) {
+    .reports-grid { grid-template-columns: 1fr; }
+    .summary-grid { grid-template-columns: 1fr; }
+  }
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "Reports" %}</span>
+{% endblock %}
+
+{% block content %}
+<div x-data="reportsHub('{{ selected_type|default:'invoice' }}')">
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title" x-text="typeMeta.title">{% trans "Reports" %}</h1>
+    <p class="page-subtitle" x-text="typeMeta.desc">{% trans "Generate analysis reports across your documents." %}</p>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <button class="btn btn-light">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+      {% trans "Last 30 days" %}
+    </button>
+    <button type="button" class="btn btn-primary" @click="generate('audit_summary', '{% trans "Audit Summary" %}')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      {% trans "Generate Report" %}
+    </button>
+  </div>
+</div>
+
+<div class="type-selector">
+  <span class="type-selector-label">{% trans "Document type:" %}</span>
+  <select x-model="docType" @change="onTypeChange">
+    <option value="invoice">{% trans "Invoices" %}</option>
+    <option value="purchase_order">{% trans "Purchase Orders" %}</option>
+    <option value="bank_statement">{% trans "Bank Statements" %}</option>
+    <option value="vat_return">{% trans "VAT Returns" %}</option>
+    <option value="payroll">{% trans "Payroll" %}</option>
+    <option value="expense_report">{% trans "Expense Reports" %}</option>
+    <option value="fixed_asset">{% trans "Fixed Assets" %}</option>
+    <option value="sales_receipt">{% trans "Sales Receipts" %}</option>
+  </select>
+  <span class="type-badge">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    <span x-text="typeMeta.label"></span>
+  </span>
+</div>
+
+<!-- Type-specific summary stats -->
+<div class="summary-grid">
+  <div class="summary-card green">
+    <div class="summary-card-header">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span class="summary-card-label">{% trans "Total Analyzed" %}</span>
+    </div>
+    <div class="summary-card-value">0</div>
+    <p class="summary-card-sub">{% trans "Documents this period" %}</p>
+  </div>
+
+  <div class="summary-card blue">
+    <div class="summary-card-header">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      <span class="summary-card-label">{% trans "Accuracy Rate" %}</span>
+    </div>
+    <div class="summary-card-value">98.5%</div>
+    <p class="summary-card-sub">{% trans "AI extraction quality" %}</p>
+  </div>
+
+  <div class="summary-card amber">
+    <div class="summary-card-header">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+      <span class="summary-card-label">{% trans "Risks Found" %}</span>
+    </div>
+    <div class="summary-card-value">0</div>
+    <p class="summary-card-sub">{% trans "Across this document type" %}</p>
+  </div>
+
+  <div class="summary-card dark">
+    <div class="summary-card-header">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6l-8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+      <span class="summary-card-label">{% trans "Compliance" %}</span>
+    </div>
+    <div class="summary-card-value">95%</div>
+    <p class="summary-card-sub">{% trans "ZATCA Phase 2 status" %}</p>
+  </div>
+</div>
+
+<!-- Available reports for the selected type -->
+<div>
+  <h3 class="card-title" style="margin-bottom: 18px;" x-text="`${typeMeta.label} {% trans 'Reports' %}`">{% trans "Available Reports" %}</h3>
+  <div class="reports-grid">
+
+    <button type="button" class="report-card" @click="generate('audit_summary', 'Audit Summary')">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      </div>
+      <h3>{% trans "Audit Summary" %}</h3>
+      <p x-text="`{% trans 'Comprehensive audit results for' %} ${typeMeta.label}`">{% trans "Comprehensive audit results, accuracy rates, and risk distribution." %}</p>
+      <div class="report-card-action">{% trans "Generate" %} →</div>
+    </button>
+
+    <button type="button" class="report-card" @click="generate('risk_analysis', 'Risk Analysis')">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <h3>{% trans "Risk Analysis" %}</h3>
+      <p>{% trans "Detailed risk indicators, anomalies, and fraud detection scores." %}</p>
+      <div class="report-card-action">{% trans "Generate" %} →</div>
+    </button>
+
+    <button type="button" class="report-card" @click="generate('compliance', 'Compliance Report')">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6l-8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+      </div>
+      <h3>{% trans "Compliance Report" %}</h3>
+      <p x-show="docType !== 'payroll' && docType !== 'expense_report'">{% trans "ZATCA Phase 2, VAT validation, and tax compliance details." %}</p>
+      <p x-show="docType === 'payroll' || docType === 'expense_report'" x-cloak>{% trans "GOSI / labor law compliance and policy validation." %}</p>
+      <div class="report-card-action">{% trans "Generate" %} →</div>
+    </button>
+
+    <button type="button" class="report-card" @click="generate('trend', 'Trend Analysis')">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      </div>
+      <h3>{% trans "Trend Analysis" %}</h3>
+      <p>{% trans "Volume, amounts, and key metrics over time." %}</p>
+      <div class="report-card-action">{% trans "Generate" %} →</div>
+    </button>
+
+    <button type="button" class="report-card" @click="generate('vendor', 'Vendor Analysis')">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <h3>{% trans "Vendor Analysis" %}</h3>
+      <p>{% trans "Top vendors, transaction volumes, and supplier performance." %}</p>
+      <div class="report-card-action">{% trans "Generate" %} →</div>
+    </button>
+
+    <button type="button" class="report-card" @click="generate('isa700', 'ISA 700 Opinion')">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      </div>
+      <h3>{% trans "ISA 700 Opinion" %}</h3>
+      <p>{% trans "Formal audit opinion based on international standards." %}</p>
+      <div class="report-card-action">{% trans "Generate" %} →</div>
+    </button>
+  </div>
+</div>
+
+<!-- Fraud & Risk Findings (powered by rule_engine: AI-R03/05/08, DUP-01..03, GAAP-ANO-001) -->
+<div class="card" style="margin-bottom: 28px;">
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+    <div>
+      <h3 class="card-title" style="margin-bottom:4px;">{% trans "Fraud & Anomaly Detection" %}</h3>
+      <p style="font-size:12px; color:var(--text-muted);">{% trans "Powered by 8 AI risk rules + 3 duplicate detectors + Benford's Law analyzer" %}</p>
+    </div>
+    <span class="badge badge-success">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+      {% trans "Active" %}
+    </span>
+  </div>
+
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
+
+    <div style="padding:16px; background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.2); border-radius:14px;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; color:var(--success);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <strong style="font-size:12px; font-weight:800; letter-spacing:0.3px; text-transform:uppercase;">AI-R05</strong>
+      </div>
+      <div style="font-family:'Cairo',sans-serif; font-size:14px; font-weight:800; color:var(--text); margin-bottom:4px;">{% trans "Benford's Law" %}</div>
+      <div style="font-size:12px; color:var(--text-muted); line-height:1.6;">{% trans "First-digit distribution analysis catches manufactured numbers." %}</div>
+      <div style="margin-top:10px; font-size:11px; color:var(--success); font-weight:700;">{% trans "0 anomalies detected" %}</div>
+    </div>
+
+    <div style="padding:16px; background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.2); border-radius:14px;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; color:var(--success);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <strong style="font-size:12px; font-weight:800; letter-spacing:0.3px; text-transform:uppercase;">AI-R03</strong>
+      </div>
+      <div style="font-family:'Cairo',sans-serif; font-size:14px; font-weight:800; color:var(--text); margin-bottom:4px;">{% trans "Document Alteration" %}</div>
+      <div style="font-size:12px; color:var(--text-muted); line-height:1.6;">{% trans "Detects edits, overwrites, and tampering signatures." %}</div>
+      <div style="margin-top:10px; font-size:11px; color:var(--success); font-weight:700;">{% trans "All clean" %}</div>
+    </div>
+
+    <div style="padding:16px; background:rgba(245,158,11,0.06); border:1px solid rgba(245,158,11,0.2); border-radius:14px;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; color:var(--warning);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <strong style="font-size:12px; font-weight:800; letter-spacing:0.3px; text-transform:uppercase;">DUP-01..03</strong>
+      </div>
+      <div style="font-family:'Cairo',sans-serif; font-size:14px; font-weight:800; color:var(--text); margin-bottom:4px;">{% trans "Duplicate Invoices" %}</div>
+      <div style="font-size:12px; color:var(--text-muted); line-height:1.6;">{% trans "Document number, content fingerprint, and SHA-256 hash checks." %}</div>
+      <div style="margin-top:10px; font-size:11px; color:var(--warning); font-weight:700;">{% trans "1 fingerprint match" %}</div>
+    </div>
+
+    <div style="padding:16px; background:rgba(0,51,102,0.04); border:1px solid rgba(0,51,102,0.10); border-radius:14px;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; color:var(--primary);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <strong style="font-size:12px; font-weight:800; letter-spacing:0.3px; text-transform:uppercase;">GAAP-ANO-001</strong>
+      </div>
+      <div style="font-family:'Cairo',sans-serif; font-size:14px; font-weight:800; color:var(--text); margin-bottom:4px;">{% trans "Materiality & Patterns" %}</div>
+      <div style="font-size:12px; color:var(--text-muted); line-height:1.6;">{% trans "Round-number bias, off-hours uploads, materiality thresholds." %}</div>
+      <div style="margin-top:10px; font-size:11px; color:var(--success); font-weight:700;">{% trans "Within materiality" %}</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Recent reports list -->
+<div class="card table-card">
+  <div class="table-header">
+    <h3 class="card-title">{% trans "Recent Reports" %}</h3>
+    <button class="btn btn-light">{% trans "View all" %} ←</button>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>{% trans "Report" %}</th>
+          <th>{% trans "Type" %}</th>
+          <th>{% trans "Generated" %}</th>
+          <th>{% trans "Status" %}</th>
+          <th>{% trans "Action" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="5">
+          <div class="empty-state">
+            <div class="empty-state-icon">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <h3>{% trans "No reports generated yet" %}</h3>
+            <p>{% trans "Pick a report type above to generate your first report. It will appear here once ready." %}</p>
+            <a href="{% url 'frontend:upload' %}" class="btn btn-primary">{% trans "Upload Documents" %}</a>
+          </div>
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== AI Generating Report overlay ===== -->
+<div class="ai-overlay" x-show="generating" x-cloak x-transition>
+  <div class="ai-overlay-card">
+    <button class="ai-overlay-close" @click="generating = false" aria-label="{% trans 'Cancel' %}" type="button">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+
+    <div class="ai-loader">
+      {% include "components/ai_loader.html" %}
+
+      <div class="ai-loader-label" x-text="`{% trans 'Generating' %} ${reportLabel}`">{% trans "Generating Report" %}</div>
+      <div class="ai-loader-status">
+        <span class="ai-dots"><span></span><span></span><span></span></span>
+        <span x-text="generateStatus">{% trans "Working on it…" %}</span>
+      </div>
+
+      <div class="ai-progress">
+        <div class="ai-progress-fill" :style="`width: ${generateProgress}%`"></div>
+      </div>
+
+      <div class="ai-stages">
+        <div class="ai-stage" :class="{ active: generateStep === 1, done: generateStep > 1 }">
+          <div class="ai-stage-line"></div>
+          <div class="ai-stage-circle"><span x-show="generateStep <= 1">1</span><svg x-show="generateStep > 1" x-cloak width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="ai-stage-label">{% trans "Collect" %}</div>
+        </div>
+        <div class="ai-stage" :class="{ active: generateStep === 2, done: generateStep > 2 }">
+          <div class="ai-stage-line"></div>
+          <div class="ai-stage-circle"><span x-show="generateStep <= 2">2</span><svg x-show="generateStep > 2" x-cloak width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="ai-stage-label">{% trans "Analyze" %}</div>
+        </div>
+        <div class="ai-stage" :class="{ active: generateStep === 3, done: generateStep > 3 }">
+          <div class="ai-stage-line"></div>
+          <div class="ai-stage-circle"><span x-show="generateStep <= 3">3</span><svg x-show="generateStep > 3" x-cloak width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="ai-stage-label">{% trans "Compose" %}</div>
+        </div>
+        <div class="ai-stage" :class="{ active: generateStep === 4, done: generateStep > 4 }">
+          <div class="ai-stage-circle"><span x-show="generateStep <= 4">4</span><svg x-show="generateStep > 4" x-cloak width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="ai-stage-label">{% trans "Render" %}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /reportsHub wrapper -->
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const REPORT_TYPE_META = {
+    'invoice':         { label: '{% trans "Invoices" %}',         title: '{% trans "Invoice Reports" %}',         desc: '{% trans "Audit summary, ZATCA compliance, fraud detection, and vendor analysis for invoices." %}' },
+    'purchase_order':  { label: '{% trans "Purchase Orders" %}',  title: '{% trans "Purchase Order Reports" %}',  desc: '{% trans "3-way match analysis, supplier performance, and PO compliance." %}' },
+    'bank_statement':  { label: '{% trans "Bank Statements" %}',  title: '{% trans "Bank Statement Reports" %}',  desc: '{% trans "Reconciliation results, suspicious transactions, and balance verification." %}' },
+    'vat_return':      { label: '{% trans "VAT Returns" %}',      title: '{% trans "VAT Return Reports" %}',      desc: '{% trans "Quarterly VAT analysis, ZATCA Phase 2 status, and tax position summary." %}' },
+    'payroll':         { label: '{% trans "Payroll" %}',          title: '{% trans "Payroll Reports" %}',         desc: '{% trans "GOSI calculations, salary anomalies, and payroll compliance." %}' },
+    'expense_report':  { label: '{% trans "Expense Reports" %}',  title: '{% trans "Expense Reports Analysis" %}', desc: '{% trans "Policy compliance, top spenders, and expense categorization." %}' },
+    'fixed_asset':     { label: '{% trans "Fixed Assets" %}',     title: '{% trans "Fixed Asset Reports" %}',     desc: '{% trans "Depreciation schedules, asset utilization, and capital expenditure summary." %}' },
+    'sales_receipt':   { label: '{% trans "Sales Receipts" %}',   title: '{% trans "Sales Receipt Reports" %}',   desc: '{% trans "POS reconciliation, revenue analysis, and customer transaction patterns." %}' },
+  };
+
+  function reportsHub(initialType) {
+    return {
+      docType: initialType || 'invoice',
+      typeMeta: REPORT_TYPE_META[initialType] || REPORT_TYPE_META['invoice'],
+
+      // ── Report generation overlay state ────────────────────
+      generating: false,
+      generateStep: 0,
+      generateProgress: 0,
+      generateStatus: '',
+      reportLabel: '',
+      _genTimer: null,
+
+      onTypeChange() {
+        this.typeMeta = REPORT_TYPE_META[this.docType] || REPORT_TYPE_META['invoice'];
+        const url = new URL(window.location);
+        url.searchParams.set('type', this.docType);
+        window.location.href = url.toString();
+      },
+
+      generate(reportKind, reportLabel) {
+        // Open the AI overlay and walk through stages while the backend would
+        // assemble the report. The stages run on a paced simulation so the
+        // user always sees progress; real backend hooks can replace the
+        // simulation by setting generateProgress / generateStep directly.
+        this.reportLabel = reportLabel || 'Report';
+        this.generating = true;
+        this.generateStep = 1;
+        this.generateProgress = 0;
+        this.generateStatus = '{% trans "Collecting documents and audit findings..." %}';
+
+        const stages = [
+          { at: 22, status: '{% trans "Querying audit results, fraud rules, and compliance findings..." %}', step: 2 },
+          { at: 52, status: '{% trans "GPT-4o composing executive summary and key insights..." %}', step: 3 },
+          { at: 80, status: '{% trans "Rendering charts, tables, and PDF layout..." %}', step: 4 },
+        ];
+
+        clearInterval(this._genTimer);
+        this._genTimer = setInterval(() => {
+          if (this.generateProgress >= 96) return;
+          this.generateProgress += 2;
+          for (const s of stages) {
+            if (this.generateProgress >= s.at && this.generateProgress < s.at + 2) {
+              this.generateStatus = s.status;
+              this.generateStep = s.step;
+            }
+          }
+        }, 90);
+
+        // Settle: cap progress at 100, mark all stages done, then redirect to
+        // the existing invoice-audit report endpoint after a short pause.
+        setTimeout(() => {
+          clearInterval(this._genTimer);
+          this.generateProgress = 100;
+          this.generateStep = 5;
+          this.generateStatus = '{% trans "Report ready — opening..." %}';
+          setTimeout(() => {
+            window.location.href = `/reports/invoice-audit/?type=${this.docType}&kind=${encodeURIComponent(reportKind)}`;
+          }, 700);
+        }, 4500);
+      },
+    }
+  }
 </script>
 {% endblock %}

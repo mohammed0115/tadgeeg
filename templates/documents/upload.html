@@ -1,538 +1,379 @@
-{% extends "base.html" %}
-{% load i18n %}
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n static %}
+
 {% block title %}{% trans "Upload Documents" %}{% endblock %}
-{% block page_title %}{% trans "Upload Documents" %}{% endblock %}
 {% block nav_documents %}active{% endblock %}
-{% block nav_doc_upload %}active{% endblock %}
+
+{% block head_extra %}
+  <script defer src="{% static 'vendor/alpine.min.js' %}" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
+{% endblock %}
+
+{% block extra_styles %}
+  [x-cloak] { display: none !important; }
+  .upload-page { max-width: 880px; margin: 0 auto; }
+  .upload-hero { text-align: center; margin-bottom: 32px; }
+  .upload-hero h2 { font-family: 'Cairo', sans-serif; font-size: 28px; font-weight: 900; color: var(--primary); letter-spacing: -1px; margin-bottom: 8px; }
+  .upload-hero p { color: var(--text-muted); font-size: 14px; }
+
+  /* Type selector */
+  .type-selector { background: white; border: 1px solid var(--border); border-radius: 18px; padding: 18px 22px; margin-bottom: 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .type-selector-label { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+  .type-selector select {
+    flex: 1; min-width: 240px;
+    padding: 12px 14px;
+    background: var(--bg-soft);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .type-selector select:focus { outline: none; border-color: var(--primary); background: white; box-shadow: 0 0 0 4px rgba(0,51,102,0.08); }
+  .type-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 100px;
+    font-size: 12px; font-weight: 700;
+    background: rgba(16,185,129,0.1);
+    color: var(--accent-dark);
+    border: 1px solid rgba(16,185,129,0.2);
+  }
+
+  .dropzone { background: white; border: 2.5px dashed var(--border); border-radius: 28px; padding: 56px 32px; text-align: center; transition: all 0.35s ease; cursor: pointer; position: relative; overflow: hidden; }
+  .dropzone:hover, .dropzone.dragover { border-color: var(--accent); background: rgba(16,185,129,0.03); transform: translateY(-2px); }
+  .dropzone.uploading { border-color: var(--accent); border-style: solid; background: rgba(16,185,129,0.04); cursor: default; }
+  .dropzone-icon { width: 88px; height: 88px; border-radius: 26px; background: linear-gradient(135deg, rgba(0,51,102,0.08), rgba(16,185,129,0.08)); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; color: var(--primary); transition: all 0.3s ease; }
+  .dropzone:hover .dropzone-icon { background: var(--accent); color: white; transform: scale(1.05) rotate(-3deg); }
+  .dropzone h3 { font-family: 'Cairo', sans-serif; font-size: 20px; font-weight: 800; color: var(--text); margin-bottom: 10px; }
+  .dropzone p { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+
+  .progress-bar { width: 100%; max-width: 400px; height: 8px; background: var(--bg-soft); border-radius: 100px; overflow: hidden; margin: 20px auto; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent) 0%, var(--accent-light) 100%); border-radius: 100px; width: 0%; transition: width 0.5s ease; }
+  .progress-steps { display: flex; justify-content: center; gap: 24px; margin-top: 24px; flex-wrap: wrap; }
+  .progress-step { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--text-light); transition: color 0.3s ease; }
+  .progress-step.done { color: var(--success); }
+  .progress-step.active { color: var(--accent); }
+  .progress-step .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; opacity: 0.4; }
+  .progress-step.active .dot, .progress-step.done .dot { opacity: 1; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .progress-step.active .dot { animation: pulse 1.4s ease-in-out infinite; }
+
+  .file-list { margin-top: 24px; max-height: 280px; overflow-y: auto; padding-right: 4px; }
+  .file-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg-soft); border: 1px solid var(--border-soft); border-radius: 14px; margin-bottom: 8px; }
+  .file-row-icon { width: 36px; height: 36px; border-radius: 10px; background: white; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--primary); flex-shrink: 0; }
+  .file-row-meta { flex: 1; min-width: 0; }
+  .file-row-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-row-size { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .file-row-remove { color: var(--text-light); padding: 6px; border-radius: 6px; transition: all 0.2s ease; }
+  .file-row-remove:hover { background: #fee2e2; color: var(--danger); }
+
+  .result { margin-top: 20px; padding: 16px 20px; border-radius: 14px; font-size: 14px; display: flex; align-items: center; gap: 12px; font-weight: 600; }
+  .result-success { background: #dcfce7; border: 1px solid #bbf7d0; color: #166534; }
+  .result-error { background: #fee2e2; border: 1px solid #fecaca; color: #991b1b; }
+
+  .tips { margin-top: 28px; padding: 20px; background: rgba(0,51,102,0.03); border: 1px solid rgba(0,51,102,0.08); border-radius: 16px; display: flex; gap: 14px; }
+  .tips svg { flex-shrink: 0; color: var(--primary); }
+  .tips-content h5 { font-family: 'Cairo', sans-serif; font-weight: 800; color: var(--primary); font-size: 13px; margin-bottom: 6px; }
+  .tips-content p { font-size: 12px; color: var(--text-muted); line-height: 1.7; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <a href="{% url 'frontend:documents' %}" style="color:var(--text-muted)">{% trans "Documents" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "Upload" %}</span>
+{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto space-y-5" x-data="docUploader()" x-init="init()">
-  <div class="rounded-2xl border border-blue-200 bg-blue-50 px-6 py-5 text-right text-blue-700">
-    <p class="text-lg font-semibold leading-8">
-      <span class="font-bold">{% trans "Note:" %}</span>
-      {% trans "Text extracted from documents is used as audit evidence only, not as the accounting source of truth, and a digital fingerprint is stored for each file." %}
-    </p>
+<div class="upload-page" x-data="uploader('{{ selected_type|default:'invoice' }}')">
+
+  <div class="upload-hero">
+    <h2 x-text="typeMeta.title">{% trans "Upload Documents" %}</h2>
+    <p x-text="typeMeta.desc">{% trans "Pick the document type and upload — our AI will extract data and run audit checks." %}</p>
   </div>
 
-  <div class="overflow-hidden rounded-[22px] border border-slate-200 bg-white">
-    <div class="grid grid-cols-2 border-b border-slate-200 lg:grid-cols-4">
-      <template x-for="mode in uploadModes" :key="mode.id">
-        <button
-          type="button"
-          @click="setMode(mode.id)"
-          class="flex flex-col items-center justify-center gap-3 px-4 py-7 text-center transition-all duration-150"
-          :class="selectedMode === mode.id ? 'border-b-4 border-slate-800 bg-white text-slate-900' : 'border-b-4 border-transparent bg-slate-50/30 text-slate-500 hover:bg-slate-50 hover:text-slate-700'"
-        >
-          <i :data-lucide="mode.icon" class="h-7 w-7"></i>
-          <div>
-            <p class="text-[15px] font-semibold" x-text="mode.label"></p>
-            <p class="mt-1 text-xs text-slate-400" x-text="mode.subtext"></p>
+  <div class="type-selector">
+    <span class="type-selector-label">{% trans "Document type:" %}</span>
+    <select x-model="docType" @change="onTypeChange">
+      <optgroup label="{% trans 'Sales & AR' %}">
+        <option value="invoice">{% trans "Sales Invoice" %}</option>
+        <option value="sales_order">{% trans "Sales Order" %}</option>
+        <option value="quotation">{% trans "Quotation" %}</option>
+        <option value="proforma_invoice">{% trans "Proforma Invoice" %}</option>
+        <option value="sales_receipt">{% trans "Sales Receipt" %}</option>
+        <option value="customer_statement">{% trans "Customer Statement" %}</option>
+      </optgroup>
+      <optgroup label="{% trans 'Purchasing & AP' %}">
+        <option value="purchase_invoice">{% trans "Purchase Invoice" %}</option>
+        <option value="purchase_order">{% trans "Purchase Order" %}</option>
+        <option value="goods_receipt_note">{% trans "Goods Receipt Note (GRN)" %}</option>
+        <option value="supplier_statement">{% trans "Supplier Statement" %}</option>
+      </optgroup>
+      <optgroup label="{% trans 'Cash & Bank' %}">
+        <option value="bank_statement">{% trans "Bank Statement" %}</option>
+        <option value="payment_voucher">{% trans "Payment Voucher" %}</option>
+        <option value="receipt_voucher">{% trans "Receipt Voucher" %}</option>
+        <option value="cash_voucher">{% trans "Cash Voucher" %}</option>
+      </optgroup>
+      <optgroup label="{% trans 'GL & Compliance' %}">
+        <option value="journal_entry">{% trans "Journal Entry" %}</option>
+        <option value="general_ledger">{% trans "General Ledger" %}</option>
+        <option value="ledger">{% trans "Sub-Ledger" %}</option>
+        <option value="vat_return">{% trans "VAT Return" %}</option>
+        <option value="contract">{% trans "Contract" %}</option>
+      </optgroup>
+      <optgroup label="{% trans 'Other' %}">
+        <option value="payroll">{% trans "Payroll" %}</option>
+        <option value="expense_report">{% trans "Expense Report" %}</option>
+        <option value="fixed_asset">{% trans "Fixed Asset" %}</option>
+      </optgroup>
+    </select>
+    <span class="type-badge" x-show="AUTO_EXTRACT_TYPES.includes(docType)">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+      {% trans "Auto-extract enabled" %}
+    </span>
+    <span class="type-badge" x-show="!AUTO_EXTRACT_TYPES.includes(docType)" x-cloak>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      {% trans "Manual review" %}
+    </span>
+  </div>
+
+  <div class="dropzone" :class="{ 'dragover': dragging, 'uploading': uploading }"
+       @dragover.prevent="dragging = true"
+       @dragleave.prevent="dragging = false"
+       @drop.prevent="onDrop($event)"
+       @click="!uploading && $refs.fileInput.click()">
+
+    <input x-ref="fileInput" type="file" multiple style="display:none"
+           accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff,.zip,.xlsx,.xls,.json,.csv,.tsv"
+           @change="addFiles($event.target.files)">
+
+    <div x-show="!uploading">
+      <div class="dropzone-icon">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+      <h3 x-text="`{% trans 'Drop files here for' %} ${typeMeta.label}`">{% trans "Drag files here or click to select" %}</h3>
+      <p>{% trans "Supports PDF, Excel, CSV, JSON, and images — up to 50MB per file" %}</p>
+      <button class="btn btn-dark btn-lg" type="button" @click.stop="$refs.fileInput.click()">{% trans "Choose Files" %}</button>
+    </div>
+
+    <div x-show="uploading" x-cloak class="ai-loader" style="padding:8px 0">
+      {% include "components/ai_loader.html" %}
+
+      <div class="ai-loader-label" x-text="currentFileName">{% trans "AI is analyzing your document" %}</div>
+      <div class="ai-loader-status">
+        <span class="ai-dots"><span></span><span></span><span></span></span>
+        <span x-text="currentStatus">{% trans "Working on it…" %}</span>
+      </div>
+
+      <div class="ai-progress">
+        <div class="ai-progress-fill" :style="`width: ${progress}%`"></div>
+      </div>
+
+      <div class="ai-stages">
+        <div class="ai-stage" :class="{ active: step === 1, done: step > 1 }">
+          <div class="ai-stage-line"></div>
+          <div class="ai-stage-circle"><span x-show="step <= 1">1</span><svg x-show="step > 1" x-cloak width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="ai-stage-label">{% trans "Upload" %}</div>
+        </div>
+        <div class="ai-stage" :class="{ active: step === 2, done: step > 2 }">
+          <div class="ai-stage-line"></div>
+          <div class="ai-stage-circle"><span x-show="step <= 2">2</span><svg x-show="step > 2" x-cloak width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="ai-stage-label">{% trans "OCR" %}</div>
+        </div>
+        <div class="ai-stage" :class="{ active: step === 3, done: step > 3 }">
+          <div class="ai-stage-line"></div>
+          <div class="ai-stage-circle"><span x-show="step <= 3">3</span><svg x-show="step > 3" x-cloak width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="ai-stage-label">{% trans "GPT-4o" %}</div>
+        </div>
+        <div class="ai-stage" :class="{ active: step === 4, done: step > 4 }">
+          <div class="ai-stage-circle"><span x-show="step <= 4">4</span><svg x-show="step > 4" x-cloak width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="ai-stage-label">{% trans "Audit Rules" %}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div x-show="files.length && !uploading" x-cloak>
+    <div class="file-list">
+      <template x-for="(f, i) in files" :key="i">
+        <div class="file-row">
+          <div class="file-row-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           </div>
-        </button>
+          <div class="file-row-meta">
+            <div class="file-row-name" x-text="f.name"></div>
+            <div class="file-row-size" x-text="fmtSize(f.size)"></div>
+          </div>
+          <button @click="files.splice(i, 1)" class="file-row-remove" type="button" title="{% trans 'Remove' %}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
       </template>
     </div>
 
-    <div class="space-y-6 p-6 lg:p-8">
-      <div
-        @dragover.prevent="dragging = true"
-        @dragleave.prevent="dragging = false"
-        @drop.prevent="onDrop($event)"
-        @click="$refs.fileInput.click()"
-        class="rounded-[20px] border-2 border-dashed px-6 py-10 text-center transition-all duration-150"
-        :class="dragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50/50'"
-      >
-        <input
-          x-ref="fileInput"
-          type="file"
-          class="hidden"
-          :multiple="allowsMultiple"
-          :accept="currentAccept"
-          @change="addFiles($event.target.files); $event.target.value = ''"
-        >
-
-        <div class="mx-auto flex max-w-3xl flex-col items-center gap-4">
-          <div class="flex h-20 w-20 items-center justify-center rounded-3xl bg-slate-100 text-slate-400">
-            <i :data-lucide="dropzoneIcon" class="h-10 w-10"></i>
-          </div>
-
-          <div class="space-y-2">
-            <h2 class="text-2xl font-semibold text-slate-800" x-text="dropzoneTitle"></h2>
-            <p class="text-lg text-slate-500" x-text="dropzoneSubtitle"></p>
-            <p class="text-sm text-slate-400" x-text="supportedFilesText"></p>
-          </div>
-
-          <template x-if="selectedMode === 'csvjson'">
-            <div class="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700">
-              {% trans "CSV, JSON, JSONL, XLSX, and XLS files are supported. Data will be extracted and analyzed automatically." %}
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <template x-if="files.length">
-        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-          <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-            <div>
-              <h3 class="text-base font-bold text-slate-800">{% trans "Selected Files" %}</h3>
-              <p class="text-sm text-slate-500" x-text="files.length + ' {% trans 'files ready to upload' %}'"></p>
-            </div>
-            <button type="button" @click="files = []" class="text-sm font-semibold text-slate-500 transition-colors hover:text-red-600">
-              {% trans "Clear All" %}
-            </button>
-          </div>
-
-          <div class="divide-y divide-slate-100">
-            <template x-for="(file, index) in files" :key="file.name + '-' + file.size + '-' + index">
-              <div class="flex items-center gap-4 px-5 py-4">
-                <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl" :class="fileIconClass(file.name)">
-                  <i :data-lucide="fileIcon(file.name)" class="h-5 w-5"></i>
-                </div>
-                <div class="min-w-0 flex-1 text-right">
-                  <p class="truncate text-sm font-semibold text-slate-800" x-text="file.name"></p>
-                  <p class="mt-1 text-xs text-slate-400" x-text="fmtSize(file.size)"></p>
-                </div>
-                <button type="button" @click="removeFile(index)" class="rounded-lg p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-red-600">
-                  <i data-lucide="x" class="h-4 w-4"></i>
-                </button>
-              </div>
-            </template>
-          </div>
-        </div>
-      </template>
-
-      <div class="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
-        <div class="space-y-2">
-          <label class="block text-lg font-semibold text-slate-800">{% trans "Document Type" %}</label>
-          <select x-model="selectedType" class="h-14 w-full rounded-xl border border-slate-300 bg-white px-4 text-lg text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
-            <option value="">{% trans "Select document type" %}</option>
-            <template x-for="type in docTypes" :key="type.id">
-              <option :value="type.id" x-text="type.label"></option>
-            </template>
-          </select>
-          <p class="text-sm text-slate-400" x-text="currentType.hint || '{% trans 'Choose the document type to apply the right rule analysis.' %}'"></p>
-        </div>
-
-        <div class="space-y-2">
-          <label class="block text-lg font-semibold text-slate-800">{% trans "Language" %}</label>
-          <select x-model="language" class="h-14 w-full rounded-xl border border-slate-300 bg-white px-4 text-lg text-slate-800 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
-            <template x-for="lang in languageOptions" :key="lang.id">
-              <option :value="lang.id" x-text="lang.label"></option>
-            </template>
-          </select>
-        </div>
-
-        <label class="flex h-14 min-w-[140px] items-center justify-center gap-3 rounded-xl border border-slate-300 bg-slate-50 px-4 text-lg font-medium text-slate-700">
-          <input x-model="isHandwritten" type="checkbox" class="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-          <span>{% trans "Handwritten" %}</span>
-        </label>
-      </div>
-
-      <button
-        type="button"
-        @click="upload()"
-        :disabled="uploadDisabled"
-        class="flex h-16 w-full items-center justify-center gap-3 rounded-xl bg-slate-800 px-6 text-xl font-bold text-white transition hover:bg-slate-900 disabled:cursor-not-allowed disabled:bg-slate-300"
-      >
-        <i x-show="uploading" data-lucide="loader-2" class="h-5 w-5 animate-spin"></i>
-        <i x-show="!uploading && selectedType === 'invoice' && selectedMode !== 'csvjson'" data-lucide="arrow-left"></i>
-        <i x-show="!uploading && !(selectedType === 'invoice' && selectedMode !== 'csvjson')" data-lucide="upload-cloud"></i>
-        <span x-text="submitLabel"></span>
+    <div style="display:flex; gap:12px; margin-top:20px; justify-content:center;">
+      <button @click="files = []" class="btn btn-light" type="button">{% trans "Clear all" %}</button>
+      <button @click="upload" class="btn btn-primary btn-lg" type="button" :disabled="!files.length">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span x-text="`{% trans 'Upload' %} ${files.length} ${typeMeta.label}`"></span>
       </button>
     </div>
   </div>
 
-  <template x-if="summary">
-    <div class="space-y-4 rounded-[22px] border border-slate-200 bg-white p-6">
-      <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h3 class="text-xl font-bold text-slate-800">{% trans "Processing Results" %}</h3>
-          <p class="text-sm text-slate-500" x-text="'{% trans 'Processed' %} ' + summary.processed + ' {% trans 'out of' %} ' + summary.total + ' {% trans 'files' %}'"></p>
-        </div>
-        <a :href="listUrl()" class="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-          <i data-lucide="list"></i>
-          {% trans "View Full List" %}
-        </a>
-      </div>
+  <div x-show="result" x-cloak class="result" :class="resultType === 'success' ? 'result-success' : 'result-error'">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <template x-if="resultType === 'success'"><polyline points="20 6 9 17 4 12"/></template>
+      <template x-if="resultType !== 'success'"><g><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></g></template>
+    </svg>
+    <span x-text="result"></span>
+  </div>
 
-      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">{% trans "Total" %}</p>
-          <p class="mt-2 font-mono text-2xl font-bold text-slate-800" x-text="summary.total"></p>
-        </div>
-        <div class="rounded-2xl border border-green-200 bg-green-50 p-4">
-          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-green-700">{% trans "Succeeded" %}</p>
-          <p class="mt-2 font-mono text-2xl font-bold text-green-700" x-text="summary.processed"></p>
-        </div>
-        <div class="rounded-2xl border border-red-200 bg-red-50 p-4">
-          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-red-700">{% trans "Failed" %}</p>
-          <p class="mt-2 font-mono text-2xl font-bold text-red-700" x-text="summary.failed"></p>
-        </div>
-        <div class="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-          <p class="text-xs font-semibold uppercase tracking-[0.12em] text-blue-700">{% trans "Type" %}</p>
-          <p class="mt-2 text-lg font-bold text-blue-700" x-text="summary.documentType"></p>
-        </div>
-      </div>
-
-      <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-        <div class="divide-y divide-slate-100">
-          <template x-for="(result, index) in results" :key="(result.document_id || result.filename || 'result') + '-' + index">
-            <div class="flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center">
-              <div class="flex min-w-0 flex-1 items-start gap-4">
-                <div class="mt-0.5 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl"
-                     :class="result.success === false ? 'bg-red-50 text-red-600' : scoreBadgeClass(result.validation_score)">
-                  <i :data-lucide="result.success === false ? 'triangle-alert' : 'file-check-2'" class="h-5 w-5"></i>
-                </div>
-
-                <div class="min-w-0 flex-1 text-right">
-                  <div class="flex flex-wrap items-center justify-end gap-2">
-                    <p class="truncate text-sm font-bold text-slate-800" x-text="result.filename"></p>
-                    <span x-show="result.success === false" class="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">{% trans "Failed" %}</span>
-                    <span x-show="result.success !== false" class="rounded-lg border px-2.5 py-1 text-xs font-semibold"
-                          :class="riskBadge(result.risk_level)" x-text="riskLabel(result.risk_level)"></span>
-                  </div>
-
-                  <template x-if="result.success === false">
-                    <p class="mt-2 text-sm text-red-600" x-text="result.error"></p>
-                  </template>
-
-                  <template x-if="result.success !== false">
-                    <div class="mt-2 space-y-2">
-                      <div class="flex flex-wrap items-center justify-end gap-2 text-xs text-slate-500">
-                        <span x-text="'{% trans 'Status:' %} ' + statusLabel(result.status)"></span>
-                        <span>•</span>
-                        <span x-text="'{% trans 'Time:' %} ' + (result.processing_ms || 0) + ' ms'"></span>
-                        <span>•</span>
-                        <span class="font-mono text-slate-700" x-text="Math.round(result.validation_score || 0) + '%'"></span>
-                      </div>
-
-                      <template x-if="result.rules_failed && result.rules_failed.length">
-                        <div class="flex flex-wrap justify-end gap-2">
-                          <template x-for="ruleCode in result.rules_failed.slice(0, 6)" :key="ruleCode">
-                            <span class="rounded-lg border border-red-200 bg-red-50 px-2 py-1 font-mono text-[11px] font-semibold text-red-700" x-text="ruleCode"></span>
-                          </template>
-                        </div>
-                      </template>
-                    </div>
-                  </template>
-                </div>
-              </div>
-
-              <div class="flex items-center justify-between gap-3 lg:w-[240px] lg:flex-col lg:items-end">
-                <template x-if="result.success !== false">
-                  <div class="w-full lg:max-w-[180px]">
-                    <div class="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-                      <div class="h-full rounded-full transition-all duration-500" :class="progressBarClass(result.validation_score)" :style="'width:' + Math.max(0, Math.min(100, result.validation_score || 0)) + '%' "></div>
-                    </div>
-                  </div>
-                </template>
-
-                <template x-if="result.success !== false && result.document_id">
-                  <a :href="detailUrl(result.document_id)" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">
-                    <i data-lucide="eye" class="h-4 w-4"></i>
-                    {% trans "View Details" %}
-                  </a>
-                </template>
-              </div>
-            </div>
-          </template>
-        </div>
-      </div>
+  <div class="tips">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <div class="tips-content">
+      <h5>{% trans "Tips for best accuracy" %}</h5>
+      <p>{% trans "Make sure scanned images and documents are high resolution (300dpi or higher). Avoid skewed images or poor lighting. For multi-page files, use PDF." %}</p>
     </div>
-  </template>
+  </div>
 </div>
 {% endblock %}
 
-{% block scripts %}
+{% block extra_scripts %}
 <script>
-function docUploader() {
-  return {
-    selectedMode: 'single',
-    selectedType: '',
-    language: 'mixed',
-    isHandwritten: false,
-    files: [],
-    dragging: false,
-    uploading: false,
-    results: [],
-    summary: null,
-    maxSizeMb: 50,
-
-    uploadModes: [
-      { id: 'single', label: '{% trans "Single File" %}', icon: 'file-text', subtext: '{% trans "PDF or image" %}' },
-      { id: 'multiple', label: '{% trans "Multiple Files" %}', icon: 'folder-open', subtext: '{% trans "Batch upload" %}' },
-      { id: 'zip', label: '{% trans "ZIP Batch" %}', icon: 'archive', subtext: '{% trans "Single compressed file" %}' },
-      { id: 'csvjson', label: 'CSV / JSON', icon: 'file-json', subtext: '{% trans "Structured files" %}' },
-    ],
-
-    languageOptions: [
-      { id: 'mixed', label: '{% trans "Arabic and English" %}' },
-      { id: 'ar', label: '{% trans "Arabic" %}' },
-      { id: 'en', label: 'English' },
-    ],
-
-    docTypes: [
-      { id: 'purchase_order', label: '{% trans "Purchase Orders" %}', hint: '{% trans "Analyze purchase orders and map them to vendors and line items." %}', listUrl: '/documents/purchase-orders/', detailBase: '/documents/purchase-orders/' },
-      { id: 'bank_statement', label: '{% trans "Bank Statement" %}', hint: '{% trans "Reconcile transactions and balances and detect banking anomalies." %}', listUrl: '/documents/bank-statements/', detailBase: '/documents/bank-statements/' },
-      { id: 'payroll', label: '{% trans "Payroll" %}', hint: '{% trans "Review payroll, deductions, and ghost employees." %}', listUrl: '/documents/payroll/', detailBase: '/documents/payroll/' },
-      { id: 'expense_report', label: '{% trans "Expense Report" %}', hint: '{% trans "Review claims, allowances, and attachments." %}', listUrl: '/documents/expense-reports/', detailBase: '/documents/expense-reports/' },
-      { id: 'vat_return', label: '{% trans "VAT Return" %}', hint: '{% trans "Validate VAT filings and ZATCA requirements." %}', listUrl: '/documents/vat-returns/', detailBase: '/documents/vat-returns/' },
-      { id: 'fixed_asset', label: '{% trans "Fixed Asset" %}', hint: '{% trans "Review asset records, depreciation, and movement." %}', listUrl: '/documents/fixed-assets/', detailBase: '/documents/fixed-assets/' },
-      { id: 'sales_receipt', label: '{% trans "Sales Receipt" %}', hint: '{% trans "Check receipt details, tax data, and compliance." %}', listUrl: '/documents/sales-receipts/', detailBase: '/documents/sales-receipts/' },
-      { id: 'invoice', label: '{% trans "Invoice" %}', hint: '{% trans "You will be redirected to the dedicated invoice upload screen." %}', listUrl: '/invoices/', detailBase: '/invoices/' },
-    ],
-
-    init() {
-      const initialType = '{{ selected_type|default:""|escapejs }}';
-      if (this.docTypes.some((type) => type.id === initialType)) {
-        this.selectedType = initialType;
-      }
-      this.$nextTick(() => lucide.createIcons());
-    },
-
-    get currentType() {
-      return this.docTypes.find((type) => type.id === this.selectedType) || {};
-    },
-
-    get allowsMultiple() {
-      return this.selectedMode === 'multiple' || this.selectedMode === 'csvjson';
-    },
-
-    get currentAccept() {
-      return {
-        single: '.pdf,.jpg,.jpeg,.png,.tif,.tiff',
-        multiple: '.pdf,.jpg,.jpeg,.png,.tif,.tiff',
-        zip: '.zip',
-        csvjson: '.csv,.json,.jsonl,.xlsx,.xls',
-      }[this.selectedMode] || '.pdf,.jpg,.jpeg,.png,.tif,.tiff';
-    },
-
-    get supportedFilesText() {
-      return {
-        single: '{% trans "PDF, JPG, PNG, TIFF, TIF — maximum 50MB per file" %}',
-        multiple: '{% trans "PDF, JPG, PNG, TIFF, TIF — up to 50MB per file" %}',
-        zip: '{% trans "One ZIP file containing PDFs or images — up to 50MB" %}',
-        csvjson: '{% trans "CSV, JSON, JSONL, XLSX, XLS — structured data files — up to 50MB" %}',
-      }[this.selectedMode];
-    },
-
-    get dropzoneTitle() {
-      return {
-        single: '{% trans "Click to choose a file or drag it here" %}',
-        multiple: '{% trans "Drag multiple files here or click to choose" %}',
-        zip: '{% trans "Drag a ZIP file here or click to choose" %}',
-        csvjson: '{% trans "Choose a CSV, JSON, or XLSX file" %}',
-      }[this.selectedMode];
-    },
-
-    get dropzoneSubtitle() {
-      return {
-        single: '{% trans "Best for uploading and processing one document directly" %}',
-        multiple: '{% trans "Upload a group of documents of the same type at once" %}',
-        zip: '{% trans "Process a full batch inside a compressed archive" %}',
-        csvjson: '{% trans "Import structured data from spreadsheet files" %}',
-      }[this.selectedMode];
-    },
-
-    get dropzoneIcon() {
-      return {
-        single: 'file-text',
-        multiple: 'folder-open',
-        zip: 'archive',
-        csvjson: 'file-json',
-      }[this.selectedMode];
-    },
-
-    get uploadDisabled() {
-      return this.uploading || !this.files.length || !this.selectedType;
-    },
-
-    get submitLabel() {
-      if (this.uploading) return '{% trans "Uploading and processing documents..." %}';
-      if (this.selectedMode === 'csvjson') return '{% trans "Import Structured Data" %}';
-      if (this.selectedType === 'invoice') return '{% trans "Go to Invoice Upload" %}';
-      return '{% trans "Upload and Process Document" %}';
-    },
-
-    setMode(modeId) {
-      this.selectedMode = modeId;
-      this.files = [];
-      this.$nextTick(() => lucide.createIcons());
-    },
-
-    addFiles(fileList) {
-      const acceptedFiles = [];
-      const maxBytes = this.maxSizeMb * 1024 * 1024;
-      const allowed = this.currentAccept.split(',').map((item) => item.trim().toLowerCase()).filter(Boolean);
-
-      for (const file of Array.from(fileList || [])) {
-        const extension = '.' + (file.name.split('.').pop() || '').toLowerCase();
-        if (!allowed.includes(extension)) {
-          notify('{% trans "Unsupported file type for this mode:" %} ' + file.name, 'warning');
-          continue;
-        }
-        if (file.size > maxBytes) {
-          notify('{% trans "File is larger than 50MB:" %} ' + file.name, 'warning');
-          continue;
-        }
-        acceptedFiles.push(file);
-      }
-
-      if (!acceptedFiles.length) return;
-
-      if (this.selectedMode === 'multiple' || this.selectedMode === 'csvjson') {
-        this.files = [...this.files, ...acceptedFiles];
-      } else {
-        this.files = [acceptedFiles[0]];
-      }
-
-      this.$nextTick(() => lucide.createIcons());
-    },
-
-    onDrop(event) {
-      this.dragging = false;
-      this.addFiles(event.dataTransfer.files);
-    },
-
-    removeFile(index) {
-      this.files.splice(index, 1);
-      this.$nextTick(() => lucide.createIcons());
-    },
-
-    fileIcon(fileName) {
-      const extension = (fileName.split('.').pop() || '').toLowerCase();
-      if (extension === 'pdf') return 'file-type-pdf';
-      if (['jpg', 'jpeg', 'png', 'tif', 'tiff'].includes(extension)) return 'image';
-      if (extension === 'zip') return 'archive';
-      if (['csv', 'json', 'jsonl'].includes(extension)) return 'file-json';
-      if (['xlsx', 'xls'].includes(extension)) return 'table';
-      return 'file';
-    },
-
-    fileIconClass(fileName) {
-      const extension = (fileName.split('.').pop() || '').toLowerCase();
-      if (extension === 'pdf') return 'bg-red-50 text-red-600';
-      if (['jpg', 'jpeg', 'png', 'tif', 'tiff'].includes(extension)) return 'bg-blue-50 text-blue-600';
-      if (extension === 'zip') return 'bg-amber-50 text-amber-600';
-      if (['csv', 'json', 'jsonl'].includes(extension)) return 'bg-violet-50 text-violet-600';
-      if (['xlsx', 'xls'].includes(extension)) return 'bg-emerald-50 text-emerald-600';
-      return 'bg-slate-100 text-slate-500';
-    },
-
-    fmtSize(bytes) {
-      if (bytes < 1024) return bytes + ' B';
-      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-      return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    },
-
-    riskLabel(level) {
-      return {
-        critical: '{% trans "Critical" %}',
-        high: '{% trans "High" %}',
-        medium: '{% trans "Medium" %}',
-        low: '{% trans "Low" %}',
-      }[level] || '{% trans "Unspecified" %}';
-    },
-
-    riskBadge(level) {
-      return {
-        critical: 'border-red-200 bg-red-50 text-red-700',
-        high: 'border-amber-200 bg-amber-50 text-amber-700',
-        medium: 'border-amber-200 bg-amber-50 text-amber-700',
-        low: 'border-green-200 bg-green-50 text-green-700',
-      }[level] || 'border-slate-200 bg-slate-50 text-slate-600';
-    },
-
-    statusLabel(status) {
-      return {
-        pending: '{% trans "Pending" %}',
-        validated: '{% trans "Validated" %}',
-        flagged: '{% trans "Flagged" %}',
-        approved: '{% trans "Approved" %}',
-        rejected: '{% trans "Rejected" %}',
-      }[status] || status || '{% trans "Unknown" %}';
-    },
-
-    progressBarClass(score) {
-      const value = Number(score || 0);
-      if (value >= 85) return 'bg-blue-600';
-      if (value >= 70) return 'bg-green-600';
-      if (value >= 50) return 'bg-amber-500';
-      return 'bg-red-500';
-    },
-
-    scoreBadgeClass(score) {
-      const value = Number(score || 0);
-      if (value >= 85) return 'bg-blue-50 text-blue-600';
-      if (value >= 70) return 'bg-green-50 text-green-600';
-      if (value >= 50) return 'bg-amber-50 text-amber-600';
-      return 'bg-red-50 text-red-600';
-    },
-
-    listUrl() {
-      return this.currentType.listUrl || '/documents/';
-    },
-
-    detailUrl(documentId) {
-      if (!this.currentType.detailBase) return this.listUrl();
-      return this.currentType.detailBase + documentId + '/';
-    },
-
-    async upload() {
-      if (!this.selectedType) {
-        notify('{% trans "Select a document type first." %}', 'warning');
-        return;
-      }
-
-      if (!this.files.length) {
-        notify('{% trans "Choose at least one file." %}', 'warning');
-        return;
-      }
-
-      if (this.selectedType === 'invoice') {
-        window.location.href = '/invoices/upload/';
-        return;
-      }
-
-      this.uploading = true;
-      const formData = new FormData();
-      formData.append('document_type', this.selectedType);
-      formData.append('language_preference', this.language);
-      formData.append('is_handwritten', this.isHandwritten ? 'true' : 'false');
-      formData.append('upload_mode', this.selectedMode);
-      for (const file of this.files) {
-        formData.append('files', file);
-      }
-
-      try {
-        const data = await apiFetch('/documents/upload/typed/', {
-          method: 'POST',
-          body: formData,
-        });
-
-        this.summary = {
-          total: data.total || 0,
-          processed: data.processed || 0,
-          failed: data.failed || 0,
-          documentType: data.document_type_ar || this.currentType.label || this.selectedType,
-        };
-        this.results = [
-          ...(data.results || []),
-          ...((data.errors || []).map((errorItem) => ({ ...errorItem, success: false }))),
-        ];
-        this.files = [];
-        notify(
-          (data.failed ? '{% trans "Processing completed with some warnings." %} ' : '{% trans "Documents uploaded successfully." %} ') +
-          '{% trans "Processed files:" %} ' + (data.processed || 0),
-          data.failed ? 'warning' : 'success'
-        );
-      } catch (error) {
-        notify('{% trans "Unable to upload documents. Check the files and try again." %}', 'error');
-      } finally {
-        this.uploading = false;
-        this.$nextTick(() => lucide.createIcons());
-      }
-    },
+  function getCookie(name) {
+    const c = `; ${document.cookie}`.split(`; ${name}=`);
+    if (c.length === 2) return c.pop().split(';').shift();
+    return '';
   }
-}
+
+  const TYPE_META = {
+    // Sales & AR
+    'invoice':             { label: '{% trans "Sales Invoices" %}',     title: '{% trans "Upload Sales Invoices" %}',     desc: '{% trans "AI will analyze invoices and run ZATCA + fraud detection." %}' },
+    'sales_order':         { label: '{% trans "Sales Orders" %}',       title: '{% trans "Upload Sales Orders" %}',       desc: '{% trans "Match sales orders against invoices and delivery notes." %}' },
+    'quotation':           { label: '{% trans "Quotations" %}',         title: '{% trans "Upload Quotations" %}',         desc: '{% trans "Track quote validity, conversion to orders, and pricing approval." %}' },
+    'proforma_invoice':    { label: '{% trans "Proforma Invoices" %}',  title: '{% trans "Upload Proforma Invoices" %}',  desc: '{% trans "Validate proforma details before issuing the final invoice." %}' },
+    'sales_receipt':       { label: '{% trans "Sales Receipts" %}',     title: '{% trans "Upload Sales Receipts" %}',     desc: '{% trans "Process customer-facing receipts and POS records." %}' },
+    'customer_statement':  { label: '{% trans "Customer Statements" %}', title: '{% trans "Upload Customer Statements" %}', desc: '{% trans "Reconcile customer balances and aging buckets." %}' },
+    // Purchasing & AP
+    'purchase_invoice':    { label: '{% trans "Purchase Invoices" %}',  title: '{% trans "Upload Purchase Invoices" %}',  desc: '{% trans "Validate vendor invoices, withholding tax, and 3-way match." %}' },
+    'purchase_order':      { label: '{% trans "Purchase Orders" %}',    title: '{% trans "Upload Purchase Orders" %}',    desc: '{% trans "We will match POs against invoices and goods receipts (3-way match)." %}' },
+    'goods_receipt_note':  { label: '{% trans "Goods Receipts" %}',     title: '{% trans "Upload Goods Receipt Notes" %}', desc: '{% trans "Confirm receipt of goods against PO quantities and condition." %}' },
+    'supplier_statement':  { label: '{% trans "Supplier Statements" %}', title: '{% trans "Upload Supplier Statements" %}', desc: '{% trans "Reconcile vendor balances and aging against AP ledger." %}' },
+    // Cash & Bank
+    'bank_statement':      { label: '{% trans "Bank Statements" %}',    title: '{% trans "Upload Bank Statements" %}',    desc: '{% trans "Reconcile bank statements with your transaction records automatically." %}' },
+    'payment_voucher':     { label: '{% trans "Payment Vouchers" %}',   title: '{% trans "Upload Payment Vouchers" %}',   desc: '{% trans "Validate cash outflows, approvals, and vendor matching." %}' },
+    'receipt_voucher':     { label: '{% trans "Receipt Vouchers" %}',   title: '{% trans "Upload Receipt Vouchers" %}',   desc: '{% trans "Validate cash inflows from customers and approvals." %}' },
+    'cash_voucher':        { label: '{% trans "Cash Vouchers" %}',      title: '{% trans "Upload Cash Vouchers" %}',      desc: '{% trans "Track petty cash movements and supporting documentation." %}' },
+    // GL & Compliance
+    'journal_entry':       { label: '{% trans "Journal Entries" %}',    title: '{% trans "Upload Journal Entries" %}',    desc: '{% trans "Validate balanced debits/credits and posting periods." %}' },
+    'general_ledger':      { label: '{% trans "General Ledgers" %}',    title: '{% trans "Upload General Ledgers" %}',    desc: '{% trans "Validate trial balance and detect unposted entries." %}' },
+    'ledger':              { label: '{% trans "Sub-Ledgers" %}',        title: '{% trans "Upload Sub-Ledgers" %}',        desc: '{% trans "Reconcile sub-ledger balances against the GL control account." %}' },
+    'vat_return':          { label: '{% trans "VAT Returns" %}',        title: '{% trans "Upload VAT Returns" %}',        desc: '{% trans "Upload quarterly VAT filings — we will validate ZATCA Phase 2 compliance." %}' },
+    'contract':            { label: '{% trans "Contracts" %}',          title: '{% trans "Upload Contracts" %}',          desc: '{% trans "Extract terms, dates, and obligations for compliance tracking." %}' },
+    // Other
+    'payroll':             { label: '{% trans "Payroll" %}',            title: '{% trans "Upload Payroll" %}',            desc: '{% trans "Validate salaries, GOSI, and detect anomalies in payroll records." %}' },
+    'expense_report':      { label: '{% trans "Expense Reports" %}',    title: '{% trans "Upload Expense Reports" %}',    desc: '{% trans "Categorize expenses and check policy compliance." %}' },
+    'fixed_asset':         { label: '{% trans "Fixed Assets" %}',       title: '{% trans "Upload Fixed Assets" %}',       desc: '{% trans "Track capital assets and depreciation schedules." %}' },
+  };
+
+  // Types that have a full AI extract+validate pipeline today.
+  // The remaining types still ingest, but rely on manual or
+  // heuristic processing until their adapter ships.
+  const AUTO_EXTRACT_TYPES = [
+    'invoice', 'purchase_order', 'bank_statement', 'vat_return',
+    'payroll', 'expense_report', 'fixed_asset', 'sales_receipt',
+  ];
+
+  function uploader(initialType) {
+    return {
+      docType: initialType || 'invoice',
+      typeMeta: TYPE_META[initialType] || TYPE_META['invoice'],
+      files: [], dragging: false, uploading: false, progress: 0, step: 0,
+      currentFileName: '', currentStatus: '',
+      result: null, resultType: 'success',
+
+      onTypeChange() {
+        this.typeMeta = TYPE_META[this.docType] || TYPE_META['invoice'];
+        const url = new URL(window.location);
+        url.searchParams.set('type', this.docType);
+        window.history.replaceState({}, '', url);
+      },
+
+      onDrop(e) { this.dragging = false; this.addFiles(e.dataTransfer.files); },
+      addFiles(list) { for (const f of list) this.files.push(f); },
+      fmtSize(b) { return b > 1048576 ? (b/1048576).toFixed(1)+' MB' : (b/1024).toFixed(0)+' KB'; },
+
+      async upload() {
+        if (!this.files.length) return;
+        this.uploading = true; this.result = null; this.progress = 0; this.step = 1;
+        this.currentFileName = this.files[0].name;
+        this.currentStatus = '{% trans "Uploading..." %}';
+
+        const stages = [
+          { at: 25, status: '{% trans "Running OCR text extraction..." %}', step: 2 },
+          { at: 55, status: '{% trans "Running AI extraction..." %}', step: 3 },
+          { at: 85, status: '{% trans "Running audit rules..." %}', step: 4 },
+        ];
+        const progressInterval = setInterval(() => {
+          if (this.progress < 90) {
+            this.progress += 2;
+            for (const s of stages) {
+              if (this.progress >= s.at && this.progress < s.at + 2) {
+                this.currentStatus = s.status;
+                this.step = s.step;
+              }
+            }
+          }
+        }, 80);
+
+        const fd = new FormData();
+        // /auditor/upload/ form expects 'file' (multi-file) and 'selected_doc_type'
+        for (const f of this.files) fd.append('file', f);
+        fd.append('selected_doc_type', this.docType);
+        fd.append('doc_language', 'auto');
+        fd.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+
+        try {
+          const response = await fetch('/auditor/upload/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' },
+            body: fd,
+          });
+          clearInterval(progressInterval);
+          this.progress = 100; this.step = 4;
+
+          if (response.status === 401 || response.status === 403) {
+            this.resultType = 'error';
+            this.result = '{% trans "Session expired — please sign in again." %}';
+            setTimeout(() => window.location.href = '/login/', 1500);
+            return;
+          }
+
+          // Auditor upload view redirects to the result page on success.
+          if (response.redirected) {
+            this.resultType = 'success';
+            this.result = '{% trans "Upload complete — opening report..." %}';
+            setTimeout(() => { window.location.href = response.url; }, 600);
+            return;
+          }
+
+          // Non-redirected response means the form re-rendered with errors.
+          this.resultType = 'error';
+          this.result = '{% trans "Upload failed. Please check your files and try again." %}';
+        } catch (e) {
+          clearInterval(progressInterval);
+          this.resultType = 'error';
+          this.result = '{% trans "Server connection error" %}';
+        } finally {
+          setTimeout(() => { this.uploading = false; this.step = 0; this.progress = 0; }, 600);
+        }
+      }
+    }
+  }
 </script>
 {% endblock %}

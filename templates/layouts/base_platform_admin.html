@@ -424,7 +424,7 @@
       }
 
       if (response.status === 403) {
-        notify("ليس لديك صلاحية للوصول إلى إدارة المنصة.", "error");
+        notify("{% trans 'You do not have permission to access platform management.' %}", "error");
         return null;
       }
 

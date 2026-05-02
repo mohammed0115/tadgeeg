@@ -12,7 +12,7 @@ class SecurityHeadersMiddleware:
         "https://fonts.googleapis.com https://cdn.jsdelivr.net; "
         "font-src 'self' https://fonts.gstatic.com data:; "
         "img-src 'self' data: blob: https:; "
-        "connect-src 'self' https://accounts.google.com; "
+        "connect-src 'self' https://accounts.google.com https://api.openai.com; "
         "frame-src https://accounts.google.com; "
         "object-src 'none'; base-uri 'self'; form-action 'self';"
     )

@@ -1,8 +1,8 @@
 {% extends "layouts/base_platform_admin.html" %}
 {% load i18n %}
-{% block page_title %}صفحة من نحن{% endblock %}
-{% block breadcrumb_parent %}إدارة المحتوى{% endblock %}
-{% block breadcrumb_current %}من نحن{% endblock %}
+{% block page_title %}{% trans 'About Page' %}{% endblock %}
+{% block breadcrumb_parent %}{% trans 'Content Management' %}{% endblock %}
+{% block breadcrumb_current %}{% trans 'About Us' %}{% endblock %}
 
 {% block content %}
 <div x-data="aboutEditor()" x-init="init()" class="space-y-6 fade-in">
@@ -10,12 +10,12 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">تحرير صفحة من نحن</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">تعديل محتوى صفحة التعريف بالشركة</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans 'Edit About Page' %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans 'Edit company about page content' %}</p>
     </div>
     <a href="/platform-admin/" class="btn-ghost text-xs">
       <i data-lucide="arrow-right" class="w-4 h-4"></i>
-      العودة
+      {% trans 'Back' %}
     </a>
   </div>
 
@@ -37,58 +37,58 @@
       <div class="card p-6 space-y-5">
         <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-700/30">
           <i data-lucide="info" class="w-5 h-5 text-blue-500"></i>
-          محتوى من نحن
+          {% trans 'About Content' %}
         </h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان (EN)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Title (EN)' %}</label>
             <input type="text" x-model="form.title" class="input">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان (عربي)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Title (Arabic)' %}</label>
             <input type="text" x-model="form.title_ar" class="input" dir="rtl">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان الفرعي (EN)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Subtitle (EN)' %}</label>
             <input type="text" x-model="form.subtitle" class="input">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان الفرعي (عربي)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Subtitle (Arabic)' %}</label>
             <input type="text" x-model="form.subtitle_ar" class="input" dir="rtl">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">المحتوى الرئيسي (EN)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Main Content (EN)' %}</label>
             <textarea x-model="form.content" class="input" rows="5"></textarea>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">المحتوى الرئيسي (عربي)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Main Content (Arabic)' %}</label>
             <textarea x-model="form.content_ar" class="input" rows="5" dir="rtl"></textarea>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">الرسالة (Mission)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Mission' %}</label>
             <textarea x-model="form.mission" class="input" rows="3"></textarea>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">الرؤية (Vision)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Vision' %}</label>
             <textarea x-model="form.vision" class="input" rows="3"></textarea>
           </div>
           <div class="md:col-span-2">
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">رابط الصورة</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Image URL' %}</label>
             <input type="url" x-model="form.image_url" class="input" placeholder="https://...">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">تاريخ التأسيس</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Founded Date' %}</label>
             <input type="text" x-model="form.founded_year" class="input" placeholder="2020">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">عدد الموظفين</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Employee Count' %}</label>
             <input type="text" x-model="form.employees_count" class="input" placeholder="50+">
           </div>
         </div>
         <div class="flex justify-end pt-2">
           <button @click="saveAbout()" :disabled="saving" class="btn-primary">
             <i data-lucide="save" class="w-4 h-4"></i>
-            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ المحتوى'"></span>
+            <span x-text="saving ? 'Saving...' : 'Save Content'"></span>
           </button>
         </div>
       </div>
@@ -98,38 +98,38 @@
         <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700/30">
           <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
             <i data-lucide="users" class="w-5 h-5 text-violet-500"></i>
-            أعضاء الفريق
+            {% trans "Team Members" %}
           </h3>
           <button @click="addTeamMember()" class="btn-ghost text-xs">
-            <i data-lucide="plus" class="w-4 h-4"></i> إضافة عضو
+            <i data-lucide="plus" class="w-4 h-4"></i> {% trans "Add Member" %}
           </button>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <template x-for="(member, idx) in form.team_members" :key="idx">
             <div class="p-4 bg-slate-50 dark:bg-slate-700/30 rounded-xl space-y-3">
               <div class="flex items-center justify-between">
-                <span class="text-xs font-semibold text-slate-500">عضو #<span x-text="idx+1"></span></span>
+                <span class="text-xs font-semibold text-slate-500">{% trans "Member" %} #<span x-text="idx+1"></span></span>
                 <button @click="form.team_members.splice(idx, 1)" class="text-slate-400 hover:text-red-500">
                   <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
               </div>
               <div class="grid grid-cols-2 gap-3">
-                <input type="text" x-model="member.name" class="input" placeholder="الاسم">
-                <input type="text" x-model="member.role" class="input" placeholder="الدور / المسمى">
-                <input type="url" x-model="member.photo_url" class="input col-span-2" placeholder="رابط الصورة">
+                <input type="text" x-model="member.name" class="input" placeholder="{% trans 'Name' %}">
+                <input type="text" x-model="member.role" class="input" placeholder="{% trans 'Role / Title' %}">
+                <input type="url" x-model="member.photo_url" class="input col-span-2" placeholder="{% trans 'Image URL' %}">
                 <input type="url" x-model="member.linkedin_url" class="input" placeholder="LinkedIn URL">
                 <input type="url" x-model="member.twitter_url" class="input" placeholder="Twitter URL">
               </div>
             </div>
           </template>
           <template x-if="form.team_members.length === 0">
-            <p class="col-span-2 text-sm text-slate-400 text-center py-4">لا يوجد أعضاء فريق بعد.</p>
+            <p class="col-span-2 text-sm text-slate-400 text-center py-4">{% trans "No team members yet." %}</p>
           </template>
         </div>
         <div class="flex justify-end pt-2">
           <button @click="saveTeam()" :disabled="saving" class="btn-primary">
             <i data-lucide="save" class="w-4 h-4"></i>
-            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ الفريق'"></span>
+            <span x-text="saving ? "{% trans 'Saving...' %}" : "{% trans 'Save Team' %}""></span>
           </button>
         </div>
       </div>
@@ -162,7 +162,7 @@ function aboutEditor() {
           if (!Array.isArray(this.form.team_members)) this.form.team_members = [];
         }
       } catch (e) {
-        notify('تعذّر تحميل بيانات الصفحة', 'error');
+        notify("{% trans 'Failed to load page data' %}", 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());
@@ -182,10 +182,10 @@ function aboutEditor() {
           method: 'PATCH',
           body: JSON.stringify(payload),
         });
-        if (res && res.ok) notify('تم حفظ المحتوى', 'success');
-        else notify('فشل الحفظ', 'error');
+        if (res && res.ok) notify("{% trans 'Content saved' %}", 'success');
+        else notify('Save failed', 'error');
       } catch (e) {
-        notify('فشل الحفظ', 'error');
+        notify('Save failed', 'error');
       } finally {
         this.saving = false;
       }
@@ -198,10 +198,10 @@ function aboutEditor() {
           method: 'PATCH',
           body: JSON.stringify({ team_members: this.form.team_members }),
         });
-        if (res && res.ok) notify('تم حفظ الفريق', 'success');
-        else notify('فشل الحفظ', 'error');
+        if (res && res.ok) notify("{% trans 'Team saved' %}", 'success');
+        else notify('Save failed', 'error');
       } catch (e) {
-        notify('فشل الحفظ', 'error');
+        notify('Save failed', 'error');
       } finally {
         this.saving = false;
       }

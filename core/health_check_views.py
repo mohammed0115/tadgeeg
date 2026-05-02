@@ -95,3 +95,24 @@ class OpenAIHealthView(APIView):
         }
         http_status = status.HTTP_200_OK if component.status != "unhealthy" else status.HTTP_503_SERVICE_UNAVAILABLE
         return Response(payload, status=http_status)
+
+
+class ExtendedHealthView(APIView):
+    """Operational health: storage, migrations, cache, OpenAI key.
+
+    Complements the OCR-pipeline-focused HealthCheckView. Used by ops
+    dashboards and pre-deploy smoke tests.
+    """
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        from core.services.extra_health_checks import comprehensive_report
+        report = comprehensive_report()
+        bad = [k for k, v in report.items() if v.get("status") == "unhealthy"]
+        http_status = (
+            status.HTTP_503_SERVICE_UNAVAILABLE if bad else status.HTTP_200_OK
+        )
+        return Response(
+            {"status": "unhealthy" if bad else "healthy", "checks": report, "failed": bad},
+            status=http_status,
+        )

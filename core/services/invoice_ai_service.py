@@ -100,6 +100,16 @@ def extract_invoice_with_ai(image_path: str, raw_text: str = "") -> dict:
         logger.warning("OpenAI not configured — using text-only extraction.")
         return _fallback_extraction(raw_text)
 
+    # Per-org daily budget guard. Falls back to deterministic regex extraction
+    # if the org has hit its cap, instead of throwing — uploads still succeed
+    # but stop spending money.
+    from core.services import ai_budget
+    try:
+        ai_budget.guard_current(projected_tokens=4000)
+    except ai_budget.BudgetExceeded:
+        logger.warning("[ai-budget] using fallback extraction (budget exceeded)")
+        return _fallback_extraction(raw_text)
+
     ext = Path(image_path).suffix.lower()
     use_vision = ext in _IMAGE_EXTS
 
@@ -166,6 +176,12 @@ def extract_invoice_with_ai(image_path: str, raw_text: str = "") -> dict:
         data = json.loads(response.choices[0].message.content)
         data["_extraction_method"] = method
         data["_tokens_used"] = response.usage.total_tokens
+        # Reconcile actual usage with the org's daily budget so future calls
+        # see accurate consumption (we charged 4000 estimated up front).
+        try:
+            ai_budget.charge_current(int(response.usage.total_tokens))
+        except Exception:
+            pass
         return data
 
     except Exception as e:

@@ -1,1213 +1,239 @@
-{% extends "base.html" %}
+{% extends "layouts/dashboard_base.html" %}
 {% load i18n %}
+
 {% block title %}{% trans "Dashboard" %}{% endblock %}
-{% block page_title %}{% trans "Dashboard" %}{% endblock %}
 {% block nav_dashboard %}active{% endblock %}
 
-{% block header_actions %}{% endblock %}
+{% block extra_styles %}
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 28px; }
+  .stat-card-trend { position: absolute; top: 22px; left: 22px; font-size: 11px; font-weight: 700; padding: 4px 8px; border-radius: 100px; background: var(--bg-soft); color: var(--text-muted); }
+  .stat-card-trend.up { background: #dcfce7; color: #166534; }
+  .stat-card-trend.down { background: #fee2e2; color: #991b1b; }
 
-{% block header_primary_action %}{% endblock %}
+  .upload-card { background: white; border: 2px dashed var(--border); border-radius: 24px; padding: 48px 32px; text-align: center; transition: all 0.3s ease; margin-bottom: 28px; }
+  .upload-card:hover { border-color: var(--accent); background: rgba(16,185,129,0.02); }
+  .upload-icon { width: 76px; height: 76px; border-radius: 20px; background: linear-gradient(135deg, rgba(0,51,102,0.08), rgba(16,185,129,0.08)); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; color: var(--primary); }
+  .upload-title { font-family: 'Cairo', sans-serif; font-size: 20px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+  .upload-desc { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+  .file-types { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+  .file-type { padding: 6px 14px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 8px; font-size: 11px; font-weight: 700; color: var(--text-muted); }
 
-{% block content %}
-<style>
-  .dashboard-page .dashboard-surface {
-    border-radius: 2rem; border: 1px solid rgba(226,232,240,.8);
-    background: rgba(255,255,255,.9); box-shadow: 0 20px 55px -30px rgba(15,23,42,.3);
-  }
-  .dashboard-page .dashboard-gradient-card {
-    border-radius: 28px; color: #fff; padding: 24px; min-height: 196px;
-    display: flex; flex-direction: column; justify-content: space-between;
-    box-shadow: 0 24px 60px -24px rgba(15,23,42,.45); position: relative; overflow: hidden;
-  }
-  .dashboard-page .dashboard-gradient-blue  { background: linear-gradient(135deg,#3b82f6 0%,#2563eb 100%); }
-  .dashboard-page .dashboard-gradient-violet { background: linear-gradient(135deg,#a855f7 0%,#7c3aed 100%); }
-  .dashboard-page .dashboard-gradient-orange { background: linear-gradient(135deg,#fb923c 0%,#f97316 100%); }
-  .dashboard-page .dashboard-gradient-green  { background: linear-gradient(135deg,#22c55e 0%,#16a34a 100%); }
-  .dashboard-page .dashboard-soft-button {
-    display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 0.75rem;
-    border-radius: 1rem; border: 1px solid #e2e8f0; background: #fff;
-    padding: 1rem; font-size: 0.875rem; font-weight: 600; color: #1e293b;
-    box-shadow: 0 1px 2px 0 rgba(0,0,0,.05); transition: all 0.15s ease; cursor: pointer;
-  }
-  .dashboard-page .dashboard-soft-button:hover { border-color: #cbd5e1; background: #f8fafc; }
-  .dashboard-page .dashboard-soft-button-primary {
-    border-color: transparent;
-    background: linear-gradient(135deg,#2563eb 0%,#9333ea 100%);
-    color: #fff; box-shadow: 0 14px 30px rgba(99,102,241,.25);
-  }
-  .dashboard-page .dashboard-alert-item { border-radius: 1rem; border: 1px solid; padding: 1rem; transition: all 0.15s ease; }
-  .dashboard-page .dashboard-alert-item.bg-red-50 {
-    border-width: 2px;
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.12);
-  }
-  .dashboard-page .dashboard-mini-stat {
-    border-radius: 1.5rem; border: 1px solid #e2e8f0; background: rgba(248,250,252,.8); padding: 1rem;
-  }
-  [dir="rtl"] i[data-lucide="arrow-left"] {
-    transform: scaleX(-1);
-  }
-</style>
+  .cta-banner { background: linear-gradient(135deg, var(--primary) 0%, #002244 100%); border-radius: 24px; padding: 40px; color: white; position: relative; overflow: hidden; margin-bottom: 28px; }
+  .cta-banner::before { content: ''; position: absolute; top: -100px; left: -100px; width: 300px; height: 300px; background: radial-gradient(circle, var(--accent) 0%, transparent 70%); opacity: 0.3; border-radius: 50%; }
+  .cta-content { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+  .cta-text h3 { font-family: 'Cairo', sans-serif; font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+  .cta-text p { opacity: 0.85; font-size: 14px; max-width: 480px; }
 
-<div x-data="dashboard()" x-init="init()" class="dashboard-page -m-6 min-h-full bg-gradient-to-b from-slate-50 via-white to-slate-100/80 px-4 py-6 sm:px-6 lg:px-8">
-  <div class="mx-auto max-w-7xl space-y-6">
-    <section class="relative overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white/90 p-6 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.35)] backdrop-blur xl:p-8">
-      <div class="absolute -top-24 left-10 h-48 w-48 rounded-full bg-primary-500/10 blur-3xl"></div>
-      <div class="absolute bottom-0 right-0 h-44 w-44 rounded-full bg-violet-500/10 blur-3xl"></div>
-
-      <div class="relative flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
-        <div class="max-w-3xl space-y-5">
-          <div class="inline-flex items-center gap-2 rounded-full border border-primary-100 bg-primary-50/80 px-3 py-1 text-xs font-semibold text-primary-700">
-            <i data-lucide="layout-dashboard" class="h-3.5 w-3.5"></i>
-            {% blocktrans with product=product_name %}{{ product }} Executive Dashboard{% endblocktrans %}
-          </div>
-
-          <div class="space-y-3 text-right">
-            <p class="text-sm font-semibold text-primary-600" x-text="organizationName"></p>
-            <h1 class="text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl xl:text-[2.6rem]">{% trans "Financial leadership and compliance in one screen" %}</h1>
-            <p class="max-w-2xl text-sm leading-8 text-slate-600 sm:text-base">
-              {% trans "Monitor invoices, risk, cash flow, and compliance indicators from an executive workspace designed to accelerate decisions for finance and audit teams." %}
-            </p>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-3">
-            <span class="inline-flex items-center gap-3 rounded-full border-2 px-4 py-2 text-sm font-bold" :class="dashboardStatusMeta().badgeClass">
-              <span class="h-3 w-3 rounded-full animate-pulse" :class="dashboardStatusMeta().dotClass"></span>
-              <span x-text="dashboardStatusMeta().label"></span>
-            </span>
-
-            <div class="flex items-center gap-4 text-xs text-slate-500">
-              <span class="flex items-center gap-1">
-                <i data-lucide="calendar-days" class="h-4 w-4"></i>
-                <span x-text="todayLabel"></span>
-              </span>
-              <span class="flex items-center gap-1">
-                <i data-lucide="badge-check" class="h-4 w-4"></i>
-                <span x-text="complianceDescription"></span>
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div class="flex flex-col items-stretch gap-3 sm:flex-row xl:justify-end">
-          <a href="{% url 'frontend:invoices' %}?status=flagged" class="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50">
-            <i data-lucide="triangle-alert" class="h-4 w-4"></i>
-            {% trans "Review queue" %}
-          </a>
-          <a href="{% url 'frontend:upload' %}" class="inline-flex h-12 min-w-[12rem] items-center justify-center gap-2 rounded-2xl bg-slate-950 px-6 text-sm font-bold text-white shadow-[0_18px_40px_-18px_rgba(15,23,42,0.95)] transition hover:-translate-y-0.5 hover:bg-slate-800">
-            <i data-lucide="file-plus-2" class="h-4 w-4"></i>
-            {% trans "Upload new invoices" %}
-          </a>
-        </div>
-      </div>
-
-      <div class="relative mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
-        <div class="dashboard-gradient-card dashboard-gradient-blue">
-          <div class="absolute inset-x-0 top-0 h-px bg-white/30"></div>
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="text-lg font-bold">{% trans "Total invoices" %}</p>
-              <p class="mt-2 text-sm text-white/80">{% trans "Steady growth in processing volume" %}</p>
-            </div>
-            <i data-lucide="file-text" class="h-6 w-6 text-white/90"></i>
-          </div>
-          <div>
-            <p class="font-mono text-5xl font-extrabold" x-text="formatInteger(stats.total_invoices)"></p>
-            <p class="mt-3 text-base text-white/90" x-text="growthDescription"></p>
-          </div>
-        </div>
-
-        <div class="dashboard-gradient-card dashboard-gradient-violet">
-          <div class="absolute inset-x-0 top-0 h-px bg-white/30"></div>
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="text-lg font-bold">{% trans "Total value" %}</p>
-              <p class="mt-2 text-sm text-white/80">{% trans "Across all processed invoices" %}</p>
-            </div>
-            <i data-lucide="badge-dollar-sign" class="h-6 w-6 text-white/90"></i>
-          </div>
-          <div>
-            <p class="font-mono text-[2.35rem] font-extrabold leading-tight" x-text="formatSar(stats.total_amount)"></p>
-            <p class="mt-3 text-base text-white/90">{% trans "Total value handled during the period" %}</p>
-          </div>
-        </div>
-
-        <div class="dashboard-gradient-card dashboard-gradient-orange">
-          <div class="absolute inset-x-0 top-0 h-px bg-white/30"></div>
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="text-lg font-bold">{% trans "Needs review" %}</p>
-              <p class="mt-2 text-sm text-white/80">{% trans "High-risk invoices and review notes" %}</p>
-            </div>
-            <i data-lucide="triangle-alert" class="h-6 w-6 text-white/90"></i>
-          </div>
-          <div>
-            <p class="font-mono text-5xl font-extrabold" x-text="formatInteger(stats.flagged)"></p>
-            <p class="mt-3 text-base text-white/90" x-text="reviewDescription"></p>
-          </div>
-        </div>
-
-        <div class="dashboard-gradient-card dashboard-gradient-green">
-          <div class="absolute inset-x-0 top-0 h-px bg-white/30"></div>
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="text-lg font-bold">{% trans "Compliance rate" %}</p>
-              <p class="mt-2 text-sm text-white/80">{% trans "Tax and audit compliance quality" %}</p>
-            </div>
-            <i data-lucide="badge-check" class="h-6 w-6 text-white/90"></i>
-          </div>
-          <div>
-            <p class="font-mono text-5xl font-extrabold" x-text="formatPercent(stats.compliance_rate)"></p>
-            <p class="mt-3 text-base text-white/90" x-text="complianceDescription"></p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-  <div class="grid grid-cols-1 gap-6 xl:grid-cols-12">
-    <div class="space-y-6 xl:col-span-3">
-      <div class="dashboard-surface p-6">
-        <div class="flex items-center justify-between">
-          <h2 class="text-2xl font-bold text-slate-900">{% trans "Quick actions" %}</h2>
-          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">{% trans "Direct actions" %}</span>
-        </div>
-
-        <div class="mt-5 space-y-3">
-          <a href="{% url 'frontend:upload' %}" class="dashboard-soft-button dashboard-soft-button-primary">
-            <i data-lucide="file-plus-2" class="h-5 w-5"></i>
-            <span class="flex-1 text-right">{% trans "Upload new invoices" %}</span>
-          </a>
-          <a href="{% url 'frontend:invoices' %}?status=flagged" class="dashboard-soft-button">
-            <i data-lucide="triangle-alert" class="h-5 w-5 text-orange-500"></i>
-            <span class="flex-1 text-right">{% trans "Review flagged invoices" %}</span>
-          </a>
-          <a href="{% url 'frontend:compliance' %}" class="dashboard-soft-button">
-            <i data-lucide="shield-check" class="h-5 w-5 text-green-500"></i>
-            <span class="flex-1 text-right">{% trans "Tax compliance report" %}</span>
-          </a>
-        </div>
-      </div>
-
-      <div class="dashboard-surface p-6">
-        <div class="flex items-center justify-between">
-          <h2 class="text-2xl font-bold text-slate-900">{% trans "Recent alerts" %}</h2>
-          <span class="rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-600" x-text="formatInteger(alerts.length)"></span>
-        </div>
-
-        <div class="mt-5 space-y-3">
-          <!-- F-24: empty state message when no real alerts -->
-        <div x-show="alerts.length === 1 && alerts[0].type === 'success'"
-             class="flex flex-col items-center gap-2 py-4 text-center">
-          <i data-lucide="shield-check" class="h-8 w-8 text-green-300"></i>
-          <p class="text-sm font-medium text-slate-500">{% trans "No alerts at this time" %}</p>
-          <p class="text-xs text-slate-400">{% trans "All audit checks are passing normally" %}</p>
-        </div>
-        <template x-show="!(alerts.length === 1 && alerts[0].type === 'success')"
-                  x-for="(alert, index) in alerts" :key="alert.title + '-' + index">
-            <div class="dashboard-alert-item transition-all" 
-                 :class="[
-                   alertClass(alert.type),
-                   alert.type === 'critical' ? 'ring-2 ring-offset-2 ring-red-300 border-red-300' : ''
-                 ]">
-              <div class="flex items-start gap-3">
-                <div class="mt-0.5 flex items-center justify-center rounded-xl" 
-                     :class="[
-                       alert.type === 'critical' ? 'h-10 w-10' : 'h-9 w-9',
-                       alertIconWrapClass(alert.type)
-                     ]">
-                  <i :data-lucide="alertIcon(alert.type)" class="h-4 w-4"></i>
-                </div>
-                <div class="min-w-0 flex-1 text-right">
-                  <p class="text-sm font-bold" x-text="alert.title"></p>
-                  <p class="mt-1 text-xs leading-6 opacity-90" x-text="alert.subtitle"></p>
-                </div>
-              </div>
-            </div>
-          </template>
-        </div>
-      </div>
-
-      <div class="dashboard-surface p-6">
-        <div class="flex items-center justify-between">
-          <h2 class="text-2xl font-bold text-slate-900">{% trans "Executive summary" %}</h2>
-          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500" x-text="latestSessionSummary?.source || i18n.deterministic"></span>
-        </div>
-        <p class="mt-4 text-sm leading-7 text-slate-600" x-text="latestSessionSummary?.summary || i18n.noExecutiveSummary"></p>
-        <div class="mt-5 grid grid-cols-2 gap-3">
-          <div class="dashboard-mini-stat">
-            <p class="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">{% trans "Critical" %}</p>
-            <p class="mt-2 font-mono text-2xl font-bold text-red-600" x-text="formatInteger(findingTotals.critical)"></p>
-          </div>
-          <div class="dashboard-mini-stat">
-            <p class="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">{% trans "High" %}</p>
-            <p class="mt-2 font-mono text-2xl font-bold text-orange-600" x-text="formatInteger(findingTotals.high)"></p>
-          </div>
-        </div>
-      </div>
-
-      <div class="dashboard-surface p-6">
-        <div class="flex items-center justify-between">
-          <h2 class="text-2xl font-bold text-slate-900">{% trans "Recent sessions" %}</h2>
-          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500" x-text="formatInteger(recentSessions.length)"></span>
-        </div>
-        <div class="mt-5 space-y-3">
-          <template x-if="!recentSessions.length">
-            <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 px-6 py-8 text-center">
-              <i data-lucide="file-text" class="mx-auto h-8 w-8 text-slate-300 mb-2"></i>
-              <p class="text-sm font-semibold text-slate-700">{% trans "No recent audit sessions" %}</p>
-              <p class="mt-1 text-xs text-slate-500">{% trans "Upload invoices to start an audit session" %}</p>
-              <a href="{% url 'frontend:upload' %}" class="mt-3 inline-flex text-xs font-semibold text-blue-600 hover:text-blue-700">
-                {% trans "Start your first audit" %} →
-              </a>
-            </div>
-          </template>
-          <template x-for="session in recentSessions.slice(0, 3)" :key="session.id">
-            <a :href="'/invoices/sessions/' + session.id + '/'" class="block rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 transition hover:border-slate-300 hover:bg-white">
-              <div class="flex items-center justify-between gap-3">
-                <div class="text-right">
-                  <p class="text-sm font-bold text-slate-800" x-text="session.name || ('Session ' + session.id.slice(0, 8))"></p>
-                  <p class="mt-1 text-xs text-slate-500" x-text="sessionStatusLabel(session.status) + ' • ' + session.processed_count + '/' + session.total_count"></p>
-                </div>
-                <span class="rounded-full px-2.5 py-1 text-[11px] font-bold" :class="sessionStatusBadge(session.status)" x-text="sessionStatusLabel(session.status)"></span>
-              </div>
-            </a>
-          </template>
-        </div>
-      </div>
-    </div>
-
-    <div class="space-y-6 xl:col-span-9">
-      <div class="dashboard-surface p-6 lg:p-7">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div class="text-right">
-            <h2 class="text-3xl font-bold text-slate-900">{% trans "Monthly Cash Flow" %}</h2>
-            <p class="mt-2 text-sm text-slate-500">{% trans "Monthly invoice trends and total value over recent months" %}</p>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-3 self-start">
-            <span class="rounded-full px-4 py-2 text-sm font-bold" :class="growthPillClass" x-text="growthPillText"></span>
-            <select x-model.number="chartPeriod" @change="buildCashFlowChart()" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100">
-              <option :value="12">{% trans "Last 12 months" %}</option>
-              <option :value="6">{% trans "Last 6 months" %}</option>
-              <option :value="3">{% trans "Last 3 months" %}</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="relative mt-6 h-[360px] lg:h-[420px]">
-          <canvas id="cashFlowChart" x-show="!loadingChart && cashTrend.length > 0"></canvas>
-          <!-- F-23: empty state when no data -->
-          <div x-show="!loadingChart && cashTrend.length === 0"
-               class="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50">
-            <i data-lucide="bar-chart-2" class="h-8 w-8 text-slate-300"></i>
-            <p class="text-sm font-medium text-slate-400">{% trans "No cash flow data available yet" %}</p>
-            <a href="{% url 'frontend:upload' %}" class="mt-1 text-xs text-blue-500 hover:underline">{% trans "Upload invoices to see monthly trends" %}</a>
-          </div>
-          <!-- Skeleton placeholder while chart loads -->
-          <div x-show="loadingChart" class="absolute inset-0 rounded-3xl bg-gradient-to-b from-slate-100 to-slate-50 p-6">
-            <div class="flex flex-col gap-4 h-full justify-center">
-              <!-- Animated skeleton bars -->
-              <div class="flex items-end gap-2 justify-center h-40">
-                <template x-for="i in 6">
-                  <div class="w-12 bg-slate-300 rounded-t-lg animate-pulse"
-                       :style="'height: ' + (40 + Math.random() * 80) + 'px'"></div>
-                </template>
-              </div>
-              <!-- Skeleton legend -->
-              <div class="flex justify-center gap-6">
-                <template x-for="i in 4">
-                  <div class="h-3 w-24 bg-slate-200 rounded animate-pulse"></div>
-                </template>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 gap-6 2xl:grid-cols-12">
-        <div class="dashboard-surface p-6 2xl:col-span-8">
-          <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div class="text-right">
-              <h2 class="text-2xl font-bold text-slate-900">{% trans "Review Queue" %}</h2>
-              <p class="mt-1 text-sm text-slate-500">{% trans "Invoices requiring manual audit or immediate follow-up" %}</p>
-            </div>
-            <a href="{% url 'frontend:invoices' %}?status=flagged" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-              <i data-lucide="arrow-left" class="h-4 w-4"></i>
-              {% trans "View all" %}
-            </a>
-          </div>
-
-          <div class="mt-6 space-y-3">
-            <template x-if="loadingFlagged">
-              <div class="flex items-center justify-center py-12 text-slate-400">
-                <svg class="h-6 w-6 animate-spin" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-20"></circle><path fill="currentColor" d="M12 2a10 10 0 0 1 10 10h-4a6 6 0 0 0-6-6V2z"></path></svg>
-              </div>
-            </template>
-
-            <template x-if="!loadingFlagged && !flaggedInvoices.length">
-              <div class="rounded-2xl border border-2 border-emerald-200 bg-emerald-50 px-5 py-10 text-center">
-                <i data-lucide="badge-check" class="mx-auto h-8 w-8 text-emerald-600"></i>
-                <p class="mt-3 text-sm font-bold text-emerald-900">{% trans "All invoices passed review" %}</p>
-                <p class="mt-1 text-xs text-emerald-700">{% trans "No high-risk items or critical issues detected" %}</p>
-              </div>
-            </template>
-
-            <!-- Mobile/Tablet: Cards -->
-            <div class="lg:hidden space-y-3">
-              <template x-for="invoice in flaggedInvoices" :key="invoice.id">
-                <a :href="'/invoices/' + invoice.id + '/'" class="block rounded-2xl border border-slate-200 bg-slate-50 px-5 py-4 transition hover:border-slate-300 hover:bg-white">
-                  <div class="flex flex-col gap-3">
-                    <div class="flex items-start gap-4">
-                      <div class="flex h-11 w-11 items-center justify-center rounded-2xl" :class="invoice.risk_level === 'critical' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'">
-                        <i data-lucide="file-warning" class="h-5 w-5"></i>
-                      </div>
-                      <div class="text-right">
-                        <p class="text-sm font-bold text-slate-900" x-text="invoice.vendor_name || i18n.unspecifiedSupplier"></p>
-                        <p class="mt-1 text-xs text-slate-500" x-text="invoice.invoice_number || i18n.invoiceNoNumber"></p>
-                      </div>
-                    </div>
-
-                    <div class="flex flex-wrap items-center gap-3 justify-end">
-                      <span class="rounded-full px-3 py-1 text-xs font-bold" :class="riskBadge(invoice.risk_level)" x-text="riskLabel(invoice.risk_level)"></span>
-                      <span class="font-mono text-sm font-bold text-slate-700" x-text="formatAmount(invoice.total_amount, invoice.currency || 'SAR')"></span>
-                      <span class="text-xs text-slate-400" x-text="invoice.invoice_date || '—'"></span>
-                    </div>
-                  </div>
-                </a>
-              </template>
-            </div>
-
-            <!-- Desktop: Table -->
-            <div class="hidden lg:block">
-              <div class="overflow-x-auto">
-                <table class="w-full">
-                  <thead>
-                    <tr class="border-b-2 border-slate-200 text-xs font-bold text-slate-500 uppercase">
-                      <th class="text-right pb-3 px-4">{% trans "Vendor" %}</th>
-                      <th class="text-right pb-3 px-4">{% trans "Invoice Number" %}</th>
-                      <th class="text-right pb-3 px-4">{% trans "Amount" %}</th>
-                      <th class="text-right pb-3 px-4">{% trans "Date" %}</th>
-                      <th class="text-right pb-3 px-4">{% trans "Risk Level" %}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <template x-for="invoice in flaggedInvoices" :key="invoice.id">
-                      <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
-                        <td class="text-right py-4 px-4 text-sm font-semibold text-slate-900">
-                          <a :href="'/invoices/' + invoice.id + '/'" class="text-blue-600 hover:text-blue-700">
-                            <span x-text="invoice.vendor_name || i18n.unspecifiedSupplier"></span>
-                          </a>
-                        </td>
-                        <td class="text-right py-4 px-4 text-sm text-slate-600 font-mono">
-                          <span x-text="invoice.invoice_number || '—'"></span>
-                        </td>
-                        <td class="text-right py-4 px-4 text-sm font-semibold text-slate-900">
-                          <span x-text="formatAmount(invoice.total_amount, invoice.currency || 'SAR')"></span>
-                        </td>
-                        <td class="text-right py-4 px-4 text-sm text-slate-600">
-                          <span x-text="invoice.invoice_date || '—'"></span>
-                        </td>
-                        <td class="text-right py-4 px-4 text-center">
-                          <span class="rounded-full px-3 py-1 text-xs font-bold" 
-                                :class="riskBadge(invoice.risk_level)" 
-                                x-text="riskLabel(invoice.risk_level)"></span>
-                        </td>
-                      </tr>
-                    </template>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="space-y-6 2xl:col-span-4">
-          <div class="dashboard-surface p-6">
-            <div class="flex items-center justify-between">
-              <h2 class="text-2xl font-bold text-slate-900">{% trans "Risk Indicators" %}</h2>
-              <i data-lucide="shield-alert" class="h-5 w-5 text-slate-400"></i>
-            </div>
-
-            <div class="mt-5 grid grid-cols-2 gap-3">
-              <div class="dashboard-mini-stat">
-                <p class="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">{% trans "Duplicates" %}</p>
-                <p class="mt-2 font-mono text-2xl font-bold text-amber-600" x-text="formatInteger(stats.duplicates)"></p>
-              </div>
-              <div class="dashboard-mini-stat">
-                <p class="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">{% trans "High risk" %}</p>
-                <p class="mt-2 font-mono text-2xl font-bold text-red-600" x-text="formatInteger(stats.high_risk)"></p>
-              </div>
-            </div>
-
-            <div class="mt-5 space-y-4">
-              <p class="text-xs font-semibold uppercase text-slate-400 mb-3">
-                {% trans "Risk distribution (% of total invoices)" %}
-              </p>
-              <template x-for="item in riskDist.filter(i => i.count > 0)" :key="item.key">
-                <div>
-                  <div class="mb-2 flex items-center justify-between text-sm">
-                    <span class="font-semibold text-slate-700" x-text="item.label"></span>
-                    <span class="font-mono font-bold text-slate-700">
-                      <span x-text="item.count"></span>
-                      <span class="text-xs text-slate-500 ml-1">(<span x-text="item.pct"></span>%)</span>
-                    </span>
-                  </div>
-                  <div class="h-2 overflow-hidden rounded-full bg-slate-100">
-                    <div class="h-full rounded-full transition-all duration-500" :style="'width:' + item.pct + '%; background:' + item.color"></div>
-                  </div>
-                </div>
-              </template>
-            </div>
-          </div>
-
-          <div class="dashboard-surface p-6">
-            <div class="flex items-center justify-between">
-              <h2 class="text-2xl font-bold text-slate-900">{% trans "Top Vendors" %}</h2>
-              <a href="{% url 'frontend:vendors' %}" class="text-sm font-semibold text-blue-600 hover:text-blue-700">{% trans "View all" %} →</a>
-            </div>
-
-            <div class="mt-5 space-y-4">
-              <template x-if="!topVendors.length">
-                <div class="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 px-6 py-8 text-center">
-                  <i data-lucide="inbox" class="mx-auto h-8 w-8 text-slate-300 mb-2"></i>
-                  <p class="text-sm font-semibold text-slate-700">{% trans "No vendor data available" %}</p>
-                  <p class="mt-1 text-xs text-slate-500">{% trans "Upload invoices to see top vendors" %}</p>
-                </div>
-              </template>
-
-              <template x-for="(vendor, index) in topVendors" :key="vendor.vendor_name + '-' + index">
-                <div>
-                  <div class="mb-2 flex items-center justify-between gap-3 text-sm">
-                    <span class="truncate font-semibold text-slate-700" x-text="vendor.vendor_name || i18n.unclassified"></span>
-                    <span class="font-mono font-bold text-slate-900" x-text="formatSar(vendor.total_amount)"></span>
-                  </div>
-                  <div class="h-2 overflow-hidden rounded-full bg-slate-100">
-                    <div class="h-full rounded-full transition-all duration-500" :style="'width:' + vendor.pct + '%; background:' + vendor.color"></div>
-                  </div>
-                  <div class="mt-2 flex items-center justify-between text-xs text-slate-400">
-                    <span><span x-text="vendor.invoice_count"></span> <span x-text="i18n.invoices"></span></span>
-                    <span><span x-text="vendor.pct"></span>% <span x-text="i18n.ofTotal"></span></span>
-                  </div>
-                </div>
-              </template>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="dashboard-surface p-6">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div class="text-right">
-            <h2 class="text-2xl font-bold text-slate-900">{% trans "Audit Rule Quality" %}</h2>
-            <p class="mt-1 text-sm text-slate-500">{% trans "Pass rate of key rule groups across the review cycle" %}</p>
-          </div>
-          <span class="rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-500" x-text="ruleGroups.length + ' ' + i18n.auditRules"></span>
-        </div>
-
-        <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          <template x-for="group in ruleGroups" :key="group.code">
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div class="flex items-center justify-between">
-                <div class="text-right">
-                  <p class="text-sm font-bold text-slate-800" x-text="group.label"></p>
-                  <p class="mt-1 font-mono text-xs text-slate-400" x-text="group.code"></p>
-                </div>
-                <span class="font-mono text-lg font-bold" :style="'color:' + group.color" x-text="group.pct + '%'"></span>
-              </div>
-              <div class="mt-4 h-2 overflow-hidden rounded-full bg-white">
-                <div class="h-full rounded-full transition-all duration-500" :style="'width:' + group.pct + '%; background:' + group.color"></div>
-              </div>
-            </div>
-          </template>
-        </div>
-      </div>
-
-      {# Big Four Compliance Panel #}
-      <div class="dashboard-surface p-6" x-show="bigFourFirms.length">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div class="text-right">
-            <h2 class="text-2xl font-bold text-slate-900">{% trans "Big Four Audit Standards" %}</h2>
-            <p class="mt-1 text-sm text-slate-500">{% trans "Compliance rate per KPMG, Deloitte, PwC, and EY methodologies" %}</p>
-          </div>
-          <span class="rounded-full px-4 py-2 text-sm font-bold"
-                :class="bigFourOverall >= 90 ? 'bg-green-50 text-green-700' : bigFourOverall >= 70 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'"
-                x-text="bigFourOverall + '% ' + i18n.overall"></span>
-        </div>
-
-        <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <template x-for="firm in bigFourFirms" :key="firm.firm">
-            <div class="rounded-2xl border bg-slate-50 p-5"
-                 :class="firm.status === 'compliant' ? 'border-green-200' : firm.status === 'at_risk' ? 'border-amber-200' : 'border-red-200'">
-              <div class="flex items-start justify-between gap-3">
-                <div class="flex-1 text-right">
-                  <p class="text-sm font-extrabold text-slate-900" x-text="firm.firm"></p>
-                  <p class="mt-0.5 text-xs leading-5 text-slate-500" x-text="firm.description"></p>
-                  <p class="mt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400" x-text="firm.standard"></p>
-                </div>
-                <div class="flex flex-col items-end gap-1">
-                  <span class="font-mono text-2xl font-extrabold"
-                        :class="firm.status === 'compliant' ? 'text-green-600' : firm.status === 'at_risk' ? 'text-amber-600' : 'text-red-600'"
-                        x-text="firm.pass_rate + '%'"></span>
-                  <span class="rounded-full px-2.5 py-0.5 text-[10px] font-bold"
-                        :class="firm.status === 'compliant' ? 'bg-green-100 text-green-700' : firm.status === 'at_risk' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'"
-                        x-text="firm.status === 'compliant' ? i18n.compliant : firm.status === 'at_risk' ? i18n.atRisk : i18n.nonCompliant"></span>
-                </div>
-              </div>
-              <div class="mt-4 h-2 overflow-hidden rounded-full bg-white">
-                <div class="h-full rounded-full transition-all duration-700"
-                     :style="'width:' + firm.pass_rate + '%; background:' + (firm.status === 'compliant' ? '#16a34a' : firm.status === 'at_risk' ? '#d97706' : '#dc2626')"></div>
-              </div>
-              <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                <span>{% trans "Passed" %}: <span class="font-bold text-slate-700" x-text="firm.passed"></span></span>
-                <span>{% trans "Failed" %}: <span class="font-bold text-red-600" x-text="firm.failed"></span></span>
-                <span>{% trans "Total" %}: <span class="font-bold text-slate-700" x-text="firm.total"></span></span>
-              </div>
-            </div>
-          </template>
-        </div>
-
-        <!-- F-25: contextual guidance when Big Four shows 0% / non-compliant -->
-        <div x-show="bigFourFirms.length > 0 && bigFourOverall === 0"
-             class="mt-5 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <i data-lucide="info" class="mt-0.5 h-4 w-4 shrink-0 text-amber-500"></i>
-          <div>
-            <p class="font-semibold">{% trans "Big Four compliance requires invoice data" %}</p>
-            <p class="mt-0.5 text-xs leading-5">
-              {% trans "Upload at least one validated invoice to calculate compliance rates against KPMG, Deloitte, PwC, and EY methodologies." %}
-              <a href="{% url 'frontend:upload' %}" class="ml-1 font-bold underline hover:text-amber-900">{% trans "Upload now →" %}</a>
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {# Industry Benchmark Panel #}
-      <div class="dashboard-surface p-6" x-show="benchmarkMetrics.length && stats.total_invoices > 0">
-        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div class="text-right">
-            <h2 class="text-2xl font-bold text-slate-900">{% trans "Industry Benchmark" %}</h2>
-            <p class="mt-1 text-sm text-slate-500" x-text="i18n.comparedTo + ': ' + benchmarkIndustryLabel"></p>
-          </div>
-          <span class="rounded-full px-4 py-2 text-sm font-bold"
-                :class="benchmarkPosition === 'above_average' ? 'bg-green-50 text-green-700' : benchmarkPosition === 'below_average' ? 'bg-red-50 text-red-700' : 'bg-slate-100 text-slate-600'"
-                x-text="benchmarkPosition === 'above_average' ? i18n.aboveAverage + ' ✓' : benchmarkPosition === 'below_average' ? i18n.belowAverage + ' ↓' : i18n.atAverage"></span>
-        </div>
-
-        <div class="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <template x-for="metric in benchmarkMetrics" :key="metric.key">
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div class="flex items-center justify-between text-sm">
-                <span class="rounded-full px-2 py-0.5 text-[10px] font-bold"
-                      :class="metric.status === 'above' ? 'bg-green-100 text-green-700' : metric.status === 'below' ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'"
-                      x-text="metric.status === 'above' ? '↑ ' + i18n.better : metric.status === 'below' ? '↓ ' + i18n.below : '= ' + i18n.equal"></span>
-                <span class="font-semibold text-slate-700" x-text="metric.label"></span>
-              </div>
-              <div class="mt-3 flex items-end justify-between gap-3">
-                <div class="text-left">
-                  <p class="text-[10px] text-slate-400">{% trans "Industry standard" %}</p>
-                  <p class="font-mono text-sm font-bold text-slate-500" x-text="metric.benchmark + metric.unit"></p>
-                </div>
-                <div class="text-right">
-                  <p class="text-[10px] text-slate-400">{% trans "Your organization" %}</p>
-                  <p class="font-mono text-lg font-extrabold"
-                     :class="metric.status === 'above' ? 'text-green-600' : metric.status === 'below' ? 'text-red-600' : 'text-slate-700'"
-                     x-text="metric.value + metric.unit"></p>
-                </div>
-              </div>
-              <div class="mt-3 h-2 overflow-hidden rounded-full bg-white">
-                <div class="h-full rounded-full transition-all duration-700"
-                     :style="'width:' + Math.min(100, metric.value) + '%; background:' + (metric.status === 'above' ? '#16a34a' : metric.status === 'below' ? '#dc2626' : '#64748b')"></div>
-              </div>
-            </div>
-          </template>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
+  @media (max-width: 1024px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .stats-grid { grid-template-columns: 1fr; } .upload-card { padding: 32px 20px; } }
 {% endblock %}
 
-{% block page_js %}
-<script>
-function dashboard() {
-  return {
-    i18n: {
-      thisMonth: '{% trans "this month" %}',
-      noUrgentItems: '{% trans "No urgent items need review." %}',
-      highRiskItems: '{% trans "high-risk items" %}',
-      zatcaCompliant: '{% trans "Aligned with ZATCA" %}',
-      needsFollowUp: '{% trans "Needs follow-up and improvement" %}',
-      statusHighRisk: '{% trans "High-risk items under review" %}',
-      statusReviewActive: '{% trans "Review queue is active" %}',
-      statusStable: '{% trans "Financial landscape is stable" %}',
-      unknown: '{% trans "Unspecified" %}',
-      received: '{% trans "Received" %}',
-      extracting: '{% trans "Extracting" %}',
-      normalizing: '{% trans "Normalizing" %}',
-      validating: '{% trans "Validating" %}',
-      reviewRequired: '{% trans "Needs review" %}',
-      actionRequired: '{% trans "Action required" %}',
-      completed: '{% trans "Completed" %}',
-      failed: '{% trans "Failed" %}',
-      invoicesDuplicate: '{% trans "Duplicate invoices" %}',
-      invoicesDuplicateSubtitle: '{% trans "invoices need duplicate verification" %}',
-      invoiceWithoutNumber: '{% trans "Invoice without number" %}',
-      unspecifiedVendor: '{% trans "Unspecified vendor" %}',
-      unspecifiedSupplier: '{% trans "Unspecified supplier" %}',
-      invoiceNoNumber: '{% trans "Invoice with no number" %}',
-      unclassified: '{% trans "Unclassified" %}',
-      invoices: '{% trans "invoices" %}',
-      ofTotal: '{% trans "of total" %}',
-      auditRules: '{% trans "audit rules" %}',
-      overall: '{% trans "overall" %}',
-      compliant: '{% trans "Compliant" %}',
-      atRisk: '{% trans "At risk" %}',
-      nonCompliant: '{% trans "Non-compliant" %}',
-      comparedTo: '{% trans "Compared to" %}',
-      aboveAverage: '{% trans "Above average" %}',
-      belowAverage: '{% trans "Below average" %}',
-      atAverage: '{% trans "At average" %}',
-      better: '{% trans "Better" %}',
-      below: '{% trans "Below" %}',
-      equal: '{% trans "Equal" %}',
-      noCriticalAlerts: '{% trans "No critical alerts" %}',
-      noBaselineData: '{% trans "No baseline data yet" %}',
-      auditStable: '{% trans "Audit and compliance are currently operating normally." %}',
-      cashFlowTotal: '{% trans "Total flow" %}',
-      noExecutiveSummary: '{% trans "No recent audit sessions are available for an executive summary." %}',
-      january: '{% trans "January" %}',
-      february: '{% trans "February" %}',
-      march: '{% trans "March" %}',
-      april: '{% trans "April" %}',
-      may: '{% trans "May" %}',
-      june: '{% trans "June" %}',
-      headerInvoice: '{% trans "Invoice Header" %}',
-      duplicates: '{% trans "Duplicates" %}',
-      vat: '{% trans "VAT" %}',
-      anomalies: '{% trans "Anomalies" %}',
-      controls: '{% trans "Controls" %}',
-      document: '{% trans "Document" %}',
-      deterministic: '{% trans "Deterministic" %}',
-    },
-    chartPeriod: 6,
-    loadingChart: true,
-    loadingFlagged: true,
-    spendChartInst: null,
-    growthOverride: Number('{{ monthly_growth|default:"0"|escapejs }}'),
-    monthlyGrowth: Number('{{ monthly_growth|default:"0"|escapejs }}'),
-      organizationName: '{{ request.user.organization.name|default:product_name|escapejs }}',
-    stats: {
-      total_invoices: 0,
-      total_amount: 0,
-      flagged: 0,
-      duplicates: 0,
-      compliance_rate: 0,
-      high_risk: 0,
-    },
-    cashTrend: [],
-    flaggedInvoices: [],
-    topVendors: [],
-    riskDist: [],
-    alerts: [],
-    ruleGroups: [],
-    recentSessions: [],
-    latestSessionSummary: null,
-    findingTotals: { critical: 0, high: 0, medium: 0, low: 0 },
+{% block breadcrumb %}
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
+  </svg>
+  <span>{% trans "Coverage: GCC" %}</span>
+{% endblock %}
 
-    get todayLabel() {
-      return new Intl.DateTimeFormat(window.APP_LOCALE || document.documentElement.lang || 'en-US', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      }).format(new Date());
-    },
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{% trans "Main Dashboard" %}</h1>
+    <p class="page-subtitle">{% blocktrans with product=product_name %}{{ product }} — Unified AI-powered financial document auditor{% endblocktrans %}</p>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <button class="btn btn-light">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      {% trans "Export" %}
+    </button>
+    <a href="{% url 'frontend:upload' %}" class="btn btn-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      {% trans "New Document" %}
+    </a>
+  </div>
+</div>
 
-    get growthPillText() {
-      const value = Number(this.monthlyGrowth || 0);
-      return `${value >= 0 ? '+' : ''}${value.toFixed(1)}% ↗`;
-    },
+<!-- Stats -->
+<div class="stats-grid">
+  <div class="stat-card blue">
+    {% if monthly_growth >= 0 %}
+      <span class="stat-card-trend up">↑ +{{ monthly_growth|default:0 }}%</span>
+    {% else %}
+      <span class="stat-card-trend">↓ {{ monthly_growth|default:0 }}%</span>
+    {% endif %}
+    <div class="stat-card-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
+    </div>
+    <div class="stat-card-label">{% trans "Process Automation" %}</div>
+    <div class="stat-card-value">{{ kpis.automation_pct|default:0 }}%</div>
+    <div class="stat-card-sub">{% trans "Invoices auto-extracted without errors" %}</div>
+  </div>
 
-    get growthPillClass() {
-      return Number(this.monthlyGrowth || 0) >= 0
-        ? 'bg-emerald-50 text-emerald-600'
-        : 'bg-red-50 text-red-600';
-    },
+  <div class="stat-card green">
+    <span class="stat-card-trend up">{% trans "OCR" %}</span>
+    <div class="stat-card-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="stat-card-label">{% trans "Data Accuracy" %}</div>
+    <div class="stat-card-value">{{ kpis.extraction_accuracy_pct|default:0 }}%</div>
+    <div class="stat-card-sub">{% trans "Average OCR confidence" %}</div>
+  </div>
 
-    get growthDescription() {
-      // F-03 fix: never show growth % when there are no invoices as baseline
-      const total = Number(this.stats.total_invoices || 0);
-      if (total === 0) return this.i18n.noBaselineData || 'No baseline data';
-      return `${this.growthPillText} ${this.i18n.thisMonth}`;
-    },
+  <div class="stat-card {% if kpis.fraud_alerts == 0 %}green{% elif kpis.fraud_alerts < 5 %}amber{% else %}red{% endif %}">
+    {% if kpis.fraud_alerts == 0 %}
+      <span class="stat-card-trend up">{% trans "Safe" %}</span>
+    {% else %}
+      <span class="stat-card-trend">!</span>
+    {% endif %}
+    <div class="stat-card-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6l-8-4z"/></svg>
+    </div>
+    <div class="stat-card-label">{% trans "Fraud / High-Risk" %}</div>
+    <div class="stat-card-value">{{ kpis.fraud_alerts|default:0 }}</div>
+    <div class="stat-card-sub">{{ kpis.high_risk_count|default:0 }} {% trans "high-risk invoices" %}</div>
+  </div>
 
-    get reviewDescription() {
-      if (!this.stats.flagged) return this.i18n.noUrgentItems;
-      return `${this.formatInteger(this.stats.high_risk || this.stats.flagged)} ${this.i18n.highRiskItems}`;
-    },
+  <div class="stat-card amber">
+    <span class="stat-card-trend">ZATCA</span>
+    <div class="stat-card-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <div class="stat-card-label">{% trans "Compliance Alerts" %}</div>
+    <div class="stat-card-value">{{ kpis.compliance_alerts|default:0 }}</div>
+    <div class="stat-card-sub">{% trans "Invoices missing valid QR" %}</div>
+  </div>
+</div>
 
-    get complianceDescription() {
-      return Number(this.stats.compliance_rate || 0) >= 90 ? this.i18n.zatcaCompliant : this.i18n.needsFollowUp;
-    },
+<div class="stats-grid" style="margin-top:18px">
+  <div class="stat-card blue">
+    <div class="stat-card-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    </div>
+    <div class="stat-card-label">{% trans "Total Invoices" %}</div>
+    <div class="stat-card-value">{{ kpis.total_invoices|default:0 }}</div>
+    <div class="stat-card-sub">{% trans "All time" %}</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-card-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+    </div>
+    <div class="stat-card-label">{% trans "Purchase Orders" %}</div>
+    <div class="stat-card-value">{{ kpis.total_pos|default:0 }}</div>
+    <div class="stat-card-sub">{% trans "All time" %}</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-card-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+    </div>
+    <div class="stat-card-label">{% trans "Total Invoiced" %}</div>
+    <div class="stat-card-value" style="font-size:22px">{{ kpis.total_amount|floatformat:0|default:0 }}</div>
+    <div class="stat-card-sub">SAR · VAT: {{ kpis.vat_total|floatformat:0|default:0 }}</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-card-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg>
+    </div>
+    <div class="stat-card-label">{% trans "Pending Review" %}</div>
+    <div class="stat-card-value">{{ kpis.pending_review|default:0 }}</div>
+    <div class="stat-card-sub">{% trans "Awaiting human approval" %}</div>
+  </div>
+</div>
 
-    dashboardStatusMeta() {
-      if (Number(this.stats.high_risk || 0) > 0) {
-        return {
-          label: this.i18n.statusHighRisk,
-          badgeClass: 'border-amber-200 bg-amber-50 text-amber-800',
-          dotClass: 'bg-amber-500',
-        };
-      }
+<!-- CTA Banner -->
+<div class="cta-banner">
+  <div class="cta-content">
+    <div class="cta-text">
+      <h3>{% trans "Start auditing your financial documents now" %}</h3>
+      <p>{% trans "Upload invoices, bank statements, or VAT records and our system will analyze them in seconds." %}</p>
+    </div>
+    <a href="{% url 'frontend:upload' %}" class="btn btn-primary btn-lg">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      {% trans "Start Upload" %}
+    </a>
+  </div>
+</div>
 
-      if (Number(this.stats.flagged || 0) > 0) {
-        return {
-          label: this.i18n.statusReviewActive,
-          badgeClass: 'border-blue-200 bg-blue-50 text-blue-700',
-          dotClass: 'bg-blue-500',
-        };
-      }
+<!-- Upload area -->
+<div class="upload-card">
+  <div class="upload-icon">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+  </div>
+  <h3 class="upload-title">{% trans "Drag files here or click to select" %}</h3>
+  <p class="upload-desc">{% trans "Supports PDF, Excel, CSV, JSON, and images — up to 50MB per file" %}</p>
+  <a href="{% url 'frontend:upload' %}" class="btn btn-dark">{% trans "Upload Documents" %}</a>
+  <div class="file-types">
+    <span class="file-type">PDF</span>
+    <span class="file-type">XLSX</span>
+    <span class="file-type">CSV</span>
+    <span class="file-type">JSON</span>
+    <span class="file-type">JPG/PNG</span>
+  </div>
+</div>
 
-      return {
-        label: this.i18n.statusStable,
-        badgeClass: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-        dotClass: 'bg-emerald-500',
-      };
-    },
+<!-- Recent Operations -->
+<div class="card table-card">
+  <div class="table-header">
+    <div>
+      <h3 class="card-title" style="margin-bottom:4px">{% trans "Recent Operations" %}</h3>
+      <p style="font-size:12px;color:var(--text-muted)">{% trans "Last 10 analyzed documents" %}</p>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-light">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        {% trans "Filter" %}
+      </button>
+      <a href="{% url 'frontend:invoices' %}" class="btn btn-light">{% trans "View all" %} ←</a>
+    </div>
+  </div>
 
-    formatInteger(value) {
-      return Number(value || 0).toLocaleString(window.APP_LOCALE || document.documentElement.lang || 'en-US', { maximumFractionDigits: 0 });
-    },
-
-    formatPercent(value) {
-      return `${Number(value || 0).toFixed(1)}%`;
-    },
-
-    formatSar(value) {
-      // F-22 fix: use org currency if set, fallback to SAR
-      const currency = (window.ORG_CURRENCY || 'SAR').trim();
-      const displayCurrency = document.documentElement.lang === 'ar' && currency === 'SAR' ? 'ر.س' : currency;
-      const formatted = Number(value || 0).toLocaleString(
-        window.APP_LOCALE || document.documentElement.lang || 'en-US',
-        { maximumFractionDigits: 1 }
-      );
-      // F-22 fix: show em-dash instead of "0" when no data loaded yet
-      if (Number(value || 0) === 0 && this.stats.total_invoices === 0) return '—';
-      return `${displayCurrency} ${formatted}`;
-    },
-
-    formatAmount(value, currency) {
-      return `${currency || 'SAR'} ${Number(value || 0).toLocaleString(window.APP_LOCALE || document.documentElement.lang || 'en-US', { maximumFractionDigits: 2 })}`;
-    },
-
-    riskLabel(level) {
-      return {
-        critical: '{% trans "Critical" %}',
-        high: '{% trans "High" %}',
-        medium: '{% trans "Medium" %}',
-        low: '{% trans "Low" %}',
-      }[level] || this.i18n.unknown;
-    },
-
-    riskBadge(level) {
-      return {
-        critical: 'bg-red-50 text-red-700',
-        high: 'bg-orange-50 text-orange-700',
-        medium: 'bg-amber-50 text-amber-700',
-        low: 'bg-green-50 text-green-700',
-      }[level] || 'bg-slate-100 text-slate-600';
-    },
-
-    sessionStatusLabel(status) {
-      return {
-        received: this.i18n.received,
-        extracting: this.i18n.extracting,
-        normalizing: this.i18n.normalizing,
-        validating: this.i18n.validating,
-        review_required: this.i18n.reviewRequired,
-        action_required: this.i18n.actionRequired,
-        completed: this.i18n.completed,
-        failed: this.i18n.failed,
-      }[status] || status;
-    },
-
-    sessionStatusBadge(status) {
-      return {
-        received: 'bg-slate-50 text-slate-700',
-        extracting: 'bg-blue-50 text-blue-700',
-        normalizing: 'bg-indigo-50 text-indigo-700',
-        validating: 'bg-violet-50 text-violet-700',
-        review_required: 'bg-amber-50 text-amber-700',
-        action_required: 'bg-red-50 text-red-700',
-        completed: 'bg-green-50 text-green-700',
-        failed: 'bg-red-50 text-red-700',
-      }[status] || 'bg-slate-100 text-slate-600';
-    },
-
-    alertIcon(type) {
-      return {
-        critical: 'triangle-alert',
-        warning: 'alert-circle',
-        info: 'shield-alert',
-        success: 'badge-check',
-      }[type] || 'bell-ring';
-    },
-
-    alertClass(type) {
-      return {
-        critical: 'border-red-200 bg-red-50 text-red-700',
-        warning: 'border-amber-200 bg-amber-50 text-amber-700',
-        info: 'border-blue-200 bg-blue-50 text-blue-700',
-        success: 'border-green-200 bg-green-50 text-green-700',
-      }[type] || 'border-slate-200 bg-slate-50 text-slate-600';
-    },
-
-    alertIconWrapClass(type) {
-      return {
-        critical: 'bg-white/80 text-red-600',
-        warning: 'bg-white/80 text-amber-600',
-        info: 'bg-white/80 text-blue-600',
-        success: 'bg-white/80 text-green-600',
-      }[type] || 'bg-white/80 text-slate-600';
-    },
-
-    initRuleGroups() {
-      this.ruleGroups = [
-        { code: 'INV', label: this.i18n.headerInvoice, pct: 88, color: '#2563eb' },
-        { code: 'DUP', label: this.i18n.duplicates, pct: 94, color: '#f59e0b' },
-        { code: 'VAT', label: this.i18n.vat, pct: 79, color: '#7c3aed' },
-        { code: 'ANO', label: this.i18n.anomalies, pct: 65, color: '#ef4444' },
-        { code: 'CTL', label: this.i18n.controls, pct: 82, color: '#06b6d4' },
-        { code: 'DOC', label: this.i18n.document, pct: 91, color: '#16a34a' },
-      ];
-    },
-
-    init() {
-      this.initRuleGroups();
-      Promise.all([this.loadSpendReport(), this.loadReviewQueues(), this.loadAuditOverview()])
-        .finally(() => this.$nextTick(() => lucide.createIcons()));
-      // F-16 fix: poll every 30s so metrics stay current without manual refresh
-      this._pollInterval = setInterval(() => {
-        this.loadSpendReport();
-        this.loadReviewQueues();
-      }, 30000);
-    },
-
-    destroy() {
-      if (this._pollInterval) clearInterval(this._pollInterval);
-    },
-
-    updateDerivedMetrics() {
-      const total = Number(this.stats.total_invoices || 0);
-      const flagged = Number(this.stats.flagged || 0);
-      // F-02 fix: when no invoices exist compliance is 0 (unknown), not 100
-      this.stats.compliance_rate = total > 0 ? Math.max(0, ((total - flagged) / total) * 100) : 0;
-      this.buildAlerts();
-    },
-
-    async loadSpendReport() {
-      this.loadingChart = true;
-      try {
-        const report = await apiFetch('/invoices/reports/spend/');
-        const overall = report.overall || {};
-
-        this.stats.total_invoices = overall.total_invoices || 0;
-        this.stats.total_amount = overall.grand_total || 0;
-
-        const trend = (report.monthly_trend || []).map((item) => ({
-          month: item.month,
-          total: Number(item.total || 0),
-          count: Number(item.count || 0),
-          flagged: Number(item.flagged || 0),
-        }));
-        this.cashTrend = trend;
-        this.monthlyGrowth = this.computeMonthlyGrowth(trend);
-
-        const grandTotal = Number(overall.grand_total || 0) || 1;
-        const palette = ['#2563eb', '#7c3aed', '#f97316', '#10b981', '#eab308'];
-        this.topVendors = (report.by_vendor || []).slice(0, 5).map((vendor, index) => ({
-          vendor_name: vendor.vendor_name || this.i18n.unknown,
-          total_amount: Number(vendor.total || 0),
-          invoice_count: Number(vendor.count || 0),
-          pct: Math.max(4, Math.min(100, Number(((vendor.total || 0) / grandTotal) * 100).toFixed(1))),
-          color: palette[index % palette.length],
-        }));
-
-        this.updateDerivedMetrics();
-        this.$nextTick(() => this.buildCashFlowChart());
-      } catch (error) {
-        console.warn('dashboard spend report', error);
-        this.cashTrend = [];
-      } finally {
-        this.loadingChart = false;
-      }
-    },
-
-    async loadReviewQueues() {
-      this.loadingFlagged = true;
-      try {
-        const [flagged, duplicates, low, medium, high, critical] = await Promise.all([
-          apiFetch('/invoices/?status=flagged&page_size=5'),
-          apiFetch('/invoices/?is_duplicate=true&page_size=1'),
-          apiFetch('/invoices/?risk_level=low&page_size=1'),
-          apiFetch('/invoices/?risk_level=medium&page_size=1'),
-          apiFetch('/invoices/?risk_level=high&page_size=1'),
-          apiFetch('/invoices/?risk_level=critical&page_size=1'),
-        ]);
-
-        this.flaggedInvoices = flagged.results || [];
-        this.stats.flagged = Number(flagged.count || 0);
-        this.stats.duplicates = Number(duplicates.count || 0);
-
-        const counts = {
-          low: Number(low.count || 0),
-          medium: Number(medium.count || 0),
-          high: Number(high.count || 0),
-          critical: Number(critical.count || 0),
-        };
-
-        this.stats.high_risk = counts.high + counts.critical;
-
-        const total = Object.values(counts).reduce((sum, value) => sum + value, 0) || Number(this.stats.total_invoices || 0) || 1;
-        this.riskDist = [
-          { key: 'critical', label: this.riskLabel('critical'), count: counts.critical, pct: Number((counts.critical / total) * 100).toFixed(1), color: '#ef4444' },
-          { key: 'high', label: this.riskLabel('high'), count: counts.high, pct: Number((counts.high / total) * 100).toFixed(1), color: '#f97316' },
-          { key: 'medium', label: this.riskLabel('medium'), count: counts.medium, pct: Number((counts.medium / total) * 100).toFixed(1), color: '#eab308' },
-          { key: 'low', label: this.riskLabel('low'), count: counts.low, pct: Number((counts.low / total) * 100).toFixed(1), color: '#22c55e' },
-        ];
-
-        this.updateDerivedMetrics();
-      } catch (error) {
-        console.warn('dashboard queues', error);
-      } finally {
-        this.loadingFlagged = false;
-      }
-    },
-
-    async loadAuditOverview() {
-      try {
-        const response = await apiFetch('/audit/dashboard/overview/');
-        this.recentSessions = response.recent_sessions || [];
-        this.latestSessionSummary = response.latest_summary || null;
-        this.findingTotals = response.finding_totals || { critical: 0, high: 0, medium: 0, low: 0 };
-      } catch (error) {
-        console.warn('dashboard audit overview', error);
-      }
-    },
-
-    computeMonthlyGrowth(trend) {
-      // F-03 fix: only compute growth when both current and previous have real data
-      if (trend.length >= 2) {
-        const previous = Number(trend[trend.length - 2].total || 0);
-        const current = Number(trend[trend.length - 1].total || 0);
-        if (previous > 0 && current > 0) {
-          return ((current - previous) / previous) * 100;
-        }
-        if (previous === 0 && current === 0) return 0;
-      }
-      // Only fall back to override when we have actual invoice data
-      const total = Number(this.stats.total_invoices || 0);
-      return total > 0 ? Number(this.growthOverride || 0) : 0;
-    },
-
-    buildAlerts() {
-      const items = [];
-
-      if (this.stats.duplicates > 0) {
-        items.push({
-          type: 'warning',
-          title: this.i18n.invoicesDuplicate,
-          subtitle: `${this.formatInteger(this.stats.duplicates)} ${this.i18n.invoicesDuplicateSubtitle}`,
-        });
-      }
-
-      this.flaggedInvoices.slice(0, 3).forEach((invoice) => {
-        items.push({
-          type: invoice.risk_level === 'critical' ? 'critical' : 'info',
-          title: invoice.invoice_number || this.i18n.invoiceWithoutNumber,
-          subtitle: `${invoice.vendor_name || this.i18n.unspecifiedVendor} — ${this.formatAmount(invoice.total_amount, invoice.currency || 'SAR')}`,
-        });
-      });
-
-      if (!items.length) {
-        items.push({
-          type: 'success',
-          title: this.i18n.noCriticalAlerts,
-          subtitle: this.i18n.auditStable,
-        });
-      }
-
-      this.alerts = items.slice(0, 4);
-    },
-
-    buildCashFlowChart() {
-      const canvas = document.getElementById('cashFlowChart');
-      if (!canvas) return;
-
-      const series = [...this.cashTrend];
-      const filtered = series.length > this.chartPeriod ? series.slice(-this.chartPeriod) : series;
-      const labels = filtered.length
-        ? filtered.map((item) => this.formatMonth(item.month))
-        : [this.i18n.january, this.i18n.february, this.i18n.march, this.i18n.april, this.i18n.may, this.i18n.june];
-      const values = filtered.length
-        ? filtered.map((item) => Number(item.total || 0))
-        : [0, 0, 0, 0, 0, 0];
-
-      if (this.spendChartInst) {
-        this.spendChartInst.destroy();
-      }
-
-      const context = canvas.getContext('2d');
-      const gradient = context.createLinearGradient(0, 0, 0, canvas.height || 420);
-      gradient.addColorStop(0, 'rgba(37, 99, 235, 0.28)');
-      gradient.addColorStop(1, 'rgba(37, 99, 235, 0.02)');
-
-      this.spendChartInst = new Chart(canvas, {
-        type: 'line',
-        data: {
-          labels,
-          datasets: [{
-            label: this.i18n.cashFlowTotal,
-            data: values,
-            borderColor: '#2563eb',
-            backgroundColor: gradient,
-            fill: true,
-            borderWidth: 3,
-            tension: 0.42,
-            pointRadius: 0,
-            pointHoverRadius: 5,
-            pointBackgroundColor: '#2563eb',
-          }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { intersect: false, mode: 'index' },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              rtl: true,
-              displayColors: false,
-              callbacks: {
-                label: (context) => ` ${this.formatSar(context.parsed.y)}`,
-              },
-            },
-          },
-          scales: {
-            x: {
-              grid: {
-                color: 'rgba(148, 163, 184, 0.18)',
-                borderDash: [4, 4],
-              },
-              ticks: {
-                color: '#64748b',
-                font: { size: 11, family: 'IBM Plex Sans Arabic' },
-              },
-            },
-            y: {
-              beginAtZero: true,
-              grid: {
-                color: 'rgba(148, 163, 184, 0.18)',
-                borderDash: [4, 4],
-              },
-              ticks: {
-                color: '#64748b',
-                font: { size: 11, family: 'JetBrains Mono' },
-                callback: (value) => Number(value).toLocaleString('en-US'),
-              },
-            },
-          },
-        },
-      });
-    },
-
-    formatMonth(value) {
-      if (!value) return '—';
-      const date = new Date(`${value}-01T00:00:00`);
-      return new Intl.DateTimeFormat('ar', { month: 'long' }).format(date);
-    },
-  };
-}
-const originalDashboardFactory = dashboard;
-dashboard = function() {
-  const state = originalDashboardFactory();
-
-  state.initRuleGroups = function() {
-    this.ruleGroups = [
-      { code: 'INV', label: this.i18n.headerInvoice, pct: 0, color: '#2563eb', passed: 0, failed: 0, total: 0 },
-      { code: 'DUP', label: this.i18n.duplicates, pct: 0, color: '#f59e0b', passed: 0, failed: 0, total: 0 },
-      { code: 'VAT', label: this.i18n.vat, pct: 0, color: '#7c3aed', passed: 0, failed: 0, total: 0 },
-      { code: 'ANO', label: this.i18n.anomalies, pct: 0, color: '#ef4444', passed: 0, failed: 0, total: 0 },
-      { code: 'CTL', label: this.i18n.controls, pct: 0, color: '#06b6d4', passed: 0, failed: 0, total: 0 },
-      { code: 'DOC', label: this.i18n.document, pct: 0, color: '#16a34a', passed: 0, failed: 0, total: 0 },
-    ];
-  };
-
-  state.loadAuditOverview = async function() {
-    try {
-      const response = await apiFetch('/audit/dashboard/overview/');
-      this.recentSessions = response.recent_sessions || [];
-      this.latestSessionSummary = response.latest_summary || null;
-      this.findingTotals = response.finding_totals || { critical: 0, high: 0, medium: 0, low: 0 };
-      if (Array.isArray(response.rule_groups) && response.rule_groups.length) {
-        this.ruleGroups = response.rule_groups;
-      }
-    } catch (error) {
-      console.warn('dashboard audit overview', error);
-    }
-  };
-
-  // ── Big Four state ────────────────────────────────────────────────────────
-  state.bigFourFirms = [];
-  state.bigFourOverall = 0;
-
-  state.loadBigFour = async function() {
-    try {
-      const response = await apiFetch('/audit/big-four/');
-      this.bigFourFirms = response.firms || [];
-      this.bigFourOverall = response.overall_pass_rate || 0;
-    } catch (error) {
-      console.warn('dashboard big-four', error);
-    }
-  };
-
-  // ── Industry Benchmark state ──────────────────────────────────────────────
-  state.benchmarkMetrics = [];
-  state.benchmarkIndustryLabel = '';
-  state.benchmarkPosition = '';
-
-  state.loadBenchmark = async function() {
-    try {
-      const response = await apiFetch('/analytics/benchmark/');
-      this.benchmarkIndustryLabel = response.industry_label || '';
-      this.benchmarkPosition = response.summary?.overall_position || '';
-      const metaMap = {
-        compliance_rate_pct:    { label: '{% trans "Compliance rate" %}',       unit: '%' },
-        duplicate_rate_pct:     { label: '{% trans "Duplicate invoice rate" %}', unit: '%' },
-        avg_risk_score:         { label: '{% trans "Average risk score" %}',     unit: '' },
-        vat_compliance_rate_pct:{ label: '{% trans "VAT compliance rate" %}',    unit: '%' },
-      };
-      this.benchmarkMetrics = Object.entries(response.metrics || {}).map(([key, data]) => ({
-        key,
-        label:     metaMap[key]?.label || key,
-        unit:      metaMap[key]?.unit || '',
-        value:     Number(data.value  || 0).toFixed(1),
-        benchmark: Number(data.benchmark || 0).toFixed(1),
-        delta:     Number(data.delta  || 0).toFixed(1),
-        status:    data.status || 'at',
-      }));
-    } catch (error) {
-      console.warn('dashboard benchmark', error);
-    }
-  };
-
-  // Override init to also load new panels
-  const _origInit = state.init.bind(state);
-  state.init = function() {
-    _origInit();
-    this.loadBigFour();
-    this.loadBenchmark();
-  };
-
-  return state;
-};
-</script>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>{% trans "Document" %}</th>
+          <th>{% trans "Date" %}</th>
+          <th>{% trans "Status" %}</th>
+          <th>{% trans "Risk Level" %}</th>
+          <th>{% trans "Action" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if recent_invoices %}
+          {% for inv in recent_invoices %}
+          <tr>
+            <td>
+              <div class="file-name">
+                <div class="file-icon pdf">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                {{ inv.filename|default:inv.invoice_number }}
+              </div>
+            </td>
+            <td class="text-muted">{{ inv.created_at|date:"Y-m-d" }}</td>
+            <td><span class="badge badge-{% if inv.status == 'approved' %}success{% elif inv.status == 'flagged' %}warning{% elif inv.status == 'rejected' %}danger{% else %}info{% endif %}">{{ inv.get_status_display|default:inv.status }}</span></td>
+            <td><span class="badge badge-{% if inv.risk_level == 'low' %}success{% elif inv.risk_level == 'medium' %}warning{% elif inv.risk_level == 'high' %}danger{% else %}info{% endif %}">{{ inv.risk_level|default:"--" }}</span></td>
+            <td>
+              <a href="{% url 'frontend:invoice_detail' pk=inv.id %}" class="row-action">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" transform="scale(-1,1) translate(-24,0)"/></svg>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="5">
+            <div class="empty-state">
+              <h3>{% trans "No documents yet" %}</h3>
+              <p>{% trans "Upload your first invoice or document and our AI will analyze it." %}</p>
+              <a href="{% url 'frontend:upload' %}" class="btn btn-primary">{% trans "Upload" %}</a>
+            </div>
+          </td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}

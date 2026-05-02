@@ -1,0 +1,35 @@
+{
+  "invoice_metadata": {
+    "invoice_number": "00021",
+    "date": "2018-01-04",
+    "status": "unpaid",
+    "currency": "SAR"
+  },
+  "vendor": {
+    "name": "شركة دفترة",
+    "tax_id": "123456789888804",
+    "address": "شارع الملك فيصل، مكة، مكة",
+    "phone": "05654697635"
+  },
+  "client": {
+    "name": "الشركة الهندسية للإلكترونيات - علي محمد",
+    "address": "50 شارع النصر، مدينة نصر، القاهرة 12752"
+  },
+  "line_items": [
+    {
+      "item": "Samsung S8 Plus",
+      "description": "هاتف محمول",
+      "unit_price": 7000,
+      "quantity": 20,
+      "total": 140000
+    }
+  ],
+  "financial_summary": {
+    "subtotal": 140000,
+    "vat_rate": "0%",
+    "vat_amount": 0.00,
+    "total_inclusive": 140000,
+    "paid": 0.00,
+    "balance_due": 140000
+  }
+}

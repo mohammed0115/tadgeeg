@@ -1,12 +1,20 @@
-{%  extends "base.html" %}
-{%  block title %}تفاصيل إيصال البيع{%  endblock %}
-{%  block page_title %}تفاصيل إيصال البيع{%  endblock %}
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{%  block title %}{% trans 'Sales Receipt Details' %}{%  endblock %}
+{% block nav_documents %}active{% endblock %}
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Home" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <a href="/documents/sales-receipts/" style="color:var(--text-muted)">{% trans 'Sales Receipts' %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700" x-text="docTitle || 'Details'">{% trans 'Details' %}</span>
+{% endblock %}
 
 {%  block content %}
 <div x-data="docDetail()" x-init="load()">
 
   <a href="/documents/sales-receipts/" class="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-primary-600 dark:hover:text-primary-400 mb-5 transition-colors">
-    <i data-lucide="arrow-right" class="w-4 h-4"></i> العودة للقائمة
+    <i data-lucide="arrow-right" class="w-4 h-4"></i> {% trans "Back to list" %}
   </a>
 
   <template x-if="loading">
@@ -24,17 +32,17 @@
               <div class="w-9 h-9 rounded-xl bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center">
                 <i data-lucide="scan-line" class="w-5 h-5 text-primary-600"></i>
               </div>
-              <span class="text-sm text-slate-400">تفاصيل إيصال البيع</span>
+              <span class="text-sm text-slate-400">{% trans "Sales Receipt Details" %}</span>
               <span :class="riskBadge(doc.risk_level)" class="text-xs font-bold px-2.5 py-1 rounded-lg border" x-text="riskLabel(doc.risk_level)"></span>
               <span :class="statusBadge(doc.audit_status)" class="text-xs font-semibold px-2.5 py-1 rounded-lg border" x-text="statusLabel(doc.audit_status)"></span>
             </div>
             <h1 class="text-lg font-bold text-slate-800 dark:text-white" x-text="docTitle"></h1>
-            <p class="text-xs text-slate-400 mt-1" x-text="'رُفع: ' + fmtDate(doc.created_at)"></p>
+            <p class="text-xs text-slate-400 mt-1" x-text="'{% trans "Uploaded:" %} ' + fmtDate(doc.created_at)"></p>
           </div>
           <div class="flex gap-2">
             <template x-if="doc.audit_status !== 'approved'">
               <button @click="approve()" :disabled="saving" class="btn-primary text-sm px-4 h-9 rounded-xl flex items-center gap-2 disabled:opacity-50">
-                <i data-lucide="check" class="w-4 h-4"></i> اعتماد
+                <i data-lucide="check" class="w-4 h-4"></i> {% trans "Approve" %}
               </button>
             </template>
           </div>
@@ -42,7 +50,7 @@
 
         <!-- Score bar -->
         <div class="flex items-center gap-3">
-          <p class="text-xs text-slate-400 w-24">نقاط التحقق</p>
+          <p class="text-xs text-slate-400 w-24">{% trans "Validation Score" %}</p>
           <div class="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-3">
             <div class="h-3 rounded-full transition-all" :class="scoreColor(doc.validation_score)"
                  :style="'width:' + (doc.validation_score||0) + '%'"></div>
@@ -60,7 +68,7 @@
           <div class="card p-5">
             <h3 class="font-bold text-slate-800 dark:text-white mb-4 text-sm flex items-center gap-2">
               <i data-lucide="file-text" class="w-4 h-4 text-primary-500"></i>
-              البيانات المستخرجة
+              {% trans "Extracted Data" %}
             </h3>
             <div class="grid grid-cols-2 gap-3">
               <template x-for="[k,v] in fields" :key="k">
@@ -77,7 +85,7 @@
             <div class="card p-5">
               <h3 class="font-bold text-slate-800 dark:text-white mb-4 text-sm flex items-center gap-2">
                 <i data-lucide="list" class="w-4 h-4 text-primary-500"></i>
-                التفاصيل (بنود الإيصال)
+                {% trans 'Details (Receipt Items)' %}
               </h3>
               <div class="overflow-x-auto">
                 <table class="w-full text-xs">
@@ -100,11 +108,11 @@
                 </table>
               </div>
               <div x-show="lineItems.length > pageSize" class="mt-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-                <p>عرض <span x-text="pageStart"></span>–<span x-text="pageEnd"></span> من <span x-text="lineItems.length"></span></p>
+                <p>{% trans 'Showing' %} <span x-text="pageStart"></span>–<span x-text="pageEnd"></span> {% trans 'of' %} <span x-text="lineItems.length"></span></p>
                 <div class="flex items-center gap-2">
-                  <button @click="prevPage()" :disabled="currentPage <= 1" class="btn-ghost px-3 py-1 rounded-lg disabled:opacity-50">السابق</button>
-                  <span x-text="'صفحة ' + currentPage + ' / ' + totalPages"></span>
-                  <button @click="nextPage()" :disabled="currentPage >= totalPages" class="btn-ghost px-3 py-1 rounded-lg disabled:opacity-50">التالي</button>
+                  <button @click="prevPage()" :disabled="currentPage <= 1" class="btn-ghost px-3 py-1 rounded-lg disabled:opacity-50">{% trans "Previous" %}</button>
+                  <span x-text="'{% trans "Page" %} ' + currentPage + ' / ' + totalPages"></span>
+                  <button @click="nextPage()" :disabled="currentPage >= totalPages" class="btn-ghost px-3 py-1 rounded-lg disabled:opacity-50">{% trans "Next" %}</button>
                 </div>
               </div>
             </div>
@@ -115,7 +123,7 @@
             <div class="card p-5">
               <h3 class="font-bold text-slate-800 dark:text-white mb-3 text-sm flex items-center gap-2">
                 <i data-lucide="brain-circuit" class="w-4 h-4 text-primary-500"></i>
-                ملخص الذكاء الاصطناعي
+                {% trans "AI Summary" %}
               </h3>
               <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed" x-text="doc.ai_summary"></p>
             </div>
@@ -126,7 +134,7 @@
             <div class="card p-5">
               <h3 class="font-bold text-slate-800 dark:text-white mb-4 text-sm flex items-center gap-2">
                 <i data-lucide="shield-check" class="w-4 h-4 text-primary-500"></i>
-                نتائج التدقيق
+                {% trans "Audit Results" %}
               </h3>
               <div class="space-y-2">
                 <template x-for="rule in ruleDetails" :key="rule.code">
@@ -165,20 +173,20 @@
 
           <!-- Rules passed -->
           <div class="card p-5">
-            <h3 class="font-bold text-slate-800 dark:text-white mb-3 text-sm">نتائج التحقق</h3>
+            <h3 class="font-bold text-slate-800 dark:text-white mb-3 text-sm">{% trans "Validation Results" %}</h3>
             <div class="grid grid-cols-2 gap-3 mb-4">
               <div class="bg-green-50 dark:bg-green-900/20 rounded-xl p-3 text-center">
-                <p class="text-xs text-slate-400 mb-0.5">نجحت</p>
+                <p class="text-xs text-slate-400 mb-0.5">{% trans "Passed" %}</p>
                 <p class="text-xl font-bold text-green-600 font-mono" x-text="doc.rules_passed || 0"></p>
               </div>
               <div class="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 text-center">
-                <p class="text-xs text-slate-400 mb-0.5">فشلت</p>
+                <p class="text-xs text-slate-400 mb-0.5">{% trans "Failed" %}</p>
                 <p class="text-xl font-bold text-red-600 font-mono" x-text="doc.rules_failed || 0"></p>
               </div>
             </div>
             <template x-if="doc.failed_rule_codes && doc.failed_rule_codes.length > 0">
               <div>
-                <p class="text-xs text-slate-400 mb-2">القواعد المخفقة:</p>
+                <p class="text-xs text-slate-400 mb-2">{% trans "Failed rules:" %}</p>
                 <div class="flex flex-wrap gap-1.5">
                   <template x-for="code in doc.failed_rule_codes" :key="code">
                     <span class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-xs font-mono px-2 py-0.5 rounded border border-red-200 dark:border-red-800" x-text="code"></span>
@@ -189,16 +197,16 @@
             <template x-if="!doc.failed_rule_codes || doc.failed_rule_codes.length === 0">
               <div class="flex items-center gap-2 text-green-600 dark:text-green-400 text-sm">
                 <i data-lucide="check-circle" class="w-4 h-4"></i>
-                <span>جميع القواعد نجحت</span>
+                <span>{% trans "All rules passed" %}</span>
               </div>
             </template>
           </div>
 
           <!-- Notes -->
           <div class="card p-5">
-            <h3 class="font-bold text-slate-800 dark:text-white mb-3 text-sm">ملاحظات</h3>
-            <textarea x-model="notes" rows="4" class="input-field w-full text-sm resize-none" placeholder="أضف ملاحظاتك..."></textarea>
-            <button @click="saveNotes()" :disabled="saving" class="w-full mt-2 btn-primary text-sm h-8 rounded-lg disabled:opacity-50">حفظ</button>
+            <h3 class="font-bold text-slate-800 dark:text-white mb-3 text-sm">{% trans "Notes" %}</h3>
+            <textarea x-model="notes" rows="4" class="input-field w-full text-sm resize-none" placeholder="{% trans 'Add your notes...' %}"></textarea>
+            <button @click="saveNotes()" :disabled="saving" class="w-full mt-2 btn-primary text-sm h-8 rounded-lg disabled:opacity-50">{% trans "Save" %}</button>
           </div>
 
         </div>
@@ -208,7 +216,7 @@
 </div>
 {%  endblock %}
 
-{%  block scripts %}
+{% block extra_scripts %}
 <script>
 function docDetail() {
   const docId   = window.location.pathname.split('/').filter(Boolean).pop();
@@ -221,18 +229,18 @@ function docDetail() {
         this.doc = await apiFetch(apiPath + docId + '/');
         this.notes = this.doc.notes || '';
         this.currentPage = 1;
-      } catch(e) { notify('خطأ في التحميل', 'error'); }
+      } catch(e) { notify('Loading error', 'error'); }
       finally { this.loading = false; this.$nextTick(() => lucide.createIcons()); }
     },
 
-    get docTitle() { return this.doc.receipt_number || 'إيصال ' + this.doc.id?.slice(0,8); },
+    get docTitle() { return this.doc.receipt_number || "{% trans 'Receipt' %} " + this.doc.id?.slice(0,8); },
     get fields() { return [
-        ['رقم الإيصال', this.doc.receipt_number],['التاريخ', this.doc.receipt_date],
-        ['النوع', this.doc.receipt_type],['البائع', this.doc.seller_name],
-        ['الرقم الضريبي للبائع', this.doc.seller_vat_number],['العميل', this.doc.customer_name],
-        ['المبلغ قبل الضريبة', this.fmtNum(this.doc.subtotal)],['نسبة الضريبة', (this.doc.vat_rate||15) + '%'],
-        ['مبلغ الضريبة', this.fmtNum(this.doc.vat_amount)],['الإجمالي', this.fmtNum(this.doc.total_amount)],
-        ['QR Code', this.doc.has_qr_code ? (this.doc.qr_code_valid ? '✅ صحيح' : '⚠️ غير صحيح') : '❌ مفقود'],['مكرر', this.doc.is_duplicate ? '⚠️ نعم' : '✅ لا'],
+        ["{% trans 'Receipt Number' %}", this.doc.receipt_number],["{% trans 'Date' %}", this.doc.receipt_date],
+        ["{% trans 'Type' %}", this.doc.receipt_type],["{% trans 'Seller' %}", this.doc.seller_name],
+        ["{% trans 'Seller VAT Number' %}", this.doc.seller_vat_number],["{% trans 'Customer' %}", this.doc.customer_name],
+        ["{% trans 'Subtotal' %}", this.fmtNum(this.doc.subtotal)],["{% trans 'VAT Rate' %}", (this.doc.vat_rate||15) + '%'],
+        ["{% trans 'VAT Amount' %}", this.fmtNum(this.doc.vat_amount)],["{% trans 'Total' %}", this.fmtNum(this.doc.total_amount)],
+        ['QR Code', this.doc.has_qr_code ? (this.doc.qr_code_valid ? "✅ {% trans 'Valid' %}" : "⚠️ {% trans 'Invalid' %}") : "❌ {% trans 'Missing' %}"],["{% trans 'Duplicate' %}", this.doc.is_duplicate ? "⚠️ {% trans 'Yes' %}" : "✅ {% trans 'No' %}"],
       ]; },
     get lineItems() { return this.doc.line_items || []; },
     get paginatedLineItems() {
@@ -242,7 +250,7 @@ function docDetail() {
     get totalPages() { return Math.max(1, Math.ceil(this.lineItems.length / this.pageSize)); },
     get pageStart() { return this.lineItems.length ? ((this.currentPage - 1) * this.pageSize) + 1 : 0; },
     get pageEnd() { return Math.min(this.currentPage * this.pageSize, this.lineItems.length); },
-    get itemCols() { return ['الوصف','الكمية','سعر الوحدة','الإجمالي']; },
+    get itemCols() { return ["{% trans 'Description' %}","{% trans 'Quantity' %}","{% trans 'Unit Price' %}","{% trans 'Total' %}"]; },
     get itemKeys() { return ['description','qty','unit_price','total']; },
     nextPage() { if (this.currentPage < this.totalPages) this.currentPage += 1; },
     prevPage() { if (this.currentPage > 1) this.currentPage -= 1; },
@@ -256,8 +264,8 @@ function docDetail() {
         });
         const d = await r.json();
         this.doc.audit_status = d.audit_status || 'approved';
-        notify('تم الاعتماد', 'success');
-      } catch(e) { notify('خطأ', 'error'); }
+        notify("{% trans 'Approved' %}", 'success');
+      } catch(e) { notify("{% trans 'Error' %}", 'error'); }
       finally { this.saving = false; }
     },
 
@@ -268,19 +276,19 @@ function docDetail() {
           method: 'PATCH', headers: {'Content-Type':'application/json'},
           body: JSON.stringify({ notes: this.notes })
         });
-        notify('تم الحفظ', 'success');
-      } catch(e) { notify('خطأ', 'error'); }
+        notify("{% trans 'Saved' %}", 'success');
+      } catch(e) { notify("{% trans 'Error' %}", 'error'); }
       finally { this.saving = false; }
     },
 
     get ruleDetails() { return this.doc?.validation_details?.rule_details || []; },
-    severityLabel(s) { return {critical:'حرج',high:'عالي',medium:'متوسط',low:'منخفض'}[s]??s; },
+    severityLabel(s) { return (window.TADGEEG_I18N?.severity?.[s]) || s; },
     fmtDate(d) { return d ? new Date(d).toLocaleString(APP_LOCALE) : '—'; },
     fmtNum(v) { return v ? Number(v).toLocaleString(APP_LOCALE, {maximumFractionDigits:2}) : '—'; },
     scoreColor(s) { return s>=85?'bg-green-500':s>=70?'bg-amber-400':s>=50?'bg-orange-500':'bg-red-500'; },
-    riskLabel(l) { return {critical:'حرج',high:'عالي',medium:'متوسط',low:'منخفض'}[l]??l; },
+    riskLabel(l) { return (window.TADGEEG_I18N?.risk?.[l]) || l; },
     riskBadge(l) { return {critical:'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',high:'bg-orange-50 text-orange-700 border-orange-200',medium:'bg-amber-50 text-amber-700 border-amber-200',low:'bg-green-50 text-green-700 border-green-200'}[l]??''; },
-    statusLabel(s) { return {validated:'تم التحقق',flagged:'مُعلَّق',approved:'مُعتمَد',pending:'قيد الانتظار',rejected:'مرفوض'}[s]??s; },
+    statusLabel(s) { return (window.TADGEEG_I18N?.status?.[s]) || s; },
     statusBadge(s) { return {validated:'bg-blue-50 text-blue-700 border-blue-200',flagged:'bg-amber-50 text-amber-700 border-amber-200',approved:'bg-green-50 text-green-700 border-green-200',rejected:'bg-red-50 text-red-700 border-red-200',pending:'bg-slate-50 text-slate-600 border-slate-200'}[s]??''; },
   }
 }

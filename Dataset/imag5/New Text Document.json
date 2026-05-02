@@ -1,0 +1,34 @@
+{
+  "invoice_metadata": {
+    "invoice_number": "INV-R3-2022-0001",
+    "issue_date": "02-01-2022",
+    "due_date": "02-01-2022",
+    "currency": "SAR"
+  },
+  "seller_info": {
+    "name": "الركن الثالث للاستشارات الزكاة والضريبية",
+    "tax_id": "302250102100003",
+    "cr_number": "1010468738",
+    "address": "الرياض - المملكة العربية السعودية"
+  },
+  "customer_info": {
+    "name": "ابراهيم حسن اسعد مالكي",
+    "tax_id": "310724486100003"
+  },
+  "line_items": [
+    {
+      "sr": 1,
+      "description": "قيمة 50% من الدفعة الأولى حسب ما تم الاتفاق عليه في العقد الخاص بالدعاوى المرفوعة على الامانة العامة للجان الضريبية",
+      "unit": 1,
+      "amount_excl_vat": 10000,
+      "tax_rate": "15.0%",
+      "tax_amount": 1500,
+      "total_incl_vat": 11500
+    }
+  ],
+  "financial_summary": {
+    "total_before_tax": 10000,
+    "tax_amount": 1500,
+    "total_amount": 11500.00
+  }
+}

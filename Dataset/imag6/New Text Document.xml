@@ -1,0 +1,15 @@
+<TaxInvoice>
+    <Header>
+        <InvoiceNo>231000171</InvoiceNo>
+        <IssueDate>2023-12-13</IssueDate>
+    </Header>
+    <Seller>
+        <Name>GOLDEN SIDE</Name>
+        <VATID>310310970400003</VATID>
+    </Seller>
+    <Totals>
+        <NetTotal>2120</NetTotal>
+        <TaxAmount>315</TaxAmount>
+        <GrandTotal>2435</GrandTotal>
+    </Totals>
+</TaxInvoice>

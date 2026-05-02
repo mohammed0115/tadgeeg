@@ -1,4 +1,5 @@
 {% load i18n static report_filters %}
+{% load i18n %}
 {% get_current_language as LANGUAGE_CODE %}
 {% get_current_language_bidi as LANGUAGE_BIDI %}
 <!DOCTYPE html>
@@ -168,17 +169,17 @@
       <span class="text-white text-sm font-bold">T</span>
     </div>
     <span class="font-semibold text-slate-700 text-sm">
-      {% if is_rtl %}منصة تدقيق — تقرير مستند{% else %}Tadgeeg — Document Audit Report{% endif %}
+      {% trans 'Tadgeeg — Document Audit Report' %}
     </span>
   </div>
   <div class="flex items-center gap-2">
     <button onclick="window.print()"
       class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-800 text-white text-sm hover:bg-blue-900 transition">
-      🖨️ {% if is_rtl %}طباعة / PDF{% else %}Print / PDF{% endif %}
+      🖨️ {% trans 'Print / PDF' %}
     </button>
     <button onclick="window.history.back()"
       class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 text-sm hover:bg-slate-50 transition">
-      ← {% if is_rtl %}رجوع{% else %}Back{% endif %}
+      ← {% trans 'Back' %}
     </button>
   </div>
 </div>
@@ -195,20 +196,20 @@
       <!-- Org & Doc info -->
       <div>
         <div class="text-blue-200 text-xs font-medium uppercase tracking-widest mb-1">
-          {% if is_rtl %}{{ meta.document_type_label_ar }}{% else %}{{ meta.document_type_label_en }}{% endif %}
+          {% blocktrans with v0=meta.document_type_label_en %}{{ v0 }}{% endblocktrans %}
         </div>
         <h1 class="text-2xl font-bold mb-1">{{ meta.organization_name }}</h1>
         <div class="text-blue-100 text-sm space-y-0.5">
           <div>
-            {% if is_rtl %}رقم المستند:{% else %}Document #:{% endif %}
+            {% trans 'Document #:' %}
             <span class="font-mono font-semibold">{{ key_fields.document_number|default:"—" }}</span>
           </div>
           <div>
-            {% if is_rtl %}التاريخ:{% else %}Date:{% endif %}
+            {% trans 'Date:' %}
             {{ key_fields.document_date|default:"—" }}
           </div>
           <div>
-            {% if is_rtl %}تم التوليد:{% else %}Generated:{% endif %}
+            {% trans 'Generated:' %}
             {{ meta.generated_at }}
           </div>
         </div>
@@ -220,37 +221,37 @@
         <div class="mb-3">
           {% if meta.status == "clean" %}
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-100 text-green-800 font-semibold text-sm">
-              ✅ {% if is_rtl %}نظيف{% else %}Clean{% endif %}
+              ✅ {% trans "Clean" %}
             </span>
           {% elif meta.status == "critical" %}
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-100 text-purple-800 font-semibold text-sm">
-              🚨 {% if is_rtl %}حرج{% else %}Critical{% endif %}
+              🚨 {% trans 'Critical' %}
             </span>
           {% elif meta.status == "issues_found" %}
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-yellow-100 text-yellow-800 font-semibold text-sm">
-              ⚠️ {% if is_rtl %}يحتوي على مشاكل{% else %}Issues Found{% endif %}
+              ⚠️ {% trans 'Issues Found' %}
             </span>
           {% else %}
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 text-slate-700 font-semibold text-sm">
-              ⏳ {% if is_rtl %}لم يُدقَّق{% else %}Not Audited{% endif %}
+              ⏳ {% trans 'Not Audited' %}
             </span>
           {% endif %}
         </div>
         <!-- Risk Level -->
         {% if summary.risk_level %}
         <div class="text-blue-100 text-xs">
-          {% if is_rtl %}مستوى المخاطر:{% else %}Risk Level:{% endif %}
+          {% trans 'Risk Level:' %}
           <span class="font-bold text-white">
-            {% if is_rtl %}{{ summary.risk_level_ar }}{% else %}{{ summary.risk_level|upper }}{% endif %}
+            {% blocktrans with v0=summary.risk_level|upper %}{{ v0 }}{% endblocktrans %}
           </span>
         </div>
         <div class="text-blue-100 text-xs mt-0.5">
-          {% if is_rtl %}درجة المخاطرة:{% else %}Risk Score:{% endif %}
+          {% trans 'Risk Score:' %}
           <span class="font-bold text-white">{{ summary.risk_score|floatformat:1 }} / 100</span>
         </div>
         {% endif %}
         <div class="text-blue-200 text-xs mt-2">
-          {% if is_rtl %}المدقق:{% else %}Auditor:{% endif %}
+          {% trans 'Auditor:' %}
           {{ trail.auditor|default:"System" }}
         </div>
       </div>
@@ -260,7 +261,7 @@
   <!-- Quick compliance bar -->
   {% if summary.total_rules or summary.average_score %}
   <div class="px-8 py-3 bg-blue-50 border-t border-blue-100 flex items-center gap-4 text-sm flex-wrap">
-    <span class="text-slate-500 text-xs">{% if is_rtl %}الامتثال الإجمالي{% else %}Overall Compliance{% endif %}</span>
+    <span class="text-slate-500 text-xs">{% trans 'Overall Compliance' %}</span>
     <div class="flex-1 min-w-[120px] risk-bar risk-{{ summary.risk_level|default:'low' }}">
       {% if meta.document_id %}
       <div class="risk-fill" style="width: {{ summary.pass_rate }}%"></div>
@@ -274,10 +275,10 @@
     <span class="font-semibold text-blue-900 text-xs">{{ summary.average_score|floatformat:1 }}%</span>
     {% endif %}
     {% if summary.blocks_approval %}
-    <span class="pill pill-fail">🔒 {% if is_rtl %}يمنع الاعتماد{% else %}Blocks Approval{% endif %}</span>
+    <span class="pill pill-fail">🔒 {% trans 'Blocks Approval' %}</span>
     {% endif %}
     {% if summary.requires_manual_review %}
-    <span class="pill pill-warning">👁 {% if is_rtl %}يحتاج مراجعة يدوية{% else %}Manual Review Required{% endif %}</span>
+    <span class="pill pill-warning">👁 {% trans 'Manual Review Required' %}</span>
     {% endif %}
   </div>
   {% endif %}
@@ -290,7 +291,7 @@
 <div class="section-card">
   <div class="section-header">
     <div class="icon bg-blue-100 text-blue-700">📊</div>
-    <h2 class="font-semibold text-slate-800">{% if is_rtl %}الملخص التنفيذي{% else %}Executive Summary{% endif %}</h2>
+    <h2 class="font-semibold text-slate-800">{% trans 'Executive Summary' %}</h2>
   </div>
   <div class="section-body">
 
@@ -300,30 +301,30 @@
     <div class="kpi-card border-blue-100">
       <div class="kpi-value text-blue-800">{{ summary.total_amount|floatformat:0|default:"—" }}</div>
       <div class="kpi-label">
-        {% if is_rtl %}الإجمالي ({{ summary.currency }}){% else %}Total ({{ summary.currency }}){% endif %}
+        {% blocktrans with v0=summary.currency %}Total ({{ v0 }}){% endblocktrans %}
       </div>
     </div>
     <div class="kpi-card border-green-100">
       <div class="kpi-value text-green-600">{{ summary.rules_passed|default:0 }}</div>
-      <div class="kpi-label">{% if is_rtl %}قواعد ناجحة{% else %}Rules Passed{% endif %}</div>
+      <div class="kpi-label">{% trans 'Rules Passed' %}</div>
     </div>
     <div class="kpi-card border-red-100">
       <div class="kpi-value text-red-600">{{ summary.rules_failed|default:0 }}</div>
-      <div class="kpi-label">{% if is_rtl %}قواعد فاشلة{% else %}Rules Failed{% endif %}</div>
+      <div class="kpi-label">{% trans 'Rules Failed' %}</div>
     </div>
     <div class="kpi-card border-yellow-100">
       <div class="kpi-value text-yellow-600">{{ summary.rules_warning|default:0 }}</div>
-      <div class="kpi-label">{% if is_rtl %}تحذيرات{% else %}Warnings{% endif %}</div>
+      <div class="kpi-label">{% trans 'Warnings' %}</div>
     </div>
     <div class="kpi-card border-purple-100">
       <div class="kpi-value text-purple-600">{{ summary.blocking_failures|default:0 }}</div>
-      <div class="kpi-label">{% if is_rtl %}تمنع الاعتماد{% else %}Block Approval{% endif %}</div>
+      <div class="kpi-label">{% trans 'Block Approval' %}</div>
     </div>
     <div class="kpi-card {% if summary.error_rate > 20 %}border-red-200{% elif summary.error_rate > 5 %}border-yellow-200{% else %}border-green-200{% endif %}">
       <div class="kpi-value {% if summary.error_rate > 20 %}text-red-600{% elif summary.error_rate > 5 %}text-yellow-600{% else %}text-green-600{% endif %}">
         {{ summary.error_rate|floatformat:1 }}%
       </div>
-      <div class="kpi-label">{% if is_rtl %}نسبة الأخطاء{% else %}Error Rate{% endif %}</div>
+      <div class="kpi-label">{% trans 'Error Rate' %}</div>
     </div>
   </div>
 
@@ -332,27 +333,27 @@
   <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
     <div class="kpi-card border-blue-100">
       <div class="kpi-value text-blue-800">{{ summary.total_documents|default:0 }}</div>
-      <div class="kpi-label">{% if is_rtl %}إجمالي المستندات{% else %}Total Documents{% endif %}</div>
+      <div class="kpi-label">{% trans 'Total Documents' %}</div>
     </div>
     <div class="kpi-card border-green-100">
       <div class="kpi-value text-green-600">{{ summary.average_score|floatformat:1|default:"—" }}%</div>
-      <div class="kpi-label">{% if is_rtl %}متوسط الدرجة{% else %}Average Score{% endif %}</div>
+      <div class="kpi-label">{% trans 'Average Score' %}</div>
     </div>
     <div class="kpi-card border-red-100">
       <div class="kpi-value text-red-600">{{ summary.high_risk_count|default:0 }}</div>
-      <div class="kpi-label">{% if is_rtl %}مخاطر عالية{% else %}High Risk{% endif %}</div>
+      <div class="kpi-label">{% trans 'High Risk' %}</div>
     </div>
     <div class="kpi-card border-yellow-100">
       <div class="kpi-value text-yellow-600">{{ summary.flagged_count|default:0 }}</div>
-      <div class="kpi-label">{% if is_rtl %}مُعلَّق{% else %}Flagged{% endif %}</div>
+      <div class="kpi-label">{% trans 'Flagged' %}</div>
     </div>
     <div class="kpi-card border-purple-100">
       <div class="kpi-value text-purple-600">{{ summary.risk_distribution.critical|default:0 }}</div>
-      <div class="kpi-label">{% if is_rtl %}خطر حرج{% else %}Critical Risk{% endif %}</div>
+      <div class="kpi-label">{% trans 'Critical Risk' %}</div>
     </div>
     <div class="kpi-card border-green-200">
       <div class="kpi-value text-green-600">{{ summary.clean_count|default:0 }}</div>
-      <div class="kpi-label">{% if is_rtl %}نظيف{% else %}Clean{% endif %}</div>
+      <div class="kpi-label">{% trans 'Clean' %}</div>
     </div>
   </div>
   {% endif %}
@@ -371,36 +372,36 @@
   <div class="section-header">
     <div class="icon bg-red-100 text-red-700">🚨</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}المستندات عالية المخاطر ({{ report.high_risk_documents|length }}){% else %}High-Risk Documents ({{ report.high_risk_documents|length }}){% endif %}
+      {% blocktrans with v0=report.high_risk_documents|length %}High-Risk Documents ({{ v0 }}){% endblocktrans %}
     </h2>
   </div>
   <div class="section-body p-0 overflow-x-auto">
     <table class="rule-table">
       <thead>
         <tr>
-          <th>{% if is_rtl %}المعرف{% else %}ID{% endif %}</th>
-          <th>{% if is_rtl %}مستوى الخطر{% else %}Risk Level{% endif %}</th>
-          <th>{% if is_rtl %}الدرجة{% else %}Score{% endif %}</th>
-          <th>{% if is_rtl %}الحالة{% else %}Status{% endif %}</th>
-          <th>{% if is_rtl %}القواعد الفاشلة{% else %}Failed Rules{% endif %}</th>
+          <th>{% trans 'ID' %}</th>
+          <th>{% trans 'Risk Level' %}</th>
+          <th>{% trans 'Score' %}</th>
+          <th>{% trans 'Status' %}</th>
+          <th>{% trans 'Failed Rules' %}</th>
         </tr>
       </thead>
       <tbody>
         {% for doc in report.high_risk_documents %}
         <tr>
           <td class="font-mono text-xs text-slate-500">{{ doc.id|slice:":8" }}…</td>
-          <td><span class="pill pill-{{ doc.risk_level }}">{% if is_rtl %}{{ doc.risk_level_ar }}{% else %}{{ doc.risk_level|upper }}{% endif %}</span></td>
+          <td><span class="pill pill-{{ doc.risk_level }}">{% blocktrans with v0=doc.risk_level|upper %}{{ v0 }}{% endblocktrans %}</span></td>
           <td class="font-semibold {% if doc.validation_score < 60 %}text-red-600{% elif doc.validation_score < 80 %}text-yellow-600{% else %}text-green-600{% endif %}">
             {{ doc.validation_score|floatformat:1 }}%
           </td>
           <td>
             <span class="pill pill-{% if doc.audit_status == 'flagged' %}fail{% elif doc.audit_status == 'approved' %}pass{% else %}warning{% endif %}">
               {% if doc.audit_status == 'approved' %}
-                {% if is_rtl %}معتمد{% else %}Approved{% endif %}
+                {% trans 'Approved' %}
               {% elif doc.audit_status == 'flagged' %}
-                {% if is_rtl %}مُعلّق{% else %}Flagged{% endif %}
+                {% trans 'Flagged' %}
               {% elif doc.audit_status == 'rejected' %}
-                {% if is_rtl %}مرفوض{% else %}Rejected{% endif %}
+                {% trans 'Rejected' %}
               {% else %}
                 {{ doc.audit_status }}
               {% endif %}
@@ -420,7 +421,7 @@
   <div class="section-header">
     <div class="icon bg-orange-100 text-orange-700">⚠️</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}أكثر المخالفات تكراراً{% else %}Most Frequent Violations{% endif %}
+      {% trans 'Most Frequent Violations' %}
     </h2>
   </div>
   <div class="section-body">
@@ -440,7 +441,7 @@
   <div class="section-header">
     <div class="icon bg-slate-100 text-slate-600">📋</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}قائمة المستندات ({{ report.document_list|length }}){% else %}Document List ({{ report.document_list|length }}){% endif %}
+      {% blocktrans with v0=report.document_list|length %}Document List ({{ v0 }}){% endblocktrans %}
     </h2>
   </div>
   <div class="section-body p-0 overflow-x-auto">
@@ -448,11 +449,11 @@
       <thead>
         <tr>
           <th>#</th>
-          <th>{% if is_rtl %}المعرف{% else %}Document ID{% endif %}</th>
-          <th>{% if is_rtl %}مستوى الخطر{% else %}Risk{% endif %}</th>
-          <th>{% if is_rtl %}الدرجة{% else %}Score{% endif %}</th>
-          <th>{% if is_rtl %}الحالة{% else %}Status{% endif %}</th>
-          <th>{% if is_rtl %}تاريخ الإنشاء{% else %}Created{% endif %}</th>
+          <th>{% trans 'Document ID' %}</th>
+          <th>{% trans 'Risk' %}</th>
+          <th>{% trans 'Score' %}</th>
+          <th>{% trans 'Status' %}</th>
+          <th>{% trans 'Created' %}</th>
         </tr>
       </thead>
       <tbody>
@@ -467,11 +468,11 @@
           <td>
             <span class="pill pill-{% if doc.audit_status == 'flagged' %}fail{% elif doc.audit_status == 'approved' %}pass{% else %}warning{% endif %}">
               {% if doc.audit_status == 'approved' %}
-                {% if is_rtl %}معتمد{% else %}Approved{% endif %}
+                {% trans 'Approved' %}
               {% elif doc.audit_status == 'flagged' %}
-                {% if is_rtl %}مُعلّق{% else %}Flagged{% endif %}
+                {% trans 'Flagged' %}
               {% elif doc.audit_status == 'rejected' %}
-                {% if is_rtl %}مرفوض{% else %}Rejected{% endif %}
+                {% trans 'Rejected' %}
               {% else %}
                 {{ doc.audit_status }}
               {% endif %}
@@ -497,55 +498,55 @@
 <div class="section-card">
   <div class="section-header">
     <div class="icon bg-slate-100 text-slate-600">📋</div>
-    <h2 class="font-semibold text-slate-800">{% if is_rtl %}الحقول الأساسية{% else %}Key Fields{% endif %}</h2>
+    <h2 class="font-semibold text-slate-800">{% trans 'Key Fields' %}</h2>
   </div>
   <div class="section-body">
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
       {% if key_fields.counterparty %}
       <div class="flex justify-between py-1.5 border-b border-slate-50">
-        <span class="text-slate-500">{% if is_rtl %}المورد / العميل{% else %}Vendor / Customer{% endif %}</span>
+        <span class="text-slate-500">{% trans 'Vendor / Customer' %}</span>
         <span class="font-medium text-slate-800">{{ key_fields.counterparty }}</span>
       </div>
       {% endif %}
       {% if key_fields.tax_id %}
       <div class="flex justify-between py-1.5 border-b border-slate-50">
-        <span class="text-slate-500">{% if is_rtl %}الرقم الضريبي{% else %}VAT Number{% endif %}</span>
+        <span class="text-slate-500">{% trans 'VAT Number' %}</span>
         <span class="font-mono font-medium text-slate-800">{{ key_fields.tax_id }}</span>
       </div>
       {% endif %}
       {% if key_fields.document_date %}
       <div class="flex justify-between py-1.5 border-b border-slate-50">
-        <span class="text-slate-500">{% if is_rtl %}التاريخ{% else %}Date{% endif %}</span>
+        <span class="text-slate-500">{% trans 'Date' %}</span>
         <span class="font-medium">{{ key_fields.document_date }}</span>
       </div>
       {% endif %}
       {% if key_fields.currency %}
       <div class="flex justify-between py-1.5 border-b border-slate-50">
-        <span class="text-slate-500">{% if is_rtl %}العملة{% else %}Currency{% endif %}</span>
+        <span class="text-slate-500">{% trans 'Currency' %}</span>
         <span class="font-medium">{{ key_fields.currency }}</span>
       </div>
       {% endif %}
       {% if key_fields.subtotal %}
       <div class="flex justify-between py-1.5 border-b border-slate-50">
-        <span class="text-slate-500">{% if is_rtl %}الأساس قبل الضريبة{% else %}Subtotal{% endif %}</span>
+        <span class="text-slate-500">{% trans 'Subtotal' %}</span>
         <span class="font-semibold text-slate-800">{{ key_fields.subtotal|floatformat:2 }} {{ key_fields.currency }}</span>
       </div>
       {% endif %}
       {% if key_fields.vat_amount %}
       <div class="flex justify-between py-1.5 border-b border-slate-50">
-        <span class="text-slate-500">{% if is_rtl %}ضريبة القيمة المضافة{% else %}VAT Amount{% endif %}</span>
+        <span class="text-slate-500">{% trans 'VAT Amount' %}</span>
         <span class="font-semibold">{{ key_fields.vat_amount|floatformat:2 }} {{ key_fields.currency }}</span>
       </div>
       {% endif %}
       {% if key_fields.total_amount %}
       <div class="flex justify-between py-1.5 border-b border-slate-50">
-        <span class="text-slate-500">{% if is_rtl %}الإجمالي الكلي{% else %}Total Amount{% endif %}</span>
+        <span class="text-slate-500">{% trans 'Total Amount' %}</span>
         <span class="font-bold text-blue-800 text-base">{{ key_fields.total_amount|floatformat:2 }} {{ key_fields.currency }}</span>
       </div>
       {% endif %}
       {% if key_fields.cost_center %}
       <div class="flex justify-between py-1.5 border-b border-slate-50">
-        <span class="text-slate-500">{% if is_rtl %}مركز التكلفة{% else %}Cost Center{% endif %}</span>
+        <span class="text-slate-500">{% trans 'Cost Center' %}</span>
         <span class="font-medium">{{ key_fields.cost_center }}</span>
       </div>
       {% endif %}
@@ -553,13 +554,13 @@
       <!-- Bank Statement extras -->
       {% if key_fields.opening_balance is not None %}
       <div class="flex justify-between py-1.5 border-b border-slate-50">
-        <span class="text-slate-500">{% if is_rtl %}رصيد الافتتاح{% else %}Opening Balance{% endif %}</span>
+        <span class="text-slate-500">{% trans 'Opening Balance' %}</span>
         <span class="font-medium">{{ key_fields.opening_balance|floatformat:2 }}</span>
       </div>
       {% endif %}
       {% if key_fields.closing_balance is not None %}
       <div class="flex justify-between py-1.5 border-b border-slate-50">
-        <span class="text-slate-500">{% if is_rtl %}رصيد الإغلاق{% else %}Closing Balance{% endif %}</span>
+        <span class="text-slate-500">{% trans 'Closing Balance' %}</span>
         <span class="font-medium">{{ key_fields.closing_balance|floatformat:2 }}</span>
       </div>
       {% endif %}
@@ -567,7 +568,7 @@
       <!-- Payroll extras -->
       {% if key_fields.employee_count %}
       <div class="flex justify-between py-1.5 border-b border-slate-50">
-        <span class="text-slate-500">{% if is_rtl %}عدد الموظفين{% else %}Employee Count{% endif %}</span>
+        <span class="text-slate-500">{% trans 'Employee Count' %}</span>
         <span class="font-medium">{{ key_fields.employee_count }}</span>
       </div>
       {% endif %}
@@ -575,7 +576,7 @@
       <!-- VAT extras -->
       {% if key_fields.net_vat_payable is not None %}
       <div class="flex justify-between py-1.5 border-b border-slate-50">
-        <span class="text-slate-500">{% if is_rtl %}صافي الضريبة المستحقة{% else %}Net VAT Payable{% endif %}</span>
+        <span class="text-slate-500">{% trans 'Net VAT Payable' %}</span>
         <span class="font-bold text-blue-800">{{ key_fields.net_vat_payable|floatformat:2 }} SAR</span>
       </div>
       {% endif %}
@@ -586,15 +587,15 @@
     <div class="mt-3 flex gap-2 flex-wrap">
       {% if key_fields.has_qr_code %}
         {% if key_fields.qr_code_valid %}
-        <span class="pill pill-pass">✅ {% if is_rtl %}رمز QR صالح{% else %}QR Code Valid{% endif %}</span>
+        <span class="pill pill-pass">✅ {% trans 'QR Code Valid' %}</span>
         {% else %}
-        <span class="pill pill-fail">❌ {% if is_rtl %}رمز QR غير صالح{% else %}QR Code Invalid{% endif %}</span>
+        <span class="pill pill-fail">❌ {% trans 'QR Code Invalid' %}</span>
         {% endif %}
       {% else %}
-        <span class="pill pill-warning">⚠️ {% if is_rtl %}رمز QR مفقود{% else %}QR Code Missing{% endif %}</span>
+        <span class="pill pill-warning">⚠️ {% trans 'QR Code Missing' %}</span>
       {% endif %}
       {% if key_fields.is_duplicate %}
-      <span class="pill pill-fail">🔁 {% if is_rtl %}فاتورة مكررة{% else %}Duplicate{% endif %}</span>
+      <span class="pill pill-fail">🔁 {% trans 'Duplicate' %}</span>
       {% endif %}
     </div>
     {% endif %}
@@ -611,8 +612,7 @@
   <div class="section-header">
     <div class="icon bg-indigo-100 text-indigo-700">⚖️</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}نتائج تقييم القواعد ({{ rules|length }} قاعدة)
-      {% else %}Rule Evaluation Results ({{ rules|length }} rules){% endif %}
+      {% blocktrans with v0=rules|length %}Rule Evaluation Results ({{ v0 }} rules){% endblocktrans %}
     </h2>
     <div class="ms-auto flex gap-2 text-xs">
       <span class="pill pill-pass">✓ {{ summary.rules_passed }}</span>
@@ -624,12 +624,12 @@
     <table class="rule-table">
       <thead>
         <tr>
-          <th>{% if is_rtl %}الكود{% else %}Code{% endif %}</th>
-          <th>{% if is_rtl %}اسم القاعدة{% else %}Rule Name{% endif %}</th>
-          <th>{% if is_rtl %}الحالة{% else %}Status{% endif %}</th>
-          <th>{% if is_rtl %}الخطورة{% else %}Severity{% endif %}</th>
-          <th>{% if is_rtl %}الوصف{% else %}Description{% endif %}</th>
-          <th>{% if is_rtl %}يمنع الاعتماد{% else %}Blocks{% endif %}</th>
+          <th>{% trans 'Code' %}</th>
+          <th>{% trans 'Rule Name' %}</th>
+          <th>{% trans 'Status' %}</th>
+          <th>{% trans 'Severity' %}</th>
+          <th>{% trans 'Description' %}</th>
+          <th>{% trans 'Blocks' %}</th>
         </tr>
       </thead>
       <tbody>
@@ -640,32 +640,31 @@
           </td>
           <td>
             <div class="font-medium text-slate-800">
-              {% if is_rtl %}{{ rule.rule_name_ar }}{% else %}{{ rule.rule_name_en }}{% endif %}
+              {% blocktrans with v0=rule.rule_name_en %}{{ v0 }}{% endblocktrans %}
             </div>
           </td>
           <td>
             <span class="pill pill-{{ rule.status|lower }}">
               {% if rule.status == "pass" %}✓{% elif rule.status == "fail" %}✗{% elif rule.status == "warning" %}⚠{% else %}—{% endif %}
-              {% if is_rtl %}{{ rule.status_ar }}{% else %}{{ rule.status|upper }}{% endif %}
+              {% blocktrans with v0=rule.status|upper %}{{ v0 }}{% endblocktrans %}
             </span>
           </td>
           <td>
             <span class="pill pill-{{ rule.severity|lower }}">
-              {% if is_rtl %}{{ rule.severity_ar }}{% else %}{{ rule.severity|upper }}{% endif %}
+              {% blocktrans with v0=rule.severity|upper %}{{ v0 }}{% endblocktrans %}
             </span>
           </td>
           <td class="max-w-xs">
             <div class="text-slate-700 text-xs leading-relaxed">
-              {% if is_rtl %}{{ rule.explanation_ar|default:rule.explanation_en }}
-              {% else %}{{ rule.explanation_en|default:rule.explanation_ar }}{% endif %}
+              {% blocktrans with v0=rule.explanation_en|default:rule.explanation_ar %}{{ v0 }}{% endblocktrans %}
             </div>
             {% for ev in rule.evidence %}
             <div class="evidence-block mt-1">
               <span class="font-semibold text-slate-600">
-                {% if is_rtl %}{{ ev.field_name_ar|default:ev.field_name }}{% else %}{{ ev.field_name }}{% endif %}:
+                {% blocktrans with v0=ev.field_name %}{{ v0 }}{% endblocktrans %}:
               </span>
-              {% if is_rtl %}المتوقع{% else %}Expected{% endif %} <code class="text-green-700">{{ ev.expected }}</code>
-              → {% if is_rtl %}الفعلي{% else %}Actual{% endif %} <code class="text-red-700">{{ ev.actual }}</code>
+              {% trans 'Expected' %} <code class="text-green-700">{{ ev.expected }}</code>
+              → {% trans 'Actual' %} <code class="text-red-700">{{ ev.actual }}</code>
             </div>
             {% endfor %}
           </td>
@@ -680,7 +679,7 @@
         {% empty %}
         <tr>
           <td colspan="6" class="text-center text-slate-400 py-8">
-            {% if is_rtl %}لا توجد نتائج تدقيق متاحة{% else %}No audit results available{% endif %}
+            {% trans 'No audit results available' %}
           </td>
         </tr>
         {% endfor %}
@@ -699,7 +698,7 @@
   <div class="section-header">
     <div class="icon bg-red-100 text-red-700">🚨</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}المخالفات ({{ violations|length }}){% else %}Violations ({{ violations|length }}){% endif %}
+      {% blocktrans with v0=violations|length %}Violations ({{ v0 }}){% endblocktrans %}
     </h2>
   </div>
   <div class="section-body">
@@ -708,30 +707,30 @@
       <div class="flex items-start justify-between gap-3 flex-wrap">
         <div class="flex items-center gap-2">
           <span class="pill pill-{{ v.severity }}">
-            {% if is_rtl %}{{ v.severity_ar }}{% else %}{{ v.severity|upper }}{% endif %}
+            {% blocktrans with v0=v.severity|upper %}{{ v0 }}{% endblocktrans %}
           </span>
           <span class="font-mono text-xs text-slate-400">{{ v.rule_code }}</span>
           {% if v.blocks_approval %}
-          <span class="pill pill-fail text-xs">🔒 {% if is_rtl %}يمنع الاعتماد{% else %}Blocks Approval{% endif %}</span>
+          <span class="pill pill-fail text-xs">🔒 {% trans 'Blocks Approval' %}</span>
           {% endif %}
         </div>
         {% if v.financial_impact %}
         <span class="text-xs text-slate-500">
-          {% if is_rtl %}التأثير المالي:{% else %}Financial Impact:{% endif %}
+          {% trans 'Financial Impact:' %}
           <strong>{{ v.financial_impact|floatformat:2 }} SAR</strong>
         </span>
         {% endif %}
       </div>
 
       <div class="mt-2 font-semibold text-slate-800 text-sm">
-        {% if is_rtl %}{{ v.title_ar }}{% else %}{{ v.title_en }}{% endif %}
+        {% blocktrans with v0=v.title_en %}{{ v0 }}{% endblocktrans %}
       </div>
 
       {% if v.recommendation_ar or v.recommendation_en %}
       <div class="mt-1.5 text-xs text-slate-600 flex items-start gap-1.5">
         <span class="text-blue-600">💡</span>
         <span>
-          {% if is_rtl %}{{ v.recommendation_ar }}{% else %}{{ v.recommendation_en }}{% endif %}
+          {% blocktrans with v0=v.recommendation_en %}{{ v0 }}{% endblocktrans %}
         </span>
       </div>
       {% endif %}
@@ -750,28 +749,28 @@
   <div class="section-header">
     <div class="icon bg-purple-100 text-purple-700">🤖</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}رؤى الذكاء الاصطناعي{% else %}AI Insights{% endif %}
+      {% trans 'AI Insights' %}
     </h2>
   </div>
   <div class="section-body space-y-4">
 
     {% if ai.ai_summary_ar or ai.ai_summary_en %}
     <div class="bg-purple-50 border border-purple-100 rounded-lg p-4 text-sm text-slate-700 leading-relaxed">
-      {% if is_rtl %}{{ ai.ai_summary_ar }}{% else %}{{ ai.ai_summary_en }}{% endif %}
+      {% blocktrans with v0=ai.ai_summary_en %}{{ v0 }}{% endblocktrans %}
     </div>
     {% endif %}
 
     {% if ai.anomalies %}
     <div>
       <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-        {% if is_rtl %}الشذوذات المكتشفة{% else %}Detected Anomalies{% endif %}
+        {% trans 'Detected Anomalies' %}
       </h3>
       <div class="space-y-1.5">
         {% for anomaly in ai.anomalies %}
         <div class="flex items-start gap-2 text-sm">
           <span class="text-orange-500 mt-0.5">⚡</span>
           <span class="text-slate-700">
-            {% if is_rtl %}{{ anomaly.message_ar }}{% else %}{{ anomaly.message_en }}{% endif %}
+            {% blocktrans with v0=anomaly.message_en %}{{ v0 }}{% endblocktrans %}
             {% if anomaly.value %} — <code class="text-slate-500 text-xs">{{ anomaly.value }}</code>{% endif %}
           </span>
         </div>
@@ -783,12 +782,12 @@
     {% if ai.risk_factors %}
     <div>
       <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-        {% if is_rtl %}عوامل الخطر{% else %}Risk Factors{% endif %}
+        {% trans 'Risk Factors' %}
       </h3>
       {% for rf in ai.risk_factors %}
       <div class="flex items-start gap-2 text-sm">
         <span class="text-red-500 mt-0.5">⚠</span>
-        <span>{% if is_rtl %}{{ rf.ar }}{% else %}{{ rf.en }}{% endif %}</span>
+        <span>{% blocktrans with v0=rf.en %}{{ v0 }}{% endblocktrans %}</span>
       </div>
       {% endfor %}
     </div>
@@ -806,7 +805,7 @@
   <div class="section-header">
     <div class="icon bg-indigo-100 text-indigo-700">📄</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}الملخص التحليلي{% else %}Analytical Summary{% endif %}
+      {% trans 'Analytical Summary' %}
     </h2>
   </div>
   <div class="section-body space-y-6 text-sm leading-relaxed text-slate-700">
@@ -814,7 +813,7 @@
     {% if narrative.executive_summary %}
     <div>
       <h3 class="text-xs font-bold uppercase tracking-wide text-indigo-600 mb-2">
-        {% if is_rtl %}الملخص التنفيذي{% else %}Executive Summary{% endif %}
+        {% trans 'Executive Summary' %}
       </h3>
       <p>{{ narrative.executive_summary }}</p>
     </div>
@@ -823,7 +822,7 @@
     {% if narrative.scope_and_methodology %}
     <div>
       <h3 class="text-xs font-bold uppercase tracking-wide text-indigo-600 mb-2">
-        {% if is_rtl %}نطاق التدقيق والمنهجية{% else %}Scope and Methodology{% endif %}
+        {% trans 'Scope and Methodology' %}
       </h3>
       <p>{{ narrative.scope_and_methodology }}</p>
     </div>
@@ -832,7 +831,7 @@
     {% if narrative.key_findings %}
     <div>
       <h3 class="text-xs font-bold uppercase tracking-wide text-amber-600 mb-2">
-        {% if is_rtl %}النتائج الرئيسية{% else %}Key Findings{% endif %}
+        {% trans 'Key Findings' %}
       </h3>
       <p>{{ narrative.key_findings }}</p>
     </div>
@@ -841,7 +840,7 @@
     {% if narrative.anomalies_section %}
     <div>
       <h3 class="text-xs font-bold uppercase tracking-wide text-red-600 mb-2">
-        {% if is_rtl %}الأنماط الشاذة{% else %}Anomalies{% endif %}
+        {% trans 'Anomalies' %}
       </h3>
       <p>{{ narrative.anomalies_section }}</p>
     </div>
@@ -850,7 +849,7 @@
     {% if narrative.compliance_section %}
     <div>
       <h3 class="text-xs font-bold uppercase tracking-wide text-blue-600 mb-2">
-        {% if is_rtl %}الامتثال{% else %}Compliance{% endif %}
+        {% trans 'Compliance' %}
       </h3>
       <p>{{ narrative.compliance_section }}</p>
     </div>
@@ -859,7 +858,7 @@
     {% if narrative.recommendations %}
     <div>
       <h3 class="text-xs font-bold uppercase tracking-wide text-green-600 mb-2">
-        {% if is_rtl %}التوصيات{% else %}Recommendations{% endif %}
+        {% trans 'Recommendations' %}
       </h3>
       <p>{{ narrative.recommendations }}</p>
     </div>
@@ -868,7 +867,7 @@
     {% if narrative.conclusion %}
     <div>
       <h3 class="text-xs font-bold uppercase tracking-wide text-slate-600 mb-2">
-        {% if is_rtl %}الخلاصة{% else %}Conclusion{% endif %}
+        {% trans 'Conclusion' %}
       </h3>
       <p>{{ narrative.conclusion }}</p>
     </div>
@@ -877,7 +876,7 @@
     {% if narrative.management_response_placeholder %}
     <div class="bg-slate-50 border border-dashed border-slate-300 rounded-lg p-4">
       <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">
-        {% if is_rtl %}رد الإدارة{% else %}Management Response{% endif %}
+        {% trans 'Management Response' %}
       </h3>
       <p class="text-slate-500 italic">{{ narrative.management_response_placeholder }}</p>
     </div>
@@ -895,7 +894,7 @@
   <div class="section-header">
     <div class="icon bg-green-100 text-green-700">🏛️</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}الامتثال للوائح الزكاة والضريبة (ZATCA){% else %}ZATCA Compliance{% endif %}
+      {% trans 'ZATCA Compliance' %}
     </h2>
     <div class="ms-auto">
       <span class="font-bold text-lg {% if compliance.compliance_score >= 80 %}text-green-600{% elif compliance.compliance_score >= 60 %}text-yellow-600{% else %}text-red-600{% endif %}">
@@ -920,12 +919,12 @@
     {% if compliance.missing_fields %}
     <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
       <div class="text-amber-800 font-semibold text-xs mb-1.5">
-        ⚠️ {% if is_rtl %}حقول مطلوبة مفقودة{% else %}Required Fields Missing{% endif %}
+        ⚠️ {% trans 'Required Fields Missing' %}
       </div>
       <div class="flex flex-wrap gap-2">
         {% for mf in compliance.missing_fields %}
         <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs">
-          {% if is_rtl %}{{ mf.label_ar }}{% else %}{{ mf.field }}{% endif %}
+          {% blocktrans with v0=mf.field %}{{ v0 }}{% endblocktrans %}
         </span>
         {% endfor %}
       </div>
@@ -945,33 +944,33 @@
   <div class="section-header">
     <div class="icon bg-blue-100 text-blue-700">🧾</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}تفصيل الضريبة المضافة{% else %}VAT Breakdown{% endif %}
+      {% trans 'VAT Breakdown' %}
     </h2>
   </div>
   <div class="section-body">
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
       <div class="bg-slate-50 rounded-lg p-3">
         <div class="text-lg font-bold text-slate-800">{{ specific.vat_breakdown.subtotal|floatformat:2 }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}الأساس الخاضع{% else %}Subtotal{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Subtotal' %}</div>
       </div>
       <div class="bg-slate-50 rounded-lg p-3">
         <div class="text-lg font-bold text-blue-700">{{ specific.vat_breakdown.vat_rate }}%</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}نسبة الضريبة{% else %}VAT Rate{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'VAT Rate' %}</div>
       </div>
       <div class="bg-slate-50 rounded-lg p-3">
         <div class="text-lg font-bold text-slate-800">{{ specific.vat_breakdown.vat_amount|floatformat:2 }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}مبلغ الضريبة{% else %}VAT Amount{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'VAT Amount' %}</div>
       </div>
       <div class="bg-blue-50 rounded-lg p-3 border border-blue-100">
         <div class="text-lg font-bold text-blue-800">{{ specific.vat_breakdown.total|floatformat:2 }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}الإجمالي{% else %}Total{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Total' %}</div>
       </div>
     </div>
     {% if specific.vat_breakdown.expected_vat != specific.vat_breakdown.vat_amount %}
     <div class="mt-3 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
-      ⚠️ {% if is_rtl %}الضريبة المتوقعة:{% else %}Expected VAT:{% endif %}
+      ⚠️ {% trans 'Expected VAT:' %}
       <strong>{{ specific.vat_breakdown.expected_vat|floatformat:2 }} SAR</strong>
-      {% if is_rtl %}— الفارق قد يشير إلى خطأ في الحساب{% else %}— Discrepancy may indicate calculation error{% endif %}
+      {% trans '— Discrepancy may indicate calculation error' %}
     </div>
     {% endif %}
   </div>
@@ -984,32 +983,31 @@
   <div class="section-header">
     <div class="icon bg-teal-100 text-teal-700">🏦</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}مطابقة الرصيد{% else %}Balance Reconciliation{% endif %}
+      {% trans 'Balance Reconciliation' %}
     </h2>
   </div>
   <div class="section-body">
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center mb-3">
       <div class="bg-slate-50 rounded-lg p-3">
         <div class="font-bold text-slate-800">{{ specific.reconciliation.opening_balance|floatformat:2 }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}رصيد الافتتاح{% else %}Opening{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Opening' %}</div>
       </div>
       <div class="bg-green-50 rounded-lg p-3">
         <div class="font-bold text-green-700">+{{ specific.reconciliation.total_credits|floatformat:2 }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}الإيداعات{% else %}Credits{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Credits' %}</div>
       </div>
       <div class="bg-red-50 rounded-lg p-3">
         <div class="font-bold text-red-700">-{{ specific.reconciliation.total_debits|floatformat:2 }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}السحوبات{% else %}Debits{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Debits' %}</div>
       </div>
       <div class="bg-blue-50 rounded-lg p-3 border border-blue-100">
         <div class="font-bold text-blue-800">{{ specific.reconciliation.closing_balance|floatformat:2 }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}رصيد الإغلاق{% else %}Closing{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Closing' %}</div>
       </div>
     </div>
     {% if specific.suspicious_transactions > 0 %}
     <div class="bg-orange-50 border border-orange-200 rounded-lg p-3 text-sm text-orange-800">
-      🔍 {% if is_rtl %}{{ specific.suspicious_transactions }} معاملة مشبوهة قرب حد الإبلاغ AML
-      {% else %}{{ specific.suspicious_transactions }} suspicious transactions near AML reporting threshold{% endif %}
+      🔍 {% blocktrans with v0=specific.suspicious_transactions %}{{ v0 }} suspicious transactions near AML reporting threshold{% endblocktrans %}
     </div>
     {% endif %}
   </div>
@@ -1022,33 +1020,28 @@
   <div class="section-header">
     <div class="icon bg-emerald-100 text-emerald-700">👥</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}تفصيل الرواتب{% else %}Payroll Breakdown{% endif %}
+      {% trans 'Payroll Breakdown' %}
     </h2>
   </div>
   <div class="section-body">
     <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 text-center mb-4">
       <div class="bg-slate-50 rounded-lg p-3">
         <div class="font-bold text-slate-800">{{ specific.salary_breakdown.total_gross|floatformat:2 }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}إجمالي الرواتب الأساسية{% else %}Total Gross{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Total Gross' %}</div>
       </div>
       <div class="bg-red-50 rounded-lg p-3">
         <div class="font-bold text-red-700">{{ specific.salary_breakdown.total_deductions|floatformat:2 }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}إجمالي الاستقطاعات{% else %}Total Deductions{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Total Deductions' %}</div>
       </div>
       <div class="bg-green-50 rounded-lg p-3">
         <div class="font-bold text-green-700">{{ specific.salary_breakdown.total_net|floatformat:2 }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}إجمالي الصافي{% else %}Total Net{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Total Net' %}</div>
       </div>
     </div>
     {% if specific.employee_validation.ghost_flags > 0 or specific.employee_validation.duplicate_ids > 0 %}
     <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
-      🚨 {% if is_rtl %}
-        {{ specific.employee_validation.ghost_flags }} موظف وهمي محتمل |
-        {{ specific.employee_validation.duplicate_ids }} معرّف مكرر
-      {% else %}
-        {{ specific.employee_validation.ghost_flags }} potential ghost employees |
-        {{ specific.employee_validation.duplicate_ids }} duplicate IDs
-      {% endif %}
+      🚨 {% blocktrans with v0=specific.employee_validation.ghost_flags v1=specific.employee_validation.duplicate_ids %}{{ v0 }} potential ghost employees |
+        {{ v1 }} duplicate IDs{% endblocktrans %}
     </div>
     {% endif %}
   </div>
@@ -1061,32 +1054,31 @@
   <div class="section-header">
     <div class="icon bg-blue-100 text-blue-700">📊</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}حساب صافي الضريبة{% else %}VAT Net Calculation{% endif %}
+      {% trans 'VAT Net Calculation' %}
     </h2>
   </div>
   <div class="section-body">
     <div class="grid grid-cols-3 gap-4 text-center mb-4">
       <div class="bg-red-50 rounded-lg p-3">
         <div class="font-bold text-red-700">{{ specific.vat_calculation.output_vat|floatformat:2 }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}ضريبة المخرجات{% else %}Output VAT{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Output VAT' %}</div>
       </div>
       <div class="bg-green-50 rounded-lg p-3">
         <div class="font-bold text-green-700">{{ specific.vat_calculation.input_vat|floatformat:2 }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}ضريبة المدخلات{% else %}Input VAT{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Input VAT' %}</div>
       </div>
       <div class="bg-blue-50 rounded-lg p-3 border border-blue-100">
         <div class="font-bold text-blue-800">{{ specific.vat_calculation.declared_net|floatformat:2 }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}صافي الضريبة المستحقة{% else %}Net VAT Payable{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Net VAT Payable' %}</div>
       </div>
     </div>
     {% if not specific.vat_calculation.arithmetic_ok %}
     <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800">
-      ❌ {% if is_rtl %}خطأ في الحساب — الفارق: {{ specific.vat_calculation.discrepancy|floatformat:2 }} ريال
-      {% else %}Arithmetic error — discrepancy: {{ specific.vat_calculation.discrepancy|floatformat:2 }} SAR{% endif %}
+      ❌ {% blocktrans with v0=specific.vat_calculation.discrepancy|floatformat:2 %}Arithmetic error — discrepancy: {{ v0 }} SAR{% endblocktrans %}
     </div>
     {% else %}
     <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-800">
-      ✅ {% if is_rtl %}الحساب صحيح{% else %}Calculation correct{% endif %}
+      ✅ {% trans 'Calculation correct' %}
     </div>
     {% endif %}
   </div>
@@ -1099,28 +1091,28 @@
   <div class="section-header">
     <div class="icon bg-amber-100 text-amber-700">🏗️</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}ملخص الإهلاك{% else %}Depreciation Summary{% endif %}
+      {% trans 'Depreciation Summary' %}
     </h2>
   </div>
   <div class="section-body">
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
       <div class="bg-slate-50 rounded-lg p-3">
         <div class="font-bold text-slate-800">{{ specific.depreciation_summary.total_cost|floatformat:2 }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}إجمالي التكلفة{% else %}Total Cost{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Total Cost' %}</div>
       </div>
       <div class="bg-orange-50 rounded-lg p-3">
         <div class="font-bold text-orange-700">{{ specific.depreciation_summary.total_accumulated|floatformat:2 }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}الإهلاك المتراكم{% else %}Accumulated Dep.{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Accumulated Dep.' %}</div>
       </div>
       <div class="bg-blue-50 rounded-lg p-3">
         <div class="font-bold text-blue-700">{{ specific.depreciation_summary.total_book_value|floatformat:2 }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}القيمة الدفترية{% else %}Book Value{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Book Value' %}</div>
       </div>
       <div class="bg-{% if specific.depreciation_summary.negative_book_value_count > 0 %}red{% else %}green{% endif %}-50 rounded-lg p-3">
         <div class="font-bold text-{% if specific.depreciation_summary.negative_book_value_count > 0 %}red{% else %}green{% endif %}-700">
           {{ specific.depreciation_summary.negative_book_value_count }}
         </div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}قيم دفترية سالبة{% else %}Negative BV{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Negative BV' %}</div>
       </div>
     </div>
   </div>
@@ -1133,21 +1125,21 @@
   <div class="section-header">
     <div class="icon bg-violet-100 text-violet-700">🏢</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}التحقق من المورد{% else %}Vendor Validation{% endif %}
+      {% trans 'Vendor Validation' %}
     </h2>
   </div>
   <div class="section-body">
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
       <div class="bg-slate-50 rounded-lg p-3">
-        <div class="text-xs text-slate-400 mb-1">{% if is_rtl %}اسم المورد{% else %}Vendor Name{% endif %}</div>
+        <div class="text-xs text-slate-400 mb-1">{% trans 'Vendor Name' %}</div>
         <div class="font-semibold text-slate-800">{{ specific.vendor_validation.vendor_name|default:"—" }}</div>
       </div>
       <div class="bg-slate-50 rounded-lg p-3">
-        <div class="text-xs text-slate-400 mb-1">{% if is_rtl %}الرقم الضريبي{% else %}VAT Number{% endif %}</div>
+        <div class="text-xs text-slate-400 mb-1">{% trans 'VAT Number' %}</div>
         <div class="font-mono font-medium text-slate-700">{{ specific.vendor_validation.vendor_vat|default:"—" }}</div>
       </div>
       <div class="bg-slate-50 rounded-lg p-3">
-        <div class="text-xs text-slate-400 mb-1">{% if is_rtl %}رقم السجل التجاري{% else %}CR Number{% endif %}</div>
+        <div class="text-xs text-slate-400 mb-1">{% trans 'CR Number' %}</div>
         <div class="font-mono font-medium text-slate-700">{{ specific.vendor_validation.vendor_cr|default:"—" }}</div>
       </div>
     </div>
@@ -1160,39 +1152,39 @@
   <div class="section-header">
     <div class="icon bg-orange-100 text-orange-700">💰</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}التحقق من الميزانية{% else %}Budget Validation{% endif %}
+      {% trans 'Budget Validation' %}
     </h2>
   </div>
   <div class="section-body">
     <div class="grid grid-cols-3 gap-4 text-center mb-3">
       <div class="bg-slate-50 rounded-lg p-3">
-        <div class="font-bold text-slate-800">{{ specific.budget_check.budget_limit|floatformat:2|default:"غير محدد" }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}حد الميزانية{% else %}Budget Limit{% endif %}</div>
+        <div class="font-bold text-slate-800">{{ specific.budget_check.budget_limit|floatformat:2|default:_("Not set") }}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Budget Limit' %}</div>
       </div>
       <div class="bg-blue-50 rounded-lg p-3">
         <div class="font-bold text-blue-800">{{ specific.budget_check.total_amount|floatformat:2 }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}قيمة أمر الشراء{% else %}PO Amount{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'PO Amount' %}</div>
       </div>
       <div class="rounded-lg p-3 {% if specific.budget_check.within_budget %}bg-green-50{% else %}bg-red-50{% endif %}">
         <div class="font-bold {% if specific.budget_check.within_budget %}text-green-700{% else %}text-red-700{% endif %}">
           {% if specific.budget_check.within_budget %}
-            {% if is_rtl %}ضمن الميزانية ✓{% else %}Within Budget ✓{% endif %}
+            {% trans 'Within Budget ✓' %}
           {% else %}
-            {% if is_rtl %}تجاوز الميزانية ✗{% else %}Over Budget ✗{% endif %}
+            {% trans 'Over Budget ✗' %}
           {% endif %}
         </div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}الحالة{% else %}Status{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Status' %}</div>
       </div>
     </div>
     {% if specific.approval_workflow.approved_by %}
     <div class="border-t border-slate-100 pt-3 text-sm text-slate-600">
-      <span class="font-medium">{% if is_rtl %}اعتمده:{% else %}Approved by:{% endif %}</span>
+      <span class="font-medium">{% trans 'Approved by:' %}</span>
       {{ specific.approval_workflow.approved_by }}
       {% if specific.approval_workflow.approved_at %}
         <span class="text-slate-400 ms-2">{{ specific.approval_workflow.approved_at }}</span>
       {% endif %}
       {% if specific.approval_workflow.cost_center %}
-        | <span class="font-medium">{% if is_rtl %}مركز التكلفة:{% else %}Cost Center:{% endif %}</span>
+        | <span class="font-medium">{% trans 'Cost Center:' %}</span>
         {{ specific.approval_workflow.cost_center }}
       {% endif %}
     </div>
@@ -1207,24 +1199,24 @@
   <div class="section-header">
     <div class="icon bg-pink-100 text-pink-700">🧾</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}التحقق من الإيصالات{% else %}Receipt Validation{% endif %}
+      {% trans 'Receipt Validation' %}
     </h2>
   </div>
   <div class="section-body">
     <div class="grid grid-cols-3 gap-4 text-center mb-4">
       <div class="bg-slate-50 rounded-lg p-3">
         <div class="font-bold text-slate-800">{{ specific.receipt_validation.total_lines }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}إجمالي البنود{% else %}Total Lines{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Total Lines' %}</div>
       </div>
       <div class="bg-green-50 rounded-lg p-3">
         <div class="font-bold text-green-700">{{ specific.receipt_validation.with_receipt }}</div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}بإيصال مرفق{% else %}With Receipt{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'With Receipt' %}</div>
       </div>
       <div class="rounded-lg p-3 {% if specific.receipt_validation.without_receipt > 0 %}bg-red-50{% else %}bg-green-50{% endif %}">
         <div class="font-bold {% if specific.receipt_validation.without_receipt > 0 %}text-red-700{% else %}text-green-700{% endif %}">
           {{ specific.receipt_validation.without_receipt }}
         </div>
-        <div class="text-xs text-slate-500 mt-1">{% if is_rtl %}بدون إيصال{% else %}Missing Receipt{% endif %}</div>
+        <div class="text-xs text-slate-500 mt-1">{% trans 'Missing Receipt' %}</div>
       </div>
     </div>
 
@@ -1232,10 +1224,10 @@
     <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-800 mb-3">
       🚨
       {% if specific.policy_violations.over_limit_count > 0 %}
-        {% if is_rtl %}{{ specific.policy_violations.over_limit_count }} بند تجاوز حد السياسة{% else %}{{ specific.policy_violations.over_limit_count }} line(s) exceeded policy limit{% endif %}
+        {% blocktrans with v0=specific.policy_violations.over_limit_count %}{{ v0 }} line(s) exceeded policy limit{% endblocktrans %}
       {% endif %}
       {% if specific.policy_violations.self_approval %}
-        {% if is_rtl %} | موافقة ذاتية مكتشفة{% else %} | Self-approval detected{% endif %}
+        {% trans '| Self-approval detected' %}
       {% endif %}
     </div>
     {% endif %}
@@ -1243,7 +1235,7 @@
     {% if specific.category_breakdown %}
     <div class="mt-2">
       <div class="text-xs text-slate-500 mb-2 font-semibold uppercase tracking-wide">
-        {% if is_rtl %}توزيع المصروفات حسب الفئة{% else %}Expense Category Breakdown{% endif %}
+        {% trans 'Expense Category Breakdown' %}
       </div>
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
         {% for cat in specific.category_breakdown %}
@@ -1265,22 +1257,22 @@
   <div class="section-header">
     <div class="icon bg-cyan-100 text-cyan-700">💳</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}التحقق من طريقة الدفع{% else %}Payment Validation{% endif %}
+      {% trans 'Payment Validation' %}
     </h2>
   </div>
   <div class="section-body">
     <div class="grid grid-cols-2 gap-4 mb-3 text-sm">
       <div class="bg-slate-50 rounded-lg p-3">
-        <div class="text-xs text-slate-400 mb-1">{% if is_rtl %}طريقة الدفع{% else %}Payment Method{% endif %}</div>
+        <div class="text-xs text-slate-400 mb-1">{% trans 'Payment Method' %}</div>
         <div class="font-semibold text-slate-800 capitalize">{{ specific.payment_validation.payment_method|default:"—" }}</div>
       </div>
       <div class="rounded-lg p-3 {% if specific.payment_validation.within_cash_limit %}bg-green-50{% else %}bg-red-50{% endif %}">
-        <div class="text-xs text-slate-400 mb-1">{% if is_rtl %}حد النقد AML{% else %}AML Cash Limit{% endif %}</div>
+        <div class="text-xs text-slate-400 mb-1">{% trans 'AML Cash Limit' %}</div>
         <div class="font-bold {% if specific.payment_validation.within_cash_limit %}text-green-700{% else %}text-red-700{% endif %}">
           {% if specific.payment_validation.within_cash_limit %}
-            {% if is_rtl %}ضمن الحد{% else %}Within Limit{% endif %} ✓
+            {% trans 'Within Limit' %} ✓
           {% else %}
-            {% if is_rtl %}تجاوز الحد{% else %}Exceeds Limit{% endif %} ✗
+            {% trans 'Exceeds Limit' %} ✗
           {% endif %}
         </div>
       </div>
@@ -1290,25 +1282,25 @@
     <div class="border-t border-slate-100 pt-3 grid grid-cols-2 gap-3 text-sm">
       {% if zr.receipt_number %}
       <div>
-        <span class="text-slate-500">{% if is_rtl %}رقم الإيصال:{% else %}Receipt No.:{% endif %}</span>
+        <span class="text-slate-500">{% trans 'Receipt No.:' %}</span>
         <span class="font-mono font-medium ms-1">{{ zr.receipt_number }}</span>
       </div>
       {% endif %}
       {% if zr.zatca_invoice_ref %}
       <div>
-        <span class="text-slate-500">{% if is_rtl %}مرجع ZATCA:{% else %}ZATCA Ref.:{% endif %}</span>
+        <span class="text-slate-500">{% trans 'ZATCA Ref.:' %}</span>
         <span class="font-mono font-medium ms-1 text-blue-700">{{ zr.zatca_invoice_ref }}</span>
       </div>
       {% endif %}
       <div class="col-span-2 flex gap-2 mt-1">
         {% if zr.has_qr %}
           {% if zr.qr_valid %}
-          <span class="pill pill-pass">✅ {% if is_rtl %}رمز QR صالح{% else %}QR Valid{% endif %}</span>
+          <span class="pill pill-pass">✅ {% trans 'QR Valid' %}</span>
           {% else %}
-          <span class="pill pill-fail">❌ {% if is_rtl %}رمز QR غير صالح{% else %}QR Invalid{% endif %}</span>
+          <span class="pill pill-fail">❌ {% trans 'QR Invalid' %}</span>
           {% endif %}
         {% else %}
-          <span class="pill pill-warning">⚠️ {% if is_rtl %}رمز QR مفقود{% else %}QR Missing{% endif %}</span>
+          <span class="pill pill-warning">⚠️ {% trans 'QR Missing' %}</span>
         {% endif %}
       </div>
     </div>
@@ -1324,7 +1316,7 @@
   <div class="section-header">
     <div class="icon bg-slate-100 text-slate-600">📑</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}بنود المستند ({{ specific.line_items|length }}){% else %}Line Items ({{ specific.line_items|length }}){% endif %}
+      {% blocktrans with v0=specific.line_items|length %}Line Items ({{ v0 }}){% endblocktrans %}
     </h2>
   </div>
   <div class="section-body p-0 overflow-x-auto">
@@ -1332,11 +1324,11 @@
       <thead>
         <tr>
           <th>#</th>
-          <th>{% if is_rtl %}الوصف{% else %}Description{% endif %}</th>
-          <th>{% if is_rtl %}الكمية{% else %}Qty{% endif %}</th>
-          <th>{% if is_rtl %}سعر الوحدة{% else %}Unit Price{% endif %}</th>
-          <th>{% if is_rtl %}الضريبة%{% else %}VAT %{% endif %}</th>
-          <th>{% if is_rtl %}الإجمالي{% else %}Total{% endif %}</th>
+          <th>{% trans 'Description' %}</th>
+          <th>{% trans 'Qty' %}</th>
+          <th>{% trans 'Unit Price' %}</th>
+          <th>{% trans 'VAT %' %}</th>
+          <th>{% trans 'Total' %}</th>
         </tr>
       </thead>
       <tbody>
@@ -1370,7 +1362,7 @@
   <div class="section-header">
     <div class="icon bg-yellow-100 text-yellow-700">💡</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}التوصيات وخطة الإصلاح{% else %}Recommendations & Action Plan{% endif %}
+      {% trans 'Recommendations & Action Plan' %}
     </h2>
   </div>
   <div class="section-body">
@@ -1387,10 +1379,10 @@
         <div class="flex items-center gap-2 flex-wrap mb-1">
           <span class="pill pill-{{ rec.priority }}">
             {% if is_rtl %}
-              {% if rec.priority == 'critical' %}حرج
-              {% elif rec.priority == 'high' %}عالٍ
-              {% elif rec.priority == 'medium' %}متوسط
-              {% elif rec.priority == 'low' %}منخفض
+              {% if rec.priority == 'critical' %}{% trans "Critical" %}
+              {% elif rec.priority == 'high' %}{% trans "High" %}
+              {% elif rec.priority == 'medium' %}{% trans "Medium" %}
+              {% elif rec.priority == 'low' %}{% trans "Low" %}
               {% else %}{{ rec.priority }}{% endif %}
             {% else %}
               {{ rec.priority|upper }}
@@ -1399,16 +1391,16 @@
           <span class="font-mono text-xs text-slate-400">{{ rec.rule_code }}</span>
         </div>
         <div class="text-sm font-medium text-slate-800">
-          {% if is_rtl %}{{ rec.action_ar }}{% else %}{{ rec.action_en }}{% endif %}
+          {% blocktrans with v0=rec.action_en %}{{ v0 }}{% endblocktrans %}
         </div>
         {% if rec.impact_ar or rec.impact_en %}
         <div class="text-xs text-slate-500 mt-0.5">
-          {% if is_rtl %}{{ rec.impact_ar }}{% else %}{{ rec.impact_en }}{% endif %}
+          {% blocktrans with v0=rec.impact_en %}{{ v0 }}{% endblocktrans %}
         </div>
         {% endif %}
         {% if rec.financial_impact %}
         <div class="text-xs text-blue-600 mt-1 font-medium">
-          {% if is_rtl %}التأثير المالي المقدّر:{% else %}Est. Financial Impact:{% endif %}
+          {% trans 'Est. Financial Impact:' %}
           {{ rec.financial_impact|floatformat:2 }} SAR
         </div>
         {% endif %}
@@ -1428,7 +1420,7 @@
   <div class="section-header">
     <div class="icon bg-blue-100 text-blue-700">📋</div>
     <h2 class="font-semibold text-slate-800">
-      {% if is_rtl %}الملخص التحليلي{% else %}Analytical Summary{% endif %}
+      {% trans 'Analytical Summary' %}
     </h2>
   </div>
   <div class="section-body space-y-6">
@@ -1437,10 +1429,10 @@
     {% if narrative.executive_summary_ar or narrative.executive_summary_en %}
     <div>
       <h3 class="text-xs font-bold uppercase tracking-widest text-blue-700 mb-2">
-        {% if is_rtl %}الملخص التنفيذي{% else %}Executive Summary{% endif %}
+        {% trans 'Executive Summary' %}
       </h3>
       <p class="text-sm text-slate-700 leading-relaxed">
-        {% if is_rtl %}{{ narrative.executive_summary_ar }}{% else %}{{ narrative.executive_summary_en }}{% endif %}
+        {% blocktrans with v0=narrative.executive_summary_en %}{{ v0 }}{% endblocktrans %}
       </p>
     </div>
     {% endif %}
@@ -1449,10 +1441,10 @@
     {% if narrative.scope_and_methodology_ar or narrative.scope_and_methodology_en %}
     <div>
       <h3 class="text-xs font-bold uppercase tracking-widest text-slate-500 mb-2">
-        {% if is_rtl %}نطاق التدقيق والمنهجية{% else %}Scope & Methodology{% endif %}
+        {% trans 'Scope & Methodology' %}
       </h3>
       <p class="text-sm text-slate-700 leading-relaxed">
-        {% if is_rtl %}{{ narrative.scope_and_methodology_ar }}{% else %}{{ narrative.scope_and_methodology_en }}{% endif %}
+        {% blocktrans with v0=narrative.scope_and_methodology_en %}{{ v0 }}{% endblocktrans %}
       </p>
     </div>
     {% endif %}
@@ -1461,10 +1453,10 @@
     {% if narrative.key_findings_ar or narrative.key_findings_en %}
     <div>
       <h3 class="text-xs font-bold uppercase tracking-widest text-amber-700 mb-2">
-        {% if is_rtl %}النتائج الرئيسية{% else %}Key Findings{% endif %}
+        {% trans 'Key Findings' %}
       </h3>
       <div class="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-        {% if is_rtl %}{{ narrative.key_findings_ar }}{% else %}{{ narrative.key_findings_en }}{% endif %}
+        {% blocktrans with v0=narrative.key_findings_en %}{{ v0 }}{% endblocktrans %}
       </div>
     </div>
     {% endif %}
@@ -1473,10 +1465,10 @@
     {% if narrative.compliance_section_ar or narrative.compliance_section_en %}
     <div>
       <h3 class="text-xs font-bold uppercase tracking-widest text-green-700 mb-2">
-        {% if is_rtl %}الامتثال{% else %}Compliance{% endif %}
+        {% trans 'Compliance' %}
       </h3>
       <p class="text-sm text-slate-700 leading-relaxed">
-        {% if is_rtl %}{{ narrative.compliance_section_ar }}{% else %}{{ narrative.compliance_section_en }}{% endif %}
+        {% blocktrans with v0=narrative.compliance_section_en %}{{ v0 }}{% endblocktrans %}
       </p>
     </div>
     {% endif %}
@@ -1485,10 +1477,10 @@
     {% if narrative.anomalies_section_ar or narrative.anomalies_section_en %}
     <div>
       <h3 class="text-xs font-bold uppercase tracking-widest text-orange-700 mb-2">
-        {% if is_rtl %}الأنماط الشاذة{% else %}Anomalies{% endif %}
+        {% trans 'Anomalies' %}
       </h3>
       <div class="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-        {% if is_rtl %}{{ narrative.anomalies_section_ar }}{% else %}{{ narrative.anomalies_section_en }}{% endif %}
+        {% blocktrans with v0=narrative.anomalies_section_en %}{{ v0 }}{% endblocktrans %}
       </div>
     </div>
     {% endif %}
@@ -1497,10 +1489,10 @@
     {% if narrative.recommendations_ar or narrative.recommendations_en %}
     <div>
       <h3 class="text-xs font-bold uppercase tracking-widest text-yellow-700 mb-2">
-        {% if is_rtl %}التوصيات{% else %}Recommendations{% endif %}
+        {% trans 'Recommendations' %}
       </h3>
       <div class="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-        {% if is_rtl %}{{ narrative.recommendations_ar }}{% else %}{{ narrative.recommendations_en }}{% endif %}
+        {% blocktrans with v0=narrative.recommendations_en %}{{ v0 }}{% endblocktrans %}
       </div>
     </div>
     {% endif %}
@@ -1509,10 +1501,10 @@
     {% if narrative.conclusion_ar or narrative.conclusion_en %}
     <div class="bg-slate-50 border border-slate-200 rounded-lg p-4">
       <h3 class="text-xs font-bold uppercase tracking-widest text-slate-600 mb-2">
-        {% if is_rtl %}الخلاصة{% else %}Conclusion{% endif %}
+        {% trans 'Conclusion' %}
       </h3>
       <p class="text-sm text-slate-700 leading-relaxed">
-        {% if is_rtl %}{{ narrative.conclusion_ar }}{% else %}{{ narrative.conclusion_en }}{% endif %}
+        {% blocktrans with v0=narrative.conclusion_en %}{{ v0 }}{% endblocktrans %}
       </p>
     </div>
     {% endif %}
@@ -1521,10 +1513,10 @@
     {% if narrative.management_response_ar or narrative.management_response_en %}
     <div class="border border-dashed border-slate-300 rounded-lg p-4">
       <h3 class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">
-        {% if is_rtl %}رد الإدارة{% else %}Management Response{% endif %}
+        {% trans 'Management Response' %}
       </h3>
       <p class="text-sm text-slate-500 italic">
-        {% if is_rtl %}{{ narrative.management_response_ar }}{% else %}{{ narrative.management_response_en }}{% endif %}
+        {% blocktrans with v0=narrative.management_response_en %}{{ v0 }}{% endblocktrans %}
       </p>
     </div>
     {% endif %}
@@ -1540,30 +1532,30 @@
 <div class="section-card">
   <div class="section-header">
     <div class="icon bg-slate-100 text-slate-500">🔎</div>
-    <h2 class="font-semibold text-slate-800">{% if is_rtl %}سجل المراجعة{% else %}Audit Trail{% endif %}</h2>
+    <h2 class="font-semibold text-slate-800">{% trans 'Audit Trail' %}</h2>
   </div>
   <div class="section-body">
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
       <div>
-        <div class="text-slate-400 text-xs mb-0.5">{% if is_rtl %}المدقق{% else %}Auditor{% endif %}</div>
+        <div class="text-slate-400 text-xs mb-0.5">{% trans 'Auditor' %}</div>
         <div class="font-medium">{{ trail.auditor|default:"System" }}</div>
       </div>
       <div>
-        <div class="text-slate-400 text-xs mb-0.5">{% if is_rtl %}تاريخ التدقيق{% else %}Audit Date{% endif %}</div>
+        <div class="text-slate-400 text-xs mb-0.5">{% trans 'Audit Date' %}</div>
         <div class="font-medium">{{ trail.audit_date|default:"—" }}</div>
       </div>
       <div>
-        <div class="text-slate-400 text-xs mb-0.5">{% if is_rtl %}نوع التدقيق{% else %}Audit Type{% endif %}</div>
+        <div class="text-slate-400 text-xs mb-0.5">{% trans 'Audit Type' %}</div>
         <div class="font-medium">
           {% if trail.audit_type == "automatic" %}
-          🤖 {% if is_rtl %}آلي{% else %}Automatic{% endif %}
+          🤖 {% trans 'Automatic' %}
           {% else %}
-          👤 {% if is_rtl %}يدوي{% else %}Manual{% endif %}
+          👤 {% trans 'Manual' %}
           {% endif %}
         </div>
       </div>
       <div>
-        <div class="text-slate-400 text-xs mb-0.5">{% if is_rtl %}إصدار المحرك{% else %}Engine Version{% endif %}</div>
+        <div class="text-slate-400 text-xs mb-0.5">{% trans 'Engine Version' %}</div>
         <div class="font-medium font-mono">{{ trail.engine_version|default:"2.0" }}</div>
       </div>
     </div>
@@ -1571,7 +1563,7 @@
     <!-- Footer -->
     <div class="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 flex-wrap gap-2">
       <span>
-        {% if is_rtl %}منصة Tadgeeg للتدقيق — نظام ذكاء اصطناعي للتدقيق المالي{% else %}Tadgeeg Audit Platform — AI-Powered Financial Auditing{% endif %}
+        {% trans 'Tadgeeg Audit Platform — AI-Powered Financial Auditing' %}
       </span>
       <span>{{ meta.generated_at }}</span>
     </div>

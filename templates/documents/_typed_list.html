@@ -1,0 +1,159 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n doc_filters %}
+{% comment %}
+Generic typed-document list — renders the same dense table for every Phase-2
+doc type. Pass these context vars from the view:
+    doc_type_label       (gettext_lazy)  — section title
+    doc_type_subtitle    (gettext_lazy)  — short description under the title
+    doc_type_icon        — Lucide icon name (e.g. "file-text", "shopping-cart")
+    upload_url           — full URL to the upload page (already includes ?type=)
+    detail_url_name      — Django url name for the per-row detail page
+    report_url           — full URL to the audit report (already includes ?type=)
+    rows                 — paginated objects (one row per document)
+    columns              — list of {key, label, kind?} dicts; `kind` ∈ {amount, date, status, risk}
+    page_obj, paginator, querystring, total_count — from `_paginate`
+{% endcomment %}
+
+{% block title %}{{ doc_type_label }}{% endblock %}
+{% block nav_documents %}active{% endblock %}
+
+{% block extra_styles %}
+  .page-icon {
+    width: 56px; height: 56px;
+    border-radius: 16px;
+    background: #e0f2fe; color: #075985;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .filter-bar {
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 24px; padding: 16px 20px;
+    background: white; border: 1px solid var(--border-soft); border-radius: 14px;
+  }
+  .filter-input {
+    flex: 1; min-width: 200px; padding: 10px 16px;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    background: var(--bg-soft); font-size: 13px; font-family: inherit;
+  }
+  .filter-input:focus { outline: none; border-color: var(--primary); background: white; }
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <a href="{% url 'frontend:documents' %}" style="color:var(--text-muted)">{% trans "Documents" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{{ doc_type_label }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div style="display:flex; align-items:center; gap:18px;">
+    <div class="page-icon">
+      <i data-lucide="{{ doc_type_icon|default:'file-text' }}" style="width:28px;height:28px;"></i>
+    </div>
+    <div>
+      <h1 class="page-title">{{ doc_type_label }}</h1>
+      <p class="page-subtitle">{{ doc_type_subtitle }}</p>
+    </div>
+  </div>
+  <div style="display:flex; gap:10px;">
+    {% if report_url %}
+    <a href="{{ report_url }}" class="btn btn-light">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      {% trans "View Report" %}
+    </a>
+    {% endif %}
+    {% if upload_url %}
+    <a href="{{ upload_url }}" class="btn btn-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      {% trans "Upload" %}
+    </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="filter-bar">
+  <input type="text" name="q" form="filter-form" value="{{ search|default:'' }}"
+         class="filter-input" placeholder="{% trans 'Search...' %}">
+  <select name="risk" form="filter-form" class="filter-input" style="flex:0 0 auto; min-width:160px;">
+    <option value="">{% trans "All Risk Levels" %}</option>
+    <option value="critical">{% trans "Critical" %}</option>
+    <option value="high">{% trans "High" %}</option>
+    <option value="medium">{% trans "Medium" %}</option>
+    <option value="low">{% trans "Low" %}</option>
+  </select>
+  <button type="submit" form="filter-form" class="btn btn-light">{% trans "Filter" %}</button>
+  <form id="filter-form" method="get" class="hidden"></form>
+  <span style="margin-left:auto; font-size:12px; color:var(--text-muted);">
+    {% blocktrans with n=total_count %}{{ n }} document(s){% endblocktrans %}
+  </span>
+</div>
+
+<div class="card table-card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          {% for col in columns %}<th>{{ col.label }}</th>{% endfor %}
+          <th>{% trans "Risk" %}</th>
+          <th>{% trans "Status" %}</th>
+          <th>{% trans "Action" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if rows %}
+          {% for r in rows %}
+          <tr>
+            <td class="text-muted">{{ forloop.counter|add:page_obj.start_index|add:"-1" }}</td>
+            {% for col in columns %}
+              <td{% if col.kind == 'amount' %} style="font-family:monospace;font-weight:700"{% endif %}>
+                {% with val=r|get_field:col.key %}
+                  {% if col.kind == 'amount' %}{{ val|default:0 }} <span style="font-size:11px;color:var(--text-muted)">{{ r.currency|default:'SAR' }}</span>
+                  {% elif col.kind == 'date' %}{{ val|date:"Y-m-d"|default:"—" }}
+                  {% else %}{{ val|default:"—" }}{% endif %}
+                {% endwith %}
+              </td>
+            {% endfor %}
+            <td>
+              <span class="badge badge-{% if r.risk_level == 'critical' %}danger{% elif r.risk_level == 'high' %}danger{% elif r.risk_level == 'medium' %}warning{% else %}success{% endif %}">
+                {% if r.risk_level == 'critical' %}{% trans "Critical" %}
+                {% elif r.risk_level == 'high' %}{% trans "High" %}
+                {% elif r.risk_level == 'medium' %}{% trans "Medium" %}
+                {% else %}{% trans "Low" %}{% endif %}
+              </span>
+            </td>
+            <td>
+              <span class="badge badge-{% if r.audit_status == 'approved' %}success{% elif r.audit_status == 'flagged' %}warning{% elif r.audit_status == 'rejected' %}danger{% else %}info{% endif %}">
+                {{ r.get_audit_status_display|default:r.audit_status }}
+              </span>
+            </td>
+            <td>
+              <a href="{% url detail_url_name pk=r.id %}" class="row-action">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6" transform="scale(-1,1) translate(-24,0)"/></svg>
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="{{ columns|length|add:'4' }}">
+            <div class="empty-state">
+              <div class="empty-state-icon">
+                <i data-lucide="{{ doc_type_icon|default:'file-text' }}" style="width:36px;height:36px;"></i>
+              </div>
+              <h3>{% blocktrans with t=doc_type_label %}No {{ t }} yet{% endblocktrans %}</h3>
+              <p>{% trans "Upload your first document and our AI will extract data and run audit checks automatically." %}</p>
+              {% if upload_url %}
+              <a href="{{ upload_url }}" class="btn btn-primary">{% trans "Upload Document" %}</a>
+              {% endif %}
+            </div>
+          </td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include "partials/_pagination.html" %}
+</div>
+{% endblock %}

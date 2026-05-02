@@ -1,9 +1,16 @@
 {% load i18n %}
+{% comment %}
+High-Risk Invoices — invoice-centric drill-down view.
+
+Companion to the Findings Register: register answers "which rules failed?",
+this answers "which invoices need review and why?". Invoice numbers are deep
+links to the invoice detail page so an auditor can act in one click.
+{% endcomment %}
 <section class="card p-6 rounded-2xl shadow-sm border-2 border-red-200 bg-gradient-to-b from-red-50/60 to-white space-y-4 print-break-avoid">
   <div class="flex items-center justify-between">
-    <h2 class="text-xl font-extrabold text-slate-900">{% trans "Highest Risk Invoices" %}</h2>
+    <h2 class="text-xl font-extrabold text-slate-900">{% blocktrans with t=type_plural|default:_("Invoices") %}Highest Risk {{ t }}{% endblocktrans %}</h2>
     <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold bg-red-100 text-red-700 border border-red-200">
-      Priority Table
+      {% trans "Priority Review" %}
     </span>
   </div>
 
@@ -11,29 +18,55 @@
     <table class="min-w-full text-sm">
       <thead class="bg-slate-900 text-white">
         <tr>
-          <th class="px-4 py-3 text-right">{% trans "Invoice No." %}</th>
-          <th class="px-4 py-3 text-right">{% trans "Amount" %}</th>
-          <th class="px-4 py-3 text-right">{% trans "Date" %}</th>
-          <th class="px-4 py-3 text-right">{% trans "Risk Level" %}</th>
-          <th class="px-4 py-3 text-right">{% trans "Risk Score" %}</th>
-          <th class="px-4 py-3 text-right">{% trans "Violations" %}</th>
+          <th class="px-4 py-3 font-bold">{% blocktrans with t=type_singular|default:_("Invoice") %}{{ t }} No.{% endblocktrans %}</th>
+          <th class="px-4 py-3 font-bold">{% trans "Vendor" %}</th>
+          <th class="px-4 py-3 font-bold">{% trans "Amount" %}</th>
+          <th class="px-4 py-3 font-bold">{% trans "Date" %}</th>
+          <th class="px-4 py-3 font-bold">{% trans "Risk Level" %}</th>
+          <th class="px-4 py-3 font-bold">{% trans "Risk Score" %}</th>
+          <th class="px-4 py-3 font-bold">{% trans "Violations" %}</th>
+          <th class="px-4 py-3 font-bold print:hidden">{% trans "Action" %}</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-slate-200">
         {% for invoice in report.high_risk_invoices %}
-          <tr class="{% if invoice.risk_level == 'critical' or invoice.risk_level == 'high' %}bg-red-50/50 border-r-4 border-red-400{% else %}bg-white{% endif %}">
-            <td class="px-4 py-3 font-bold text-slate-900">{{ invoice.invoice_number }}</td>
-            <td class="px-4 py-3 text-slate-700">{{ invoice.amount|floatformat:2 }}</td>
-            <td class="px-4 py-3 text-slate-600">{{ invoice.date }}</td>
+          <tr x-data="{ showAll: false }" class="align-top {% if invoice.risk_level == 'critical' or invoice.risk_level == 'high' %}bg-red-50/50{% else %}bg-white{% endif %}">
+
+            {# Clickable invoice number #}
+            <td class="px-4 py-3 whitespace-nowrap">
+              <a href="{{ detail_url_prefix|default:"/invoices/" }}{{ invoice.id }}/" target="_blank" rel="noopener"
+                 class="inline-flex items-center gap-1 font-extrabold text-blue-700 hover:text-blue-900 hover:underline">
+                {{ invoice.invoice_number }}
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg>
+              </a>
+            </td>
+
+            {# Vendor #}
+            <td class="px-4 py-3 text-slate-700 max-w-[160px] truncate" title="{{ invoice.vendor_name }}">{{ invoice.vendor_name|default:"—" }}</td>
+
+            {# Amount #}
+            <td class="px-4 py-3 text-slate-700 whitespace-nowrap">
+              <span class="font-bold">{{ invoice.amount|floatformat:2 }}</span>
+              <span class="text-[10px] text-slate-500 ml-1">{{ invoice.currency }}</span>
+            </td>
+
+            {# Date #}
+            <td class="px-4 py-3 text-slate-600 whitespace-nowrap">{{ invoice.date }}</td>
+
+            {# Risk level badge #}
             <td class="px-4 py-3">
-              {% if invoice.risk_level == 'critical' or invoice.risk_level == 'high' %}
-                <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold bg-red-100 text-red-700 border border-red-200">{% trans "High Risk" %}</span>
+              {% if invoice.risk_level == 'critical' %}
+                <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-extrabold bg-red-600 text-white">{% trans "Critical" %}</span>
+              {% elif invoice.risk_level == 'high' %}
+                <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-extrabold bg-orange-500 text-white">{% trans "High" %}</span>
               {% elif invoice.risk_level == 'medium' %}
-                <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200">{% trans "Review" %}</span>
+                <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-extrabold bg-amber-500 text-white">{% trans "Medium" %}</span>
               {% else %}
-                <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">{% trans "Safe" %}</span>
+                <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-extrabold bg-emerald-500 text-white">{% trans "Low" %}</span>
               {% endif %}
             </td>
+
+            {# Risk score #}
             <td class="px-4 py-3">
               <div class="space-y-1.5 min-w-[140px]">
                 <div class="flex items-center justify-between text-xs">
@@ -49,51 +82,111 @@
                 {% endif %}
               </div>
             </td>
-            <td class="px-4 py-3">
+
+            {# Violations — show first 3, expandable to all #}
+            <td class="px-4 py-3 min-w-[280px]">
               <div class="space-y-2">
-                {% for violation in invoice.violations %}
-                  <div class="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
-                    <p class="text-xs font-bold text-slate-900">{{ violation.rule_code }} — {{ violation.description }}</p>
-                    <p class="text-xs text-slate-600 mt-1">{% trans "Reason:" %} {{ violation.reason }}</p>
+                {% for violation in invoice.violations|slice:":3" %}
+                  <div class="rounded-xl border border-slate-200 bg-slate-50 p-2.5 flex items-start gap-2">
+                    {% if violation.severity == 'critical' %}
+                      <span class="inline-block w-1.5 h-1.5 mt-1.5 rounded-full bg-red-600 flex-shrink-0"></span>
+                    {% elif violation.severity == 'high' %}
+                      <span class="inline-block w-1.5 h-1.5 mt-1.5 rounded-full bg-orange-500 flex-shrink-0"></span>
+                    {% elif violation.severity == 'medium' %}
+                      <span class="inline-block w-1.5 h-1.5 mt-1.5 rounded-full bg-amber-500 flex-shrink-0"></span>
+                    {% else %}
+                      <span class="inline-block w-1.5 h-1.5 mt-1.5 rounded-full bg-emerald-500 flex-shrink-0"></span>
+                    {% endif %}
+                    <div>
+                      <p class="text-xs font-bold text-slate-900"><span class="font-mono">{{ violation.rule_code }}</span> — {{ violation.description }}</p>
+                      {% if violation.reason and violation.reason != violation.description %}
+                        <p class="text-xs text-slate-600 mt-0.5">{{ violation.reason }}</p>
+                      {% endif %}
+                    </div>
                   </div>
                 {% empty %}
                   <p class="text-xs text-slate-500">{% trans "No violation details." %}</p>
                 {% endfor %}
+
+                {% if invoice.violation_count > 3 %}
+                  <button type="button" @click="showAll = !showAll"
+                          class="print-hidden inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold bg-slate-900 text-white hover:bg-slate-700">
+                    <span x-show="!showAll">+{{ invoice.violation_count|add:"-3" }} {% trans "more violations" %}</span>
+                    <span x-show="showAll">{% trans "Show less" %}</span>
+                  </button>
+
+                  <div x-show="showAll" x-transition x-cloak class="space-y-2 print:hidden">
+                    {% for violation in invoice.violations %}
+                      {% if forloop.counter > 3 %}
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-2.5 flex items-start gap-2">
+                          {% if violation.severity == 'critical' %}
+                            <span class="inline-block w-1.5 h-1.5 mt-1.5 rounded-full bg-red-600 flex-shrink-0"></span>
+                          {% elif violation.severity == 'high' %}
+                            <span class="inline-block w-1.5 h-1.5 mt-1.5 rounded-full bg-orange-500 flex-shrink-0"></span>
+                          {% elif violation.severity == 'medium' %}
+                            <span class="inline-block w-1.5 h-1.5 mt-1.5 rounded-full bg-amber-500 flex-shrink-0"></span>
+                          {% else %}
+                            <span class="inline-block w-1.5 h-1.5 mt-1.5 rounded-full bg-emerald-500 flex-shrink-0"></span>
+                          {% endif %}
+                          <div>
+                            <p class="text-xs font-bold text-slate-900"><span class="font-mono">{{ violation.rule_code }}</span> — {{ violation.description }}</p>
+                            {% if violation.reason and violation.reason != violation.description %}
+                              <p class="text-xs text-slate-600 mt-0.5">{{ violation.reason }}</p>
+                            {% endif %}
+                          </div>
+                        </div>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                {% endif %}
               </div>
+            </td>
+
+            {# Open invoice action #}
+            <td class="px-4 py-3 print:hidden">
+              <a href="{{ detail_url_prefix|default:"/invoices/" }}{{ invoice.id }}/" target="_blank" rel="noopener"
+                 class="inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-bold bg-slate-900 text-white hover:bg-slate-700 whitespace-nowrap">
+                {% trans "Open" %}
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg>
+              </a>
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="6" class="px-4 py-6 text-center text-slate-500">{% trans "No high risk invoices." %}</td></tr>
+          <tr><td colspan="8" class="px-4 py-8 text-center text-slate-500">{% blocktrans with t=type_plural|default:_("invoices") %}No high risk {{ t }}.{% endblocktrans %}</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 
+  {# Mobile card layout #}
   <div class="md:hidden space-y-3">
     {% for invoice in report.high_risk_invoices %}
       <article class="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 {% if invoice.risk_level == 'critical' or invoice.risk_level == 'high' %}ring-1 ring-red-200{% endif %}">
         <div class="flex items-start justify-between gap-3">
           <div>
-            <p class="text-xs text-slate-500">{% trans "Invoice No." %}</p>
-            <p class="font-extrabold text-slate-900">{{ invoice.invoice_number }}</p>
+            <p class="text-xs text-slate-500">{% blocktrans with t=type_singular|default:_("Invoice") %}{{ t }} No.{% endblocktrans %}</p>
+            <a href="{{ detail_url_prefix|default:"/invoices/" }}{{ invoice.id }}/" target="_blank" rel="noopener" class="font-extrabold text-blue-700 hover:underline">{{ invoice.invoice_number }}</a>
+            <p class="text-xs text-slate-500 mt-0.5">{{ invoice.vendor_name|default:"—" }}</p>
           </div>
-          {% if invoice.risk_level == 'critical' or invoice.risk_level == 'high' %}
-            <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold bg-red-100 text-red-700">{% trans "High Risk" %}</span>
+          {% if invoice.risk_level == 'critical' %}
+            <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold bg-red-600 text-white">{% trans "Critical" %}</span>
+          {% elif invoice.risk_level == 'high' %}
+            <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold bg-orange-500 text-white">{% trans "High" %}</span>
           {% elif invoice.risk_level == 'medium' %}
-            <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold bg-amber-100 text-amber-700">{% trans "Review" %}</span>
+            <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold bg-amber-500 text-white">{% trans "Medium" %}</span>
           {% else %}
-            <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold bg-emerald-100 text-emerald-700">{% trans "Safe" %}</span>
+            <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold bg-emerald-500 text-white">{% trans "Low" %}</span>
           {% endif %}
         </div>
 
         <div class="grid grid-cols-2 gap-3 text-sm">
-          <div><p class="text-xs text-slate-500">{% trans "Amount" %}</p><p class="font-bold text-slate-800">{{ invoice.amount|floatformat:2 }}</p></div>
+          <div><p class="text-xs text-slate-500">{% trans "Amount" %}</p><p class="font-bold text-slate-800">{{ invoice.amount|floatformat:2 }} {{ invoice.currency }}</p></div>
           <div><p class="text-xs text-slate-500">{% trans "Date" %}</p><p class="font-bold text-slate-800">{{ invoice.date }}</p></div>
         </div>
 
         <div>
           <div class="flex items-center justify-between text-xs mb-1">
-            <span class="text-slate-500">{% trans "Risk Score" %}</span><span class="font-bold text-slate-900">{{ invoice.risk_score|floatformat:0 }}</span>
+            <span class="text-slate-500">{% trans "Risk Score" %}</span><span class="font-bold text-slate-900">{{ invoice.risk_score|floatformat:0 }} / 100</span>
           </div>
           {% if invoice.risk_score >= 70 %}
             <progress class="w-full h-2 rounded-full accent-red-500" value="{{ invoice.risk_score|floatformat:0 }}" max="100"></progress>
@@ -107,13 +200,20 @@
         <div class="space-y-2">
           {% for violation in invoice.violations %}
             <div class="rounded-xl border border-slate-200 bg-slate-50 p-2.5">
-              <p class="text-xs font-bold text-slate-900">{{ violation.rule_code }} — {{ violation.description }}</p>
-              <p class="text-xs text-slate-600 mt-1">{% trans "Reason:" %} {{ violation.reason }}</p>
+              <p class="text-xs font-bold text-slate-900"><span class="font-mono">{{ violation.rule_code }}</span> — {{ violation.description }}</p>
+              {% if violation.reason and violation.reason != violation.description %}
+                <p class="text-xs text-slate-600 mt-0.5">{{ violation.reason }}</p>
+              {% endif %}
             </div>
           {% empty %}
             <p class="text-xs text-slate-500">{% trans "No violation details." %}</p>
           {% endfor %}
         </div>
+
+        <a href="{{ detail_url_prefix|default:"/invoices/" }}{{ invoice.id }}/" target="_blank" rel="noopener"
+           class="inline-flex items-center justify-center gap-1 rounded-xl px-3 py-2 text-xs font-bold bg-slate-900 text-white hover:bg-slate-700 w-full print:hidden">
+          {% trans "Open invoice" %}
+        </a>
       </article>
     {% empty %}
       <p class="text-slate-500">{% trans "No high risk invoices." %}</p>

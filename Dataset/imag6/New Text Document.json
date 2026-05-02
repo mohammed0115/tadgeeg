@@ -1,0 +1,53 @@
+{
+  "invoice_metadata": {
+    "invoice_number": "231000171",
+    "date": "2023-12-13",
+    "due_date": "2023-12-13",
+    "currency": "SAR"
+  },
+  "seller_info": {
+    "name": "الجانب الذهبي - GOLDEN SIDE",
+    "tax_id": "310310970400003",
+    "address": "Mateen Building, 1st Floor, Office 15, Riyadh, KSA"
+  },
+  "customer_info": {
+    "tax_id": "310783010300003"
+  },
+  "items": [
+    {
+      "description": "Cheese Cake / تشيز كيك",
+      "qty": 70,
+      "unit": "EA",
+      "price": 11,
+      "taxable_amount": 770,
+      "vat_rate": "15%",
+      "vat_amount": 115.5,
+      "total": 885.5
+    },
+    {
+      "description": "Kranshi / كرانشي",
+      "qty": 150,
+      "unit": "EA",
+      "price": 4,
+      "taxable_amount": 600,
+      "vat_rate": "15%",
+      "vat_amount": 90,
+      "total": 690
+    },
+    {
+      "description": "Chocholate Elzahab / شوكوليت الذهب",
+      "qty": 150,
+      "unit": "EA",
+      "price": 5,
+      "taxable_amount": 750,
+      "vat_rate": "15%",
+      "vat_amount": 112.5,
+      "total": 862.5
+    }
+  ],
+  "financial_summary": {
+    "total_without_vat": 2120,
+    "total_vat": 315,
+    "grand_total": 2435
+  }
+}

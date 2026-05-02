@@ -1,7 +1,7 @@
 {% extends "layouts/base_platform_admin.html" %}
 {% load i18n %}
-{% block page_title %}إدارة المنظمات{% endblock %}
-{% block breadcrumb_current %}المنظمات{% endblock %}
+{% block page_title %}{% trans 'Organization Management' %}{% endblock %}
+{% block breadcrumb_current %}{% trans 'Organizations' %}{% endblock %}
 
 {% block content %}
 <div x-data="organizationsManager()" x-init="init()" class="space-y-5 fade-in">
@@ -9,27 +9,27 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">المنظمات</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">إدارة جميع المنظمات المسجلة في المنصة</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans 'Organizations' %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans 'Manage all organizations registered on the platform' %}</p>
     </div>
     <button @click="openCreate()" class="btn-primary">
       <i data-lucide="plus" class="w-4 h-4"></i>
-      إضافة منظمة
+      {% trans 'Add Organization' %}
     </button>
   </div>
 
   <!-- Filter Bar -->
   <div class="card p-4 flex flex-wrap items-center gap-3">
     <input type="text" x-model.debounce.300ms="search" @input="load()"
-           class="input max-w-xs" placeholder="البحث بالاسم أو البريد الإلكتروني...">
+           class="input max-w-xs" placeholder="{% trans 'Search by name or email...' %}">
     <select x-model="statusFilter" @change="load()" class="select">
-      <option value="">جميع الحالات</option>
-      <option value="active">نشط</option>
-      <option value="inactive">غير نشط</option>
-      <option value="suspended">موقوف</option>
+      <option value="">{% trans 'All Statuses' %}</option>
+      <option value="active">{% trans 'Active' %}</option>
+      <option value="inactive">{% trans 'Inactive' %}</option>
+      <option value="suspended">{% trans 'Suspended' %}</option>
     </select>
     <div class="mr-auto"></div>
-    <span class="text-xs text-slate-500" x-text="'الإجمالي: ' + total"></span>
+    <span class="text-xs text-slate-500" x-text="i18nTotalLabel + total"></span>
   </div>
 
   <!-- Table -->
@@ -51,7 +51,7 @@
     <template x-if="!loading && organizations.length === 0">
       <div class="px-5 py-16 text-center">
         <i data-lucide="building-2" class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3"></i>
-        <p class="text-slate-500 dark:text-slate-400 text-sm">لا توجد منظمات مطابقة</p>
+        <p class="text-slate-500 dark:text-slate-400 text-sm">{% trans 'No matching organizations' %}</p>
       </div>
     </template>
 
@@ -60,12 +60,12 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>المنظمة</th>
-              <th>البريد الإلكتروني</th>
-              <th>الخطة</th>
-              <th>الحالة</th>
-              <th>تاريخ التسجيل</th>
-              <th>إجراءات</th>
+              <th>{% trans 'Organization' %}</th>
+              <th>{% trans 'Email' %}</th>
+              <th>{% trans 'Plan' %}</th>
+              <th>{% trans 'Status' %}</th>
+              <th>{% trans 'Registration Date' %}</th>
+              <th>{% trans 'Actions' %}</th>
             </tr>
           </thead>
           <tbody>
@@ -92,7 +92,7 @@
                           'badge-green':  org.is_active,
                           'badge-red':    !org.is_active,
                         }"
-                        x-text="org.is_active ? 'نشط' : 'غير نشط'"></span>
+                        x-text="org.is_active ? 'Active' : 'Inactive'"></span>
                 </td>
                 <td class="text-slate-400 text-xs"
                     x-text="org.created_at ? new Date(org.created_at).toLocaleDateString(APP_LOCALE) : '—'"></td>
@@ -117,7 +117,7 @@
     <!-- Pagination -->
     <template x-if="!loading && totalPages > 1">
       <div class="px-5 py-3.5 border-t border-slate-100 dark:border-slate-700/30 flex items-center justify-between">
-        <p class="text-xs text-slate-500" x-text="'صفحة ' + page + ' من ' + totalPages"></p>
+        <p class="text-xs text-slate-500" x-text="i18nPageWord + ' ' + page + ' ' + i18nOfWord + ' ' + totalPages"></p>
         <div class="flex gap-2">
           <button @click="page--; load()" :disabled="page <= 1" class="btn-ghost text-xs px-3 py-1.5 disabled:opacity-40">
             <i data-lucide="chevron-right" class="w-4 h-4"></i>
@@ -145,6 +145,9 @@ function organizationsManager() {
     total: 0,
     totalPages: 1,
     pageSize: 20,
+    i18nTotalLabel: "{% trans 'Total:' %} ",
+    i18nPageWord:   "{% trans 'Page' %}",
+    i18nOfWord:     "{% trans 'of' %}",
 
     async load() {
       this.loading = true;
@@ -163,7 +166,7 @@ function organizationsManager() {
           this.totalPages = Math.ceil(this.total / this.pageSize);
         }
       } catch (e) {
-        notify('تعذّر تحميل المنظمات', 'error');
+        notify("{% trans 'Failed to load organizations' %}", 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());
@@ -175,7 +178,7 @@ function organizationsManager() {
     },
 
     openCreate() {
-        notify('سيتم إضافة هذه الميزة قريباً', 'info');
+        notify("{% trans 'This feature will be added soon' %}", 'info');
       },
   
     viewOrg(org) {
@@ -183,8 +186,8 @@ function organizationsManager() {
       },
 
     async toggleStatus(org) {
-      const action = org.is_active ? 'تعطيل' : 'تفعيل';
-      if (!confirm(`هل أنت متأكد من ${action} المنظمة "${org.name}"؟`)) return;
+      const action = org.is_active ? "{% trans 'Deactivate' %}" : "{% trans 'Activate' %}";
+      if (!confirm(`{% trans 'Are you sure you want to' %} ${action} {% trans 'organization' %} "${org.name}"?`)) return;
       try {
         const res = await apiFetch(`/api/v1/auth/organizations/${org.id}/`, {
           method: 'PATCH',
@@ -192,11 +195,11 @@ function organizationsManager() {
         });
         if (res && res.ok) {
           org.is_active = !org.is_active;
-          notify(`تم ${action} المنظمة بنجاح`, 'success');
+          notify(`{% trans 'Organization' %} ${action} {% trans 'successfully' %}`, 'success');
           this.$nextTick(() => lucide.createIcons());
         }
       } catch (e) {
-        notify('فشل تحديث الحالة', 'error');
+        notify("{% trans 'Status update failed' %}", 'error');
       }
     },
   };

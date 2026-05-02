@@ -4,127 +4,531 @@
 <!DOCTYPE html>
 <html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% trans "Email Verification" %} — {{ product_name }}</title>
-<script>window.tailwind = window.tailwind || {};</script>
-<script src="{% static 'vendor/tailwind.browser.js' %}" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com'"></script>
-<script defer src="{% static 'vendor/alpine.min.js' %}"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% trans "Verify your email" %} | {{ product_name }}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
+
+  <script defer src="{% static 'vendor/alpine.min.js' %}" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
+
   <style>
-    * { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     [x-cloak] { display: none !important; }
-    body {
-      background:
-        radial-gradient(circle at top right, rgba(37, 99, 235, 0.12), transparent 24%),
-        radial-gradient(circle at bottom left, rgba(124, 58, 237, 0.12), transparent 30%),
-        linear-gradient(180deg, #eef4ff 0%, #f8fafc 100%);
+
+    :root {
+      --primary: #003366;
+      --primary-dark: #002244;
+      --primary-light: #1a4d80;
+      --accent: #10B981;
+      --accent-dark: #059669;
+      --accent-light: #34d399;
+      --bg-soft: #f8fafc;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      --border: #e2e8f0;
+      --danger: #ef4444;
     }
-    .auth-grid {
-      background-image:
-        linear-gradient(rgba(148, 163, 184, 0.12) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(148, 163, 184, 0.12) 1px, transparent 1px);
-      background-size: 42px 42px;
+
+    body {
+      font-family: 'Tajawal', sans-serif;
+      color: var(--text);
+      background: white;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    a { text-decoration: none; color: inherit; }
+    button { font-family: inherit; cursor: pointer; border: none; background: none; }
+
+    .otp-wrap { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
+
+    /* Form side */
+    .otp-form-side {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 48px 80px;
+      background: white;
+      overflow-y: auto;
+    }
+    .form-container {
+      max-width: 480px;
+      width: 100%;
+      margin: 0 auto;
+      animation: fadeIn 0.6s ease both;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 28px;
+      transition: color 0.2s ease;
+    }
+    .back-link:hover { color: var(--primary); }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    .logo-mark { width: 44px; height: 44px; }
+    .logo-mark svg { width: 100%; height: 100%; }
+    .logo-text { display: flex; flex-direction: column; line-height: 1; }
+    .logo-text .ar { font-family: 'Cairo', sans-serif; font-size: 22px; font-weight: 800; color: var(--primary); }
+    .logo-text .en { font-family: 'Cairo', sans-serif; font-size: 16px; font-weight: 700; color: var(--primary); margin-top: 2px; }
+
+    .big-icon-wrap {
+      width: 80px;
+      height: 80px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      box-shadow: 0 12px 32px rgba(0, 51, 102, 0.25);
+    }
+
+    .otp-title {
+      font-family: 'Cairo', sans-serif;
+      font-size: 30px;
+      font-weight: 900;
+      color: var(--text);
+      margin-bottom: 10px;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+    .otp-desc {
+      color: var(--text-muted);
+      font-size: 15px;
+      margin-bottom: 8px;
+      line-height: 1.7;
+    }
+    .otp-email {
+      font-weight: 800;
+      color: var(--primary);
+      font-family: 'Cairo', sans-serif;
+      margin-bottom: 28px;
+      font-size: 15px;
+    }
+
+    .info-box {
+      background: rgba(0, 51, 102, 0.04);
+      border: 1px solid rgba(0, 51, 102, 0.10);
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-bottom: 22px;
+    }
+    .info-box-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+    .info-box-body {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .alert {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 18px;
+    }
+    .alert-error { background: #fee2e2; border: 1px solid #fecaca; color: #991b1b; }
+    .alert-success { background: #dcfce7; border: 1px solid #bbf7d0; color: #166534; }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .otp-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+      max-width: 100%;
+    }
+    .otp-box {
+      width: 100%;
+      min-width: 0;
+      height: 56px;
+      padding: 0;
+      border-radius: 12px;
+      border: 1.5px solid var(--border);
+      background: var(--bg-soft);
+      text-align: center;
+      font-family: 'Cairo', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--primary);
+      transition: all 0.2s ease;
+      font-family: inherit;
+      box-sizing: border-box;
     }
     .otp-box:focus {
       outline: none;
-      border-color: #2563eb;
-      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+      border-color: var(--primary);
+      background: white;
+      box-shadow: 0 0 0 4px rgba(0, 51, 102, 0.10);
+    }
+
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+    .meta-row b { color: var(--primary); font-weight: 800; }
+
+    .login-btn {
+      width: 100%;
+      padding: 15px;
+      background: var(--primary);
+      color: white;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 15px;
+      transition: all 0.25s ease;
+      box-shadow: 0 8px 20px rgba(0, 51, 102, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .login-btn:hover:not(:disabled) {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(0, 51, 102, 0.28);
+    }
+    .login-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    .resend-card {
+      margin-top: 24px;
+      padding: 16px;
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .resend-card-text { font-size: 13px; }
+    .resend-card-text b { color: var(--text); font-weight: 800; }
+    .resend-card-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+    .resend-btn {
+      padding: 10px 18px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      background: white;
+      transition: all 0.2s ease;
+    }
+    .resend-btn:hover:not(:disabled) {
+      border-color: var(--accent);
+      background: rgba(16, 185, 129, 0.06);
+      color: var(--accent-dark);
+    }
+    .resend-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .footer-note {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-size: 11px;
+      color: var(--text-light);
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    /* Brand side */
+    .otp-brand-side {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      position: relative;
+      overflow: hidden;
+      padding: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    .brand-orb { position: absolute; border-radius: 50%; filter: blur(80px); }
+    .brand-orb.orb-1 { width: 400px; height: 400px; background: var(--accent); top: -100px; right: -100px; opacity: 0.3; }
+    .brand-orb.orb-2 { width: 350px; height: 350px; background: #1a4d80; bottom: -80px; left: -80px; opacity: 0.5; }
+    .brand-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .brand-content { position: relative; z-index: 1; text-align: center; max-width: 460px; }
+    .brand-icon-shield {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 28px;
+      border-radius: 22px;
+      background: rgba(16, 185, 129, 0.16);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent-light);
+      backdrop-filter: blur(10px);
+    }
+    .brand-quote {
+      font-family: 'Cairo', sans-serif;
+      font-size: 26px;
+      font-weight: 800;
+      line-height: 1.4;
+      margin-bottom: 32px;
+      letter-spacing: -0.5px;
+    }
+    .brand-quote .highlight { color: var(--accent-light); }
+    .brand-steps { display: flex; flex-direction: column; gap: 12px; }
+    .brand-step {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      backdrop-filter: blur(10px);
+    }
+    .brand-step-num {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--accent-light);
+      font-weight: 800;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .brand-step-text { font-size: 13px; opacity: 0.92; line-height: 1.5; text-align: right; flex: 1; }
+    .brand-step-text small { display: block; opacity: 0.65; font-size: 11px; margin-top: 2px; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes auth-shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+    .login-btn:disabled {
+      background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 25%, var(--accent) 50%, var(--primary-light) 75%, var(--primary) 100%);
+      background-size: 200% auto;
+      animation: auth-shimmer 2.4s linear infinite;
+      opacity: 1;
+    }
+    @keyframes auth-dot-bounce { 0%,80%,100% { transform: scale(0.6); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
+    .auth-dots { display: inline-flex; gap: 4px; margin-right: 6px; vertical-align: middle; }
+    .auth-dots span { width: 5px; height: 5px; border-radius: 50%; background: white; animation: auth-dot-bounce 1.2s infinite ease-in-out; }
+    .auth-dots span:nth-child(2) { animation-delay: .15s; }
+    .auth-dots span:nth-child(3) { animation-delay: .30s; }
+
+    @media (max-width: 1024px) {
+      .otp-wrap { grid-template-columns: 1fr; }
+      .otp-brand-side { display: none; }
+      .otp-form-side { padding: 32px 20px; }
+    }
+    @media (max-width: 480px) {
+      .otp-grid { gap: 6px; }
+      .otp-box { height: 48px; font-size: 20px; }
     }
   </style>
 </head>
-<body class="min-h-screen text-slate-900">
-  <div class="fixed {% if LANGUAGE_BIDI %}right-4{% else %}left-4{% endif %} top-4 z-50">
-    {% include "partials/language_switcher.html" with extra_classes="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/85 p-1 text-xs font-semibold text-slate-700 shadow-lg backdrop-blur" %}
+<body>
+  <div style="position:fixed;top:16px;{% if LANGUAGE_BIDI %}left{% else %}right{% endif %}:16px;z-index:50;">
+    {% include "partials/language_switcher.html" with extra_classes="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/95 p-1 text-xs font-semibold text-slate-700 shadow-md backdrop-blur" %}
   </div>
-  <div class="auth-grid fixed inset-0 pointer-events-none"></div>
+  <main class="otp-wrap">
 
-  <main class="relative flex min-h-screen items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
-    <div class="w-full max-w-xl" x-data="otpVerifyPage({
-      resendCooldown: {{ resend_cooldown_seconds|default:0 }},
-      attemptsRemaining: {{ otp_attempts_remaining|default:5 }},
-      resendRemaining: {{ otp_resend_remaining|default:3 }},
-      initialError: '{{ error_message|default:""|escapejs }}'
-    })" x-init="init()">
-      <div class="mb-6 text-center">
-        <a href="{% url 'frontend:home' %}" class="inline-flex items-center gap-3">
-          <img src="{% static 'img/logo.png' %}" alt="{{ product_name }}" class="h-16 w-16 rounded-[22px] object-cover shadow-[0_22px_55px_rgba(37,99,235,0.28)]">
+    <!-- ===== Form Side ===== -->
+    <div class="otp-form-side">
+      <div class="form-container" x-data="otpVerifyPage({
+        resendCooldown: {{ resend_cooldown_seconds|default:0 }},
+        attemptsRemaining: {{ otp_attempts_remaining|default:5 }},
+        resendRemaining: {{ otp_resend_remaining|default:3 }},
+        initialError: '{{ error_message|default:""|escapejs }}'
+      })" x-init="init()">
+
+        <a href="{% url 'frontend:home' %}" class="back-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18l6-6-6-6" transform="scale(-1,1) translate(-24,0)"/>
+          </svg>
+          {% trans "Back to Home" %}
         </a>
-        <p class="mt-4 text-xs font-semibold text-slate-500">{{ product_signature }}</p>
-        <h1 class="mt-5 text-3xl font-extrabold tracking-tight text-slate-900">{% trans "Verify your email" %}</h1>
-        <p class="mt-2 text-sm leading-7 text-slate-500">
-          {% trans "Enter the 6-digit verification code linked to this email:" %}
-          <span class="font-bold text-slate-700">{{ masked_email }}</span>
-        </p>
-      </div>
 
-      <section class="rounded-[30px] border border-white/70 bg-white/90 p-6 shadow-[0_32px_80px_rgba(15,23,42,0.12)] backdrop-blur-xl sm:p-8">
-        <div class="mb-6 rounded-2xl border border-blue-100 bg-blue-50/70 p-4 text-sm leading-7 text-blue-900">
-          <div class="font-bold">{% trans "One final step to secure your account" %}</div>
-          <div class="mt-1 text-blue-800/80">{% trans "Enter the code within 10 minutes. It can be used only once." %}</div>
+        <div class="logo">
+          <div class="logo-mark">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="50" r="40" stroke="#003366" stroke-width="8" fill="none"/>
+              <path d="M28 50 L44 66 L72 36" stroke="#10B981" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="logo-text">
+            <span class="ar">تدقيق</span>
+            <span class="en">{{ product_name }}</span>
+          </div>
         </div>
 
-        <div x-cloak x-show="message" class="mb-5 rounded-2xl px-4 py-3 text-sm font-semibold"
-             :class="messageType === 'error' ? 'border border-red-200 bg-red-50 text-red-700' : 'border border-emerald-200 bg-emerald-50 text-emerald-700'">
+        <div class="big-icon-wrap">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+        </div>
+
+        <h1 class="otp-title">{% trans "Verify your email" %}</h1>
+        <p class="otp-desc">{% trans "Enter the 6-digit verification code we sent to:" %}</p>
+        <p class="otp-email">{{ masked_email }}</p>
+
+        <div class="info-box">
+          <div class="info-box-title">{% trans "One final step to secure your account" %}</div>
+          <div class="info-box-body">{% trans "Enter the code within 10 minutes. It can be used only once." %}</div>
+        </div>
+
+        <div x-cloak x-show="message" class="alert" :class="messageType === 'error' ? 'alert-error' : 'alert-success'">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:1px">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
           <span x-text="message"></span>
         </div>
 
-        <form id="otp-form" method="post" @submit.prevent="submitOtp" class="space-y-6">
+        <form id="otp-form" method="post" @submit.prevent="submitOtp">
           {% csrf_token %}
           <input type="hidden" name="otp_code" id="otp_code">
 
-          <div>
-            <label class="mb-3 block text-sm font-bold text-slate-700">{% trans "Verification Code" %}</label>
-            <div class="grid grid-cols-6 gap-2 sm:gap-3" dir="ltr" @paste.prevent="handlePaste">
-              <template x-for="(digit, index) in digits" :key="index">
-                <input
-                  type="text"
-                  inputmode="numeric"
-                  maxlength="1"
-                  class="otp-box h-14 rounded-2xl border border-slate-200 bg-slate-50 text-center text-2xl font-extrabold tracking-wider text-slate-900 transition"
-                  x-model="digits[index]"
-                  @input="handleInput(index, $event)"
-                  @keydown="handleKeydown(index, $event)"
-                  :data-index="index"
-                >
-              </template>
-            </div>
-            <div class="mt-3 flex items-center justify-between text-xs text-slate-500">
-              <span>{% trans "Remaining attempts:" %} <span class="font-bold text-slate-700" x-text="attemptsRemaining"></span></span>
-              <span>{% trans "Remaining resends:" %} <span class="font-bold text-slate-700" x-text="resendRemaining"></span></span>
-            </div>
+          <label class="form-label">{% trans "Verification Code" %}</label>
+          <div class="otp-grid" dir="ltr" @paste.prevent="handlePaste">
+            <template x-for="(digit, index) in digits" :key="index">
+              <input
+                type="text"
+                inputmode="numeric"
+                maxlength="1"
+                class="otp-box"
+                x-model="digits[index]"
+                @input="handleInput(index, $event)"
+                @keydown="handleKeydown(index, $event)"
+                :data-index="index"
+              >
+            </template>
           </div>
 
-          <button type="submit"
-                  class="flex h-12 w-full items-center justify-center rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 text-sm font-bold text-white shadow-lg shadow-blue-900/20 transition hover:from-blue-700 hover:to-cyan-600 disabled:cursor-not-allowed disabled:opacity-70"
-                  :disabled="loading">
-            <span x-show="!loading">{% trans "Verify code and sign in" %}</span>
-            <span x-show="loading">{% trans "Verifying..." %}</span>
+          <div class="meta-row">
+            <span>{% trans "Remaining attempts:" %} <b x-text="attemptsRemaining"></b></span>
+            <span>{% trans "Remaining resends:" %} <b x-text="resendRemaining"></b></span>
+          </div>
+
+          <button type="submit" class="login-btn" :disabled="loading">
+            <template x-if="loading"><span class="auth-dots"><span></span><span></span><span></span></span></template>
+            <span x-text="loading ? '{% trans "Verifying..." %}' : '{% trans "Verify and sign in" %}'"></span>
           </button>
         </form>
 
-        <div class="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div class="text-sm font-bold text-slate-800">{% trans "Didn’t receive the code?" %}</div>
-              <div class="mt-1 text-xs text-slate-500">
-                <span x-show="countdown > 0">{% trans "You can resend after" %} <span class="font-bold text-slate-700" x-text="countdown"></span> {% trans "seconds." %}</span>
-                <span x-show="countdown === 0">{% trans "You can request a new code now." %}</span>
-              </div>
+        <div class="resend-card">
+          <div class="resend-card-text">
+            <b>{% trans "Didn't receive the code?" %}</b>
+            <div class="resend-card-sub">
+              <span x-show="countdown > 0">{% trans "You can resend after" %} <b x-text="countdown"></b> {% trans "seconds." %}</span>
+              <span x-show="countdown === 0">{% trans "You can request a new code now." %}</span>
             </div>
-            <button type="button"
-                    @click="resendOtp"
-                    class="h-11 rounded-2xl border border-slate-200 px-5 text-sm font-bold text-slate-700 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    :disabled="countdown > 0 || resendLoading || resendRemaining === 0">
-              <span x-show="!resendLoading">{% trans "Resend code" %}</span>
-              <span x-show="resendLoading">{% trans "Sending..." %}</span>
-            </button>
           </div>
+          <button type="button" @click="resendOtp" class="resend-btn"
+                  :disabled="countdown > 0 || resendLoading || resendRemaining === 0">
+            <span x-show="!resendLoading">{% trans "Resend code" %}</span>
+            <span x-show="resendLoading">{% trans "Sending..." %}</span>
+          </button>
         </div>
 
-        <div class="mt-5 text-center text-xs leading-6 text-slate-500">
-          {% trans "If you did not request this account or a sign-in attempt, you can ignore this step and your account will remain inactive." %}
+        <div style="margin-top:18px; text-align:center;">
+          <a href="{% url 'frontend:login' %}?cancel=1" style="font-size:13px; color:var(--text-muted); font-weight:600; text-decoration:none;"
+             onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text-muted)'">
+            ← {% trans "Use a different email / sign in to another account" %}
+          </a>
         </div>
-      </section>
+
+        <div class="footer-note">
+          {% trans "If you did not request this account or sign-in attempt, you can ignore this step and your account will remain inactive." %}
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Brand Side ===== -->
+    <div class="otp-brand-side">
+      <div class="brand-grid"></div>
+      <div class="brand-orb orb-1"></div>
+      <div class="brand-orb orb-2"></div>
+
+      <div class="brand-content">
+        <div class="brand-icon-shield">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6l-8-4z"/>
+            <path d="M9 12l2 2 4-4"/>
+          </svg>
+        </div>
+
+        <h2 class="brand-quote">
+          {% blocktrans %}Two-step verification keeps your account <span class="highlight">safer</span>.{% endblocktrans %}
+        </h2>
+
+        <div class="brand-steps">
+          <div class="brand-step">
+            <div class="brand-step-num">1</div>
+            <div class="brand-step-text">
+              {% trans "Check your email inbox" %}
+              <small>{% trans "Including spam or junk folder" %}</small>
+            </div>
+          </div>
+          <div class="brand-step">
+            <div class="brand-step-num">2</div>
+            <div class="brand-step-text">
+              {% trans "Enter the 6-digit code" %}
+              <small>{% trans "Valid for 10 minutes" %}</small>
+            </div>
+          </div>
+          <div class="brand-step">
+            <div class="brand-step-num">3</div>
+            <div class="brand-step-text">
+              {% trans "Move directly to the dashboard" %}
+              <small>{% blocktrans with product=product_name %}Start using {{ product }} immediately{% endblocktrans %}</small>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 
@@ -132,25 +536,14 @@
     function getCookie(name) {
       const cookieValue = `; ${document.cookie}`;
       const parts = cookieValue.split(`; ${name}=`);
-      if (parts.length === 2) {
-        return parts.pop().split(';').shift();
-      }
+      if (parts.length === 2) return parts.pop().split(';').shift();
       return '';
     }
 
     async function parseJson(response) {
       const text = await response.text();
       if (!text) return {};
-      try {
-        return JSON.parse(text);
-      } catch (error) {
-        return { error: text };
-      }
-    }
-
-    function storeTokens(payload) {
-      // Tokens are stored in HttpOnly cookies by the server.
-      // No localStorage writes — prevents XSS token theft.
+      try { return JSON.parse(text); } catch (e) { return { error: text }; }
     }
 
     function otpVerifyPage(config) {
@@ -166,9 +559,7 @@
         timerId: null,
 
         init() {
-          if (config.initialError) {
-            this.showMessage(config.initialError, 'error');
-          }
+          if (config.initialError) this.showMessage(config.initialError, 'error');
           this.startTimer();
           this.focusInput(0);
         },
@@ -177,12 +568,8 @@
           if (this.timerId) clearInterval(this.timerId);
           if (this.countdown <= 0) return;
           this.timerId = setInterval(() => {
-            if (this.countdown > 0) {
-              this.countdown -= 1;
-            }
-            if (this.countdown <= 0) {
-              clearInterval(this.timerId);
-            }
+            if (this.countdown > 0) this.countdown -= 1;
+            if (this.countdown <= 0) clearInterval(this.timerId);
           }, 1000);
         },
 
@@ -200,15 +587,11 @@
           this.digits[index] = value;
           event.target.value = value;
           this.syncCode();
-          if (value && index < this.digits.length - 1) {
-            this.focusInput(index + 1);
-          }
+          if (value && index < this.digits.length - 1) this.focusInput(index + 1);
         },
 
         handleKeydown(index, event) {
-          if (event.key === 'Backspace' && !this.digits[index] && index > 0) {
-            this.focusInput(index - 1);
-          }
+          if (event.key === 'Backspace' && !this.digits[index] && index > 0) this.focusInput(index - 1);
         },
 
         handlePaste(event) {
@@ -241,23 +624,17 @@
           try {
             const response = await fetch('{% url "frontend:otp_verify" %}', {
               method: 'POST',
-              headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-                'X-Requested-With': 'XMLHttpRequest',
-              },
+              headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' },
               body: new FormData(document.getElementById('otp-form')),
             });
             const data = await parseJson(response);
 
             if (!response.ok || !data.success) {
-              if (typeof data.attempts_remaining !== 'undefined') {
-                this.attemptsRemaining = data.attempts_remaining;
-              }
+              if (typeof data.attempts_remaining !== 'undefined') this.attemptsRemaining = data.attempts_remaining;
               this.showMessage(data.error || '{% trans "Unable to verify the code right now." %}', 'error');
               return;
             }
 
-            storeTokens(data);
             this.showMessage(data.message || '{% trans "Verification completed successfully." %}', 'success');
             window.location.href = data.redirect || '{% url "frontend:dashboard" %}';
           } catch (error) {
@@ -272,14 +649,10 @@
 
           this.resendLoading = true;
           try {
-            const formData = new FormData();
             const response = await fetch('{% url "frontend:otp_resend" %}', {
               method: 'POST',
-              headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-                'X-Requested-With': 'XMLHttpRequest',
-              },
-              body: formData,
+              headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' },
+              body: new FormData(),
             });
             const data = await parseJson(response);
 

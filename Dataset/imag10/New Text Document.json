@@ -1,0 +1,63 @@
+{
+  "po_metadata": {
+    "po_number": "PQR00003",
+    "date": "03/11/2020 12:21:19",
+    "project_name": "ASDFG",
+    "delivery_location": "Warehouse",
+    "currency": "SAR"
+  },
+  "order_placed_by": {
+    "company": "GLOBAL SOURCES FOR GEN. CONT. CO. LTD.",
+    "address": "P.O Box: 2705, Jubail, Saudi Arabia",
+    "email": "info@yourcompany.example.com"
+  },
+  "supplier_details": {
+    "name": "ASUSTeK",
+    "address": "31 Hong Kong street, Taipei 106, Taiwan",
+    "contact_person": "Bazith Moideen (Procurement Manager)"
+  },
+  "line_items": [
+    {
+      "product": "[E-COM08] Apple In-Ear Headphones",
+      "unit": "Day(s)",
+      "qty": 5272505.000,
+      "unit_price": 70.00,
+      "taxes": "IGST 1%",
+      "total": 369075350.00
+    },
+    {
+      "product": "[E-COM10] Apple Wireless Keyboard",
+      "unit": "Dozen(s)",
+      "qty": 524254.000,
+      "unit_price": 10.00,
+      "total": 5242540.00
+    },
+    {
+      "product": "[E-COM05] Bose Mini Bluetooth Speaker",
+      "unit": "fl oz",
+      "qty": 41742.000,
+      "unit_price": 140.00,
+      "total": 5843880.00
+    },
+    {
+      "product": "[HDD-SH1] HDD SH-1",
+      "unit": "Dozen(s)",
+      "qty": 527386.000,
+      "unit_price": 860.00,
+      "total": 453551960.00
+    },
+    {
+      "product": "[E-COM09] iMac",
+      "unit": "Dozen(s)",
+      "qty": 5242.000,
+      "unit_price": 1299.00,
+      "total": 6809358.00
+    }
+  ],
+  "financial_summary": {
+    "sub_total": 840523088.00,
+    "discount": null,
+    "adjusted_sub_total": 3690753.50,
+    "total_sar": 844213841.50
+  }
+}

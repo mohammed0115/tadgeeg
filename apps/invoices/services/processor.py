@@ -282,7 +282,9 @@ def process_single_file(
             img_for_ai = file_path
 
         try:
-            ai_data = extract_invoice_with_ai(img_for_ai, raw_text)
+            from core.services.ai_budget import org_context
+            with org_context(org.id if org else None):
+                ai_data = extract_invoice_with_ai(img_for_ai, raw_text)
         except Exception as exc:
             logger.warning("OpenAI extraction failed for %s: %s", filename, exc)
             from core.services.invoice_ai_service import _fallback_extraction

@@ -573,6 +573,23 @@ VALIDATORS = {
     "sales_receipt":  validate_sales_receipt,
 }
 
+# Phase-3 additions: pull in the 15 new doc-type validators and merge them
+# into the public dispatch. The lazy import + try/except keeps the original
+# module loadable even if v2 is absent (e.g. partial deployment).
+try:
+    from .doc_validators_v2 import VALIDATORS_V2  # noqa: E402
+    VALIDATORS.update(VALIDATORS_V2)
+    # Aliases — same business doc, different conventional name
+    VALIDATORS.setdefault("payment", VALIDATORS["payment_voucher"])
+    VALIDATORS.setdefault("tax_vat_document", VALIDATORS["vat_return"])
+    # GRN is registered as "grn" in V2; the rest of the codebase uses the
+    # long form. Alias both ways so any caller resolves correctly.
+    VALIDATORS.setdefault("goods_receipt_note", VALIDATORS["grn"])
+    VALIDATORS.setdefault("invoice", VALIDATORS["sales_invoice"])  # canonical Invoice → SI rules
+except ImportError:  # pragma: no cover — defensive
+    pass
+
+
 def run_document_validation(doc_type: str, document_obj) -> dict:
     """Route to the correct validator by document type."""
     validator = VALIDATORS.get(doc_type)

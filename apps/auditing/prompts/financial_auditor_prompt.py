@@ -15,8 +15,19 @@ STRICT RULES:
 - OCR noise is expected. Use context to infer values where obvious.
 - Assessment must be objective and audit-grade.
 
-DOCUMENT TYPES you can detect:
-invoice, purchase_order, bank_statement, payroll, expense_report, tax_declaration, fixed_asset, sales_receipt, other
+DOCUMENT TYPES — you MUST set "document_type" to exactly ONE of these snake_case strings (no synonyms, no plurals, no spaces):
+
+  invoice            — sales/purchase invoices, simplified tax invoices, billing documents
+  purchase_order     — POs, supplier orders
+  bank_statement     — bank account statements, account histories
+  payroll            — salary sheets, GOSI declarations
+  expense_report     — travel/operational expense submissions
+  tax_declaration    — VAT returns, tax filings, ZATCA declarations (do NOT use "vat_return" or "vat_returns")
+  fixed_asset        — capital assets, depreciation schedules
+  sales_receipt      — POS receipts, customer-facing receipts
+  other              — anything that does not fit the above
+
+If a document looks like a VAT return, use "tax_declaration". Always lowercase, always snake_case.
 
 VALIDATION RULES to apply based on document type:
 - Invoice/PO/Sales Receipt: line_total = qty × unit_price, subtotal + vat = total, required fields (number, date, vendor/buyer, total)

@@ -5,21 +5,25 @@
 <html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
 <head>
   <meta charset="UTF-8">
-  <title>500 — خطأ في الخادم | Tadgeeg</title>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-  <script>window.tailwind = window.tailwind || {};</script>
-  <script src="{% static 'vendor/tailwind.browser.js' %}" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com'"></script>
-  <style>body{font-family:'Cairo',sans-serif}</style>
+  <title>500 — {% trans "Server Error" %} | Tadgeeg</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Cairo:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Tajawal', sans-serif; background: linear-gradient(135deg, #f8fafc 0%, #fee2e2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .err { max-width: 520px; text-align: center; }
+    .err-code { font-family: 'Cairo', sans-serif; font-size: 120px; font-weight: 900; line-height: 1; background: linear-gradient(135deg, #ef4444, #003366); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 8px; }
+    .err-title { font-family: 'Cairo', sans-serif; font-size: 26px; font-weight: 800; color: #003366; margin-bottom: 12px; }
+    .err-desc { font-size: 14px; color: #64748b; line-height: 1.7; margin-bottom: 32px; }
+    .err-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 26px; border-radius: 12px; background: #003366; color: white; font-weight: 700; text-decoration: none; transition: all 0.2s; }
+    .err-btn:hover { background: #002244; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,51,102,0.25); }
+  </style>
 </head>
-<body class="bg-gray-950 text-white min-h-screen flex items-center justify-center">
-  <div class="fixed {% if LANGUAGE_BIDI %}right-4{% else %}left-4{% endif %} top-4 z-50">
-    {% include "partials/language_switcher.html" with extra_classes="inline-flex items-center gap-1 rounded-2xl border border-white/15 bg-slate-900/70 p-1 text-xs font-semibold text-slate-200 shadow-lg backdrop-blur" %}
-  </div>
-  <div class="text-center max-w-lg px-6">
-    <div class="text-8xl font-bold text-red-500 mb-4">500</div>
-    <h1 class="text-2xl font-bold mb-2">خطأ في الخادم</h1>
-    <p class="text-gray-400 mb-8">حدث خطأ غير متوقع. فريقنا يعمل على الحل.</p>
-    <a href="/" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-semibold transition">العودة للرئيسية</a>
+<body>
+  <div class="err">
+    <div class="err-code">500</div>
+    <h1 class="err-title">{% trans "Server Error" %}</h1>
+    <p class="err-desc">{% trans "An unexpected error occurred. Our team has been notified." %}</p>
+    <a href="/" class="err-btn">{% trans "Back to Dashboard" %} ←</a>
   </div>
 </body>
 </html>

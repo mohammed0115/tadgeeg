@@ -4,294 +4,713 @@
 <!DOCTYPE html>
 <html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{% if auth_mode == 'register' %}{% trans "Create Account" %} - {{ product_name }}{% else %}{% trans "Login" %} - {{ product_name }}{% endif %}</title>
-  <meta name="description" content="{{ product_signature }}">
-<script>window.tailwind = window.tailwind || {};</script>
-<script src="{% static 'vendor/tailwind.browser.js' %}" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com'"></script>
-<script defer src="{% static 'vendor/alpine.min.js' %}"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% if auth_mode == 'register' %}{% trans "Create Account" %}{% else %}{% trans "Sign In" %}{% endif %} | {{ product_name }}</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
+
+  <script defer src="{% static 'vendor/alpine.min.js' %}" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
+
   <style>
-    * { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     [x-cloak] { display: none !important; }
-    :root { color-scheme: light; }
+
+    :root {
+      --primary: #003366;
+      --primary-dark: #002244;
+      --primary-light: #1a4d80;
+      --accent: #10B981;
+      --accent-dark: #059669;
+      --accent-light: #34d399;
+      --bg-soft: #f8fafc;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --text-light: #94a3b8;
+      --border: #e2e8f0;
+      --danger: #ef4444;
+    }
+
     body {
-      background:
-        radial-gradient(circle at top right, rgba(124,58,237,.14), transparent 24%),
-        radial-gradient(circle at 15% 80%, rgba(236,72,153,.14), transparent 22%),
-        radial-gradient(circle at 70% 60%, rgba(59,130,246,.12), transparent 28%),
-        linear-gradient(180deg, #fff 0%, #f5f3ff 36%, #eff6ff 100%);
+      font-family: 'Tajawal', sans-serif;
+      color: var(--text);
+      background: white;
+      line-height: 1.6;
+      min-height: 100vh;
     }
-    .bg-dot { background-image: radial-gradient(rgba(139,92,246,.14) 1px, transparent 1px); background-size: 28px 28px; }
-    .text-grad { background: linear-gradient(135deg, #7c3aed 0%, #ec4899 52%, #2563eb 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-    .glass { background: rgba(255,255,255,.76); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
-    .hero-card {
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.8), rgba(255,255,255,.68)),
-        radial-gradient(circle at top right, rgba(196,181,253,.34), transparent 36%);
+
+    a { text-decoration: none; color: inherit; }
+    button { font-family: inherit; cursor: pointer; border: none; background: none; }
+
+    .login-wrap { min-height: 100vh; display: grid; grid-template-columns: 1fr 1fr; }
+
+    /* === Form Side === */
+    .login-form-side {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 40px 80px;
+      background: white;
+      overflow-y: auto;
     }
-    .soft-outline { box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 24px 80px rgba(15,23,42,.08); }
-    .btn-primary { background-image: linear-gradient(110deg, #6d28d9, #8b5cf6 32%, #a855f7 55%, #3b82f6 100%); background-size: 200% 100%; transition: background-position .35s ease, transform .2s ease, box-shadow .2s ease; }
-    .btn-primary:hover { background-position: right center; transform: translateY(-2px); box-shadow: 0 16px 40px rgba(124,58,237,.22); }
-    .input-surface { background: #faf7ff; border: 1px solid #e2e8f0; transition: border-color .25s ease, box-shadow .25s ease, background-color .25s ease; }
-    .input-surface:focus { outline: none; border-color: rgba(139,92,246,.6); background: #fff; box-shadow: 0 0 0 4px rgba(139,92,246,.12); }
-    .pill-active { background: #fff; color: #0f172a; box-shadow: inset 0 0 0 1px rgba(221,214,254,.9), 0 10px 24px rgba(124,58,237,.08); }
-    .soft-card { background: rgba(255,255,255,.72); border: 1px solid rgba(255,255,255,.8); box-shadow: 0 24px 80px rgba(15,23,42,.08); }
-    .info-chip { background: linear-gradient(180deg, rgba(255,255,255,.82), rgba(255,255,255,.68)); border: 1px solid rgba(255,255,255,.92); }
-    .metric-card { transition: transform .25s ease, box-shadow .25s ease; }
-    .metric-card:hover { transform: translateY(-4px); box-shadow: 0 16px 36px rgba(124,58,237,.12); }
-    .step-dot { box-shadow: 0 0 0 5px rgba(255,255,255,.9); }
-    .panel-topline { background: linear-gradient(90deg, rgba(124,58,237,0), rgba(124,58,237,.9), rgba(59,130,246,0)); }
+    .form-container {
+      max-width: 460px;
+      width: 100%;
+      margin: 0 auto;
+      animation: fadeIn 0.6s ease both;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 28px;
+      transition: color 0.2s ease;
+    }
+    .back-link:hover { color: var(--primary); }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    .logo-mark { width: 44px; height: 44px; }
+    .logo-mark svg { width: 100%; height: 100%; }
+    .logo-text { display: flex; flex-direction: column; line-height: 1; }
+    .logo-text .ar {
+      font-family: 'Cairo', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    .logo-text .en {
+      font-family: 'Cairo', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-top: 2px;
+    }
+
+    /* Mode tabs */
+    .mode-tabs {
+      display: flex;
+      background: var(--bg-soft);
+      border-radius: 14px;
+      padding: 4px;
+      margin-bottom: 32px;
+    }
+    .mode-tab {
+      flex: 1;
+      padding: 11px 14px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      text-align: center;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+    }
+    .mode-tab.active {
+      background: white;
+      color: var(--primary);
+      box-shadow: 0 2px 6px rgba(0, 51, 102, 0.08);
+    }
+
+    .login-title {
+      font-family: 'Cairo', sans-serif;
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--text);
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
+    }
+    .login-desc {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 28px;
+    }
+
+    .form-group { margin-bottom: 18px; }
+    .form-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .form-label a {
+      font-size: 12px;
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .form-label a:hover { text-decoration: underline; }
+
+    .input-wrap { position: relative; }
+    .form-input {
+      width: 100%;
+      padding: 13px 44px;
+      background: var(--bg-soft);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      font-size: 14px;
+      color: var(--text);
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: white;
+      box-shadow: 0 0 0 4px rgba(0, 51, 102, 0.08);
+    }
+    .input-icon {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-light);
+      pointer-events: none;
+    }
+    .input-toggle {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-light);
+      cursor: pointer;
+      padding: 4px;
+    }
+    .input-toggle:hover { color: var(--primary); }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 22px;
+    }
+    .checkbox-row input { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+    .checkbox-row label { font-size: 13px; color: var(--text-muted); cursor: pointer; }
+
+    .login-btn {
+      width: 100%;
+      padding: 15px;
+      background: var(--primary);
+      color: white;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 15px;
+      transition: all 0.25s ease;
+      box-shadow: 0 8px 20px rgba(0, 51, 102, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .login-btn:hover:not(:disabled) {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(0, 51, 102, 0.28);
+    }
+    .login-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin: 24px 0;
+      color: var(--text-light);
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .google-btn {
+      width: 100%;
+      padding: 13px;
+      background: white;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      transition: all 0.2s ease;
+    }
+    .google-btn:hover {
+      border-color: var(--primary);
+      background: var(--bg-soft);
+    }
+
+    .signup-prompt {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .signup-prompt a { color: var(--accent); font-weight: 700; }
+    .signup-prompt a:hover { text-decoration: underline; }
+
+    .alert {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 18px;
+    }
+    .alert-error { background: #fee2e2; border: 1px solid #fecaca; color: #991b1b; }
+    .alert-success { background: #dcfce7; border: 1px solid #bbf7d0; color: #166534; }
+
+    .mfa-input {
+      letter-spacing: 8px;
+      font-family: 'Cairo', monospace;
+      font-size: 18px;
+      text-align: center;
+      padding: 14px 16px !important;
+    }
+
+    /* === Brand Side === */
+    .login-brand-side {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      position: relative;
+      overflow: hidden;
+      padding: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    .brand-orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.5; }
+    .brand-orb.orb-1 {
+      width: 400px; height: 400px;
+      background: var(--accent);
+      top: -100px; right: -100px;
+      opacity: 0.3;
+    }
+    .brand-orb.orb-2 {
+      width: 350px; height: 350px;
+      background: #1a4d80;
+      bottom: -80px; left: -80px;
+      opacity: 0.5;
+    }
+    .brand-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .brand-content { position: relative; z-index: 1; text-align: center; max-width: 440px; }
+    .brand-quote {
+      font-family: 'Cairo', sans-serif;
+      font-size: 30px;
+      font-weight: 800;
+      line-height: 1.4;
+      margin-bottom: 36px;
+      letter-spacing: -0.5px;
+    }
+    .brand-quote .highlight { color: var(--accent-light); }
+    .brand-features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 36px;
+    }
+    .brand-feature {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 18px;
+      backdrop-filter: blur(10px);
+    }
+    .brand-feature-value {
+      font-family: 'Cairo', sans-serif;
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--accent-light);
+      margin-bottom: 4px;
+    }
+    .brand-feature-label { font-size: 12px; opacity: 0.85; }
+    .brand-quote-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: center;
+      padding: 14px 22px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 100px;
+      backdrop-filter: blur(10px);
+    }
+    .brand-avatars { display: flex; }
+    .brand-avatars div {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--primary);
+      background: linear-gradient(135deg, var(--accent), #34d399);
+      margin-right: -10px;
+    }
+    .brand-avatars div:nth-child(2) { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
+    .brand-avatars div:nth-child(3) { background: linear-gradient(135deg, #ef4444, #f87171); }
+    .brand-avatars div:nth-child(4) {
+      background: rgba(255, 255, 255, 0.15);
+      font-size: 10px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    /* AI shimmer for inline auth buttons */
+    @keyframes auth-shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    .login-btn:disabled {
+      background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 25%, var(--accent) 50%, var(--primary-light) 75%, var(--primary) 100%);
+      background-size: 200% auto;
+      animation: auth-shimmer 2.4s linear infinite;
+      opacity: 1;
+    }
+    @keyframes auth-dot-bounce {
+      0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+    .auth-dots { display: inline-flex; gap: 4px; margin-right: 6px; vertical-align: middle; }
+    .auth-dots span {
+      width: 5px; height: 5px;
+      border-radius: 50%;
+      background: white;
+      animation: auth-dot-bounce 1.2s infinite ease-in-out;
+    }
+    .auth-dots span:nth-child(2) { animation-delay: 0.15s; }
+    .auth-dots span:nth-child(3) { animation-delay: 0.30s; }
+
+    @media (max-width: 1024px) {
+      .login-wrap { grid-template-columns: 1fr; }
+      .login-brand-side { display: none; }
+      .login-form-side { padding: 32px 20px; }
+    }
   </style>
 </head>
-<body class="min-h-screen overflow-x-hidden text-slate-900">
-  <div class="fixed {% if LANGUAGE_BIDI %}right-4{% else %}left-4{% endif %} top-4 z-50">
-    {% include "partials/language_switcher.html" with extra_classes="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/85 p-1 text-xs font-semibold text-slate-700 shadow-lg backdrop-blur" %}
-  </div>
-  <div class="pointer-events-none fixed inset-0 bg-dot"></div>
-  <div class="pointer-events-none fixed inset-0 overflow-hidden">
-    <div class="absolute -top-32 right-[-8rem] h-80 w-80 rounded-full bg-violet-200/70 blur-3xl"></div>
-    <div class="absolute bottom-[-7rem] left-[-5rem] h-72 w-72 rounded-full bg-pink-200/70 blur-3xl"></div>
-    <div class="absolute top-1/3 left-1/3 h-64 w-64 rounded-full bg-blue-200/60 blur-3xl"></div>
+<body
+  x-data="authPortal('{{ auth_mode|default:'login'|escapejs }}', {{ google_oauth_enabled|yesno:'true,false' }}, '{{ auth_error_message|default:''|escapejs }}')"
+>
+
+  <div style="position:fixed;top:16px;{% if LANGUAGE_BIDI %}left{% else %}right{% endif %}:16px;z-index:50;">
+    {% include "partials/language_switcher.html" with extra_classes="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/95 p-1 text-xs font-semibold text-slate-700 shadow-md backdrop-blur" %}
   </div>
 
-  <main class="relative min-h-screen px-4 py-6 sm:px-6 lg:px-8">
-    <div class="mx-auto max-w-7xl">
-      <div class="mb-6 flex items-center justify-between gap-4">
-        <a href="{% url 'frontend:home' %}" class="flex items-center gap-3">
-          <img src="{% static 'img/logo.png' %}" alt="{{ product_name }} logo" class="h-12 w-12 rounded-2xl object-cover shadow-lg shadow-violet-900/10">
-          <div>
-            <div class="text-lg font-extrabold text-slate-900">{{ product_name }}</div>
-            <div class="text-sm text-slate-500">{{ company_byline }}</div>
-          </div>
+  <div class="login-wrap">
+    <!-- ===== Form Side ===== -->
+    <div class="login-form-side">
+      <div class="form-container">
+        <a href="{% url 'frontend:home' %}" class="back-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18l6-6-6-6" transform="scale(-1,1) translate(-24,0)"/>
+          </svg>
+          {% trans "Back to Home" %}
         </a>
-        <div class="flex items-center gap-3">
-          <a href="{% url 'frontend:home' %}" class="rounded-2xl px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-white/60 hover:text-slate-900">{% trans "Home" %}</a>
+
+        <div class="logo">
+          <div class="logo-mark">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="50" r="40" stroke="#003366" stroke-width="8" fill="none"/>
+              <path d="M28 50 L44 66 L72 36" stroke="#10B981" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="logo-text">
+            <span class="ar">تدقيق</span>
+            <span class="en">{{ product_name }}</span>
+          </div>
+        </div>
+
+        <!-- Mode tabs (hidden during MFA) -->
+        <div class="mode-tabs" x-show="!mfaRequired">
+          <a href="{% url 'frontend:login' %}" class="mode-tab" :class="mode === 'login' ? 'active' : ''">{% trans "Sign In" %}</a>
+          <a href="{% url 'frontend:register' %}" class="mode-tab" :class="mode === 'register' ? 'active' : ''">{% trans "Create Account" %}</a>
+        </div>
+
+        <!-- ====== LOGIN MODE ====== -->
+        <div x-show="mode === 'login' && !mfaRequired">
+          <h1 class="login-title">{% trans "Welcome back" %}</h1>
+          <p class="login-desc">{% trans "Sign in to access your dashboard." %}</p>
+
+          {% if messages %}
+            {% for msg in messages %}
+              <div class="alert {% if msg.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <span>{{ msg }}</span>
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          <div x-show="loginError" x-transition class="alert alert-error">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span x-text="loginError"></span>
+          </div>
+
+          <form @submit.prevent="submitLogin" novalidate>
+            {% csrf_token %}
+            <div class="form-group">
+              <label class="form-label">{% trans "Email Address" %}</label>
+              <div class="input-wrap">
+                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
+                </svg>
+                <input type="email" name="email" class="form-input" placeholder="name@company.sa"
+                       x-model="login.email" required autocomplete="email">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">
+                {% trans "Password" %}
+                <a href="{% url 'frontend:password_reset' %}">{% trans "Forgot password?" %}</a>
+              </label>
+              <div class="input-wrap">
+                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0110 0v4"/>
+                </svg>
+                <input :type="showPassword ? 'text' : 'password'" name="password" class="form-input"
+                       placeholder="••••••••" x-model="login.password" required autocomplete="current-password">
+                <button type="button" class="input-toggle" @click="showPassword = !showPassword" aria-label="{% trans 'Show or hide password' %}">
+                  <svg x-show="!showPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  <svg x-show="showPassword" x-cloak width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="checkbox-row">
+              <input type="checkbox" id="remember" x-model="login.remember">
+              <label for="remember">{% trans "Remember me on this device" %}</label>
+            </div>
+
+            <button type="submit" class="login-btn" :disabled="loginLoading">
+              <template x-if="loginLoading"><span class="auth-dots"><span></span><span></span><span></span></span></template>
+              <span x-text="loginLoading ? '{% trans "Signing in..." %}' : '{% trans "Sign In" %}'"></span>
+            </button>
+          </form>
+
+          {% if google_oauth_enabled %}
+          <div class="divider">{% trans "Or continue with" %}</div>
+          <a href="{% url 'frontend:google_oauth_login' %}" class="google-btn">
+            <svg viewBox="0 0 48 48" width="20" height="20"><path fill="#FFC107" d="M43.6 20.4H42V20H24v8h11.3C33.6 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.6Z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.1 29.3 4 24 4c-7.7 0-14.3 4.3-17.7 10.7Z"/><path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.5-5.2l-6.2-5.2C29.3 35.1 26.8 36 24 36c-5.2 0-9.6-3.3-11.2-8l-6.5 5C9.7 39.6 16.3 44 24 44Z"/><path fill="#1976D2" d="M43.6 20.4H42V20H24v8h11.3c-1.1 3.1-3.3 5.5-6 7l6.2 5.2C39.4 36.6 44 30.9 44 24c0-1.3-.1-2.4-.4-3.6Z"/></svg>
+            <span>{% trans "Continue with Google" %}</span>
+          </a>
+          {% endif %}
+
+          <p class="signup-prompt">
+            {% trans "Don't have an account?" %}
+            <a href="{% url 'frontend:register' %}">{% trans "Start your free trial now" %}</a>
+          </p>
+        </div>
+
+        <!-- ====== REGISTER MODE ====== -->
+        <div x-show="mode === 'register' && !mfaRequired" x-cloak>
+          <h1 class="login-title">{% trans "Create Your Account" %}</h1>
+          <p class="login-desc">{% trans "Start your free trial — no credit card required." %}</p>
+
+          <div x-show="registerError" x-transition class="alert alert-error">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span x-text="registerError"></span>
+          </div>
+
+          <form @submit.prevent="submitRegister" novalidate>
+            {% csrf_token %}
+            <div class="form-group">
+              <label class="form-label">{% trans "Full Name" %}</label>
+              <div class="input-wrap">
+                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+                <input type="text" name="full_name" class="form-input" placeholder="{% trans 'Mohammed Ahmed' %}"
+                       x-model="register.full_name" required autocomplete="name">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">{% trans "Email Address" %}</label>
+              <div class="input-wrap">
+                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                  <polyline points="22,6 12,13 2,6"/>
+                </svg>
+                <input type="email" name="email" class="form-input" placeholder="name@company.sa"
+                       x-model="register.email" required autocomplete="email">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">{% trans "Password" %}</label>
+              <div class="input-wrap">
+                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0110 0v4"/>
+                </svg>
+                <input :type="showPassword ? 'text' : 'password'" name="password" class="form-input"
+                       placeholder="••••••••" x-model="register.password" required autocomplete="new-password" minlength="8">
+                <button type="button" class="input-toggle" @click="showPassword = !showPassword" aria-label="{% trans 'Show or hide password' %}">
+                  <svg x-show="!showPassword" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  <svg x-show="showPassword" x-cloak width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">{% trans "Confirm Password" %}</label>
+              <div class="input-wrap">
+                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 12l2 2 4-4"/>
+                  <path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/>
+                </svg>
+                <input :type="showConfirm ? 'text' : 'password'" name="password_confirm" class="form-input"
+                       placeholder="••••••••" x-model="register.password_confirm" required autocomplete="new-password">
+                <button type="button" class="input-toggle" @click="showConfirm = !showConfirm">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" class="login-btn" :disabled="registerLoading" style="margin-top:8px">
+              <template x-if="registerLoading"><span class="auth-dots"><span></span><span></span><span></span></span></template>
+              <span x-text="registerLoading ? '{% trans "Creating account..." %}' : '{% trans "Create Account" %}'"></span>
+            </button>
+          </form>
+
+          {% if google_oauth_enabled %}
+          <div class="divider">{% trans "Or continue with" %}</div>
+          <a href="{% url 'frontend:google_oauth_login' %}" class="google-btn">
+            <svg viewBox="0 0 48 48" width="20" height="20"><path fill="#FFC107" d="M43.6 20.4H42V20H24v8h11.3C33.6 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.6Z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.1 29.3 4 24 4c-7.7 0-14.3 4.3-17.7 10.7Z"/><path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.5-5.2l-6.2-5.2C29.3 35.1 26.8 36 24 36c-5.2 0-9.6-3.3-11.2-8l-6.5 5C9.7 39.6 16.3 44 24 44Z"/><path fill="#1976D2" d="M43.6 20.4H42V20H24v8h11.3c-1.1 3.1-3.3 5.5-6 7l6.2 5.2C39.4 36.6 44 30.9 44 24c0-1.3-.1-2.4-.4-3.6Z"/></svg>
+            <span>{% trans "Continue with Google" %}</span>
+          </a>
+          {% endif %}
+
+          <p class="signup-prompt">
+            {% trans "Already have an account?" %}
+            <a href="{% url 'frontend:login' %}">{% trans "Sign in" %}</a>
+          </p>
+        </div>
+
+        <!-- ====== MFA STEP ====== -->
+        <div x-show="mfaRequired" x-cloak>
+          <h1 class="login-title">{% trans "Two-Factor Verification" %}</h1>
+          <p class="login-desc">{% trans "Enter the 6-digit code from your authenticator app." %}</p>
+
+          <div x-show="loginError" x-transition class="alert alert-error">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:1px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span x-text="loginError"></span>
+          </div>
+
+          <form @submit.prevent="verifyMFA" novalidate>
+            <div class="form-group">
+              <label class="form-label">{% trans "Verification Code" %}</label>
+              <input type="text" class="form-input mfa-input" placeholder="000000"
+                     x-model="totpCode" maxlength="6" inputmode="numeric"
+                     autocomplete="one-time-code" required style="padding:14px 16px">
+            </div>
+
+            <button type="submit" class="login-btn" :disabled="loginLoading || totpCode.length !== 6">
+              <template x-if="loginLoading"><span class="auth-dots"><span></span><span></span><span></span></span></template>
+              <span x-text="loginLoading ? '{% trans "Verifying..." %}' : '{% trans "Verify" %}'"></span>
+            </button>
+          </form>
+
+          <p class="signup-prompt">
+            <a href="#" @click.prevent="mfaRequired = false; loginError = ''; totpCode = ''">
+              ← {% trans "Back to login" %}
+            </a>
+          </p>
+        </div>
+
+        <div style="text-align:center; margin-top:32px; padding-top:24px; border-top:1px solid var(--border); font-size:11px; color:var(--text-light)">
+          {% blocktrans with product=product_name company=company_display_name %}© 2026 {{ product }}. A product by {{ company }}.{% endblocktrans %}
         </div>
       </div>
+    </div>
 
-      <div class="grid items-start gap-8 lg:grid-cols-[minmax(0,1.02fr)_minmax(420px,0.82fr)] xl:grid-cols-[minmax(0,1fr)_minmax(460px,0.8fr)] xl:gap-12" dir="ltr">
-        <section class="order-1 lg:order-2" dir="rtl">
-          <div class="relative overflow-hidden rounded-[38px] border border-white/80 bg-white/90 p-7 shadow-[0_30px_80px_rgba(15,23,42,0.08)] sm:p-10 lg:p-11 xl:p-12"
-               x-data="authPortal('{{ auth_mode|default:'login'|escapejs }}', {{ google_oauth_enabled|yesno:'true,false' }}, '{{ auth_error_message|default:''|escapejs }}')"
-               @google-error.window="handleExternalError($event.detail)">
-            <div class="panel-topline absolute inset-x-10 top-0 h-1 rounded-full"></div>
+    <!-- ===== Brand Side ===== -->
+    <div class="login-brand-side">
+      <div class="brand-grid"></div>
+      <div class="brand-orb orb-1"></div>
+      <div class="brand-orb orb-2"></div>
 
-            <div class="grid grid-cols-2 gap-1 rounded-[22px] border border-slate-200 bg-slate-100/95 p-1">
-              <a href="{% url 'frontend:register' %}" class="rounded-[16px] px-4 py-3.5 text-center text-sm font-bold transition-all" :class="mode === 'register' ? 'pill-active' : 'text-slate-500 hover:text-slate-800'">{% trans "Create Account" %}</a>
-              <a href="{% url 'frontend:login' %}" class="rounded-[16px] px-4 py-3.5 text-center text-sm font-bold transition-all" :class="mode === 'login' ? 'pill-active' : 'text-slate-500 hover:text-slate-800'">{% trans "Login" %}</a>
-            </div>
+      <div class="brand-content">
+        <h2 class="brand-quote">
+          {% blocktrans %}Financial auditing <span class="highlight">powered by AI</span> to take your business further.{% endblocktrans %}
+        </h2>
 
-            <div class="mt-12" x-show="mode === 'login'" x-cloak>
-              <div class="mb-10 flex items-start justify-between gap-4">
-                <div>
-                  <div class="mb-3 text-sm font-bold uppercase tracking-[0.3em] text-violet-500">{% trans "Login" %}</div>
-                  <h1 class="max-w-[26rem] text-[2rem] font-black leading-[1.15] text-slate-900 sm:text-[2.35rem]">{% trans "Sign in with a calm, clear flow" %}</h1>
-                  <p class="mt-4 max-w-[28rem] text-base leading-7 text-slate-500">{% blocktrans with product=product_name %}Enter your email address and password to return directly to the {{ product }} workspace.{% endblocktrans %}</p>
-                </div>
-                <div class="hidden h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-gradient-to-br from-violet-600 via-fuchsia-500 to-blue-500 text-white shadow-lg shadow-violet-500/20 sm:flex">
-                  <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6.75v-1.5a3.75 3.75 0 0 0-7.5 0v1.5m-2.25 0h12a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 18 18.75H6a1.5 1.5 0 0 1-1.5-1.5v-9a1.5 1.5 0 0 1 1.5-1.5Z" />
-                  </svg>
-                </div>
-              </div>
-
-              <form class="space-y-6" method="post" action="{% url 'frontend:login' %}" @submit.prevent="submitLogin()">
-                <label class="block rounded-[28px] border border-violet-100 bg-gradient-to-br from-violet-50/80 to-white p-6">
-                  <span class="mb-3 block text-sm font-bold text-slate-700">{% trans "Email Address" %}</span>
-                  <div class="relative">
-                    <span class="pointer-events-none absolute inset-y-0 right-5 flex items-center text-slate-400">
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 8.25 10.5 13.5a2.86 2.86 0 0 0 3 0L21 8.25M5.25 19.5h13.5A2.25 2.25 0 0 0 21 17.25v-10.5A2.25 2.25 0 0 0 18.75 4.5H5.25A2.25 2.25 0 0 0 3 6.75v10.5A2.25 2.25 0 0 0 5.25 19.5Z" />
-                      </svg>
-                    </span>
-                    <input x-model="login.email" type="email" name="email" placeholder="name@company.sa" class="input-surface h-[62px] w-full rounded-[22px] px-5 pr-14 text-lg" autocomplete="email">
-                  </div>
-                </label>
-
-                <label class="block rounded-[28px] border border-slate-200 bg-white/80 p-6">
-                  <div class="mb-3 flex items-center justify-between gap-3">
-                    <span class="text-sm font-bold text-slate-700">{% trans "Password" %}</span>
-                    <a href="{% url 'frontend:password_reset' %}" class="text-sm font-bold text-violet-600 transition hover:text-violet-800">{% trans "Forgot password?" %}</a>
-                  </div>
-                  <div class="relative">
-                    <button type="button" class="absolute inset-y-0 left-5 flex items-center text-slate-400 transition hover:text-slate-600" @click="showPassword = !showPassword" aria-label="{% trans 'Show or hide password' %}">
-                      <svg x-show="!showPassword" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
-                      <svg x-show="showPassword" x-cloak xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="m3 3 18 18" /><path stroke-linecap="round" stroke-linejoin="round" d="M10.584 10.587A2 2 0 0 0 12 14a2 2 0 0 0 1.414-.586" /><path stroke-linecap="round" stroke-linejoin="round" d="M9.88 5.09A10.936 10.936 0 0 1 12 5c4.478 0 8.268 2.943 9.542 7a10.97 10.97 0 0 1-4.337 5.486M6.228 6.228A10.958 10.958 0 0 0 2.458 12c1.274 4.057 5.065 7 9.542 7a10.96 10.96 0 0 0 5.772-1.772" /></svg>
-                    </button>
-                    <input :type="showPassword ? 'text' : 'password'" x-model="login.password" name="password" placeholder="••••••••" class="input-surface h-[62px] w-full rounded-[22px] px-5 pl-14 text-lg" autocomplete="current-password">
-                  </div>
-                  <p class="mt-3 text-sm leading-6 text-slate-500">{% trans "You can recover your password from the link above whenever you need it." %}</p>
-                </label>
-
-                <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
-                  <label class="inline-flex items-center gap-3">
-                    <input x-model="login.remember" type="checkbox" class="h-5 w-5 rounded-md border-slate-300 text-violet-600 focus:ring-violet-500">
-                    <span class="font-bold">{% trans "Remember me" %}</span>
-                  </label>
-                  <span>{% trans "A clear sign-in experience aligned with the recovery flow." %}</span>
-                </div>
-
-                <div x-show="loginError" x-cloak class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" x-text="loginError"></div>
-
-                <button type="submit" class="btn-primary flex h-[68px] w-full items-center justify-center gap-3 rounded-[24px] px-6 text-lg font-black text-white shadow-lg shadow-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60" :disabled="loginLoading">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16m-6-6 6 6-6 6" /></svg>
-                  <span x-text="loading ? '{% trans "Signing in..." %}' : '{% trans "Login" %}'"></span>
-                </button>
-              </form>
-
-              <div class="my-10 flex items-center gap-4 text-slate-400">
-                <div class="h-px flex-1 bg-slate-200"></div>
-                <span class="text-base font-medium">{% trans "Or continue with" %}</span>
-                <div class="h-px flex-1 bg-slate-200"></div>
-              </div>
-
-              <div class="rounded-[22px] border border-slate-200 bg-white p-4">
-                {% if google_oauth_enabled %}
-                <a href="{% url 'frontend:google_oauth_login' %}" class="flex h-14 items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-700 transition hover:border-violet-200 hover:bg-violet-50/40 hover:text-violet-700">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="h-6 w-6" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.4H42V20H24v8h11.3C33.6 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.6Z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.1 29.3 4 24 4c-7.7 0-14.3 4.3-17.7 10.7Z"/><path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.5-5.2l-6.2-5.2C29.3 35.1 26.8 36 24 36c-5.2 0-9.6-3.3-11.2-8l-6.5 5C9.7 39.6 16.3 44 24 44Z"/><path fill="#1976D2" d="M43.6 20.4H42V20H24v8h11.3c-1.1 3.1-3.3 5.5-6 7l6.2 5.2C39.4 36.6 44 30.9 44 24c0-1.3-.1-2.4-.4-3.6Z"/></svg>
-                  <span>{% trans "Continue with Google" %}</span>
-                </a>
-                {% else %}
-                <div class="flex h-14 items-center justify-center rounded-2xl bg-slate-50 text-base font-semibold text-slate-400">{% trans "Google Login is not configured in settings" %}</div>
-                {% endif %}
-              </div>
-            </div>
-
-            <div class="mt-12" x-show="mode === 'register'" x-cloak>
-              <div class="mb-10 flex items-start justify-between gap-4">
-                <div>
-                  <div class="mb-3 text-sm font-bold uppercase tracking-[0.3em] text-violet-500">{% trans "Create Account" %}</div>
-                  <h1 class="max-w-[26rem] text-[2rem] font-black leading-[1.15] text-slate-900 sm:text-[2.35rem]">{% trans "Create your account" %}</h1>
-                  <p class="mt-4 max-w-[28rem] text-base leading-7 text-slate-500">{% trans "Enter your core details and we will send a verification code to your email before activation." %}</p>
-                </div>
-                <div class="hidden h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-gradient-to-br from-violet-600 via-fuchsia-500 to-blue-500 text-white shadow-lg shadow-violet-500/20 sm:flex">
-                  <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M18 7.5V6a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v1.5m12 0A1.5 1.5 0 0 1 19.5 9v10.5A1.5 1.5 0 0 1 18 21H6A1.5 1.5 0 0 1 4.5 19.5V9A1.5 1.5 0 0 1 6 7.5m12 0H6" />
-                  </svg>
-                </div>
-              </div>
-
-              <form class="space-y-6" method="post" action="{% url 'frontend:register' %}" @submit.prevent="submitRegister()">
-                <label class="block rounded-[28px] border border-slate-200 bg-white/80 p-6">
-                  <span class="mb-3 block text-sm font-bold text-slate-700">{% trans "Full Name" %}</span>
-                  <input x-model="register.full_name" type="text" name="full_name" placeholder="{% trans 'Mohammed Ahmed' %}" class="input-surface h-[62px] w-full rounded-[22px] px-5 text-lg" autocomplete="name">
-                </label>
-
-                <label class="block rounded-[28px] border border-violet-100 bg-gradient-to-br from-violet-50/80 to-white p-6">
-                  <span class="mb-3 block text-sm font-bold text-slate-700">{% trans "Email Address" %}</span>
-                  <input x-model="register.email" type="email" name="email" placeholder="name@company.sa" class="input-surface h-[62px] w-full rounded-[22px] px-5 text-lg" autocomplete="email">
-                  <p class="mt-3 text-sm leading-6 text-slate-500">{% trans "A verification code will be sent to this email immediately after account creation." %}</p>
-                </label>
-
-                <label class="block rounded-[28px] border border-slate-200 bg-white/80 p-6">
-                  <span class="mb-3 block text-sm font-bold text-slate-700">{% trans "Password" %}</span>
-                  <input :type="showPassword ? 'text' : 'password'" x-model="register.password" name="password" placeholder="••••••••" class="input-surface h-[62px] w-full rounded-[22px] px-5 text-lg" autocomplete="new-password">
-                  <p class="mt-3 text-sm leading-6 text-slate-500">{% trans "Use at least 8 characters with a password suitable for business use." %}</p>
-                </label>
-
-                <label class="block rounded-[28px] border border-slate-200 bg-white/80 p-6">
-                  <span class="mb-3 block text-sm font-bold text-slate-700">{% trans "Confirm Password" %}</span>
-                  <input :type="showConfirm ? 'text' : 'password'" x-model="register.password_confirm" name="password_confirm" placeholder="••••••••" class="input-surface h-[62px] w-full rounded-[22px] px-5 text-lg" autocomplete="new-password">
-                </label>
-
-                <div class="flex flex-wrap items-center justify-between gap-3 text-sm text-slate-500">
-                  <label class="inline-flex items-center gap-3">
-                    <input x-model="showConfirm" type="checkbox" class="h-5 w-5 rounded-md border-slate-300 text-violet-600 focus:ring-violet-500">
-                    <span class="font-bold">{% trans "Show confirm password" %}</span>
-                  </label>
-                  <span>{% trans "We will verify that both password fields match before completing registration." %}</span>
-                </div>
-
-                <div x-show="registerError" x-cloak class="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700" x-text="registerError"></div>
-                <button type="submit" class="btn-primary flex h-[68px] w-full items-center justify-center gap-3 rounded-[24px] px-6 text-lg font-black text-white shadow-lg shadow-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60" :disabled="loading">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 12h16m-6-6 6 6-6 6" /></svg>
-                  <span x-text="loading ? '{% trans "Creating account..." %}' : '{% trans "Create Account" %}'"></span>
-                </button>
-              </form>
-
-              <div class="my-10 flex items-center gap-4 text-slate-400">
-                <div class="h-px flex-1 bg-slate-200"></div>
-                <span class="text-base font-medium">{% trans "Or continue with" %}</span>
-                <div class="h-px flex-1 bg-slate-200"></div>
-              </div>
-
-              <div class="rounded-[22px] border border-slate-200 bg-white p-4">
-                {% if google_oauth_enabled %}
-                <a href="{% url 'frontend:google_oauth_login' %}" class="flex h-14 items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 text-base font-semibold text-slate-700 transition hover:border-violet-200 hover:bg-violet-50/40 hover:text-violet-700">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="h-6 w-6" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.4H42V20H24v8h11.3C33.6 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.6Z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 18.9 12 24 12c3 0 5.7 1.1 7.8 2.9l5.7-5.7C34.1 6.1 29.3 4 24 4c-7.7 0-14.3 4.3-17.7 10.7Z"/><path fill="#4CAF50" d="M24 44c5.2 0 10-2 13.5-5.2l-6.2-5.2C29.3 35.1 26.8 36 24 36c-5.2 0-9.6-3.3-11.2-8l-6.5 5C9.7 39.6 16.3 44 24 44Z"/><path fill="#1976D2" d="M43.6 20.4H42V20H24v8h11.3c-1.1 3.1-3.3 5.5-6 7l6.2 5.2C39.4 36.6 44 30.9 44 24c0-1.3-.1-2.4-.4-3.6Z"/></svg>
-                  <span>{% trans "Continue with Google" %}</span>
-                </a>
-                {% else %}
-                <div class="flex h-14 items-center justify-center rounded-2xl bg-slate-50 text-base font-semibold text-slate-400">{% trans "Google Login is not configured in settings" %}</div>
-                {% endif %}
-              </div>
-            </div>
-
-            <div class="mt-8 border-t border-slate-200 pt-6 text-center text-sm text-slate-400">{% blocktrans with product=product_name company=company_display_name %}© 2026 {{ product }}. A product by {{ company }}. All rights reserved.{% endblocktrans %}</div>
+        <div class="brand-features">
+          <div class="brand-feature">
+            <div class="brand-feature-value">95%</div>
+            <div class="brand-feature-label">{% trans "Automation rate" %}</div>
           </div>
-        </section>
-
-        <section class="order-2 self-start overflow-hidden rounded-[36px] border border-white/70 glass hero-card soft-outline px-8 py-10 sm:px-10 lg:sticky lg:top-6 lg:order-1 lg:min-h-[calc(100vh-8rem)] lg:px-12 lg:py-12 xl:px-14" dir="rtl">
-          <div class="flex h-full flex-col gap-8 lg:gap-10">
-            <div class="max-w-[35rem]">
-              <div class="mb-5 inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700">
-                <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
-                {% trans "The same calm language as the landing and recovery pages" %}
-              </div>
-              <h2 class="max-w-2xl text-[2.15rem] font-black leading-[1.08] tracking-tight text-slate-900 sm:text-[2.8rem] lg:text-[3.35rem]">{% trans "Welcome to the intelligent financial auditing platform" %}</h2>
-              <p class="mt-4 max-w-xl text-base leading-8 text-slate-500 sm:text-lg">{% trans "An advanced platform powered by deep learning to improve financial and tax compliance accuracy for businesses across the GCC." %}</p>
-            </div>
-
-            <div class="grid gap-3 sm:grid-cols-3">
-              <div class="metric-card soft-card rounded-[24px] px-4 py-5 text-center"><div class="text-[1.7rem] font-black text-slate-900">60s</div><div class="mt-1.5 text-xs font-semibold text-slate-500 sm:text-sm">{% trans "Average session start time" %}</div></div>
-              <div class="metric-card soft-card rounded-[24px] px-4 py-5 text-center"><div class="text-[1.7rem] font-black text-slate-900">OTP</div><div class="mt-1.5 text-xs font-semibold text-slate-500 sm:text-sm">{% trans "Email verification" %}</div></div>
-              <div class="metric-card soft-card rounded-[24px] px-4 py-5 text-center"><div class="text-[1.7rem] font-black text-slate-900">AES-256</div><div class="mt-1.5 text-xs font-semibold text-slate-500 sm:text-sm">{% trans "Data protection" %}</div></div>
-            </div>
-
-            <div class="soft-card max-w-[34rem] rounded-[32px] p-5 sm:p-6 lg:mt-auto">
-              <div class="flex items-start justify-between gap-4">
-                <div>
-                  <div class="text-xs font-black uppercase tracking-[0.24em] text-slate-400">{% trans "Access preview" %}</div>
-                  <div class="mt-2 text-xl font-black leading-tight text-slate-900 sm:text-[1.65rem]">{% trans "A clearer, calmer way to access your account" %}</div>
-                </div>
-                <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-gradient-to-br from-violet-600 via-fuchsia-500 to-blue-500 text-white shadow-lg shadow-violet-500/20">
-                  <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3l7.5 3v6c0 4.5-3.12 8.63-7.5 9-4.38-.37-7.5-4.5-7.5-9V6L12 3Z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m9 12 2 2 4-4" />
-                  </svg>
-                </div>
-              </div>
-
-              <div class="mt-6 space-y-3">
-                <div class="flex items-center justify-between rounded-[22px] border border-white/80 bg-white/70 px-4 py-3.5">
-                  <div class="flex items-center gap-3">
-                    <span class="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-sm font-black text-violet-700">01</span>
-                    <div class="text-sm font-semibold text-slate-700">{% trans "Enter your email or account details" %}</div>
-                  </div>
-                  <span class="text-xs font-semibold text-slate-400">{% trans "Fast" %}</span>
-                </div>
-                <div class="flex items-center justify-between rounded-[22px] border border-white/80 bg-white/70 px-4 py-3.5">
-                  <div class="flex items-center gap-3">
-                    <span class="flex h-8 w-8 items-center justify-center rounded-full bg-pink-100 text-sm font-black text-pink-600">02</span>
-                    <div class="text-sm font-semibold text-slate-700">{% trans "Calm verification with no visual noise" %}</div>
-                  </div>
-                  <span class="text-xs font-semibold text-slate-400">{% trans "Organized" %}</span>
-                </div>
-                <div class="flex items-center justify-between rounded-[22px] border border-white/80 bg-white/70 px-4 py-3.5">
-                  <div class="flex items-center gap-3">
-                    <span class="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-black text-blue-600">03</span>
-                    <div class="text-sm font-semibold text-slate-700">{% blocktrans with product=product_name %}Move directly into the {{ product }} dashboard{% endblocktrans %}</div>
-                  </div>
-                  <span class="text-xs font-semibold text-slate-400">{% trans "Direct" %}</span>
-                </div>
-              </div>
-            </div>
+          <div class="brand-feature">
+            <div class="brand-feature-value">98%</div>
+            <div class="brand-feature-label">{% trans "Extraction accuracy" %}</div>
           </div>
-        </section>
+          <div class="brand-feature">
+            <div class="brand-feature-value">+2.5M</div>
+            <div class="brand-feature-label">{% trans "Invoices processed" %}</div>
+          </div>
+          <div class="brand-feature">
+            <div class="brand-feature-value">+1.2K</div>
+            <div class="brand-feature-label">{% trans "Trusted organizations" %}</div>
+          </div>
+        </div>
+
+        <div class="brand-quote-author">
+          <div class="brand-avatars"><div></div><div></div><div></div><div>+</div></div>
+          <span style="font-size:12px;opacity:0.9">{% trans "Join 1,200+ organizations in the Gulf" %}</span>
+        </div>
       </div>
     </div>
-  </main>
+  </div>
 
   <script>
     function getCookie(name) {
@@ -303,78 +722,130 @@
     async function parseJson(response) {
       const text = await response.text();
       if (!text) return {};
-      try { return JSON.parse(text); } catch (error) { return { error: text }; }
+      try { return JSON.parse(text); } catch (e) { return { error: text }; }
     }
-    function storeTokens(payload) {
-      // Tokens are stored in HttpOnly cookies by the server.
-      // No localStorage writes — prevents XSS token theft.
-    }
+
     function authPortal(initialMode, googleEnabled, initialError) {
       return {
-        mode: initialMode, googleEnabled, loginLoading: false, registerLoading: false, loginError: initialMode === 'login' ? (initialError || '') : '', registerError: initialMode === 'register' ? (initialError || '') : '', showPassword: false, showConfirm: false,
+        mode: initialMode,
+        googleEnabled,
+        loginLoading: false,
+        registerLoading: false,
+        loginError: initialMode === 'login' ? (initialError || '') : '',
+        registerError: initialMode === 'register' ? (initialError || '') : '',
+        showPassword: false,
+        showConfirm: false,
         login: { email: '', password: '', remember: false },
         register: { full_name: '', email: '', password: '', password_confirm: '' },
-        get error() {
-          return this.mode === 'register' ? this.registerError : this.loginError;
-        },
-        set error(value) {
-          if (this.mode === 'register') {
-            this.registerError = value || '';
-            return;
-          }
-          this.loginError = value || '';
-        },
-        get loading() {
-          return this.mode === 'register' ? this.registerLoading : this.loginLoading;
-        },
-        set loading(value) {
-          if (this.mode === 'register') {
-            this.registerLoading = Boolean(value);
-            return;
-          }
-          this.loginLoading = Boolean(value);
-        },
-        clearErrors() {
-          this.loginError = '';
-          this.registerError = '';
-        },
-        handleExternalError(message) {
-          this.loading = false;
-          this.loginLoading = false;
-          this.registerLoading = false;
-          if (this.mode === 'register') {
-            this.registerError = message || '';
-            return;
-          }
-          this.loginError = message || '';
-        },
+
+        // MFA
+        mfaRequired: false,
+        tempToken: '',
+        totpCode: '',
+
         async submitLogin() {
-          this.clearErrors();
-          if (!this.login.email || !this.login.password) { this.error = '{% trans "Please enter your email address and password." %}'; return; }
-          this.loading = true;
-          const formData = new FormData(); formData.append('email', this.login.email); formData.append('password', this.login.password);
-          try {
-            const response = await fetch('{% url "frontend:login" %}', { method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
-            const data = await parseJson(response);
-            if (!response.ok || !data.success) { this.error = data.error || '{% trans "Unable to sign in. Please try again." %}'; return; }
-            storeTokens(data); window.location.href = data.redirect || '{% url "frontend:dashboard" %}';
-          } catch (error) { this.error = '{% trans "A server connection error occurred." %}'; } finally { this.loading = false; }
-        },
-        async submitRegister() {
-          this.error = '';
-          if (!this.register.full_name || !this.register.email || !this.register.password || !this.register.password_confirm) { this.error = '{% trans "Please complete all required fields." %}'; return; }
-          if (this.register.password.length < 8) { this.error = '{% trans "Password must be at least 8 characters long." %}'; return; }
-          if (this.register.password !== this.register.password_confirm) { this.error = '{% trans "Passwords do not match." %}'; return; }
-          this.loading = true;
+          this.loginError = '';
+          if (!this.login.email || !this.login.password) {
+            this.loginError = '{% trans "Please enter your email address and password." %}';
+            return;
+          }
+          this.loginLoading = true;
           const formData = new FormData();
-          formData.append('full_name', this.register.full_name); formData.append('email', this.register.email);
-          formData.append('password', this.register.password); formData.append('password_confirm', this.register.password_confirm);
+          formData.append('email', this.login.email);
+          formData.append('password', this.login.password);
           try {
-            const response = await fetch('{% url "frontend:register" %}', { method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' }, body: formData });
+            const response = await fetch('{% url "frontend:login" %}', {
+              method: 'POST',
+              headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' },
+              body: formData,
+            });
             const data = await parseJson(response);
-            if (!response.ok || !data.success) { this.error = data.error || '{% trans "Unable to create the account right now." %}'; return; }
-            storeTokens(data); window.location.href = data.redirect || '{% url "frontend:google_pending" %}';
-          } catch (error) { this.error = '{% trans "A server connection error occurred." %}'; } finally { this.loading = false; }
+
+            // MFA required (HTTP 202)
+            if (response.status === 202 && data.mfa_required) {
+              this.mfaRequired = true;
+              this.tempToken = data.temp_token;
+              this.loginError = data.message || '';
+              this.totpCode = '';
+              this.loginLoading = false;
+              return;
+            }
+
+            if (!response.ok || !data.success) {
+              this.loginError = data.error || '{% trans "Unable to sign in. Please try again." %}';
+              return;
+            }
+            window.location.href = data.redirect || '{% url "frontend:dashboard" %}';
+          } catch (e) {
+            this.loginError = '{% trans "A server connection error occurred." %}';
+          } finally {
+            this.loginLoading = false;
+          }
+        },
+
+        async verifyMFA() {
+          if (!this.totpCode || this.totpCode.length !== 6) {
+            this.loginError = '{% trans "Please enter a 6-digit code" %}';
+            return;
+          }
+          this.loginLoading = true;
+          this.loginError = '';
+          try {
+            const response = await fetch('{% url "frontend:mfa-login-verify" %}', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+              body: JSON.stringify({ temp_token: this.tempToken, code: this.totpCode }),
+            });
+            const data = await parseJson(response);
+            if (response.ok && data.success) {
+              window.location.href = data.redirect || '{% url "frontend:dashboard" %}';
+              return;
+            }
+            this.loginError = data.error || '{% trans "Invalid code" %}';
+          } catch (e) {
+            this.loginError = '{% trans "MFA verification failed" %}';
+          } finally {
+            this.loginLoading = false;
+          }
+        },
+
+        async submitRegister() {
+          this.registerError = '';
+          if (!this.register.full_name || !this.register.email || !this.register.password || !this.register.password_confirm) {
+            this.registerError = '{% trans "Please complete all required fields." %}';
+            return;
+          }
+          if (this.register.password.length < 8) {
+            this.registerError = '{% trans "Password must be at least 8 characters long." %}';
+            return;
+          }
+          if (this.register.password !== this.register.password_confirm) {
+            this.registerError = '{% trans "Passwords do not match." %}';
+            return;
+          }
+          this.registerLoading = true;
+          const formData = new FormData();
+          formData.append('full_name', this.register.full_name);
+          formData.append('email', this.register.email);
+          formData.append('password', this.register.password);
+          formData.append('password_confirm', this.register.password_confirm);
+          try {
+            const response = await fetch('{% url "frontend:register" %}', {
+              method: 'POST',
+              headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' },
+              body: formData,
+            });
+            const data = await parseJson(response);
+            if (!response.ok || !data.success) {
+              this.registerError = data.error || '{% trans "Unable to create the account right now." %}';
+              return;
+            }
+            window.location.href = data.redirect || '{% url "frontend:google_pending" %}';
+          } catch (e) {
+            this.registerError = '{% trans "A server connection error occurred." %}';
+          } finally {
+            this.registerLoading = false;
+          }
         },
       };
     }

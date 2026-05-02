@@ -1,8 +1,8 @@
 {% extends "layouts/base_platform_admin.html" %}
 {% load i18n %}
-{% block page_title %}خطط الأسعار{% endblock %}
-{% block breadcrumb_parent %}إدارة المحتوى{% endblock %}
-{% block breadcrumb_current %}الأسعار{% endblock %}
+{% block page_title %}{% trans 'Pricing Plans' %}{% endblock %}
+{% block breadcrumb_parent %}{% trans 'Content Management' %}{% endblock %}
+{% block breadcrumb_current %}{% trans 'Pricing' %}{% endblock %}
 
 {% block content %}
 <div x-data="pricingEditor()" x-init="init()" class="space-y-5 fade-in">
@@ -10,12 +10,12 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">خطط الأسعار</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">إدارة خطط الاشتراك والأسعار المعروضة</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans 'Pricing Plans' %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans 'Manage subscription plans and displayed pricing' %}</p>
     </div>
     <button @click="openAddPlan()" class="btn-primary">
       <i data-lucide="plus" class="w-4 h-4"></i>
-      إضافة خطة
+      {% trans 'Add Plan' %}
     </button>
   </div>
 
@@ -42,7 +42,7 @@
       <template x-if="plans.length === 0">
         <div class="card p-12 text-center">
           <i data-lucide="tag" class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3"></i>
-          <p class="text-slate-500 text-sm">لا توجد خطط أسعار بعد.</p>
+          <p class="text-slate-500 text-sm">{% trans 'No pricing plans yet.' %}</p>
         </div>
       </template>
       <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -52,7 +52,7 @@
               <div class="flex items-center gap-2">
                 <span class="font-bold text-slate-800 dark:text-white" x-text="plan.name"></span>
                 <template x-if="plan.is_popular">
-                  <span class="badge-indigo text-[10px]">الأكثر شيوعاً</span>
+                  <span class="badge-indigo text-[10px]">{% trans 'Most Popular' %}</span>
                 </template>
               </div>
               <div class="flex items-center gap-1">
@@ -66,7 +66,7 @@
             </div>
             <div class="flex items-baseline gap-1">
               <span class="text-3xl font-black text-slate-900 dark:text-white" x-text="plan.price || '0'"></span>
-              <span class="text-sm text-slate-500">SAR / <span x-text="plan.billing_period || 'شهر'"></span></span>
+              <span class="text-sm text-slate-500">SAR / <span x-text="plan.billing_period || 'month'"></span></span>
             </div>
             <p class="text-xs text-slate-500 dark:text-slate-400" x-text="plan.description_ar || plan.description || ''"></p>
             <ul class="space-y-1.5">
@@ -79,10 +79,10 @@
             </ul>
             <div class="pt-2 border-t border-slate-100 dark:border-slate-700/30 flex items-center justify-between">
               <span class="text-xs" :class="plan.is_active ? 'text-emerald-600' : 'text-slate-400'"
-                    x-text="plan.is_active ? 'نشط' : 'مخفي'"></span>
+                    x-text="plan.is_active ? 'Active' : 'Hidden'"></span>
               <button @click="toggleActive(plan)" class="text-xs"
                       :class="plan.is_active ? 'text-red-500 hover:text-red-700' : 'text-emerald-500 hover:text-emerald-700'"
-                      x-text="plan.is_active ? 'إخفاء' : 'تفعيل'"></button>
+                      x-text="plan.is_active ? 'Hide' : 'Activate'"></button>
             </div>
           </div>
         </template>
@@ -96,7 +96,7 @@
       <div class="modal-box max-w-2xl">
         <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/30">
           <h3 class="font-bold text-slate-800 dark:text-white"
-              x-text="editingPlan.id ? 'تعديل الخطة' : 'إضافة خطة جديدة'"></h3>
+              x-text="editingPlan.id ? "{% trans 'Edit Plan' %}" : "{% trans 'Add new plan' %}""></h3>
           <button @click="showModal=false" class="text-slate-400 hover:text-slate-600">
             <i data-lucide="x" class="w-5 h-5"></i>
           </button>
@@ -104,50 +104,50 @@
         <div class="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">اسم الخطة (EN)</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Plan Name (EN)' %}</label>
               <input type="text" x-model="editingPlan.name" class="input" placeholder="Pro Plan">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">اسم الخطة (عربي)</label>
-              <input type="text" x-model="editingPlan.name_ar" class="input" dir="rtl" placeholder="الخطة المتقدمة">
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Plan Name (Arabic)' %}</label>
+              <input type="text" x-model="editingPlan.name_ar" class="input" dir="rtl" placeholder="{% trans 'Advanced Plan' %}">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">السعر (SAR)</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Price (SAR)' %}</label>
               <input type="number" x-model.number="editingPlan.price" class="input" placeholder="299">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">فترة الفوترة</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Billing Period' %}</label>
               <select x-model="editingPlan.billing_period" class="select w-full">
-                <option value="month">شهري</option>
-                <option value="year">سنوي</option>
+                <option value="month">{% trans 'Monthly' %}</option>
+                <option value="year">{% trans 'Annual' %}</option>
               </select>
             </div>
             <div class="col-span-2">
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الوصف (عربي)</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Description (Arabic)' %}</label>
               <textarea x-model="editingPlan.description_ar" class="input" rows="2" dir="rtl"></textarea>
             </div>
             <div class="col-span-2">
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الميزات (سطر لكل ميزة)</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Features (one per line)" %}</label>
               <textarea x-model="featuresText" class="input font-mono text-xs" rows="6"
-                        placeholder="رفع الملفات&#10;التقارير التلقائية&#10;دعم ZATCA"></textarea>
+                        placeholder="{% trans 'File upload' %}&#10;{% trans 'Automatic reports' %}&#10;{% trans 'ZATCA support' %}"></textarea>
             </div>
           </div>
           <div class="flex items-center gap-4">
             <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
               <input type="checkbox" x-model="editingPlan.is_popular" class="rounded">
-              الأكثر شيوعاً
+              {% trans 'Most Popular' %}
             </label>
             <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
               <input type="checkbox" x-model="editingPlan.is_active" class="rounded">
-              نشط
+              {% trans 'Active' %}
             </label>
           </div>
         </div>
         <div class="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-700/30">
-          <button @click="showModal=false" class="btn-ghost">إلغاء</button>
+          <button @click="showModal=false" class="btn-ghost">{% trans 'Cancel' %}</button>
           <button @click="savePlan()" :disabled="saving" class="btn-primary">
             <i data-lucide="save" class="w-4 h-4"></i>
-            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ'"></span>
+            <span x-text="saving ? 'Saving...' : 'Save'"></span>
           </button>
         </div>
       </div>
@@ -176,7 +176,7 @@ function pricingEditor() {
           this.plans = Array.isArray(data) ? data : (data.results || []);
         }
       } catch (e) {
-        notify('تعذّر تحميل خطط الأسعار', 'error');
+        notify("{% trans 'Failed to load pricing plans' %}", 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());
@@ -215,25 +215,25 @@ function pricingEditor() {
           } else {
             this.plans.push(saved);
           }
-          notify('تم حفظ الخطة', 'success');
+          notify("{% trans 'Plan saved' %}", 'success');
           this.showModal = false;
           this.$nextTick(() => lucide.createIcons());
         } else {
-          notify('فشل الحفظ', 'error');
+          notify('Save failed', 'error');
         }
       } catch (e) {
-        notify('فشل الحفظ', 'error');
+        notify('Save failed', 'error');
       } finally {
         this.saving = false;
       }
     },
 
     async deletePlan(id) {
-      if (!confirm('هل أنت متأكد من حذف هذه الخطة؟')) return;
+      if (!confirm("{% trans 'Are you sure you want to delete this plan?' %}")) return;
       const res = await apiFetch(`/api/v1/cms/admin/pricing/${id}/`, { method: 'DELETE' });
       if (res && (res.ok || res.status === 204)) {
         this.plans = this.plans.filter(p => p.id !== id);
-        notify('تم حذف الخطة', 'success');
+        notify("{% trans 'Plan deleted' %}", 'success');
       }
     },
 

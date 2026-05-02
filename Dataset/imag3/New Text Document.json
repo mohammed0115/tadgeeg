@@ -1,0 +1,25 @@
+{
+  "invoice_metadata": {
+    "date": "2027-02-06",
+    "customer_name": "إسلام",
+    "currency": "EGP"
+  },
+  "line_items": [
+    {"item": "مساعد خلفي", "amount": 1300},
+    {"item": "بستم بالبنز", "amount": 550},
+    {"item": "كاتينة", "amount": 900},
+    {"item": "مشوار كاتينة", "amount": 250},
+    {"item": "دليل كاتينة", "amount": 700},
+    {"item": "بلية شداد كاتينة", "amount": 800},
+    {"item": "طقم جوانات", "amount": 400},
+    {"item": "فلتر زيت + أورينج", "amount": 200},
+    {"item": "فلتر هواء", "amount": 250},
+    {"item": "طقم شنابر", "amount": 400},
+    {"item": "علبة غراء أبيض", "amount": 40},
+    {"item": "خراط", "amount": 1220},
+    {"item": "صنفرة", "amount": 20}
+  ],
+  "totals": {
+    "grand_total": 7030
+  }
+}

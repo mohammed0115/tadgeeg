@@ -1,7 +1,7 @@
 {% extends "layouts/base_platform_admin.html" %}
 {% load i18n %}
-{% block page_title %}إعدادات المنصة{% endblock %}
-{% block breadcrumb_current %}الإعدادات{% endblock %}
+{% block page_title %}{% trans 'Platform Settings' %}{% endblock %}
+{% block breadcrumb_current %}{% trans 'Settings' %}{% endblock %}
 
 {% block content %}
 <div x-data="platformSettings()" x-init="init()" class="space-y-5 fade-in">
@@ -9,8 +9,8 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">إعدادات المنصة</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">الإعدادات العامة لمنصة Get Solution</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans 'Platform Settings' %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans 'General settings for the Get Solution platform' %}</p>
     </div>
   </div>
 
@@ -52,7 +52,7 @@
             <div class="flex items-center gap-2">
               <p class="text-sm font-semibold text-slate-700 dark:text-slate-200" x-text="setting.label_ar || setting.key"></p>
               <template x-if="setting.is_sensitive">
-                <span class="badge-amber text-[10px]">حساس</span>
+                <span class="badge-amber text-[10px]">{% trans 'Sensitive' %}</span>
               </template>
             </div>
             <p class="text-xs text-slate-400 mt-0.5" x-text="setting.description_ar || ''"></p>
@@ -98,7 +98,7 @@
 
       <template x-if="filteredSettings.length === 0">
         <div class="card p-10 text-center">
-          <p class="text-slate-400 text-sm">لا توجد إعدادات في هذه المجموعة</p>
+          <p class="text-slate-400 text-sm">{% trans 'No settings in this group' %}</p>
         </div>
       </template>
     </div>
@@ -116,12 +116,12 @@ function platformSettings() {
     activeGroup: 'general',
     showPasswords: {},
     groups: [
-      { key: 'general',       label: 'عام',              icon: 'settings-2' },
-      { key: 'email',         label: 'البريد الإلكتروني', icon: 'mail' },
-      { key: 'integrations',  label: 'التكاملات',        icon: 'plug' },
-      { key: 'security',      label: 'الأمان',           icon: 'shield' },
-      { key: 'notifications', label: 'الإشعارات',        icon: 'bell' },
-      { key: 'billing',       label: 'الفوترة',          icon: 'credit-card' },
+      { key: 'general',       label: "{% trans 'General' %}",          icon: 'settings-2' },
+      { key: 'email',         label: "{% trans 'Email' %}",            icon: 'mail' },
+      { key: 'integrations',  label: "{% trans 'Integrations' %}",     icon: 'plug' },
+      { key: 'security',      label: "{% trans 'Security' %}",         icon: 'shield' },
+      { key: 'notifications', label: "{% trans 'Notifications' %}",    icon: 'bell' },
+      { key: 'billing',       label: "{% trans 'Billing' %}",          icon: 'credit-card' },
     ],
     get filteredSettings() {
       return this.settings.filter(s => s.group === this.activeGroup);
@@ -135,7 +135,7 @@ function platformSettings() {
           this.settings = Array.isArray(data) ? data : (data.results || []);
         }
       } catch (e) {
-        notify('تعذّر تحميل الإعدادات', 'error');
+        notify('Failed to load settings', 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());
@@ -153,10 +153,10 @@ function platformSettings() {
           method: 'PATCH',
           body: JSON.stringify({ value: String(setting.value) }),
         });
-        if (res && res.ok) notify('تم حفظ الإعداد', 'success');
-        else notify('فشل حفظ الإعداد', 'error');
+        if (res && res.ok) notify('Setting saved', 'success');
+        else notify('Failed to save setting', 'error');
       } catch (e) {
-        notify('فشل حفظ الإعداد', 'error');
+        notify('Failed to save setting', 'error');
       }
     },
   };

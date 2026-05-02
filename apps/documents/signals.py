@@ -6,10 +6,34 @@ Each post_save signal fires run_audit_task asynchronously via Celery,
 scoped to the document's organization for full tenant isolation.
 """
 import logging
+import threading
+from contextlib import contextmanager
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 logger = logging.getLogger("rule_engine")
+
+
+# Thread-local flag that lets bulk multi-record uploads skip per-row Celery
+# dispatch (a 500-row Excel would otherwise queue 500 audit tasks). When set,
+# the caller is expected to dispatch a single audit for the file as a whole.
+_local = threading.local()
+
+
+@contextmanager
+def suppress_audit_dispatch():
+    """Context manager that disables auto-audit dispatch for the current thread."""
+    prev = getattr(_local, "suppressed", False)
+    _local.suppressed = True
+    try:
+        yield
+    finally:
+        _local.suppressed = prev
+
+
+def _is_suppressed() -> bool:
+    return bool(getattr(_local, "suppressed", False))
 
 # Map typed model class name → SupportedDocumentType string used by rule engine
 _MODEL_TO_DOC_TYPE = {
@@ -30,6 +54,8 @@ _READY_STATUSES = {"validated", "approved", "pending", "pending_review"}
 
 def _should_trigger(instance) -> bool:
     """Return True if this save should kick off an audit run."""
+    if _is_suppressed():
+        return False
     status = getattr(instance, "audit_status", None) or getattr(instance, "approval_status", None) or ""
     # Always trigger on creation; on updates only when status transitions to a ready state
     return status.lower() in _READY_STATUSES or status == ""
@@ -57,8 +83,41 @@ def _has_active_run(doc_id: str, document_type: str, org_id: str) -> bool:
         return False  # fail open
 
 
+_BROKER_REACHABLE_CACHE = {"checked_at": 0, "reachable": None}
+
+
+def _broker_reachable() -> bool:
+    """Lightweight TCP probe of the Celery broker. Cached for 30s so we don't
+    re-probe on every save. Returns False fast when the broker is down,
+    avoiding the multi-second result-backend reconnect loop inside .delay().
+    """
+    import time as _time
+    import socket
+    from urllib.parse import urlparse
+    from django.conf import settings
+
+    now = _time.time()
+    if _BROKER_REACHABLE_CACHE["reachable"] is not None and now - _BROKER_REACHABLE_CACHE["checked_at"] < 30:
+        return _BROKER_REACHABLE_CACHE["reachable"]
+
+    url = urlparse(getattr(settings, "CELERY_BROKER_URL", "redis://localhost:6379/0"))
+    host = url.hostname or "localhost"
+    port = url.port or 6379
+    try:
+        with socket.create_connection((host, port), timeout=1.0):
+            reachable = True
+    except Exception:
+        reachable = False
+    _BROKER_REACHABLE_CACHE.update(checked_at=now, reachable=reachable)
+    return reachable
+
+
 def _dispatch_audit(instance, document_type: str) -> None:
     """Fire run_audit_compat_task.delay() in a non-blocking, fault-tolerant way."""
+    if not _broker_reachable():
+        logger.debug("[Signal] Broker unreachable; skipping audit dispatch for %s %s",
+                     document_type, instance.pk)
+        return
     try:
         org_id = str(instance.organization_id)
         doc_id = str(instance.pk)

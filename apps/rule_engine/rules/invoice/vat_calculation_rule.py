@@ -28,8 +28,8 @@ _GCC_VAT_RATES: dict[str, Decimal] = {
 _GCC_VAT_PATTERNS: dict[str, dict] = {
     "SA": {
         "label":     "ZATCA TRN (Saudi Arabia)",
-        "format":    "15 digits starting with 3",
-        "validator": lambda n: n.isdigit() and len(n) == 15 and n.startswith("3"),
+        "format":    "15 digits, must start AND end with 3",
+        "validator": lambda n: n.isdigit() and len(n) == 15 and n.startswith("3") and n.endswith("3"),
     },
     "AE": {
         "label":     "FTA TRN (UAE)",

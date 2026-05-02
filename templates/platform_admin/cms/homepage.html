@@ -1,8 +1,8 @@
 {% extends "layouts/base_platform_admin.html" %}
 {% load i18n %}
-{% block page_title %}تحرير الصفحة الرئيسية{% endblock %}
-{% block breadcrumb_parent %}إدارة المحتوى{% endblock %}
-{% block breadcrumb_current %}الصفحة الرئيسية{% endblock %}
+{% block page_title %}{% trans 'Edit Homepage' %}{% endblock %}
+{% block breadcrumb_parent %}{% trans 'Content Management' %}{% endblock %}
+{% block breadcrumb_current %}{% trans 'Homepage' %}{% endblock %}
 
 {% block content %}
 <div x-data="homepageEditor()" x-init="init()" class="space-y-5 fade-in">
@@ -10,12 +10,12 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">تحرير الصفحة الرئيسية</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">تعديل محتوى الصفحة الرئيسية للمنصة</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans 'Edit Homepage' %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans 'Edit homepage content for the platform' %}</p>
     </div>
     <a href="/platform-admin/" class="btn-ghost text-xs">
       <i data-lucide="arrow-right" class="w-4 h-4"></i>
-      العودة
+      {% trans 'Back' %}
     </a>
   </div>
 
@@ -49,50 +49,50 @@
       <div x-show="activeTab === 'hero'" class="card p-6 space-y-5">
         <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
           <i data-lucide="star" class="w-4 h-4 text-amber-500"></i>
-          قسم Hero
+          {% trans 'Hero Section' %}
         </h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">عنوان Hero <span class="text-blue-500">(EN)</span></label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Hero Title' %} <span class="text-blue-500">(EN)</span></label>
             <input type="text" x-model="form.hero.hero_title" class="input" placeholder="Intelligent Financial Auditing">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">عنوان Hero <span class="text-emerald-500">(عربي)</span></label>
-            <input type="text" x-model="form.hero.hero_title_ar" class="input" dir="rtl" placeholder="تدقيق مالي ذكي">
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Hero Title' %} <span class="text-emerald-500">({% trans "Arabic" %})</span></label>
+            <input type="text" x-model="form.hero.hero_title_ar" class="input" dir="rtl" placeholder="{% trans 'Smart financial auditing' %}">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان الفرعي (EN)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Subtitle (EN)' %}</label>
             <textarea x-model="form.hero.hero_subtitle" class="input" rows="2" placeholder="Automate compliance..."></textarea>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان الفرعي (عربي)</label>
-            <textarea x-model="form.hero.hero_subtitle_ar" class="input" rows="2" dir="rtl" placeholder="أتمتة الامتثال..."></textarea>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Subtitle (Arabic)' %}</label>
+            <textarea x-model="form.hero.hero_subtitle_ar" class="input" rows="2" dir="rtl" placeholder="{% trans 'Automate compliance...' %}"></textarea>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">نص CTA الرئيسي (EN)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Primary CTA Text (EN)' %}</label>
             <input type="text" x-model="form.hero.cta_primary_text" class="input" placeholder="Get Started Free">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">رابط CTA الرئيسي</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Primary CTA URL' %}</label>
             <input type="url" x-model="form.hero.cta_primary_url" class="input" placeholder="/register/">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">نص CTA الثانوي (EN)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Secondary CTA Text (EN)' %}</label>
             <input type="text" x-model="form.hero.cta_secondary_text" class="input" placeholder="Watch Demo">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">رابط CTA الثانوي</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Secondary CTA URL' %}</label>
             <input type="url" x-model="form.hero.cta_secondary_url" class="input" placeholder="/demo/">
           </div>
           <div class="md:col-span-2">
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">رابط صورة Hero</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Hero Image URL' %}</label>
             <input type="url" x-model="form.hero.hero_image_url" class="input" placeholder="https://...">
           </div>
         </div>
         <div class="flex justify-end pt-2">
           <button @click="saveSection('hero')" :disabled="saving" class="btn-primary">
             <i data-lucide="save" class="w-4 h-4"></i>
-            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ Hero'"></span>
+            <span x-text="saving ? 'Saving...' : 'Save Hero'"></span>
           </button>
         </div>
       </div>
@@ -102,10 +102,10 @@
         <div class="flex items-center justify-between">
           <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
             <i data-lucide="bar-chart-2" class="w-4 h-4 text-blue-500"></i>
-            الإحصائيات
+            {% trans 'Stats' %}
           </h3>
           <button @click="form.stats.push({ label: '', label_ar: '', value: '', icon: '' })" class="btn-ghost text-xs">
-            <i data-lucide="plus" class="w-4 h-4"></i> إضافة إحصائية
+            <i data-lucide="plus" class="w-4 h-4"></i> {% trans 'Add Stat' %}
           </button>
         </div>
         <div class="space-y-3">
@@ -113,7 +113,7 @@
             <div class="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-700/30 rounded-xl">
               <div class="grid grid-cols-2 md:grid-cols-4 gap-3 flex-1">
                 <input type="text" x-model="stat.label" class="input" placeholder="Label EN">
-                <input type="text" x-model="stat.label_ar" class="input" dir="rtl" placeholder="التسمية">
+                <input type="text" x-model="stat.label_ar" class="input" dir="rtl" placeholder="{% trans 'Label' %}">
                 <input type="text" x-model="stat.value" class="input" placeholder="10,000+">
                 <input type="text" x-model="stat.icon" class="input" placeholder="users">
               </div>
@@ -123,13 +123,13 @@
             </div>
           </template>
           <template x-if="form.stats.length === 0">
-            <p class="text-sm text-slate-400 text-center py-4">لا توجد إحصائيات. انقر إضافة إحصائية.</p>
+            <p class="text-sm text-slate-400 text-center py-4">{% trans 'No stats yet. Click Add Stat.' %}</p>
           </template>
         </div>
         <div class="flex justify-end pt-2">
           <button @click="saveSection('stats')" :disabled="saving" class="btn-primary">
             <i data-lucide="save" class="w-4 h-4"></i>
-            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ الإحصائيات'"></span>
+            <span x-text="saving ? 'Saving...' : 'Save Stats'"></span>
           </button>
         </div>
       </div>
@@ -139,10 +139,10 @@
         <div class="flex items-center justify-between">
           <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
             <i data-lucide="award" class="w-4 h-4 text-amber-500"></i>
-            الشركاء والعملاء
+            {% trans 'Partners & Customers' %}
           </h3>
           <button @click="form.trusted_logos.push({ name: '', logo_url: '' })" class="btn-ghost text-xs">
-            <i data-lucide="plus" class="w-4 h-4"></i> إضافة شعار
+            <i data-lucide="plus" class="w-4 h-4"></i> {% trans 'Add Logo' %}
           </button>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -157,7 +157,7 @@
                 </div>
               </template>
               <div class="flex-1 space-y-2">
-                <input type="text" x-model="logo.name" class="input" placeholder="اسم الشركة">
+                <input type="text" x-model="logo.name" class="input" placeholder="{% trans 'Company Name' %}">
                 <input type="url" x-model="logo.logo_url" class="input" placeholder="https://...logo.svg">
               </div>
               <button @click="form.trusted_logos.splice(idx, 1)" class="text-slate-400 hover:text-red-500 flex-shrink-0">
@@ -169,7 +169,7 @@
         <div class="flex justify-end pt-2">
           <button @click="saveSection('trusted_logos')" :disabled="saving" class="btn-primary">
             <i data-lucide="save" class="w-4 h-4"></i>
-            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ'"></span>
+            <span x-text="saving ? 'Saving...' : 'Save'"></span>
           </button>
         </div>
       </div>
@@ -178,38 +178,38 @@
       <div x-show="activeTab === 'video'" class="card p-6 space-y-5">
         <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
           <i data-lucide="play-circle" class="w-4 h-4 text-violet-500"></i>
-          فيديو تعريفي
+          {% trans 'Intro Video' %}
         </h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="md:col-span-2">
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">رابط الفيديو</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Video URL' %}</label>
             <input type="url" x-model="form.video.video_url" class="input" placeholder="https://youtube.com/...">
           </div>
           <div class="md:col-span-2">
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">رابط الصورة المصغّرة</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Thumbnail URL' %}</label>
             <input type="url" x-model="form.video.thumbnail_url" class="input" placeholder="https://...thumbnail.jpg">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان (EN)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Title (EN)' %}</label>
             <input type="text" x-model="form.video.title" class="input" placeholder="See How It Works">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان (عربي)</label>
-            <input type="text" x-model="form.video.title_ar" class="input" dir="rtl" placeholder="شاهد كيف يعمل">
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Title (Arabic)' %}</label>
+            <input type="text" x-model="form.video.title_ar" class="input" dir="rtl" placeholder="{% trans 'See how it works' %}">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">الوصف (EN)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Description (EN)' %}</label>
             <textarea x-model="form.video.description" class="input" rows="3"></textarea>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">الوصف (عربي)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Description (Arabic)' %}</label>
             <textarea x-model="form.video.description_ar" class="input" rows="3" dir="rtl"></textarea>
           </div>
         </div>
         <div class="flex justify-end pt-2">
           <button @click="saveSection('video')" :disabled="saving" class="btn-primary">
             <i data-lucide="save" class="w-4 h-4"></i>
-            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ الفيديو'"></span>
+            <span x-text="saving ? 'Saving...' : 'Save Video'"></span>
           </button>
         </div>
       </div>
@@ -218,50 +218,50 @@
       <div x-show="activeTab === 'about_section'" class="card p-6 space-y-5">
         <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
           <i data-lucide="info" class="w-4 h-4 text-blue-500"></i>
-          قسم من نحن
+          {% trans 'About Section' %}
         </h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان (EN)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Title (EN)' %}</label>
             <input type="text" x-model="form.about_section.title" class="input">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان (عربي)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Title (Arabic)' %}</label>
             <input type="text" x-model="form.about_section.title_ar" class="input" dir="rtl">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان الفرعي (EN)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Subtitle (EN)' %}</label>
             <input type="text" x-model="form.about_section.subtitle" class="input">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان الفرعي (عربي)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Subtitle (Arabic)' %}</label>
             <input type="text" x-model="form.about_section.subtitle_ar" class="input" dir="rtl">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">المحتوى (EN)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Content (EN)' %}</label>
             <textarea x-model="form.about_section.content" class="input" rows="4"></textarea>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">المحتوى (عربي)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Content (Arabic)' %}</label>
             <textarea x-model="form.about_section.content_ar" class="input" rows="4" dir="rtl"></textarea>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">الرسالة (EN)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Mission (EN)' %}</label>
             <textarea x-model="form.about_section.mission" class="input" rows="2"></textarea>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">الرؤية (EN)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Vision (EN)' %}</label>
             <textarea x-model="form.about_section.vision" class="input" rows="2"></textarea>
           </div>
           <div class="md:col-span-2">
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">رابط الصورة</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Image URL' %}</label>
             <input type="url" x-model="form.about_section.image_url" class="input">
           </div>
         </div>
         <div class="flex justify-end pt-2">
           <button @click="saveSection('about_section')" :disabled="saving" class="btn-primary">
             <i data-lucide="save" class="w-4 h-4"></i>
-            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ'"></span>
+            <span x-text="saving ? 'Saving...' : 'Save'"></span>
           </button>
         </div>
       </div>
@@ -271,10 +271,10 @@
         <div class="flex items-center justify-between">
           <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
             <i data-lucide="heart" class="w-4 h-4 text-red-500"></i>
-            القيم الأساسية
+            {% trans "Core Values" %}
           </h3>
           <button @click="form.core_values.push({ title:'', title_ar:'', description:'', icon:'' })" class="btn-ghost text-xs">
-            <i data-lucide="plus" class="w-4 h-4"></i> إضافة قيمة
+            <i data-lucide="plus" class="w-4 h-4"></i> {% trans 'Add Value' %}
           </button>
         </div>
         <div class="space-y-3">
@@ -282,7 +282,7 @@
             <div class="p-4 bg-slate-50 dark:bg-slate-700/30 rounded-xl space-y-3">
               <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <input type="text" x-model="val.title" class="input" placeholder="Title EN">
-                <input type="text" x-model="val.title_ar" class="input" dir="rtl" placeholder="العنوان">
+                <input type="text" x-model="val.title_ar" class="input" dir="rtl" placeholder="{% trans 'Title' %}">
                 <input type="text" x-model="val.description" class="input" placeholder="Description">
                 <div class="flex items-center gap-2">
                   <input type="text" x-model="val.icon" class="input flex-1" placeholder="shield-check">
@@ -295,7 +295,7 @@
               </div>
               <div class="flex justify-end">
                 <button @click="form.core_values.splice(idx, 1)" class="text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
-                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> حذف
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> {% trans 'Delete' %}
                 </button>
               </div>
             </div>
@@ -304,7 +304,7 @@
         <div class="flex justify-end pt-2">
           <button @click="saveSection('core_values')" :disabled="saving" class="btn-primary">
             <i data-lucide="save" class="w-4 h-4"></i>
-            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ القيم'"></span>
+            <span x-text="saving ? "{% trans 'Saving...' %}" : "{% trans 'Save Values' %}""></span>
           </button>
         </div>
       </div>
@@ -313,7 +313,7 @@
       <div x-show="activeTab === 'seo'" class="card p-6 space-y-5">
         <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
           <i data-lucide="search" class="w-4 h-4 text-emerald-500"></i>
-          تحسين محركات البحث للرئيسية
+          {% trans "Homepage SEO" %}
         </h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="md:col-span-2">
@@ -323,7 +323,7 @@
             <input type="text" x-model="form.seo.meta_title" class="input" maxlength="60">
           </div>
           <div class="md:col-span-2">
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Meta Title (عربي)</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Meta Title (Arabic)" %}</label>
             <input type="text" x-model="form.seo.meta_title_ar" class="input" dir="rtl">
           </div>
           <div class="md:col-span-2">
@@ -340,7 +340,7 @@
         <div class="flex justify-end pt-2">
           <button @click="saveSection('seo')" :disabled="saving" class="btn-primary">
             <i data-lucide="save" class="w-4 h-4"></i>
-            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ SEO'"></span>
+            <span x-text="saving ? "{% trans 'Saving...' %}" : "{% trans 'Save SEO' %}""></span>
           </button>
         </div>
       </div>
@@ -360,11 +360,11 @@ function homepageEditor() {
     activeTab: 'hero',
     tabs: [
       { id: 'hero',          label: 'Hero',        icon: 'star' },
-      { id: 'stats',         label: 'إحصائيات',    icon: 'bar-chart-2' },
-      { id: 'trusted',       label: 'الشركاء',     icon: 'award' },
-      { id: 'video',         label: 'فيديو',       icon: 'play-circle' },
-      { id: 'about_section', label: 'من نحن',      icon: 'info' },
-      { id: 'values',        label: 'القيم',       icon: 'heart' },
+      { id: 'stats',         label: "{% trans 'Stats' %}",    icon: 'bar-chart-2' },
+      { id: 'trusted',       label: "{% trans 'Partners' %}",     icon: 'award' },
+      { id: 'video',         label: "{% trans 'Video' %}",       icon: 'play-circle' },
+      { id: 'about_section', label: "{% trans 'About Us' %}",      icon: 'info' },
+      { id: 'values',        label: "{% trans 'Values' %}",       icon: 'heart' },
       { id: 'seo',           label: 'SEO',         icon: 'search' },
     ],
     form: {
@@ -391,7 +391,7 @@ function homepageEditor() {
           if (data.seo)          Object.assign(this.form.seo, data.seo);
         }
       } catch (e) {
-        notify('تعذّر تحميل بيانات الصفحة الرئيسية', 'error');
+        notify("{% trans 'Failed to load homepage data' %}", 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());
@@ -406,12 +406,12 @@ function homepageEditor() {
           body: JSON.stringify({ section, data: this.form[section] }),
         });
         if (res && res.ok) {
-          notify('تم الحفظ بنجاح', 'success');
+          notify('Saved successfully', 'success');
         } else {
-          notify('فشل الحفظ', 'error');
+          notify('Save failed', 'error');
         }
       } catch (e) {
-        notify(e.message || 'فشل الحفظ', 'error');
+        notify(e.message || "{% trans 'Save failed' %}", 'error');
       } finally {
         this.saving = false;
       }

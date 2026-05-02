@@ -1,96 +1,98 @@
-{% extends "base.html" %}
+{% extends "layouts/dashboard_base.html" %}
 {% load i18n %}
-{% get_current_language as LANGUAGE_CODE %}
-{% get_current_language_bidi as LANGUAGE_BIDI %}
+
 {% block title %}{% trans "Audit Cases" %}{% endblock %}
-{% block page_title %}{% trans "Audit Cases" %}{% endblock %}
 {% block nav_audit %}active{% endblock %}
+
+{% block extra_styles %}
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 28px; }
+  @media (max-width: 1024px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .stats-grid { grid-template-columns: 1fr; } }
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "Audit Cases" %}</span>
+{% endblock %}
+
 {% block content %}
-<div x-data="auditList()" x-init="init()" class="space-y-4 max-w-screen-xl">
-  <div class="card overflow-hidden">
-    <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
-      <h3 class="font-semibold text-slate-800 dark:text-white">{% trans "Financial Audit Cases" %}</h3>
-    </div>
-    <div x-show="loading" class="flex justify-center py-16">
-      <svg class="animate-spin w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
-        <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-      </svg>
-    </div>
-    <table x-show="!loading" class="data-table">
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{% trans "Audit Cases" %}</h1>
+    <p class="page-subtitle">{% trans "Track and review all open and closed audit cases" %}</p>
+  </div>
+  <button class="btn btn-primary">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    {% trans "New Case" %}
+  </button>
+</div>
+
+<div class="stats-grid">
+  <div class="stat-card blue">
+    <div class="stat-card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg></div>
+    <div class="stat-card-label">{% trans "Total Runs" %}</div>
+    <div class="stat-card-value">{{ counts.total|default:0 }}</div>
+    <div class="stat-card-sub">{% trans "All audit runs" %}</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <div class="stat-card-label">{% trans "Completed" %}</div>
+    <div class="stat-card-value">{{ counts.completed|default:0 }}</div>
+    <div class="stat-card-sub">{% trans "Successfully audited" %}</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg></div>
+    <div class="stat-card-label">{% trans "Running" %}</div>
+    <div class="stat-card-value">{{ counts.running|default:0 }}</div>
+    <div class="stat-card-sub">{% trans "Pending or in progress" %}</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg></div>
+    <div class="stat-card-label">{% trans "Failed" %}</div>
+    <div class="stat-card-value">{{ counts.failed|default:0 }}</div>
+    <div class="stat-card-sub">{% trans "Need investigation" %}</div>
+  </div>
+</div>
+
+<div class="card table-card">
+  <div class="table-wrap">
+    <table class="data-table">
       <thead>
         <tr>
-          <th>{% trans "Case Number" %}</th>
-          <th>{% trans "Title" %}</th>
-          <th>{% trans "Type" %}</th>
-          <th>{% trans "Severity" %}</th>
+          <th>#</th>
+          <th>{% trans "Document Type" %}</th>
+          <th>{% trans "Document ID" %}</th>
+          <th>{% trans "Started" %}</th>
           <th>{% trans "Status" %}</th>
-          <th>{% trans "Opened" %}</th>
-          <th>{% trans "Assigned To" %}</th>
+          <th>{% trans "Rules" %}</th>
+          <th>{% trans "Risk" %}</th>
         </tr>
       </thead>
       <tbody>
-        <template x-for="c in cases" :key="c.id">
-          <tr class="cursor-pointer" @click="window.location='/audit/'+c.id+'/'">
-            <td class="font-mono text-xs" x-text="c.case_number||c.id?.slice(0,8)"></td>
-            <td class="font-medium text-slate-800 dark:text-white max-w-xs truncate" x-text="c.title||'—'"></td>
-            <td><span class="badge badge-info text-xs" x-text="c.case_type||'—'"></span></td>
-            <td>
-              <span :class="'badge-'+(c.severity||'medium')" class="badge"
-                    x-text="severityLabel(c.severity)"></span>
-            </td>
-            <td><span class="badge badge-info" x-text="c.status||'—'"></span></td>
-            <td class="text-xs" x-text="(c.created_at||'').slice(0,10)"></td>
-            <td class="text-xs" x-text="c.assigned_to_name||c.assigned_to||'—'"></td>
+        {% if rows %}
+          {% for r in rows %}
+          <tr>
+            <td class="text-muted">{{ forloop.counter }}</td>
+            <td>{{ r.document_type|default:"—" }}</td>
+            <td><span style="font-family:monospace;font-size:12px">{{ r.document_id|default:"—"|truncatechars:18 }}</span></td>
+            <td class="text-muted">{{ r.started_at|date:"Y-m-d H:i" }}</td>
+            <td><span class="badge badge-{% if r.status == 'completed' %}success{% elif r.status == 'failed' %}danger{% else %}info{% endif %}">{{ r.status }}</span></td>
+            <td><span style="color:var(--success);font-weight:700">{{ r.rules_passed|default:0 }}</span> / <span style="color:var(--danger);font-weight:700">{{ r.rules_failed|default:0 }}</span></td>
+            <td><span class="badge badge-{% if r.risk_level == 'low' %}success{% elif r.risk_level == 'medium' %}warning{% elif r.risk_level == 'high' %}danger{% else %}info{% endif %}">{{ r.risk_level|default:"—" }}</span></td>
           </tr>
-        </template>
-        <tr x-show="!cases.length && !loading">
-          <td colspan="7" class="text-center py-16 text-slate-400 text-sm">
-            <i data-lucide="shield-alert" class="w-8 h-8 mx-auto mb-2"></i>
-            <p x-text="i18n.noCases"></p>
-          </td>
-        </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="7">
+            <div class="empty-state">
+              <h3>{% trans "No audit runs yet" %}</h3>
+              <p>{% trans "Audit runs are created automatically when you upload documents. They run in the background." %}</p>
+              <a href="{% url 'frontend:upload' %}" class="btn btn-primary">{% trans "Upload Documents" %}</a>
+            </div>
+          </td></tr>
+        {% endif %}
       </tbody>
     </table>
   </div>
 </div>
-{% endblock %}
-
-{% block page_js %}
-<script>
-function auditList() {
-  return {
-    cases: [],
-    loading: true,
-    i18n: {
-      critical:   '{% trans "Critical" %}',
-      high:       '{% trans "High" %}',
-      medium:     '{% trans "Medium" %}',
-      low:        '{% trans "Low" %}',
-      loadFailed: '{% trans "Loading failed" %}',
-      noCases:    '{% trans "No audit cases" %}',
-    },
-
-    async init() {
-      try {
-        const d = await apiFetch('/audit/cases/?page_size=50');
-        this.cases = d.results || d || [];
-      } catch(e) {
-        notify(this.i18n.loadFailed, 'error');
-      }
-      this.loading = false;
-      this.$nextTick(() => lucide.createIcons());
-    },
-
-    severityLabel(s) {
-      return {
-        critical: this.i18n.critical,
-        high:     this.i18n.high,
-        medium:   this.i18n.medium,
-        low:      this.i18n.low,
-      }[s] ?? s ?? '—';
-    },
-  };
-}
-</script>
 {% endblock %}

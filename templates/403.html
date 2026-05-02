@@ -1,0 +1,29 @@
+{% load static i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
+<head>
+  <meta charset="UTF-8">
+  <title>403 — {% trans "Forbidden" %} | Tadgeeg</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&family=Cairo:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Tajawal', sans-serif; background: linear-gradient(135deg, #f8fafc 0%, #fef3c7 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+    .err { max-width: 520px; text-align: center; }
+    .err-code { font-family: 'Cairo', sans-serif; font-size: 120px; font-weight: 900; line-height: 1; background: linear-gradient(135deg, #f59e0b, #003366); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 8px; }
+    .err-title { font-family: 'Cairo', sans-serif; font-size: 26px; font-weight: 800; color: #003366; margin-bottom: 12px; }
+    .err-desc { font-size: 14px; color: #64748b; line-height: 1.7; margin-bottom: 32px; }
+    .err-btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 26px; border-radius: 12px; background: #003366; color: white; font-weight: 700; text-decoration: none; transition: all 0.2s; }
+    .err-btn:hover { background: #002244; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(0,51,102,0.25); }
+  </style>
+</head>
+<body>
+  <div class="err">
+    <div class="err-code">403</div>
+    <h1 class="err-title">{% trans "Access Denied" %}</h1>
+    <p class="err-desc">{% trans "You don't have permission to access this resource." %}</p>
+    <a href="/" class="err-btn">{% trans "Back to Dashboard" %} ←</a>
+  </div>
+</body>
+</html>

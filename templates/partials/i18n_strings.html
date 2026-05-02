@@ -1,0 +1,152 @@
+{% load i18n %}
+{% comment %}
+Tadgeeg JavaScript i18n payload — single source of truth.
+Loaded inside <head> by base.html and layouts/dashboard_base.html.
+
+Read from JS:
+    window.TADGEEG_I18N.risk.high          // direct
+    t('status.pending')                    // safe lookup, returns key on miss
+    t('msg.load_error', 'Could not load')  // with fallback
+
+When adding new keys: keep them grouped (risk / severity / status / msg).
+Never hardcode user-facing strings in JS — always pull from here.
+{% endcomment %}
+<script>
+(function () {
+  window.TADGEEG_I18N = {
+    lang: "{{ LANGUAGE_CODE|default:'ar' }}",
+    dir:  "{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}",
+
+    // ── Risk levels ──
+    risk: {
+      low:      "{% trans 'Low' %}",
+      medium:   "{% trans 'Medium' %}",
+      high:     "{% trans 'High' %}",
+      critical: "{% trans 'Critical' %}",
+    },
+
+    // ── Severity (alias of risk plus info) ──
+    severity: {
+      low:      "{% trans 'Low' %}",
+      medium:   "{% trans 'Medium' %}",
+      high:     "{% trans 'High' %}",
+      critical: "{% trans 'Critical' %}",
+      info:     "{% trans 'Info' %}",
+    },
+
+    // ── Audit / processing / invoice statuses ──
+    status: {
+      pending:         "{% trans 'Pending' %}",
+      processing:      "{% trans 'Processing' %}",
+      validated:       "{% trans 'Validated' %}",
+      flagged:         "{% trans 'Flagged' %}",
+      approved:        "{% trans 'Approved' %}",
+      rejected:        "{% trans 'Rejected' %}",
+      completed:       "{% trans 'Completed' %}",
+      failed:          "{% trans 'Failed' %}",
+      partial:         "{% trans 'Partial' %}",
+      received:        "{% trans 'Received' %}",
+      extracting:      "{% trans 'Extracting' %}",
+      normalizing:     "{% trans 'Normalizing' %}",
+      validating:      "{% trans 'Validating' %}",
+      review_required: "{% trans 'Needs Review' %}",
+      action_required: "{% trans 'Action Required' %}",
+      escalated:       "{% trans 'Escalated' %}",
+      queued:          "{% trans 'Queued' %}",
+      paid:            "{% trans 'Paid' %}",
+      draft:           "{% trans 'Draft' %}",
+      published:       "{% trans 'Published' %}",
+      archived:        "{% trans 'Archived' %}",
+    },
+
+    // ── Generic UI messages, prompts & notifications ──
+    msg: {
+      // Loading / progress
+      loading:          "{% trans 'Loading…' %}",
+      saving:           "{% trans 'Saving...' %}",
+      uploading:        "{% trans 'Uploading...' %}",
+      processing:       "{% trans 'Processing...' %}",
+      deleting:         "{% trans 'Deleting...' %}",
+
+      // Success / failure outcomes
+      saved:            "{% trans 'Saved' %}",
+      save_success:     "{% trans 'Saved successfully' %}",
+      save_error:       "{% trans 'Save failed' %}",
+      load_error:       "{% trans 'Failed to load data' %}",
+      delete_success:   "{% trans 'Deleted successfully' %}",
+      delete_error:     "{% trans 'Failed to delete' %}",
+      update_success:   "{% trans 'Status updated' %}",
+      update_error:     "{% trans 'Status update failed' %}",
+      approve_success:  "{% trans 'Approved' %}",
+      reject_success:   "{% trans 'Rejected' %}",
+      generic_error:    "{% trans 'An error occurred. Please try again.' %}",
+      something_wrong:  "{% trans 'Something went wrong.' %}",
+      action_failed:    "{% trans 'Action failed:' %}",
+      network_error:    "{% trans 'Network error' %}",
+      request_failed:   "{% trans 'Request failed' %}",
+      connection_error: "{% trans 'Connection error.' %}",
+      server_error:     "{% trans 'Server connection error.' %}",
+      method_not_allowed:"{% trans 'Method not allowed' %}",
+
+      // Confirmations
+      confirm:          "{% trans 'Confirm' %}",
+      cancel:           "{% trans 'Cancel' %}",
+      delete_confirm:   "{% trans 'Are you sure you want to delete this item?' %}",
+      delete_folder_confirm: "{% trans 'Delete this folder? Files inside will not be deleted.' %}",
+      cannot_undo:      "{% trans 'This action cannot be undone.' %}",
+      required:         "{% trans 'This field is required' %}",
+
+      // Upload outcomes
+      upload_failed:    "{% trans 'Upload failed' %}",
+      upload_done:      "{% trans 'Upload complete — analyzing...' %}",
+      upload_interrupted:"{% trans 'Upload was interrupted. Please try again.' %}",
+      file_uploaded:    "{% trans 'File uploaded successfully.' %}",
+      files_uploaded:   "{% trans 'files uploaded successfully' %}",
+
+      // Folder operations
+      folder_created:   "{% trans 'Folder created.' %}",
+      folder_deleted:   "{% trans 'Folder deleted.' %}",
+      folder_load_fail: "{% trans 'Failed to load folders' %}",
+      folder_create_fail:"{% trans 'Failed to create folder.' %}",
+      folder_delete_fail:"{% trans 'Failed to delete folder.' %}",
+
+      // Empty states
+      no_data:          "{% trans 'No data' %}",
+      no_invoices:      "{% trans 'No invoices yet' %}",
+      no_documents:     "{% trans 'No documents yet' %}",
+      no_files:         "{% trans 'No files found' %}",
+    },
+
+    // ── Generic action verbs (rare JS usage) ──
+    action: {
+      save:     "{% trans 'Save' %}",
+      cancel:   "{% trans 'Cancel' %}",
+      delete:   "{% trans 'Delete' %}",
+      edit:     "{% trans 'Edit' %}",
+      view:     "{% trans 'View' %}",
+      back:     "{% trans 'Back' %}",
+      retry:    "{% trans 'Retry' %}",
+      refresh:  "{% trans 'Refresh' %}",
+      download: "{% trans 'Download' %}",
+      upload:   "{% trans 'Upload' %}",
+      create:   "{% trans 'Create' %}",
+    },
+
+    // ── Common units / suffixes used in inline JS templates ──
+    units: {
+      file:   "{% trans 'file' %}",
+      files:  "{% trans 'files' %}",
+      item:   "{% trans 'item' %}",
+      items:  "{% trans 'items' %}",
+    },
+  };
+
+  // Helper: t('risk.high') → "High" / "عالي"; on miss returns fallback || the key.
+  window.t = function (path, fallback) {
+    try {
+      const v = path.split('.').reduce((o, k) => (o || {})[k], window.TADGEEG_I18N);
+      return (typeof v === 'string') ? v : (fallback != null ? fallback : path);
+    } catch (e) { return fallback != null ? fallback : path; }
+  };
+})();
+</script>

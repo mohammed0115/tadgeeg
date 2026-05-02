@@ -1,205 +1,130 @@
-{% extends "base.html" %}
+{% extends "layouts/dashboard_base.html" %}
 {% load i18n %}
+
 {% block title %}{% trans "Vendors" %}{% endblock %}
-{% block page_title %}{% trans "Vendor Analysis" %}{% endblock %}
 {% block nav_vendors %}active{% endblock %}
 
+{% block extra_styles %}
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 28px; }
+  .vendor-row-name {
+    display: flex; align-items: center; gap: 12px;
+    font-weight: 700; color: var(--text);
+  }
+  .vendor-avatar {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 800;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  @media (max-width: 1024px) { .stats-grid { grid-template-columns: 1fr; } }
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "Vendors" %}</span>
+{% endblock %}
+
 {% block content %}
-<div x-data="vendorsPage()" x-init="init()" class="space-y-5 max-w-screen-2xl">
-
-  <!-- Stats -->
-  <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-    <div class="card p-5">
-      <div class="text-2xl font-bold font-mono text-slate-800 dark:text-white" x-text="stats.total">—</div>
-      <div class="text-sm text-slate-400 mt-1">{% trans "Total Vendors" %}</div>
-    </div>
-    <div class="card p-5 border-r-4 border-r-red-500">
-      <div class="text-2xl font-bold font-mono text-red-600 dark:text-red-400" x-text="stats.high_risk">—</div>
-      <div class="text-sm text-slate-400 mt-1">{% trans "High Risk" %}</div>
-    </div>
-    <div class="card p-5 border-r-4 border-r-blue-500">
-      <div class="text-2xl font-bold font-mono text-blue-600 dark:text-blue-400" x-text="formatNumber(stats.avg_risk_score)">—</div>
-      <div class="text-sm text-slate-400 mt-1">{% trans "Average Risk Score" %}</div>
-    </div>
-    <div class="card p-5 border-r-4 border-r-amber-400">
-      <div class="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400" x-text="formatNumber(stats.with_compliance)">—</div>
-      <div class="text-sm text-slate-400 mt-1">{% trans "Compliance Issues" %}</div>
-    </div>
-    <div class="card p-5 border-r-4 border-r-emerald-500">
-      <div class="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400" x-text="formatNumber(stats.avg_frequency)">—</div>
-      <div class="text-sm text-slate-400 mt-1">{% trans "Average Frequency" %}</div>
-    </div>
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{% trans "Vendors" %}</h1>
+    <p class="page-subtitle">{% trans "Manage suppliers and review their transaction history" %}</p>
   </div>
+  <button class="btn btn-primary">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    {% trans "Add Vendor" %}
+  </button>
+</div>
 
-  <!-- Table -->
-  <div class="card overflow-hidden">
-    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
-      <h3 class="font-semibold text-slate-800 dark:text-white">{% trans "Vendor List" %}</h3>
-      <div class="flex gap-3 items-center">
-        <div class="relative">
-          <i data-lucide="search" class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"></i>
-          <input x-model="search" type="text" placeholder="{% trans 'Search by name...' %}" class="input pr-9 py-2 w-52">
-        </div>
-        <select x-model="riskFilter" class="select py-2">
-          <option value="">{% trans "All Levels" %}</option>
-          <option value="high">{% trans "High" %}</option>
-          <option value="medium">{% trans "Medium" %}</option>
-          <option value="low">{% trans "Low" %}</option>
-          <option value="blocked">{% trans "Blocked" %}</option>
-        </select>
-      </div>
-    </div>
+<form method="get" style="margin-bottom:18px;">
+  <input type="text" name="q" value="{{ search|default:'' }}" placeholder="{% trans 'Search by vendor name or VAT...' %}"
+         style="width:100%;max-width:480px;padding:10px 16px;border:1.5px solid var(--border);border-radius:10px;background:var(--bg-soft);font-size:13px;font-family:inherit;">
+</form>
 
-    <div x-show="loading" class="flex justify-center py-12">
-      <svg class="animate-spin w-5 h-5 text-slate-300" fill="none" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
-        <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-      </svg>
-    </div>
+<div class="stats-grid">
+  <div class="stat-card blue">
+    <div class="stat-card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+    <div class="stat-card-label">{% trans "Total Vendors" %}</div>
+    <div class="stat-card-value">{{ stats.total|default:0 }}</div>
+    <div class="stat-card-sub">{% trans "Active suppliers" %}</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div>
+    <div class="stat-card-label">{% trans "Verified" %}</div>
+    <div class="stat-card-value">{{ stats.verified|default:0 }}</div>
+    <div class="stat-card-sub">{% trans "VAT validated by ZATCA" %}</div>
+  </div>
+  <div class="stat-card amber">
+    <div class="stat-card-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg></div>
+    <div class="stat-card-label">{% trans "Needs Review" %}</div>
+    <div class="stat-card-value">{{ stats.needs_review|default:0 }}</div>
+    <div class="stat-card-sub">{% trans "Missing VAT or info" %}</div>
+  </div>
+</div>
 
-    <table x-show="!loading" class="data-table">
+<div class="card table-card">
+  <div class="table-header">
+    <h3 class="card-title">{% trans "All Vendors" %}</h3>
+  </div>
+  <div class="table-wrap">
+    <table class="data-table">
       <thead>
         <tr>
           <th>{% trans "Vendor" %}</th>
           <th>{% trans "VAT Number" %}</th>
           <th>{% trans "Invoices" %}</th>
-          <th>{% trans "Risk Score" %}</th>
-          <th>{% trans "Frequency" %}</th>
-          <th>{% trans "Compliance" %}</th>
-          <th class="text-left">{% trans "Total Spend" %}</th>
-          <th>{% trans "Average Invoice" %}</th>
-          <th>{% trans "Duplicates" %}</th>
-          <th>{% trans "Flagged" %}</th>
-          <th>{% trans "Risk Level" %}</th>
-          <th>{% trans "New?" %}</th>
+          <th>{% trans "Purchase Orders" %}</th>
+          <th>{% trans "Total Amount" %}</th>
+          <th>{% trans "Last Activity" %}</th>
+          <th>{% trans "Status" %}</th>
         </tr>
       </thead>
       <tbody>
-        <template x-for="v in filteredVendors()" :key="v.id">
+        {% if rows %}
+          {% for v in rows %}
           <tr>
             <td>
-              <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center text-sm font-bold text-slate-600 dark:text-slate-200 flex-shrink-0"
-                     x-text="(v.vendor_name||'?')[0].toUpperCase()"></div>
-                <span class="font-medium text-slate-800 dark:text-white" x-text="v.vendor_name||'—'"></span>
+              <div class="vendor-row-name">
+                <div class="vendor-avatar">{{ v.initials }}</div>
+                <span>{{ v.vendor_name }}</span>
               </div>
             </td>
-            <td class="font-mono text-xs" x-text="v.vendor_vat_number||'—'"></td>
-            <td class="font-mono font-semibold" x-text="v.invoice_count||0"></td>
+            <td><span style="font-family:monospace;font-size:12px;">{{ v.vendor_vat_number|default:"—" }}</span></td>
+            <td><span style="font-family:monospace;font-weight:700;">{{ v.invoice_count }}</span></td>
+            <td><span style="font-family:monospace;font-weight:700;">{{ v.po_count }}</span></td>
+            <td><span style="font-family:monospace;font-weight:700;">{{ v.total_amount|floatformat:2 }}</span> SAR</td>
+            <td class="text-muted">{{ v.last_activity|date:"Y-m-d"|default:"—" }}</td>
             <td>
-              <span class="badge bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
-                    x-text="formatNumber(v.risk_score || v.vendor_risk_score || 0)"></span>
-            </td>
-            <td class="font-mono text-xs" x-text="formatNumber(v.transaction_frequency_30d||0)"></td>
-            <td>
-              <span x-show="(v.compliance_issue_count||0)>0"
-                    class="badge bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300"
-                    x-text="v.compliance_issue_count"></span>
-              <span x-show="!(v.compliance_issue_count>0)" class="text-slate-300 dark:text-slate-600">—</span>
-            </td>
-            <td class="text-left font-mono font-bold text-slate-800 dark:text-white" x-text="formatMoney(v.total_amount||0)"></td>
-            <td class="font-mono text-xs" x-text="formatNumber(v.avg_invoice_amount||0)"></td>
-            <td>
-              <span x-show="v.duplicate_count>0"
-                    class="badge bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
-                    x-text="v.duplicate_count"></span>
-              <span x-show="!v.duplicate_count" class="text-slate-300 dark:text-slate-600">—</span>
-            </td>
-            <td>
-              <span x-show="v.flagged_count>0"
-                    class="badge badge-high"
-                    x-text="v.flagged_count"></span>
-              <span x-show="!v.flagged_count" class="text-slate-300 dark:text-slate-600">—</span>
-            </td>
-            <td>
-              <span :class="{
-                'badge-critical': v.risk_tier==='high'||v.risk_tier==='blocked',
-                'badge-medium':   v.risk_tier==='medium',
-                'badge-low':      v.risk_tier==='low'
-              }" class="badge"
-              x-text="riskLabel(v.risk_tier)"></span>
-            </td>
-            <td>
-              <span x-show="v.is_new" class="badge badge-info">{% trans "New" %}</span>
-              <span x-show="!v.is_new" class="text-slate-300 dark:text-slate-600">—</span>
+              {% if v.is_verified %}
+                <span class="badge badge-success">{% trans "Verified" %}</span>
+              {% elif not v.vendor_vat_number %}
+                <span class="badge badge-warning">{% trans "Missing VAT" %}</span>
+              {% else %}
+                <span class="badge badge-warning">{% trans "Needs Review" %}</span>
+              {% endif %}
             </td>
           </tr>
-        </template>
-        <tr x-show="!loading&&!filteredVendors().length">
-          <td colspan="12" class="text-center py-12 text-slate-400">
-            <i data-lucide="building-2" class="w-8 h-8 mx-auto mb-2"></i>
-            <p class="text-sm">{% trans "No vendors found" %}</p>
-          </td>
-        </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="7">
+            <div class="empty-state">
+              <div class="empty-state-icon">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <h3>{% trans "No vendors yet" %}</h3>
+              <p>{% trans "Vendors will be auto-extracted from invoice uploads. You can also add them manually." %}</p>
+              <a href="{% url 'frontend:upload' %}" class="btn btn-primary">{% trans "Upload Invoices" %}</a>
+            </div>
+          </td></tr>
+        {% endif %}
       </tbody>
     </table>
   </div>
 </div>
-{% endblock %}
-
-{% block page_js %}
-<script>
-function vendorsPage() {
-  return {
-    vendors: [], loading: true, search: '', riskFilter: '',
-    stats: { total:0, high_risk:0, avg_risk_score:0, with_compliance:0, avg_frequency:0 },
-    i18n: {
-      sar: "{% trans 'SAR' %}",
-      loadFailed: "{% trans 'Failed to load vendors' %}",
-      high: "{% trans 'High' %}",
-      medium: "{% trans 'Medium' %}",
-      low: "{% trans 'Low' %}",
-      blocked: "{% trans 'Blocked' %}",
-    },
-
-    async init() {
-      try {
-        const d = await apiFetch('/invoices/reports/vendors/?limit=500');
-        this.vendors = d.vendors || d.results || d || [];
-        this.stats.total = d.summary?.total_vendors ?? this.vendors.length;
-        this.stats.high_risk = d.summary?.high_risk_vendors ?? this.vendors.filter(v=>v.risk_tier==='high'||v.risk_tier==='blocked').length;
-        this.stats.avg_risk_score = d.summary?.avg_risk_score ?? average(this.vendors.map(v => Number(v.risk_score || v.vendor_risk_score || 0)));
-        this.stats.with_compliance = d.summary?.compliance_issue_total ?? this.vendors.reduce((sum, v) => sum + Number(v.compliance_issue_count || 0), 0);
-        this.stats.avg_frequency = d.summary?.avg_frequency_30d ?? average(this.vendors.map(v => Number(v.transaction_frequency_30d || 0)));
-      } catch(e) { notify(this.i18n.loadFailed,'error'); }
-      this.loading = false;
-      this.$nextTick(() => lucide.createIcons());
-    },
-
-    filteredVendors() {
-      return this.vendors.filter(v => {
-        const matchSearch = !this.search || (v.vendor_name||'').toLowerCase().includes(this.search.toLowerCase());
-        const matchRisk   = !this.riskFilter || v.risk_tier === this.riskFilter;
-        return matchSearch && matchRisk;
-      });
-    },
-
-    riskLabel(tier) {
-      return {
-        high: this.i18n.high,
-        medium: this.i18n.medium,
-        low: this.i18n.low,
-        blocked: this.i18n.blocked,
-      }[tier] || tier || '—';
-    },
-
-    formatNumber(value) {
-      return Number(value || 0).toLocaleString(APP_LOCALE, {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      });
-    },
-
-    formatMoney(value) {
-      return `${this.formatNumber(value)} ${this.i18n.sar}`;
-    },
-  }
-}
-
-function average(values) {
-  const nums = (values || []).filter(v => !Number.isNaN(v));
-  if (!nums.length) return 0;
-  return nums.reduce((sum, v) => sum + v, 0) / nums.length;
-}
-</script>
 {% endblock %}

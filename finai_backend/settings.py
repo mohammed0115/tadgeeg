@@ -126,6 +126,7 @@ LOCAL_APPS = [
     "apps.frontend",
     "apps.auditing",
     "apps.rule_engine",
+    "apps.notifications",
 ]
 
 # ─── Rule Engine Settings ──────────────────────────────────────────────────────

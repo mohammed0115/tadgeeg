@@ -1,8 +1,8 @@
 {% extends "layouts/base_platform_admin.html" %}
 {% load i18n %}
-{% block page_title %}إدارة الخدمات{% endblock %}
-{% block breadcrumb_parent %}إدارة المحتوى{% endblock %}
-{% block breadcrumb_current %}الخدمات{% endblock %}
+{% block page_title %}{% trans 'Service Management' %}{% endblock %}
+{% block breadcrumb_parent %}{% trans 'Content Management' %}{% endblock %}
+{% block breadcrumb_current %}{% trans "Services" %}{% endblock %}
 
 {% block content %}
 <div x-data="servicesEditor()" x-init="init()" class="space-y-5 fade-in">
@@ -10,12 +10,12 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">إدارة الخدمات</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">تحرير قائمة الخدمات والميزات المعروضة</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans 'Service Management' %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans 'Edit list of services and features shown' %}</p>
     </div>
     <button @click="addService()" class="btn-primary">
       <i data-lucide="plus" class="w-4 h-4"></i>
-      إضافة خدمة
+      {% trans 'Add Service' %}
     </button>
   </div>
 
@@ -42,12 +42,12 @@
                 <i :data-lucide="service.icon || 'layers'" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
               </div>
               <span class="font-semibold text-slate-700 dark:text-slate-200 text-sm"
-                    x-text="service.title || 'خدمة جديدة'"></span>
+                    x-text="service.title || 'New service'"></span>
             </div>
             <div class="flex items-center gap-2">
               <label class="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer">
                 <input type="checkbox" x-model="service.is_active" class="rounded">
-                نشط
+                {% trans 'Active' %}
               </label>
               <button @click="services.splice(idx, 1)" class="text-slate-400 hover:text-red-500 p-1">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
@@ -56,23 +56,23 @@
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان (EN)</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Title (EN)' %}</label>
               <input type="text" x-model="service.title" class="input" placeholder="Service Title">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">العنوان (عربي)</label>
-              <input type="text" x-model="service.title_ar" class="input" dir="rtl" placeholder="اسم الخدمة">
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Title (Arabic)' %}</label>
+              <input type="text" x-model="service.title_ar" class="input" dir="rtl" placeholder="{% trans 'Service Name' %}">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الوصف (EN)</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Description (EN)' %}</label>
               <textarea x-model="service.description" class="input" rows="3" placeholder="Describe the service..."></textarea>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الوصف (عربي)</label>
-              <textarea x-model="service.description_ar" class="input" rows="3" dir="rtl" placeholder="وصف الخدمة..."></textarea>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Description (Arabic)' %}</label>
+              <textarea x-model="service.description_ar" class="input" rows="3" dir="rtl" placeholder="{% trans 'Service description...' %}"></textarea>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الأيقونة (Lucide)</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Icon (Lucide)' %}</label>
               <div class="flex items-center gap-2">
                 <input type="text" x-model="service.icon" class="input flex-1" placeholder="shield-check">
                 <template x-if="service.icon">
@@ -83,7 +83,7 @@
               </div>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">ترتيب العرض</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Display Order' %}</label>
               <input type="number" x-model.number="service.order" class="input" placeholder="1">
             </div>
           </div>
@@ -93,14 +93,14 @@
       <template x-if="services.length === 0">
         <div class="card p-12 text-center">
           <i data-lucide="layers" class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3"></i>
-          <p class="text-slate-500 text-sm">لا توجد خدمات. انقر "إضافة خدمة" للبدء.</p>
+          <p class="text-slate-500 text-sm">{% trans 'No services. Click "Add Service" to start.' %}</p>
         </div>
       </template>
 
       <div class="flex justify-end">
         <button @click="saveAll()" :disabled="saving" class="btn-primary">
           <i data-lucide="save" class="w-4 h-4"></i>
-          <span x-text="saving ? 'جاري الحفظ...' : 'حفظ جميع الخدمات'"></span>
+          <span x-text="saving ? 'Saving...' : 'Save All Services'"></span>
         </button>
       </div>
     </div>
@@ -125,7 +125,7 @@ function servicesEditor() {
           this.services = Array.isArray(data) ? data : (data.results || []);
         }
       } catch (e) {
-        notify('تعذّر تحميل الخدمات', 'error');
+        notify('Failed to load services', 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());
@@ -147,10 +147,10 @@ function servicesEditor() {
           method: 'PUT',
           body: JSON.stringify(this.services),
         });
-        if (res && res.ok) notify('تم حفظ الخدمات', 'success');
-        else notify('فشل الحفظ', 'error');
+        if (res && res.ok) notify('Services saved', 'success');
+        else notify('Save failed', 'error');
       } catch (e) {
-        notify('فشل الحفظ', 'error');
+        notify('Save failed', 'error');
       } finally {
         this.saving = false;
       }

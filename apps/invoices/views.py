@@ -76,8 +76,10 @@ ALLOWED_MIME = {"application/pdf", "image/jpeg", "image/png", "image/tiff",
                 "application/vnd.ms-excel", "application/json", "text/json",
                 "text/csv", "text/plain", "text/tab-separated-values",
                 "application/csv", "application/octet-stream"}
-ALLOWED_EXT  = {".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif", ".zip",
-                ".xlsx", ".xls", ".json", ".csv", ".tsv"}
+ALLOWED_EXT  = {".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif", ".webp",
+                ".gif", ".bmp", ".zip", ".xlsx", ".xls", ".xlsm",
+                ".json", ".jsonl", ".ndjson", ".csv", ".tsv",
+                ".xml", ".txt", ".md"}
 
 DEFAULT_BULK_CHUNK_SIZE = 250
 MIN_BULK_CHUNK_SIZE = 25
@@ -343,6 +345,9 @@ class InvoiceUploadView(APIView):
         errors  = []
         async_jobs = []
 
+        from core.utils.file_validation import validate_uploaded_file
+        from rest_framework.exceptions import ValidationError as _ValidationError
+
         for uploaded_file in uploaded_files:
             filename = uploaded_file.name
             ext = os.path.splitext(filename)[1].lower()
@@ -351,6 +356,16 @@ class InvoiceUploadView(APIView):
                 errors.append({"filename": filename, "error": _("Unsupported file type: %(ext)s") % {"ext": ext}})
                 batch.failed_files += 1
                 AuditSessionService.record_failure(audit_session, f"Unsupported file type: {ext}")
+                continue
+
+            # Defensive: validate MIME by inspecting the actual bytes (not just the
+            # extension). Catches an .exe renamed to .pdf or scripts disguised as docs.
+            try:
+                validate_uploaded_file(uploaded_file, filename=filename, check_content=True)
+            except _ValidationError as exc:
+                errors.append({"filename": filename, "error": str(exc.detail if hasattr(exc, "detail") else exc)})
+                batch.failed_files += 1
+                AuditSessionService.record_failure(audit_session, f"MIME validation failed: {exc}")
                 continue
 
             # ── ZIP: extract and process each file inside ─────────────────────
@@ -699,6 +714,26 @@ class InvoiceApproveView(APIView):
         invoice.save()
         _save_audit_event(invoice, request.user, event_type, msg,
                           before=before, after={"status": invoice.status}, request=request)
+
+        # Fire outbound webhook so customers' ERPs see the state change.
+        try:
+            from apps.webhooks.services import emit
+            emit(
+                "invoice.approved" if action == "approve" else "invoice.rejected",
+                request.user.organization,
+                {
+                    "invoice_id":     str(invoice.id),
+                    "invoice_number": invoice.invoice_number,
+                    "vendor_name":    invoice.vendor_name,
+                    "total_amount":   float(invoice.total_amount or 0),
+                    "currency":       invoice.currency,
+                    "status":         invoice.status,
+                    "actor":          getattr(request.user, "email", str(request.user)),
+                    "reason":         msg,
+                },
+            )
+        except Exception:
+            pass  # never let a webhook failure break the approval flow
 
         return Response({"invoice_id": str(invoice.id), "status": invoice.status, "message": msg})
 
@@ -1179,3 +1214,99 @@ class ValidationRulesListView(APIView):
             "Group 6 — Document Quality": {k: v for k, v in RULES.items() if k.startswith("DOC")},
         }
         return Response({"total_rules": TOTAL_RULES, "rule_groups": groups})
+
+
+class InvoiceBulkActionView(APIView):
+    """POST /api/v1/invoices/bulk/
+
+    Apply ``approve`` / ``reject`` / ``flag`` to many invoices in one call.
+    Body: ``{"action": "approve|reject|flag", "ids": ["...", "..."], "reason": "..."}``
+
+    Notes:
+      - Operates only on invoices in the caller's organization.
+      - Each invoice still goes through the same approval-gate logic as the
+        single-invoice endpoint (so blocked invoices stay blocked).
+      - Webhook fires per affected invoice.
+      - Returns per-id success/failure so the caller can show partial results.
+    """
+    permission_classes = [IsAuthenticated, IsSeniorAuditorOrAbove]
+
+    @extend_schema(
+        tags=["Invoices"],
+        summary="Bulk approve / reject / flag invoices",
+        request={"type": "object", "properties": {
+            "action": {"type": "string", "enum": ["approve", "reject", "flag"]},
+            "ids":    {"type": "array", "items": {"type": "string", "format": "uuid"}},
+            "reason": {"type": "string"},
+        }},
+    )
+    def post(self, request):
+        action = request.data.get("action")
+        ids = request.data.get("ids") or []
+        reason = (request.data.get("reason") or "").strip()
+        if action not in ("approve", "reject", "flag"):
+            return Response({"error": "action must be approve|reject|flag"}, status=400)
+        if not isinstance(ids, list) or not ids:
+            return Response({"error": "ids must be a non-empty list"}, status=400)
+        if action == "reject" and not reason:
+            return Response({"error": "reason is required for reject"}, status=400)
+        if len(ids) > 200:
+            return Response({"error": "max 200 invoices per bulk call"}, status=400)
+
+        org = request.user.organization
+        invoices = Invoice.objects.filter(id__in=ids, organization=org)
+        results = []
+        from apps.webhooks.services import emit
+
+        for inv in invoices:
+            before = inv.status
+            try:
+                if action == "approve":
+                    # Reuse the approval gate from the single endpoint.
+                    try:
+                        risk = RiskScoreSummary.objects.get(document_id=inv.id)
+                        if risk.blocks_approval:
+                            results.append({"id": str(inv.id), "ok": False,
+                                            "error": "blocked by critical audit failures"})
+                            continue
+                    except RiskScoreSummary.DoesNotExist:
+                        results.append({"id": str(inv.id), "ok": False,
+                                        "error": "no audit run yet"})
+                        continue
+                    inv.status = Invoice.Status.APPROVED
+                    inv.approved_by = request.user
+                    inv.approved_at = timezone.now()
+                    event = "invoice.approved"
+                elif action == "reject":
+                    inv.status = Invoice.Status.REJECTED
+                    inv.rejected_reason = reason
+                    event = "invoice.rejected"
+                else:  # flag
+                    inv.status = Invoice.Status.FLAGGED
+                    event = "invoice.flagged"
+                inv.save()
+                results.append({"id": str(inv.id), "ok": True,
+                                "before": before, "after": inv.status})
+                try:
+                    emit(event, org, {
+                        "invoice_id": str(inv.id),
+                        "invoice_number": inv.invoice_number,
+                        "vendor_name": inv.vendor_name,
+                        "total_amount": float(inv.total_amount or 0),
+                        "status": inv.status,
+                        "actor": getattr(request.user, "email", str(request.user)),
+                        "reason": reason or None,
+                    })
+                except Exception:
+                    pass
+            except Exception as exc:
+                results.append({"id": str(inv.id), "ok": False, "error": str(exc)[:200]})
+
+        ok_count = sum(1 for r in results if r.get("ok"))
+        return Response({
+            "requested": len(ids),
+            "found":     invoices.count(),
+            "succeeded": ok_count,
+            "failed":    len(results) - ok_count,
+            "results":   results,
+        })

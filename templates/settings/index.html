@@ -1,854 +1,803 @@
-{% extends "base.html" %}
+{% extends "layouts/dashboard_base.html" %}
 {% load i18n %}
-{% block title %}{% trans "Organization Settings" %}{% endblock %}
-{% block page_title %}{% trans "Organization Settings" %}{% endblock %}
+
+{% block title %}{% trans "Settings" %}{% endblock %}
 {% block nav_settings %}active{% endblock %}
-{% block header_actions %}{% endblock %}
-{% block header_primary_action %}{% endblock %}
+
+{% block extra_styles %}
+  .settings-grid { display: grid; grid-template-columns: 240px 1fr; gap: 24px; align-items: start; }
+  .settings-tabs { display: flex; flex-direction: column; gap: 4px; position: sticky; top: 88px; }
+  .settings-tab {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; border-radius: 12px;
+    background: white; border: 1px solid var(--border-soft);
+    color: var(--text-muted); font-size: 14px; font-weight: 600;
+    transition: all 0.2s ease;
+    cursor: pointer; text-align: right;
+    width: 100%; font-family: inherit;
+  }
+  .settings-tab:hover { background: var(--bg-soft); color: var(--primary); border-color: var(--border); }
+  .settings-tab.active { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 4px 12px rgba(0,51,102,0.2); }
+  .settings-tab svg { flex-shrink: 0; }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .form-group label { display: block; font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--bg-soft);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    color: var(--text);
+    transition: all 0.2s ease;
+    font-family: inherit;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: white;
+    box-shadow: 0 0 0 4px rgba(0,51,102,0.08);
+  }
+  .form-group input[readonly] { background: var(--bg-softer); color: var(--text-muted); cursor: not-allowed; }
+  .form-help { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+  .alert {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 16px; border-radius: 12px;
+    font-size: 13px; font-weight: 500;
+    margin-bottom: 18px;
+  }
+  .alert-success { background: #dcfce7; border: 1px solid #bbf7d0; color: #166534; }
+  .alert-error   { background: #fee2e2; border: 1px solid #fecaca; color: #991b1b; }
+
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 18px;
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    gap: 16px;
+  }
+  .toggle-row-info h4 { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .toggle-row-info p  { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+
+  .toggle { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; cursor: pointer; inset: 0;
+    background: var(--border); border-radius: 24px;
+    transition: .25s;
+  }
+  .toggle-slider::before {
+    position: absolute; content: "";
+    height: 18px; width: 18px;
+    left: 3px; top: 3px;
+    background: white; border-radius: 50%;
+    transition: .25s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  .toggle input:checked + .toggle-slider { background: var(--accent); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+  .coming-soon {
+    text-align: center; padding: 60px 24px;
+    background: linear-gradient(135deg, var(--bg-soft) 0%, white 100%);
+    border-radius: 16px; border: 2px dashed var(--border);
+  }
+  .coming-soon .icon {
+    width: 72px; height: 72px;
+    margin: 0 auto 18px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .coming-soon h3 { font-family: 'Cairo', sans-serif; font-size: 18px; font-weight: 800; color: var(--text); margin-bottom: 8px; }
+  .coming-soon p  { font-size: 14px; color: var(--text-muted); max-width: 380px; margin: 0 auto; line-height: 1.7; }
+
+  @media (max-width: 1024px) {
+    .settings-grid { grid-template-columns: 1fr; }
+    .settings-tabs { position: static; flex-direction: row; flex-wrap: wrap; }
+    .settings-tab { flex: 1 1 auto; min-width: 140px; }
+    .form-grid { grid-template-columns: 1fr; }
+  }
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "Settings" %}</span>
+{% endblock %}
 
 {% block content %}
-<style>
-  [x-cloak] { display: none !important; }
-  
-  /* Premium Scrollbar */
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb {
-    background: rgba(101, 84, 192, 0.3);
-    border-radius: 4px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(101, 84, 192, 0.5);
-  }
-  
-  /* Smooth focus animations */
-  input:focus, textarea:focus, select:focus {
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-</style>
+<div x-data="settingsApp()" x-init="init()">
 
-<div x-data="organizationSettingsPage()"
-     x-init="load()"
-     @keydown.window.ctrl.s.prevent="saveAll()"
-     @keydown.window.meta.s.prevent="saveAll()"
-     class="-m-6 min-h-screen bg-white text-slate-950 dark:bg-slate-950 dark:text-white">
-  
-  <!-- Background Gradients -->
-  <div class="fixed inset-0 overflow-hidden pointer-events-none">
-    <div class="absolute -top-40 right-0 h-96 w-96 rounded-full bg-gradient-to-br from-primary-500/20 via-transparent to-transparent blur-3xl"></div>
-    <div class="absolute top-1/3 -left-40 h-80 w-80 rounded-full bg-gradient-to-br from-violet-500/15 to-transparent blur-3xl"></div>
-    <div class="absolute bottom-0 right-1/3 h-96 w-96 rounded-full bg-gradient-to-br from-blue-500/10 to-transparent blur-3xl"></div>
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{% trans "Settings" %}</h1>
+    <p class="page-subtitle">{% trans "Manage your profile, organization, and security preferences" %}</p>
   </div>
+</div>
 
-  <div class="relative mx-auto max-w-7xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
+<div class="settings-grid">
+  <aside class="settings-tabs">
+    <button class="settings-tab" :class="{ active: tab === 'profile' }" @click="tab = 'profile'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      {% trans "Profile" %}
+    </button>
+    <button class="settings-tab" :class="{ active: tab === 'organization' }" @click="tab = 'organization'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+      {% trans "Organization" %}
+    </button>
+    <button class="settings-tab" :class="{ active: tab === 'security' }" @click="tab = 'security'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6l-8-4z"/></svg>
+      {% trans "Security & MFA" %}
+    </button>
+    <button class="settings-tab" :class="{ active: tab === 'notifications' }" @click="tab = 'notifications'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg>
+      {% trans "Notifications" %}
+    </button>
+    <button class="settings-tab" :class="{ active: tab === 'api' }" @click="tab = 'api'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      {% trans "API & Webhooks" %}
+    </button>
+    <button class="settings-tab" :class="{ active: tab === 'region' }" @click="tab = 'region'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v20M2 12h20"/></svg>
+      {% trans "Language & Region" %}
+    </button>
+    <button class="settings-tab" :class="{ active: tab === 'team' }" @click="tab = 'team'; loadTeam()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
+      {% trans "Team & Users" %}
+    </button>
+  </aside>
 
-    <!-- Loading Skeleton -->
-    <template x-if="loading">
-      <div class="space-y-8 animate-pulse">
-        <div class="h-64 rounded-3xl bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800/50 dark:to-slate-900/30"></div>
-        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <template x-for="i in 4" :key="i">
-            <div class="h-32 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800/50 dark:to-slate-900/30"></div>
-          </template>
+  <div>
+    <!-- Status banner shared across tabs -->
+    <div x-show="message" x-transition class="alert" :class="messageType === 'error' ? 'alert-error' : 'alert-success'">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0; margin-top:1px">
+        <template x-if="messageType === 'success'"><polyline points="20 6 9 17 4 12"/></template>
+        <template x-if="messageType === 'error'"><g><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></g></template>
+      </svg>
+      <span x-text="message"></span>
+    </div>
+
+    <!-- ========== PROFILE TAB ========== -->
+    <div class="card" x-show="tab === 'profile'">
+      <h3 class="card-title">{% trans "Profile Information" %}</h3>
+      <form @submit.prevent="saveProfile">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>{% trans "Full Name" %}</label>
+            <input type="text" x-model="profile.full_name">
+          </div>
+          <div class="form-group">
+            <label>{% trans "Email" %}</label>
+            <input type="email" x-model="profile.email" readonly>
+            <div class="form-help">{% trans "Email cannot be changed. Contact support to update." %}</div>
+          </div>
+          <div class="form-group">
+            <label>{% trans "Phone Number" %}</label>
+            <input type="tel" x-model="profile.phone" placeholder="+966 5X XXX XXXX">
+          </div>
+          <div class="form-group">
+            <label>{% trans "Job Title / Department" %}</label>
+            <input type="text" x-model="profile.department" placeholder="{% trans 'Auditor / Accountant / etc.' %}">
+          </div>
         </div>
-        <div class="grid gap-8 lg:grid-cols-2">
-          <template x-for="i in 4" :key="i">
-            <div class="h-96 rounded-3xl bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800/50 dark:to-slate-900/30"></div>
-          </template>
+
+        <div style="display:flex; gap:10px; margin-top:24px; padding-top:20px; border-top:1px solid var(--border-soft);">
+          <button type="submit" class="btn btn-primary" :disabled="loading">
+            <span x-show="!loading">{% trans "Save Changes" %}</span>
+            <span x-show="loading" x-cloak>{% trans "Saving..." %}</span>
+          </button>
+          <button type="button" class="btn btn-light" @click="resetProfile">{% trans "Cancel" %}</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ========== ORGANIZATION TAB ========== -->
+    <div class="card" x-show="tab === 'organization'" x-cloak>
+      <h3 class="card-title">{% trans "Organization Information" %}</h3>
+      {% if user.organization %}
+      <div class="form-grid">
+        <div class="form-group">
+          <label>{% trans "Organization Name" %}</label>
+          <input type="text" value="{{ user.organization.name|default:'' }}" readonly>
+        </div>
+        <div class="form-group">
+          <label>{% trans "VAT Number" %}</label>
+          <input type="text" value="{{ user.organization.vat_number|default:'' }}" readonly>
+        </div>
+        <div class="form-group">
+          <label>{% trans "Country" %}</label>
+          <input type="text" value="{{ user.organization.country|default:'Saudi Arabia' }}" readonly>
+        </div>
+        <div class="form-group">
+          <label>{% trans "Subscription Plan" %}</label>
+          <input type="text" value="{% trans 'Professional' %}" readonly>
         </div>
       </div>
-    </template>
+      <div class="form-help" style="margin-top:16px;">
+        {% trans "Organization settings are managed by your account administrator. Contact them to update these fields." %}
+      </div>
+      {% else %}
+      <p style="color:var(--text-muted)">{% trans "You are not associated with an organization yet." %}</p>
+      {% endif %}
+    </div>
 
-    <!-- Main Content -->
-    <template x-if="!loading">
-      <form x-cloak @submit.prevent="saveAll()" class="space-y-8">
-
-        <!-- Premium Hero Header -->
-        <section class="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/50 to-white shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-slate-300/80 hover:shadow-md dark:border-slate-800/60 dark:from-slate-900/80 dark:via-slate-950/50 dark:to-slate-900/80">
-          <div class="absolute -top-32 -right-32 h-64 w-64 rounded-full bg-primary-500/10 blur-3xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"></div>
-          <div class="absolute -bottom-24 -left-32 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl opacity-0 transition-opacity duration-500 group-hover:opacity-100"></div>
-
-          <div class="relative px-8 py-10 lg:px-10 lg:py-12">
-            <div class="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between">
-              <!-- Header Content -->
-              <div class="max-w-3xl space-y-6">
-                <div class="inline-flex items-center gap-2.5 rounded-full border border-primary-200/60 bg-primary-50/80 px-3.5 py-1.5 text-xs font-semibold text-primary-700 dark:border-primary-500/20 dark:bg-primary-500/10 dark:text-primary-300">
-                  <span class="flex h-2 w-2 rounded-full bg-primary-600"></span>
-                  {% blocktrans with product=product_name %}{{ product }} Control Center{% endblocktrans %}
-                </div>
-
-                <div class="space-y-3">
-                  <h1 class="text-4xl font-bold tracking-tight text-slate-950 sm:text-5xl dark:text-white">
-                    {% trans "Organization Settings" %}
-                  </h1>
-                  <p class="max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-400">
-                    {% trans "Manage the company profile, tax compliance, financial thresholds, and smart preferences from one unified control center." %}
-                  </p>
-                </div>
-
-                <!-- Status Badges -->
-                <div class="flex flex-wrap items-center gap-2">
-                  <span class="inline-flex items-center gap-2.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all"
-                        :class="statusMeta().badgeClass">
-                    <span class="h-2 w-2 rounded-full" :class="statusMeta().dotClass"></span>
-                    <span x-text="statusMeta().label"></span>
-                  </span>
-
-                  <span class="inline-flex items-center gap-2 rounded-full border border-slate-200/60 bg-slate-50/80 px-3.5 py-1.5 text-xs font-medium text-slate-600 dark:border-slate-700/60 dark:bg-slate-950/50 dark:text-slate-400">
-                    <i data-lucide="clock" class="h-3.5 w-3.5"></i>
-                    <span x-text="lastSavedText()"></span>
-                  </span>
-
-                  <span class="inline-flex items-center gap-2 rounded-full border border-slate-200/60 bg-slate-50/80 px-3.5 py-1.5 text-xs font-medium text-slate-600 dark:border-slate-700/60 dark:bg-slate-950/50 dark:text-slate-400">
-                    <i data-lucide="zap" class="h-3.5 w-3.5"></i>
-                    {% trans "Ctrl + S" %}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Action Buttons -->
-              <div class="flex flex-col gap-3 min-w-fit sm:flex-row">
-                <button type="button"
-                        @click="exportData()"
-                        class="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-slate-200/60 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:border-slate-300/80 hover:bg-slate-50 hover:shadow-md active:scale-95 dark:border-slate-700/60 dark:bg-slate-950/50 dark:text-slate-300 dark:hover:bg-slate-900">
-                  <i data-lucide="download" class="h-4 w-4"></i>
-                  <span class="hidden sm:inline">{% trans "Export" %}</span>
-                </button>
-
-                <button type="submit"
-                        :disabled="saving || !hasUnsavedChanges()"
-                        class="inline-flex h-11 min-w-[14rem] items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-slate-950 to-slate-800 px-6 text-sm font-bold text-white shadow-lg transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed dark:from-primary-600 dark:to-primary-700 dark:hover:shadow-lg">
-                  <template x-if="saving">
-                    <svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
-                    </svg>
-                  </template>
-                  <i x-show="!saving" data-lucide="save" class="h-4 w-4"></i>
-                  <span x-text="saveButtonLabel()"></span>
-                </button>
-              </div>
-            </div>
+    <!-- ========== SECURITY & MFA TAB ========== -->
+    <div class="card" x-show="tab === 'security'" x-cloak>
+      <h3 class="card-title">{% trans "Change Password" %}</h3>
+      <form @submit.prevent="changePassword">
+        <div class="form-grid">
+          <div class="form-group" style="grid-column:1 / -1">
+            <label>{% trans "Current Password" %}</label>
+            <input type="password" x-model="password.old_password" required autocomplete="current-password">
           </div>
-        </section>
-
-        <!-- Stats Cards -->
-        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <div class="group overflow-hidden rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white to-slate-50/80 p-6 shadow-sm transition-all hover:shadow-md dark:border-slate-800/60 dark:from-slate-950/80 dark:to-slate-900/50">
-            <div class="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-primary-500/20 blur-2xl opacity-0 transition-opacity group-hover:opacity-100"></div>
-            <div class="relative space-y-3">
-              <div class="flex items-center justify-between">
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{% trans "Profile" %}</p>
-                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-300">
-                  <i data-lucide="check-circle" class="h-4 w-4"></i>
-                </div>
-              </div>
-              <p class="text-3xl font-bold text-slate-950 dark:text-white" x-text="profileCompletionPercent() + '%'"></p>
-              <p class="text-xs leading-relaxed text-slate-600 dark:text-slate-400" x-text="profileCompletionMessage()"></p>
-            </div>
+          <div class="form-group">
+            <label>{% trans "New Password" %}</label>
+            <input type="password" x-model="password.new_password" required autocomplete="new-password" minlength="8">
+            <div class="form-help">{% trans "At least 8 characters with letters and numbers." %}</div>
           </div>
-
-          <div class="group overflow-hidden rounded-2xl border p-6 shadow-sm transition-all hover:shadow-md"
-               :class="complianceSummary().tone === 'success' ? 'border-emerald-200/60 bg-gradient-to-br from-emerald-50/80 to-white dark:border-emerald-500/20 dark:from-emerald-950/40' : 'border-amber-200/60 bg-gradient-to-br from-amber-50/80 to-white dark:border-amber-500/20 dark:from-amber-950/40'">
-            <div class="relative space-y-3">
-              <div class="flex items-center justify-between">
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{% trans "Compliance" %}</p>
-                <div class="flex h-8 w-8 items-center justify-center rounded-lg"
-                     :class="complianceSummary().tone === 'success' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'">
-                  <i :data-lucide="complianceSummary().tone === 'success' ? 'shield-check' : 'alert-circle'" class="h-4 w-4"></i>
-                </div>
-              </div>
-              <p class="text-lg font-bold text-slate-950 dark:text-white" x-text="complianceSummary().title"></p>
-              <p class="text-xs leading-relaxed text-slate-600 dark:text-slate-400" x-text="complianceSummary().description"></p>
-            </div>
-          </div>
-
-          <div class="group overflow-hidden rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white to-slate-50/80 p-6 shadow-sm transition-all hover:shadow-md dark:border-slate-800/60 dark:from-slate-950/80 dark:to-slate-900/50">
-            <div class="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-violet-500/20 blur-2xl opacity-0 transition-opacity group-hover:opacity-100"></div>
-            <div class="relative space-y-3">
-              <div class="flex items-center justify-between">
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{% trans "Control" %}</p>
-                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300">
-                  <i data-lucide="trending-up" class="h-4 w-4"></i>
-                </div>
-              </div>
-              <p class="text-lg font-bold text-slate-950 dark:text-white" x-text="formatMoney(settings.large_invoice_threshold)"></p>
-              <p class="text-xs leading-relaxed text-slate-600 dark:text-slate-400" x-text="financialSummary()"></p>
-            </div>
-          </div>
-
-          <div class="group overflow-hidden rounded-2xl border border-slate-200/60 bg-gradient-to-br from-white to-slate-50/80 p-6 shadow-sm transition-all hover:shadow-md dark:border-slate-800/60 dark:from-slate-950/80 dark:to-slate-900/50">
-            <div class="absolute -top-12 -right-12 h-24 w-24 rounded-full bg-blue-500/20 blur-2xl opacity-0 transition-opacity group-hover:opacity-100"></div>
-            <div class="relative space-y-3">
-              <div class="flex items-center justify-between">
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{% trans "AI" %}</p>
-                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
-                  <i data-lucide="brain" class="h-4 w-4"></i>
-                </div>
-              </div>
-              <p class="text-lg font-bold text-slate-950 dark:text-white" x-text="auditModeLabel()"></p>
-              <p class="text-xs leading-relaxed text-slate-600 dark:text-slate-400" x-text="reviewModeDescription()"></p>
-            </div>
+          <div class="form-group">
+            <label>{% trans "Confirm New Password" %}</label>
+            <input type="password" x-model="password.confirm_password" required autocomplete="new-password">
           </div>
         </div>
-
-        <!-- Settings Grid -->
-        <div class="grid gap-8 lg:grid-cols-2">
-
-          <!-- 1. Organization Profile -->
-          <section class="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/30 to-white p-8 shadow-sm transition-all hover:shadow-md dark:border-slate-800/60 dark:from-slate-950/80 dark:via-slate-900/40 dark:to-slate-950/80">
-            <div class="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-primary-500/10 blur-3xl opacity-0 transition-opacity group-hover:opacity-100"></div>
-
-            <div class="relative space-y-6 border-b border-slate-100/80 pb-6 dark:border-slate-800/80">
-              <div class="flex items-start gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-300">
-                  <i data-lucide="building-2" class="h-5 w-5"></i>
-                </div>
-                <div>
-                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{% trans "Identity" %}</p>
-                  <h2 class="text-lg font-bold text-slate-950 dark:text-white">{% trans "Organization profile" %}</h2>
-                  <p class="mt-1 max-w-sm text-sm text-slate-600 dark:text-slate-400">{% trans "Define the company information that appears in reports and generated outputs." %}</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="relative mt-6 space-y-4">
-              <div class="space-y-2">
-                <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "Organization name" %}</label>
-                <input x-model="org.name" type="text" placeholder="{% trans 'Company name' %}"
-                       class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white dark:focus:border-primary-400">
-              </div>
-              <div class="grid gap-3 sm:grid-cols-2">
-                <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "Industry" %}</label>
-                  <input x-model="org.industry" type="text" placeholder="{% trans 'Financial technology' %}"
-                         class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-                </div>
-                <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "Country" %}</label>
-                  <select x-model="org.country"
-                          class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-                    <template x-for="option in countryOptions" :key="option.value">
-                      <option :value="option.value" x-text="option.label"></option>
-                    </template>
-                  </select>
-                </div>
-              </div>
-              <div class="grid gap-3 sm:grid-cols-2">
-                <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "Currency" %}</label>
-                  <select x-model="org.currency"
-                          class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-                    <template x-for="option in currencyOptions" :key="option.value">
-                      <option :value="option.value" x-text="option.label"></option>
-                    </template>
-                  </select>
-                </div>
-                <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "Fiscal year start" %}</label>
-                  <select x-model="org.fiscal_year_start"
-                          class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-                    <template x-for="month in fiscalMonthOptions" :key="month.value">
-                      <option :value="month.value" x-text="month.label"></option>
-                    </template>
-                  </select>
-                </div>
-              </div>
-              <div class="space-y-2">
-                <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "Registered address" %}</label>
-                <textarea x-model="org.address" rows="3" placeholder="{% trans 'Registered office address' %}"
-                          class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white"></textarea>
-              </div>
-            </div>
-          </section>
-
-          <!-- 2. Tax & Compliance -->
-          <section class="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/30 to-white p-8 shadow-sm transition-all hover:shadow-md dark:border-slate-800/60 dark:from-slate-950/80 dark:via-slate-900/40 dark:to-slate-950/80">
-            <div class="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl opacity-0 transition-opacity group-hover:opacity-100"></div>
-
-            <div class="relative space-y-6 border-b border-slate-100/80 pb-6 dark:border-slate-800/80">
-              <div class="flex items-start gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
-                  <i data-lucide="file-check-2" class="h-5 w-5"></i>
-                </div>
-                <div>
-                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{% trans "Compliance" %}</p>
-                  <h2 class="text-lg font-bold text-slate-950 dark:text-white">{% trans "Tax and Regulatory Registration" %}</h2>
-                  <p class="mt-1 max-w-sm text-sm text-slate-600 dark:text-slate-400">{% trans "VAT data and regulatory integration to ensure e-invoicing readiness." %}</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Status Alert -->
-            <div class="relative my-6 flex gap-3 rounded-2xl border p-4"
-                 :class="complianceSummary().tone === 'success' ? 'border-emerald-200/60 bg-emerald-50/80 dark:border-emerald-500/20' : 'border-amber-200/60 bg-amber-50/80 dark:border-amber-500/20'">
-              <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg"
-                    :class="complianceSummary().tone === 'success' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300'">
-                <i :data-lucide="complianceSummary().tone === 'success' ? 'check' : 'alert-circle'" class="h-3 w-3"></i>
-              </span>
-              <div>
-                <p class="text-xs font-semibold text-slate-900 dark:text-white" x-text="complianceSummary().title"></p>
-                <p class="mt-0.5 text-xs text-slate-600 dark:text-slate-400" x-text="complianceSummary().description"></p>
-              </div>
-            </div>
-
-            <div class="relative space-y-4">
-              <div class="grid gap-3 sm:grid-cols-2">
-                <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "VAT Number" %}</label>
-                  <input x-model="org.vat_number" type="text" dir="ltr" placeholder="300XXXXXXXXXXX3"
-                         class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-                </div>
-                <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "CR Number" %}</label>
-                  <input x-model="org.cr_number" type="text" dir="ltr" placeholder="1010XXXXXX"
-                         class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-                </div>
-              </div>
-              <div class="grid gap-3 sm:grid-cols-2">
-                <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "VAT Rate" %}</label>
-                  <div class="relative">
-                    <input x-model="settings.vat_rate" type="number" min="0" max="100" step="0.1" dir="ltr" placeholder="15"
-                           class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 pl-10 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-                    <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-xs font-semibold text-slate-500">%</span>
-                  </div>
-                </div>
-                <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "ZATCA Environment" %}</label>
-                  <select x-model="settings.zatca_env"
-                          class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-                    <template x-for="option in zatcaEnvironments" :key="option.value">
-                      <option :value="option.value" x-text="option.label"></option>
-                    </template>
-                  </select>
-                </div>
-              </div>
-              <div class="space-y-2">
-                <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "Require QR Code" %}</label>
-                <select x-model="settings.zatca_qr_required"
-                        class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-                  <option value="true">{% trans "Yes — Required" %}</option>
-                  <option value="false">{% trans "Optional" %}</option>
-                </select>
-              </div>
-            </div>
-          </section>
-
-          <!-- 3. Financial Controls -->
-          <section class="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/30 to-white p-8 shadow-sm transition-all hover:shadow-md dark:border-slate-800/60 dark:from-slate-950/80 dark:via-slate-900/40 dark:to-slate-950/80">
-            <div class="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-violet-500/10 blur-3xl opacity-0 transition-opacity group-hover:opacity-100"></div>
-
-            <div class="relative space-y-6 border-b border-slate-100/80 pb-6 dark:border-slate-800/80">
-              <div class="flex items-start gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-300">
-                  <i data-lucide="bar-chart-3" class="h-5 w-5"></i>
-                </div>
-                <div>
-                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">{% trans "Controls" %}</p>
-                  <h2 class="text-lg font-bold text-slate-950 dark:text-white">{% trans "Financial Control Thresholds" %}</h2>
-                  <p class="mt-1 max-w-sm text-sm text-slate-600 dark:text-slate-400">{% trans "Set the thresholds that define when escalation or alerts should be triggered." %}</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="relative mt-6 space-y-4">
-              <div class="grid gap-3 sm:grid-cols-2">
-                <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">{% trans "Monthly Budget" %}</label>
-                  <input x-model="settings.monthly_budget_limit" type="number" min="0" dir="ltr" placeholder="250000"
-                         class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-                  <p class="text-xs text-slate-500 dark:text-slate-400">الليا</p>
-                </div>
-                <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">حد الفاتورة الكبيرة</label>
-                  <input x-model="settings.large_invoice_threshold" type="number" min="0" dir="ltr" placeholder="10000"
-                         class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-                </div>
-              </div>
-              <div class="grid gap-3 sm:grid-cols-2">
-                <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">هامش الشذوذ</label>
-                  <div class="relative">
-                    <input x-model="settings.anomaly_threshold_pct" type="number" min="0" max="100" dir="ltr" placeholder="25"
-                           class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 pl-10 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-                    <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-xs font-semibold text-slate-500">%</span>
-                  </div>
-                </div>
-                <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">السقف اليومي</label>
-                  <input x-model="settings.max_daily_invoices" type="number" min="0" dir="ltr" placeholder="100"
-                         class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-                </div>
-              </div>
-              <div class="space-y-2">
-                <label class="text-sm font-semibold text-slate-900 dark:text-white">حد مصروفات الموظفين</label>
-                <input x-model="settings.expense_policy_limit" type="number" min="0" dir="ltr" placeholder="5000"
-                       class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-              </div>
-            </div>
-          </section>
-
-          <!-- 4. AI Audit Preferences -->
-          <section class="group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/30 to-white p-8 shadow-sm transition-all hover:shadow-md dark:border-slate-800/60 dark:from-slate-950/80 dark:via-slate-900/40 dark:to-slate-950/80">
-            <div class="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-blue-500/10 blur-3xl opacity-0 transition-opacity group-hover:opacity-100"></div>
-
-            <div class="relative space-y-6 border-b border-slate-100/80 pb-6 dark:border-slate-800/80">
-              <div class="flex items-start gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
-                  <i data-lucide="brain-circuit" class="h-5 w-5"></i>
-                </div>
-                <div>
-                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">ذكي</p>
-                  <h2 class="text-lg font-bold text-slate-950 dark:text-white">تفضيلات التدقيق الذكي</h2>
-                  <p class="mt-1 max-w-sm text-sm text-slate-600 dark:text-slate-400">اضبط سلوك الذكاء الاصطناعي والإنذارات.</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="relative mt-6 space-y-4">
-              <div class="grid gap-3 sm:grid-cols-2">
-                <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">وضع المراجعة</label>
-                  <select x-model="settings.ai_review_mode"
-                          class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-                    <template x-for="option in reviewModes" :key="option.value">
-                      <option :value="option.value" x-text="option.label"></option>
-                    </template>
-                  </select>
-                </div>
-                <div class="space-y-2">
-                  <label class="text-sm font-semibold text-slate-900 dark:text-white">حد الثقة</label>
-                  <div class="relative">
-                    <input x-model="settings.ai_confidence_threshold" type="number" min="50" max="100" dir="ltr" placeholder="85"
-                           class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 pl-10 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-                    <span class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-xs font-semibold text-slate-500">%</span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="space-y-3 rounded-2xl border border-slate-100/60 bg-slate-50/50 p-4 dark:border-slate-800/60 dark:bg-slate-950/20">
-                {% include "settings/partials/toggle_row.html" with label="طلب تفسير" description="اطلب شرحاً لكل قرار تدقيق." toggle_model="settings.ai_require_explanations" only %}
-                {% include "settings/partials/toggle_row.html" with label="قضية تلقائية" description="افتح قضية عند المخاطر الحرجة." toggle_model="settings.ai_auto_create_case" only %}
-                {% include "settings/partials/toggle_row.html" with label="إيقاف عالي المخاطر" description="منع اعتماد الفواتير عالية المخاطر." toggle_model="settings.ai_block_high_risk_invoices" only %}
-              </div>
-            </div>
-          </section>
-
-          <!-- 5. Invoice Defaults (Full Width) -->
-          <section class="lg:col-span-2 group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/30 to-white p-8 shadow-sm transition-all hover:shadow-md dark:border-slate-800/60 dark:from-slate-950/80 dark:via-slate-900/40 dark:to-slate-950/80">
-            <div class="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-primary-500/10 blur-3xl opacity-0 transition-opacity group-hover:opacity-100"></div>
-
-            <div class="relative space-y-6 border-b border-slate-100/80 pb-6 dark:border-slate-800/80">
-              <div class="flex items-start gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-300">
-                  <i data-lucide="receipt" class="h-5 w-5"></i>
-                </div>
-                <div>
-                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">قواعد</p>
-                  <h2 class="text-lg font-bold text-slate-950 dark:text-white">إعدادات الفواتير والالتزام الافتراضي</h2>
-                  <p class="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-400">اضبط القواعس اليومية التي يجب أن تمر بها الفاتورة قبل اعتمادها.</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="relative mt-6 grid gap-8 lg:grid-cols-3">
-              <!-- Left Column -->
-              <div class="lg:col-span-2 space-y-4">
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <div class="space-y-2">
-                    <label class="text-sm font-semibold text-slate-900 dark:text-white">أيام الاستحقاق</label>
-                    <input x-model="settings.invoice_due_days" type="number" min="0" dir="ltr" placeholder="30"
-                           class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm font-mono transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-                  </div>
-                  <div class="space-y-2">
-                    <label class="text-sm font-semibold text-slate-900 dark:text-white">سياسة التقريب</label>
-                    <select x-model="settings.invoice_rounding_policy"
-                            class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white">
-                      <template x-for="option in roundingPolicies" :key="option.value">
-                        <option :value="option.value" x-text="option.label"></option>
-                      </template>
-                    </select>
-                  </div>
-                </div>
-
-                <div class="space-y-3 rounded-2xl border border-slate-100/60 bg-slate-50/50 p-4 dark:border-slate-800/60 dark:bg-slate-950/20">
-                  {% include "settings/partials/toggle_row.html" with label="طلب أمر شراء" description="مطلوب قبل الاعتماد." toggle_model="settings.invoice_require_po" only %}
-                  {% include "settings/partials/toggle_row.html" with label="التحقق من VAT للمورد" description="VAT صالح مطلوب." toggle_model="settings.invoice_require_vendor_vat" only %}
-                  {% include "settings/partials/toggle_row.html" with label="إيقاف البيانات الناقصة" description="احجز المستندات غير المكتملة." toggle_model="settings.compliance_hold_missing_tax_id" only %}
-                </div>
-              </div>
-
-              <!-- Right Column -->
-              <div class="space-y-2 rounded-2xl border border-slate-100/60 bg-slate-50/50 p-4 dark:border-slate-800/60 dark:bg-slate-950/20">
-                <label class="text-sm font-semibold text-slate-900 dark:text-white">ملاحظات افتراضية</label>
-                <textarea x-model="settings.invoice_default_notes" rows="6" placeholder="عبارات امتثال..."
-                          class="w-full rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3 text-sm transition focus:border-primary-500/80 focus:ring-4 focus:ring-primary-500/10 dark:border-slate-700/60 dark:bg-slate-950/40 dark:text-white dark:placeholder:text-slate-500"></textarea>
-                <p class="text-xs text-slate-500 dark:text-slate-400">تظهر تلقائياً على المستندات الجديدة.</p>
-              </div>
-            </div>
-          </section>
-
-          <!-- 6. Notifications (Full Width) -->
-          <section class="lg:col-span-2 group relative overflow-hidden rounded-3xl border border-slate-200/60 bg-gradient-to-br from-white via-slate-50/30 to-white p-8 shadow-sm transition-all hover:shadow-md dark:border-slate-800/60 dark:from-slate-950/80 dark:via-slate-900/40 dark:to-slate-950/80">
-            <div class="absolute -top-24 -left-24 h-48 w-48 rounded-full bg-orange-500/10 blur-3xl opacity-0 transition-opacity group-hover:opacity-100"></div>
-
-            <div class="relative space-y-6 border-b border-slate-100/80 pb-6 dark:border-slate-800/80">
-              <div class="flex items-start gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-300">
-                  <i data-lucide="bell" class="h-5 w-5"></i>
-                </div>
-                <div>
-                  <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">إشعارات</p>
-                  <h2 class="text-lg font-bold text-slate-950 dark:text-white">التنبيهات والإشعارات</h2>
-                  <p class="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-400">تحكم بكيفية ومتى يتم إرسال الإشعارات للفريق.</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="relative mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {% include "settings/partials/toggle_row.html" with label="تنبيهات فورية" description="إشعارات الرقابة الفورية." toggle_model="notifications.ws_realtime_alerts" only %}
-              {% include "settings/partials/toggle_row.html" with label="إنشاء قضية" description="بريد عند قضية جديدة." toggle_model="notifications.email_audit_case_created" only %}
-              {% include "settings/partials/toggle_row.html" with label="ملخص أسبوعي" description="ملخص للقيادات." toggle_model="notifications.email_weekly_summary" only %}
-              {% include "settings/partials/toggle_row.html" with label="تعليق الفاتورة" description="إشعار عند التعليق." toggle_model="notifications.email_invoice_flagged" only %}
-              {% include "settings/partials/toggle_row.html" with label="تأخر الإقرار" description="تنبيه بقرب التأخر." toggle_model="notifications.email_vat_late_filing" only %}
-              {% include "settings/partials/toggle_row.html" with label="شذوذ الرواتب" description="تنبيه الأنماط غير المعتادة." toggle_model="notifications.payroll_anomaly_alert" only %}
-            </div>
-          </section>
-
-          <!-- Data Export -->
-          <section class="lg:col-span-2 relative overflow-hidden rounded-3xl border border-dashed border-slate-300/60 bg-gradient-to-br from-slate-50 to-white p-8 transition-all hover:border-slate-400/60 dark:border-slate-700/60 dark:from-slate-900/40 dark:to-slate-950/80">
-            <div class="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-              <div class="space-y-2">
-                <p class="text-xs font-semibold uppercase tracking-wider text-slate-500">إدارة</p>
-                <h3 class="text-lg font-bold text-slate-950 dark:text-white">نسخة احتياطية وسجل البيانات</h3>
-                <p class="max-w-2xl text-sm text-slate-600 dark:text-slate-400">استخدم التصدير لأرشفة البيانات أو مشاركة الإعدادات.</p>
-              </div>
-              <button type="button"
-                      @click="exportData()"
-                      class="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200/60 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700/60 dark:bg-slate-950/50 dark:text-slate-300">
-                <i data-lucide="download" class="h-4 w-4"></i>
-                تصدير
-              </button>
-            </div>
-          </section>
+        <div style="display:flex; gap:10px; margin-top:24px; padding-top:20px; border-top:1px solid var(--border-soft);">
+          <button type="submit" class="btn btn-primary" :disabled="loading">
+            <span x-show="!loading">{% trans "Update Password" %}</span>
+            <span x-show="loading" x-cloak>{% trans "Updating..." %}</span>
+          </button>
+          <button type="button" class="btn btn-light" @click="password = { old_password: '', new_password: '', confirm_password: '' }">{% trans "Clear" %}</button>
         </div>
-
       </form>
-    </template>
+
+      <div style="margin-top:32px; padding-top:24px; border-top:1px solid var(--border-soft);">
+        <h3 class="card-title" style="margin-bottom:8px;">{% trans "Two-Factor Authentication (MFA)" %}</h3>
+        <p style="color:var(--text-muted); font-size:13px; margin-bottom:14px;">{% trans "Add an extra layer of security to your account using an authenticator app." %}</p>
+        <a href="/api/v1/auth/mfa/setup/" class="btn btn-dark">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6l-8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+          {% trans "Set up MFA" %}
+        </a>
+      </div>
+    </div>
+
+    <!-- ========== NOTIFICATIONS TAB ========== -->
+    <div class="card" x-show="tab === 'notifications'" x-cloak>
+      <h3 class="card-title">{% trans "Notification Preferences" %}</h3>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:18px;">{% trans "Choose what events trigger in-app and email notifications." %}</p>
+
+      <div class="toggle-row">
+        <div class="toggle-row-info">
+          <h4>{% trans "High-risk invoice alerts" %}</h4>
+          <p>{% trans "When an uploaded invoice is flagged with high or critical risk." %}</p>
+        </div>
+        <label class="toggle"><input type="checkbox" x-model="prefs.high_risk"><span class="toggle-slider"></span></label>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-row-info">
+          <h4>{% trans "Fraud detection findings" %}</h4>
+          <p>{% trans "Notify me when Benford / duplicate / alteration rules fire." %}</p>
+        </div>
+        <label class="toggle"><input type="checkbox" x-model="prefs.fraud"><span class="toggle-slider"></span></label>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-row-info">
+          <h4>{% trans "ZATCA compliance failures" %}</h4>
+          <p>{% trans "When a document fails Phase 2 e-invoicing validation." %}</p>
+        </div>
+        <label class="toggle"><input type="checkbox" x-model="prefs.compliance"><span class="toggle-slider"></span></label>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-row-info">
+          <h4>{% trans "Upload completion summaries" %}</h4>
+          <p>{% trans "When a batch of documents has finished AI processing." %}</p>
+        </div>
+        <label class="toggle"><input type="checkbox" x-model="prefs.uploads"><span class="toggle-slider"></span></label>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-row-info">
+          <h4>{% trans "Weekly digest email" %}</h4>
+          <p>{% trans "A summary of last week's audit activity, every Monday morning." %}</p>
+        </div>
+        <label class="toggle"><input type="checkbox" x-model="prefs.weekly_digest"><span class="toggle-slider"></span></label>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:24px; padding-top:20px; border-top:1px solid var(--border-soft);">
+        <button type="button" class="btn btn-primary" @click="savePrefs" :disabled="loading">
+          <span x-show="!loading">{% trans "Save Preferences" %}</span>
+          <span x-show="loading" x-cloak>{% trans "Saving..." %}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ========== API & WEBHOOKS TAB ========== -->
+    <div class="card" x-show="tab === 'api'" x-cloak>
+      <h3 class="card-title">{% trans "API Access" %}</h3>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:18px;">{% trans "Programmatic access to Tadgeeg via REST APIs and webhooks." %}</p>
+
+      <div class="form-grid" style="grid-template-columns: 1fr;">
+        <div class="form-group">
+          <label>{% trans "API Documentation" %}</label>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <a href="/api/docs/" class="btn btn-light" target="_blank">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Swagger UI
+            </a>
+            <a href="/api/redoc/" class="btn btn-light" target="_blank">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+              ReDoc
+            </a>
+            <a href="/api/schema/" class="btn btn-light" target="_blank">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+              OpenAPI Schema
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="coming-soon" style="margin-top:24px;">
+        <div class="icon">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="16" r="1"/><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
+        <h3>{% trans "API Keys & Webhooks — Coming soon" %}</h3>
+        <p>{% trans "Self-service API key management and webhook subscriptions are in active development. For now, contact support for an API key." %}</p>
+      </div>
+    </div>
+
+    <!-- ========== TEAM & USERS TAB ========== -->
+    <div x-show="tab === 'team'" x-cloak>
+
+      <!-- Add new user card -->
+      <div class="card" style="margin-bottom: 18px;">
+        <h3 class="card-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-left:6px"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          {% trans "Invite a New User" %}
+        </h3>
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:18px;">
+          {% trans "Create an account for a colleague in your organization. They'll receive a verification email at the address you provide." %}
+        </p>
+
+        <form @submit.prevent="addUser">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>{% trans "Full Name" %} *</label>
+              <input type="text" x-model="newUser.full_name" required placeholder="{% trans 'Mohammed Ahmed' %}">
+            </div>
+            <div class="form-group">
+              <label>{% trans "Email" %} *</label>
+              <input type="email" x-model="newUser.email" required placeholder="colleague@company.sa">
+            </div>
+            <div class="form-group">
+              <label>{% trans "Role" %}</label>
+              <select x-model="newUser.role">
+                <option value="user">{% trans "User" %}</option>
+                <option value="auditor">{% trans "Auditor" %}</option>
+                <option value="reviewer">{% trans "Reviewer" %}</option>
+                <option value="manager">{% trans "Manager" %}</option>
+                <option value="admin">{% trans "Admin" %}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>{% trans "Job Title / Department" %}</label>
+              <input type="text" x-model="newUser.department" placeholder="{% trans 'Finance / Audit / etc.' %}">
+            </div>
+            <div class="form-group">
+              <label>{% trans "Phone Number" %}</label>
+              <input type="tel" x-model="newUser.phone" placeholder="+966 5X XXX XXXX">
+            </div>
+            <div class="form-group">
+              <label>{% trans "Initial Password" %} *</label>
+              <input type="text" x-model="newUser.password" required minlength="8" placeholder="{% trans 'At least 8 chars' %}">
+              <div class="form-help">{% trans "Share this with the user. They will be asked to change it on first login." %}</div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:10px; margin-top:24px; padding-top:20px; border-top:1px solid var(--border-soft); flex-wrap: wrap; align-items: center;">
+            <button type="submit" class="btn btn-primary" :disabled="loading">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              <span x-show="!loading">{% trans "Add User" %}</span>
+              <span x-show="loading" x-cloak>{% trans "Adding..." %}</span>
+            </button>
+            <button type="button" class="btn btn-light" @click="resetNewUser">{% trans "Clear form" %}</button>
+            <button type="button" class="btn btn-light" @click="generatePassword" style="margin-right:auto;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+              {% trans "Generate password" %}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Existing team members -->
+      <div class="card table-card" style="padding:0; overflow:hidden;">
+        <div class="table-header">
+          <h3 class="card-title" style="margin-bottom:0;">
+            {% trans "Team Members" %}
+            <span x-show="team.length > 0" x-text="`(${team.length})`" style="font-weight:600; color:var(--text-muted); font-size:13px; margin-right:6px;"></span>
+          </h3>
+          <button type="button" class="btn btn-light" @click="loadTeam" :disabled="teamLoading">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+            <span x-show="!teamLoading">{% trans "Refresh" %}</span>
+            <span x-show="teamLoading" x-cloak>{% trans "Loading..." %}</span>
+          </button>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>{% trans "User" %}</th>
+                <th>{% trans "Role" %}</th>
+                <th>{% trans "Department" %}</th>
+                <th>{% trans "Status" %}</th>
+                <th>{% trans "Joined" %}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="u in team" :key="u.id">
+                <tr>
+                  <td>
+                    <div class="file-name">
+                      <div class="file-icon" style="background:linear-gradient(135deg, var(--primary), var(--primary-light)); color:white; font-weight:800;" x-text="(u.full_name || u.email || '').slice(0,2).toUpperCase()"></div>
+                      <div>
+                        <div style="font-weight:700;" x-text="u.full_name || u.email"></div>
+                        <div style="font-size:11px; color:var(--text-muted);" x-text="u.email"></div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="badge badge-info" x-text="u.role || '—'"></span></td>
+                  <td class="text-muted" x-text="u.department || '—'"></td>
+                  <td>
+                    <span class="badge" :class="u.is_active ? 'badge-success' : 'badge-danger'" x-text="u.is_active ? '{% trans 'Active' %}' : '{% trans 'Disabled' %}'"></span>
+                  </td>
+                  <td class="text-muted" x-text="u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'"></td>
+                </tr>
+              </template>
+              <tr x-show="!teamLoading && team.length === 0">
+                <td colspan="5">
+                  <div class="empty-state">
+                    <div class="empty-state-icon">
+                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/></svg>
+                    </div>
+                    <h3>{% trans "No team members yet" %}</h3>
+                    <p x-text="teamError || '{% trans 'Add your first colleague using the form above.' %}'"></p>
+                  </div>
+                </td>
+              </tr>
+              <tr x-show="teamLoading" x-cloak>
+                <td colspan="5">
+                  <div class="empty-state"><div style="color:var(--text-muted)">{% trans "Loading team..." %}</div></div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== LANGUAGE & REGION TAB ========== -->
+    <div class="card" x-show="tab === 'region'" x-cloak>
+      <h3 class="card-title">{% trans "Language & Region" %}</h3>
+      <form action="/i18n/setlang/" method="post">
+        {% csrf_token %}
+        <input name="next" type="hidden" value="{% url 'frontend:settings' %}">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>{% trans "Display Language" %}</label>
+            <select name="language">
+              <option value="ar" {% if LANGUAGE_CODE == 'ar' %}selected{% endif %}>العربية</option>
+              <option value="en" {% if LANGUAGE_CODE == 'en' %}selected{% endif %}>English</option>
+            </select>
+            <div class="form-help">{% trans "Page reloads after saving." %}</div>
+          </div>
+          <div class="form-group">
+            <label>{% trans "Timezone" %}</label>
+            <select x-model="region.timezone">
+              <option value="Asia/Riyadh">Asia/Riyadh (GMT+3) — السعودية</option>
+              <option value="Asia/Dubai">Asia/Dubai (GMT+4) — الإمارات</option>
+              <option value="Asia/Kuwait">Asia/Kuwait (GMT+3) — الكويت</option>
+              <option value="Asia/Bahrain">Asia/Bahrain (GMT+3) — البحرين</option>
+              <option value="Asia/Qatar">Asia/Qatar (GMT+3) — قطر</option>
+              <option value="Asia/Muscat">Asia/Muscat (GMT+4) — عمان</option>
+              <option value="UTC">UTC</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>{% trans "Default Currency" %}</label>
+            <select x-model="region.currency">
+              <option value="SAR">SAR — ريال سعودي</option>
+              <option value="AED">AED — درهم إماراتي</option>
+              <option value="KWD">KWD — دينار كويتي</option>
+              <option value="BHD">BHD — دينار بحريني</option>
+              <option value="QAR">QAR — ريال قطري</option>
+              <option value="OMR">OMR — ريال عماني</option>
+              <option value="USD">USD — US Dollar</option>
+              <option value="EUR">EUR — Euro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>{% trans "Date Format" %}</label>
+            <select x-model="region.date_format">
+              <option value="YYYY-MM-DD">2025-04-15 (ISO)</option>
+              <option value="DD/MM/YYYY">15/04/2025 (DMY)</option>
+              <option value="MM/DD/YYYY">04/15/2025 (MDY)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top:24px; padding-top:20px; border-top:1px solid var(--border-soft);">
+          <button type="submit" class="btn btn-primary">{% trans "Apply Language" %}</button>
+          <button type="button" class="btn btn-light" @click="saveRegion">{% trans "Save Region" %}</button>
+        </div>
+      </form>
+    </div>
 
   </div>
 </div>
 
+</div><!-- /settingsApp -->
 {% endblock %}
 
-{% block scripts %}
+{% block extra_scripts %}
 <script>
-function organizationSettingsPage() {
-  return {
-    loading: true,
-    saving: false,
-    lastSavedAt: null,
-    snapshot: null,
-    org: {},
-    settings: {},
-    notifications: {},
+  function getCookie(name) {
+    const c = `; ${document.cookie}`.split(`; ${name}=`);
+    return c.length === 2 ? c.pop().split(';').shift() : '';
+  }
 
-    countryOptions: [
-      { value: 'SA', label: 'المملكة العربية السعودية 🇸🇦' },
-      { value: 'AE', label: 'الإمارات العربية المتحدة 🇦🇪' },
-      { value: 'BH', label: 'البحرين 🇧🇭' },
-      { value: 'KW', label: 'الكويت 🇰🇼' },
-      { value: 'OM', label: 'عُمان 🇴🇲' },
-      { value: 'QA', label: 'قطر 🇶🇦' },
-    ],
+  function settingsApp() {
+    return {
+      tab: new URL(window.location).searchParams.get('tab') || 'profile',
+      loading: false,
+      message: '',
+      messageType: 'success',
+      _origProfile: null,
 
-    currencyOptions: [
-      { value: 'SAR', label: 'ريال سعودي (SAR)' },
-      { value: 'AED', label: 'درهم إماراتي (AED)' },
-      { value: 'BHD', label: 'دينار بحريني (BHD)' },
-      { value: 'KWD', label: 'دينار كويتي (KWD)' },
-      { value: 'OMR', label: 'ريال عُماني (OMR)' },
-      { value: 'QAR', label: 'ريال قطري (QAR)' },
-    ],
+      profile: {
+        full_name: '{{ user.full_name|default:user.email|escapejs }}',
+        email: '{{ user.email|escapejs }}',
+        phone: '{{ user.phone|default:""|escapejs }}',
+        department: '{{ user.department|default:""|escapejs }}',
+      },
 
-    fiscalMonthOptions: [
-      { value: 1, label: 'يناير' },{ value: 2, label: 'فبراير' },{ value: 3, label: 'مارس' },
-      { value: 4, label: 'أبريل' },{ value: 5, label: 'مايو' },{ value: 6, label: 'يونيو' },
-      { value: 7, label: 'يوليو' },{ value: 8, label: 'أغسطس' },{ value: 9, label: 'سبتمبر' },
-      { value: 10, label: 'أكتوبر' },{ value: 11, label: 'نوفمبر' },{ value: 12, label: 'ديسمبر' },
-    ],
+      password: { old_password: '', new_password: '', confirm_password: '' },
 
-    reviewModes: [
-      { value: 'balanced', label: 'متوازن' },
-      { value: 'conservative', label: 'محافظ' },
-      { value: 'aggressive', label: 'استباقي' },
-    ],
+      prefs: {
+        high_risk:     localStorage.getItem('pref_high_risk')     !== 'false',
+        fraud:         localStorage.getItem('pref_fraud')         !== 'false',
+        compliance:    localStorage.getItem('pref_compliance')    !== 'false',
+        uploads:       localStorage.getItem('pref_uploads')       !== 'false',
+        weekly_digest: localStorage.getItem('pref_weekly_digest') === 'true',
+      },
 
-    zatcaEnvironments: [
-      { value: 'sandbox', label: 'Sandbox — بيئة تجريبية' },
-      { value: 'simulation', label: 'Simulation — محاكاة' },
-      { value: 'production', label: 'Production — تشغيل فعلي' },
-    ],
+      region: {
+        timezone: localStorage.getItem('region_timezone') || 'Asia/Riyadh',
+        currency: localStorage.getItem('region_currency') || 'SAR',
+        date_format: localStorage.getItem('region_date_format') || 'YYYY-MM-DD',
+      },
 
-    roundingPolicies: [
-      { value: 'standard', label: 'تقريب قياسي' },
-      { value: 'up', label: 'تقريب للأعلى' },
-      { value: 'down', label: 'تقريب للأسفل' },
-    ],
+      // ─── Team & users state ───
+      team: [],
+      teamLoading: false,
+      teamError: '',
+      newUser: {
+        full_name: '',
+        email: '',
+        role: 'user',
+        department: '',
+        phone: '',
+        password: '',
+      },
 
-    defaultOrg: {
-      name: '', name_ar: '', country: 'SA', currency: 'SAR', vat_number: '', cr_number: '',
-      vat_rate: 15, fiscal_year_start: 1, address: '', website: '', industry: '',
-    },
+      init() {
+        this._origProfile = { ...this.profile };
+        // Sync tab to URL hash for sharing/bookmarking
+        this.$watch('tab', (v) => {
+          const url = new URL(window.location);
+          url.searchParams.set('tab', v);
+          window.history.replaceState({}, '', url);
+          this.message = '';
+        });
+      },
 
-    defaultSettings: {
-      monthly_budget_limit: 0, large_invoice_threshold: 10000, vat_rate: 15,
-      anomaly_threshold_pct: 25, max_daily_invoices: 100, expense_policy_limit: 5000,
-      zatca_api_url: '', zatca_env: 'sandbox', zatca_qr_required: 'true',
-      ai_review_mode: 'balanced', ai_confidence_threshold: 85, ai_require_explanations: true,
-      ai_auto_create_case: true, ai_block_high_risk_invoices: false, invoice_due_days: 30,
-      invoice_require_po: true, invoice_require_vendor_vat: true, invoice_rounding_policy: 'standard',
-      invoice_default_notes: '', compliance_hold_missing_tax_id: true,
-    },
+      flash(text, type = 'success') {
+        this.message = text;
+        this.messageType = type;
+        setTimeout(() => { this.message = ''; }, 4000);
+      },
 
-    defaultNotifications: {
-      email_invoice_flagged: true, email_audit_case_created: true, email_weekly_summary: true,
-      email_vat_late_filing: true, ws_realtime_alerts: true, payroll_anomaly_alert: true,
-    },
-
-    async load() {
-      try {
-        const [organizationData, settingsData] = await Promise.all([
-          apiFetch('/auth/organization/'),
-          apiFetch('/auth/organization/settings/').catch(() => ({})),
-        ]);
-        this.org = { ...this.defaultOrg, ...(organizationData || {}) };
-        this.settings = this.normalizeSettings(settingsData.financial || {}, this.org);
-        this.notifications = this.normalizeNotifications(settingsData.notifications || {});
-        this.lastSavedAt = this.org.updated_at || new Date().toISOString();
-        this.captureSnapshot();
-      } catch (error) {
-        this.org = { ...this.defaultOrg };
-        this.settings = this.normalizeSettings({}, this.defaultOrg);
-        this.notifications = this.normalizeNotifications({});
-        notify('تعذر تحميل الإعدادات', 'error');
-      } finally {
-        this.loading = false;
-        this.$nextTick(() => lucide.createIcons());
-      }
-    },
-
-    normalizeSettings(raw = {}, organization = null) {
-      const orgData = organization || this.org || this.defaultOrg;
-      return {
-        ...this.defaultSettings, vat_rate: orgData?.vat_rate ?? this.defaultSettings.vat_rate,
-        ...(raw || {}),
-        zatca_qr_required: String(raw?.zatca_qr_required ?? this.defaultSettings.zatca_qr_required),
-      };
-    },
-
-    normalizeNotifications(raw = {}) {
-      const normalized = { ...this.defaultNotifications, ...raw };
-      if (raw.email_case_created && !raw.email_audit_case_created) normalized.email_audit_case_created = !!raw.email_case_created;
-      if (raw.email_vat_late && !raw.email_vat_late_filing) normalized.email_vat_late_filing = !!raw.email_vat_late;
-      return normalized;
-    },
-
-    numericValue(value, fallback = 0) {
-      const n = Number(value);
-      return Number.isFinite(n) ? n : fallback;
-    },
-
-    captureSnapshot() { this.snapshot = JSON.stringify(this.serializeState()); },
-    hasUnsavedChanges() { return this.snapshot !== JSON.stringify(this.serializeState()); },
-
-    serializeState() {
-      return {
-        org: {
-          name: (this.org.name || '').trim(), name_ar: (this.org.name_ar || '').trim(),
-          country: this.org.country || this.defaultOrg.country, currency: this.org.currency || this.defaultOrg.currency,
-          vat_number: (this.org.vat_number || '').trim(), cr_number: (this.org.cr_number || '').trim(),
-          fiscal_year_start: this.numericValue(this.org.fiscal_year_start, this.defaultOrg.fiscal_year_start),
-          address: (this.org.address || '').trim(), website: (this.org.website || '').trim(),
-          industry: (this.org.industry || '').trim(),
-        },
-        settings: {
-          monthly_budget_limit: this.numericValue(this.settings.monthly_budget_limit),
-          large_invoice_threshold: this.numericValue(this.settings.large_invoice_threshold),
-          vat_rate: this.numericValue(this.settings.vat_rate), anomaly_threshold_pct: this.numericValue(this.settings.anomaly_threshold_pct),
-          max_daily_invoices: this.numericValue(this.settings.max_daily_invoices),
-          expense_policy_limit: this.numericValue(this.settings.expense_policy_limit),
-          zatca_api_url: (this.settings.zatca_api_url || '').trim(), zatca_env: this.settings.zatca_env || this.defaultSettings.zatca_env,
-          zatca_qr_required: String(this.settings.zatca_qr_required ?? this.defaultSettings.zatca_qr_required),
-          ai_review_mode: this.settings.ai_review_mode || this.defaultSettings.ai_review_mode,
-          ai_confidence_threshold: this.numericValue(this.settings.ai_confidence_threshold),
-          ai_require_explanations: !!this.settings.ai_require_explanations, ai_auto_create_case: !!this.settings.ai_auto_create_case,
-          ai_block_high_risk_invoices: !!this.settings.ai_block_high_risk_invoices, invoice_due_days: this.numericValue(this.settings.invoice_due_days),
-          invoice_require_po: !!this.settings.invoice_require_po, invoice_require_vendor_vat: !!this.settings.invoice_require_vendor_vat,
-          invoice_rounding_policy: this.settings.invoice_rounding_policy || this.defaultSettings.invoice_rounding_policy,
-          invoice_default_notes: (this.settings.invoice_default_notes || '').trim(), compliance_hold_missing_tax_id: !!this.settings.compliance_hold_missing_tax_id,
-        },
-        notifications: {
-          email_invoice_flagged: !!this.notifications.email_invoice_flagged,
-          email_audit_case_created: !!this.notifications.email_audit_case_created,
-          email_weekly_summary: !!this.notifications.email_weekly_summary,
-          email_vat_late_filing: !!this.notifications.email_vat_late_filing,
-          ws_realtime_alerts: !!this.notifications.ws_realtime_alerts,
-          payroll_anomaly_alert: !!this.notifications.payroll_anomaly_alert,
-        },
-      };
-    },
-
-    validateBeforeSave() {
-      if (!(this.org.name || '').trim()) { notify('اسم المؤسسة مطلوب', 'error'); return false; }
-      const rules = [
-        { label: 'الميزانية الشهرية', value: this.settings.monthly_budget_limit, min: 0 },
-        { label: 'حد الفاتورة الكبيرة', value: this.settings.large_invoice_threshold, min: 0 },
-        { label: 'نسبة VAT', value: this.settings.vat_rate, min: 0, max: 100 },
-        { label: 'هامش الشذوذ', value: this.settings.anomaly_threshold_pct, min: 0, max: 100 },
-        { label: 'السقف اليومي', value: this.settings.max_daily_invoices, min: 0 },
-        { label: 'حد المصروفات', value: this.settings.expense_policy_limit, min: 0 },
-        { label: 'حد الثقة', value: this.settings.ai_confidence_threshold, min: 50, max: 100 },
-        { label: 'أيام الاستحقاق', value: this.settings.invoice_due_days, min: 0 },
-      ];
-      for (const rule of rules) {
-        const n = Number(rule.value);
-        if (!Number.isFinite(n) || n < rule.min || (rule.max !== undefined && n > rule.max)) {
-          notify(`${rule.label} غير صالحة`, 'error'); return false;
+      // ─── Profile ───
+      async saveProfile() {
+        this.loading = true;
+        this.message = '';
+        try {
+          const r = await fetch('/api/v1/auth/me/', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCookie('csrftoken'),
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              full_name: this.profile.full_name,
+              phone: this.profile.phone,
+              department: this.profile.department,
+            }),
+          });
+          if (r.ok) {
+            this._origProfile = { ...this.profile };
+            this.flash('{% trans "Profile updated successfully." %}');
+          } else {
+            const d = await r.json().catch(() => ({}));
+            this.flash(d.detail || d.error || '{% trans "Failed to update profile." %}', 'error');
+          }
+        } catch (e) {
+          this.flash('{% trans "Server connection error." %}', 'error');
+        } finally {
+          this.loading = false;
         }
-      }
-      return true;
-    },
+      },
 
-    async saveAll() {
-      if (this.saving) return;
-      if (!this.hasUnsavedChanges()) { notify('لا توجد تغييرات للحفظ', 'info'); return; }
-      if (!this.validateBeforeSave()) return;
-      this.saving = true;
-      const state = this.serializeState();
-      try {
-        const savedOrg = await apiFetch('/auth/organization/', {
-          method: 'PATCH',
-          body: JSON.stringify(state.org),
-        });
-        const savedSettings = await apiFetch('/auth/organization/settings/', {
-          method: 'POST',
-          body: JSON.stringify({ financial: state.settings, notifications: state.notifications }),
-        });
-        this.org = { ...this.defaultOrg, ...(savedOrg || state.org) };
-        this.settings = this.normalizeSettings(savedSettings?.financial || state.settings, this.org);
-        this.notifications = this.normalizeNotifications(savedSettings?.notifications || state.notifications);
-        this.lastSavedAt = this.org.updated_at || new Date().toISOString();
-        this.captureSnapshot();
-        notify('تم الحفظ بنجاح', 'success');
-        this.$nextTick(() => lucide.createIcons());
-      } catch (error) {
-        notify('تعذّر حفظ الإعدادات. حاول مرة أخرى.', 'error');
-      } finally {
-        this.saving = false;
-      }
-    },
+      resetProfile() { this.profile = { ...this._origProfile }; this.message = ''; },
 
-    exportData() { window.location.href = '/api/v1/reports/export/'; },
+      // ─── Password ───
+      async changePassword() {
+        if (this.password.new_password !== this.password.confirm_password) {
+          this.flash('{% trans "New passwords do not match." %}', 'error');
+          return;
+        }
+        if (this.password.new_password.length < 8) {
+          this.flash('{% trans "Password must be at least 8 characters." %}', 'error');
+          return;
+        }
+        this.loading = true;
+        try {
+          const r = await fetch('/api/v1/auth/me/change-password/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCookie('csrftoken'),
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({
+              old_password: this.password.old_password,
+              new_password: this.password.new_password,
+              confirm_password: this.password.confirm_password,
+            }),
+          });
+          if (r.ok) {
+            this.password = { old_password: '', new_password: '', confirm_password: '' };
+            this.flash('{% trans "Password changed successfully." %}');
+          } else {
+            const d = await r.json().catch(() => ({}));
+            const err = d.detail || d.old_password?.[0] || d.new_password?.[0] || '{% trans "Failed to change password." %}';
+            this.flash(err, 'error');
+          }
+        } catch (e) {
+          this.flash('{% trans "Server connection error." %}', 'error');
+        } finally {
+          this.loading = false;
+        }
+      },
 
-    profileCompletionPercent() {
-      const checks = [
-        (this.org.name || '').trim(), (this.org.name_ar || '').trim(), (this.org.industry || '').trim(),
-        this.org.country, this.org.currency, (this.org.website || '').trim(), (this.org.address || '').trim(),
-        (this.org.vat_number || '').trim(), (this.org.cr_number || '').trim(),
-        this.org.country !== 'SA' || (this.settings.zatca_api_url || '').trim(),
-      ];
-      return Math.round((checks.filter(Boolean).length / checks.length) * 100);
-    },
+      // ─── Notification preferences (stored locally for now) ───
+      savePrefs() {
+        this.loading = true;
+        for (const k of ['high_risk', 'fraud', 'compliance', 'uploads', 'weekly_digest']) {
+          localStorage.setItem('pref_' + k, this.prefs[k] ? 'true' : 'false');
+        }
+        setTimeout(() => {
+          this.loading = false;
+          this.flash('{% trans "Notification preferences saved." %}');
+        }, 300);
+      },
 
-    profileCompletionMessage() {
-      const p = this.profileCompletionPercent();
-      if (p >= 90) return 'الهوية المؤسسية مكتملة وجاهزة للاستخدام.';
-      if (p >= 70) return 'أكمل بعض الحقول النظامية لرفع مستوى الثقة.';
-      return 'ابدأ بإكمال البيانات الأساسية.';
-    },
+      // ─── Region (stored locally; backend can sync later) ───
+      saveRegion() {
+        this.loading = true;
+        for (const k of ['timezone', 'currency', 'date_format']) {
+          localStorage.setItem('region_' + k, this.region[k]);
+        }
+        setTimeout(() => {
+          this.loading = false;
+          this.flash('{% trans "Region preferences saved." %}');
+        }, 300);
+      },
 
-    complianceSummary() {
-      const hasVat = !!(this.org.vat_number || '').trim(), hasCr = !!(this.org.cr_number || '').trim();
-      const hasZatca = this.org.country !== 'SA' || !!(this.settings.zatca_api_url || '').trim();
-      if (!hasVat || !hasCr) return {
-        tone: 'warning', title: 'بيانات التسجيل غير مكتملة',
-        description: 'أكمل الرقم الضريبي والسجل التجاري أولاً.',
-      };
-      if (!hasZatca) return {
-        tone: 'warning', title: 'الربط الضريبي يحتاج تهيئة',
-        description: 'أضف رابط التكامل الضريبي لرفع جاهزية الفوترة الإلكترونية.',
-      };
-      return { tone: 'success', title: 'الامتثال الضريبي جاهز', description: 'جميع البيانات المطلوبة موجودة.' };
-    },
+      // ─── Team & users ───
+      async loadTeam() {
+        this.teamLoading = true;
+        this.teamError = '';
+        try {
+          const r = await fetch('/api/v1/auth/users/', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin',
+          });
+          if (r.status === 403) {
+            this.team = [];
+            this.teamError = '{% trans "You do not have permission to view team members. Contact an administrator." %}';
+            return;
+          }
+          if (!r.ok) {
+            const d = await r.json().catch(() => ({}));
+            this.teamError = d.detail || '{% trans "Failed to load team." %}';
+            return;
+          }
+          const data = await r.json();
+          // API may return paginated {results: [...]} or a plain array
+          this.team = Array.isArray(data) ? data : (data.results || []);
+        } catch (e) {
+          this.teamError = '{% trans "Server connection error." %}';
+        } finally {
+          this.teamLoading = false;
+        }
+      },
 
-    auditModeLabel() {
-      const s = this.reviewModes.find(o => o.value === this.settings.ai_review_mode);
-      return s ? s.label : 'متوازن';
-    },
+      generatePassword() {
+        const charset = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%';
+        let pwd = '';
+        const arr = new Uint32Array(14);
+        crypto.getRandomValues(arr);
+        for (const n of arr) pwd += charset[n % charset.length];
+        this.newUser.password = pwd;
+      },
 
-    reviewModeDescription() {
-      const c = fmtNum(this.settings.ai_confidence_threshold, 0);
-      const msgs = {
-        conservative: `وضع محافظ يقلل التصعيق التلقائي (${c}% فأعلى).`,
-        aggressive: `وضع استباقي يوسع الرصد المبكر (${c}% فأعلى).`,
-        balanced: `وضع متوازن يحافظ على جودة التنبيهات (${c}% فأعلى).`,
-      };
-      return msgs[this.settings.ai_review_mode] || msgs.balanced;
-    },
+      resetNewUser() {
+        this.newUser = { full_name: '', email: '', role: 'user', department: '', phone: '', password: '' };
+        this.message = '';
+      },
 
-    financialSummary() {
-      return `التصعيق من ${this.formatMoney(this.settings.large_invoice_threshold)} مع حد يومي ${fmtNum(this.settings.max_daily_invoices, 0)} فاتورة.`;
-    },
-
-    invoiceRulesSummary() {
-      const d = fmtNum(this.settings.invoice_due_days, 0);
-      const po = this.settings.invoice_require_po ? 'أمر مطلوب' : 'أمر اختياري';
-      const tax = this.settings.invoice_require_vendor_vat ? 'VAT مفعل' : 'VAT مرن';
-      return `${d} يوماً • ${po} • ${tax}.`;
-    },
-
-    saveButtonLabel() {
-      if (this.saving) return 'جاري الحفظ...';
-      return this.hasUnsavedChanges() ? 'حفظ التغييرات' : 'محفوظ';
-    },
-
-    statusMeta() {
-      if (this.saving) return {
-        label: 'جاري', badgeClass: 'border-primary-200 bg-primary-50 text-primary-700 dark:border-primary-500/30 dark:text-primary-200',
-        dotClass: 'bg-primary-500 animate-pulse',
-      };
-      if (this.hasUnsavedChanges()) return {
-        label: 'تغييرات', badgeClass: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:text-amber-200',
-        dotClass: 'bg-amber-500',
-      };
-      if (this.complianceSummary().tone === 'warning') return {
-        label: 'مراجعة مطلوبة', badgeClass: 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:text-amber-200',
-        dotClass: 'bg-amber-500',
-      };
-      return {
-        label: 'محفوظ', badgeClass: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:text-emerald-200',
-        dotClass: 'bg-emerald-500',
-      };
-    },
-
-    lastSavedText() {
-      if (!this.lastSavedAt) return '{% trans "Not saved yet" %}';
-      try {
-        return '{% trans "Last" %} ' + new Intl.DateTimeFormat(APP_LOCALE, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(this.lastSavedAt));
-      } catch { return '{% trans "Last now" %}'; }
-    },
-
-    formatMoney(v) {
-      try {
-        return new Intl.NumberFormat(APP_LOCALE, {
-          style: 'currency', currency: this.org.currency || 'SAR',
-          minimumFractionDigits: 0, maximumFractionDigits: 0,
-        }).format(Number(v || 0));
-      } catch { return `${fmtNum(v || 0, 0)} ${this.org.currency || ''}`.trim(); }
-    },
-  };
-}
+      async addUser() {
+        if (!this.newUser.email || !this.newUser.full_name || !this.newUser.password) {
+          this.flash('{% trans "Name, email, and password are required." %}', 'error');
+          return;
+        }
+        if (this.newUser.password.length < 8) {
+          this.flash('{% trans "Password must be at least 8 characters." %}', 'error');
+          return;
+        }
+        this.loading = true;
+        try {
+          const r = await fetch('/api/v1/auth/users/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': getCookie('csrftoken'),
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(this.newUser),
+          });
+          if (r.status === 403) {
+            this.flash('{% trans "You do not have permission to add users. Contact an administrator." %}', 'error');
+            return;
+          }
+          if (!r.ok) {
+            const d = await r.json().catch(() => ({}));
+            const msg = d.detail || d.email?.[0] || d.password?.[0] || d.full_name?.[0] || JSON.stringify(d).slice(0, 200);
+            this.flash(msg, 'error');
+            return;
+          }
+          const created = await r.json().catch(() => ({}));
+          this.flash(`{% trans "User added:" %} ${created.email || this.newUser.email}`);
+          this.resetNewUser();
+          this.loadTeam();
+        } catch (e) {
+          this.flash('{% trans "Server connection error." %}', 'error');
+        } finally {
+          this.loading = false;
+        }
+      },
+    };
+  }
 </script>
 {% endblock %}

@@ -1,0 +1,31 @@
+{
+  "invoice_metadata": {
+    "invoice_number": "RR-INV-0001",
+    "issue_date": "2023-02-08",
+    "issue_time": "18:22:24",
+    "supply_date": "2022-02-13",
+    "currency": "SAR"
+  },
+  "line_items": [
+    {
+      "identifier": 1,
+      "item_name": "Premium Television / توريد أنابيب ملحومة",
+      "quantity": 2.0,
+      "item_gross_price": 1000.00,
+      "item_price_discount": 50.00,
+      "item_net_price": 950.0,
+      "line_allowance_amount": 100.00,
+      "line_net_amount": 1800.00,
+      "vat_rate": 15.00,
+      "vat_line_amount": 270.00,
+      "line_amount_inclusive_vat": 2070.00
+    }
+  ],
+  "financial_summary": {
+    "sum_of_invoice_line_net_amount": 1800.00,
+    "sum_of_allowances_on_document_level": 90.00,
+    "invoice_total_amount_without_vat": 1710.00,
+    "invoice_total_vat_amount": 256.50,
+    "invoice_total_amount_with_vat": 1966.50
+  }
+}

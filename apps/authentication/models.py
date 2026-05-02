@@ -357,6 +357,11 @@ class AuditLog(models.Model):
         null=True, blank=True, db_index=True,
         help_text="Records are retained until this date (7-year minimum per regulatory requirements)."
     )
+    # Tamper-evidence: every entry's chain_hash = SHA-256(prev_chain_hash || canonical_json(payload)).
+    # Auditors can walk the chain and detect any inserted, deleted, or
+    # modified record. Computed in save(); never edited after creation.
+    previous_hash = models.CharField(max_length=64, blank=True, db_index=True)
+    chain_hash    = models.CharField(max_length=64, blank=True, db_index=True)
 
     class Meta:
         db_table = "audit_logs"
@@ -366,6 +371,51 @@ class AuditLog(models.Model):
             models.Index(fields=["organization", "timestamp"]),
             models.Index(fields=["action"]),
         ]
+
+    def save(self, *args, **kwargs):
+        """Append-only: refuse updates and compute the chain hash on insert."""
+        if self.pk and AuditLog.objects.filter(pk=self.pk).exists():
+            # Update path — only `retain_until` may change post-creation, and
+            # only when the caller explicitly opts in via update_fields. A
+            # bare ``log.save()`` call attempting to overwrite anything else
+            # is rejected to preserve append-only semantics.
+            allowed = set(kwargs.get("update_fields") or [])
+            if not allowed:
+                raise ValueError(
+                    "AuditLog records are append-only — full-row save() forbidden. "
+                    "Pass update_fields=['retain_until'] for the only legal update."
+                )
+            if not allowed.issubset({"retain_until"}):
+                raise ValueError(
+                    "AuditLog records are append-only — modifying %s is forbidden."
+                    % (allowed - {"retain_until"})
+                )
+            return super().save(*args, **kwargs)
+
+        # Insert path — compute chain hash from the previous entry's hash.
+        if not self.chain_hash:
+            from core.utils.audit_log import compute_chain_hash
+            prev = (
+                AuditLog.objects
+                .order_by("-timestamp")
+                .values_list("chain_hash", flat=True)
+                .first()
+            ) or ""
+            payload = {
+                "action": self.action,
+                "user_id": str(self.user_id) if self.user_id else None,
+                "organization_id": str(self.organization_id) if self.organization_id else None,
+                "resource_type": self.resource_type,
+                "resource_id": self.resource_id,
+                "details": self.details,
+            }
+            self.previous_hash = prev
+            self.chain_hash = compute_chain_hash(prev, payload)
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """Block deletion — audit log is append-only."""
+        raise ValueError("AuditLog records cannot be deleted (append-only).")
 
     def __str__(self):
         return f"{self.action} by {self.user} at {self.timestamp}"

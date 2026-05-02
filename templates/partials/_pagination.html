@@ -1,0 +1,62 @@
+{% load i18n %}
+{% comment %}
+Reusable pagination control.
+
+Required context vars:
+  page_obj    — django.core.paginator.Page
+  paginator   — django.core.paginator.Paginator
+  querystring — current querystring without the `page` key (so filters survive)
+
+Renders nothing when there's <= 1 page.
+{% endcomment %}
+
+{% if paginator.num_pages > 1 %}
+<nav class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between print:hidden"
+     aria-label="{% trans 'Pagination' %}">
+
+  <p class="text-xs text-slate-500">
+    {% blocktrans with start=page_obj.start_index end=page_obj.end_index total=paginator.count %}Showing {{ start }}–{{ end }} of {{ total }}{% endblocktrans %}
+  </p>
+
+  <div class="flex items-center gap-1.5 flex-wrap">
+    {# First / Previous #}
+    {% if page_obj.has_previous %}
+      <a href="?page=1{% if querystring %}&amp;{{ querystring }}{% endif %}"
+         class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+         aria-label="{% trans 'First page' %}">«</a>
+      <a href="?page={{ page_obj.previous_page_number }}{% if querystring %}&amp;{{ querystring }}{% endif %}"
+         class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+         rel="prev">{% trans "Previous" %}</a>
+    {% else %}
+      <span class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-300 cursor-not-allowed">«</span>
+      <span class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-300 cursor-not-allowed">{% trans "Previous" %}</span>
+    {% endif %}
+
+    {# Page numbers — show current ± 2 #}
+    {% for n in paginator.page_range %}
+      {% if n == page_obj.number %}
+        <span class="inline-flex items-center justify-center min-w-[36px] rounded-lg border border-slate-900 bg-slate-900 px-2 py-1.5 text-xs font-bold text-white"
+              aria-current="page">{{ n }}</span>
+      {% elif n == 1 or n == paginator.num_pages or n|add:"-2" <= page_obj.number and n|add:"2" >= page_obj.number %}
+        <a href="?page={{ n }}{% if querystring %}&amp;{{ querystring }}{% endif %}"
+           class="inline-flex items-center justify-center min-w-[36px] rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">{{ n }}</a>
+      {% elif n == 2 and page_obj.number > 4 or n == paginator.num_pages|add:"-1" and page_obj.number < paginator.num_pages|add:"-3" %}
+        <span class="inline-flex items-center justify-center px-1 text-slate-400">…</span>
+      {% endif %}
+    {% endfor %}
+
+    {# Next / Last #}
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% if querystring %}&amp;{{ querystring }}{% endif %}"
+         class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+         rel="next">{% trans "Next" %}</a>
+      <a href="?page={{ paginator.num_pages }}{% if querystring %}&amp;{{ querystring }}{% endif %}"
+         class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+         aria-label="{% trans 'Last page' %}">»</a>
+    {% else %}
+      <span class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-300 cursor-not-allowed">{% trans "Next" %}</span>
+      <span class="inline-flex items-center justify-center rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-semibold text-slate-300 cursor-not-allowed">»</span>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}

@@ -1,196 +1,71 @@
-{% extends "base.html" %}
+{% extends "layouts/dashboard_base.html" %}
 {% load i18n %}
+
 {% block title %}{% trans "Transactions" %}{% endblock %}
-{% block page_title %}{% trans "Transactions" %}{% endblock %}
 {% block nav_transactions %}active{% endblock %}
 
-{% block content %}
-<div x-data="txList()" x-init="load()">
-
-  <!-- Stats -->
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    <div class="card p-4">
-      <p class="text-xs text-slate-400 mb-1">{% trans "Total Transactions" %}</p>
-      <p class="text-2xl font-bold text-slate-800 dark:text-white font-mono" x-text="stats.total ?? '—'"></p>
-    </div>
-    <div class="card p-4">
-      <p class="text-xs text-slate-400 mb-1">{% trans "Flagged" %}</p>
-      <p class="text-2xl font-bold text-amber-600 font-mono" x-text="stats.flagged ?? '—'"></p>
-    </div>
-    <div class="card p-4">
-      <p class="text-xs text-slate-400 mb-1">{% trans "Duplicates" %}</p>
-      <p class="text-2xl font-bold text-red-600 font-mono" x-text="stats.duplicates ?? '—'"></p>
-    </div>
-    <div class="card p-4">
-      <p class="text-xs text-slate-400 mb-1">{% trans "Total Amount (SAR)" %}</p>
-      <p class="text-2xl font-bold text-primary-600 font-mono" x-text="fmtNum(stats.total_amount)"></p>
-    </div>
-  </div>
-
-  <!-- Toolbar -->
-  <div class="card p-4 mb-4 flex flex-wrap items-center gap-3">
-    <div class="flex-1 relative min-w-48">
-      <i data-lucide="search" class="absolute right-3 top-2.5 w-4 h-4 text-slate-400"></i>
-      <input x-model="q" @input.debounce.400ms="load()" placeholder="{% trans 'Search by reference number or vendor...' %}"
-             class="input-field pr-9 w-full text-sm"/>
-    </div>
-    <select x-model="txType" @change="load()" class="input-field text-sm w-40">
-      <option value="">{% trans "All types" %}</option>
-      <option value="income">{% trans "Income" %}</option>
-      <option value="expense">{% trans "Expenses" %}</option>
-      <option value="asset">{% trans "Assets" %}</option>
-      <option value="liability">{% trans "Liabilities" %}</option>
-      <option value="transfer">{% trans "Transfers" %}</option>
-      <option value="journal_entry">{% trans "Journal Entries" %}</option>
-    </select>
-    <select x-model="filterRisk" @change="load()" class="input-field text-sm w-36">
-      <option value="">{% trans "All risk levels" %}</option>
-      <option value="critical">{% trans "Critical" %}</option>
-      <option value="high">{% trans "High" %}</option>
-      <option value="medium">{% trans "Medium" %}</option>
-      <option value="low">{% trans "Low" %}</option>
-    </select>
-    <select x-model="flagged" @change="load()" class="input-field text-sm w-36">
-      <option value="">{% trans "All" %}</option>
-      <option value="true">{% trans "Flagged only" %}</option>
-      <option value="false">{% trans "Not flagged" %}</option>
-    </select>
-    <!-- Date range -->
-    <input type="date" x-model="dateFrom" @change="load()" class="input-field text-sm w-36"/>
-    <input type="date" x-model="dateTo"   @change="load()" class="input-field text-sm w-36"/>
-  </div>
-
-  <!-- Table -->
-  <div class="card overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-slate-200 dark:border-slate-700 text-xs text-slate-500 uppercase">
-            <th class="text-right px-4 py-3 font-semibold">{% trans "Reference" %}</th>
-            <th class="text-right px-4 py-3 font-semibold">{% trans "Type" %}</th>
-            <th class="text-right px-4 py-3 font-semibold">{% trans "Description / Vendor" %}</th>
-            <th class="text-right px-4 py-3 font-semibold">{% trans "Amount" %}</th>
-            <th class="text-right px-4 py-3 font-semibold">{% trans "Date" %}</th>
-            <th class="text-right px-4 py-3 font-semibold">{% trans "Risk" %}</th>
-            <th class="text-right px-4 py-3 font-semibold">{% trans "Status" %}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <template x-if="loading">
-            <tr><td colspan="7" class="text-center py-12 text-slate-400">
-              <i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i>
-            </td></tr>
-          </template>
-          <template x-if="!loading && rows.length === 0">
-            <tr><td colspan="7" class="text-center py-12 text-slate-400">
-              <i data-lucide="layers" class="w-8 h-8 mx-auto mb-2 opacity-30"></i>
-              <p class="text-sm">{% trans "No transactions found" %}</p>
-            </td></tr>
-          </template>
-          <template x-for="r in rows" :key="r.id">
-            <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-              <td class="px-4 py-3 font-mono text-xs text-slate-500" x-text="r.reference_number || r.external_id || '—'"></td>
-              <td class="px-4 py-3">
-                <span :class="typeBadge(r.transaction_type)" class="text-xs font-semibold px-2 py-0.5 rounded border"
-                      x-text="typeLabel(r.transaction_type)"></span>
-              </td>
-              <td class="px-4 py-3 max-w-[200px]">
-                <p class="font-medium text-slate-700 dark:text-slate-200 truncate text-xs" x-text="r.vendor_name || r.customer_name || '—'"></p>
-                <p class="text-xs text-slate-400 truncate" x-text="r.description"></p>
-              </td>
-              <td class="px-4 py-3 font-mono text-xs font-semibold"
-                  :class="r.transaction_type === 'income' ? 'text-green-600' : 'text-slate-700 dark:text-slate-300'"
-                  x-text="(r.transaction_type === 'income' ? '+' : '') + fmtCurrency(r.amount, r.currency)"></td>
-              <td class="px-4 py-3 text-xs text-slate-500" x-text="r.transaction_date"></td>
-              <td class="px-4 py-3">
-                <span :class="riskBadge(r.risk_level)" class="text-xs font-semibold px-2 py-0.5 rounded border"
-                      x-text="riskLabel(r.risk_level)"></span>
-              </td>
-              <td class="px-4 py-3 flex items-center gap-2">
-                <template x-if="r.is_flagged">
-                  <span class="text-xs bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800 px-2 py-0.5 rounded font-semibold">{% trans "Flagged" %}</span>
-                </template>
-                <template x-if="r.is_duplicate">
-                  <span class="text-xs bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800 px-2 py-0.5 rounded font-semibold">{% trans "Duplicate" %}</span>
-                </template>
-                <template x-if="!r.is_flagged && !r.is_duplicate">
-                  <span class="text-xs bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800 px-2 py-0.5 rounded font-semibold">{% trans "Normal" %}</span>
-                </template>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
-    </div>
-    <!-- Pagination -->
-    <div class="border-t border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
-      <p class="text-xs text-slate-400" x-text="'{% trans 'Showing' %} ' + rows.length + ' {% trans 'of' %} ' + totalCount + ' {% trans 'transactions' %}'"></p>
-      <div class="flex gap-2">
-        <button @click="page = Math.max(1, page-1); load()" :disabled="page <= 1"
-                class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40">
-          {% trans "Previous" %}
-        </button>
-        <span class="text-xs px-3 py-1.5 text-slate-500" x-text="'{% trans 'Page' %} ' + page"></span>
-        <button @click="page++; load()" :disabled="rows.length < pageSize"
-                class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 disabled:opacity-40">
-          {% trans "Next" %}
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "Transactions" %}</span>
 {% endblock %}
 
-{% block scripts %}
-<script>
-function txList() {
-  return {
-    rows: [], stats: {}, loading: true,
-    q: '', txType: '', filterRisk: '', flagged: '', dateFrom: '', dateTo: '',
-    page: 1, pageSize: 50, totalCount: 0,
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{% trans "Transactions" %}</h1>
+    <p class="page-subtitle">{% trans "Unified feed of invoices and purchase orders across the organisation." %}</p>
+  </div>
+</div>
 
-    async load() {
-      this.loading = true;
-      const p = new URLSearchParams({ page_size: this.pageSize, page: this.page });
-      if (this.q)         p.set('search', this.q);
-      if (this.txType)    p.set('transaction_type', this.txType);
-      if (this.filterRisk)p.set('risk_level', this.filterRisk);
-      if (this.flagged)   p.set('is_flagged', this.flagged);
-      if (this.dateFrom)  p.set('date_from', this.dateFrom);
-      if (this.dateTo)    p.set('date_to', this.dateTo);
-      try {
-        const resp = await apiFetch('/transactions/?' + p);
-        this.rows = resp.results ?? resp;
-        this.totalCount = resp.count ?? this.rows.length;
-        // Stats
-        const s = await apiFetch('/transactions/stats/').catch(()=>({}));
-        this.stats = s;
-      } catch(e) { notify('{% trans "Error loading data" %}', 'error'); }
-      finally { this.loading = false; this.$nextTick(() => lucide.createIcons()); }
-    },
-
-    fmtNum(v) { return v ? Number(v).toLocaleString(APP_LOCALE) : '—'; },
-    fmtCurrency(v, c='SAR') { return v ? Number(v).toLocaleString(APP_LOCALE, {maximumFractionDigits:2}) + ' ' + c : '—'; },
-
-    typeLabel(t) {
-            return {'income':'{% trans "Income" %}','expense':'{% trans "Expenses" %}','asset':'{% trans "Assets" %}','liability':'{% trans "Liabilities" %}',
-              'transfer':'{% trans "Transfer" %}','journal_entry':'{% trans "Journal Entry" %}'}[t] ?? t;
-    },
-    typeBadge(t) {
-      return {'income':'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800',
-              'expense':'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
-              'transfer':'bg-blue-50 text-blue-700 border-blue-200',
-              'journal_entry':'bg-purple-50 text-purple-700 border-purple-200'}[t]
-          ?? 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700';
-    },
-    riskLabel(l) { return {'critical':'{% trans "Critical" %}','high':'{% trans "High" %}','medium':'{% trans "Medium" %}','low':'{% trans "Low" %}'}[l]??l; },
-    riskBadge(l) {
-      return {'critical':'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
-              'high':'bg-orange-50 text-orange-700 border-orange-200',
-              'medium':'bg-amber-50 text-amber-700 border-amber-200',
-              'low':'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'}[l]??'';
-    },
-  }
-}
-</script>
+<div class="card table-card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>{% trans "Type" %}</th>
+          <th>{% trans "Reference" %}</th>
+          <th>{% trans "Counterparty" %}</th>
+          <th>{% trans "Amount" %}</th>
+          <th>{% trans "Date" %}</th>
+          <th>{% trans "Status" %}</th>
+          <th>{% trans "Action" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if rows %}
+          {% for r in rows %}
+          <tr>
+            <td class="text-muted">{{ forloop.counter }}</td>
+            <td>
+              {% if r.type == 'invoice' %}
+                <span class="badge badge-info">{% trans "Invoice" %}</span>
+              {% else %}
+                <span class="badge badge-warning">{% trans "Purchase Order" %}</span>
+              {% endif %}
+            </td>
+            <td><a href="{{ r.url }}" style="color:var(--primary);font-weight:700">{{ r.ref }}</a></td>
+            <td>{{ r.party }}</td>
+            <td><span style="font-family:monospace;font-weight:700">{{ r.amount|floatformat:2 }}</span> {{ r.currency }}</td>
+            <td class="text-muted">{{ r.date|date:"Y-m-d" }}</td>
+            <td>
+              <span class="badge badge-{% if r.status == 'approved' %}success{% elif r.status == 'flagged' %}warning{% elif r.status == 'rejected' %}danger{% else %}info{% endif %}">{{ r.status }}</span>
+            </td>
+            <td><a href="{{ r.url }}" class="row-action"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6" transform="scale(-1,1) translate(-24,0)"/></svg></a></td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="8">
+            <div class="empty-state">
+              <h3>{% trans "No transactions yet" %}</h3>
+              <p>{% trans "Upload invoices or purchase orders to populate this feed." %}</p>
+              <a href="{% url 'frontend:upload' %}" class="btn btn-primary">{% trans "Upload" %}</a>
+            </div>
+          </td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
 {% endblock %}

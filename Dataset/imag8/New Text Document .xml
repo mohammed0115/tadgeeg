@@ -1,0 +1,24 @@
+<SimplifiedTaxInvoice>
+    <Header>
+        <InvoiceID>0529139</InvoiceID>
+        <IssueDate>2022-05-29</IssueDate>
+    </Header>
+    <Seller>
+        <Name>فلاي اكونت للسفر والسياحة</Name>
+        <VATNumber>300530875400003</VATNumber>
+    </Seller>
+    <Items>
+        <Item>
+            <Description>تذاكر طيران</Description>
+            <NetTotal>786.96</NetTotal>
+            <VAT>13.04</VAT>
+            <GrossTotal>800</GrossTotal>
+        </Item>
+    </Items>
+    <Summary>
+        <TaxAmount>104.35</TaxAmount>
+        <GrandTotal>1200</GrandTotal>
+        <AmountPaid>500</AmountPaid>
+        <AmountDue>700</AmountDue>
+    </Summary>
+</SimplifiedTaxInvoice>

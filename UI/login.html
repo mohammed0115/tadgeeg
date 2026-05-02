@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تسجيل الدخول | تدقيق - Tadgeeg</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { background: white; }
+
+    .login-wrap {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    /* === Left side: Form === */
+    .login-form-side {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 48px 80px;
+      background: white;
+    }
+    .form-container {
+      max-width: 440px;
+      width: 100%;
+      margin: 0 auto;
+      animation: fadeIn 0.6s ease both;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 36px;
+      transition: color 0.2s ease;
+    }
+    .back-link:hover { color: var(--primary); }
+    .login-logo { margin-bottom: 40px; }
+    .login-title {
+      font-family: 'Cairo', sans-serif;
+      font-size: 32px;
+      font-weight: 900;
+      color: var(--text);
+      margin-bottom: 8px;
+      letter-spacing: -0.5px;
+    }
+    .login-desc {
+      color: var(--text-muted);
+      font-size: 15px;
+      margin-bottom: 36px;
+    }
+
+    .form-group { margin-bottom: 20px; }
+    .form-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .form-label a {
+      font-size: 12px;
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .form-label a:hover { text-decoration: underline; }
+    .input-wrap { position: relative; }
+    .form-input {
+      width: 100%;
+      padding: 14px 44px;
+      background: var(--bg-soft);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      font-size: 14px;
+      color: var(--text);
+      transition: all 0.2s ease;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: white;
+      box-shadow: 0 0 0 4px rgba(0, 51, 102, 0.08);
+    }
+    .input-icon {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-light);
+    }
+    .input-toggle {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-light);
+      cursor: pointer;
+      padding: 4px;
+    }
+    .input-toggle:hover { color: var(--primary); }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+    .checkbox-row input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+    .checkbox-row label {
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 16px;
+      background: var(--primary);
+      color: white;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 15px;
+      transition: all 0.25s ease;
+      box-shadow: 0 8px 20px rgba(0, 51, 102, 0.2);
+    }
+    .login-btn:hover {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(0, 51, 102, 0.28);
+    }
+    .login-btn:active { transform: scale(0.99); }
+
+    .signup-prompt {
+      text-align: center;
+      margin-top: 28px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+    .signup-prompt a {
+      color: var(--accent);
+      font-weight: 700;
+    }
+    .signup-prompt a:hover { text-decoration: underline; }
+
+    .security-note {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 48px;
+      font-size: 11px;
+      color: var(--text-light);
+    }
+
+    /* === Right side: Branded panel === */
+    .login-brand-side {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      position: relative;
+      overflow: hidden;
+      padding: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    .brand-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.5;
+    }
+    .brand-orb.orb-1 {
+      width: 400px;
+      height: 400px;
+      background: var(--accent);
+      top: -100px;
+      right: -100px;
+      opacity: 0.3;
+    }
+    .brand-orb.orb-2 {
+      width: 350px;
+      height: 350px;
+      background: #1a4d80;
+      bottom: -80px;
+      left: -80px;
+      opacity: 0.5;
+    }
+    .brand-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+    .brand-content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      max-width: 440px;
+    }
+    .brand-quote {
+      font-family: 'Cairo', sans-serif;
+      font-size: 30px;
+      font-weight: 800;
+      line-height: 1.4;
+      margin-bottom: 40px;
+      letter-spacing: -0.5px;
+    }
+    .brand-quote .highlight { color: var(--accent-light); }
+    .brand-features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 40px;
+    }
+    .brand-feature {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 18px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .brand-feature-value {
+      font-family: 'Cairo', sans-serif;
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--accent-light);
+      margin-bottom: 4px;
+    }
+    .brand-feature-label {
+      font-size: 12px;
+      opacity: 0.85;
+    }
+
+    .brand-quote-author {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: center;
+      padding: 16px 24px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 100px;
+      backdrop-filter: blur(10px);
+    }
+    .brand-avatars {
+      display: flex;
+    }
+    .brand-avatars div {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 2px solid var(--primary);
+      background: linear-gradient(135deg, var(--accent), #34d399);
+      margin-right: -10px;
+    }
+    .brand-avatars div:nth-child(2) { background: linear-gradient(135deg, #f59e0b, #fbbf24); }
+    .brand-avatars div:nth-child(3) { background: linear-gradient(135deg, #ef4444, #f87171); }
+    .brand-avatars div:nth-child(4) {
+      background: rgba(255, 255, 255, 0.15);
+      font-size: 10px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .brand-quote-author-text {
+      font-size: 12px;
+      opacity: 0.9;
+    }
+
+    @media (max-width: 1024px) {
+      .login-wrap { grid-template-columns: 1fr; }
+      .login-brand-side { display: none; }
+      .login-form-side { padding: 40px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-wrap">
+    <!-- ===== Form Side ===== -->
+    <div class="login-form-side">
+      <div class="form-container">
+        <a href="index.html" class="back-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18l6-6-6-6" transform="scale(-1,1) translate(-24,0)"/>
+          </svg>
+          العودة للرئيسية
+        </a>
+
+        <div class="logo login-logo">
+          <div class="logo-mark">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="50" cy="50" r="40" stroke="#003366" stroke-width="8" fill="none"/>
+              <path d="M28 50 L44 66 L72 36" stroke="#10B981" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="logo-text">
+            <span class="ar">تدقيق</span>
+            <span class="en">Tadgeeg</span>
+          </div>
+        </div>
+
+        <h1 class="login-title">تسجيل الدخول</h1>
+        <p class="login-desc">مرحباً بك مجدداً! يرجى إدخال بياناتك للوصول إلى لوحة التحكم.</p>
+
+        <form id="loginForm">
+          <div class="form-group">
+            <label class="form-label">البريد الإلكتروني</label>
+            <div class="input-wrap">
+              <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+              <input type="email" class="form-input" placeholder="name@company.sa" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              كلمة المرور
+              <a href="#">نسيت كلمة المرور؟</a>
+            </label>
+            <div class="input-wrap">
+              <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0110 0v4"/>
+              </svg>
+              <input type="password" id="passwordInput" class="form-input" placeholder="••••••••" required>
+              <button type="button" class="input-toggle" onclick="togglePassword()">
+                <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="remember">
+            <label for="remember">تذكرني على هذا الجهاز</label>
+          </div>
+
+          <button type="submit" class="login-btn">دخول النظام</button>
+        </form>
+
+        <p class="signup-prompt">
+          ليس لديك حساب؟ <a href="#">ابدأ تجربتك المجانية الآن</a>
+        </p>
+
+        <div class="security-note">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6l-8-4z"/>
+            <path d="M9 12l2 2 4-4"/>
+          </svg>
+          <span>جميع البيانات مشفرة وفق معايير AES-256 و SOC 2</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Brand Side ===== -->
+    <div class="login-brand-side">
+      <div class="brand-grid"></div>
+      <div class="brand-orb orb-1"></div>
+      <div class="brand-orb orb-2"></div>
+
+      <div class="brand-content">
+        <h2 class="brand-quote">
+          تدقيق مالي <span class="highlight">مدعوم بالذكاء الاصطناعي</span> لتنطلق أعمالك.
+        </h2>
+
+        <div class="brand-features">
+          <div class="brand-feature">
+            <div class="brand-feature-value">95%</div>
+            <div class="brand-feature-label">نسبة أتمتة العمليات</div>
+          </div>
+          <div class="brand-feature">
+            <div class="brand-feature-value">98%</div>
+            <div class="brand-feature-label">دقة استخراج البيانات</div>
+          </div>
+          <div class="brand-feature">
+            <div class="brand-feature-value">+2.5M</div>
+            <div class="brand-feature-label">فاتورة معالجة</div>
+          </div>
+          <div class="brand-feature">
+            <div class="brand-feature-value">+1.2K</div>
+            <div class="brand-feature-label">منظمة موثوقة</div>
+          </div>
+        </div>
+
+        <div class="brand-quote-author">
+          <div class="brand-avatars">
+            <div></div><div></div><div></div><div>+</div>
+          </div>
+          <span class="brand-quote-author-text">انضم إلى أكثر من 1,200 منظمة في الخليج</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function togglePassword() {
+      const input = document.getElementById('passwordInput');
+      const icon = document.getElementById('eyeIcon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+      } else {
+        input.type = 'password';
+        icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+      }
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const btn = document.querySelector('.login-btn');
+      btn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10" opacity="0.25"/><path d="M12 2a10 10 0 0110 10" style="animation:spin 1s linear infinite;transform-origin:12px 12px"/></svg> جاري الدخول...';
+      btn.disabled = true;
+      setTimeout(() => { window.location.href = 'dashboard.html'; }, 800);
+    });
+  </script>
+  <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+</body>
+</html>

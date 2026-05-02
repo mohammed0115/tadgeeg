@@ -245,22 +245,46 @@ def _extract_from_pandas(file_path: str, ext: str, doc_type: str) -> dict:
     """
     Read XLSX/CSV/JSON with pandas and map columns directly to typed model fields.
     Returns a partial ai_data dict — caller merges with OpenAI result.
+
+    For files that contain multiple distinct entities (e.g., a PO Excel with one
+    row per purchase order), this function still collapses everything into a
+    single record. Multi-record splitting is handled by the higher-level
+    ``_extract_records_from_pandas`` wrapper used by ``_process_typed_document``.
     """
     try:
         df = _load_dataframe(file_path, ext)
         if df is None:
             return {}
+        return _extract_from_pandas_df(df, doc_type)
+    except Exception as e:
+        logger.warning(f"[pandas extract] {e}")
+        return {}
+
+
+def _extract_from_pandas_df(df, doc_type: str) -> dict:
+    """Same as _extract_from_pandas but takes a pre-loaded DataFrame."""
+    try:
+        if df is None or len(df) == 0:
+            return {}
 
         if doc_type == "purchase_order":
             line_items = []
             for _, row in df.iterrows():
-                # description: "وصف الصنف" OR "اسم الصنف" from actual sample file
+                # Item name (اسم الصنف) and description (وصف الصنف) — captured separately.
+                item_name = str(_row_get(row,
+                    "اسم الصنف",                         # actual sample column
+                    "item_name", "item",
+                    "اسم البند", "البند") or "")
                 desc = str(_row_get(row,
-                    "وصف الصنف", "اسم الصنف",          # actual sample columns
-                    "description", "item", "item_name",
-                    "الوصف", "البند", "اسم البند") or "")
+                    "وصف الصنف",                         # actual sample column
+                    "description", "الوصف") or "")
+                # Fall back to item_name if description column is missing.
+                if not desc and item_name:
+                    desc = item_name
                 qty = float(_safe_decimal(_row_get(row,
                     "الكمية", "qty", "quantity", "كمية") or 0))
+                unit = str(_row_get(row,
+                    "وحدة القياس", "unit", "uom", "الوحدة") or "")
                 unit_price = float(_safe_decimal(_row_get(row,
                     "سعر الوحدة (SAR)", "سعر الوحدة",
                     "unit_price", "price", "السعر") or 0))
@@ -273,20 +297,32 @@ def _extract_from_pandas(file_path: str, ext: str, doc_type: str) -> dict:
                 total_line = float(_safe_decimal(_row_get(row,
                     "الإجمالي الكلي (SAR)", "الإجمالي الكلي",  # actual sample column
                     "total", "total_amount", "المجموع") or 0))
+                # Per-row metadata that's useful in the detail table but not in totals.
+                status = str(_row_get(row,
+                    "الحالة", "status") or "")
+                approved_by = str(_row_get(row,
+                    "تمت الموافقة بواسطة", "approved_by") or "")
+                notes = str(_row_get(row,
+                    "ملاحظات", "notes", "remarks") or "")
                 # Auto-compute missing values
                 if not total_line and (subtotal_line or unit_price):
                     total_line = round((subtotal_line or unit_price * qty) + vat_line, 2)
                 if not subtotal_line and unit_price and qty:
                     subtotal_line = round(unit_price * qty, 2)
                 item = {
+                    "item_name":   item_name,
                     "description": desc,
                     "qty":         qty,
+                    "unit":        unit,
                     "unit_price":  unit_price,
                     "subtotal":    subtotal_line,
                     "vat_amount":  vat_line,
                     "total":       total_line,
+                    "status":      status,
+                    "approved_by": approved_by,
+                    "notes":       notes,
                 }
-                if desc or unit_price or qty:
+                if desc or item_name or unit_price or qty:
                     line_items.append(item)
 
             total   = _sum_col(df,
@@ -646,6 +682,147 @@ def _extract_from_pandas(file_path: str, ext: str, doc_type: str) -> dict:
         return {}
 
 
+# ── Multi-record splitting for structured uploads ────────────────────────────
+#
+# Some structured files (purchase orders, sales receipts) contain *one entity per
+# row*: a single XLSX with 5000 rows = 5000 distinct purchase orders, not one PO
+# with 5000 line items. The legacy `_extract_from_pandas` collapses every row
+# into a single typed record, which loses information and produces wrong totals.
+#
+# The wrapper below detects the entity-per-row case by grouping the dataframe
+# on a key column (po_number, receipt_number, …) and returns *one ai_data dict
+# per group*. The caller (`_process_typed_document`) creates one typed-model row
+# per dict.
+
+# Doc types where each row is typically a separate entity. Other types
+# (bank_statement, payroll, vat_return) treat the whole file as one entity
+# with many lines, so they keep the legacy behaviour.
+_MULTI_RECORD_TYPES = {
+    "purchase_order", "sales_receipt", "fixed_asset",
+    "expense_report",  # one row per claim/employee → split if mixed
+    "invoice",         # invoice Excels with many invoices per file
+}
+
+# Maximum number of records we'll create from a single file in one request.
+# Synchronous DB inserts past this take too long to keep an HTTP request open.
+# Anything beyond this is dropped with a warning summary; users can split files.
+MAX_RECORDS_PER_FILE = int(os.environ.get("DOCUMENTS_MAX_RECORDS_PER_FILE", "500"))
+
+# Per-doc-type grouping key candidates (first match wins). Fallback keys are
+# tried only when no primary candidate exists in the columns.
+_MULTI_RECORD_GROUP_KEYS = {
+    "purchase_order": {
+        "primary":  ("رقم أمر الشراء", "po_number", "reference", "ref"),
+        "fallback": ("اسم المورد", "vendor_name", "vendor", "supplier"),
+    },
+    "sales_receipt": {
+        "primary":  ("رقم الإيصال", "receipt_number", "رقم الفاتورة"),
+        "fallback": ("تاريخ البيع", "receipt_date", "date"),
+    },
+    "fixed_asset": {
+        # One row per asset — group by asset id (or asset name as fallback).
+        "primary":  ("رقم الأصل", "asset_id", "id"),
+        "fallback": ("اسم الأصل", "asset_name", "name"),
+    },
+    "expense_report": {
+        # One row per expense claim — group by report number (or employee).
+        "primary":  ("رقم المطالبة", "report_number", "claim_id"),
+        "fallback": ("اسم الموظف", "employee_name", "employee_id"),
+    },
+    "invoice": {
+        # Bulk-invoice Excel — group by invoice number (or vendor + date if number missing).
+        "primary":  ("رقم الفاتورة", "invoice_number", "invoice_no", "doc_number"),
+        "fallback": ("اسم المورد", "vendor_name", "vendor"),
+    },
+}
+
+
+def _find_grouping_column(df, primary_candidates, fallback_candidates=()):
+    """Locate the first column matching any candidate (using normalized names)."""
+    cols_norm = {_normalize_col_name(c): c for c in df.columns}
+    for name in primary_candidates:
+        col = cols_norm.get(_normalize_col_name(name))
+        if col is not None:
+            return col
+    for name in fallback_candidates:
+        col = cols_norm.get(_normalize_col_name(name))
+        if col is not None:
+            return col
+    return None
+
+
+def _extract_records_from_pandas(file_path: str, ext: str, doc_type: str) -> list:
+    """
+    Returns a list of ai_data dicts, one per detected entity in the file.
+
+    - For Phase-2 doc types (sales_order, quotation, …): delegates to the bulk
+      adapter, which uses table-driven column aliasing per doc type.
+    - For single-record legacy types: returns a one-element list with the
+      `_extract_from_pandas_df` output.
+    - For multi-record legacy types with a usable grouping column: returns one
+      dict per group (capped at MAX_RECORDS_PER_FILE).
+    """
+    # Phase-2 path: dedicated bulk adapter
+    from apps.documents.bulk_adapter import PHASE2_TYPES, extract_phase2_records
+    if doc_type in PHASE2_TYPES:
+        return extract_phase2_records(file_path, ext, doc_type)
+
+    try:
+        df = _load_dataframe(file_path, ext)
+        if df is None or len(df) == 0:
+            return []
+
+        if doc_type not in _MULTI_RECORD_TYPES:
+            single = _extract_from_pandas_df(df, doc_type)
+            return [single] if single else []
+
+        keys = _MULTI_RECORD_GROUP_KEYS.get(doc_type, {})
+        group_col = _find_grouping_column(df, keys.get("primary", ()), keys.get("fallback", ()))
+
+        # No grouping column → treat as single record (legacy behaviour).
+        if group_col is None:
+            single = _extract_from_pandas_df(df, doc_type)
+            return [single] if single else []
+
+        # Group preserving file order; keep NaN/empty rows in their own group.
+        groups = list(df.groupby(group_col, sort=False, dropna=False))
+
+        # Single group → don't split (matches legacy behaviour for sub-line files).
+        if len(groups) <= 1:
+            single = _extract_from_pandas_df(df, doc_type)
+            return [single] if single else []
+
+        records = []
+        truncated = len(groups) > MAX_RECORDS_PER_FILE
+        for key, group_df in groups[:MAX_RECORDS_PER_FILE]:
+            rec = _extract_from_pandas_df(group_df, doc_type)
+            if not rec:
+                continue
+            # Tag the record with its group key in case the per-doc extractor
+            # missed the field (e.g., when the grouping column was a fallback).
+            if doc_type == "purchase_order" and not rec.get("po_number") and key:
+                rec["po_number"] = str(key)
+            elif doc_type == "sales_receipt" and not rec.get("receipt_number") and key:
+                rec["receipt_number"] = str(key)
+            records.append(rec)
+
+        if truncated:
+            logger.warning(
+                "[multi-record] %s: file has %d entities, capped at %d. "
+                "Set DOCUMENTS_MAX_RECORDS_PER_FILE to raise the limit.",
+                doc_type, len(groups), MAX_RECORDS_PER_FILE,
+            )
+            # Mark the last record so the response can surface a warning.
+            if records:
+                records[-1]["_truncated_at"] = MAX_RECORDS_PER_FILE
+                records[-1]["_total_groups"] = len(groups)
+
+        return records
+    except Exception as e:
+        logger.warning(f"[multi-record extract] {e}")
+        return []
+
+
 # ── Canonical data persistence ────────────────────────────────────────────────
 
 def _save_canonical(ai_data: dict, doc_type: str, model_name: str, object_id) -> None:
@@ -667,6 +844,215 @@ def _save_canonical(ai_data: dict, doc_type: str, model_name: str, object_id) ->
 
 
 # ── Core processing pipeline ───────────────────────────────────────────────────
+
+_RISK_RANK = {"low": 0, "medium": 1, "high": 2, "critical": 3}
+
+
+def _apply_validation_to_typed(typed_obj, ai_data: dict, doc_type: str) -> dict:
+    """Run validation + persist results onto an already-created typed row.
+
+    Returns the validation result dict (so the caller can include score / risk
+    in its summary response).
+    """
+    val_result = run_document_validation(doc_type, typed_obj)
+
+    ai_audit = {
+        "validation_results":  ai_data.get("_validation_results", []),
+        "anomalies":           ai_data.get("_anomalies", []),
+        "compliance_review":   ai_data.get("_compliance_review", {}),
+        "recommendations":     ai_data.get("_recommendations", []),
+        "field_confidence":    ai_data.get("_field_confidence", {}),
+        "overall_confidence":  ai_data.get("_overall_confidence", 1.0),
+        "language_detected":   ai_data.get("_language_detected", ""),
+        "ai_risk_level":       ai_data.get("_overall_risk_level", ""),
+        "rule_details":        val_result["rule_details"],
+    }
+
+    ai_risk   = ai_data.get("_overall_risk_level", "low")
+    rule_risk = val_result["risk_level"]
+    final_risk = ai_risk if _RISK_RANK.get(ai_risk, 0) >= _RISK_RANK.get(rule_risk, 0) else rule_risk
+
+    typed_obj.validation_score  = val_result["validation_score"]
+    typed_obj.risk_level        = final_risk
+    typed_obj.rules_passed      = val_result["rules_passed"]
+    typed_obj.rules_failed      = val_result["rules_failed"]
+    typed_obj.failed_rule_codes = val_result["failed_rule_codes"]
+    typed_obj.validation_details= ai_audit
+    typed_obj.ai_summary        = ai_data.get("ai_summary", "")
+    typed_obj.audit_status      = "flagged" if final_risk in ("high", "critical") else "validated"
+    typed_obj.save()
+
+    val_result["final_risk"] = final_risk
+    return val_result
+
+
+def _finalize_multi_record(records: list, base_doc, doc_type: str, org, user,
+                           ocr_confidence: float, filename: str, start: float) -> dict:
+    """Create one typed row per record dict; return a multi-record summary.
+
+    Because ``AuditMixin.document`` is a OneToOneField, we cannot share a single
+    Document row across N typed records. Instead we create N sibling Document
+    rows that all point to the same uploaded file, mark the first one as the
+    "parent" via the ``notes`` field, and link each typed record to its own
+    Document. The original ``base_doc`` is reused for the first record so the
+    file storage isn't duplicated.
+
+    Per-row audit dispatch is suppressed during creation — running 500 separate
+    Celery audits per upload would overwhelm the worker. Instead we dispatch a
+    single parent audit at the end (the audit can then iterate the children).
+
+    For >50 records when Redis/Celery is unavailable, the heavy creation loop
+    is moved to a background thread (see core.services.async_runner). The
+    response returns immediately with ``async=True`` so the user sees a fast
+    upload instead of a 30s spinner.
+    """
+    # Decide if this run should fan out to a background thread.
+    from core.services.async_runner import should_use_background, run_in_background
+
+    if should_use_background(len(records), sync_threshold=50):
+        # Persist the base_doc, then fire-and-forget the heavy work.
+        base_doc.notes = (base_doc.notes or "") + f"\n[multi-record bg job: {len(records)} entities, async]"
+        base_doc.processing_status = Document.ProcessingStatus.PROCESSING
+        base_doc.save(update_fields=["notes", "processing_status"])
+
+        run_in_background(
+            _finalize_multi_record_inline,
+            records, base_doc, doc_type, org, user, ocr_confidence, filename, start,
+        )
+        elapsed = int((time.time() - start) * 1000)
+        return {
+            "document_id":         str(base_doc.id),
+            "base_document_id":    str(base_doc.id),
+            "document_type":       doc_type,
+            "document_type_ar":    DOCUMENT_TYPE_LABELS_AR.get(doc_type, doc_type),
+            "document_type_label": str(DOCUMENT_TYPE_LABELS.get(doc_type, doc_type)),
+            "filename":            filename,
+            "success":             True,
+            "is_multi_record":     True,
+            "record_count":        len(records),
+            "is_async":            True,
+            "validation_score":    0,
+            "risk_level":          "pending",
+            "processing_ms":       elapsed,
+            "ai_summary":          f"تم رفع {len(records)} سجل وجاري المعالجة في الخلفية.",
+        }
+
+    # Inline path (small jobs OR broker reachable).
+    return _finalize_multi_record_inline(
+        records, base_doc, doc_type, org, user, ocr_confidence, filename, start,
+    )
+
+
+def _finalize_multi_record_inline(records: list, base_doc, doc_type: str, org, user,
+                                  ocr_confidence: float, filename: str, start: float) -> dict:
+    """Inline (synchronous) implementation — also called by the bg thread."""
+    from django.core.files.base import ContentFile
+    from .signals import suppress_audit_dispatch
+
+    created = []
+    risks = {"low": 0, "medium": 0, "high": 0, "critical": 0}
+    sum_score = 0.0
+    truncated_at = None
+    total_groups = None
+    parent_file = base_doc.file
+    parent_id = str(base_doc.id)
+
+    with suppress_audit_dispatch():
+        for idx, rec in enumerate(records):
+            if rec.get("_truncated_at"):
+                truncated_at = rec["_truncated_at"]
+                total_groups = rec.get("_total_groups")
+            rec_clean = {k: v for k, v in rec.items() if not k.startswith("_total_") and not k.startswith("_truncated")}
+
+            # First record reuses the original base_doc; siblings get a new Document.
+            if idx == 0:
+                doc_for_record = base_doc
+                base_doc.notes = (base_doc.notes or "") + f"\n[multi-record parent: {len(records)} entities]"
+                base_doc.save(update_fields=["notes"])
+            else:
+                doc_for_record = Document.objects.create(
+                    organization      = org,
+                    uploaded_by       = user,
+                    file              = parent_file,  # share the same file path
+                    original_filename = base_doc.original_filename,
+                    file_size         = base_doc.file_size,
+                    mime_type         = base_doc.mime_type,
+                    document_type     = doc_type,
+                    processing_status = Document.ProcessingStatus.PROCESSING,
+                    notes             = f"[multi-record child of {parent_id}]",
+                )
+
+            try:
+                typed_obj = _create_typed_record(doc_type, rec_clean, doc_for_record, org, user)
+            except Exception as exc:
+                logger.warning("[multi-record] create failed for %s record %d: %s", doc_type, idx, exc)
+                if idx > 0:
+                    doc_for_record.delete()  # roll back the orphan child Document
+                continue
+
+            _save_canonical(rec_clean, doc_type, typed_obj.__class__.__name__, typed_obj.id)
+            try:
+                val_result = _apply_validation_to_typed(typed_obj, rec_clean, doc_type)
+                final_risk = val_result.get("final_risk", "low")
+                risks[final_risk] = risks.get(final_risk, 0) + 1
+                sum_score += val_result.get("validation_score", 0) or 0
+            except Exception as exc:
+                logger.warning("[multi-record] validation failed for %s/%s: %s", doc_type, typed_obj.id, exc)
+
+            doc_for_record.ocr_confidence    = ocr_confidence
+            doc_for_record.processing_status = Document.ProcessingStatus.COMPLETED
+            doc_for_record.save(update_fields=["ocr_confidence", "processing_status"])
+            created.append(typed_obj)
+
+    n = len(created)
+    avg_score = round(sum_score / n, 1) if n else 0.0
+    overall_risk = (
+        "critical" if risks["critical"] else
+        "high"     if risks["high"]     else
+        "medium"   if risks["medium"]   else
+        "low"
+    )
+
+    # Single parent audit dispatch (the rule engine can fan out to children).
+    # Skip silently when the broker is down so the request still completes fast.
+    if created:
+        from .signals import _broker_reachable
+        if _broker_reachable():
+            try:
+                from apps.rule_engine.tasks.audit_tasks_v2 import run_audit_compat_task
+                run_audit_compat_task.delay(
+                    document_id=str(created[0].id),
+                    document_type=doc_type,
+                    organization_id=str(org.id),
+                    triggered_by="multi_record_upload",
+                )
+            except Exception as exc:
+                logger.warning("[multi-record] parent audit dispatch failed: %s", exc)
+
+    elapsed = int((time.time() - start) * 1000)
+    first_id = str(created[0].id) if created else None
+
+    return {
+        "document_id":         first_id,
+        "base_document_id":    str(base_doc.id),
+        "document_type":       doc_type,
+        "document_type_ar":    DOCUMENT_TYPE_LABELS_AR.get(doc_type, doc_type),
+        "document_type_label": str(DOCUMENT_TYPE_LABELS.get(doc_type, doc_type)),
+        "filename":            filename,
+        "success":             n > 0,
+        "is_multi_record":     True,
+        "record_count":        n,
+        "truncated_at":        truncated_at,
+        "total_groups":        total_groups,
+        "validation_score":    avg_score,
+        "risk_level":          overall_risk,
+        "risk_breakdown":      risks,
+        "processing_ms":       elapsed,
+        "ai_summary":          f"تم إنشاء {n} سجل من الملف" + (
+            f" (مقتطع من أصل {total_groups})" if truncated_at else ""
+        ),
+    }
+
 
 def _process_typed_document(file_obj, filename: str, doc_type: str, org, user, request=None) -> dict:
     """
@@ -713,11 +1099,29 @@ def _process_typed_document(file_obj, filename: str, doc_type: str, org, user, r
             img_path = imgs[0]
 
     # ── 3. AI Extraction ────────────────────────────────────────────────────
-    # For structured files: pandas direct extraction is primary; OpenAI supplements
+    # For structured files: split into one record per detected entity (PO,
+    # receipt, etc.) using pandas. OpenAI is skipped for multi-record structured
+    # files because pandas already produces all the per-record fields we need —
+    # calling OpenAI on a 5000-row Excel would just hit token limits.
+    multi_records = []
     if ext in _STRUCTURED_EXTS:
-        pandas_data = _extract_from_pandas(file_path, ext, doc_type)
+        multi_records = _extract_records_from_pandas(file_path, ext, doc_type)
+
+    if multi_records and len(multi_records) > 1:
+        # Multi-record path: create N typed rows, one Document.
+        return _finalize_multi_record(
+            multi_records, base_doc, doc_type, org, user, ocr_confidence,
+            filename, start,
+        )
+
+    # Single-record path (legacy): pandas + OpenAI merge for structured files,
+    # OpenAI alone for everything else.
+    from core.services.ai_budget import org_context
+    if ext in _STRUCTURED_EXTS:
+        pandas_data = multi_records[0] if multi_records else {}
         try:
-            ai_data = extract_document(doc_type, img_path, raw_text)
+            with org_context(org.id if org else None):
+                ai_data = extract_document(doc_type, img_path, raw_text)
         except Exception as e:
             logger.warning(f"AI extraction failed for {filename}: {e}")
             ai_data = {}
@@ -729,53 +1133,19 @@ def _process_typed_document(file_obj, filename: str, doc_type: str, org, user, r
         ai_data = merged
     else:
         try:
-            ai_data = extract_document(doc_type, img_path, raw_text)
+            with org_context(org.id if org else None):
+                ai_data = extract_document(doc_type, img_path, raw_text)
         except Exception as e:
             logger.warning(f"AI extraction failed for {filename}: {e}")
             ai_data = {}
 
     # ── 4. Create typed model ───────────────────────────────────────────────
     typed_obj = _create_typed_record(doc_type, ai_data, base_doc, org, user)
-
-    # ── 4b. Persist canonical snapshot ──────────────────────────────────────
     _save_canonical(ai_data, doc_type, typed_obj.__class__.__name__, typed_obj.id)
 
-    # ── 5. Validation ───────────────────────────────────────────────────────
-    val_result = run_document_validation(doc_type, typed_obj)
+    # ── 5. Validation + finalisation ────────────────────────────────────────
+    val_result = _apply_validation_to_typed(typed_obj, ai_data, doc_type)
 
-    # Merge OpenAI audit results into validation_details
-    ai_audit = {
-        "validation_results":  ai_data.get("_validation_results", []),
-        "anomalies":           ai_data.get("_anomalies", []),
-        "compliance_review":   ai_data.get("_compliance_review", {}),
-        "recommendations":     ai_data.get("_recommendations", []),
-        "field_confidence":    ai_data.get("_field_confidence", {}),
-        "overall_confidence":  ai_data.get("_overall_confidence", 1.0),
-        "language_detected":   ai_data.get("_language_detected", ""),
-        "ai_risk_level":       ai_data.get("_overall_risk_level", ""),
-        "rule_details":        val_result["rule_details"],
-    }
-
-    # Use the higher risk level between AI audit and rule engine
-    ai_risk   = ai_data.get("_overall_risk_level", "low")
-    rule_risk = val_result["risk_level"]
-    _risk_rank = {"low": 0, "medium": 1, "high": 2, "critical": 3}
-    final_risk = ai_risk if _risk_rank.get(ai_risk, 0) >= _risk_rank.get(rule_risk, 0) else rule_risk
-
-    # Update typed object with validation results
-    typed_obj.validation_score  = val_result["validation_score"]
-    typed_obj.risk_level        = final_risk
-    typed_obj.rules_passed      = val_result["rules_passed"]
-    typed_obj.rules_failed      = val_result["rules_failed"]
-    typed_obj.failed_rule_codes = val_result["failed_rule_codes"]
-    typed_obj.validation_details= ai_audit
-    typed_obj.ai_summary        = ai_data.get("ai_summary", "")
-    typed_obj.audit_status      = (
-        "flagged" if final_risk in ["high", "critical"] else "validated"
-    )
-    typed_obj.save()
-
-    # Update base document status
     base_doc.ocr_confidence    = ocr_confidence
     base_doc.processing_status = Document.ProcessingStatus.COMPLETED
     base_doc.save(update_fields=["ocr_confidence", "processing_status"])
@@ -800,6 +1170,11 @@ def _process_typed_document(file_obj, filename: str, doc_type: str, org, user, r
 
 def _create_typed_record(doc_type: str, ai_data: dict, base_doc, org, user):
     """Instantiate and save the correct typed model from extracted AI data."""
+
+    # Phase-2 typed models use a unified, table-driven creation path.
+    from apps.documents.bulk_adapter import PHASE2_TYPES, create_phase2_record
+    if doc_type in PHASE2_TYPES:
+        return create_phase2_record(doc_type, ai_data or {}, base_doc, org, user)
 
     common = dict(organization=org, document=base_doc, uploaded_by=user)
 
@@ -978,27 +1353,43 @@ class TypedDocumentUploadView(APIView):
     def post(self, request):
         org = request.user.organization
         if not org:
-            return Response({"error": "المستخدم لا ينتمي لمؤسسة."}, status=400)
+            return Response({"error": _("User does not belong to an organization.")}, status=400)
 
         doc_type = request.data.get("document_type", "")
         if doc_type not in VALID_TYPES:
-            return Response({"error": f"نوع الوثيقة غير صحيح. الأنواع المتاحة: {VALID_TYPES}"}, status=400)
+            return Response(
+                {"error": _("Invalid document type. Available types: %(types)s") % {"types": VALID_TYPES}},
+                status=400,
+            )
 
         # Forward invoices to invoice upload endpoint
         if doc_type == "invoice":
-            return Response({"error": "للفواتير استخدم: POST /api/v1/invoices/upload/"}, status=400)
+            return Response(
+                {"error": _("For invoices use: POST /api/v1/invoices/upload/")},
+                status=400,
+            )
 
         uploaded_files = request.FILES.getlist("files") or (
             [request.FILES["file"]] if "file" in request.FILES else []
         )
         if not uploaded_files:
-            return Response({"error": "لم يتم رفع أي ملفات."}, status=400)
+            return Response({"error": _("No files were uploaded.")}, status=400)
 
         results, errors = [], []
+
+        from core.utils.file_validation import validate_uploaded_file
+        from rest_framework.exceptions import ValidationError as _ValidationError
 
         for f in uploaded_files:
             ext = os.path.splitext(f.name)[1].lower()
             try:
+                # MIME / magic-byte validation: catches a renamed-executable-as-pdf.
+                try:
+                    validate_uploaded_file(f, filename=f.name, check_content=True)
+                except _ValidationError as ve:
+                    errors.append({"filename": f.name, "error": str(ve.detail if hasattr(ve, "detail") else ve)})
+                    continue
+
                 if ext == ".zip":
                     zr, ze = _process_zip_typed(f, doc_type, org, request.user, request)
                     results.extend(zr); errors.extend(ze)
@@ -1010,7 +1401,7 @@ class TypedDocumentUploadView(APIView):
             except Exception as e:
                 logger.exception(f"Upload failed for {f.name}: {e}")
                 errors.append({
-                    "filename": f.name, 
+                    "filename": f.name,
                     "error": _("Processing error: %(detail)s") % {"detail": str(e)[:200]},
                 })
 
@@ -1161,7 +1552,7 @@ class PurchaseOrderApproveView(APIView):
         try:
             po = PurchaseOrder.objects.get(pk=pk, organization=request.user.organization)
         except PurchaseOrder.DoesNotExist:
-            return Response({"error": "أمر الشراء غير موجود."}, status=404)
+            return Response({"error": _("Purchase order not found.")}, status=404)
 
         action = request.data.get("action")
         if action == "approve":
@@ -1172,11 +1563,11 @@ class PurchaseOrderApproveView(APIView):
             po.reviewed_at = timezone.now()
         elif action == "reject":
             if not request.data.get("reason"):
-                return Response({"error": "سبب الرفض مطلوب."}, status=400)
+                return Response({"error": _("Rejection reason is required.")}, status=400)
             po.audit_status = "rejected"
             po.approval_status = PurchaseOrder.ApprovalStatus.REJECTED
         else:
-            return Response({"error": "action يجب أن يكون approve أو reject"}, status=400)
+            return Response({"error": _("action must be approve or reject")}, status=400)
 
         po.save()
         return Response({"id": str(po.id), "status": po.audit_status})

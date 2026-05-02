@@ -57,8 +57,9 @@ class AuditProcessingService:
         file_path = doc.file.path
         family = self.router.route(file_path)
 
-        # Step 1: Extract raw text
+        # Step 1: Extract raw text (and decide if Vision is preferred)
         raw_text = self._extract(file_path, family, doc)
+        use_vision = self._should_use_vision(family, raw_text)
 
         # Step 2: Normalize
         result = self.normalizer.normalize(raw_text)
@@ -93,8 +94,24 @@ class AuditProcessingService:
             else detected_type_raw
         )
 
-        # Step 4: AI audit
-        ai_result = self.ai.audit(normalized or raw_text, doc_type_hint=detected_type)
+        # Step 4: AI audit (Vision for images / image-based PDFs, text otherwise)
+        if use_vision:
+            try:
+                images = self._collect_images(file_path, family)
+                if images:
+                    ai_result = self.ai.audit_images(
+                        images,
+                        doc_type_hint=detected_type,
+                        language=language,
+                        ocr_text=normalized or raw_text,
+                    )
+                else:
+                    ai_result = self.ai.audit(normalized or raw_text, doc_type_hint=detected_type, language=language)
+            except Exception as exc:
+                logger.warning("Vision audit failed, falling back to text: %s", exc)
+                ai_result = self.ai.audit(normalized or raw_text, doc_type_hint=detected_type, language=language)
+        else:
+            ai_result = self.ai.audit(normalized or raw_text, doc_type_hint=detected_type, language=language)
 
         # Merge: use AI's detected type if higher confidence
         ai_type = ai_result.get("document_type", "")
@@ -162,6 +179,10 @@ class AuditProcessingService:
         language_hint = doc.language or "auto"
 
         if family == "pdf":
+            # Try embedded text first; OCR only if the PDF is image-based.
+            text = self.parser.parse_pdf_text(file_path)
+            if text and len(text.strip()) > 80:
+                return text
             return self._call_ocr(file_path, language_hint)
         elif family == "image":
             return self._call_ocr(file_path, language_hint)
@@ -171,6 +192,10 @@ class AuditProcessingService:
             return self.parser.parse_csv(file_path)
         elif family == "json":
             return self.parser.parse_json(file_path)
+        elif family == "xml":
+            return self.parser.parse_xml(file_path)
+        elif family == "text":
+            return self.parser.parse_text(file_path)
         elif family == "zip":
             result = self.zip_svc.extract_and_parse(file_path)
             if isinstance(result, dict):
@@ -182,6 +207,22 @@ class AuditProcessingService:
                 family,
             )
             return self._call_ocr(file_path, language_hint)
+
+    def _should_use_vision(self, family: str, raw_text: str) -> bool:
+        """Use Vision for images, and for PDFs when extracted text is sparse."""
+        if family == "image":
+            return True
+        if family == "pdf" and (not raw_text or len(raw_text.strip()) < 200):
+            return True
+        return False
+
+    def _collect_images(self, file_path: str, family: str) -> list:
+        """Build a list of image bytes/paths to send to Vision."""
+        if family == "image":
+            return [file_path]
+        if family == "pdf":
+            return self.parser.render_pdf_pages(file_path, max_pages=3, dpi=200)
+        return []
 
     def _call_ocr(self, file_path: str, language_hint: str) -> str:
         """Call OCR service with the appropriate method signature."""

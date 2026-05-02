@@ -1,0 +1,233 @@
+{% load i18n %}
+{% comment %}
+Findings Register — the canonical audit deliverable section.
+
+For each failed rule we surface:
+  • Severity badge (Critical/High/Medium/Low) — color-coded
+  • Rule code + auditor-readable title
+  • Failure count and unique-invoice count
+  • Financial impact (sum of affected invoice totals)
+  • Affected invoices as clickable chips (deep-link to invoice detail)
+  • Auditor recommendation (next action)
+
+Findings are pre-sorted by severity desc, financial impact desc.
+{% endcomment %}
+
+{% with reg=report.findings_register %}
+<section class="card p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5 print-break-avoid">
+
+  {# ── Header + severity strip ───────────────────────────────────────── #}
+  <div class="flex flex-col gap-3">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <div>
+        <h2 class="text-xl font-extrabold text-slate-900">{% trans "Findings Register" %}</h2>
+        <p class="text-xs text-slate-500 mt-1">
+          {% blocktrans count counter=reg.findings|length with affected=reg.total_invoices_affected %}{{ counter }} finding affecting {{ affected }} invoice(s){% plural %}{{ counter }} findings affecting {{ affected }} invoice(s){% endblocktrans %}
+        </p>
+      </div>
+      <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-bold bg-slate-900 text-white">
+        {% trans "ISA-Aligned Findings" %}
+      </span>
+    </div>
+
+    {# Severity KPI strip — clickable filter chips would be a future enhancement #}
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="rounded-2xl border-2 border-red-300 bg-red-50 p-3">
+        <div class="flex items-center gap-2 text-xs font-bold text-red-700 uppercase tracking-wider">
+          <span class="inline-block w-2 h-2 rounded-full bg-red-500"></span>
+          {% trans "Critical" %}
+        </div>
+        <div class="mt-1 text-2xl font-extrabold text-red-700">{{ reg.by_severity.critical|default:0 }}</div>
+      </div>
+      <div class="rounded-2xl border-2 border-orange-300 bg-orange-50 p-3">
+        <div class="flex items-center gap-2 text-xs font-bold text-orange-700 uppercase tracking-wider">
+          <span class="inline-block w-2 h-2 rounded-full bg-orange-500"></span>
+          {% trans "High" %}
+        </div>
+        <div class="mt-1 text-2xl font-extrabold text-orange-700">{{ reg.by_severity.high|default:0 }}</div>
+      </div>
+      <div class="rounded-2xl border-2 border-amber-300 bg-amber-50 p-3">
+        <div class="flex items-center gap-2 text-xs font-bold text-amber-700 uppercase tracking-wider">
+          <span class="inline-block w-2 h-2 rounded-full bg-amber-500"></span>
+          {% trans "Medium" %}
+        </div>
+        <div class="mt-1 text-2xl font-extrabold text-amber-700">{{ reg.by_severity.medium|default:0 }}</div>
+      </div>
+      <div class="rounded-2xl border-2 border-emerald-300 bg-emerald-50 p-3">
+        <div class="flex items-center gap-2 text-xs font-bold text-emerald-700 uppercase tracking-wider">
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+          {% trans "Low" %}
+        </div>
+        <div class="mt-1 text-2xl font-extrabold text-emerald-700">{{ reg.by_severity.low|default:0 }}</div>
+      </div>
+    </div>
+
+    {# Total exposure callout #}
+    <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+      <div class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 2v20M5 9l7-7 7 7M5 15l7 7 7-7"/></svg>
+        {% trans "Estimated financial exposure across all findings" %}
+      </div>
+      <div class="text-lg font-extrabold text-slate-900">
+        {{ reg.total_financial_impact|floatformat:2 }} <span class="text-xs font-bold text-slate-500">SAR</span>
+      </div>
+    </div>
+  </div>
+
+  {# ── Empty state when there are no findings yet ────────────────────── #}
+  {% if not reg.findings %}
+    <div class="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/60 p-8 text-center">
+      <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto text-emerald-500"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <p class="mt-3 text-sm font-bold text-slate-800">{% trans "No rule violations detected." %}</p>
+      <p class="mt-1 text-xs text-slate-500 max-w-md mx-auto leading-relaxed">{% trans "When invoices fail validation rules, each finding will appear here with severity, financial impact, and direct links to affected invoices." %}</p>
+    </div>
+  {% else %}
+
+  {# ── Findings table ───────────────────────────────────────────────── #}
+  <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-900 text-white">
+        <tr>
+          <th class="px-3 py-3 font-bold">{% trans "Severity" %}</th>
+          <th class="px-3 py-3 font-bold">{% trans "Rule" %}</th>
+          <th class="px-3 py-3 font-bold">{% trans "Title / Description" %}</th>
+          <th class="px-3 py-3 font-bold text-center">{% trans "Failures" %}</th>
+          <th class="px-3 py-3 font-bold text-center">{% trans "Invoices" %}</th>
+          <th class="px-3 py-3 font-bold">{% trans "Financial Impact" %}</th>
+          <th class="px-3 py-3 font-bold">{% trans "Affected Invoices" %}</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for f in reg.findings %}
+          <tr x-data="{ expanded: false }" class="align-top
+            {% if f.severity == 'critical' %}bg-red-50/40
+            {% elif f.severity == 'high' %}bg-orange-50/30
+            {% elif f.severity == 'medium' %}bg-amber-50/30
+            {% else %}bg-white{% endif %}">
+
+            {# Severity badge #}
+            <td class="px-3 py-3">
+              {% if f.severity == 'critical' %}
+                <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-extrabold bg-red-600 text-white">
+                  <span class="inline-block w-1.5 h-1.5 rounded-full bg-white"></span>{{ f.severity_label }}
+                </span>
+              {% elif f.severity == 'high' %}
+                <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-extrabold bg-orange-500 text-white">
+                  <span class="inline-block w-1.5 h-1.5 rounded-full bg-white"></span>{{ f.severity_label }}
+                </span>
+              {% elif f.severity == 'medium' %}
+                <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-extrabold bg-amber-500 text-white">
+                  <span class="inline-block w-1.5 h-1.5 rounded-full bg-white"></span>{{ f.severity_label }}
+                </span>
+              {% else %}
+                <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-extrabold bg-emerald-500 text-white">
+                  <span class="inline-block w-1.5 h-1.5 rounded-full bg-white"></span>{{ f.severity_label }}
+                </span>
+              {% endif %}
+            </td>
+
+            {# Rule code #}
+            <td class="px-3 py-3">
+              <div class="font-mono text-xs font-extrabold text-slate-900">{{ f.rule_code }}</div>
+              <div class="text-[10px] uppercase tracking-wider text-slate-500 mt-0.5">{{ f.group_label }}</div>
+            </td>
+
+            {# Title / description / recommendation #}
+            <td class="px-3 py-3 max-w-md">
+              <div class="font-semibold text-slate-800 leading-snug">{{ f.title }}</div>
+              <div class="mt-1 flex items-start gap-1.5 text-xs text-slate-600 leading-relaxed">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="flex-shrink-0 mt-0.5 text-blue-600"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span><strong class="text-blue-700">{% trans "Recommendation:" %}</strong> {{ f.recommendation }}</span>
+              </div>
+            </td>
+
+            {# Failure count #}
+            <td class="px-3 py-3 text-center">
+              <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-extrabold bg-slate-900 text-white">{{ f.failure_count }}</span>
+            </td>
+
+            {# Unique invoices #}
+            <td class="px-3 py-3 text-center">
+              <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold bg-slate-100 text-slate-800 border border-slate-200">{{ f.invoice_count }}</span>
+            </td>
+
+            {# Financial impact #}
+            <td class="px-3 py-3">
+              <div class="font-extrabold text-slate-900 whitespace-nowrap">{{ f.financial_impact|floatformat:2 }}</div>
+              <div class="text-[10px] uppercase tracking-wider text-slate-500">SAR</div>
+            </td>
+
+            {# Affected invoices (clickable chips, deep-link to invoice detail) #}
+            <td class="px-3 py-3 min-w-[260px]">
+              <div class="flex flex-wrap gap-1.5">
+                {% for inv in f.invoices|slice:":6" %}
+                  <a href="{{ detail_url_prefix|default:"/invoices/" }}{{ inv.id }}/" target="_blank" rel="noopener"
+                     class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 hover:border-blue-400 transition-colors"
+                     title="{{ inv.vendor }} — {{ inv.amount|floatformat:2 }} SAR">
+                    {{ inv.number }}
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg>
+                  </a>
+                {% endfor %}
+
+                {% if f.invoices|length > 6 %}
+                  <button type="button" @click="expanded = !expanded"
+                          class="print-hidden inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold bg-slate-900 text-white hover:bg-slate-700">
+                    <span x-show="!expanded">+{{ f.invoices|length|add:"-6" }} {% trans "more" %}</span>
+                    <span x-show="expanded">{% trans "Hide" %}</span>
+                  </button>
+                {% endif %}
+
+                {% if not f.invoices %}
+                  <span class="text-xs text-slate-400">{% trans "No specific invoices linked." %}</span>
+                {% endif %}
+              </div>
+
+              {# Expandable extra invoices #}
+              {% if f.invoices|length > 6 %}
+                <div x-show="expanded" x-transition x-cloak class="mt-2 print:hidden">
+                  <div class="flex flex-wrap gap-1.5">
+                    {% for inv in f.invoices %}
+                      {% if forloop.counter > 6 %}
+                        <a href="{{ detail_url_prefix|default:"/invoices/" }}{{ inv.id }}/" target="_blank" rel="noopener"
+                           class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100">
+                          {{ inv.number }}
+                        </a>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                </div>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% endif %}{# end findings/empty branching #}
+
+  {# ── Print-friendly: full invoice list per finding ─────────────────── #}
+  <div class="hidden print:block space-y-3">
+    {% for f in reg.findings %}
+      <div class="border-l-4 pl-3
+        {% if f.severity == 'critical' %}border-red-500
+        {% elif f.severity == 'high' %}border-orange-500
+        {% elif f.severity == 'medium' %}border-amber-500
+        {% else %}border-emerald-500{% endif %}">
+        <div class="font-extrabold text-slate-900 text-sm">{{ f.rule_code }} — {{ f.title }}</div>
+        <div class="text-xs text-slate-700 mt-1">
+          {% blocktrans with sev=f.severity_label cnt=f.invoice_count impact=f.financial_impact|floatformat:2 %}{{ sev }} severity · {{ cnt }} invoices · {{ impact }} SAR exposure{% endblocktrans %}
+        </div>
+        <div class="text-xs text-slate-700 mt-1">
+          <strong>{% trans "Recommendation:" %}</strong> {{ f.recommendation }}
+        </div>
+        <div class="text-xs text-slate-600 mt-1">
+          <strong>{% trans "Affected invoices:" %}</strong>
+          {% for inv in f.invoices %}{{ inv.number }}{% if not forloop.last %}, {% endif %}{% endfor %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+</section>
+{% endwith %}

@@ -1,0 +1,29 @@
+{
+  "invoice_info": {
+    "type": "Simplified Tax Invoice",
+    "number": "0529139",
+    "date": "2022-05-29",
+    "total_amount": 1200,
+    "currency": "SAR"
+  },
+  "seller": {
+    "name": "فلاي اكونت للسفر والسياحة",
+    "phone": "00966114819055",
+    "tax_number": "300530875400003"
+  },
+  "customer": {
+    "name": "محمد سليمان",
+    "phone": "0501239039"
+  },
+  "items": [
+    {"product": "تذاكر طيران", "price_excl_vat": 786.96, "vat": 13.04, "total": 800},
+    {"product": "فنادق", "price_excl_vat": 2434.78, "vat": 65.22, "total": 2500},
+    {"product": "سيارات", "price_excl_vat": 1173.91, "vat": 26.09, "total": 1200}
+  ],
+  "totals": {
+    "invoice_value": 1200,
+    "tax_amount": 104.35,
+    "paid_amount": 500,
+    "remaining_amount": 700
+  }
+}

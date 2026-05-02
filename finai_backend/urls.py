@@ -6,7 +6,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
-from core.health_check_views import FullHealthCheckView, HealthCheckView, OpenAIHealthView, PipelineStatusView
+from core.health_check_views import FullHealthCheckView, HealthCheckView, OpenAIHealthView, PipelineStatusView, ExtendedHealthView
 from apps.audit.views import AuditDashboardOverviewView
 from apps.invoices.views import (
     InvoiceApproveView,
@@ -76,9 +76,14 @@ urlpatterns = [
     path("api/v1/invoices/", include("apps.invoices.urls")),
     path("api/v1/reports/", include("apps.reports.urls")),
     path("api/v1/rule-engine/", include("apps.rule_engine.api.urls")),
+    path("api/v1/notifications/", include("apps.notifications.urls")),
+    path("api/v1/assistant/", include("apps.assistant.urls")),
+    path("api/v1/webhooks/", include("apps.webhooks.urls")),
+    path("api/v1/export/", include("apps.data_export.urls")),
     path("api/v1/health/", HealthCheckView.as_view(), name="api-health"),
     path("api/v1/health/full/", FullHealthCheckView.as_view(), name="api-health-full"),
     path("api/v1/health/openai/", OpenAIHealthView.as_view(), name="api-health-openai"),
+    path("api/v1/health/extended/", ExtendedHealthView.as_view(), name="api-health-extended"),
     path("api/v1/status/", PipelineStatusView.as_view(), name="api-status"),
     path("api/v1/users/", UserListView.as_view(), name="user-list-compat"),
     path("api/v1/vendors/", VendorListView.as_view(), name="vendor-list-compat"),
@@ -92,3 +97,4 @@ if settings.DEBUG:
 
 handler404 = "apps.frontend.page_views.page_not_found"
 handler500 = "apps.frontend.page_views.server_error"
+handler403 = "apps.frontend.page_views.permission_denied"

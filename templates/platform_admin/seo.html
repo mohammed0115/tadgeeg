@@ -1,7 +1,7 @@
 {% extends "layouts/base_platform_admin.html" %}
 {% load i18n %}
-{% block page_title %}إعدادات SEO{% endblock %}
-{% block breadcrumb_current %}تحسين محركات البحث{% endblock %}
+{% block page_title %}{% trans "SEO Settings" %}{% endblock %}
+{% block breadcrumb_current %}{% trans "Search Engine Optimization" %}{% endblock %}
 
 {% block content %}
 <div x-data="seoSettings()" x-init="init()" class="space-y-5 fade-in">
@@ -9,14 +9,14 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">تحسين محركات البحث</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">إعدادات SEO وبيانات التعريف لكل صفحة</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans "Search Engine Optimization" %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans "SEO settings and metadata for each page" %}</p>
     </div>
   </div>
 
   <!-- Page Selector -->
   <div class="card p-4 flex flex-wrap items-center gap-2">
-    <span class="text-xs font-semibold text-slate-500 ml-1">اختر الصفحة:</span>
+    <span class="text-xs font-semibold text-slate-500 ml-1">{% trans "Select Page:" %}</span>
     <template x-for="page in pages" :key="page.key">
       <button @click="selectPage(page.key)"
               class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all border"
@@ -46,12 +46,12 @@
         <div class="card p-6 space-y-5">
           <h3 class="font-bold text-slate-800 dark:text-white flex items-center gap-2">
             <i data-lucide="search" class="w-4 h-4 text-indigo-500"></i>
-            Meta Tags
+            {% trans "Meta Tags" %}
           </h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <div class="flex items-center justify-between mb-1.5">
-                <label class="text-xs font-semibold text-slate-500">Meta Title (EN)</label>
+                <label class="text-xs font-semibold text-slate-500">{% trans "Meta Title (EN)" %}</label>
                 <span class="text-[10px]" :class="(form.meta_title||'').length > 60 ? 'text-red-500' : 'text-slate-400'">
                   <span x-text="(form.meta_title||'').length"></span>/60
                 </span>
@@ -62,14 +62,14 @@
             </div>
             <div>
               <div class="flex items-center justify-between mb-1.5">
-                <label class="text-xs font-semibold text-slate-500">Meta Title (عربي)</label>
+                <label class="text-xs font-semibold text-slate-500">{% trans "Meta Title (Arabic)" %}</label>
                 <span class="text-[10px] text-slate-400"><span x-text="(form.meta_title_ar||'').length"></span>/60</span>
               </div>
               <input type="text" x-model="form.meta_title_ar" class="input" dir="rtl" maxlength="70">
             </div>
             <div class="md:col-span-2">
               <div class="flex items-center justify-between mb-1.5">
-                <label class="text-xs font-semibold text-slate-500">Meta Description (EN)</label>
+                <label class="text-xs font-semibold text-slate-500">{% trans "Meta Description (EN)" %}</label>
                 <span class="text-[10px]" :class="(form.meta_description||'').length > 160 ? 'text-red-500' : 'text-slate-400'">
                   <span x-text="(form.meta_description||'').length"></span>/160
                 </span>
@@ -77,11 +77,11 @@
               <textarea x-model="form.meta_description" class="input" rows="3" maxlength="165"></textarea>
             </div>
             <div class="md:col-span-2">
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">Meta Description (عربي)</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Meta Description (Arabic)" %}</label>
               <textarea x-model="form.meta_description_ar" class="input" rows="3" dir="rtl"></textarea>
             </div>
             <div class="md:col-span-2">
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">Keywords (EN)</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Keywords (EN)" %}</label>
               <input type="text" x-model="form.keywords" class="input" placeholder="audit, ZATCA, compliance, ...">
             </div>
           </div>
@@ -90,22 +90,22 @@
         <div class="card p-6 space-y-5">
           <h3 class="font-bold text-slate-800 dark:text-white flex items-center gap-2">
             <i data-lucide="share-2" class="w-4 h-4 text-violet-500"></i>
-            Open Graph / Social
+            {% trans "Open Graph / Social" %}
           </h3>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">OG Title</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "OG Title" %}</label>
               <input type="text" x-model="form.og_title" class="input">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">OG Type</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "OG Type" %}</label>
               <select x-model="form.og_type" class="select w-full">
                 <option value="website">website</option>
                 <option value="article">article</option>
               </select>
             </div>
             <div class="md:col-span-2">
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">OG Image URL</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "OG Image URL" %}</label>
               <div class="flex gap-3">
                 <input type="url" x-model="form.og_image" class="input flex-1" placeholder="https://...og-image.jpg">
                 <template x-if="form.og_image">
@@ -114,7 +114,7 @@
               </div>
             </div>
             <div class="md:col-span-2">
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">Canonical URL</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Canonical URL" %}</label>
               <input type="url" x-model="form.canonical_url" class="input" placeholder="https://getsolution.com/...">
             </div>
           </div>
@@ -123,7 +123,7 @@
         <div class="flex justify-end">
           <button @click="save()" :disabled="saving" class="btn-primary">
             <i data-lucide="save" class="w-4 h-4"></i>
-            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ إعدادات SEO'"></span>
+            <span x-text="saving ? i18nSaving : i18nSaveSeo"></span>
           </button>
         </div>
       </div>
@@ -133,44 +133,44 @@
         <div class="card p-5 space-y-3">
           <p class="text-xs font-semibold text-slate-500 flex items-center gap-1">
             <i data-lucide="search" class="w-3.5 h-3.5"></i>
-            معاينة نتيجة Google
+            {% trans "Google Search Preview" %}
           </p>
           <div class="space-y-1 p-3 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
             <p class="text-xs text-emerald-700 dark:text-emerald-500">getsolution.com/<span x-text="selectedPageKey || ''"></span></p>
             <p class="text-blue-700 dark:text-blue-400 text-base font-medium leading-tight"
-               x-text="form.meta_title || 'عنوان الصفحة'"
+               x-text="form.meta_title || i18nPageTitlePlaceholder"
                :class="(form.meta_title||'').length > 60 ? 'text-red-500' : ''"></p>
             <p class="text-slate-600 dark:text-slate-400 text-xs leading-relaxed"
-               x-text="form.meta_description || 'وصف الصفحة يظهر هنا...'"></p>
+               x-text="form.meta_description || i18nDescPlaceholder"></p>
           </div>
         </div>
         <div class="card p-5 space-y-2">
-          <p class="text-xs font-semibold text-slate-500">Checklist</p>
+          <p class="text-xs font-semibold text-slate-500">{% trans "Checklist" %}</p>
           <div class="space-y-1.5">
             <div class="flex items-center gap-2 text-xs"
                  :class="form.meta_title ? 'text-emerald-600' : 'text-slate-400'">
               <i :data-lucide="form.meta_title ? 'check-circle' : 'circle'" class="w-3.5 h-3.5"></i>
-              Meta Title
+              {% trans "Meta Title" %}
             </div>
             <div class="flex items-center gap-2 text-xs"
                  :class="form.meta_description ? 'text-emerald-600' : 'text-slate-400'">
               <i :data-lucide="form.meta_description ? 'check-circle' : 'circle'" class="w-3.5 h-3.5"></i>
-              Meta Description
+              {% trans "Meta Description" %}
             </div>
             <div class="flex items-center gap-2 text-xs"
                  :class="form.og_image ? 'text-emerald-600' : 'text-slate-400'">
               <i :data-lucide="form.og_image ? 'check-circle' : 'circle'" class="w-3.5 h-3.5"></i>
-              OG Image
+              {% trans "OG Image" %}
             </div>
             <div class="flex items-center gap-2 text-xs"
                  :class="(form.meta_title||'').length <= 60 ? 'text-emerald-600' : 'text-red-500'">
               <i :data-lucide="(form.meta_title||'').length <= 60 ? 'check-circle' : 'alert-circle'" class="w-3.5 h-3.5"></i>
-              Title length ≤ 60
+              {% trans "Title length ≤ 60" %}
             </div>
             <div class="flex items-center gap-2 text-xs"
                  :class="(form.meta_description||'').length <= 160 ? 'text-emerald-600' : 'text-red-500'">
               <i :data-lucide="(form.meta_description||'').length <= 160 ? 'check-circle' : 'alert-circle'" class="w-3.5 h-3.5"></i>
-              Description length ≤ 160
+              {% trans "Description length ≤ 160" %}
             </div>
           </div>
         </div>
@@ -189,17 +189,24 @@ function seoSettings() {
     saving: false,
     selectedPageKey: '',
     pages: [
-      { key: 'home',     label: 'الرئيسية',   icon: 'home' },
-      { key: 'about',    label: 'من نحن',      icon: 'info' },
-      { key: 'services', label: 'الخدمات',     icon: 'layers' },
-      { key: 'pricing',  label: 'الأسعار',     icon: 'tag' },
-      { key: 'contact',  label: 'تواصل',       icon: 'mail' },
-      { key: 'jobs',     label: 'الوظائف',     icon: 'briefcase' },
+      { key: 'home',     label: "{% trans 'Home' %}",     icon: 'home' },
+      { key: 'about',    label: "{% trans 'About Us' %}", icon: 'info' },
+      { key: 'services', label: "{% trans 'Services' %}", icon: 'layers' },
+      { key: 'pricing',  label: "{% trans 'Pricing' %}",  icon: 'tag' },
+      { key: 'contact',  label: "{% trans 'Contact' %}",  icon: 'mail' },
+      { key: 'jobs',     label: "{% trans 'Jobs' %}",     icon: 'briefcase' },
     ],
     form: {
       meta_title: '', meta_title_ar: '', meta_description: '', meta_description_ar: '',
       keywords: '', og_title: '', og_type: 'website', og_image: '', canonical_url: '',
     },
+    i18nSaving:               "{% trans 'Saving...' %}",
+    i18nSaveSeo:              "{% trans 'Save SEO Settings' %}",
+    i18nPageTitlePlaceholder: "{% trans 'Page title' %}",
+    i18nDescPlaceholder:      "{% trans 'Page description appears here...' %}",
+    i18nLoadFail:             "{% trans 'Failed to load SEO settings' %}",
+    i18nSaveOk:               "{% trans 'SEO settings saved' %}",
+    i18nSaveFail:             "{% trans 'Save failed' %}",
 
     async init() {
       await this.selectPage('home');
@@ -219,7 +226,7 @@ function seoSettings() {
           Object.assign(this.form, data);
         }
       } catch (e) {
-        notify('تعذّر تحميل إعدادات SEO', 'error');
+        notify(this.i18nLoadFail, 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());
@@ -233,10 +240,10 @@ function seoSettings() {
           method: 'POST',
           body: JSON.stringify({ page: this.selectedPageKey, ...this.form }),
         });
-        if (res && res.ok) notify('تم حفظ إعدادات SEO', 'success');
-        else notify('فشل الحفظ', 'error');
+        if (res && res.ok) notify(this.i18nSaveOk, 'success');
+        else notify(this.i18nSaveFail, 'error');
       } catch (e) {
-        notify('فشل الحفظ', 'error');
+        notify(this.i18nSaveFail, 'error');
       } finally {
         this.saving = false;
       }

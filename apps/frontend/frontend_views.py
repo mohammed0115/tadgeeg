@@ -6,6 +6,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
+from django.utils.translation import gettext as _
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 
@@ -84,7 +85,7 @@ def login_view(request):
             except Exception:
                 pass
             return JsonResponse({'success': True, 'redirect': '/dashboard/', 'tokens': tokens})
-        return JsonResponse({'success': False, 'error': 'البريد الإلكتروني أو كلمة المرور غير صحيحة'})
+        return JsonResponse({'success': False, 'error': _('Email or password is incorrect')})
 
     return render(request, 'auth/login.html')
 

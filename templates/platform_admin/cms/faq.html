@@ -1,8 +1,8 @@
 {% extends "layouts/base_platform_admin.html" %}
 {% load i18n %}
-{% block page_title %}الأسئلة الشائعة{% endblock %}
-{% block breadcrumb_parent %}إدارة المحتوى{% endblock %}
-{% block breadcrumb_current %}الأسئلة الشائعة{% endblock %}
+{% block page_title %}{% trans 'FAQ' %}{% endblock %}
+{% block breadcrumb_parent %}{% trans 'Content Management' %}{% endblock %}
+{% block breadcrumb_current %}{% trans 'FAQ' %}{% endblock %}
 
 {% block content %}
 <div x-data="faqEditor()" x-init="init()" class="space-y-5 fade-in">
@@ -10,26 +10,26 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">الأسئلة الشائعة</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">إدارة الأسئلة والأجوبة المعروضة على الموقع</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans 'FAQ' %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans 'Manage questions and answers shown on the site' %}</p>
     </div>
     <button @click="addFaq()" class="btn-primary">
       <i data-lucide="plus" class="w-4 h-4"></i>
-      إضافة سؤال
+      {% trans 'Add Question' %}
     </button>
   </div>
 
   <!-- Filter -->
   <div class="card p-4 flex flex-wrap items-center gap-3">
     <select x-model="categoryFilter" @change="filterFaqs()" class="select">
-      <option value="">جميع الفئات</option>
+      <option value="">{% trans 'All Categories' %}</option>
       <template x-for="cat in categories" :key="cat">
         <option :value="cat" x-text="cat"></option>
       </template>
     </select>
     <input type="text" x-model.debounce.300ms="searchQuery" @input="filterFaqs()"
-           class="input max-w-xs" placeholder="البحث في الأسئلة...">
-    <span class="text-xs text-slate-500 mr-auto" x-text="filteredFaqs.length + ' سؤال'"></span>
+           class="input max-w-xs" placeholder="{% trans 'Search in questions...' %}">
+    <span class="text-xs text-slate-500 mr-auto" x-text="filteredFaqs.length + " " + "{% trans 'questions' %}""></span>
   </div>
 
   <!-- Loading -->
@@ -50,7 +50,7 @@
       <template x-if="filteredFaqs.length === 0">
         <div class="card p-12 text-center">
           <i data-lucide="help-circle" class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3"></i>
-          <p class="text-slate-500 text-sm">لا توجد أسئلة. انقر "إضافة سؤال" للبدء.</p>
+          <p class="text-slate-500 text-sm">{% trans 'No questions. Click "Add Question" to start.' %}</p>
         </div>
       </template>
       <template x-for="(faq, idx) in filteredFaqs" :key="faq.id || idx">
@@ -60,12 +60,12 @@
               <div class="w-6 h-6 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center flex-shrink-0">
                 <span class="text-xs font-bold text-indigo-600" x-text="idx+1"></span>
               </div>
-              <p class="font-semibold text-slate-800 dark:text-white text-sm truncate" x-text="faq.question_ar || faq.question || 'سؤال جديد'"></p>
+              <p class="font-semibold text-slate-800 dark:text-white text-sm truncate" x-text="faq.question_ar || faq.question || 'New question'"></p>
             </div>
             <div class="flex items-center gap-1 flex-shrink-0">
               <label class="flex items-center gap-1 text-xs text-slate-500 cursor-pointer">
                 <input type="checkbox" x-model="faq.is_active" class="rounded">
-                نشط
+                {% trans 'Active' %}
               </label>
               <button @click="removeFaq(idx)" class="p-1.5 text-slate-400 hover:text-red-500">
                 <i data-lucide="trash-2" class="w-4 h-4"></i>
@@ -74,27 +74,27 @@
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">السؤال (EN)</label>
-              <input type="text" x-model="faq.question" class="input" placeholder="Question in English?">
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Question (EN)' %}</label>
+              <input type="text" x-model="faq.question" class="input" placeholder="{% trans 'Question in English?' %}">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">السؤال (عربي)</label>
-              <input type="text" x-model="faq.question_ar" class="input" dir="rtl" placeholder="السؤال بالعربية؟">
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Question (Arabic)' %}</label>
+              <input type="text" x-model="faq.question_ar" class="input" dir="rtl" placeholder="{% trans 'Question in Arabic?' %}">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الجواب (EN)</label>
-              <textarea x-model="faq.answer" class="input" rows="3" placeholder="Answer in English..."></textarea>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Answer (EN)' %}</label>
+              <textarea x-model="faq.answer" class="input" rows="3" placeholder="{% trans 'Answer in English...' %}"></textarea>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الجواب (عربي)</label>
-              <textarea x-model="faq.answer_ar" class="input" rows="3" dir="rtl" placeholder="الجواب بالعربية..."></textarea>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Answer (Arabic)' %}</label>
+              <textarea x-model="faq.answer_ar" class="input" rows="3" dir="rtl" placeholder="{% trans 'Answer in Arabic...' %}"></textarea>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الفئة</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Category' %}</label>
               <input type="text" x-model="faq.category" class="input" placeholder="General">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1.5">الترتيب</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans 'Order' %}</label>
               <input type="number" x-model.number="faq.order" class="input" placeholder="1">
             </div>
           </div>
@@ -104,7 +104,7 @@
         <div class="flex justify-end">
           <button @click="saveAll()" :disabled="saving" class="btn-primary">
             <i data-lucide="save" class="w-4 h-4"></i>
-            <span x-text="saving ? 'جاري الحفظ...' : 'حفظ جميع الأسئلة'"></span>
+            <span x-text="saving ? 'Saving...' : 'Save All Questions'"></span>
           </button>
         </div>
       </template>
@@ -137,7 +137,7 @@ function faqEditor() {
           this.filteredFaqs = [...this.faqs];
         }
       } catch (e) {
-        notify('تعذّر تحميل الأسئلة', 'error');
+        notify('Failed to load questions', 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());
@@ -173,10 +173,10 @@ function faqEditor() {
           method: 'PUT',
           body: JSON.stringify(this.faqs),
         });
-        if (res && res.ok) notify('تم حفظ الأسئلة', 'success');
-        else notify('فشل الحفظ', 'error');
+        if (res && res.ok) notify('Questions saved', 'success');
+        else notify('Save failed', 'error');
       } catch (e) {
-        notify('فشل الحفظ', 'error');
+        notify('Save failed', 'error');
       } finally {
         this.saving = false;
       }

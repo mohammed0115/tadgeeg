@@ -1,0 +1,16 @@
+<WaterBill>
+    <AccountInfo>
+        <AccountNumber>948737</AccountNumber>
+        <CustomerName>طه علي أحمد السراجي</CustomerName>
+        <BillingMonth>January 2024</BillingMonth>
+    </AccountInfo>
+    <FinancialDetails>
+        <WaterCharge>1350.00</WaterCharge>
+        <SanitationCharge>5000.00</SanitationCharge>
+        <Arrears>4689.86</Arrears>
+        <LocalCouncilFee>190.50</LocalCouncilFee>
+        <TotalMonthly>6350.00</TotalMonthly>
+        <PaidAmount>4000.00</PaidAmount>
+        <BalanceDue>7955.36</BalanceDue>
+    </Financials>
+</WaterBill>

@@ -1,7 +1,7 @@
 {% extends "layouts/base_vendor_dashboard.html" %}
 {% load i18n %}
-{% block page_title %}المجلدات{% endblock %}
-{% block breadcrumb_current %}المجلدات{% endblock %}
+{% block page_title %}{% trans "Folders" %}{% endblock %}
+{% block breadcrumb_current %}{% trans "Folders" %}{% endblock %}
 
 {% block content %}
 <div x-data="foldersManager()" x-init="init()" class="space-y-5 fade-in">
@@ -9,12 +9,12 @@
   <!-- Header -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-black text-slate-900 dark:text-white">المجلدات</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">تنظيم ملفاتك في مجلدات</p>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans "Folders" %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">{% trans "Organize your files in folders" %}</p>
     </div>
     <button @click="openCreate()" class="btn-primary">
       <i data-lucide="folder-plus" class="w-4 h-4"></i>
-      مجلد جديد
+      {% trans "New Folder" %}
     </button>
   </div>
 
@@ -22,11 +22,11 @@
   <div class="flex items-center gap-1 text-sm flex-wrap">
     <button @click="navigateTo(null)" class="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
       <i data-lucide="home" class="w-3.5 h-3.5"></i>
-      الجذر
+      {% trans "Root" %}
     </button>
     <template x-for="(crumb, idx) in breadcrumb" :key="crumb.id">
       <div class="flex items-center gap-1">
-        <i data-lucide="chevron-left" class="w-3.5 h-3.5 text-slate-400"></i>
+        <i data-lucide="chevron-left" class="w-3.5 h-3.5 text-slate-400 rtl:rotate-180"></i>
         <button @click="navigateTo(crumb.id)"
                 class="text-sm"
                 :class="idx === breadcrumb.length - 1 ? 'font-semibold text-slate-700 dark:text-slate-200' : 'text-blue-600 dark:text-blue-400 hover:underline'"
@@ -53,10 +53,10 @@
       <template x-if="folders.length === 0 && files.length === 0">
         <div class="card p-12 text-center">
           <i data-lucide="folder-open" class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3"></i>
-          <p class="text-slate-500 text-sm">المجلد فارغ</p>
+          <p class="text-slate-500 text-sm">{% trans "This folder is empty" %}</p>
           <button @click="openCreate()" class="btn-ghost text-xs mt-4 mx-auto">
             <i data-lucide="folder-plus" class="w-4 h-4"></i>
-            إنشاء مجلد فرعي
+            {% trans "Create subfolder" %}
           </button>
         </div>
       </template>
@@ -76,7 +76,7 @@
               </button>
             </div>
             <p class="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate" x-text="folder.name"></p>
-            <p class="text-[10px] text-slate-400" x-text="(folder.files_count || 0) + ' ملف'"></p>
+            <p class="text-[10px] text-slate-400" x-text="(folder.files_count || 0) + ' ' + t('units.files')"></p>
           </div>
         </template>
 
@@ -107,21 +107,21 @@
     <div class="modal-backdrop" @click.self="showModal=false">
       <div class="modal-box max-w-sm">
         <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700/30">
-          <h3 class="font-bold text-slate-800 dark:text-white">مجلد جديد</h3>
+          <h3 class="font-bold text-slate-800 dark:text-white">{% trans "New Folder" %}</h3>
           <button @click="showModal=false"><i data-lucide="x" class="w-5 h-5 text-slate-400"></i></button>
         </div>
         <div class="p-6 space-y-4">
           <div>
-            <label class="block text-xs font-semibold text-slate-500 mb-1.5">اسم المجلد</label>
+            <label class="block text-xs font-semibold text-slate-500 mb-1.5">{% trans "Folder Name" %}</label>
             <input type="text" x-model="newFolderName" @keyup.enter="createFolder()" class="input"
-                   placeholder="مثال: فواتير 2025" autofocus>
+                   placeholder="{% trans 'e.g. Invoices 2025' %}" autofocus>
           </div>
         </div>
         <div class="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-700/30">
-          <button @click="showModal=false" class="btn-ghost">إلغاء</button>
+          <button @click="showModal=false" class="btn-ghost">{% trans "Cancel" %}</button>
           <button @click="createFolder()" :disabled="!newFolderName.trim() || saving" class="btn-primary">
             <i data-lucide="folder-plus" class="w-4 h-4"></i>
-            إنشاء
+            {% trans "Create" %}
           </button>
         </div>
       </div>
@@ -154,7 +154,7 @@ function foldersManager() {
           this.files   = data.files   || [];
         }
       } catch (e) {
-        notify('تعذّر تحميل المجلدات', 'error');
+        notify(t('msg.folder_load_fail'), 'error');
       } finally {
         this.loading = false;
         this.$nextTick(() => lucide.createIcons());
@@ -195,25 +195,25 @@ function foldersManager() {
         if (res && res.ok) {
           const folder = await res.json();
           this.folders.push(folder);
-          notify('تم إنشاء المجلد', 'success');
+          notify(t('msg.folder_created'), 'success');
           this.showModal = false;
           this.$nextTick(() => lucide.createIcons());
         } else {
-          notify('فشل إنشاء المجلد', 'error');
+          notify(t('msg.folder_create_fail'), 'error');
         }
       } catch (e) {
-        notify('فشل إنشاء المجلد', 'error');
+        notify(t('msg.folder_create_fail'), 'error');
       } finally {
         this.saving = false;
       }
     },
 
     async deleteFolder(id) {
-      if (!confirm('هل أنت متأكد من حذف هذا المجلد وكل محتوياته؟')) return;
+      if (!confirm(t('msg.delete_folder_confirm'))) return;
       const res = await apiFetch(`/api/v1/documents/folders/${id}/`, { method: 'DELETE' });
       if (res && (res.ok || res.status === 204)) {
         this.folders = this.folders.filter(f => f.id !== id);
-        notify('تم حذف المجلد', 'success');
+        notify(t('msg.folder_deleted'), 'success');
       }
     },
   };

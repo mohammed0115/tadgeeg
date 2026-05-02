@@ -124,4 +124,36 @@ urlpatterns = [
     path('documents/vat-returns/<uuid:pk>/', views.vat_return_detail, name='vat_return_detail'),
     path('documents/fixed-assets/<uuid:pk>/', views.fixed_asset_detail, name='fixed_asset_detail'),
     path('documents/sales-receipts/<uuid:pk>/', views.sales_receipt_detail, name='sales_receipt_detail'),
+
+    # Phase 4 — typed document list pages
+    path('documents/sales-orders/', views.sales_orders, name='sales_orders'),
+    path('documents/quotations/', views.quotations, name='quotations'),
+    path('documents/proforma-invoices/', views.proforma_invoices, name='proforma_invoices'),
+    path('documents/receipt-vouchers/', views.receipt_vouchers, name='receipt_vouchers'),
+    path('documents/cash-vouchers/', views.cash_vouchers, name='cash_vouchers'),
+    path('documents/general-ledgers/', views.general_ledgers, name='general_ledgers'),
+    path('documents/ledgers/', views.ledgers, name='ledgers'),
+    path('documents/contracts/', views.contracts, name='contracts'),
+    path('documents/supplier-statements/', views.supplier_statements, name='supplier_statements'),
+    path('documents/customer-statements/', views.customer_statements, name='customer_statements'),
+
+    # Phase 4 — typed document detail pages
+    path('documents/sales-orders/<uuid:pk>/', views.sales_order_detail, name='sales_order_detail'),
+    path('documents/quotations/<uuid:pk>/', views.quotation_detail, name='quotation_detail'),
+    path('documents/proforma-invoices/<uuid:pk>/', views.proforma_invoice_detail, name='proforma_invoice_detail'),
+    path('documents/receipt-vouchers/<uuid:pk>/', views.receipt_voucher_detail, name='receipt_voucher_detail'),
+    path('documents/cash-vouchers/<uuid:pk>/', views.cash_voucher_detail, name='cash_voucher_detail'),
+    path('documents/general-ledgers/<uuid:pk>/', views.general_ledger_detail, name='general_ledger_detail'),
+    path('documents/ledgers/<uuid:pk>/', views.ledger_detail, name='ledger_detail'),
+    path('documents/contracts/<uuid:pk>/', views.contract_detail, name='contract_detail'),
+    path('documents/supplier-statements/<uuid:pk>/', views.supplier_statement_detail, name='supplier_statement_detail'),
+    path('documents/customer-statements/<uuid:pk>/', views.customer_statement_detail, name='customer_statement_detail'),
+
+    # GRN, Payment Voucher, Journal Entry — completes the 20-doc-type catalog
+    path('documents/grns/',                   views.goods_receipt_notes,       name='goods_receipt_notes'),
+    path('documents/grns/<uuid:pk>/',         views.goods_receipt_note_detail, name='goods_receipt_note_detail'),
+    path('documents/payment-vouchers/',       views.payment_vouchers,          name='payment_vouchers'),
+    path('documents/payment-vouchers/<uuid:pk>/', views.payment_voucher_detail, name='payment_voucher_detail'),
+    path('documents/journal-entries/',        views.journal_entries,           name='journal_entries'),
+    path('documents/journal-entries/<uuid:pk>/', views.journal_entry_detail,    name='journal_entry_detail'),
 ]

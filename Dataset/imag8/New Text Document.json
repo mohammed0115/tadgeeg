@@ -1,0 +1,49 @@
+{
+  "invoice_header": {
+    "invoice_type": "فاتورة ضريبية مبسطة / Simplified Tax Invoice",
+    "invoice_number": "0529139",
+    "date": "2022-05-29",
+    "total_due": 1200,
+    "currency": "ريال سعودي"
+  },
+  "seller_details": {
+    "name": "فلاي اكونت للسفر والسياحة",
+    "phone": "00966114819055",
+    "address": "الرياض - شارع الأمير نواف بن عبد العزيز",
+    "tax_id": "300530875400003"
+  },
+  "customer_details": {
+    "name": "محمد سليمان",
+    "phone": "0501239039",
+    "tax_id": "123123123123"
+  },
+  "line_items": [
+    {
+      "product": "تذاكر طيران",
+      "reference": "3523123",
+      "amount_excl_vat": 786.96,
+      "vat": 13.04,
+      "total": 800
+    },
+    {
+      "product": "فنادق",
+      "reference": "213123",
+      "amount_excl_vat": 2434.78,
+      "vat": 65.22,
+      "total": 2500
+    },
+    {
+      "product": "سيارات",
+      "reference": "123523123",
+      "amount_excl_vat": 1173.91,
+      "vat": 26.09,
+      "total": 1200
+    }
+  ],
+  "financial_summary": {
+    "invoice_value": 1200,
+    "paid_vat": 104.35,
+    "paid_amount": 500,
+    "remaining_amount": 700
+  }
+}

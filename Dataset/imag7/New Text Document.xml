@@ -1,0 +1,29 @@
+<InvoiceDocument>
+    <Header>
+        <Number>248</Number>
+        <Date>2022-01-25</Date>
+        <Vendor>معرض الإسراء للأدوات الكهربائية</Vendor>
+    </Header>
+    <Items>
+        <Item>
+            <Name>مروحة كهربائية ستاند</Name>
+            <Qty>1</Qty>
+            <Amount>500</Amount>
+        </Item>
+        <Item>
+            <Name>ثلاجة 18 قدم</Name>
+            <Qty>1</Qty>
+            <Amount>6500</Amount>
+        </Item>
+        <Item>
+            <Name>كولمان لحفظ المياه</Name>
+            <Qty>1</Qty>
+            <Amount>1000</Amount>
+        </Item>
+    </Items>
+    <Financials>
+        <Discount>100</Discount>
+        <Tax>500</Tax>
+        <TotalAmount>8400</TotalAmount>
+    </Financials>
+</InvoiceDocument>

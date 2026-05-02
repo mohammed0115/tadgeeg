@@ -1,0 +1,258 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n doc_filters %}
+{% comment %}
+Generic typed-document detail page. View passes:
+    doc                 — the model instance
+    doc_type_label      — section title
+    doc_type_icon       — Lucide icon name
+    list_url            — URL to the parent listing
+    field_groups        — [{title, fields:[{key,label,kind?}]}]
+    failed_rules        — [{rule_code, name, description, severity}]
+                          (resolved via the rule catalog when possible)
+{% endcomment %}
+
+{% block title %}{{ doc_type_label }} — {{ doc.id|stringformat:"s"|slice:":8" }}{% endblock %}
+{% block nav_documents %}active{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <a href="{{ list_url }}" style="color:var(--text-muted)">{{ doc_type_label }}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "Details" %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div style="display:flex; align-items:center; gap:18px;">
+    <div style="width:56px;height:56px;border-radius:16px;background:#e0f2fe;color:#075985;display:flex;align-items:center;justify-content:center;">
+      <i data-lucide="{{ doc_type_icon|default:'file-text' }}" style="width:28px;height:28px;"></i>
+    </div>
+    <div>
+      <h1 class="page-title">{{ doc_type_label }} {% trans "Details" %}</h1>
+      <p class="page-subtitle">{% trans "Validation results and document fields" %}</p>
+    </div>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="{{ list_url }}" class="btn btn-light">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+      {% trans "Back to list" %}
+    </a>
+  </div>
+</div>
+
+{# ── Risk + audit status header card ─────────────────────────────────────── #}
+<div class="card" style="padding:24px; margin-bottom:18px;">
+  <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:16px;">
+    <div>
+      <p style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">{% trans "Validation Score" %}</p>
+      <p style="font-size:28px; font-weight:800; color:var(--primary); margin-top:4px;">
+        {{ doc.validation_score|floatformat:1|default:"—" }}<span style="font-size:14px;color:var(--text-muted);"> / 100</span>
+      </p>
+    </div>
+    <div>
+      <p style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">{% trans "Risk Level" %}</p>
+      <p style="margin-top:6px;">
+        {% if doc.risk_level == 'critical' %}
+          <span class="badge badge-danger" style="font-size:14px;padding:6px 14px;">{% trans "Critical" %}</span>
+        {% elif doc.risk_level == 'high' %}
+          <span class="badge badge-danger" style="font-size:14px;padding:6px 14px;">{% trans "High" %}</span>
+        {% elif doc.risk_level == 'medium' %}
+          <span class="badge badge-warning" style="font-size:14px;padding:6px 14px;">{% trans "Medium" %}</span>
+        {% else %}
+          <span class="badge badge-success" style="font-size:14px;padding:6px 14px;">{% trans "Low" %}</span>
+        {% endif %}
+      </p>
+    </div>
+    <div>
+      <p style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">{% trans "Rules Passed" %}</p>
+      <p style="font-size:28px; font-weight:800; color:var(--success); margin-top:4px;">{{ doc.rules_passed|default:0 }}</p>
+    </div>
+    <div>
+      <p style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">{% trans "Rules Failed" %}</p>
+      <p style="font-size:28px; font-weight:800; color:var(--danger); margin-top:4px;">{{ doc.rules_failed|default:0 }}</p>
+    </div>
+  </div>
+</div>
+
+{# ── Document field groups (rendered from view-supplied schema) ─────────── #}
+{% for group in field_groups %}
+<div class="card" style="padding:20px 24px; margin-bottom:14px;">
+  <h3 style="font-size:14px; font-weight:700; color:var(--primary); margin-bottom:16px;">{{ group.title }}</h3>
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:14px 24px;">
+    {% for f in group.fields %}
+      <div>
+        <p style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">{{ f.label }}</p>
+        <p style="font-size:14px; font-weight:600; color:var(--text); margin-top:4px;">
+          {% with val=doc|get_field:f.key %}
+            {% if f.kind == 'date' %}{{ val|date:"Y-m-d"|default:"—" }}
+            {% elif f.kind == 'amount' %}<span style="font-family:monospace;">{{ val|default:0 }}</span> <span style="color:var(--text-muted);font-size:12px;">{{ doc.currency|default:'SAR' }}</span>
+            {% elif f.kind == 'bool' %}{% if val %}<span class="badge badge-success">{% trans "Yes" %}</span>{% else %}<span class="badge badge-danger">{% trans "No" %}</span>{% endif %}
+            {% else %}{{ val|default:"—" }}{% endif %}
+          {% endwith %}
+        </p>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+{# ── Failed rules — derived from doc.failed_rule_codes ──────────────────── #}
+{% if doc.failed_rule_codes %}
+<div class="card" style="padding:20px 24px; margin-bottom:14px;">
+  <h3 style="font-size:14px; font-weight:700; color:var(--danger); margin-bottom:16px;">{% trans "Failed Rules" %}</h3>
+  <ul style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px;">
+    {% for fr in failed_rules %}
+      <li style="border:1px solid var(--border-soft); border-radius:10px; padding:12px 14px; background:#fef2f2;">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px;">
+          <div style="flex:1;">
+            <p style="font-family:monospace; font-size:11px; font-weight:800; color:var(--text);">{{ fr.rule_code }}</p>
+            <p style="font-size:13px; font-weight:600; color:var(--text); margin-top:4px;">{{ fr.name|default:fr.rule_code }}</p>
+            {% if fr.description %}<p style="font-size:12px; color:var(--text-muted); margin-top:4px;">{{ fr.description }}</p>{% endif %}
+            {% if fr.recommendation %}
+              <p style="font-size:12px; color:var(--info); margin-top:6px;"><strong>{% trans "Recommendation:" %}</strong> {{ fr.recommendation }}</p>
+            {% endif %}
+          </div>
+          <span class="badge badge-{% if fr.severity == 'critical' %}danger{% elif fr.severity == 'high' %}danger{% elif fr.severity == 'medium' %}warning{% else %}info{% endif %}">
+            {{ fr.severity|default:"—" }}
+          </span>
+        </div>
+      </li>
+    {% empty %}
+      {# Plain code list when catalog lookup didn't enrich #}
+      {% for code in doc.failed_rule_codes %}
+        <li style="border:1px solid var(--border-soft); border-radius:8px; padding:10px 14px;">
+          <span style="font-family:monospace;font-weight:700;">{{ code }}</span>
+        </li>
+      {% endfor %}
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{# ── Linked documents (PO ↔ GRN ↔ Invoice ↔ Payment chain) ─────────────── #}
+{% if cross_links %}
+<div class="card" style="padding:20px 24px; margin-bottom:14px;">
+  <h3 style="font-size:14px; font-weight:700; color:var(--primary); margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+    <i data-lucide="link-2" style="width:16px;height:16px;color:#2563eb;"></i>
+    {% trans "Linked Documents" %}
+  </h3>
+
+  {# Three-way match summary (only present for invoice docs with PO/GRN) #}
+  {% with twm=cross_links.three_way_match %}
+  {% if twm.applicable %}
+    <div style="margin-bottom:14px; padding:12px 14px; border-radius:10px; border:1px solid var(--border-soft);
+                background:{% if twm.is_clean %}#dcfce7{% else %}#fef2f2{% endif %};">
+      <div style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700;
+                  color:{% if twm.is_clean %}#166534{% else %}#991b1b{% endif %};">
+        {% if twm.is_clean %}
+          <i data-lucide="check-circle-2" style="width:16px;height:16px;"></i>
+          {% trans "3-Way Match Clean" %}
+        {% else %}
+          <i data-lucide="alert-triangle" style="width:16px;height:16px;"></i>
+          {% trans "3-Way Match Issues" %}
+        {% endif %}
+      </div>
+      {% if twm.issues %}
+      <ul style="margin-top:8px; padding-inline-start:20px; font-size:12px; color:#991b1b; line-height:1.7;">
+        {% for issue in twm.issues %}
+          <li style="font-family:monospace;">{{ issue }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+  {% endif %}
+  {% endwith %}
+
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:12px;">
+    {% for slot, link in cross_links.items %}
+      {% if slot != "three_way_match" and link %}
+        {% if link.id %}{# single link #}
+          <a href="{{ link.url }}" style="display:block; padding:12px 14px; border:1px solid var(--border-soft);
+              border-radius:10px; background:#f8fafc; text-decoration:none; transition:all 0.2s;
+              {% if link.issues %}border-color:#fecaca; background:#fef2f2;{% endif %}">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+              <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">
+                {{ slot|cut:"_"|title }}
+              </div>
+              <span class="badge badge-{% if link.match_score >= 1.0 %}success{% elif link.match_score >= 0.85 %}info{% else %}warning{% endif %}"
+                    style="font-size:10px; padding:2px 8px;">
+                {{ link.match_type }}
+              </span>
+            </div>
+            <div style="font-family:monospace; font-size:13px; font-weight:800; color:var(--text); margin-top:4px;">
+              {{ link.display_id|default:"—" }}
+            </div>
+            <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">
+              {{ link.date|default:"—" }}
+              {% if link.amount %} · <span style="font-family:monospace;">{{ link.amount|floatformat:2 }} {{ link.currency }}</span>{% endif %}
+            </div>
+            {% if link.amount_diff and link.amount_diff != 0 %}
+              <div style="font-size:11px; color:#991b1b; margin-top:4px;">
+                {% trans "Δ" %} <span style="font-family:monospace;">{{ link.amount_diff|floatformat:2 }}</span>
+              </div>
+            {% endif %}
+            {% if link.issues %}
+              <div style="font-size:11px; color:#991b1b; margin-top:4px;">
+                ⚠ {{ link.issues|join:", " }}
+              </div>
+            {% endif %}
+          </a>
+        {% else %}{# list of links (e.g. contract → invoices) #}
+          <div style="padding:12px 14px; border:1px solid var(--border-soft); border-radius:10px; background:#f8fafc;">
+            <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">
+              {{ slot|cut:"_"|title }} <span style="color:#2563eb">({{ link|length }})</span>
+            </div>
+            <div style="margin-top:6px; max-height:120px; overflow-y:auto;">
+              {% for sub in link|slice:":10" %}
+                <a href="{{ sub.url }}" style="display:block; padding:4px 0; font-family:monospace; font-size:12px; color:var(--primary); text-decoration:none;">
+                  {{ sub.display_id|default:sub.id|truncatechars:20 }}
+                  {% if sub.amount %}· {{ sub.amount|floatformat:2 }}{% endif %}
+                </a>
+              {% endfor %}
+              {% if link|length > 10 %}
+                <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">
+                  +{{ link|length|add:"-10" }} {% trans "more" %}
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{# ── AI summary + recommendations ──────────────────────────────────────── #}
+{% if doc.ai_summary or doc.ai_recommendations %}
+<div class="card" style="padding:20px 24px; margin-bottom:14px;">
+  <h3 style="font-size:14px; font-weight:700; color:var(--primary); margin-bottom:16px; display:flex; align-items:center; gap:8px;">
+    <i data-lucide="sparkles" style="width:16px;height:16px;color:#7c3aed;"></i>
+    {% trans "AI Insights" %}
+  </h3>
+  {% if doc.ai_summary %}
+  <p style="font-size:14px; line-height:1.7; color:var(--text); margin-bottom:14px;">{{ doc.ai_summary }}</p>
+  {% endif %}
+  {% if doc.ai_recommendations %}
+  <ul style="list-style:disc inside; font-size:13px; color:var(--text); padding:0; margin:0;">
+    {% for rec in doc.ai_recommendations %}<li style="margin-bottom:4px;">{{ rec }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+</div>
+{% endif %}
+
+{# ── Notes ─────────────────────────────────────────────────────────────── #}
+{% if doc.notes %}
+<div class="card" style="padding:20px 24px; margin-bottom:14px;">
+  <h3 style="font-size:14px; font-weight:700; color:var(--primary); margin-bottom:12px;">{% trans "Notes" %}</h3>
+  <p style="font-size:13px; line-height:1.7; color:var(--text);">{{ doc.notes|linebreaksbr }}</p>
+</div>
+{% endif %}
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+  });
+</script>
+{% endblock %}

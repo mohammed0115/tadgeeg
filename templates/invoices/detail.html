@@ -1,75 +1,65 @@
-{% extends "base.html" %}
+{% extends "layouts/dashboard_base.html" %}
 {% load i18n %}
 {% block title %}{% trans "Invoice Details" %}{% endblock %}
-{% block page_title %}{% trans "Invoice Details" %}{% endblock %}
 {% block nav_invoices %}active{% endblock %}
 
 {% block breadcrumb %}
-  <span class="mx-2 text-sm text-slate-400">/</span>
-  <a href="{% url 'frontend:invoices' %}" class="text-sm text-slate-400 hover:text-primary-500">{% trans "Invoices" %}</a>
-  <span class="mx-2 text-sm text-slate-400">/</span>
-  <span class="text-sm text-slate-600 dark:text-slate-300">{{ invoice_display.invoice_number }}</span>
-{% endblock %}
-
-{% block header_actions %}
-<div class="flex items-center gap-2 flex-wrap">
-  <button onclick="document.getElementById('revalidateBtn').click()" class="btn-ghost border border-slate-200/80 dark:border-slate-700/60 text-xs py-2.5 px-4">
-    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-    <span>{% trans "Re-run Audit" %}</span>
-  </button>
-  {# ── 7-Scenario Approval Logic — Header Bar ─────────────────────────────── #}
-  {% if invoice.status == 'approved' or invoice.status == 'rejected' %}
-    {# SCENARIO 6 — LOCKED: no approve/reject buttons in header #}
-  {% else %}
-    <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'reject'}))" class="btn-red text-xs py-2.5 px-4 shadow-sm shadow-red-500/20">
-      <i data-lucide="x-circle" class="w-4 h-4"></i>
-      <span>{% trans "Reject" %}</span>
-    </button>
-    {% if not invoice_display.has_real_audit %}
-      {# SCENARIO 0 — NO AUDIT YET #}
-      <button disabled class="btn-ghost text-xs py-2.5 px-4 opacity-50 cursor-not-allowed border border-slate-300">
-        <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
-        <span>{% trans "Analyzing..." %}</span>
-      </button>
-    {% elif invoice_display.has_blocking %}
-      {# SCENARIOS 3 / 4 — BLOCKING FAILURES #}
-      <button disabled title="{% trans 'Approval blocked — resolve critical audit failures first' %}" class="btn-ghost text-xs py-2.5 px-4 opacity-40 cursor-not-allowed border border-slate-300">
-        <i data-lucide="lock" class="w-4 h-4"></i>
-        <span>{% trans "Approve" %}</span>
-      </button>
-      {% if user_can_override %}
-      {# SCENARIO 7 — OVERRIDE ALLOWED #}
-      <button onclick="document.getElementById('overrideModal').dispatchEvent(new Event('open'))" class="inline-flex items-center gap-1.5 rounded-xl border border-red-400 px-4 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 dark:border-red-500 dark:text-red-400 dark:hover:bg-red-950/30 shadow-sm">
-        <i data-lucide="shield-alert" class="w-4 h-4"></i>
-        <span>{% trans "Approve with Exception" %}</span>
-      </button>
-      {% endif %}
-    {% elif invoice_display.needs_senior %}
-      {# SCENARIO 5 — HIGH RISK / FRAUD: route to escalation #}
-      <button onclick="document.getElementById('escalateModal').dispatchEvent(new Event('open'))" class="inline-flex items-center gap-1.5 rounded-xl border border-amber-400 px-4 py-2.5 text-xs font-semibold text-amber-700 hover:bg-amber-50 dark:border-amber-500 dark:text-amber-400 dark:hover:bg-amber-950/30 shadow-sm">
-        <i data-lucide="arrow-up-circle" class="w-4 h-4"></i>
-        <span>{% trans "Send for Senior Review" %}</span>
-      </button>
-    {% elif invoice_display.has_warnings %}
-      {# SCENARIO 2 — WARNINGS ONLY: approve with confirmation #}
-      <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'approve_warning'}))" class="btn-green text-xs py-2.5 px-4 shadow-sm shadow-emerald-500/20">
-        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-        <span>{% trans "Approve" %}</span>
-      </button>
-    {% else %}
-      {# SCENARIO 1 — ALL PASS: approve immediately #}
-      <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'approve'}))" class="btn-green text-xs py-2.5 px-4 shadow-sm shadow-emerald-500/20">
-        <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-        <span>{% trans "Approve" %}</span>
-      </button>
-    {% endif %}
-  {% endif %}
-</div>
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <a href="{% url 'frontend:invoices' %}" style="color:var(--text-muted)">{% trans "Invoices" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{{ invoice_display.invoice_number|default:"#" }}</span>
 {% endblock %}
 
 {% block content %}
 <div x-data="invoiceDetail('{{ invoice.id }}', {{ invoice_display.validation_score|default:0 }}, {{ invoice_display.rules_passed|default:0 }}, {{ invoice_display.rules_failed|default:0 }})" x-init="init()" class="mx-auto max-w-[1380px] space-y-6 pb-6">
   <button id="revalidateBtn" class="hidden" @click="revalidate()"></button>
+
+  <div class="flex items-center gap-2 flex-wrap" style="margin-bottom: 18px;">
+    <button onclick="document.getElementById('revalidateBtn').click()" class="btn-ghost border border-slate-200/80 dark:border-slate-700/60 text-xs py-2.5 px-4">
+      <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+      <span>{% trans "Re-run Audit" %}</span>
+    </button>
+    {% if invoice.status == 'approved' or invoice.status == 'rejected' %}
+    {% else %}
+      <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'reject'}))" class="btn-red text-xs py-2.5 px-4 shadow-sm shadow-red-500/20">
+        <i data-lucide="x-circle" class="w-4 h-4"></i>
+        <span>{% trans "Reject" %}</span>
+      </button>
+      {% if not invoice_display.has_real_audit %}
+        <button disabled class="btn-ghost text-xs py-2.5 px-4 opacity-50 cursor-not-allowed border border-slate-300">
+          <i data-lucide="loader" class="w-4 h-4 animate-spin"></i>
+          <span>{% trans "Analyzing..." %}</span>
+        </button>
+      {% elif invoice_display.has_blocking %}
+        <button disabled title="{% trans 'Approval blocked — resolve critical audit failures first' %}" class="btn-ghost text-xs py-2.5 px-4 opacity-40 cursor-not-allowed border border-slate-300">
+          <i data-lucide="lock" class="w-4 h-4"></i>
+          <span>{% trans "Approve" %}</span>
+        </button>
+        {% if user_can_override %}
+        <button onclick="document.getElementById('overrideModal').dispatchEvent(new Event('open'))" class="inline-flex items-center gap-1.5 rounded-xl border border-red-400 px-4 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 dark:border-red-500 dark:text-red-400 dark:hover:bg-red-950/30 shadow-sm">
+          <i data-lucide="shield-alert" class="w-4 h-4"></i>
+          <span>{% trans "Approve with Exception" %}</span>
+        </button>
+        {% endif %}
+      {% elif invoice_display.needs_senior %}
+        <button onclick="document.getElementById('escalateModal').dispatchEvent(new Event('open'))" class="inline-flex items-center gap-1.5 rounded-xl border border-amber-400 px-4 py-2.5 text-xs font-semibold text-amber-700 hover:bg-amber-50 dark:border-amber-500 dark:text-amber-400 dark:hover:bg-amber-950/30 shadow-sm">
+          <i data-lucide="arrow-up-circle" class="w-4 h-4"></i>
+          <span>{% trans "Send for Senior Review" %}</span>
+        </button>
+      {% elif invoice_display.has_warnings %}
+        <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'approve_warning'}))" class="btn-green text-xs py-2.5 px-4 shadow-sm shadow-emerald-500/20">
+          <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+          <span>{% trans "Approve" %}</span>
+        </button>
+      {% else %}
+        <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'approve'}))" class="btn-green text-xs py-2.5 px-4 shadow-sm shadow-emerald-500/20">
+          <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+          <span>{% trans "Approve" %}</span>
+        </button>
+      {% endif %}
+    {% endif %}
+  </div>
 
   <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
     <div class="space-y-6 min-w-0">
@@ -768,7 +758,7 @@
 </div>
 {% endblock %}
 
-{% block page_js %}
+{% block extra_scripts %}
 <script>
 function invoiceDetail(invoiceId, initialScore, initialPassed, initialFailed) {
   return {

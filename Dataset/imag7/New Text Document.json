@@ -1,0 +1,44 @@
+{
+  "invoice_header": {
+    "invoice_number": "248",
+    "invoice_date": "2022-01-25",
+    "vendor_name": "معرض الإسراء للأدوات الكهربائية",
+    "address": "5 شارع المملكة - أبها",
+    "phone": ["021885114", "025488888"]
+  },
+  "customer_details": {
+    "name": "عبد الرحمن محفوظ",
+    "city": "أبها",
+    "shipping_note": "تم الاستلام من مقر المعرض"
+  },
+  "line_items": [
+    {
+      "product": "مروحة كهربائية",
+      "description": "مروحة كهربائية ستاند",
+      "quantity": 1,
+      "total": 500
+    },
+    {
+      "product": "ثلاجة",
+      "description": "ثلاجة 18 قدم",
+      "quantity": 1,
+      "total": 6500
+    },
+    {
+      "product": "كولمان",
+      "description": "كولمان لحفظ المياه",
+      "quantity": 1,
+      "total": 1000
+    },
+    {
+      "description": "خصم بمناسبة بداية العام",
+      "total": 100
+    }
+  ],
+  "financial_summary": {
+    "subtotal": 7900,
+    "tax_amount": 500,
+    "net_total": 8400,
+    "currency": "SAR"
+  }
+}

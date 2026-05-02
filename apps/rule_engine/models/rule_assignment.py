@@ -6,17 +6,42 @@ from apps.rule_engine.models.rule_definition import RuleDefinition, Severity
 
 
 class SupportedDocumentType(models.TextChoices):
-    SALES_INVOICE = "sales_invoice", "Sales Invoice"
-    PURCHASE_ORDER = "purchase_order", "Purchase Order"
-    BANK_STATEMENT = "bank_statement", "Bank Statement"
-    PAYROLL = "payroll", "Payroll Sheet"
-    EXPENSE = "expense", "Expense Report"
-    TAX_RETURN = "tax_return", "VAT / Tax Return"
-    FIXED_ASSET = "fixed_asset", "Fixed Asset Register"
-    SALES_RECEIPT = "sales_receipt", "Sales Receipt"
-    GRN     = "grn",     "Goods Receipt Note"
-    PAYMENT = "payment", "Payment Voucher"
-    OTHER = "other", "Other"
+    """Canonical document types the rule engine can audit.
+
+    Aliases (same business document, different naming):
+      - `tax_return` ≡ `tax_vat_document` (kept for backward compatibility)
+      - `payment`    ≡ `payment_voucher`
+    """
+    # ── Original (kept stable for existing data) ─────────────────────────
+    SALES_INVOICE      = "sales_invoice",    "Sales Invoice"
+    PURCHASE_ORDER     = "purchase_order",   "Purchase Order"
+    BANK_STATEMENT     = "bank_statement",   "Bank Statement"
+    PAYROLL            = "payroll",          "Payroll Sheet"
+    EXPENSE            = "expense",          "Expense Report"
+    EXPENSE_REPORT     = "expense_report",   "Expense Report"   # canonical alias
+    TAX_RETURN         = "tax_return",       "VAT / Tax Return"
+    FIXED_ASSET        = "fixed_asset",      "Fixed Asset Register"
+    SALES_RECEIPT      = "sales_receipt",    "Sales Receipt"
+    GRN                = "grn",              "Goods Receipt Note"
+    PAYMENT            = "payment",          "Payment Voucher"
+    PAYMENT_VOUCHER    = "payment_voucher",  "Payment Voucher"  # canonical alias
+
+    # ── Phase-1 additions (10 new types) ────────────────────────────────
+    PURCHASE_INVOICE   = "purchase_invoice", "Purchase Invoice"
+    SALES_ORDER        = "sales_order",      "Sales Order"
+    QUOTATION          = "quotation",        "Quotation"
+    PROFORMA_INVOICE   = "proforma_invoice", "Proforma Invoice"
+    RECEIPT_VOUCHER    = "receipt_voucher",  "Receipt Voucher"
+    CASH_VOUCHER       = "cash_voucher",     "Cash Voucher"
+    JOURNAL_ENTRY      = "journal_entry",    "Journal Entry"
+    GENERAL_LEDGER     = "general_ledger",   "General Ledger"
+    LEDGER             = "ledger",           "Ledger"
+    CONTRACT           = "contract",         "Contract"
+    SUPPLIER_STATEMENT = "supplier_statement","Supplier Statement"
+    CUSTOMER_STATEMENT = "customer_statement","Customer Statement"
+    TAX_VAT_DOCUMENT   = "tax_vat_document", "Tax / VAT Document"  # canonical alias
+
+    OTHER              = "other",            "Other"
 
 
 class ApplicabilityMode(models.TextChoices):

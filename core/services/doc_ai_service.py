@@ -48,6 +48,15 @@ def _call_openai(prompt: str, image_path: str, raw_text: str = "") -> dict:
         logger.warning("OpenAI API key not configured for document extraction.")
         return {}
 
+    # Per-org daily token budget guard. If the org has hit its cap, skip the
+    # API call entirely and return empty (callers already merge with pandas).
+    from core.services import ai_budget
+    try:
+        ai_budget.guard_current(projected_tokens=4000)
+    except ai_budget.BudgetExceeded:
+        logger.warning("[ai-budget] doc extraction skipped (budget exceeded)")
+        return {}
+
     try:
         from openai import OpenAI
 
@@ -87,6 +96,10 @@ def _call_openai(prompt: str, image_path: str, raw_text: str = "") -> dict:
         data["_extraction_method"] = "openai_vision"
         if getattr(resp, "usage", None):
             data["_tokens_used"] = resp.usage.total_tokens
+            try:
+                ai_budget.charge_current(int(resp.usage.total_tokens))
+            except Exception:
+                pass
         return data
     except Exception as e:
         logger.warning(f"OpenAI extraction failed: {e}")

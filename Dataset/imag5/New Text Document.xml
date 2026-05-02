@@ -1,0 +1,24 @@
+<TaxInvoice>
+    <InvoiceHeader>
+        <InvoiceID>INV-R3-2022-0001</InvoiceID>
+        <Date>2022-01-02</Date>
+    </InvoiceHeader>
+    <Seller>
+        <RegistrationName>الركن الثالث للاستشارات</RegistrationName>
+        <VATNumber>302250102100003</VATNumber>
+    </Seller>
+    <Buyer>
+        <Name>ابراهيم حسن اسعد مالكي</Name>
+        <BuyerVAT>310724486100003</BuyerVAT>
+    </Buyer>
+    <InvoiceLine>
+        <Description>Consultation Fees - 50% first payment</Description>
+        <Quantity>1</Quantity>
+        <LineAmount>10000</LineAmount>
+        <TaxAmount>1500</TaxAmount>
+    </InvoiceLine>
+    <TotalAmounts>
+        <TaxExclusiveAmount>10000</TaxExclusiveAmount>
+        <TaxInclusiveAmount>11500</TaxInclusiveAmount>
+    </TotalAmounts>
+</TaxInvoice>

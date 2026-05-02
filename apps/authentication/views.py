@@ -154,8 +154,19 @@ class LoginView(APIView):
     IP_LOCK = 900
 
     def _get_ip(self, request):
-        xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
-        return xff.split(",")[0].strip() if xff else request.META.get("REMOTE_ADDR", "unknown")
+        """Resolve the client IP for rate-limiting.
+
+        Trust ``X-Forwarded-For`` only when ``USE_X_FORWARDED_HOST=True`` is
+        set in settings (i.e., the deploy explicitly opts in because it sits
+        behind a known reverse proxy). Otherwise we use REMOTE_ADDR so an
+        attacker can't spoof the header to bypass our IP rate-limit.
+        """
+        from django.conf import settings
+        if getattr(settings, "USE_X_FORWARDED_HOST", False):
+            xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
+            if xff:
+                return xff.split(",")[0].strip()
+        return request.META.get("REMOTE_ADDR", "unknown")
 
     @extend_schema(
         tags=["Auth"],
@@ -794,7 +805,7 @@ class MFASetupView(APIView):
         try:
             import pyotp, qrcode, io, base64
         except ImportError:
-            return Response({"error": "pyotp / qrcode غير متاح على السيرفر."}, status=500)
+            return Response({"error": _("pyotp / qrcode is not available on the server.")}, status=500)
 
         # Generate a new secret (not saved until POST confirms it)
         secret = pyotp.random_base32()
@@ -824,17 +835,17 @@ class MFASetupView(APIView):
         try:
             import pyotp
         except ImportError:
-            return Response({"error": "pyotp غير متاح على السيرفر."}, status=500)
+            return Response({"error": _("pyotp is not available on the server.")}, status=500)
 
         code = str(request.data.get("code", "")).strip()
         secret = request.session.get("mfa_pending_secret") or request.data.get("secret", "")
 
         if not code or not secret:
-            return Response({"error": "code و secret مطلوبان."}, status=400)
+            return Response({"error": _("Code and secret are required.")}, status=400)
 
         totp = pyotp.TOTP(secret)
         if not totp.verify(code, valid_window=1):
-            return Response({"error": "الرمز غير صحيح أو منتهي الصلاحية."}, status=400)
+            return Response({"error": _("The code is invalid or expired.")}, status=400)
 
         user = request.user
         user.mfa_secret = secret
@@ -845,7 +856,7 @@ class MFASetupView(APIView):
         log_action(request, AuditLog.Action.USER_UPDATED, "user", str(user.id),
                    details={"change": "mfa_enabled"})
 
-        return Response({"success": True, "message": "تم تفعيل المصادقة الثنائية بنجاح."})
+        return Response({"success": True, "message": _("Two-factor authentication has been enabled successfully.")})
 
 
 class MFAVerifyView(APIView):
@@ -860,21 +871,21 @@ class MFAVerifyView(APIView):
         try:
             import pyotp
         except ImportError:
-            return Response({"error": "pyotp غير متاح."}, status=500)
+            return Response({"error": _("pyotp is not available.")}, status=500)
 
         user = request.user
         if not user.mfa_enabled or not user.mfa_secret:
-            return Response({"error": "المصادقة الثنائية غير مفعلة لهذا الحساب."}, status=400)
+            return Response({"error": _("Two-factor authentication is not enabled for this account.")}, status=400)
 
         code = str(request.data.get("code", "")).strip()
         if not code:
-            return Response({"error": "الرمز مطلوب."}, status=400)
+            return Response({"error": _("The code is required.")}, status=400)
 
         totp = pyotp.TOTP(user.mfa_secret)
         if not totp.verify(code, valid_window=1):
-            return Response({"error": "الرمز غير صحيح أو منتهي الصلاحية."}, status=400)
+            return Response({"error": _("The code is invalid or expired.")}, status=400)
 
-        return Response({"success": True, "message": "تم التحقق من الهوية."})
+        return Response({"success": True, "message": _("Identity verified.")})
 
 
 class MFALoginVerifyView(APIView):
@@ -966,19 +977,19 @@ class MFADisableView(APIView):
         try:
             import pyotp
         except ImportError:
-            return Response({"error": "pyotp غير متاح."}, status=500)
+            return Response({"error": _("pyotp is not available.")}, status=500)
 
         user = request.user
         if not user.mfa_enabled:
-            return Response({"error": "المصادقة الثنائية غير مفعلة."}, status=400)
+            return Response({"error": _("Two-factor authentication is not enabled.")}, status=400)
 
         code = str(request.data.get("code", "")).strip()
         if not code:
-            return Response({"error": "الرمز مطلوب للتحقق قبل إلغاء التفعيل."}, status=400)
+            return Response({"error": _("The code is required to verify before disabling.")}, status=400)
 
         totp = pyotp.TOTP(user.mfa_secret)
         if not totp.verify(code, valid_window=1):
-            return Response({"error": "الرمز غير صحيح."}, status=400)
+            return Response({"error": _("The code is incorrect.")}, status=400)
 
         user.mfa_enabled = False
         user.mfa_secret = ""
@@ -987,4 +998,4 @@ class MFADisableView(APIView):
         log_action(request, AuditLog.Action.USER_UPDATED, "user", str(user.id),
                    details={"change": "mfa_disabled"})
 
-        return Response({"success": True, "message": "تم إلغاء تفعيل المصادقة الثنائية."})
+        return Response({"success": True, "message": _("Two-factor authentication has been disabled.")})

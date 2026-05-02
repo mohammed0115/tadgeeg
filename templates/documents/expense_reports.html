@@ -1,154 +1,125 @@
-{%  extends "base.html" %}
-{% block title %}تقارير المصروفات{% endblock %}
-{% block page_title %}تقارير المصروفات{% endblock %}
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
 
-{% block content %}
-<div x-data="pageList()" x-init="load()">
+{% block title %}{% trans "Expense Reports" %}{% endblock %}
+{% block nav_documents %}active{% endblock %}
 
-  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    <div class="card p-4"><p class="text-xs text-slate-400 mb-1">إجمالي التقارير</p><p class="text-2xl font-bold text-slate-800 dark:text-white font-mono" x-text="stats.total ?? '—'"></p></div>
-    <div class="card p-4"><p class="text-xs text-slate-400 mb-1">مُعلَّقة</p><p class="text-2xl font-bold text-amber-600 font-mono" x-text="stats.flagged ?? '—'"></p></div>
-    <div class="card p-4"><p class="text-xs text-slate-400 mb-1">تم التحقق</p><p class="text-2xl font-bold text-blue-600 font-mono" x-text="stats.validated ?? '—'"></p></div>
-    <div class="card p-4"><p class="text-xs text-slate-400 mb-1">مُعتمَدة</p><p class="text-2xl font-bold text-green-600 font-mono" x-text="stats.approved ?? '—'"></p></div>
-    
-  </div>
-
-  <div class="card p-4 mb-4 flex flex-wrap items-center gap-3">
-    <div class="flex-1 relative min-w-48">
-      <i data-lucide="search" class="absolute right-3 top-2.5 w-4 h-4 text-slate-400"></i>
-      <input x-model="q" @input.debounce.400ms="load(true)" placeholder="بحث..."
-             class="input-field pr-9 w-full text-sm"/>
-    </div>
-    <select x-model="filterStatus" @change="load(true)" class="input-field text-sm w-36">
-      <option value="">كل الحالات</option>
-      <option value="validated">تم التحقق</option>
-      <option value="flagged">مُعلَّق</option>
-      <option value="approved">مُعتمَد</option>
-    </select>
-    <select x-model="filterRisk" @change="load(true)" class="input-field text-sm w-36">
-      <option value="">كل مستويات الخطر</option>
-      <option value="critical">حرج</option>
-      <option value="high">عالي</option>
-      <option value="medium">متوسط</option>
-      <option value="low">منخفض</option>
-    </select>
-    <a href="/documents/upload/?type=expense_report" class="btn-primary text-sm flex items-center gap-2 px-4 h-9 rounded-lg">
-      <i data-lucide="plus" class="w-4 h-4"></i> رفع وثيقة
-    </a>
-  </div>
-
-  <div class="card overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-slate-200 dark:border-slate-700 text-xs text-slate-500 uppercase">
-            <th class="text-right px-4 py-3 font-semibold">الموظف</th><th class="text-right px-4 py-3 font-semibold">القسم</th><th class="text-right px-4 py-3 font-semibold">الفترة</th><th class="text-right px-4 py-3 font-semibold">المبلغ المطالَب</th>
-            <th class="text-right px-4 py-3 font-semibold">نقاط التحقق</th>
-            <th class="text-right px-4 py-3 font-semibold">الخطر</th>
-            <th class="text-right px-4 py-3 font-semibold">الحالة</th>
-            <th class="px-4 py-3"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <template x-if="loading">
-            <tr><td colspan="9" class="text-center py-12 text-slate-400">
-              <i data-lucide="loader-2" class="w-6 h-6 animate-spin mx-auto mb-2"></i>
-            </td></tr>
-          </template>
-          <template x-if="!loading && rows.length === 0">
-            <tr><td colspan="9" class="text-center py-12 text-slate-400">
-              <i data-lucide="receipt" class="w-8 h-8 mx-auto mb-2 opacity-30"></i>
-              <p class="text-sm">لا توجد وثائق</p>
-            </td></tr>
-          </template>
-          <template x-for="r in rows" :key="r.id">
-            <tr class="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-              <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300" x-text="r.employee_name || '—'"></td><td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300" x-text="r.department || '—'"></td><td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300" x-text="r.report_period_from + ' — ' + r.report_period_to"></td><td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-300" x-text="fmtCurrency(r.total_claimed, r.currency)"></td>
-              <td class="px-4 py-3">
-                <div class="flex items-center gap-2">
-                  <div class="flex-1 bg-slate-200 dark:bg-slate-700 rounded-full h-1.5 w-20">
-                    <div class="h-1.5 rounded-full" :class="scoreColor(r.validation_score)"
-                         :style="'width:' + (r.validation_score||0) + '%'"></div>
-                  </div>
-                  <span class="text-xs font-mono text-slate-500" x-text="(r.validation_score||0).toFixed(0)+'%'"></span>
-                </div>
-              </td>
-              <td class="px-4 py-3"><span :class="riskBadge(r.risk_level)" class="text-xs font-semibold px-2.5 py-1 rounded-lg border" x-text="riskLabel(r.risk_level)"></span></td>
-              <td class="px-4 py-3"><span :class="statusBadge(r.audit_status)" class="text-xs font-semibold px-2.5 py-1 rounded-lg border" x-text="statusLabel(r.audit_status)"></span></td>
-              <td class="px-4 py-3">
-                <a :href="detailUrl + r.id + '/'" class="text-primary-500 hover:text-primary-700 transition-colors">
-                  <i data-lucide="eye" class="w-4 h-4"></i>
-                </a>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <div x-show="!loading && totalCount > pageSize" class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-slate-500">
-    <p>
-      عرض <span x-text="pageStart"></span>–<span x-text="pageEnd"></span> من <span x-text="totalCount"></span>
-    </p>
-    <div class="flex items-center gap-2">
-      <button @click="prevPage()" :disabled="currentPage <= 1" class="btn-ghost px-3 py-1.5 rounded-lg disabled:opacity-50">السابق</button>
-      <span x-text="'صفحة ' + currentPage + ' / ' + totalPages"></span>
-      <button @click="nextPage()" :disabled="currentPage >= totalPages" class="btn-ghost px-3 py-1.5 rounded-lg disabled:opacity-50">التالي</button>
-    </div>
-  </div>
-</div>
+{% block extra_styles %}
+  .page-icon {
+    width: 56px; height: 56px;
+    border-radius: 16px;
+    background: #ffe4e6; color: #be123c;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .filter-bar {
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 24px; padding: 16px 20px;
+    background: white; border: 1px solid var(--border-soft); border-radius: 14px;
+  }
+  .filter-input {
+    flex: 1; min-width: 200px;
+    padding: 10px 16px;
+    border: 1.5px solid var(--border); border-radius: 10px;
+    background: var(--bg-soft); font-size: 13px; font-family: inherit;
+  }
+  .filter-input:focus { outline: none; border-color: var(--primary); background: white; }
 {% endblock %}
 
-{% block scripts %}
-<script>
-function pageList() {
-  return {
-    rows: [], stats: {}, loading: true, q: '', filterStatus: '', filterRisk: '', currentPage: 1, pageSize: 10, totalCount: 0,
-    detailUrl: '/documents/expense-reports/',
-    async load(resetPage = false) {
-      if (resetPage) this.currentPage = 1;
-      this.loading = true;
-      const p = new URLSearchParams();
-      p.set('page', this.currentPage);
-      p.set('page_size', this.pageSize);
-      if (this.q) p.set('search', this.q);
-      if (this.filterStatus) p.set('status', this.filterStatus);
-      if (this.filterRisk)   p.set('risk_level', this.filterRisk);
-      try {
-        const [r1, r2] = await Promise.all([
-          apiFetch('/documents/expense-reports/?' + p.toString()),
-          apiFetch('/documents/stats/'),
-        ]);
-        this.rows  = Array.isArray(r1?.results) ? r1.results : (Array.isArray(r1) ? r1 : []);
-        this.totalCount = Number(r1?.count ?? this.rows.length ?? 0);
-        this.stats = r2['expense_reports'] ?? {};
-      } catch(e) { notify('خطأ في تحميل البيانات', 'error'); }
-      finally { this.loading = false; this.$nextTick(() => lucide.createIcons()); }
-    },
-    get totalPages() { return Math.max(1, Math.ceil(this.totalCount / this.pageSize)); },
-    get pageStart() { return this.totalCount ? ((this.currentPage - 1) * this.pageSize) + 1 : 0; },
-    get pageEnd() { return Math.min(this.currentPage * this.pageSize, this.totalCount); },
-    async nextPage() { if (this.currentPage < this.totalPages) { this.currentPage += 1; await this.load(); } },
-    async prevPage() { if (this.currentPage > 1) { this.currentPage -= 1; await this.load(); } },
-    fmtCurrency(v, c='SAR') { return v ? Number(v).toLocaleString(APP_LOCALE, {maximumFractionDigits:2}) + ' ' + c : '—'; },
-    scoreColor(s) { return s>=85?'bg-green-500':s>=70?'bg-amber-400':s>=50?'bg-orange-500':'bg-red-500'; },
-    riskLabel(l) { return {'critical':'حرج','high':'عالي','medium':'متوسط','low':'منخفض'}[l]??l; },
-    riskBadge(l) {
-      return {'critical':'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
-              'high':'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800',
-              'medium':'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800',
-              'low':'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'}[l]??'';
-    },
-    statusLabel(s) { return {'validated':'تم التحقق','flagged':'مُعلَّق','approved':'مُعتمَد','pending':'قيد الانتظار','rejected':'مرفوض'}[s]??s; },
-    statusBadge(s) {
-      return {'validated':'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800',
-              'flagged':'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800',
-              'approved':'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800',
-              'rejected':'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800',
-              'pending':'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'}[s]??'';
-    },
-  }
-}
-</script>
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <a href="{% url 'frontend:documents' %}" style="color:var(--text-muted)">{% trans "Documents" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "Expense Reports" %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div style="display:flex; align-items:center; gap:18px;">
+    <div class="page-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+    </div>
+    <div>
+      <h1 class="page-title">{% trans "Expense Reports" %}</h1>
+      <p class="page-subtitle">{% trans "Travel and operational expense submissions." %}</p>
+    </div>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <button class="btn btn-light">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      {% trans "Export" %}
+    </button>
+    <a href="{% url 'frontend:reports' %}?type=expense_report" class="btn btn-light">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      {% trans "View Reports" %}
+    </a>
+    <a href="{% url 'frontend:doc_upload' %}?type=expense_report" class="btn btn-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      {% trans "Upload Expense Reports" %}
+    </a>
+  </div>
+</div>
+
+<div class="filter-bar">
+  <input type="text" class="filter-input" placeholder="{% trans 'Search...' %}">
+  <select class="filter-input" style="flex:0 0 auto; min-width:160px;">
+    <option>{% trans "All statuses" %}</option>
+    <option>{% trans "Pending" %}</option>
+    <option>{% trans "Approved" %}</option>
+    <option>{% trans "Rejected" %}</option>
+  </select>
+  <select class="filter-input" style="flex:0 0 auto; min-width:160px;">
+    <option>{% trans "Last 30 days" %}</option>
+    <option>{% trans "Last 90 days" %}</option>
+    <option>{% trans "This year" %}</option>
+  </select>
+</div>
+
+<div class="card table-card">
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>{% trans "Document" %}</th>
+          <th>{% trans "Date" %}</th>
+          <th>{% trans "Amount" %}</th>
+          <th>{% trans "Status" %}</th>
+          <th>{% trans "Action" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+                {% if rows %}
+          {% for r in rows %}
+          <tr>
+            <td class="text-muted">{{ forloop.counter }}</td>
+            <td>
+              <a href="{% url 'frontend:expense_report_detail' pk=r.id %}" style="color:var(--primary);font-weight:700">{{ r.report_number|default:'—' }}</a>
+              <div style="font-size:12px;color:var(--text-muted)">{{ r.employee_name|default:'—' }}</div>
+            </td>
+            <td class="text-muted">{{ r.submitted_date|date:'Y-m-d'|default:'—' }}</td>
+            <td><span style="font-family:monospace;font-weight:700">{{ r.total_claimed|default:0 }}</span> {{ r.currency|default:"SAR" }}</td>
+            <td><span class="badge badge-{% if r.audit_status == 'approved' %}success{% elif r.audit_status == 'flagged' %}warning{% elif r.audit_status == 'rejected' %}danger{% else %}info{% endif %}">{{ r.get_audit_status_display|default:r.audit_status }}</span></td>
+            <td><a href="{% url 'frontend:expense_report_detail' pk=r.id %}" class="row-action"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6" transform="scale(-1,1) translate(-24,0)"/></svg></a></td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="6">
+          <div class="empty-state">
+            <div class="empty-state-icon">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+            </div>
+            <h3>{% blocktrans %}No Expense Reports yet{% endblocktrans %}</h3>
+            <p>{% trans "Upload your first document and our AI will extract data and run audit checks automatically." %}</p>
+            <a href="{% url 'frontend:doc_upload' %}?type=expense_report" class="btn btn-primary">{% trans "Upload Document" %}</a>
+          </div>
+        </td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+{% include "partials/_pagination.html" %}
+
+</div>
 {% endblock %}

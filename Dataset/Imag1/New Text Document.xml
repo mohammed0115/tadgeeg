@@ -1,0 +1,25 @@
+<Invoice>
+    <Header>
+        <InvoiceNumber>0529139</InvoiceNumber>
+        <Date>2022-05-29</Date>
+        <Currency>SAR</Currency>
+    </Header>
+    <Seller>
+        <Name>فلاي اكونت للسفر والسياحة</Name>
+        <TaxID>300530875400003</TaxID>
+    </Seller>
+    <Details>
+        <Item>
+            <Description>تذاكر طيران</Description>
+            <Total>800</Total>
+        </Item>
+        <Item>
+            <Description>فنادق</Description>
+            <Total>2500</Total>
+        </Item>
+    </Details>
+    <Summary>
+        <TotalVAT>104.35</TotalVAT>
+        <GrandTotal>1200</GrandTotal>
+    </Summary>
+</Invoice>

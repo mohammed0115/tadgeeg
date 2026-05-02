@@ -256,10 +256,10 @@
       <td>{{ inv.invoice_date|default:"—" }}</td>
       <td>
         <span class="badge badge-{{ inv.risk_level }}">
-          {% if inv.risk_level == 'critical' %}{% if LANGUAGE_BIDI %}حرج{% else %}{% trans "Critical" %}{% endif %}
-          {% elif inv.risk_level == 'high' %}{% if LANGUAGE_BIDI %}مرتفع{% else %}{% trans "High" %}{% endif %}
-          {% elif inv.risk_level == 'medium' %}{% if LANGUAGE_BIDI %}متوسط{% else %}{% trans "Medium" %}{% endif %}
-          {% elif inv.risk_level == 'low' %}{% if LANGUAGE_BIDI %}منخفض{% else %}{% trans "Low" %}{% endif %}
+          {% if inv.risk_level == 'critical' %}{% trans "Critical" %}
+          {% elif inv.risk_level == 'high' %}{% trans "High" %}
+          {% elif inv.risk_level == 'medium' %}{% trans "Medium" %}
+          {% elif inv.risk_level == 'low' %}{% trans "Low" %}
           {% else %}{{ inv.risk_level }}{% endif %}
         </span>
       </td>
@@ -439,28 +439,28 @@
       <td>{{ m.compliance_rate_pct.value }}%</td>
       <td>{{ m.compliance_rate_pct.benchmark }}%</td>
       <td>{% if m.compliance_rate_pct.delta >= 0 %}+{% endif %}{{ m.compliance_rate_pct.delta }}%</td>
-      <td><span class="badge {% if m.compliance_rate_pct.status == 'above' %}badge-low{% elif m.compliance_rate_pct.status == 'below' %}badge-critical{% else %}badge-medium{% endif %}">{% if m.compliance_rate_pct.status == 'above' %}{% if LANGUAGE_BIDI %}أعلى من المعيار{% else %}{% trans "Above benchmark" %}{% endif %}{% elif m.compliance_rate_pct.status == 'below' %}{% if LANGUAGE_BIDI %}أقل من المعيار{% else %}{% trans "Below benchmark" %}{% endif %}{% else %}{% if LANGUAGE_BIDI %}مطابق للمعيار{% else %}{% trans "At benchmark" %}{% endif %}{% endif %}</span></td>
+      <td><span class="badge {% if m.compliance_rate_pct.status == 'above' %}badge-low{% elif m.compliance_rate_pct.status == 'below' %}badge-critical{% else %}badge-medium{% endif %}">{% if m.compliance_rate_pct.status == 'above' %}{% trans "Above benchmark" %}{% elif m.compliance_rate_pct.status == 'below' %}{% trans "Below benchmark" %}{% else %}{% trans "At benchmark" %}{% endif %}</span></td>
     </tr>
     <tr>
       <td>{% trans "Duplicate Rate" %}</td>
       <td>{{ m.duplicate_rate_pct.value }}%</td>
       <td>{{ m.duplicate_rate_pct.benchmark }}%</td>
       <td>{% if m.duplicate_rate_pct.delta >= 0 %}+{% endif %}{{ m.duplicate_rate_pct.delta }}%</td>
-      <td><span class="badge {% if m.duplicate_rate_pct.status == 'above' %}badge-low{% elif m.duplicate_rate_pct.status == 'below' %}badge-critical{% else %}badge-medium{% endif %}">{% if m.duplicate_rate_pct.status == 'above' %}{% if LANGUAGE_BIDI %}أعلى من المعيار{% else %}{% trans "Above benchmark" %}{% endif %}{% elif m.duplicate_rate_pct.status == 'below' %}{% if LANGUAGE_BIDI %}أقل من المعيار{% else %}{% trans "Below benchmark" %}{% endif %}{% else %}{% if LANGUAGE_BIDI %}مطابق للمعيار{% else %}{% trans "At benchmark" %}{% endif %}{% endif %}</span></td>
+      <td><span class="badge {% if m.duplicate_rate_pct.status == 'above' %}badge-low{% elif m.duplicate_rate_pct.status == 'below' %}badge-critical{% else %}badge-medium{% endif %}">{% if m.duplicate_rate_pct.status == 'above' %}{% trans "Above benchmark" %}{% elif m.duplicate_rate_pct.status == 'below' %}{% trans "Below benchmark" %}{% else %}{% trans "At benchmark" %}{% endif %}</span></td>
     </tr>
     <tr>
       <td>{% trans "Average Risk Score" %}</td>
       <td>{{ m.avg_risk_score.value }}</td>
       <td>{{ m.avg_risk_score.benchmark }}</td>
       <td>{% if m.avg_risk_score.delta >= 0 %}+{% endif %}{{ m.avg_risk_score.delta }}</td>
-      <td><span class="badge {% if m.avg_risk_score.status == 'above' %}badge-low{% elif m.avg_risk_score.status == 'below' %}badge-critical{% else %}badge-medium{% endif %}">{% if m.avg_risk_score.status == 'above' %}{% if LANGUAGE_BIDI %}أعلى من المعيار{% else %}{% trans "Above benchmark" %}{% endif %}{% elif m.avg_risk_score.status == 'below' %}{% if LANGUAGE_BIDI %}أقل من المعيار{% else %}{% trans "Below benchmark" %}{% endif %}{% else %}{% if LANGUAGE_BIDI %}مطابق للمعيار{% else %}{% trans "At benchmark" %}{% endif %}{% endif %}</span></td>
+      <td><span class="badge {% if m.avg_risk_score.status == 'above' %}badge-low{% elif m.avg_risk_score.status == 'below' %}badge-critical{% else %}badge-medium{% endif %}">{% if m.avg_risk_score.status == 'above' %}{% trans "Above benchmark" %}{% elif m.avg_risk_score.status == 'below' %}{% trans "Below benchmark" %}{% else %}{% trans "At benchmark" %}{% endif %}</span></td>
     </tr>
     <tr>
       <td>{% trans "VAT Compliance Rate" %}</td>
       <td>{{ m.vat_compliance_rate_pct.value }}%</td>
       <td>{{ m.vat_compliance_rate_pct.benchmark }}%</td>
       <td>{% if m.vat_compliance_rate_pct.delta >= 0 %}+{% endif %}{{ m.vat_compliance_rate_pct.delta }}%</td>
-      <td><span class="badge {% if m.vat_compliance_rate_pct.status == 'above' %}badge-low{% elif m.vat_compliance_rate_pct.status == 'below' %}badge-critical{% else %}badge-medium{% endif %}">{% if m.vat_compliance_rate_pct.status == 'above' %}{% if LANGUAGE_BIDI %}أعلى من المعيار{% else %}{% trans "Above benchmark" %}{% endif %}{% elif m.vat_compliance_rate_pct.status == 'below' %}{% if LANGUAGE_BIDI %}أقل من المعيار{% else %}{% trans "Below benchmark" %}{% endif %}{% else %}{% if LANGUAGE_BIDI %}مطابق للمعيار{% else %}{% trans "At benchmark" %}{% endif %}{% endif %}</span></td>
+      <td><span class="badge {% if m.vat_compliance_rate_pct.status == 'above' %}badge-low{% elif m.vat_compliance_rate_pct.status == 'below' %}badge-critical{% else %}badge-medium{% endif %}">{% if m.vat_compliance_rate_pct.status == 'above' %}{% trans "Above benchmark" %}{% elif m.vat_compliance_rate_pct.status == 'below' %}{% trans "Below benchmark" %}{% else %}{% trans "At benchmark" %}{% endif %}</span></td>
     </tr>
     {% endwith %}
   </tbody>

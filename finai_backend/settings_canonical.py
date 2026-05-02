@@ -63,7 +63,7 @@ SECRET_KEY = os.environ.get(
     os.environ.get("DJANGO_SECRET_KEY", _SECRET_KEY_FALLBACK),
 )
 
-DEBUG = os.environ.get("DEBUG", "True") == "True"
+DEBUG = os.environ.get("DEBUG", "False") == "True"
 
 # ── Production safety guards ────────────────────────────────────────────────
 # Raise hard errors if dangerous defaults are used outside local development.
@@ -126,6 +126,10 @@ LOCAL_APPS = [
     "apps.frontend",
     "apps.auditing",
     "apps.rule_engine",
+    "apps.notifications",
+    "apps.assistant",
+    "apps.webhooks",
+    "apps.data_export",
 ]
 
 # ─── Rule Engine Settings ──────────────────────────────────────────────────────
@@ -199,9 +203,10 @@ AUTH_USER_MODEL = "authentication.User"
 
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 8}},
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 10}},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {"NAME": "core.utils.password_complexity.ComplexityValidator", "OPTIONS": {"min_classes": 3}},
 ]
 
 # ─── Internationalization ─────────────────────────────────────────────────────
@@ -387,6 +392,21 @@ CELERY_TIMEZONE = TIME_ZONE
 # LOCAL DEV: run tasks synchronously when CELERY_TASK_ALWAYS_EAGER=True in .env
 CELERY_TASK_ALWAYS_EAGER = os.environ.get("CELERY_TASK_ALWAYS_EAGER", "False") == "True"
 CELERY_TASK_EAGER_PROPAGATES = CELERY_TASK_ALWAYS_EAGER
+
+# Fail fast when the Redis broker is unreachable. Without these, a single
+# `.delay()` call retries 20× with a 1s backoff = 20s blocking per call. With a
+# 500-record bulk upload that becomes 500 × 20s = nearly 3 hours of wall time
+# burned on broker reconnect attempts. 2s timeout + 0 retries makes the call
+# return quickly so the request can finish even when Redis is down.
+CELERY_BROKER_CONNECTION_TIMEOUT = 2.0
+CELERY_BROKER_CONNECTION_MAX_RETRIES = 0
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = False
+CELERY_BROKER_TRANSPORT_OPTIONS = {"socket_timeout": 2.0, "socket_connect_timeout": 2.0}
+CELERY_RESULT_BACKEND_TRANSPORT_OPTIONS = {
+    "retry_policy": {"timeout": 2.0, "max_retries": 0},
+    "socket_timeout": 2.0,
+    "socket_connect_timeout": 2.0,
+}
 
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")

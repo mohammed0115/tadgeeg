@@ -1,13 +1,14 @@
 {% extends "base.html" %}
-{% block title %}جلسة التدقيق{% endblock %}
-{% block page_title %}جلسة التدقيق{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Audit Session" %}{% endblock %}
+{% block page_title %}{% trans "Audit Session" %}{% endblock %}
 {% block nav_batches %}active{% endblock %}
 
 {% block content %}
 <div x-data="auditSessionDetail()" x-init="load()">
   <a href="/invoices/batches/" class="mb-5 inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-primary-600 dark:hover:text-primary-400">
-    <i data-lucide="arrow-right" class="h-4 w-4"></i>
-    العودة إلى الدفعات
+    <i data-lucide="arrow-left" class="h-4 w-4 rtl:rotate-180"></i>
+    {% trans "Back to Batches" %}
   </a>
 
   <template x-if="loading">
@@ -21,9 +22,9 @@
       <div class="card p-6">
         <div class="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 class="mb-1 text-xl font-bold text-slate-800 dark:text-white" x-text="session.name || 'جلسة تدقيق ' + session.id.slice(0, 8)"></h1>
+            <h1 class="mb-1 text-xl font-bold text-slate-800 dark:text-white" x-text="session.name || sessionFallbackName(session.id)"></h1>
             <p class="text-sm text-slate-400">
-              أُنشئت بواسطة <strong x-text="session.created_by_name || 'النظام'"></strong>
+              <span x-text="i18nCreatedBy"></span> <strong x-text="session.created_by_name || i18nSystem"></strong>
               — <span x-text="fmtDate(session.created_at)"></span>
             </p>
           </div>
@@ -32,7 +33,7 @@
 
         <div class="mt-5">
           <div class="mb-1.5 flex justify-between text-xs text-slate-500">
-            <span x-text="session.processed_count + ' من ' + session.total_count + ' مكتملة'"></span>
+            <span x-text="session.processed_count + ' ' + i18nOf + ' ' + session.total_count + ' ' + i18nCompletedFem"></span>
             <span x-text="session.progress_percent + '%'"></span>
           </div>
           <div class="h-3 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
@@ -42,27 +43,27 @@
 
         <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
           <div class="rounded-xl bg-slate-50 p-3 text-center dark:bg-slate-800">
-            <p class="mb-0.5 text-xs text-slate-400">الكل</p>
+            <p class="mb-0.5 text-xs text-slate-400">{% trans "Total" %}</p>
             <p class="font-mono text-xl font-bold text-slate-800 dark:text-white" x-text="session.total_count"></p>
           </div>
           <div class="rounded-xl bg-green-50 p-3 text-center dark:bg-green-900/20">
-            <p class="mb-0.5 text-xs text-slate-400">نجحت</p>
+            <p class="mb-0.5 text-xs text-slate-400">{% trans "Successful" %}</p>
             <p class="font-mono text-xl font-bold text-green-600" x-text="session.success_count"></p>
           </div>
           <div class="rounded-xl bg-red-50 p-3 text-center dark:bg-red-900/20">
-            <p class="mb-0.5 text-xs text-slate-400">فشلت</p>
+            <p class="mb-0.5 text-xs text-slate-400">{% trans "Failed" %}</p>
             <p class="font-mono text-xl font-bold text-red-600" x-text="session.failed_count"></p>
           </div>
           <div class="rounded-xl bg-amber-50 p-3 text-center dark:bg-amber-900/20">
-            <p class="mb-0.5 text-xs text-slate-400">مراجعة</p>
+            <p class="mb-0.5 text-xs text-slate-400">{% trans "Review" %}</p>
             <p class="font-mono text-xl font-bold text-amber-600" x-text="session.review_required_count"></p>
           </div>
           <div class="rounded-xl bg-primary-50 p-3 text-center dark:bg-primary-900/20">
-            <p class="mb-0.5 text-xs text-slate-400">مكررة</p>
+            <p class="mb-0.5 text-xs text-slate-400">{% trans "Duplicate" %}</p>
             <p class="font-mono text-xl font-bold text-primary-600" x-text="session.duplicate_count"></p>
           </div>
           <div class="rounded-xl bg-violet-50 p-3 text-center dark:bg-violet-900/20">
-            <p class="mb-0.5 text-xs text-slate-400">أعلى خطر</p>
+            <p class="mb-0.5 text-xs text-slate-400">{% trans "Highest Risk" %}</p>
             <p class="font-mono text-xl font-bold text-violet-600" x-text="Number(session.max_risk_score || 0).toFixed(1)"></p>
           </div>
         </div>
@@ -75,12 +76,12 @@
       <div class="card p-6" x-show="batch">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 class="text-lg font-bold text-slate-800 dark:text-white">الدفعة المرتبطة</h2>
+            <h2 class="text-lg font-bold text-slate-800 dark:text-white">{% trans "Linked Batch" %}</h2>
             <p class="mt-1 text-sm text-slate-400" x-text="batch?.batch_name || '—'"></p>
           </div>
           <a :href="'/invoices/batches/' + batch.id + '/'" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-            فتح تفاصيل الدفعة
-            <i data-lucide="arrow-left" class="h-4 w-4"></i>
+            {% trans "Open batch details" %}
+            <i data-lucide="arrow-right" class="h-4 w-4 rtl:rotate-180"></i>
           </a>
         </div>
       </div>
@@ -89,27 +90,27 @@
         <div class="card p-6">
           <div class="flex items-center justify-between gap-3">
             <div>
-              <h2 class="text-lg font-bold text-slate-800 dark:text-white">الملخص التنفيذي</h2>
-              <p class="mt-1 text-sm text-slate-400">ملخص مبني على بيانات الجلسة نفسها</p>
+              <h2 class="text-lg font-bold text-slate-800 dark:text-white">{% trans "Executive Summary" %}</h2>
+              <p class="mt-1 text-sm text-slate-400">{% trans "Summary built from session data" %}</p>
             </div>
             <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500" x-text="summary?.source || 'deterministic'"></span>
           </div>
           <p class="mt-5 text-sm leading-7 text-slate-600 dark:text-slate-300" x-text="summary?.summary || '—'"></p>
           <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
             <div class="rounded-xl bg-red-50 p-3 text-center">
-              <p class="text-xs text-slate-400">حرجة</p>
+              <p class="text-xs text-slate-400">{% trans "Critical" %}</p>
               <p class="font-mono text-lg font-bold text-red-600" x-text="findingTotals.critical || 0"></p>
             </div>
             <div class="rounded-xl bg-orange-50 p-3 text-center">
-              <p class="text-xs text-slate-400">عالية</p>
+              <p class="text-xs text-slate-400">{% trans "High" %}</p>
               <p class="font-mono text-lg font-bold text-orange-600" x-text="findingTotals.high || 0"></p>
             </div>
             <div class="rounded-xl bg-amber-50 p-3 text-center">
-              <p class="text-xs text-slate-400">متوسطة</p>
+              <p class="text-xs text-slate-400">{% trans "Medium" %}</p>
               <p class="font-mono text-lg font-bold text-amber-600" x-text="findingTotals.medium || 0"></p>
             </div>
             <div class="rounded-xl bg-blue-50 p-3 text-center">
-              <p class="text-xs text-slate-400">منخفضة</p>
+              <p class="text-xs text-slate-400">{% trans "Low" %}</p>
               <p class="font-mono text-lg font-bold text-blue-600" x-text="findingTotals.low || 0"></p>
             </div>
           </div>
@@ -117,19 +118,19 @@
 
         <div class="card p-6">
           <div class="flex items-center justify-between gap-3">
-            <h2 class="text-lg font-bold text-slate-800 dark:text-white">أبرز الملاحظات</h2>
+            <h2 class="text-lg font-bold text-slate-800 dark:text-white">{% trans "Top Findings" %}</h2>
             <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500" x-text="findings.length"></span>
           </div>
           <div class="mt-5 space-y-3">
             <template x-if="!findings.length">
               <div class="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-400">
-                لا توجد Findings مفتوحة حالياً
+                {% trans "No open findings currently" %}
               </div>
             </template>
             <template x-for="finding in findings.slice(0, 6)" :key="finding.id">
               <div class="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                 <div class="flex items-start justify-between gap-3">
-                  <div class="text-right">
+                  <div>
                     <p class="text-sm font-bold text-slate-800 dark:text-white" x-text="finding.rule_code"></p>
                     <p class="mt-1 text-xs leading-6 text-slate-500" x-text="finding.message"></p>
                   </div>
@@ -143,23 +144,23 @@
 
       <div class="card overflow-hidden">
         <div class="border-b border-slate-200 px-6 py-4 dark:border-slate-700">
-          <h2 class="text-lg font-bold text-slate-800 dark:text-white">الفواتير داخل الجلسة</h2>
+          <h2 class="text-lg font-bold text-slate-800 dark:text-white">{% trans "Invoices in Session" %}</h2>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
               <tr class="border-b border-slate-200 text-xs uppercase text-slate-500 dark:border-slate-700">
-                <th class="px-4 py-3 text-right font-semibold">رقم الفاتورة</th>
-                <th class="px-4 py-3 text-right font-semibold">المورد</th>
-                <th class="px-4 py-3 text-right font-semibold">المبلغ</th>
-                <th class="px-4 py-3 text-right font-semibold">الخطر</th>
-                <th class="px-4 py-3 text-right font-semibold">الحالة</th>
+                <th class="px-4 py-3 font-semibold">{% trans "Invoice Number" %}</th>
+                <th class="px-4 py-3 font-semibold">{% trans "Vendor" %}</th>
+                <th class="px-4 py-3 font-semibold">{% trans "Amount" %}</th>
+                <th class="px-4 py-3 font-semibold">{% trans "Risk" %}</th>
+                <th class="px-4 py-3 font-semibold">{% trans "Status" %}</th>
                 <th class="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
               <template x-if="!invoices.length">
-                <tr><td colspan="6" class="py-10 text-center text-sm text-slate-400">لا توجد فواتير مرتبطة بهذه الجلسة</td></tr>
+                <tr><td colspan="6" class="py-10 text-center text-sm text-slate-400">{% trans "No invoices linked to this session" %}</td></tr>
               </template>
               <template x-for="invoice in invoices" :key="invoice.id">
                 <tr class="border-b border-slate-100 transition-colors hover:bg-slate-50 dark:border-slate-700/50 dark:hover:bg-slate-800/40">
@@ -169,9 +170,9 @@
                   <td class="px-4 py-3">
                     <span :class="riskBadge(invoice.risk_level)" class="rounded-full px-2.5 py-1 text-xs font-bold" x-text="riskLabel(invoice.risk_level)"></span>
                   </td>
-                  <td class="px-4 py-3 text-xs text-slate-500" x-text="invoice.status || '—'"></td>
-                  <td class="px-4 py-3 text-left">
-                    <a :href="'/invoices/' + invoice.id + '/'" class="text-xs font-semibold text-primary-600 hover:text-primary-700">التفاصيل</a>
+                  <td class="px-4 py-3 text-xs text-slate-500" x-text="statusLabel(invoice.status)"></td>
+                  <td class="px-4 py-3">
+                    <a :href="'/invoices/' + invoice.id + '/'" class="text-xs font-semibold text-primary-600 hover:text-primary-700">{% trans "Details" %}</a>
                   </td>
                 </tr>
               </template>
@@ -196,6 +197,12 @@ function auditSessionDetail() {
     summary: null,
     findings: [],
     findingTotals: {},
+    i18nSessionPrefix: "{% trans 'Audit session' %}",
+    i18nCreatedBy:     "{% trans 'Created by' %}",
+    i18nSystem:        "{% trans 'System' %}",
+    i18nOf:            "{% trans 'of' %}",
+    i18nCompletedFem:  "{% trans 'completed' %}",
+
     async load() {
       this.loading = true;
       try {
@@ -211,6 +218,7 @@ function auditSessionDetail() {
         this.$nextTick(() => lucide.createIcons());
       }
     },
+    sessionFallbackName(id) { return this.i18nSessionPrefix + ' ' + (id || '').slice(0, 8); },
     fmtDate(value) {
       if (!value) return '—';
       return new Date(value).toLocaleString(APP_LOCALE);
@@ -219,7 +227,7 @@ function auditSessionDetail() {
       return `${currency || 'SAR'} ${Number(value || 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
     },
     riskLabel(level) {
-      return { critical: 'حرج', high: 'عالٍ', medium: 'متوسط', low: 'منخفض' }[level] || 'غير محدد';
+      return t('risk.' + level, level);
     },
     riskBadge(level) {
       return {
@@ -230,16 +238,7 @@ function auditSessionDetail() {
       }[level] || 'bg-slate-100 text-slate-600';
     },
     statusLabel(status) {
-      return {
-        received: 'تم الاستلام',
-        extracting: 'استخراج',
-        normalizing: 'توحيد',
-        validating: 'تحقق',
-        review_required: 'مراجعة مطلوبة',
-        action_required: 'إجراء مطلوب',
-        completed: 'مكتملة',
-        failed: 'فشلت',
-      }[status] || status;
+      return t('status.' + status, status);
     },
     statusBadge(status) {
       return {

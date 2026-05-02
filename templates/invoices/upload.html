@@ -1,264 +1,289 @@
-{% extends "base.html" %}
-{% load i18n %}
-{% block title %}{% trans "Upload Invoices" %}{% endblock %}
-{% block page_title %}{% trans "Upload Invoices" %}{% endblock %}
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Upload Documents" %}{% endblock %}
 {% block nav_upload %}active{% endblock %}
 
+{% block head_extra %}
+  <script defer src="{% static 'vendor/alpine.min.js' %}" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
+{% endblock %}
+
+{% block extra_styles %}
+  [x-cloak] { display: none !important; }
+  .upload-page { max-width: 880px; margin: 0 auto; }
+  .upload-hero { text-align: center; margin-bottom: 40px; }
+  .upload-hero h2 { font-family: 'Cairo', sans-serif; font-size: 32px; font-weight: 900; color: var(--primary); letter-spacing: -1px; margin-bottom: 10px; }
+  .upload-hero p { color: var(--text-muted); font-size: 15px; }
+
+  .dropzone { background: white; border: 2.5px dashed var(--border); border-radius: 28px; padding: 64px 32px; text-align: center; transition: all 0.35s ease; cursor: pointer; position: relative; overflow: hidden; }
+  .dropzone:hover, .dropzone.dragover { border-color: var(--accent); background: rgba(16, 185, 129, 0.03); transform: translateY(-2px); }
+  .dropzone.uploading { border-color: var(--accent); border-style: solid; background: rgba(16, 185, 129, 0.04); cursor: default; }
+  .dropzone-icon { width: 96px; height: 96px; border-radius: 28px; background: linear-gradient(135deg, rgba(0,51,102,0.08), rgba(16,185,129,0.08)); display: flex; align-items: center; justify-content: center; margin: 0 auto 28px; color: var(--primary); transition: all 0.3s ease; }
+  .dropzone:hover .dropzone-icon { background: var(--accent); color: white; transform: scale(1.05) rotate(-3deg); }
+  .dropzone h3 { font-family: 'Cairo', sans-serif; font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 10px; }
+  .dropzone p { color: var(--text-muted); font-size: 14px; margin-bottom: 28px; }
+  .file-pills { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 28px; padding-top: 28px; border-top: 1px solid var(--border-soft); }
+  .file-pill { padding: 8px 16px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 100px; font-size: 12px; font-weight: 700; color: var(--text-muted); display: inline-flex; align-items: center; gap: 6px; }
+
+  .progress-bar { width: 100%; max-width: 400px; height: 8px; background: var(--bg-soft); border-radius: 100px; overflow: hidden; margin: 20px auto; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent) 0%, var(--accent-light) 100%); border-radius: 100px; width: 0%; transition: width 0.5s ease; }
+  .progress-steps { display: flex; justify-content: center; gap: 24px; margin-top: 24px; flex-wrap: wrap; }
+  .progress-step { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--text-light); transition: color 0.3s ease; }
+  .progress-step.done { color: var(--success); }
+  .progress-step.active { color: var(--accent); }
+  .progress-step .dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; opacity: 0.4; }
+  .progress-step.active .dot, .progress-step.done .dot { opacity: 1; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .progress-step.active .dot { animation: pulse 1.4s ease-in-out infinite; }
+
+  .doc-types { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 32px; }
+  .doc-type-card { background: white; border: 1px solid var(--border); border-radius: 18px; padding: 24px; text-align: center; transition: all 0.3s ease; cursor: pointer; }
+  .doc-type-card:hover { transform: translateY(-3px); border-color: var(--primary); box-shadow: 0 4px 6px -1px rgba(0,51,102,0.08); }
+  .doc-type-icon { width: 48px; height: 48px; border-radius: 12px; background: var(--bg-soft); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; color: var(--primary); }
+  .doc-type-card h4 { font-family: 'Cairo', sans-serif; font-weight: 800; color: var(--text); font-size: 15px; margin-bottom: 4px; }
+  .doc-type-card p { font-size: 11px; color: var(--text-muted); }
+
+  .tips { margin-top: 32px; padding: 20px; background: rgba(0,51,102,0.03); border: 1px solid rgba(0,51,102,0.08); border-radius: 16px; display: flex; gap: 14px; }
+  .tips svg { flex-shrink: 0; color: var(--primary); }
+  .tips-content h5 { font-family: 'Cairo', sans-serif; font-weight: 800; color: var(--primary); font-size: 13px; margin-bottom: 6px; }
+  .tips-content p { font-size: 12px; color: var(--text-muted); line-height: 1.7; }
+
+  .file-list { margin-top: 24px; max-height: 280px; overflow-y: auto; padding-right: 4px; }
+  .file-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg-soft); border: 1px solid var(--border-soft); border-radius: 14px; margin-bottom: 8px; }
+  .file-row-icon { width: 36px; height: 36px; border-radius: 10px; background: white; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--primary); flex-shrink: 0; }
+  .file-row-meta { flex: 1; min-width: 0; }
+  .file-row-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-row-size { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .file-row-remove { color: var(--text-light); padding: 6px; border-radius: 6px; transition: all 0.2s ease; }
+  .file-row-remove:hover { background: #fee2e2; color: var(--danger); }
+
+  .result { margin-top: 20px; padding: 16px 20px; border-radius: 14px; font-size: 14px; display: flex; align-items: center; gap: 12px; font-weight: 600; }
+  .result-success { background: #dcfce7; border: 1px solid #bbf7d0; color: #166534; }
+  .result-error { background: #fee2e2; border: 1px solid #fecaca; color: #991b1b; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 640px) {
+    .doc-types { grid-template-columns: 1fr; }
+    .dropzone { padding: 40px 20px; }
+    .dropzone h3 { font-size: 18px; }
+    .upload-hero h2 { font-size: 24px; }
+  }
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "Upload Documents" %}</span>
+{% endblock %}
+
 {% block content %}
-<div class="max-w-3xl mx-auto space-y-5" x-data="uploader()">
-
-  <!-- Upload Card -->
-  <div class="card p-6">
-    <h2 class="font-bold text-slate-800 dark:text-white text-lg mb-1">{% trans "Upload Invoice Files" %}</h2>
-    <p class="text-slate-400 text-sm mb-6">{% trans "The system supports PDF, image, Excel, JSON, CSV, and ZIP files." %}</p>
-
-    <!-- Drop Zone -->
-    <div @dragover.prevent="dragging=true"
-         @dragleave.prevent="dragging=false"
-         @drop.prevent="onDrop($event)"
-         @click="$refs.fileInput.click()"
-         :class="dragging ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/10 scale-[1.01]' : 'border-slate-300 dark:border-slate-600 hover:border-primary-400'"
-         class="border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-200 cursor-pointer">
-      <input x-ref="fileInput" type="file" multiple class="hidden"
-             accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff,.zip,.xlsx,.xls,.json,.csv,.tsv"
-             @change="addFiles($event.target.files)">
-      <div class="flex flex-col items-center gap-3">
-        <div class="w-16 h-16 rounded-2xl bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
-          <i data-lucide="upload-cloud" class="w-8 h-8 text-primary-500"></i>
-        </div>
-        <div>
-          <p class="font-semibold text-slate-700 dark:text-slate-200 text-base">{% trans "Drag and drop files here" %}</p>
-          <p class="text-slate-400 text-sm mt-1">{% trans "Or" %} <span class="text-primary-500 font-semibold">{% trans "click to choose files" %}</span></p>
-        </div>
-        <p class="text-xs text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-3 py-1.5 rounded-lg">
-          {% trans "PDF · JPG · PNG · TIFF · XLSX · JSON · CSV · ZIP — Max size 50 MB" %}
-        </p>
-      </div>
-    </div>
-
-    <!-- Batch Name -->
-    <div class="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">{% trans "Batch name (optional)" %}</label>
-        <input x-model="batchName" type="text" class="input" placeholder="{% trans 'Example: January 2025 invoices' %}">
-      </div>
-    </div>
-
-    <!-- File List -->
-    <div x-show="files.length" x-transition class="mt-5">
-      <div class="flex items-center justify-between mb-3">
-        <p class="text-sm font-semibold text-slate-700 dark:text-slate-200">
-          {% trans "Selected files:" %} <span class="text-primary-500" x-text="files.length"></span>
-        </p>
-        <button @click="files=[]" class="text-xs text-red-500 hover:text-red-400 font-medium">{% trans "Clear all" %}</button>
-      </div>
-      <div class="space-y-2 max-h-56 overflow-y-auto">
-        <template x-for="(f,i) in files" :key="i">
-          <div class="flex items-center gap-3 bg-slate-50 dark:bg-slate-700/40 rounded-xl px-4 py-3">
-            <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                 :class="f.name.endsWith('.pdf') ? 'bg-red-100 dark:bg-red-900/30' :
-                         f.name.endsWith('.zip') ? 'bg-amber-100 dark:bg-amber-900/30' :
-                         (f.name.endsWith('.xlsx')||f.name.endsWith('.xls')) ? 'bg-emerald-100 dark:bg-emerald-900/30' :
-                         f.name.endsWith('.json') ? 'bg-purple-100 dark:bg-purple-900/30' :
-                         (f.name.endsWith('.csv')||f.name.endsWith('.tsv')) ? 'bg-teal-100 dark:bg-teal-900/30' :
-                                                    'bg-blue-100 dark:bg-blue-900/30'">
-              <i :data-lucide="f.name.endsWith('.pdf') ? 'file-text' :
-                               f.name.endsWith('.zip') ? 'archive' :
-                               (f.name.endsWith('.xlsx')||f.name.endsWith('.xls')) ? 'table' :
-                               f.name.endsWith('.json') ? 'braces' :
-                               (f.name.endsWith('.csv')||f.name.endsWith('.tsv')) ? 'file-spreadsheet' : 'image'"
-                 class="w-4 h-4"
-                 :class="f.name.endsWith('.pdf') ? 'text-red-500' :
-                         f.name.endsWith('.zip') ? 'text-amber-500' :
-                         (f.name.endsWith('.xlsx')||f.name.endsWith('.xls')) ? 'text-emerald-500' :
-                         f.name.endsWith('.json') ? 'text-purple-500' :
-                         (f.name.endsWith('.csv')||f.name.endsWith('.tsv')) ? 'text-teal-500' : 'text-blue-500'"></i>
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate" x-text="f.name"></p>
-              <p class="text-xs text-slate-400" x-text="fmtSize(f.size)"></p>
-            </div>
-            <div x-show="uploading" class="w-20">
-              <div class="progress-track">
-                <div class="progress-fill bg-primary-500 animate-pulse" style="width:60%"></div>
-              </div>
-            </div>
-            <button x-show="!uploading" @click="files.splice(i,1)"
-                    class="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0">
-              <i data-lucide="x" class="w-4 h-4"></i>
-            </button>
-          </div>
-        </template>
-      </div>
-    </div>
-
-    <!-- Submit -->
-    <button @click="upload()" :disabled="!files.length || uploading"
-            class="btn-blue w-full mt-6 py-3 justify-center text-base">
-      <span x-show="!uploading" class="flex items-center gap-2">
-        <i data-lucide="cpu" class="w-5 h-5"></i>
-        {% trans "Upload and run the 30 audit rules automatically" %}
-      </span>
-      <span x-show="uploading" class="flex items-center gap-2">
-        <svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" class="opacity-25"/>
-          <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" class="opacity-75"/>
-        </svg>
-        {% trans "Analyzing with AI..." %}
-      </span>
-    </button>
+<div class="upload-page" x-data="uploader()">
+  <div class="upload-hero">
+    <h2>{% trans "Upload and Process Documents" %}</h2>
+    <p>{% trans "AI will analyze your documents in seconds — with full ZATCA checks and fraud detection." %}</p>
   </div>
 
-  <!-- Results -->
-  <div x-show="result" x-transition class="space-y-4">
+  <div class="dropzone" :class="{ 'dragover': dragging, 'uploading': uploading }"
+       @dragover.prevent="dragging = true"
+       @dragleave.prevent="dragging = false"
+       @drop.prevent="onDrop($event)"
+       @click="!uploading && $refs.fileInput.click()">
 
-    <!-- Summary -->
-    <div class="card p-5">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="font-bold text-slate-800 dark:text-white">📊 {% trans "Upload & Audit Results" %}</h3>
-        <div class="flex items-center gap-3">
-          <a :href="'/invoices/sessions/' + (result?.audit_session_id||'') + '/'"
-             x-show="result?.audit_session_id"
-             class="text-xs font-semibold text-slate-500 hover:text-slate-700">{% trans "Audit session" %} ←</a>
-          <a :href="'/invoices/batches/' + (result?.batch_id||'') + '/'"
-             class="text-xs text-primary-500 hover:text-primary-400 font-semibold">{% trans "View full batch" %} ←</a>
-        </div>
+    <input x-ref="fileInput" type="file" multiple style="display:none"
+           accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff,.zip,.xlsx,.xls,.json,.csv,.tsv"
+           @change="addFiles($event.target.files)">
+
+    <div x-show="!uploading">
+      <div class="dropzone-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       </div>
-      <div class="grid grid-cols-4 gap-3 text-center">
-        <div class="bg-slate-50 dark:bg-slate-700/40 rounded-xl py-4">
-          <div class="text-2xl font-bold font-mono text-slate-800 dark:text-white" x-text="result?.total_files||0"></div>
-          <div class="text-xs text-slate-400 mt-1">{% trans "Total files" %}</div>
-        </div>
-        <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl py-4">
-          <div class="text-2xl font-bold font-mono text-emerald-600 dark:text-emerald-400" x-text="result?.processed||0"></div>
-          <div class="text-xs text-slate-400 mt-1">{% trans "Processed" %}</div>
-        </div>
-        <div class="bg-red-50 dark:bg-red-900/20 rounded-xl py-4">
-          <div class="text-2xl font-bold font-mono text-red-600 dark:text-red-400" x-text="result?.failed||0"></div>
-          <div class="text-xs text-slate-400 mt-1">{% trans "Failed" %}</div>
-        </div>
-        <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl py-4">
-          <div class="text-2xl font-bold font-mono text-amber-600 dark:text-amber-400"
-               x-text="(result?.results||[]).filter(r=>['high','critical'].includes(r.risk_level)).length"></div>
-          <div class="text-xs text-slate-400 mt-1">{% trans "Needs review" %}</div>
-        </div>
+      <h3>{% trans "Drag files here or click to select" %}</h3>
+      <p>{% trans "Supports PDF, Excel, CSV, JSON, and images — up to 50MB per file" %}</p>
+      <button class="btn btn-dark btn-lg" type="button" @click.stop="$refs.fileInput.click()">{% trans "Choose Files" %}</button>
+
+      <div class="file-pills">
+        <span class="file-pill">📄 PDF</span>
+        <span class="file-pill">📊 XLSX</span>
+        <span class="file-pill">📑 CSV</span>
+        <span class="file-pill">⚙️ JSON</span>
+        <span class="file-pill">🖼️ JPG/PNG</span>
       </div>
     </div>
 
-    <!-- Per-file results -->
-    <div class="card overflow-hidden">
-      <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-700/30">
-        <h3 class="font-semibold text-slate-800 dark:text-white">{% trans "Per-file audit results" %}</h3>
+    <div x-show="uploading" x-cloak class="ai-loader" style="padding:8px 0">
+      {% include "components/ai_loader.html" %}
+
+      <div class="ai-loader-label" x-text="currentFileName">{% trans "AI is analyzing your document" %}</div>
+      <div class="ai-loader-status">
+        <span class="ai-dots"><span></span><span></span><span></span></span>
+        <span x-text="currentStatus">{% trans "Working on it…" %}</span>
       </div>
-      <div class="divide-y divide-slate-100 dark:divide-slate-700/20">
-        <template x-for="r in (result?.results||[])" :key="r.invoice_id">
-          <div class="flex items-center gap-4 px-5 py-4">
-            <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                 :class="['high','critical'].includes(r.risk_level) ? 'bg-red-100 dark:bg-red-900/30' : 'bg-emerald-100 dark:bg-emerald-900/30'">
-              <i :data-lucide="['high','critical'].includes(r.risk_level) ? 'alert-triangle' : 'check-circle'"
-                 class="w-4 h-4"
-                 :class="['high','critical'].includes(r.risk_level) ? 'text-red-500' : 'text-emerald-500'"></i>
-            </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-slate-700 dark:text-slate-200 truncate" x-text="r.filename"></p>
-              <p class="text-xs text-slate-400 mt-0.5">
-                {% trans "Failed" %} <span class="text-red-500 font-bold" x-text="(r.rules_failed||[]).length"></span> {% trans "out of 30 rules" %}
-                <span x-show="(r.rules_failed||[]).length" x-text="' — ' + (r.rules_failed||[]).slice(0,3).join(', ')"></span>
-              </p>
-            </div>
-            <!-- Score -->
-            <div class="text-center flex-shrink-0 w-16">
-              <div class="text-lg font-bold font-mono"
-                   :class="(r.validation_score||0)>=80 ? 'text-emerald-500' : (r.validation_score||0)>=60 ? 'text-amber-500' : 'text-red-500'"
-                   x-text="(r.validation_score||0).toFixed(0)+'%'"></div>
-              <div class="text-[10px] text-slate-400">{% trans "Audit score" %}</div>
-            </div>
-            <span class="flex-shrink-0 text-xs font-semibold px-2.5 py-1 rounded-lg"
-                  :class="'badge-'+r.risk_level"
-                  x-text="riskLabel(r.risk_level)"></span>
-            <a :href="'/invoices/'+r.invoice_id+'/'"
-               class="flex-shrink-0 text-primary-500 hover:text-primary-400 text-xs font-semibold">{% trans "Details" %} →</a>
-          </div>
-        </template>
-        <template x-for="e in (result?.errors||[])" :key="e.filename">
-          <div class="flex items-center gap-4 px-5 py-4 bg-red-50/50 dark:bg-red-900/10">
-            <i data-lucide="x-circle" class="w-5 h-5 text-red-500 flex-shrink-0"></i>
-            <div>
-              <p class="text-sm font-medium text-slate-700 dark:text-slate-200" x-text="e.filename"></p>
-              <p class="text-xs text-red-500 mt-0.5" x-text="e.error"></p>
-            </div>
-          </div>
-        </template>
+
+      <div class="ai-progress">
+        <div class="ai-progress-fill" :style="`width: ${progress}%`"></div>
       </div>
+
+      <div class="ai-stages">
+        <div class="ai-stage" :class="{ active: step === 1, done: step > 1 }">
+          <div class="ai-stage-line"></div>
+          <div class="ai-stage-circle"><span x-show="step <= 1">1</span><svg x-show="step > 1" x-cloak width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="ai-stage-label">{% trans "Upload" %}</div>
+        </div>
+        <div class="ai-stage" :class="{ active: step === 2, done: step > 2 }">
+          <div class="ai-stage-line"></div>
+          <div class="ai-stage-circle"><span x-show="step <= 2">2</span><svg x-show="step > 2" x-cloak width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="ai-stage-label">{% trans "OCR" %}</div>
+        </div>
+        <div class="ai-stage" :class="{ active: step === 3, done: step > 3 }">
+          <div class="ai-stage-line"></div>
+          <div class="ai-stage-circle"><span x-show="step <= 3">3</span><svg x-show="step > 3" x-cloak width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="ai-stage-label">{% trans "GPT-4o" %}</div>
+        </div>
+        <div class="ai-stage" :class="{ active: step === 4, done: step > 4 }">
+          <div class="ai-stage-line"></div>
+          <div class="ai-stage-circle"><span x-show="step <= 4">4</span><svg x-show="step > 4" x-cloak width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="ai-stage-label">{% trans "ZATCA" %}</div>
+        </div>
+        <div class="ai-stage" :class="{ active: step === 5, done: step > 5 }">
+          <div class="ai-stage-circle"><span x-show="step <= 5">5</span><svg x-show="step > 5" x-cloak width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="ai-stage-label">{% trans "Fraud Scan" %}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div x-show="files.length && !uploading" x-cloak>
+    <div class="file-list">
+      <template x-for="(f, i) in files" :key="i">
+        <div class="file-row">
+          <div class="file-row-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div class="file-row-meta">
+            <div class="file-row-name" x-text="f.name"></div>
+            <div class="file-row-size" x-text="fmtSize(f.size)"></div>
+          </div>
+          <button @click="files.splice(i, 1)" class="file-row-remove" type="button" title="{% trans 'Remove' %}">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </template>
+    </div>
+
+    <div style="display:flex; gap:12px; margin-top:20px; justify-content:center;">
+      <button @click="files = []" class="btn btn-light" type="button">{% trans "Clear all" %}</button>
+      <button @click="upload" class="btn btn-primary btn-lg" type="button" :disabled="!files.length">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <span x-text="`{% trans 'Upload' %} ${files.length}`"></span>
+      </button>
+    </div>
+  </div>
+
+  <div x-show="result" x-cloak class="result" :class="resultType === 'success' ? 'result-success' : 'result-error'">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <template x-if="resultType === 'success'"><polyline points="20 6 9 17 4 12"/></template>
+      <template x-if="resultType !== 'success'"><g><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></g></template>
+    </svg>
+    <span x-text="result"></span>
+  </div>
+
+  <div class="tips">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <div class="tips-content">
+      <h5>{% trans "Tips for best accuracy" %}</h5>
+      <p>{% trans "Make sure scanned images and documents are high resolution (300dpi or higher). Avoid skewed images or poor lighting. For multi-page files, use PDF." %}</p>
     </div>
   </div>
 </div>
 {% endblock %}
 
-{% block page_js %}
+{% block extra_scripts %}
 <script>
-function uploader() {
-  return {
-    i18n: {
-      sessionExpired: '{% trans "Session expired — please sign in again." %}',
-      uploadFailed: '{% trans "Upload failed:" %}',
-      uploadSuccessPrefix: '{% trans "Processed" %}',
-      invoicesWord: '{% trans "invoices" %}',
-      riskCritical: '{% trans "Critical" %}',
-      riskHigh: '{% trans "High" %}',
-      riskMedium: '{% trans "Medium" %}',
-      riskLow: '{% trans "Low" %}',
-    },
-    files: [], batchName: '', dragging: false,
-    uploading: false, result: null,
+  function getCookie(name) {
+    const cookieValue = `; ${document.cookie}`;
+    const parts = cookieValue.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+    return '';
+  }
 
-    onDrop(e) {
-      this.dragging = false;
-      this.addFiles(e.dataTransfer.files);
-    },
-    addFiles(list) {
-      for (const f of list) this.files.push(f);
-      this.$nextTick(() => lucide.createIcons());
-    },
-    fmtSize(b) {
-      return b > 1048576 ? (b/1048576).toFixed(1)+' MB' : (b/1024).toFixed(0)+' KB';
-    },
-    riskLabel(level) {
-      return {
-        critical: this.i18n.riskCritical,
-        high: this.i18n.riskHigh,
-        medium: this.i18n.riskMedium,
-        low: this.i18n.riskLow,
-      }[level] || level;
-    },
-    async upload() {
-      if (!this.files.length) return;
-      this.uploading = true; this.result = null;
-      const fd = new FormData();
-      for (const f of this.files) fd.append('files', f);
-      if (this.batchName) fd.append('batch_name', this.batchName);
-      try {
-        this.result = await apiFetch('/invoices/upload/', {
-          method: 'POST',
-          body: fd,
-        });
-        notify(`${this.i18n.uploadSuccessPrefix} ${this.result.processed||0} ${this.i18n.invoicesWord}`,
-               this.result.failed ? 'warning' : 'success');
-        this.files = [];
-      } catch(e) {
-        const message = String(e?.message || '');
-        if (message.includes('Authentication credentials') || message.includes('Session expired') || message.includes('401')) {
-          notify(this.i18n.sessionExpired, 'error');
-          setTimeout(() => window.location.href = '/login/', 1500);
-          return;
+  function uploader() {
+    return {
+      files: [], dragging: false, uploading: false, progress: 0, step: 0,
+      currentFileName: '', currentStatus: '',
+      result: null, resultType: 'success',
+
+      onDrop(e) { this.dragging = false; this.addFiles(e.dataTransfer.files); },
+      addFiles(list) { for (const f of list) this.files.push(f); },
+      fmtSize(b) { return b > 1048576 ? (b/1048576).toFixed(1)+' MB' : (b/1024).toFixed(0)+' KB'; },
+
+      async upload() {
+        if (!this.files.length) return;
+        this.uploading = true; this.result = null; this.progress = 0; this.step = 1;
+        this.currentFileName = this.files[0].name;
+        this.currentStatus = '{% trans "Uploading..." %}';
+
+        const stages = [
+          { at: 18, status: '{% trans "Extracting text via OCR + PyMuPDF..." %}', step: 2 },
+          { at: 42, status: '{% trans "GPT-4o analyzing fields and structure..." %}', step: 3 },
+          { at: 68, status: '{% trans "Validating ZATCA Phase 2 compliance..." %}', step: 4 },
+          { at: 88, status: '{% trans "Running fraud + duplicate detection rules..." %}', step: 5 },
+        ];
+        const progressInterval = setInterval(() => {
+          if (this.progress < 90) {
+            this.progress += 2;
+            for (const s of stages) {
+              if (this.progress >= s.at && this.progress < s.at + 2) {
+                this.currentStatus = s.status;
+                this.step = s.step;
+              }
+            }
+          }
+        }, 80);
+
+        const fd = new FormData();
+        // /auditor/upload/ form expects 'file' (multi-file) and 'selected_doc_type'
+        for (const f of this.files) fd.append('file', f);
+        fd.append('selected_doc_type', 'invoice');
+        fd.append('doc_language', 'auto');
+        fd.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+
+        try {
+          const response = await fetch('/auditor/upload/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With': 'XMLHttpRequest' },
+            body: fd,
+          });
+          clearInterval(progressInterval);
+          this.progress = 100; this.step = 4;
+
+          if (response.status === 401 || response.status === 403) {
+            this.resultType = 'error';
+            this.result = '{% trans "Session expired — please sign in again." %}';
+            setTimeout(() => window.location.href = '/login/', 1500);
+            return;
+          }
+
+          // The auditor upload view redirects to the result page on success.
+          if (response.redirected) {
+            this.resultType = 'success';
+            this.result = '{% trans "Upload complete — opening report..." %}';
+            setTimeout(() => { window.location.href = response.url; }, 600);
+            return;
+          }
+
+          // Non-redirected response means the form re-rendered with errors.
+          this.resultType = 'error';
+          this.result = '{% trans "Upload failed. Please check your files and try again." %}';
+        } catch (e) {
+          clearInterval(progressInterval);
+          this.resultType = 'error';
+          this.result = '{% trans "Server connection error" %}';
+        } finally {
+          setTimeout(() => { this.uploading = false; this.step = 0; this.progress = 0; }, 600);
         }
-        notify(`${this.i18n.uploadFailed} ${e.message}`, 'error');
-      } finally {
-        this.uploading = false;
-        this.$nextTick(() => lucide.createIcons());
       }
     }
   }
-}
 </script>
 {% endblock %}

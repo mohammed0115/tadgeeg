@@ -15,6 +15,7 @@ class AuditDocument(models.Model):
         FAILED = "failed", "Failed"
 
     class DocumentType(models.TextChoices):
+        # Phase 1 (legacy keys)
         INVOICE = "invoice", "Invoice"
         PURCHASE_ORDER = "purchase_order", "Purchase Order"
         BANK_STATEMENT = "bank_statement", "Bank Statement"
@@ -23,6 +24,23 @@ class AuditDocument(models.Model):
         TAX_DECLARATION = "tax_declaration", "Tax Declaration"
         FIXED_ASSET = "fixed_asset", "Fixed Asset Record"
         SALES_RECEIPT = "sales_receipt", "Sales Receipt"
+        # Phase 2/3 — full 20-type catalog
+        SALES_INVOICE = "sales_invoice", "Sales Invoice"
+        PURCHASE_INVOICE = "purchase_invoice", "Purchase Invoice"
+        SALES_ORDER = "sales_order", "Sales Order"
+        QUOTATION = "quotation", "Quotation"
+        PROFORMA_INVOICE = "proforma_invoice", "Proforma Invoice"
+        GOODS_RECEIPT_NOTE = "goods_receipt_note", "Goods Receipt Note"
+        PAYMENT_VOUCHER = "payment_voucher", "Payment Voucher"
+        RECEIPT_VOUCHER = "receipt_voucher", "Receipt Voucher"
+        CASH_VOUCHER = "cash_voucher", "Cash Voucher"
+        JOURNAL_ENTRY = "journal_entry", "Journal Entry"
+        GENERAL_LEDGER = "general_ledger", "General Ledger"
+        LEDGER = "ledger", "Ledger"
+        CONTRACT = "contract", "Contract"
+        SUPPLIER_STATEMENT = "supplier_statement", "Supplier Statement"
+        CUSTOMER_STATEMENT = "customer_statement", "Customer Statement"
+        VAT_RETURN = "vat_return", "VAT Return"
         OTHER = "other", "Other"
 
     class RiskLevel(models.TextChoices):

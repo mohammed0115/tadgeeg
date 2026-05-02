@@ -1,0 +1,24 @@
+<InvoiceDocument>
+    <InvoiceHeader>
+        <Number>00021</Number>
+        <IssueDate>2018-01-04</IssueDate>
+        <Currency>ر.س</Currency>
+    </InvoiceHeader>
+    <Parties>
+        <Seller>شركة دفترة</Seller>
+        <Buyer>الشركة الهندسية للإلكترونيات</Buyer>
+    </Parties>
+    <Inventory>
+        <Item>
+            <Name>Samsung S8 Plus</Name>
+            <Qty>20</Qty>
+            <Price>7000</Price>
+            <LineTotal>140000</LineTotal>
+        </Item>
+    </Inventory>
+    <TaxDetails>
+        <TaxRate>0%</TaxRate>
+        <TaxAmount>0.00</TaxAmount>
+    </TaxDetails>
+    <GrandTotal>140000</GrandTotal>
+</InvoiceDocument>

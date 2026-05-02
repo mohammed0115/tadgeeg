@@ -1,0 +1,21 @@
+<HandwrittenInvoice>
+    <Header>
+        <Number>1939</Number>
+        <Customer>المرزوقي</Customer>
+        <Date>2018-08-12</Date>
+    </Header>
+    <Inventory>
+        <Item>
+            <Description>كيس سكر برازيلي</Description>
+            <Total>2900</Total>
+        </Item>
+        <Item>
+            <Description>دبة زيت الزهراء</Description>
+            <Qty>1</Qty>
+            <Total>1250</Total>
+        </Item>
+    </Inventory>
+    <Summary>
+        <TotalAmount>14200</TotalAmount>
+    </Summary>
+</HandwrittenInvoice>

@@ -1,0 +1,68 @@
+{
+  "invoice_metadata": {
+    "invoice_number": "1939",
+    "date": "2018-08-12",
+    "customer_name": "المرزوقي",
+    "currency": "ريال"
+  },
+  "line_items": [
+    {
+      "description": "كيس سكر برازيلي",
+      "quantity": null,
+      "amount": 2900
+    },
+    {
+      "description": "كيس رز المودة",
+      "quantity": null,
+      "amount": 4200
+    },
+    {
+      "description": "قطعة مناشف",
+      "quantity": null,
+      "amount": 1200
+    },
+    {
+      "description": "غسلة برد معجون صغير",
+      "quantity": 1,
+      "amount": 700
+    },
+    {
+      "description": "دبة زيت الزهراء",
+      "quantity": 1,
+      "amount": 1250
+    },
+    {
+      "description": "زبادي أبو كحيل حبتين",
+      "quantity": 3,
+      "amount": 400
+    },
+    {
+      "description": "شاهي كبوس كيلو",
+      "quantity": 1,
+      "amount": 600
+    },
+    {
+      "description": "تونة كير",
+      "quantity": 1,
+      "amount": 200
+    },
+    {
+      "description": "حليب مدهش",
+      "quantity": 4,
+      "amount": 220
+    },
+    {
+      "description": "كرتون حليب نيدو طويل",
+      "quantity": 1,
+      "amount": 1100
+    },
+    {
+      "description": "صابون سائل محلي حبتين",
+      "quantity": 2,
+      "amount": 220
+    }
+  ],
+  "financial_summary": {
+    "grand_total": 14200
+  }
+}

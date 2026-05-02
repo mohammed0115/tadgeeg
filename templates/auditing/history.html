@@ -1,21 +1,22 @@
 {% extends "base.html" %}
-{% block title %}سجل التدقيق{% endblock %}
-{% block page_title %}سجل مستندات التدقيق{% endblock %}
+{% load i18n %}
+{% block title %}{% trans "Audit History" %}{% endblock %}
+{% block page_title %}{% trans "Audit History" %}{% endblock %}
 {% block nav_ai_auditor %}active{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto space-y-5" dir="rtl" x-data x-init="$nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); })">
+<div class="max-w-7xl mx-auto space-y-5" x-data x-init="$nextTick(() => { if (typeof lucide !== 'undefined') lucide.createIcons(); })">
 
   <!-- Header Row -->
   <div class="flex flex-wrap items-center justify-between gap-3">
     <div class="text-sm text-slate-500">
-      إجمالي المستندات:
+      {% trans "Total Documents:" %}
       <span class="font-bold text-slate-800">{{ total_count }}</span>
     </div>
     <a href="{% url 'auditor:upload' %}"
        class="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors">
       <i data-lucide="plus" class="h-4 w-4"></i>
-      تدقيق مستند جديد
+      {% trans "New Document Audit" %}
     </a>
   </div>
 
@@ -24,16 +25,16 @@
 
     {% if page_obj.object_list %}
     <div class="overflow-x-auto">
-      <table class="w-full text-sm text-right">
+      <table class="w-full text-sm">
         <thead class="border-b border-slate-200 bg-slate-50 text-xs font-semibold uppercase tracking-wide text-slate-500">
           <tr>
-            <th class="px-4 py-4 text-center">الإجراء</th>
-            <th class="px-4 py-4 text-center">الثقة</th>
-            <th class="px-4 py-4 text-center">المخاطر</th>
-            <th class="px-4 py-4 text-center">الحالة</th>
-            <th class="px-4 py-4">نوع المستند</th>
-            <th class="px-4 py-4">التاريخ</th>
-            <th class="px-6 py-4">اسم الملف</th>
+            <th class="px-6 py-4">{% trans "File Name" %}</th>
+            <th class="px-4 py-4">{% trans "Date" %}</th>
+            <th class="px-4 py-4">{% trans "Document Type" %}</th>
+            <th class="px-4 py-4 text-center">{% trans "Status" %}</th>
+            <th class="px-4 py-4 text-center">{% trans "Risk" %}</th>
+            <th class="px-4 py-4 text-center">{% trans "Confidence" %}</th>
+            <th class="px-4 py-4 text-center">{% trans "Action" %}</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
@@ -77,19 +78,19 @@
             <td class="px-4 py-4 text-center">
               {% if doc.status == "completed" %}
                 <span class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                  <i data-lucide="check-circle-2" class="h-3 w-3"></i> مكتمل
+                  <i data-lucide="check-circle-2" class="h-3 w-3"></i> {% trans "Completed" %}
                 </span>
               {% elif doc.status == "processing" %}
                 <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                  <i data-lucide="loader-2" class="h-3 w-3"></i> معالجة
+                  <i data-lucide="loader-2" class="h-3 w-3"></i> {% trans "Processing" %}
                 </span>
               {% elif doc.status == "failed" %}
                 <span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">
-                  <i data-lucide="x-circle" class="h-3 w-3"></i> فشل
+                  <i data-lucide="x-circle" class="h-3 w-3"></i> {% trans "Failed" %}
                 </span>
               {% else %}
                 <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                  <i data-lucide="clock" class="h-3 w-3"></i> انتظار
+                  <i data-lucide="clock" class="h-3 w-3"></i> {% trans "Pending" %}
                 </span>
               {% endif %}
             </td>
@@ -97,11 +98,11 @@
             <!-- Risk -->
             <td class="px-4 py-4 text-center">
               {% if doc.overall_risk_level == "high" %}
-                <span class="inline-block rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">مرتفع</span>
+                <span class="inline-block rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700">{% trans "High" %}</span>
               {% elif doc.overall_risk_level == "medium" %}
-                <span class="inline-block rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">متوسط</span>
+                <span class="inline-block rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700">{% trans "Medium" %}</span>
               {% elif doc.overall_risk_level == "low" %}
-                <span class="inline-block rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">منخفض</span>
+                <span class="inline-block rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">{% trans "Low" %}</span>
               {% else %}
                 <span class="text-xs text-slate-400">—</span>
               {% endif %}
@@ -138,7 +139,7 @@
               <a href="{% url 'auditor:result' doc.pk %}"
                  class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all shadow-sm">
                 <i data-lucide="eye" class="h-3.5 w-3.5"></i>
-                عرض
+                {% trans "View" %}
               </a>
             </td>
 
@@ -152,23 +153,21 @@
     {% if page_obj.has_other_pages %}
     <div class="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-6 py-4">
       <div class="text-xs text-slate-500">
-        صفحة {{ page_obj.number }} من {{ page_obj.paginator.num_pages }}
-        &nbsp;·&nbsp;
-        {{ total_count }} مستند
+        {% blocktrans with current=page_obj.number total=page_obj.paginator.num_pages count=total_count %}Page {{ current }} of {{ total }} · {{ count }} documents{% endblocktrans %}
       </div>
       <div class="flex items-center gap-2">
         {% if page_obj.has_previous %}
         <a href="?page={{ page_obj.previous_page_number }}"
            class="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors shadow-sm">
-          <i data-lucide="chevron-right" class="h-3.5 w-3.5"></i>
-          السابق
+          <i data-lucide="chevron-left" class="h-3.5 w-3.5 rtl:rotate-180"></i>
+          {% trans "Previous" %}
         </a>
         {% endif %}
         {% if page_obj.has_next %}
         <a href="?page={{ page_obj.next_page_number }}"
            class="flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors shadow-sm">
-          التالي
-          <i data-lucide="chevron-left" class="h-3.5 w-3.5"></i>
+          {% trans "Next" %}
+          <i data-lucide="chevron-right" class="h-3.5 w-3.5 rtl:rotate-180"></i>
         </a>
         {% endif %}
       </div>
@@ -182,13 +181,13 @@
         <i data-lucide="folder-open" class="h-10 w-10"></i>
       </div>
       <div>
-        <h3 class="text-lg font-semibold text-slate-700">لا توجد مستندات بعد</h3>
-        <p class="mt-1 text-sm text-slate-500">ارفع أول مستند مالي للبدء بالتدقيق الآلي</p>
+        <h3 class="text-lg font-semibold text-slate-700">{% trans "No documents yet" %}</h3>
+        <p class="mt-1 text-sm text-slate-500">{% trans "Upload your first financial document to start automated auditing" %}</p>
       </div>
       <a href="{% url 'auditor:upload' %}"
          class="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors">
         <i data-lucide="upload-cloud" class="h-4 w-4"></i>
-        رفع أول مستند
+        {% trans "Upload first document" %}
       </a>
     </div>
     {% endif %}

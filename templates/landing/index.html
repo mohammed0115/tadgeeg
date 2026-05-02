@@ -1202,6 +1202,12 @@
         </p>
         <div class="hero-actions">
           <a href="{% url 'frontend:register' %}" class="btn btn-primary btn-lg">{% trans "Start Free Trial" %}</a>
+          <button type="button" class="btn btn-outline btn-lg" onclick="openDemoVideo()" aria-label="{% trans 'Watch demo' %}">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-3px;margin-inline-end:8px;">
+              <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+            </svg>
+            {% trans "Watch Demo" %}
+          </button>
           <a href="{% url 'frontend:contact' %}" class="btn btn-outline btn-lg">{% trans "Request Demo" %}</a>
         </div>
 
@@ -1545,6 +1551,69 @@
       </div>
     </div>
   </footer>
+
+  {# ── Demo video modal ──────────────────────────────────────────────── #}
+  <div id="demo-video-modal" class="demo-video-modal" hidden onclick="closeDemoVideo(event)">
+    <div class="demo-video-modal-frame" onclick="event.stopPropagation()">
+      <button type="button" class="demo-video-close" onclick="closeDemoVideo()" aria-label="{% trans 'Close' %}">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+      <video id="demo-video-player" controls preload="metadata" playsinline>
+        <source src="{% get_media_prefix %}intro/tadgeeg-demo.mp4" type="video/mp4">
+        {% trans "Your browser does not support the video tag." %}
+      </video>
+    </div>
+  </div>
+  <style>
+    .demo-video-modal {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0, 17, 34, 0.86);
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px; backdrop-filter: blur(4px);
+      animation: demoFade 0.2s ease;
+    }
+    .demo-video-modal[hidden] { display: none; }
+    @keyframes demoFade { from { opacity: 0; } to { opacity: 1; } }
+    .demo-video-modal-frame {
+      position: relative; width: 100%; max-width: 1100px;
+      aspect-ratio: 16 / 9; background: #000;
+      border-radius: 16px; overflow: hidden;
+      box-shadow: 0 40px 80px rgba(0, 0, 0, 0.5);
+    }
+    .demo-video-modal-frame video { width: 100%; height: 100%; display: block; }
+    .demo-video-close {
+      position: absolute; top: 12px; inset-inline-end: 12px;
+      width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.15); color: #fff;
+      border: none; cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      transition: background 0.2s; z-index: 2;
+    }
+    .demo-video-close:hover { background: rgba(255, 255, 255, 0.3); }
+  </style>
+
+  <script>
+    function openDemoVideo() {
+      const m = document.getElementById('demo-video-modal');
+      const v = document.getElementById('demo-video-player');
+      m.hidden = false;
+      document.body.style.overflow = 'hidden';
+      try { v.currentTime = 0; v.play(); } catch (e) {}
+    }
+    function closeDemoVideo(e) {
+      if (e && e.target.closest && e.target.closest('.demo-video-modal-frame')) return;
+      const m = document.getElementById('demo-video-modal');
+      const v = document.getElementById('demo-video-player');
+      m.hidden = true;
+      document.body.style.overflow = '';
+      try { v.pause(); } catch (err) {}
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeDemoVideo();
+    });
+  </script>
 
   <script>
     function toggleMenu() {

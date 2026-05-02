@@ -13,9 +13,16 @@
       <td align="center">
         <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#ffffff;border-radius:24px;overflow:hidden;border:1px solid #e2e8f0;box-shadow:0 20px 50px rgba(15,23,42,.08);">
           <tr>
-            <td style="padding:32px 32px 20px;background:linear-gradient(135deg,#2563eb,#06b6d4);text-align:center;">
-              <div style="display:inline-block;height:56px;width:56px;line-height:56px;border-radius:18px;background:rgba(255,255,255,.16);font-size:28px;font-weight:800;color:#ffffff;">T</div>
-              <h1 style="margin:18px 0 6px;font-size:28px;line-height:1.2;color:#ffffff;">{% trans "Email verification" %}</h1>
+            <td style="padding:32px 32px 20px;background:linear-gradient(135deg,#003366,#10B981);text-align:center;">
+              <div style="display:inline-block;height:64px;width:64px;line-height:0;border-radius:18px;background:#ffffff;padding:10px;box-sizing:border-box;">
+                <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" width="44" height="44">
+                  <circle cx="50" cy="50" r="40" stroke="#003366" stroke-width="8" fill="none"/>
+                  <path d="M28 50 L44 66 L72 36" stroke="#10B981" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <h1 style="margin:18px 0 6px;font-size:28px;line-height:1.2;color:#ffffff;font-family:Cairo,Tajawal,Arial,sans-serif;">
+                {{ product_name|default:"Tadgeeg" }} — {% trans "Email verification" %}
+              </h1>
               <p style="margin:0;font-size:14px;line-height:1.8;color:rgba(255,255,255,.86);">{{ product_signature }}</p>
             </td>
           </tr>
@@ -26,9 +33,9 @@
                 {% trans "We received a request to verify your email address. Use the following code to complete sign-in or activate your account." %}
               </p>
 
-              <div style="margin:0 0 22px;padding:20px;border-radius:20px;border:1px solid #dbeafe;background:#eff6ff;text-align:center;">
-                <div style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:.08em;color:#1d4ed8;">{% trans "Verification Code" %}</div>
-                <div style="font-size:34px;font-weight:800;letter-spacing:10px;color:#0f172a;">{{ otp_code }}</div>
+              <div style="margin:0 0 22px;padding:20px;border-radius:20px;border:1px solid #d1fae5;background:#ecfdf5;text-align:center;">
+                <div style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:.08em;color:#003366;">{% trans "Verification Code" %}</div>
+                <div style="font-size:34px;font-weight:800;letter-spacing:10px;color:#003366;">{{ otp_code }}</div>
               </div>
 
               <div style="margin:0 0 18px;padding:16px;border-radius:18px;background:#f8fafc;border:1px solid #e2e8f0;">

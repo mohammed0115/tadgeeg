@@ -19,17 +19,24 @@ class WorkflowState(str, Enum):
 
 
 VALID_TRANSITIONS: dict[WorkflowState, list[WorkflowState]] = {
-    WorkflowState.UPLOADED: [WorkflowState.EXTRACTED],
-    WorkflowState.EXTRACTED: [WorkflowState.NEEDS_REVIEW, WorkflowState.VALIDATED],
-    WorkflowState.NEEDS_REVIEW: [WorkflowState.VALIDATED, WorkflowState.AUDIT_FAILED],
-    WorkflowState.VALIDATED: [WorkflowState.AUDIT_PASSED, WorkflowState.AUDIT_FAILED],
-    WorkflowState.AUDIT_FAILED: [WorkflowState.PENDING_APPROVAL],
-    WorkflowState.AUDIT_PASSED: [WorkflowState.PENDING_APPROVAL],
+    # An auditor with the right permission can reject from any non-terminal
+    # state — that matches how the UI surfaces the "Reject" button on every
+    # invoice detail page regardless of its current workflow stage.
+    # APPROVED is also reachable from any non-terminal state because override
+    # approvals (admin/CAO with reason) skip the intermediate stages — the
+    # `can_transition()` gate still validates the override permission, this
+    # dict only declares which transitions are *structurally* legal.
+    WorkflowState.UPLOADED:         [WorkflowState.EXTRACTED, WorkflowState.APPROVED, WorkflowState.REJECTED],
+    WorkflowState.EXTRACTED:        [WorkflowState.NEEDS_REVIEW, WorkflowState.VALIDATED, WorkflowState.APPROVED, WorkflowState.REJECTED],
+    WorkflowState.NEEDS_REVIEW:     [WorkflowState.VALIDATED, WorkflowState.AUDIT_FAILED, WorkflowState.APPROVED, WorkflowState.REJECTED],
+    WorkflowState.VALIDATED:        [WorkflowState.AUDIT_PASSED, WorkflowState.AUDIT_FAILED, WorkflowState.APPROVED, WorkflowState.REJECTED],
+    WorkflowState.AUDIT_FAILED:     [WorkflowState.PENDING_APPROVAL, WorkflowState.APPROVED, WorkflowState.REJECTED],
+    WorkflowState.AUDIT_PASSED:     [WorkflowState.PENDING_APPROVAL, WorkflowState.APPROVED, WorkflowState.REJECTED],
     WorkflowState.PENDING_APPROVAL: [WorkflowState.APPROVED, WorkflowState.REJECTED],
-    WorkflowState.APPROVED: [WorkflowState.POSTED],
-    WorkflowState.REJECTED: [WorkflowState.UPLOADED],
-    WorkflowState.POSTED: [WorkflowState.ARCHIVED],
-    WorkflowState.ARCHIVED: [],
+    WorkflowState.APPROVED:         [WorkflowState.POSTED],
+    WorkflowState.REJECTED:         [WorkflowState.UPLOADED],
+    WorkflowState.POSTED:           [WorkflowState.ARCHIVED],
+    WorkflowState.ARCHIVED:         [],
 }
 
 

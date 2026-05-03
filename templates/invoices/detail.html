@@ -20,6 +20,11 @@
       <i data-lucide="refresh-cw" class="w-4 h-4"></i>
       <span>{% trans "Re-run Audit" %}</span>
     </button>
+    <a href="{% url 'frontend:invoice_pdf' pk=invoice.id %}"
+       class="btn-ghost border border-slate-200/80 dark:border-slate-700/60 text-xs py-2.5 px-4">
+      <i data-lucide="download" class="w-4 h-4"></i>
+      <span>{% trans "Download PDF" %}</span>
+    </a>
     {% if invoice.status == 'approved' or invoice.status == 'rejected' %}
     {% else %}
       <button onclick="document.getElementById('approveModal').dispatchEvent(new CustomEvent('open',{detail:'reject'}))" class="btn-red text-xs py-2.5 px-4 shadow-sm shadow-red-500/20">
@@ -278,6 +283,58 @@
               {% endfor %}
             </tbody>
           </table>
+        </div>
+      </section>
+      {% endif %}
+
+      {# ── Linked Documents (3-way match: PO ↔ GRN ↔ Invoice ↔ Payment) ── #}
+      {% if cross_links %}
+      <section class="card p-6 lg:p-7" id="linked-documents">
+        <div class="flex items-center gap-2">
+          <i data-lucide="link-2" class="h-4 w-4 text-blue-500"></i>
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white">{% trans "Linked Documents" %}</h3>
+        </div>
+
+        {% with twm=cross_links.three_way_match %}
+        {% if twm.applicable %}
+        <div class="mt-4 rounded-xl p-4 {% if twm.is_clean %}bg-emerald-50 border border-emerald-200{% else %}bg-red-50 border border-red-200{% endif %}">
+          <div class="flex items-center gap-2 text-sm font-bold {% if twm.is_clean %}text-emerald-700{% else %}text-red-700{% endif %}">
+            {% if twm.is_clean %}
+              <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+              {% trans "3-Way Match Clean" %}
+            {% else %}
+              <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+              {% trans "3-Way Match Issues" %}
+            {% endif %}
+          </div>
+          {% if twm.issues %}
+          <ul class="mt-2 ms-5 list-disc text-xs text-red-700 space-y-1">
+            {% for issue in twm.issues %}<li class="font-mono">{{ issue }}</li>{% endfor %}
+          </ul>
+          {% endif %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        <div class="mt-4 grid gap-3" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+          {% for slot, link in cross_links.items %}
+            {% if slot != "three_way_match" and link and link.id %}
+            <a href="{{ link.url }}" class="block rounded-xl border p-3 hover:shadow-md transition
+                  {% if link.issues %}border-red-200 bg-red-50{% else %}border-slate-200 bg-slate-50{% endif %}">
+              <div class="flex items-center justify-between gap-2">
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">{{ slot|cut:"_"|title }}</div>
+                <span class="text-[9px] px-2 py-0.5 rounded-full {% if link.match_score >= 1.0 %}bg-emerald-100 text-emerald-700{% elif link.match_score >= 0.85 %}bg-blue-100 text-blue-700{% else %}bg-amber-100 text-amber-700{% endif %}">{{ link.match_type }}</span>
+              </div>
+              <div class="mt-1 font-mono text-sm font-bold text-slate-900">{{ link.display_id|default:"—" }}</div>
+              <div class="mt-0.5 text-[11px] text-slate-500">
+                {{ link.date|default:"—" }}{% if link.amount %} · <span class="font-mono">{{ link.amount|floatformat:2 }} {{ link.currency }}</span>{% endif %}
+              </div>
+              {% if link.amount_diff %}
+              <div class="mt-1 text-[11px] text-red-700">Δ <span class="font-mono">{{ link.amount_diff|floatformat:2 }}</span></div>
+              {% endif %}
+            </a>
+            {% endif %}
+          {% endfor %}
         </div>
       </section>
       {% endif %}

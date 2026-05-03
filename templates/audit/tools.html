@@ -1,0 +1,370 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Audit Planning Tools" %}{% endblock %}
+{% block nav_reports %}active{% endblock %}
+
+{% block extra_styles %}
+  .tools-page { max-width: 1200px; margin: 0 auto; }
+  .tool-card { background: white; border: 1px solid var(--border); border-radius: 16px; padding: 22px; margin-bottom: 22px; }
+  .tool-card h3 { font-family: 'Cairo', sans-serif; font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 6px; }
+  .tool-card .iso { display:inline-block; padding: 2px 10px; border-radius: 100px; background: rgba(0,51,102,0.08); color: var(--primary); font-size: 11px; font-weight: 700; margin-bottom: 14px; }
+  .form-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
+  .form-grid label { font-size: 12px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .form-grid input, .form-grid select { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 10px; font-size: 14px; font-family: inherit; background: var(--bg-soft); }
+  .form-grid input:focus, .form-grid select:focus { outline: none; border-color: var(--primary); background: white; }
+  .result-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
+  .result-card { background: var(--bg-soft); border-left: 3px solid var(--primary); padding: 14px 16px; border-radius: 8px; }
+  .result-card .label { font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .result-card .value { font-family: 'Cairo', sans-serif; font-weight: 900; font-size: 22px; color: var(--primary); margin-top: 4px; }
+  .result-card.alert { border-left-color: var(--danger); }
+  .result-card.alert .value { color: var(--danger); }
+  .data-table { width: 100%; background: white; border-collapse: separate; border-spacing: 0; }
+  .data-table th { padding: 10px 12px; background: var(--bg-soft); font-size: 11px; font-weight: 800; text-align: start; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .data-table td { padding: 10px 12px; font-size: 13px; border-top: 1px solid var(--border-soft); }
+  @media (max-width: 768px) { .form-grid, .result-grid { grid-template-columns: 1fr 1fr; } }
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <a href="{% url 'frontend:reports' %}" style="color:var(--text-muted)">{% trans "Reports" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "Audit Planning Tools" %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="tools-page">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">{% trans "Audit Planning Tools" %}</h1>
+      <p class="page-subtitle">{% trans "Materiality benchmarks (ISA 320) and sampling strategies (ISA 530) for the engagement plan." %}</p>
+    </div>
+  </div>
+
+  <!-- ── Materiality Calculator (ISA 320) ── -->
+  <form method="get" class="tool-card">
+    <span class="iso">ISA 320 / ISA 450</span>
+    <h3>{% trans "Materiality Calculator" %}</h3>
+    <p style="color:var(--text-muted); font-size:13px; margin-bottom:14px;">
+      {% trans "Pick a benchmark, enter the audited amount, and Tadgeeg returns overall, performance, and clearly-trivial thresholds." %}
+    </p>
+
+    <div class="form-grid">
+      <div>
+        <label>{% trans "Benchmark" %}</label>
+        <select name="benchmark">
+          {% for b in benchmarks %}
+            <option value="{{ b.key }}" {% if b.key == benchmark_key %}selected{% endif %}>
+              {{ b.name }} ({{ b.pct_low|floatformat:1 }}%–{{ b.pct_high|floatformat:1 }}%)
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label>{% trans "Benchmark amount" %}</label>
+        <input type="number" name="amount" value="{{ benchmark_amount }}" placeholder="e.g. 50000000" step="0.01">
+      </div>
+      <div style="display:flex; align-items:end;">
+        <button type="submit" class="btn btn-primary" style="width:100%;">
+          {% trans "Compute" %}
+        </button>
+      </div>
+    </div>
+
+    {# ── Phase 1.2: Judgment factors ── #}
+    <details style="margin-top:14px; border-top:1px solid var(--border-soft); padding-top:14px;" {% if judgment_factors %}open{% endif %}>
+      <summary style="font-weight:700; cursor:pointer; color:var(--primary);">
+        {% trans "Auditor judgment factors" %} <span style="font-size:11px; color:var(--text-muted); font-weight:500;">— {% trans "shift the % within the benchmark band" %}</span>
+      </summary>
+      <div class="form-grid" style="margin-top:12px;">
+        <div>
+          <label>{% trans "Industry risk" %}</label>
+          <select name="industry_risk">
+            <option value="">—</option>
+            <option value="low"      {% if judgment_factors.industry_risk == 'low'      %}selected{% endif %}>{% trans "Low" %}</option>
+            <option value="moderate" {% if judgment_factors.industry_risk == 'moderate' %}selected{% endif %}>{% trans "Moderate" %}</option>
+            <option value="high"     {% if judgment_factors.industry_risk == 'high'     %}selected{% endif %}>{% trans "High" %}</option>
+          </select>
+        </div>
+        <div>
+          <label>{% trans "Control environment" %}</label>
+          <select name="control_environment">
+            <option value="">—</option>
+            <option value="strong"   {% if judgment_factors.control_environment == 'strong'   %}selected{% endif %}>{% trans "Strong" %}</option>
+            <option value="adequate" {% if judgment_factors.control_environment == 'adequate' %}selected{% endif %}>{% trans "Adequate" %}</option>
+            <option value="weak"     {% if judgment_factors.control_environment == 'weak'     %}selected{% endif %}>{% trans "Weak" %}</option>
+          </select>
+        </div>
+        <div>
+          <label>{% trans "Prior misstatements" %}</label>
+          <select name="prior_misstatements">
+            <option value="">—</option>
+            <option value="none" {% if judgment_factors.prior_misstatements == 'none' %}selected{% endif %}>{% trans "None" %}</option>
+            <option value="few"  {% if judgment_factors.prior_misstatements == 'few'  %}selected{% endif %}>{% trans "Few" %}</option>
+            <option value="many" {% if judgment_factors.prior_misstatements == 'many' %}selected{% endif %}>{% trans "Many" %}</option>
+          </select>
+        </div>
+        <div>
+          <label>{% trans "Going concern doubt" %}</label>
+          <select name="going_concern_doubt">
+            <option value="">—</option>
+            <option value="no"   {% if judgment_factors.going_concern_doubt == 'no'   %}selected{% endif %}>{% trans "No" %}</option>
+            <option value="some" {% if judgment_factors.going_concern_doubt == 'some' %}selected{% endif %}>{% trans "Some" %}</option>
+            <option value="yes"  {% if judgment_factors.going_concern_doubt == 'yes'  %}selected{% endif %}>{% trans "Yes" %}</option>
+          </select>
+        </div>
+        <div>
+          <label>{% trans "First-year audit?" %}</label>
+          <select name="first_year_audit">
+            <option value="">—</option>
+            <option value="no"  {% if judgment_factors.first_year_audit == 'no'  %}selected{% endif %}>{% trans "No" %}</option>
+            <option value="yes" {% if judgment_factors.first_year_audit == 'yes' %}selected{% endif %}>{% trans "Yes" %}</option>
+          </select>
+        </div>
+        <div>
+          <label>{% trans "Components (name:weight%, comma-separated)" %}</label>
+          <input type="text" name="components" value="{{ components_param|default_if_none:'' }}"
+                 placeholder="Riyadh:60,Jeddah:30,Dammam:10">
+        </div>
+      </div>
+    </details>
+
+    {% if materiality_result %}
+      <div class="result-grid">
+        <div class="result-card">
+          <div class="label">{% trans "Benchmark" %}</div>
+          <div class="value" style="font-size:16px;">{{ materiality_result.benchmark }}</div>
+        </div>
+        <div class="result-card">
+          <div class="label">{% trans "Overall materiality" %}</div>
+          <div class="value">{{ materiality_result.overall_materiality|floatformat:0 }}</div>
+        </div>
+        <div class="result-card alert">
+          <div class="label">{% trans "Performance materiality" %} ({{ materiality_result.performance_pct|floatformat:0 }}%)</div>
+          <div class="value">{{ materiality_result.performance_materiality|floatformat:0 }}</div>
+        </div>
+        <div class="result-card">
+          <div class="label">{% trans "Clearly trivial" %} ({{ materiality_result.clearly_trivial_pct|floatformat:1 }}%)</div>
+          <div class="value">{{ materiality_result.clearly_trivial|floatformat:0 }}</div>
+        </div>
+      </div>
+
+      <p style="margin-top:14px; font-size:12px; color:var(--text-muted); font-style:italic;">{{ materiality_result.rationale }}</p>
+
+      {% if materiality_result.judgment_notes %}
+        <div style="margin-top:12px; padding:10px 14px; background: rgba(0,51,102,0.04); border-left: 3px solid var(--primary); border-radius: 6px; font-size: 12px; color: var(--text);">
+          <strong style="color:var(--primary);">{% trans "Judgment adjustments applied:" %}</strong>
+          <ul style="margin:6px 0 0 18px;">
+            {% for note in materiality_result.judgment_notes %}<li>{{ note }}</li>{% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      {% if materiality_result.component_allocation %}
+        <div style="margin-top:14px;">
+          <h4 style="font-family:'Cairo',sans-serif; font-weight:800; font-size:14px; margin-bottom:8px;">
+            {% trans "Component allocation" %}
+          </h4>
+          <table class="data-table">
+            <thead><tr>
+              <th>{% trans "Component" %}</th><th>{% trans "Weight" %}</th>
+              <th>{% trans "Overall" %}</th><th>{% trans "Performance" %}</th>
+              <th>{% trans "Clearly trivial" %}</th>
+            </tr></thead>
+            <tbody>
+              {% for c in materiality_result.component_allocation %}
+              <tr>
+                <td><strong>{{ c.name }}</strong></td>
+                <td>{{ c.weight_pct|floatformat:1 }}%</td>
+                <td>{{ c.overall|floatformat:0 }}</td>
+                <td style="color:var(--danger); font-weight:700;">{{ c.performance|floatformat:0 }}</td>
+                <td>{{ c.clearly_trivial|floatformat:0 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% endif %}
+
+      {% if flagged_above %}
+        <div style="margin-top:18px;">
+          <h4 style="font-family:'Cairo',sans-serif; font-weight:800; font-size:14px; margin-bottom:8px;">
+            {% trans "Invoices ≥ performance materiality (top 50)" %}
+          </h4>
+          <div style="overflow:auto; max-height: 320px; border: 1px solid var(--border-soft); border-radius: 10px;">
+            <table class="data-table">
+              <thead><tr>
+                <th>#</th><th>{% trans "Invoice" %}</th><th>{% trans "Vendor" %}</th>
+                <th>{% trans "Amount" %}</th><th>{% trans "Exceeds by" %}</th>
+              </tr></thead>
+              <tbody>
+                {% for r in flagged_above %}
+                <tr>
+                  <td>{{ forloop.counter }}</td>
+                  <td><a href="/invoices/{{ r.id }}/" style="color:var(--primary); font-weight:700;">{{ r.invoice_number|default:"—" }}</a></td>
+                  <td>{{ r.vendor }}</td>
+                  <td>{{ r.amount|floatformat:2 }}</td>
+                  <td style="color:var(--danger); font-weight:700;">+{{ r.exceeds_by|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endif %}
+    {% endif %}
+  </form>
+
+  <!-- ── Sampling Engine (ISA 530) ── -->
+  <form method="get" class="tool-card">
+    <span class="iso">ISA 530</span>
+    <h3>{% trans "Sampling Engine" %}</h3>
+    <p style="color:var(--text-muted); font-size:13px; margin-bottom:14px;">
+      {% trans "Pick a method and sample size; Tadgeeg generates a deterministic sample with a reproducible seed for the working papers." %}
+    </p>
+
+    <p style="font-size:13px; margin-bottom:14px;">
+      <strong>{% trans "Population:" %}</strong> {{ pop_count }} {% trans "invoices in this org" %} ·
+      <strong>{% trans "Suggested sample size:" %}</strong> {{ suggested_size }} {% trans "(95% confidence, 5% expected error)" %}
+    </p>
+
+    <div class="form-grid">
+      <div>
+        <label>{% trans "Method" %}</label>
+        <select name="method">
+          <option value="random"        {% if sample_method == 'random' %}selected{% endif %}>{% trans "Random" %}</option>
+          <option value="systematic"    {% if sample_method == 'systematic' %}selected{% endif %}>{% trans "Systematic (every n-th)" %}</option>
+          <option value="monetary_unit" {% if sample_method == 'monetary_unit' %}selected{% endif %}>{% trans "Monetary-Unit (PPS)" %}</option>
+        </select>
+      </div>
+      <div>
+        <label>{% trans "Sample size" %}</label>
+        <input type="number" name="size" value="{{ sample_size }}" min="1" max="5000" placeholder="{{ suggested_size }}">
+      </div>
+      <div>
+        <label>{% trans "Random seed" %}</label>
+        <input type="number" name="seed" value="{{ seed }}">
+      </div>
+      <div>
+        <label>{% trans "Confidence" %}</label>
+        <select name="confidence">
+          <option value="80" {% if confidence_pct == 80 %}selected{% endif %}>80%</option>
+          <option value="90" {% if confidence_pct == 90 %}selected{% endif %}>90%</option>
+          <option value="95" {% if confidence_pct == 95 %}selected{% endif %}>95%</option>
+          <option value="99" {% if confidence_pct == 99 %}selected{% endif %}>99%</option>
+        </select>
+      </div>
+      <div style="grid-column: span 2;">
+        <label>{% trans "Sample errors (per-item, comma-separated)" %}</label>
+        <input type="text" name="errors" value="{{ errors_param|default_if_none:'' }}"
+               placeholder="100, 250.50, 1200">
+      </div>
+    </div>
+
+    {# Preserve materiality form values + judgment factors so the page round-trips #}
+    <input type="hidden" name="benchmark" value="{{ benchmark_key }}">
+    <input type="hidden" name="amount" value="{{ benchmark_amount }}">
+    {% for k, v in judgment_factors.items %}
+      <input type="hidden" name="{{ k }}" value="{{ v }}">
+    {% endfor %}
+    <input type="hidden" name="components" value="{{ components_param|default_if_none:'' }}">
+
+    <button type="submit" class="btn btn-primary">{% trans "Draw sample" %}</button>
+
+    {% if sampling_result %}
+      <div class="result-grid">
+        <div class="result-card">
+          <div class="label">{% trans "Method" %}</div>
+          <div class="value" style="font-size:14px;">{{ sampling_result.method }}</div>
+        </div>
+        <div class="result-card">
+          <div class="label">{% trans "Population" %}</div>
+          <div class="value">{{ sampling_result.population_size }}</div>
+        </div>
+        <div class="result-card">
+          <div class="label">{% trans "Sampled" %}</div>
+          <div class="value">{{ sampling_result.sample_size }}</div>
+        </div>
+        <div class="result-card">
+          <div class="label">{% trans "Coverage" %}</div>
+          <div class="value">{{ sampling_result.coverage_pct }}%</div>
+        </div>
+      </div>
+
+      {% if sampling_result.notes %}
+        <ul style="margin-top:10px; padding-inline-start:18px; font-size:12px; color:var(--text-muted);">
+          {% for n in sampling_result.notes %}<li>{{ n }}</li>{% endfor %}
+        </ul>
+      {% endif %}
+
+      {% if error_projection %}
+        <div style="margin-top:18px; padding:14px 18px; border-radius:12px; background: {% if error_projection.is_acceptable %}#dcfce7{% else %}#fee2e2{% endif %}; border:1px solid {% if error_projection.is_acceptable %}#86efac{% else %}#fecaca{% endif %};">
+          <h4 style="font-family:'Cairo',sans-serif; font-weight:800; font-size:14px; margin-bottom:10px; color: {% if error_projection.is_acceptable %}#166534{% else %}#991b1b{% endif %};">
+            {% trans "Error projection (ISA 530 §A18–A23)" %}
+            {% if error_projection.is_acceptable is not None %}
+              {% if error_projection.is_acceptable %}
+                — ✓ {% trans "Acceptable" %}
+              {% else %}
+                — ✕ {% trans "Exceeds performance materiality" %}
+              {% endif %}
+            {% endif %}
+          </h4>
+          <div class="result-grid">
+            <div class="result-card">
+              <div class="label">{% trans "Most-likely error" %}</div>
+              <div class="value">{{ error_projection.most_likely_error|floatformat:0 }}</div>
+            </div>
+            <div class="result-card">
+              <div class="label">{% trans "Basic precision" %}</div>
+              <div class="value">{{ error_projection.basic_precision|floatformat:0 }}</div>
+            </div>
+            <div class="result-card">
+              <div class="label">{% trans "Incremental allowance" %}</div>
+              <div class="value">{{ error_projection.incremental_allowance|floatformat:0 }}</div>
+            </div>
+            <div class="result-card alert">
+              <div class="label">{% trans "Upper-error-limit" %} ({{ error_projection.confidence_pct }}%)</div>
+              <div class="value">{{ error_projection.upper_error_limit|floatformat:0 }}</div>
+            </div>
+          </div>
+          {% if error_projection.threshold %}
+            <p style="margin-top:10px; font-size:12px; color:var(--text-muted);">
+              {% trans "Compared against performance materiality:" %}
+              <strong>{{ error_projection.threshold|floatformat:0 }}</strong>
+            </p>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      <div style="margin-top:18px;">
+        <h4 style="font-family:'Cairo',sans-serif; font-weight:800; font-size:14px; margin-bottom:8px;">
+          {% trans "Selected invoices" %}
+        </h4>
+        <div style="overflow:auto; max-height: 320px; border: 1px solid var(--border-soft); border-radius: 10px;">
+          <table class="data-table">
+            <thead><tr>
+              <th>#</th><th>{% trans "Invoice" %}</th><th>{% trans "Vendor" %}</th>
+              <th>{% trans "Amount" %}</th><th>{% trans "Date" %}</th><th>{% trans "Risk" %}</th>
+            </tr></thead>
+            <tbody>
+              {% for s in sampling_result.sampled_items %}
+              <tr>
+                <td>{{ forloop.counter }}</td>
+                <td><a href="/invoices/{{ s.id }}/" style="color:var(--primary); font-weight:700;">{{ s.invoice_number|default:"—" }}</a></td>
+                <td>{{ s.vendor }}</td>
+                <td>{{ s.amount|floatformat:2 }}</td>
+                <td>{{ s.date }}</td>
+                <td>{{ s.risk_level }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endif %}
+  </form>
+
+</div>
+{% endblock %}

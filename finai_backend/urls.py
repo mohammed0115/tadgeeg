@@ -10,7 +10,9 @@ from core.health_check_views import FullHealthCheckView, HealthCheckView, OpenAI
 from apps.audit.views import AuditDashboardOverviewView
 from apps.invoices.views import (
     InvoiceApproveView,
+    InvoiceBulkActionView,
     InvoiceDetailView,
+    InvoiceEscalateView,
     InvoiceManualReviewView,
     InvoiceRevalidateView,
     VendorListView,
@@ -29,16 +31,18 @@ urlpatterns = [
     path("accounts/register/", RedirectView.as_view(url="/register/", permanent=False)),
     path("accounts/logout/", RedirectView.as_view(url="/logout/", permanent=False)),
 
-    # API Schema — only available in development (DEBUG=True)
-    # In production, disable by setting DEBUG=False in .env
-    *([
-        path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-        path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
-        path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
-    ] if settings.DEBUG else []),
+    # API Schema / docs
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
 
     # API v1
     path("api/v1/auth/", include("apps.authentication.urls")),
+    path("api/v1/mobile/", include("apps.api_mobile.urls")),
+    path("api/v1/alerts/", include("apps.alerts.urls")),
+    path("api/v1/zatca/", include("apps.zatca.urls")),
+    path("api/v1/banking/", include("apps.banking.urls")),
+    path("api/v1/ledger/", include("apps.ledger.urls")),
     path("api/v1/documents/", include("apps.documents.urls")),
     path("api/v1/transactions/", include("apps.transactions.urls")),
     path("api/v1/audit/", include("apps.audit.urls")),
@@ -46,10 +50,12 @@ urlpatterns = [
     path("api/v1/compliance/", include("apps.compliance.urls")),
     path("api/v1/compliance/dashboard/", ComplianceDashboardView.as_view(), name="compliance-dashboard-compat"),
     path("audit/dashboard/overview/", AuditDashboardOverviewView.as_view(), name="dashboard-overview-compat"),
-    path("invoices/<uuid:pk>/", InvoiceDetailView.as_view(), name="invoice-detail-compat"),
-    path("invoices/<uuid:pk>/review/", InvoiceManualReviewView.as_view(), name="invoice-review-compat"),
-    path("invoices/<uuid:pk>/approve/", InvoiceApproveView.as_view(), name="invoice-approve-compat"),
-    path("invoices/<uuid:pk>/revalidate/", InvoiceRevalidateView.as_view(), name="invoice-revalidate-compat"),
+    path("invoices/<uuid:pk>/",            InvoiceDetailView.as_view(),        name="invoice-detail-compat"),
+    path("invoices/<uuid:pk>/review/",     InvoiceManualReviewView.as_view(),  name="invoice-review-compat"),
+    path("invoices/<uuid:pk>/approve/",    InvoiceApproveView.as_view(),       name="invoice-approve-compat"),
+    path("invoices/<uuid:pk>/revalidate/", InvoiceRevalidateView.as_view(),    name="invoice-revalidate-compat"),
+    path("invoices/<uuid:pk>/escalate/",   InvoiceEscalateView.as_view(),      name="invoice-escalate-compat"),
+    path("invoices/bulk/",                 InvoiceBulkActionView.as_view(),    name="invoice-bulk-compat"),
     # Auditing app (AI document auditor)
     path("auditor/", include("apps.auditing.urls")),
     # ── Platform admin console (staff / Get Solution internal) ──────────────

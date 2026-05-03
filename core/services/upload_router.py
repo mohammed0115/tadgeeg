@@ -12,8 +12,10 @@ from __future__ import annotations
 import json
 import logging
 import os
+import socket
 from pathlib import Path
 import tempfile
+from urllib.parse import urlparse
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -73,6 +75,25 @@ def _trigger_rule_engine(document_id: str, document_type: str, organization_id: 
         return
 
     try:
+        from django.conf import settings
+
+        if not getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
+            broker_url = getattr(settings, "CELERY_BROKER_URL", "") or ""
+            parsed = urlparse(broker_url)
+            if parsed.scheme.startswith("redis") and parsed.hostname and parsed.port:
+                with socket.create_connection((parsed.hostname, parsed.port), timeout=0.5):
+                    pass
+    except OSError:
+        logger.info(
+            "[RuleEngine] Broker unavailable, skipping async dispatch for doc=%s type=%s",
+            document_id,
+            re_type,
+        )
+        return
+    except Exception:
+        pass
+
+    try:
         from apps.rule_engine.tasks.audit_tasks_v2 import run_audit_compat_task
         run_audit_compat_task.delay(
             document_id=str(document_id),
@@ -110,7 +131,7 @@ class DocumentUploadRouter:
     Selects the correct processing pipeline based on document_type.
     """
 
-    INVOICE_TYPES = {"invoice", "sales_invoice"}
+    INVOICE_TYPES = {"invoice", "sales_invoice", "purchase_invoice"}
     AUTO_DETECT_TYPE = "auto"
     ROUTABLE_DOCUMENT_TYPES = {
         # Phase 1
@@ -149,7 +170,8 @@ class DocumentUploadRouter:
         "goods_receipt": "goods_receipt_note",
         "po": "purchase_order",
         "so": "sales_order",
-        "sales_invoice": "invoice",  # SI uses the canonical invoice pipeline
+        "sales_invoice": "invoice",       # SI uses the canonical invoice pipeline
+        "purchase_invoice": "invoice",    # PI also uses the canonical invoice pipeline
     }
 
     def route(
@@ -454,6 +476,10 @@ class DocumentUploadRouter:
         "contract":            "/documents/contracts/",
         "supplier_statement":  "/documents/supplier-statements/",
         "customer_statement":  "/documents/customer-statements/",
+        # Late additions
+        "goods_receipt_note":  "/documents/grns/",
+        "payment_voucher":     "/documents/payment-vouchers/",
+        "journal_entry":       "/documents/journal-entries/",
     }
 
     # Map document types to their frontend detail URL patterns
@@ -477,6 +503,10 @@ class DocumentUploadRouter:
         "contract":            "/documents/contracts/{pk}/",
         "supplier_statement":  "/documents/supplier-statements/{pk}/",
         "customer_statement":  "/documents/customer-statements/{pk}/",
+        # Late additions
+        "goods_receipt_note":  "/documents/grns/{pk}/",
+        "payment_voucher":     "/documents/payment-vouchers/{pk}/",
+        "journal_entry":       "/documents/journal-entries/{pk}/",
     }
 
     def _route_document(self, uploaded_file, document_type, user, language) -> UploadRouterResult:

@@ -219,11 +219,21 @@ class DocumentAnomalyDetector:
 
         try:
             model = getattr(import_module(config["module"]), config["model"])
-            qs = model.objects.all()
 
+            # Tenant-isolation: if either the model has no org field configured
+            # OR the document is missing an organization, refuse to run cross-
+            # tenant queries (they would leak history from other organizations).
             org_field = config.get("organization_field")
-            if org_field:
-                qs = qs.filter(**{org_field: getattr(doc, "organization_id", None)})
+            doc_org_id = getattr(doc, "organization_id", None)
+            if not org_field or not doc_org_id:
+                logger.warning(
+                    "[anomaly_engine] skipping history enrichment for %s "
+                    "(missing org_field or doc.organization_id)",
+                    getattr(doc, "document_type", "?"),
+                )
+                return history
+
+            qs = model.objects.filter(**{org_field: doc_org_id})
 
             for key, value in (config.get("extra_filters") or {}).items():
                 qs = qs.filter(**{key: value})

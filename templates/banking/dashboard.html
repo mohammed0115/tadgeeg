@@ -1,0 +1,318 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n static asset_tags %}
+
+{% block title %}{% trans "Bank Connectors" %}{% endblock %}
+{% block nav_compliance %}active{% endblock %}
+
+{% block head_extra %}
+  <script defer src="{% safe_static 'vendor/alpine.min.js' %}"
+          onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
+{% endblock %}
+
+{% block extra_styles %}
+  [x-cloak] { display: none !important; }
+  .b-page { max-width: 1280px; margin: 0 auto; }
+  .b-banner { background: linear-gradient(135deg, var(--primary) 0%, #002244 100%); color: white; border-radius: 18px; padding: 22px 28px; margin-bottom: 22px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .b-banner h2 { font-family:'Cairo',sans-serif; font-size:22px; font-weight:800; }
+  .b-banner p  { color: rgba(255,255,255,0.78); font-size:13px; max-width:720px; }
+
+  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:22px; }
+  .kpi-card { background:white; border:1px solid var(--border); border-radius:14px; padding:16px 18px; }
+  .kpi-card .label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; }
+  .kpi-card .value { font-family:'Cairo',sans-serif; font-weight:900; font-size:28px; color:var(--primary); margin-top:6px; line-height:1; }
+  .kpi-card.good .value { color: var(--success); }
+  .kpi-card.alert .value { color: var(--danger); }
+
+  .b-card { background:white; border:1px solid var(--border); border-radius:14px; padding:18px 22px; margin-bottom:16px; }
+  .b-card h3 { font-family:'Cairo',sans-serif; font-weight:800; font-size:15px; color:var(--primary); margin-bottom:12px; }
+
+  .data-table { width:100%; border-collapse:separate; border-spacing:0; }
+  .data-table th { background:var(--bg-soft); padding:10px 12px; font-size:11px; font-weight:800; text-align:start; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; }
+  .data-table td { padding:10px 12px; font-size:13px; border-top:1px solid var(--border-soft); vertical-align:top; }
+
+  .badge { display:inline-block; padding:3px 10px; border-radius:100px; font-size:11px; font-weight:700; }
+  .badge-active   { background:#dcfce7; color:#166534; }
+  .badge-pending  { background:#fef3c7; color:#92400e; }
+  .badge-error    { background:#fee2e2; color:#991b1b; }
+  .badge-disabled { background:#f1f5f9; color:#64748b; }
+  .badge-mock     { background:#dbeafe; color:#1e40af; }
+
+  .score-pill { display:inline-block; padding:3px 10px; border-radius:100px; font-size:11px; font-weight:800; }
+  .score-high   { background:#dcfce7; color:#166534; }
+  .score-medium { background:#fef3c7; color:#92400e; }
+  .score-low    { background:#f1f5f9; color:#64748b; }
+
+  .b-input, .b-select { width:100%; padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; background:var(--bg-soft); font-size:13px; font-family:inherit; }
+  .b-input:focus, .b-select:focus { outline:none; border-color:var(--primary); background:white; }
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "Bank Connectors" %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="b-page" x-data="bankingApp()" x-init="init()">
+
+  <div class="b-banner">
+    <div style="flex:1; min-width:320px;">
+      <h2>🏦 {% trans "Bank Connectors" %}</h2>
+      <p>{% trans "Pull bank statements directly into Tadgeeg, then match them against open invoices automatically." %}</p>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" class="btn btn-light" @click="runRecon()" :disabled="busy">
+        {% trans "Re-run reconciliation" %}
+      </button>
+      <button type="button" class="btn btn-primary" @click="showOnboard = true">
+        + {% trans "Connect bank" %}
+      </button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="label">{% trans "Connections" %}</div>
+      <div class="value">{{ connections|length }}</div>
+    </div>
+    <div class="kpi-card alert">
+      <div class="label">{% trans "Suggested matches" %}</div>
+      <div class="value">{{ counts.suggested|default:0 }}</div>
+    </div>
+    <div class="kpi-card good">
+      <div class="label">{% trans "Confirmed" %}</div>
+      <div class="value">{{ counts.confirmed|default:0 }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">{% trans "Rejected" %}</div>
+      <div class="value">{{ counts.rejected|default:0 }}</div>
+    </div>
+  </div>
+
+  <!-- Connections -->
+  <div class="b-card">
+    <h3>{% trans "Connected banks" %}</h3>
+    <table class="data-table">
+      <thead><tr>
+        <th>{% trans "Bank" %}</th>
+        <th>{% trans "Environment" %}</th>
+        <th>{% trans "Status" %}</th>
+        <th>{% trans "Accounts" %}</th>
+        <th>{% trans "Last sync" %}</th>
+        <th></th>
+      </tr></thead>
+      <tbody>
+        {% for c in connections %}
+          <tr>
+            <td>
+              <strong>{{ c.get_bank_code_display }}</strong>
+              {% if c.display_name %}<div style="font-size:11px; color:var(--text-muted);">{{ c.display_name }}</div>{% endif %}
+            </td>
+            <td>
+              <span class="badge {% if c.environment == 'mock' %}badge-mock{% else %}badge-active{% endif %}">
+                {{ c.get_environment_display }}
+              </span>
+            </td>
+            <td>
+              <span class="badge badge-{{ c.status }}">{{ c.get_status_display }}</span>
+              {% if c.last_error %}<div style="font-size:11px; color:var(--danger);">{{ c.last_error|truncatechars:80 }}</div>{% endif %}
+            </td>
+            <td>
+              {% for a in c.accounts.all %}
+                <div style="font-size:12px;">
+                  <code>{{ a.account_number }}</code>
+                  · {{ a.balance_cached|floatformat:2 }} {{ a.currency }}
+                </div>
+              {% empty %}
+                <span style="color:var(--text-muted)">—</span>
+              {% endfor %}
+            </td>
+            <td class="text-muted">{{ c.last_sync_at|date:"Y-m-d H:i"|default:"—" }}</td>
+            <td>
+              <button type="button" class="btn btn-light" @click="syncConnection('{{ c.id }}')">
+                ↻ {% trans "Sync" %}
+              </button>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" style="text-align:center; padding:40px 0; color:var(--text-muted);">
+            {% trans "No banks connected yet. Click ‘Connect bank’ to add one." %}
+          </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Reconciliation queue -->
+  <div class="b-card">
+    <h3>{% trans "Reconciliation queue" %}</h3>
+    <table class="data-table">
+      <thead><tr>
+        <th>{% trans "Score" %}</th>
+        <th>{% trans "Transaction" %}</th>
+        <th>{% trans "Invoice" %}</th>
+        <th>{% trans "Reasons" %}</th>
+        <th></th>
+      </tr></thead>
+      <tbody>
+        {% for r in recons %}
+          <tr>
+            <td>
+              <span class="score-pill {% if r.score >= 80 %}score-high{% elif r.score >= 60 %}score-medium{% else %}score-low{% endif %}">
+                {{ r.score }}
+              </span>
+            </td>
+            <td>
+              <div style="font-weight:700;">{{ r.transaction.amount|floatformat:2 }} {{ r.transaction.currency }}</div>
+              <div style="font-size:11px; color:var(--text-muted);">
+                {{ r.transaction.posted_at|date:"Y-m-d" }} ·
+                {{ r.transaction.counterparty|truncatechars:32 }}
+              </div>
+            </td>
+            <td>
+              {% if r.invoice %}
+                <div><code>{{ r.invoice.invoice_number|default:"-" }}</code></div>
+                <div style="font-size:11px; color:var(--text-muted);">
+                  {{ r.invoice.vendor_name|truncatechars:32 }} ·
+                  {{ r.invoice.total_amount|floatformat:2 }}
+                </div>
+              {% else %}
+                <span style="color:var(--text-muted)">—</span>
+              {% endif %}
+            </td>
+            <td style="font-size:11px; color:var(--text-muted);">
+              {% for re in r.reasons %}
+                {% if re.score and re.score > 0 %}
+                  <div>• {{ re.signal }}: {{ re.reason }}</div>
+                {% endif %}
+              {% endfor %}
+            </td>
+            <td>
+              <button type="button" class="btn btn-success" @click="ack('{{ r.id }}', 'confirm')">{% trans "Confirm" %}</button>
+              <button type="button" class="btn btn-danger" @click="ack('{{ r.id }}', 'reject')">{% trans "Reject" %}</button>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" style="text-align:center; padding:40px 0; color:var(--text-muted);">
+            {% trans "No suggestions in the queue. Click ‘Re-run reconciliation’ to score the latest transactions." %}
+          </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Onboarding modal -->
+  <div x-show="showOnboard" x-cloak
+       style="position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:50;">
+    <div style="background:white; max-width:520px; width:92%; border-radius:14px; padding:22px;">
+      <h3 style="font-family:'Cairo',sans-serif; font-weight:800; color:var(--primary); margin-bottom:14px;">
+        {% trans "Connect a bank" %}
+      </h3>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <select class="b-select" x-model="form.bank_code">
+          {% for code, name in available_banks %}
+            <option value="{{ code }}">{{ name }}</option>
+          {% endfor %}
+        </select>
+        <input class="b-input" x-model="form.display_name" placeholder="{% trans 'Display name (optional)' %}">
+        <select class="b-select" x-model="form.environment">
+          <option value="mock">Mock (offline demo)</option>
+          <option value="sandbox">Sandbox</option>
+          <option value="production">Production</option>
+        </select>
+      </div>
+      <p style="font-size:11px; color:var(--text-muted); margin-top:10px;">
+        {% trans "Sandbox / Production modes need API credentials issued by the bank's developer portal." %}
+      </p>
+      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:14px;">
+        <button type="button" class="btn btn-light" @click="showOnboard = false">{% trans "Cancel" %}</button>
+        <button type="button" class="btn btn-primary" @click="connect()" :disabled="busy">
+          {% trans "Connect" %}
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function getCookie(name) {
+  const c = `; ${document.cookie}`.split(`; ${name}=`);
+  if (c.length === 2) return c.pop().split(';').shift();
+  return '';
+}
+
+function bankingApp() {
+  return {
+    busy: false,
+    showOnboard: false,
+    form: { bank_code: 'al_rajhi', display_name: '', environment: 'mock' },
+
+    init() {},
+
+    async connect() {
+      this.busy = true;
+      try {
+        const r = await fetch('/api/v1/banking/connections/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json',
+                     'X-CSRFToken': getCookie('csrftoken') },
+          body: JSON.stringify(this.form),
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          alert('Connect failed: ' + (data.error || r.statusText));
+          return;
+        }
+        // Auto-sync the new connection.
+        await fetch(`/api/v1/banking/connections/${data.id}/sync/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        location.reload();
+      } finally { this.busy = false; }
+    },
+
+    async syncConnection(id) {
+      this.busy = true;
+      try {
+        const r = await fetch(`/api/v1/banking/connections/${id}/sync/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        const data = await r.json();
+        const s = data.summary || {};
+        alert(`{% trans "Sync done" %}: imported=${s.transactions_imported || 0}, skipped=${s.transactions_skipped || 0}`);
+        location.reload();
+      } finally { this.busy = false; }
+    },
+
+    async runRecon() {
+      this.busy = true;
+      try {
+        const r = await fetch('/api/v1/banking/reconciliations/run/', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        const data = await r.json();
+        alert(`{% trans "Reconciliation done" %}: ${data.suggestions_created || 0} {% trans "new suggestions" %}`);
+        location.reload();
+      } finally { this.busy = false; }
+    },
+
+    async ack(id, action) {
+      try {
+        await fetch(`/api/v1/banking/reconciliations/${id}/action/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json',
+                     'X-CSRFToken': getCookie('csrftoken') },
+          body: JSON.stringify({ action }),
+        });
+        location.reload();
+      } catch (e) {}
+    },
+  };
+}
+</script>
+{% endblock %}

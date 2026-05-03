@@ -267,10 +267,9 @@ class InvoiceAuditReportPDFView(_TenantReportMixin, APIView):
             return response
         except Exception as exc:
             logger.error("PDF generation failed for report %s: %s", pk, exc)
-            return Response(
-                {"error": _("PDF generation failed. Use the /html/ endpoint to view this report.")},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            )
+            response = HttpResponse(html_str, content_type="text/html; charset=utf-8")
+            response["X-Report-PDF-Fallback"] = "html"
+            return response
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -90,6 +90,104 @@
   </div>
 </div>
 
+<!-- ── Multi-framework compliance grid (ZATCA + GOSI + IFRS + GAAP + ISA) ── -->
+<div class="card" style="margin-bottom:24px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+    <h3 class="card-title" style="margin:0;">{% trans "Compliance frameworks" %}</h3>
+    <span class="badge badge-info">{% trans "Saudi & GCC + International standards" %}</span>
+  </div>
+  <div class="auth-grid">
+    <div class="auth-card">
+      <div class="auth-card-flag">🇸🇦</div>
+      <div class="auth-card-name">ZATCA Phase 2</div>
+      <div class="auth-card-auth">{% trans "E-invoice + TLV-encoded QR" %}</div>
+      <div class="auth-card-rate" style="color:{% if health.qr_valid_pct >= 95 %}var(--success){% elif health.qr_valid_pct >= 70 %}var(--warning){% else %}var(--danger){% endif %}">{{ health.qr_valid_pct|default:0 }}%</div>
+    </div>
+    <div class="auth-card">
+      <div class="auth-card-flag">💼</div>
+      <div class="auth-card-name">GOSI (KSA)</div>
+      <div class="auth-card-auth">{% trans "Payroll social-insurance contributions" %}</div>
+      <div class="auth-card-rate" style="color:var(--text-muted);font-size:13px;">{% trans "Tracked on payroll uploads" %}</div>
+    </div>
+    <div class="auth-card">
+      <div class="auth-card-flag">🌐</div>
+      <div class="auth-card-name">IFRS</div>
+      <div class="auth-card-auth">{% trans "International Financial Reporting Standards" %}</div>
+      <div class="auth-card-rate" style="color:var(--text-muted);font-size:13px;">{% trans "Recognition + measurement checks" %}</div>
+    </div>
+    <div class="auth-card">
+      <div class="auth-card-flag">📊</div>
+      <div class="auth-card-name">GAAP</div>
+      <div class="auth-card-auth">{% trans "Accrual + matching principle" %}</div>
+      <div class="auth-card-rate" style="color:var(--text-muted);font-size:13px;">{% trans "Period-cutoff validation" %}</div>
+    </div>
+    <div class="auth-card">
+      <div class="auth-card-flag">🔍</div>
+      <div class="auth-card-name">ISA 500</div>
+      <div class="auth-card-auth">{% trans "Audit Evidence — Mandatory Fields" %}</div>
+      <div class="auth-card-rate" style="color:var(--success)">R018</div>
+    </div>
+    <div class="auth-card">
+      <div class="auth-card-flag">⚖️</div>
+      <div class="auth-card-name">ISA 240</div>
+      <div class="auth-card-auth">{% trans "Fraud Risk — Anomaly + Duplicate" %}</div>
+      <div class="auth-card-rate" style="color:var(--success)">R001 · R004 · R010</div>
+    </div>
+    <div class="auth-card">
+      <div class="auth-card-flag">📋</div>
+      <div class="auth-card-name">ISA 315</div>
+      <div class="auth-card-auth">{% trans "Risk Assessment — Vendor Profile" %}</div>
+      <div class="auth-card-rate" style="color:var(--success)">R006 · R015</div>
+    </div>
+    <div class="auth-card">
+      <div class="auth-card-flag">🧾</div>
+      <div class="auth-card-name">ISA 700</div>
+      <div class="auth-card-auth">{% trans "Audit Opinion" %}</div>
+      <div class="auth-card-rate" style="color:var(--text-muted);font-size:13px;">
+        <a href="{% url 'frontend:reports' %}" style="color:var(--primary)">{% trans "Generate" %} →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Audit-rule coverage matrix ── -->
+<div class="card" style="margin-bottom:24px;">
+  <h3 class="card-title">{% trans "Active audit rules (R001 → R018)" %}</h3>
+  <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;">
+    {% trans "Rules that run synchronously on every uploaded document. Each rule produces an explanatory finding when it fails." %}
+  </p>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead><tr>
+        <th>{% trans "Rule" %}</th>
+        <th>{% trans "Name" %}</th>
+        <th>{% trans "Severity" %}</th>
+        <th>{% trans "Standard" %}</th>
+      </tr></thead>
+      <tbody>
+        <tr><td><code>R001</code></td><td>{% trans "Duplicate Invoice Detection" %}</td><td><span class="badge badge-danger">CRITICAL</span></td><td>ISA 240</td></tr>
+        <tr><td><code>R002</code></td><td>{% trans "VAT Calculation & Compliance" %}</td><td><span class="badge badge-danger">HIGH</span></td><td>ZATCA Phase 2</td></tr>
+        <tr><td><code>R003</code></td><td>{% trans "Missing Critical Fields" %}</td><td><span class="badge badge-warning">MEDIUM</span></td><td>ISA 500</td></tr>
+        <tr><td><code>R004</code></td><td>{% trans "Amount Anomaly (Z-score)" %}</td><td><span class="badge badge-danger">HIGH</span></td><td>ISA 240</td></tr>
+        <tr><td><code>R005</code></td><td>{% trans "Date Anomaly Detection" %}</td><td><span class="badge badge-warning">MEDIUM</span></td><td>IFRS Cut-off</td></tr>
+        <tr><td><code>R006</code></td><td>{% trans "Vendor Risk Screening" %}</td><td><span class="badge badge-warning">MEDIUM</span></td><td>ISA 315</td></tr>
+        <tr><td><code>R007</code></td><td>{% trans "Three-Way Match (PO ↔ GRN ↔ Invoice)" %}</td><td><span class="badge badge-danger">HIGH</span></td><td>SOX / ICOFR</td></tr>
+        <tr><td><code>R008</code></td><td>{% trans "Currency Consistency (ISO-4217)" %}</td><td><span class="badge badge-warning">MEDIUM</span></td><td>IFRS / GAAP</td></tr>
+        <tr><td><code>R009</code></td><td>{% trans "VAT Rate Validity (KSA 0/5/15%)" %}</td><td><span class="badge badge-danger">HIGH</span></td><td>ZATCA</td></tr>
+        <tr><td><code>R010</code></td><td>{% trans "Round-Number Anomaly" %}</td><td><span class="badge badge-info">LOW</span></td><td>ISA 240</td></tr>
+        <tr><td><code>R011</code></td><td>{% trans "Line-Item Reconciliation" %}</td><td><span class="badge badge-danger">HIGH</span></td><td>GAAP / ISA 500</td></tr>
+        <tr><td><code>R012</code></td><td>{% trans "Negative Amount Detection" %}</td><td><span class="badge badge-danger">HIGH</span></td><td>GAAP</td></tr>
+        <tr><td><code>R013</code></td><td>{% trans "Due-Date Validity" %}</td><td><span class="badge badge-warning">MEDIUM</span></td><td>IFRS Recognition</td></tr>
+        <tr><td><code>R014</code></td><td>{% trans "VAT Number Format (KSA TRN)" %}</td><td><span class="badge badge-warning">MEDIUM</span></td><td>ZATCA</td></tr>
+        <tr><td><code>R015</code></td><td>{% trans "Vendor Approval Status" %}</td><td><span class="badge badge-danger">HIGH</span></td><td>ISA 315 / SOX</td></tr>
+        <tr><td><code>R016</code></td><td>{% trans "Decimal Precision" %}</td><td><span class="badge badge-info">LOW</span></td><td>GAAP</td></tr>
+        <tr><td><code>R017</code></td><td>{% trans "ZATCA QR Code Presence" %}</td><td><span class="badge badge-danger">HIGH</span></td><td>ZATCA Phase 2</td></tr>
+        <tr><td><code>R018</code></td><td>{% trans "Mandatory Tax-Invoice Fields" %}</td><td><span class="badge badge-danger">HIGH</span></td><td>ISA 500 + ZATCA</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
 <div class="card">
   <h3 class="card-title">{% trans "Invoices missing valid QR" %}</h3>
   {% if issues %}

@@ -127,6 +127,12 @@ LOCAL_APPS = [
     "apps.auditing",
     "apps.rule_engine",
     "apps.notifications",
+    "apps.api_mobile",
+    "apps.streaming",
+    "apps.alerts",
+    "apps.zatca",
+    "apps.banking",
+    "apps.ledger",
 ]
 
 # ─── Rule Engine Settings ──────────────────────────────────────────────────────

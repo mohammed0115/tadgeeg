@@ -1,4 +1,4 @@
-{% load static i18n %}
+{% load static i18n asset_tags %}
 {% get_current_language as LANGUAGE_CODE %}
 {% get_current_language_bidi as LANGUAGE_BIDI %}
 <!DOCTYPE html>
@@ -16,7 +16,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <!-- Tailwind -->
 <script>window.tailwind = window.tailwind || {};</script>
-<script src="{% static 'vendor/tailwind.browser.js' %}" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com'"></script>
+<script src="{% safe_static 'vendor/tailwind.browser.js' %}" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com'"></script>
 {% if bootstrap_tokens %}
 {{ bootstrap_tokens|json_script:"bootstrap-auth-tokens" }}
 {% endif %}
@@ -41,13 +41,13 @@ window.tailwind.refresh?.();
 </script>
 
 <!-- Alpine -->
-<script defer src="{% static 'vendor/alpine.min.js' %}"></script>
+<script defer src="{% safe_static 'vendor/alpine.min.js' %}" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
 
 <!-- Chart.js -->
-<script src="{% static 'vendor/chart.umd.min.js' %}"></script>
+<script src="{% safe_static 'vendor/chart.umd.min.js' %}"></script>
 
 <!-- Lucide Icons -->
-<script src="{% static 'vendor/lucide.min.js' %}"></script>
+<script src="{% safe_static 'vendor/lucide.min.js' %}"></script>
 
   <style>
   /* Language-aware typography

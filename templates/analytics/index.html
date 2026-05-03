@@ -85,6 +85,28 @@
   </div>
 </div>
 
+<div class="charts-grid" style="grid-template-columns: 1fr 1fr;">
+  <div class="card">
+    <h3 class="card-title">{% trans "Workflow Status Distribution" %}</h3>
+    <canvas id="status-chart" height="180"></canvas>
+  </div>
+  <div class="card">
+    <h3 class="card-title">{% trans "VAT Collected (monthly)" %}</h3>
+    <canvas id="vat-chart" height="180"></canvas>
+  </div>
+</div>
+
+<div class="charts-grid" style="grid-template-columns: 1fr 1fr;">
+  <div class="card">
+    <h3 class="card-title">{% trans "Audit-Rule Failure Histogram" %}</h3>
+    <canvas id="rules-chart" height="180"></canvas>
+  </div>
+  <div class="card">
+    <h3 class="card-title">{% trans "Document-Type Mix" %}</h3>
+    <canvas id="doctype-chart" height="180"></canvas>
+  </div>
+</div>
+
 <div class="card">
   <h3 class="card-title">{% trans "Top Vendors by Volume" %}</h3>
   {% if top_vendors %}
@@ -112,8 +134,12 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 (function() {
-  const monthly = {{ monthly|safe }};
-  const risk = {{ risk_dist|safe }};
+  const monthly      = {{ monthly|safe }};
+  const risk         = {{ risk_dist|safe }};
+  const statusDist   = {{ status_dist|default:"[]"|safe }};
+  const vatMonthly   = {{ vat_monthly|default:"[]"|safe }};
+  const ruleFailures = {{ rule_failures|default:"[]"|safe }};
+  const docTypeMix   = {{ doc_type_mix|default:"[]"|safe }};
 
   if (monthly.length) {
     new Chart(document.getElementById('monthly-chart'), {
@@ -121,7 +147,7 @@
       data: {
         labels: monthly.map(r => r.month),
         datasets: [
-          { label: 'Invoices', data: monthly.map(r => r.count), backgroundColor: '#003366' },
+          { label: 'Invoices',     data: monthly.map(r => r.count),  backgroundColor: '#003366' },
           { label: 'Amount (SAR)', data: monthly.map(r => r.amount), backgroundColor: '#10B981', yAxisID: 'y1' },
         ],
       },
@@ -138,12 +164,67 @@
       type: 'doughnut',
       data: {
         labels: risk.map(r => r.level),
-        datasets: [{
-          data: risk.map(r => r.count),
-          backgroundColor: risk.map(r => colors[r.level] || '#94a3b8'),
-        }],
+        datasets: [{ data: risk.map(r => r.count), backgroundColor: risk.map(r => colors[r.level] || '#94a3b8') }],
       },
       options: { responsive: true, maintainAspectRatio: false },
+    });
+  }
+
+  if (statusDist.some(r => r.count > 0)) {
+    const statusColors = { pending:'#94a3b8', processing:'#3b82f6', flagged:'#f59e0b', approved:'#10B981', rejected:'#ef4444' };
+    new Chart(document.getElementById('status-chart'), {
+      type: 'doughnut',
+      data: {
+        labels: statusDist.map(r => r.status),
+        datasets: [{ data: statusDist.map(r => r.count), backgroundColor: statusDist.map(r => statusColors[r.status] || '#94a3b8') }],
+      },
+      options: { responsive: true, maintainAspectRatio: false },
+    });
+  }
+
+  if (vatMonthly.length) {
+    new Chart(document.getElementById('vat-chart'), {
+      type: 'line',
+      data: {
+        labels: vatMonthly.map(r => r.month),
+        datasets: [{
+          label: 'VAT Collected (SAR)', data: vatMonthly.map(r => r.vat),
+          borderColor: '#003366', backgroundColor: 'rgba(0,51,102,0.12)',
+          tension: 0.3, fill: true,
+        }],
+      },
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } },
+    });
+  }
+
+  if (ruleFailures.length) {
+    new Chart(document.getElementById('rules-chart'), {
+      type: 'bar',
+      data: {
+        labels: ruleFailures.map(r => r.rule),
+        datasets: [{
+          label: 'Failures', data: ruleFailures.map(r => r.count),
+          backgroundColor: '#ef4444',
+        }],
+      },
+      options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y',
+                 scales: { x: { beginAtZero: true } } },
+    });
+  }
+
+  if (docTypeMix.length) {
+    const palette = ['#003366','#10B981','#f59e0b','#3b82f6','#8b5cf6','#ec4899','#14b8a6','#ef4444','#94a3b8','#f97316','#a855f7','#06b6d4','#6366f1','#84cc16','#facc15'];
+    new Chart(document.getElementById('doctype-chart'), {
+      type: 'pie',
+      data: {
+        labels: docTypeMix.map(r => r.name),
+        datasets: [{
+          data: docTypeMix.map(r => r.count),
+          backgroundColor: docTypeMix.map((_, i) => palette[i % palette.length]),
+        }],
+      },
+      options: { responsive: true, maintainAspectRatio: false,
+                 plugins: { legend: { position: 'right', labels: { font: { size: 10 } } } } },
     });
   }
 })();

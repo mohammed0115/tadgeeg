@@ -1,0 +1,324 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n static asset_tags %}
+
+{% block title %}{% trans "ZATCA Phase 2 — Compliance" %}{% endblock %}
+{% block nav_compliance %}active{% endblock %}
+
+{% block head_extra %}
+  <script defer src="{% safe_static 'vendor/alpine.min.js' %}"
+          onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
+{% endblock %}
+
+{% block extra_styles %}
+  [x-cloak] { display:none !important; }
+  .z-page { max-width: 1280px; margin: 0 auto; }
+  .z-banner { background: linear-gradient(135deg, var(--primary) 0%, #002244 100%); color: white; border-radius: 18px; padding: 22px 28px; margin-bottom: 22px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .z-banner h2 { font-family:'Cairo',sans-serif; font-size:22px; font-weight:800; }
+  .z-banner p  { color: rgba(255,255,255,0.78); font-size:13px; max-width: 720px; }
+
+  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:22px; }
+  .kpi-card { background:white; border:1px solid var(--border); border-radius:14px; padding:16px 18px; }
+  .kpi-card .label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; }
+  .kpi-card .value { font-family:'Cairo',sans-serif; font-weight:900; font-size:26px; color:var(--primary); margin-top:6px; line-height:1; }
+  .kpi-card.good  .value { color: var(--success); }
+  .kpi-card.alert .value { color: var(--danger); }
+  .kpi-card.warn  .value { color: #92400e; }
+
+  .z-card { background:white; border:1px solid var(--border); border-radius:14px; padding:18px 22px; margin-bottom:16px; }
+  .z-card h3 { font-family:'Cairo',sans-serif; font-weight:800; font-size:15px; color:var(--primary); margin-bottom:12px; }
+
+  .data-table { width:100%; border-collapse:separate; border-spacing:0; }
+  .data-table th { background:var(--bg-soft); padding:10px 12px; font-size:11px; font-weight:800; text-align:start; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; }
+  .data-table td { padding:10px 12px; font-size:13px; border-top:1px solid var(--border-soft); vertical-align:top; }
+
+  .badge { display:inline-block; padding:3px 10px; border-radius:100px; font-size:11px; font-weight:700; }
+  .badge-active   { background:#dcfce7; color:#166534; }
+  .badge-pending  { background:#fef3c7; color:#92400e; }
+  .badge-csr      { background:#dbeafe; color:#1e40af; }
+  .badge-expired  { background:#fee2e2; color:#991b1b; }
+  .badge-cleared  { background:#dcfce7; color:#166534; }
+  .badge-reported { background:#dbeafe; color:#1e40af; }
+  .badge-rejected { background:#fee2e2; color:#991b1b; }
+  .badge-warning  { background:#fef3c7; color:#92400e; }
+  .badge-draft, .badge-signed, .badge-submitted { background:#f1f5f9; color:#475569; }
+  .badge-low { background:#dcfce7; color:#166534; }
+
+  .check-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--border-soft); }
+  .check-row:last-child { border-bottom: none; }
+  .check-row .icon { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-weight:800; }
+  .check-row.ok .icon { background: #dcfce7; color:#166534; }
+  .check-row.todo .icon { background: #fef3c7; color:#92400e; }
+  .check-row .text { font-size:13px; }
+  .check-row .hint { font-size:11px; color:var(--text-muted); margin-top:2px; }
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "ZATCA Phase 2" %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="z-page" x-data="zatcaDash()" x-init="init()">
+
+  <div class="z-banner">
+    <div style="flex:1; min-width:300px;">
+      <h2>🇸🇦 {% trans "ZATCA Phase 2 — Compliance Dashboard" %}</h2>
+      <p>{% trans "Live counters for clearance + reporting, EGS device certificate health, and a one-glance readiness checklist." %}</p>
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button type="button" class="btn btn-light" @click="refresh()" :disabled="busy">↻ {% trans "Refresh" %}</button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid" x-show="metrics" x-cloak>
+    <div class="kpi-card good">
+      <div class="label">{% trans "Cleared (B2B)" %}</div>
+      <div class="value" x-text="metrics?.counts?.cleared ?? 0"></div>
+    </div>
+    <div class="kpi-card good">
+      <div class="label">{% trans "Reported (B2C)" %}</div>
+      <div class="value" x-text="metrics?.counts?.reported ?? 0"></div>
+    </div>
+    <div class="kpi-card warn">
+      <div class="label">{% trans "With warnings" %}</div>
+      <div class="value" x-text="metrics?.counts?.warning ?? 0"></div>
+    </div>
+    <div class="kpi-card alert">
+      <div class="label">{% trans "Rejected" %}</div>
+      <div class="value" x-text="metrics?.counts?.rejected ?? 0"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">{% trans "Pending" %}</div>
+      <div class="value" x-text="metrics?.counts?.pending ?? 0"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">{% trans "Clearance rate (30d)" %}</div>
+      <div class="value">
+        <span x-text="(metrics?.counts?.clearance_rate_pct ?? 0) + '%'"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Readiness checklist -->
+  <div class="z-card">
+    <h3>{% trans "Phase 2 readiness checklist" %}</h3>
+    <template x-for="item in metrics?.readiness || []" :key="item.check">
+      <div class="check-row" :class="item.ok ? 'ok' : 'todo'">
+        <div class="icon" x-text="item.ok ? '✓' : '!'"></div>
+        <div class="text">
+          <div x-text="item.check"></div>
+          <div class="hint" x-show="!item.ok" x-cloak x-text="item.hint"></div>
+        </div>
+      </div>
+    </template>
+  </div>
+
+  <!-- EGS devices -->
+  <div class="z-card">
+    <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+      <h3 style="margin:0;">{% trans "EGS devices" %}</h3>
+      <button type="button" class="btn btn-primary" @click="openOnboard()">+ {% trans "Onboard new device" %}</button>
+    </div>
+
+    <table class="data-table" style="margin-top:12px;">
+      <thead><tr>
+        <th>{% trans "Device" %}</th>
+        <th>{% trans "Environment" %}</th>
+        <th>{% trans "Status" %}</th>
+        <th>{% trans "Cert valid until" %}</th>
+        <th></th>
+      </tr></thead>
+      <tbody>
+        {% for d in devices %}
+          <tr>
+            <td>
+              <strong>{{ d.common_name }}</strong>
+              <div style="font-size:11px; color:var(--text-muted);">SN: <code>{{ d.serial_number }}</code></div>
+              {% if d.branch_name %}<div style="font-size:11px; color:var(--text-muted);">{{ d.branch_name }}</div>{% endif %}
+            </td>
+            <td>{{ d.get_environment_display }}</td>
+            <td>
+              <span class="badge {% if d.status == 'active' %}badge-active{% elif d.status == 'compliance' %}badge-csr{% elif d.status == 'expired' %}badge-expired{% else %}badge-pending{% endif %}">
+                {{ d.get_status_display }}
+              </span>
+            </td>
+            <td>{{ d.valid_until|date:"Y-m-d"|default:"—" }}</td>
+            <td>
+              <button type="button" class="btn btn-light" @click="renew('{{ d.id }}')">{% trans "Renew" %}</button>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="5" style="text-align:center; padding:40px 0; color:var(--text-muted);">
+            {% trans "No EGS devices registered. Click ‘Onboard new device’ to start." %}
+          </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Cert warnings -->
+  <div class="z-card" x-show="metrics?.cert_warnings?.length > 0" x-cloak
+       style="border-color:#fde68a; background:#fffbeb;">
+    <h3 style="color:#92400e;">⚠ {% trans "Certificate expiry warnings" %}</h3>
+    <template x-for="w in metrics?.cert_warnings" :key="w.device_id">
+      <div style="font-size:13px; padding:6px 0;">
+        <strong x-text="w.common_name"></strong>:
+        <span x-text="w.days_left + ' {% trans "days left" %}'" :style="w.days_left < 0 ? 'color:var(--danger);font-weight:700' : ''"></span>
+      </div>
+    </template>
+  </div>
+
+  <!-- Top rejection codes -->
+  <div class="z-card" x-show="metrics?.top_rejections?.length > 0" x-cloak>
+    <h3>{% trans "Top rejection causes (last 30d)" %}</h3>
+    <table class="data-table">
+      <thead><tr>
+        <th>{% trans "Code" %}</th>
+        <th>{% trans "Category" %}</th>
+        <th>{% trans "Count" %}</th>
+        <th>{% trans "Title" %}</th>
+        <th>{% trans "Fix hint" %}</th>
+      </tr></thead>
+      <tbody>
+        <template x-for="r in metrics?.top_rejections" :key="r.code">
+          <tr>
+            <td><code x-text="r.code"></code></td>
+            <td><span class="badge badge-pending" x-text="r.category"></span></td>
+            <td x-text="r.count"></td>
+            <td x-text="r.title"></td>
+            <td style="color:var(--text-muted)" x-text="r.fix_hint"></td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Recent submissions -->
+  <div class="z-card">
+    <h3>{% trans "Recent submissions" %}</h3>
+    <table class="data-table">
+      <thead><tr>
+        <th>{% trans "When" %}</th>
+        <th>{% trans "ZATCA UUID" %}</th>
+        <th>{% trans "Type" %}</th>
+        <th>{% trans "Status" %}</th>
+        <th>{% trans "Chain #" %}</th>
+        <th>{% trans "Hash" %}</th>
+      </tr></thead>
+      <tbody>
+        {% for s in submissions %}
+          <tr>
+            <td class="text-muted">{{ s.created_at|date:"Y-m-d H:i" }}</td>
+            <td><code>{{ s.zatca_uuid|stringformat:"s"|truncatechars:14 }}</code></td>
+            <td>{{ s.get_submission_type_display }}</td>
+            <td>
+              <span class="badge badge-{{ s.status }}">{{ s.get_status_display }}</span>
+            </td>
+            <td><code>{{ s.chain_position }}</code></td>
+            <td><code>{{ s.invoice_hash|truncatechars:16 }}</code></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" style="text-align:center; padding:40px 0; color:var(--text-muted);">
+            {% trans "No submissions yet." %}
+          </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Onboarding modal -->
+  <div x-show="showOnboard" x-cloak
+       style="position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:50;">
+    <div style="background:white; max-width:520px; width:92%; border-radius:14px; padding:22px;">
+      <h3 style="font-family:'Cairo',sans-serif; font-weight:800; color:var(--primary); margin-bottom:14px;">
+        {% trans "Onboard new EGS device" %}
+      </h3>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input class="rb-input" x-model="form.common_name" placeholder="Common name (1-Tadgeeg|2-EGS|3-001)">
+        <input class="rb-input" x-model="form.serial_number" placeholder="Serial number">
+        <input class="rb-input" x-model="form.organization_identifier" placeholder="VAT number (15 digits)">
+        <input class="rb-input" x-model="form.branch_name" placeholder="Branch (optional)">
+        <select class="rb-select" x-model="form.environment">
+          <option value="sandbox">Sandbox</option>
+          <option value="simulation">Simulation</option>
+          <option value="production">Production</option>
+        </select>
+        <input class="rb-input" x-model="form.otp" placeholder="OTP from Fatoora">
+      </div>
+      <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:14px;">
+        <button type="button" class="btn btn-light" @click="showOnboard = false">{% trans "Cancel" %}</button>
+        <button type="button" class="btn btn-primary" @click="submitOnboard()" :disabled="busy">
+          {% trans "Onboard" %}
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<style>
+  .rb-input, .rb-select { width:100%; padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; background:var(--bg-soft); font-size:13px; font-family:inherit; }
+  .rb-input:focus, .rb-select:focus { outline:none; border-color:var(--primary); background:white; }
+</style>
+
+<script>
+function getCookie(name) {
+  const c = `; ${document.cookie}`.split(`; ${name}=`);
+  if (c.length === 2) return c.pop().split(';').shift();
+  return '';
+}
+
+function zatcaDash() {
+  return {
+    metrics: null, busy: false,
+    showOnboard: false,
+    form: {
+      common_name: '1-Tadgeeg|2-EGS|3-001',
+      serial_number: '',
+      organization_identifier: '',
+      branch_name: '',
+      environment: 'sandbox',
+      otp: '123456',
+    },
+    async init() { await this.refresh(); },
+    async refresh() {
+      this.busy = true;
+      try {
+        const r = await fetch('/api/v1/zatca/dashboard/');
+        if (r.ok) this.metrics = await r.json();
+      } finally { this.busy = false; }
+    },
+    openOnboard() { this.showOnboard = true; },
+    async submitOnboard() {
+      this.busy = true;
+      try {
+        const r = await fetch('/api/v1/zatca/devices/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json',
+                     'X-CSRFToken': getCookie('csrftoken') },
+          body: JSON.stringify(this.form),
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          alert('Onboarding failed: ' + (data.error || r.statusText));
+        } else {
+          location.reload();
+        }
+      } finally { this.busy = false; }
+    },
+    async renew(id) {
+      this.busy = true;
+      try {
+        await fetch(`/api/v1/zatca/devices/${id}/renew/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        location.reload();
+      } finally { this.busy = false; }
+    },
+  };
+}
+</script>
+{% endblock %}

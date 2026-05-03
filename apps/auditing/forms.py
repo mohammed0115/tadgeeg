@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 ALLOWED_EXTENSIONS = {
     ".pdf", ".jpg", ".jpeg", ".png", ".tiff", ".tif",
-    ".xlsx", ".xls", ".csv", ".json", ".zip",
+    ".xlsx", ".xls", ".csv", ".json", ".jsonl", ".zip",
 }
 MAX_FILE_SIZE_MB = 50
 SUSPICIOUS_EXTENSIONS = {'.exe', '.bat', '.cmd', '.sh', '.dll', '.so', '.app'}

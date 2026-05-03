@@ -5,6 +5,7 @@ Covers all 30 invoice auditing rules from the business requirements.
 
 import uuid
 from django.db import models
+from apps.audit.integrity import HashChainMixin
 from apps.authentication.models import User, Organization
 from core.constants import VAT_MATH_TOLERANCE, VAT_RATE_TOLERANCE
 from core.mixins import SoftDeleteModel
@@ -463,8 +464,14 @@ class VendorProfile(models.Model):
 
 # ─── Invoice Audit Trail ──────────────────────────────────────────────────────
 
-class InvoiceAuditEvent(models.Model):
-    """Every action on an invoice is recorded here (Rule Group 8)."""
+class InvoiceAuditEvent(HashChainMixin):
+    """Every action on an invoice is recorded here (Rule Group 8).
+
+    Tamper-evident via the per-org SHA-256 chain inherited from
+    HashChainMixin. After save, ``previous_hash``/``event_hash``/
+    ``chain_position`` are immutable — a pre-save signal blocks any
+    re-hash, and `verify_chain()` flags any row mutated outside the app.
+    """
 
     class EventType(models.TextChoices):
         UPLOADED   = "uploaded",   "Invoice Uploaded"
@@ -492,6 +499,48 @@ class InvoiceAuditEvent(models.Model):
     class Meta:
         db_table = "invoice_audit_events"
         ordering = ["-timestamp"]
+        indexes = [
+            models.Index(fields=["invoice", "chain_position"]),
+        ]
 
     def __str__(self):
         return f"{self.event_type} on {self.invoice_id} by {self.user} at {self.timestamp}"
+
+    # ── HashChainMixin contract ──────────────────────────────────────────────
+
+    @classmethod
+    def _chain_org_filter_key(cls) -> str:
+        """Tell the chain framework how to filter rows by org — InvoiceAuditEvent
+        reaches the org via invoice → organization."""
+        return "invoice__organization_id"
+
+    def _chain_organization_id(self):
+        """Return the org id this event belongs to."""
+        if self.invoice_id:
+            return self.invoice.organization_id
+        return None
+
+    def _chain_payload(self) -> dict:
+        """Canonical immutable snapshot the hash commits to. Any post-save
+        edit to these fields would be detected by `verify_chain()`.
+
+        Note: ``timestamp`` is *not* included. Django's ``auto_now_add``
+        populates it inside the field-level pre_save, which fires AFTER our
+        chain pre_save signal — so the value is None at the moment we hash.
+        Including it would force us to choose between (a) hashing on a
+        wallclock that drifts from the auto-populated field, breaking
+        determinism, or (b) hand-rolling the timestamp ourselves and
+        ignoring auto_now_add. We keep `timestamp` as a UI-only field and
+        commit only to the immutable payload below — pk + chain_position
+        already encode order.
+        """
+        return {
+            "id":          str(self.id),
+            "invoice_id":  str(self.invoice_id),
+            "user_id":     str(self.user_id) if self.user_id else None,
+            "event_type":  self.event_type,
+            "description": self.description or "",
+            "before_data": self.before_data or {},
+            "after_data":  self.after_data or {},
+            "ip_address":  self.ip_address or "",
+        }

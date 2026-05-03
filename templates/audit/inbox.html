@@ -1,0 +1,88 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Approval Inbox" %}{% endblock %}
+{% block nav_audit %}active{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <a href="{% url 'frontend:audit' %}" style="color:var(--text-muted)">{% trans "Audit" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "Inbox" %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{% trans "Approval Inbox" %}</h1>
+    <p class="page-subtitle">{% trans "Documents flagged or pending — sorted by risk severity." %}</p>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:24px;">
+  <div class="card" style="padding:18px;">
+    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">{% trans "Total Pending" %}</div>
+    <div style="font-size:28px;font-weight:800;color:var(--primary);margin-top:4px;">{{ total_pending }}</div>
+  </div>
+  <div class="card" style="padding:18px; border:1px solid #fecaca;">
+    <div style="font-size:11px;color:#991b1b;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">{% trans "Critical" %}</div>
+    <div style="font-size:28px;font-weight:800;color:#7f1d1d;margin-top:4px;">{{ critical_count }}</div>
+  </div>
+  <div class="card" style="padding:18px; border:1px solid #fed7aa;">
+    <div style="font-size:11px;color:#9a3412;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">{% trans "High Risk" %}</div>
+    <div style="font-size:28px;font-weight:800;color:#dc2626;margin-top:4px;">{{ high_count }}</div>
+  </div>
+</div>
+
+<div class="card" style="padding:0; overflow:hidden;">
+  <table class="data-table" style="width:100%;">
+    <thead>
+      <tr>
+        <th>{% trans "Type" %}</th>
+        <th>{% trans "Reference" %}</th>
+        <th>{% trans "Party" %}</th>
+        <th>{% trans "Amount" %}</th>
+        <th>{% trans "Risk" %}</th>
+        <th>{% trans "Failed Rules" %}</th>
+        <th>{% trans "Created" %}</th>
+        <th>{% trans "Action" %}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in inbox %}
+      <tr>
+        <td>
+          <span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">{{ item.doc_type|cut:"_"|title }}</span>
+        </td>
+        <td style="font-family:monospace;font-weight:700;">{{ item.number }}</td>
+        <td>{{ item.party|truncatechars:30 }}</td>
+        <td style="font-family:monospace;">{{ item.amount|floatformat:2 }} <span style="font-size:11px;color:var(--text-muted);">{{ item.currency }}</span></td>
+        <td>
+          <span class="badge badge-{% if item.risk_level == 'critical' %}danger{% elif item.risk_level == 'high' %}danger{% elif item.risk_level == 'medium' %}warning{% else %}success{% endif %}"
+                {% if item.risk_level == 'critical' %}style="background:#7f1d1d;color:#fff;"{% endif %}>
+            {{ item.risk_level|title }}
+          </span>
+        </td>
+        <td>
+          {% if item.rules_failed %}
+            <span style="color:#dc2626;font-weight:700;">{{ item.rules_failed }}</span>
+          {% else %}
+            <span style="color:var(--text-muted);">—</span>
+          {% endif %}
+        </td>
+        <td style="font-size:11px;color:var(--text-muted);">{{ item.created_at|date:"Y-m-d H:i" }}</td>
+        <td>
+          <a href="{{ item.url }}" class="btn btn-light" style="padding:4px 12px;font-size:12px;">{% trans "Review" %}</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" style="text-align:center;padding:48px;color:var(--text-muted);">
+        <div style="font-size:18px;margin-bottom:8px;">✓</div>
+        {% trans "Inbox is empty — nothing pending review." %}
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

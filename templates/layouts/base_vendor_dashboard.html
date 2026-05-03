@@ -1,4 +1,4 @@
-{% load static i18n %}
+{% load static i18n asset_tags %}
 {% get_current_language as LANGUAGE_CODE %}
 {% get_current_language_bidi as LANGUAGE_BIDI %}
 <!DOCTYPE html>
@@ -15,7 +15,7 @@
   <title>{% block page_title %}{% trans "Dashboard" %}{% endblock %} | {{ org_name|default:"Organization Dashboard" }}</title>
 
   <script>window.tailwind = window.tailwind || {};</script>
-  <script src="{% static 'vendor/tailwind.browser.js' %}" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com'"></script>
+  <script src="{% safe_static 'vendor/tailwind.browser.js' %}" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com'"></script>
   <script>
     window.tailwind = window.tailwind || {};
     window.tailwind.config = {
@@ -41,9 +41,9 @@
     };
     window.tailwind.refresh?.();
   </script>
-  <script defer src="{% static 'vendor/alpine.min.js' %}"></script>
-  <script src="{% static 'vendor/lucide.min.js' %}"></script>
-  <script src="{% static 'vendor/chart.umd.min.js' %}"></script>
+  <script defer src="{% safe_static 'vendor/alpine.min.js' %}" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
+  <script src="{% safe_static 'vendor/lucide.min.js' %}"></script>
+  <script src="{% safe_static 'vendor/chart.umd.min.js' %}"></script>
 
   <style type="text/tailwindcss">
     * { font-family: "Segoe UI", Tahoma, Arial, sans-serif; }

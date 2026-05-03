@@ -38,6 +38,15 @@ Generic typed-document detail page. View passes:
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
       {% trans "Back to list" %}
     </a>
+    {% if doc_type and doc.id %}
+    <form method="post" action="{% url 'frontend:run_audit' doc_type=doc_type pk=doc.id %}" style="display:inline;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        {% trans "Run Audit" %}
+      </button>
+    </form>
+    {% endif %}
   </div>
 </div>
 

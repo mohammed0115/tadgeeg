@@ -1,0 +1,155 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{{ vendor.name|default:_("Vendor") }} — {% trans "Vendor 360" %}{% endblock %}
+{% block nav_vendors %}active{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <a href="{% url 'frontend:vendors' %}" style="color:var(--text-muted)">{% trans "Vendors" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{{ vendor.name|default:"—" }}</span>
+{% endblock %}
+
+{% block content %}
+{% if not vendor %}
+  <div class="card" style="padding:32px; text-align:center;">
+    <h3>{% trans "Vendor not found" %}</h3>
+    <p>{{ message|default:_("Could not find a vendor by that name in your organisation.") }}</p>
+    <a href="{% url 'frontend:vendors' %}" class="btn btn-primary">{% trans "Back to Vendors" %}</a>
+  </div>
+{% else %}
+<div class="page-header">
+  <div style="display:flex; align-items:center; gap:18px;">
+    <div style="width:64px;height:64px;border-radius:18px;background:#e0f2fe;color:#075985;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:26px;">
+      {{ vendor.name|slice:":1"|upper }}
+    </div>
+    <div>
+      <h1 class="page-title">{{ vendor.name }}</h1>
+      <p class="page-subtitle">
+        {% if vendor.vat_numbers %}
+          {% trans "VAT" %}: <span style="font-family:monospace;">{{ vendor.vat_numbers|join:", " }}</span>
+        {% else %}
+          {% trans "Vendor 360 view — invoices, POs, payments, contracts" %}
+        {% endif %}
+      </p>
+    </div>
+  </div>
+</div>
+
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:14px; margin-bottom:24px;">
+  <div class="card" style="padding:18px;">
+    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">{% trans "Risk Score" %}</div>
+    <div style="font-size:28px;font-weight:800;color:var(--primary);margin-top:4px;">{{ vendor.risk_score }}<span style="font-size:11px;color:var(--text-muted);"> / 100</span></div>
+    <div style="margin-top:6px;">
+      <span class="badge badge-{% if vendor.risk_level == 'critical' %}danger{% elif vendor.risk_level == 'high' %}danger{% elif vendor.risk_level == 'medium' %}warning{% else %}success{% endif %}">
+        {% if vendor.risk_level == 'critical' %}{% trans "Critical" %}
+        {% elif vendor.risk_level == 'high' %}{% trans "High" %}
+        {% elif vendor.risk_level == 'medium' %}{% trans "Medium" %}
+        {% else %}{% trans "Low" %}{% endif %}
+      </span>
+    </div>
+  </div>
+  <div class="card" style="padding:18px;">
+    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">{% trans "Invoices" %}</div>
+    <div style="font-size:28px;font-weight:800;color:var(--primary);margin-top:4px;">{{ vendor.invoice_count }}</div>
+  </div>
+  <div class="card" style="padding:18px;">
+    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">{% trans "Total Invoiced" %}</div>
+    <div style="font-size:22px;font-weight:800;color:var(--primary);margin-top:4px;font-family:monospace;">{{ vendor.total_invoiced|floatformat:0 }} <span style="font-size:11px;color:var(--text-muted);">SAR</span></div>
+  </div>
+  <div class="card" style="padding:18px;">
+    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">{% trans "Total Paid" %}</div>
+    <div style="font-size:22px;font-weight:800;color:#10B981;margin-top:4px;font-family:monospace;">{{ vendor.total_paid|floatformat:0 }} <span style="font-size:11px;color:var(--text-muted);">SAR</span></div>
+  </div>
+  <div class="card" style="padding:18px;">
+    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">{% trans "Outstanding" %}</div>
+    <div style="font-size:22px;font-weight:800;color:#dc2626;margin-top:4px;font-family:monospace;">{{ vendor.outstanding|floatformat:0 }} <span style="font-size:11px;color:var(--text-muted);">SAR</span></div>
+  </div>
+  <div class="card" style="padding:18px; border:1px solid #fecaca; background:#fef2f2;">
+    <div style="font-size:11px;color:#991b1b;text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">{% trans "High-Risk + Duplicates" %}</div>
+    <div style="font-size:28px;font-weight:800;color:#dc2626;margin-top:4px;">{{ vendor.high_risk_count }} / {{ vendor.duplicate_count }}</div>
+  </div>
+</div>
+
+{# Linkage counts row #}
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:14px; margin-bottom:24px;">
+  <div class="card" style="padding:14px; text-align:center;">
+    <div style="font-size:11px;color:var(--text-muted);">{% trans "Purchase Orders" %}</div>
+    <div style="font-size:22px;font-weight:800;color:var(--primary);">{{ vendor.po_count }}</div>
+  </div>
+  <div class="card" style="padding:14px; text-align:center;">
+    <div style="font-size:11px;color:var(--text-muted);">{% trans "Goods Receipts" %}</div>
+    <div style="font-size:22px;font-weight:800;color:var(--primary);">{{ vendor.grn_count }}</div>
+  </div>
+  <div class="card" style="padding:14px; text-align:center;">
+    <div style="font-size:11px;color:var(--text-muted);">{% trans "Payments" %}</div>
+    <div style="font-size:22px;font-weight:800;color:var(--primary);">{{ vendor.payment_count }}</div>
+  </div>
+  <div class="card" style="padding:14px; text-align:center;">
+    <div style="font-size:11px;color:var(--text-muted);">{% trans "Active Contracts" %}</div>
+    <div style="font-size:22px;font-weight:800;color:var(--primary);">{{ vendor.contract_count }}</div>
+  </div>
+</div>
+
+{# Recent invoices #}
+<div class="card" style="padding:0; margin-bottom:18px; overflow:hidden;">
+  <div style="padding:18px 20px; border-bottom:1px solid var(--border-soft);">
+    <h3 style="font-size:14px;font-weight:700;color:var(--primary);">{% trans "Recent Invoices" %} ({{ invoices|length }})</h3>
+  </div>
+  <table class="data-table" style="width:100%;">
+    <thead>
+      <tr>
+        <th>{% trans "Invoice #" %}</th>
+        <th>{% trans "Date" %}</th>
+        <th>{% trans "Amount" %}</th>
+        <th>{% trans "Status" %}</th>
+        <th>{% trans "Risk" %}</th>
+        <th>{% trans "Action" %}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for inv in invoices %}
+      <tr>
+        <td style="font-family:monospace;font-weight:700;">{{ inv.invoice_number|default:"—" }}</td>
+        <td>{{ inv.invoice_date|date:"Y-m-d"|default:"—" }}</td>
+        <td style="font-family:monospace;">{{ inv.total_amount|default:0|floatformat:2 }} {{ inv.currency }}</td>
+        <td><span class="badge badge-{% if inv.status == 'approved' %}success{% elif inv.status == 'flagged' %}warning{% elif inv.status == 'rejected' %}danger{% else %}info{% endif %}">{{ inv.status|default:"—" }}</span></td>
+        <td>
+          <span class="badge badge-{% if inv.risk_level == 'critical' or inv.risk_level == 'high' %}danger{% elif inv.risk_level == 'medium' %}warning{% else %}success{% endif %}">
+            {{ inv.risk_level|default:"low"|title }}
+          </span>
+          {% if inv.is_duplicate %}<span class="badge badge-warning" style="margin-inline-start:6px;">{% trans "DUP" %}</span>{% endif %}
+        </td>
+        <td><a href="/invoices/{{ inv.id }}/" class="row-action">→</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-muted);">{% trans "No invoices yet" %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# Active contracts #}
+{% if contracts %}
+<div class="card" style="padding:18px 20px;">
+  <h3 style="font-size:14px;font-weight:700;color:var(--primary);margin-bottom:12px;">{% trans "Contracts with this vendor" %}</h3>
+  <table class="data-table" style="width:100%;">
+    <thead><tr><th>{% trans "Contract #" %}</th><th>{% trans "Period" %}</th><th>{% trans "Value" %}</th><th>{% trans "Status" %}</th></tr></thead>
+    <tbody>
+      {% for ct in contracts %}
+      <tr>
+        <td><a href="/documents/contracts/{{ ct.id }}/" style="font-family:monospace;font-weight:700;">{{ ct.contract_number }}</a></td>
+        <td>{{ ct.start_date|date:"Y-m-d" }} → {{ ct.end_date|date:"Y-m-d" }}</td>
+        <td style="font-family:monospace;">{{ ct.contract_value|floatformat:0 }} SAR</td>
+        <td><span class="badge badge-{% if ct.status == 'active' %}success{% elif ct.status == 'expired' %}danger{% else %}info{% endif %}">{{ ct.status|title }}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

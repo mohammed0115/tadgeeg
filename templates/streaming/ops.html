@@ -1,0 +1,187 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Continuous Auditing — Live Ops" %}{% endblock %}
+{% block nav_audit %}active{% endblock %}
+
+{% block extra_styles %}
+  .ops-page { max-width: 1200px; margin: 0 auto; }
+  .ops-banner { background: linear-gradient(135deg, var(--primary) 0%, #002244 100%); color: white; border-radius: 18px; padding: 22px 28px; margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; }
+  .ops-banner h2 { font-family: 'Cairo', sans-serif; font-size: 22px; font-weight: 800; margin-bottom: 4px; }
+  .ops-banner p { color: rgba(255,255,255,0.78); font-size: 13px; }
+  .ops-pill { background: rgba(255,255,255,0.12); padding: 8px 14px; border-radius: 100px; font-size: 12px; font-weight: 700; }
+
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 22px; }
+  .kpi-card { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
+  .kpi-card .label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .kpi-card .value { font-family: 'Cairo', sans-serif; font-weight: 900; font-size: 28px; color: var(--primary); margin-top: 6px; line-height: 1; }
+  .kpi-card.alert .value { color: var(--danger); }
+  .kpi-card.good .value  { color: var(--success); }
+
+  .ops-card { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 18px 22px; margin-bottom: 16px; }
+  .ops-card h3 { font-family: 'Cairo', sans-serif; font-weight: 800; font-size: 15px; color: var(--primary); margin-bottom: 12px; }
+  .data-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+  .data-table th { background: var(--bg-soft); padding: 10px 12px; font-size: 11px; font-weight: 800; text-align: start; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .data-table td { padding: 10px 12px; font-size: 13px; border-top: 1px solid var(--border-soft); }
+
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; }
+  .badge-low { background:#dcfce7; color:#166534; }
+  .badge-medium { background:#fef3c7; color:#92400e; }
+  .badge-high { background:#fee2e2; color:#991b1b; }
+  .badge-critical { background:#7f1d1d; color:white; }
+  .badge-redis { background:#dcfce7; color:#166534; }
+  .badge-memory { background:#fef3c7; color:#92400e; }
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "Continuous Auditing" %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="ops-page">
+
+  <div class="ops-banner">
+    <div>
+      <h2>{% trans "Continuous Auditing — Live Ops" %}</h2>
+      <p>{% trans "Throughput, latency, and anomaly hits across the streaming audit pipeline." %}</p>
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <span class="ops-pill">
+        {% trans "Window" %}: {{ window_minutes }} min
+      </span>
+      <span class="ops-pill">
+        {% trans "Bus" %}: <span class="badge {% if metrics.bus.backend == 'redis' %}badge-redis{% else %}badge-memory{% endif %}">{{ metrics.bus.backend }}</span>
+      </span>
+      <form method="get" style="display:inline-flex; gap:6px;">
+        <select name="window" onchange="this.form.submit()" style="padding:6px 10px; border-radius:8px; background:rgba(255,255,255,0.16); border:1px solid rgba(255,255,255,0.2); color:white; font-weight:700;">
+          <option value="5"   {% if window_minutes == 5   %}selected{% endif %} style="color:black;">5 min</option>
+          <option value="15"  {% if window_minutes == 15  %}selected{% endif %} style="color:black;">15 min</option>
+          <option value="30"  {% if window_minutes == 30  %}selected{% endif %} style="color:black;">30 min</option>
+          <option value="60"  {% if window_minutes == 60  %}selected{% endif %} style="color:black;">60 min</option>
+          <option value="180" {% if window_minutes == 180 %}selected{% endif %} style="color:black;">3 hr</option>
+          <option value="720" {% if window_minutes == 720 %}selected{% endif %} style="color:black;">12 hr</option>
+        </select>
+      </form>
+    </div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="label">{% trans "Throughput" %}</div>
+      <div class="value">{{ metrics.throughput_per_min|floatformat:1 }}<span style="font-size:14px; color:var(--text-muted); font-weight:600;"> /min</span></div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">{% trans "Events processed" %}</div>
+      <div class="value">{{ metrics.events_processed|default:0 }}</div>
+    </div>
+    <div class="kpi-card {% if metrics.error_rate_pct > 1 %}alert{% else %}good{% endif %}">
+      <div class="label">{% trans "Error rate" %}</div>
+      <div class="value">{{ metrics.error_rate_pct|floatformat:1 }}%</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">{% trans "Avg latency" %}</div>
+      <div class="value">{{ metrics.avg_latency_ms|floatformat:0 }}<span style="font-size:14px; color:var(--text-muted); font-weight:600;"> ms</span></div>
+    </div>
+    <div class="kpi-card {% if metrics.p95_latency_ms > 500 %}alert{% endif %}">
+      <div class="label">{% trans "p95 latency" %}</div>
+      <div class="value">{{ metrics.p95_latency_ms|default:0 }}<span style="font-size:14px; color:var(--text-muted); font-weight:600;"> ms</span></div>
+    </div>
+    <div class="kpi-card {% if metrics.anomaly_count %}alert{% else %}good{% endif %}">
+      <div class="label">{% trans "Anomalies fired" %}</div>
+      <div class="value">{{ metrics.anomaly_count|default:0 }}</div>
+    </div>
+  </div>
+
+  <!-- ── Bus depth ── -->
+  <div class="ops-card">
+    <h3>{% trans "Bus state" %}</h3>
+    <table class="data-table">
+      <thead><tr>
+        <th>{% trans "Stream" %}</th>
+        <th>{% trans "Length" %}</th>
+        <th>{% trans "Groups" %}</th>
+      </tr></thead>
+      <tbody>
+        {% for key, val in metrics.bus.items %}
+          {% if key != "backend" %}
+            <tr>
+              <td><code>{{ key }}</code></td>
+              <td>{{ val.length|default:0 }}</td>
+              <td>{{ val.groups|default:"—" }}</td>
+            </tr>
+          {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── By event type ── -->
+  {% if metrics.by_event_type %}
+  <div class="ops-card">
+    <h3>{% trans "By event type" %}</h3>
+    <table class="data-table">
+      <thead><tr>
+        <th>{% trans "Event" %}</th>
+        <th>{% trans "Count" %}</th>
+      </tr></thead>
+      <tbody>
+        {% for row in metrics.by_event_type %}
+        <tr>
+          <td><code>{{ row.event_type }}</code></td>
+          <td>{{ row.count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  <!-- ── Recent anomaly hits ── -->
+  <div class="ops-card">
+    <h3>{% trans "Recent anomaly hits" %}</h3>
+    {% if recent_hits %}
+      <table class="data-table">
+        <thead><tr>
+          <th>{% trans "When" %}</th>
+          <th>{% trans "Detector" %}</th>
+          <th>{% trans "Severity" %}</th>
+          <th>{% trans "Vendor" %}</th>
+          <th>{% trans "Explanation" %}</th>
+          <th>{% trans "Invoice" %}</th>
+        </tr></thead>
+        <tbody>
+          {% for h in recent_hits %}
+          <tr>
+            <td class="text-muted">{{ h.occurred_at|date:"Y-m-d H:i" }}</td>
+            <td><code>{{ h.detector }}</code></td>
+            <td><span class="badge badge-{{ h.severity }}">{{ h.get_severity_display }}</span></td>
+            <td>{{ h.vendor_name|default:"—" }}</td>
+            <td style="max-width:480px;">{{ h.explanation|truncatechars:160 }}</td>
+            <td>
+              {% if h.invoice_id %}
+                <a href="/invoices/{{ h.invoice_id }}/" style="color:var(--primary);font-weight:700"><code>{{ h.invoice_id|truncatechars:10 }}</code></a>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p style="text-align:center; color:var(--text-muted); padding: 30px 0;">
+        {% trans "No anomaly hits in this window." %}
+      </p>
+    {% endif %}
+  </div>
+
+  <!-- ── How it works ── -->
+  <div class="ops-card" style="background: var(--bg-soft); border-color: rgba(0,51,102,0.10);">
+    <h3>{% trans "How continuous auditing works" %}</h3>
+    <p style="font-size:12px; color:var(--text-muted); line-height:1.7; margin: 0;">
+      {% trans "Every uploaded invoice publishes an event onto the bus. A worker consumes the event and runs three window detectors against it: Velocity (vendor submitting too many invoices in a short window), Sudden Spike (invoice amount above 5σ of the vendor's own history), and Vendor Concentration (one vendor crossing 30% of org spend). Each trigger persists an AnomalyHit row that this dashboard reads. Phase 3.2 will pipe these hits into email / SMS / Slack channels." %}
+    </p>
+  </div>
+
+</div>
+{% endblock %}

@@ -74,25 +74,70 @@ urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
 
     # Invoices
-    path('invoices/',                   views.invoices,        name='invoices'),
-    path('invoices/upload/',            views.upload,          name='upload'),
-    path('invoices/batches/',           views.batches,         name='batches'),
-    path('invoices/batches/<uuid:pk>/', views.batch_detail,    name='batch_detail'),
-    path('invoices/sessions/<uuid:pk>/', views.audit_session_detail, name='audit_session_detail'),
-    path('invoices/<uuid:pk>/',         views.invoice_detail,  name='invoice_detail'),
+    path('invoices/',                          views.invoices,        name='invoices'),
+    path('invoices/upload/',                   views.upload,          name='upload'),
+    path('invoices/export.csv',                views.invoices_export, {'fmt': 'csv'},  name='invoices_export_csv'),
+    path('invoices/export.xlsx',               views.invoices_export, {'fmt': 'xlsx'}, name='invoices_export_xlsx'),
+    path('invoices/reports/<str:kind>/',       views.invoice_subreport, name='invoice_subreport'),
+    path('invoices/batches/',                  views.batches,         name='batches'),
+    path('invoices/batches/<uuid:pk>/',        views.batch_detail,    name='batch_detail'),
+    path('invoices/sessions/<uuid:pk>/',       views.audit_session_detail, name='audit_session_detail'),
+    path('invoices/<uuid:pk>/',                views.invoice_detail,  name='invoice_detail'),
+    path('invoices/<uuid:pk>/pdf/',            views.invoice_pdf,     name='invoice_pdf'),
+
+    # Re-run audit on any document type
+    path('documents/<str:doc_type>/<uuid:pk>/run-audit/', views.run_audit, name='run_audit'),
+
+    # Excel export per doc-type list
+    path('documents/<str:doc_type>/export.xlsx', views.doc_list_export_excel, name='doc_list_export_excel'),
+
+    # Demo data loader (one-shot, idempotent)
+    path('demo/load/', views.load_demo_data, name='load_demo_data'),
 
     # Reports
     path('reports/', views.reports, name='reports'),
     path('reports/invoice-audit/', views.invoice_audit_report, name='invoice_audit_report'),
 
+    # Audit tools (ISA 320 materiality, ISA 530 sampling)
+    path('audit/tools/', views.audit_tools, name='audit_tools'),
+
+    # Hash-chain integrity (tamper-evident audit trail)
+    path('audit/integrity/', views.audit_integrity, name='audit_integrity'),
+
+    # Custom rule builder (Phase 2.2)
+    path('audit/rule-builder/', views.rule_builder, name='rule_builder'),
+
+    # Continuous auditing live ops (Phase 3.1)
+    path('audit/streaming/',     views.streaming_ops, name='streaming_ops'),
+
+    # Alert routing (Phase 3.2)
+    path('audit/alerts/',        views.alerts_dashboard, name='alerts_dashboard'),
+
+    # ZATCA Phase 2 dashboard (Phase 4)
+    path('compliance/zatca/',    views.zatca_dashboard,  name='zatca_dashboard'),
+
+    # Bank Connectors dashboard (Phase 5)
+    path('banking/',             views.banking_dashboard, name='banking_dashboard'),
+
+    # General Ledger dashboard (Phase 7.1)
+    path('ledger/',              views.ledger_dashboard,  name='ledger_dashboard'),
+
+    # Working papers (ISA 230 — preparer → reviewer → partner sign-off)
+    path('working-papers/',                   views.working_papers,         name='working_papers'),
+    path('working-papers/new/',               views.working_paper_create,   name='working_paper_create'),
+    path('working-papers/<uuid:pk>/',         views.working_paper_detail,   name='working_paper_detail'),
+    path('working-papers/<uuid:pk>/action/',  views.working_paper_action,   name='working_paper_action'),
+
     # Vendors
     path('vendors/', views.vendors, name='vendors'),
+    path('vendors/<path:vendor_name>/', views.vendor_detail, name='vendor_detail'),
 
     # Analytics
     path('analytics/', views.analytics, name='analytics'),
 
     # Audit cases
     path('audit/', views.audit, name='audit'),
+    path('audit/inbox/', views.audit_inbox, name='audit_inbox'),
     path('audit/<uuid:pk>/', views.audit_detail, name='audit_detail'),
 
     # Compliance

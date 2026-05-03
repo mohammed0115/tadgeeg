@@ -1,10 +1,15 @@
 {% extends "layouts/dashboard_base.html" %}
-{% load i18n %}
+{% load i18n static asset_tags %}
 
 {% block title %}{% trans "Invoices" %}{% endblock %}
 {% block nav_invoices %}active{% endblock %}
 
+{% block head_extra %}
+  <script defer src="{% safe_static 'vendor/alpine.min.js' %}" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
+{% endblock %}
+
 {% block extra_styles %}
+  [x-cloak] { display: none !important; }
   .filter-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 24px; padding: 16px 20px; background: white; border: 1px solid var(--border-soft); border-radius: 14px; }
   .filter-input { flex: 1; min-width: 200px; padding: 10px 16px; border: 1.5px solid var(--border); border-radius: 10px; background: var(--bg-soft); font-size: 13px; font-family: inherit; }
   .filter-input:focus { outline: none; border-color: var(--primary); background: white; }
@@ -12,6 +17,9 @@
   .status-tab { padding: 8px 14px; font-size: 13px; font-weight: 600; color: var(--text-muted); border-radius: 8px; transition: all 0.2s ease; }
   .status-tab.active { background: white; color: var(--primary); box-shadow: 0 2px 4px rgba(0,51,102,0.08); }
   .status-tab .count { display: inline-block; margin-right: 4px; padding: 2px 8px; background: rgba(0,51,102,0.08); color: var(--primary); border-radius: 100px; font-size: 11px; font-weight: 800; }
+  .bulk-bar { display:flex; align-items:center; gap:10px; padding:10px 16px; background:#fef3c7; border:1px solid #fde68a; border-radius:14px; margin-bottom:14px; }
+  .bulk-bar .count { font-weight:700; color:#92400e; }
+  .row-checkbox { width:16px; height:16px; cursor:pointer; }
 {% endblock %}
 
 {% block breadcrumb %}
@@ -27,10 +35,14 @@
     <p class="page-subtitle">{% trans "Browse and manage all uploaded invoices" %}</p>
   </div>
   <div style="display:flex; gap:10px;">
-    <button class="btn btn-light">
+    <a href="{% url 'frontend:invoices_export_csv' %}?status={{ status_filter|default:'all' }}&risk={{ risk_filter|default:'all' }}&q={{ search|default:'' }}" class="btn btn-light">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       {% trans "Export CSV" %}
-    </button>
+    </a>
+    <a href="{% url 'frontend:invoices_export_xlsx' %}?status={{ status_filter|default:'all' }}&risk={{ risk_filter|default:'all' }}&q={{ search|default:'' }}" class="btn btn-light">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      {% trans "Export Excel" %}
+    </a>
     <a href="{% url 'frontend:upload' %}" class="btn btn-primary">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       {% trans "Upload Invoice" %}
@@ -53,11 +65,30 @@
   </div>
 </form>
 
+<div x-data="invoiceBulk()" x-init="init()">
+
+  <div class="bulk-bar" x-show="selected.length > 0" x-cloak>
+    <span class="count" x-text="`${selected.length} ${selected.length === 1 ? '{% trans 'invoice selected' %}' : '{% trans 'invoices selected' %}'}`"></span>
+    <button type="button" class="btn btn-success" @click="bulkAction('approve')" :disabled="busy">
+      ✓ {% trans "Approve" %}
+    </button>
+    <button type="button" class="btn btn-danger" @click="bulkAction('reject')" :disabled="busy">
+      ✕ {% trans "Reject" %}
+    </button>
+    <button type="button" class="btn btn-light" @click="bulkAction('flag')" :disabled="busy">
+      🚩 {% trans "Flag" %}
+    </button>
+    <button type="button" class="btn btn-light" @click="selected = []; $refs.selectAll.checked = false; document.querySelectorAll('.row-checkbox').forEach(cb => cb.checked = false)">
+      {% trans "Clear" %}
+    </button>
+  </div>
+
 <div class="card table-card">
   <div class="table-wrap">
     <table class="data-table">
       <thead>
         <tr>
+          <th style="width:32px"><input type="checkbox" x-ref="selectAll" class="row-checkbox" @change="toggleAll($event)"></th>
           <th>#</th>
           <th>{% trans "Document" %}</th>
           <th>{% trans "Vendor" %}</th>
@@ -72,6 +103,7 @@
         {% if invoices %}
           {% for inv in invoices %}
           <tr>
+            <td><input type="checkbox" class="row-checkbox" value="{{ inv.id }}" @change="toggleOne($event, '{{ inv.id }}')"></td>
             <td class="text-muted">{{ forloop.counter }}</td>
             <td>
               <div class="file-name">
@@ -88,7 +120,7 @@
           </tr>
           {% endfor %}
         {% else %}
-          <tr><td colspan="8">
+          <tr><td colspan="9">
             <div class="empty-state">
               <div class="empty-state-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
               <h3>{% trans "No invoices yet" %}</h3>
@@ -103,4 +135,72 @@
 
   {% include "partials/_pagination.html" %}
 </div>
+
+</div> {# end x-data="invoiceBulk()" #}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function getCookie(name) {
+  const c = `; ${document.cookie}`.split(`; ${name}=`);
+  if (c.length === 2) return c.pop().split(';').shift();
+  return '';
+}
+function invoiceBulk() {
+  return {
+    selected: [],
+    busy: false,
+    init() {},
+    toggleAll(e) {
+      const on = e.target.checked;
+      const cbs = document.querySelectorAll('.row-checkbox:not([x-ref="selectAll"])');
+      this.selected = [];
+      cbs.forEach(cb => {
+        if (cb === this.$refs.selectAll) return;
+        cb.checked = on;
+        if (on && cb.value) this.selected.push(cb.value);
+      });
+    },
+    toggleOne(e, id) {
+      if (e.target.checked) {
+        if (!this.selected.includes(id)) this.selected.push(id);
+      } else {
+        this.selected = this.selected.filter(x => x !== id);
+      }
+    },
+    async bulkAction(action) {
+      if (!this.selected.length) return;
+      let reason = '';
+      if (action === 'reject' || action === 'flag') {
+        reason = prompt('{% trans "Reason (required for reject):" %}', '') || '';
+        if (action === 'reject' && !reason.trim()) return;
+      }
+      if (!confirm(`{% trans "Apply" %} "${action}" {% trans "to" %} ${this.selected.length} {% trans "invoices?" %}`)) return;
+      this.busy = true;
+      try {
+        const res = await fetch('/invoices/bulk/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          body: JSON.stringify({ action, ids: this.selected, reason }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          alert('{% trans "Done." %} ' + (data.results ? data.results.filter(r=>r.ok).length + ' / ' + data.results.length + ' {% trans "succeeded" %}' : ''));
+          window.location.reload();
+        } else {
+          alert('{% trans "Error:" %} ' + (data.error || res.statusText));
+        }
+      } catch (e) {
+        alert('{% trans "Network error." %}');
+      } finally {
+        this.busy = false;
+      }
+    },
+  };
+}
+</script>
 {% endblock %}

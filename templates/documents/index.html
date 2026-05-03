@@ -130,6 +130,37 @@
   </a>
 </div>
 
+{# Empty-state CTA — shown when the org has zero documents across all types. #}
+{% with totals_sum=doc_counts.invoices|add:doc_counts.purchase_orders|add:doc_counts.bank_statements|add:doc_counts.payroll|add:doc_counts.expense_reports|add:doc_counts.vat_returns|add:doc_counts.fixed_assets|add:doc_counts.sales_receipts|add:doc_counts.sales_orders|add:doc_counts.quotations|add:doc_counts.proforma_invoices|add:doc_counts.receipt_vouchers|add:doc_counts.cash_vouchers|add:doc_counts.general_ledgers|add:doc_counts.ledgers|add:doc_counts.contracts|add:doc_counts.supplier_statements|add:doc_counts.customer_statements|add:doc_counts.goods_receipt_notes|add:doc_counts.payment_vouchers|add:doc_counts.journal_entries %}
+{% if totals_sum == 0 %}
+<div style="background: linear-gradient(135deg, #f0fdf4, #ecfdf5); border: 1px solid #d1fae5; border-radius: 18px; padding: 32px; margin-bottom: 28px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap;">
+  <div style="width: 64px; height: 64px; border-radius: 18px; background: #10B981; color: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+  </div>
+  <div style="flex: 1; min-width: 240px;">
+    <h3 style="font-family:'Cairo',sans-serif; font-size:18px; font-weight:800; color:#003366; margin-bottom:4px;">
+      {% trans "Welcome — let's audit your first document" %}
+    </h3>
+    <p style="font-size:13px; color:#475569; line-height:1.7; margin:0;">
+      {% trans "Pick any of the 21 document types below, click Upload, drop a PDF / Excel / CSV, and our AI will extract the data and run audit rules instantly." %}
+    </p>
+  </div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <a href="{% url 'frontend:doc_upload' %}" class="btn btn-primary btn-lg">
+      {% trans "Upload your first document" %}
+    </a>
+    <form method="post" action="{% url 'frontend:load_demo_data' %}" style="display:inline;">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-light btn-lg" title="{% trans 'Populate the org with sample invoices, POs, GRNs, etc. — useful for demos.' %}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:-3px;margin-inline-end:6px;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor"/></svg>
+        {% trans "Load demo data" %}
+      </button>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endwith %}
+
 <div class="doc-types-grid">
   {# Row 1: high-volume entity types (each row = a separate Invoice / PO / Receipt / Asset) #}
   <a href="{% url 'frontend:invoices' %}" class="doc-type-card invoices">

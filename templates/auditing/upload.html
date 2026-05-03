@@ -82,7 +82,27 @@
       if (files.length) this.setFiles(files);
     },
 
+    _pickerOpen: false,
+    _pickerLockedUntil: 0,
+    openPicker() {
+      // Bulletproof: don't open a second picker while one is already open.
+      if (this._pickerOpen) return;
+      const now = Date.now();
+      if (now < this._pickerLockedUntil) return;
+      const fi = this.$refs.fileInput;
+      if (!fi) return;
+      this._pickerOpen = true;
+      this._pickerLockedUntil = now + 800;
+      fi.value = '';
+      const release = () => { this._pickerOpen = false; window.removeEventListener('focus', release); };
+      fi.addEventListener('cancel', release, { once: true });
+      window.addEventListener('focus', release, { once: true });
+      setTimeout(release, 1500);
+      fi.click();
+    },
+
     onFileChange(e) {
+      this._pickerOpen = false;
       if (e.target.files.length) this.setFiles(e.target.files);
     },
 
@@ -477,26 +497,27 @@
   >
     {% csrf_token %}
 
-    <!-- Dropzone -->
-    <div
-      class="m-5 rounded-2xl border-2 border-dashed transition-all duration-200 cursor-pointer"
+    <!-- Dropzone — native <label for=""> opens the picker once on click. No JS click handlers. -->
+    <input
+      x-ref="fileInput"
+      id="id_file"
+      name="file"
+      type="file"
+      class="hidden"
+      accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif,.bmp,.webp,.xlsx,.xls,.xlsm,.csv,.tsv,.json,.jsonl,.zip"
+      @change="onFileChange($event); $event.target.value = ''"
+      multiple
+    >
+
+    <label
+      x-bind:for="(selectedFiles && selectedFiles.length > 0) ? null : 'id_file'"
+      class="m-5 rounded-2xl border-2 border-dashed transition-all duration-200 block"
       :class="dragging ? 'border-blue-500 bg-blue-50 scale-[1.01]' : 'border-slate-300 bg-slate-50 hover:border-blue-400 hover:bg-blue-50/40'"
+      :style="(selectedFiles && selectedFiles.length > 0) ? 'cursor:default;' : 'cursor:pointer;'"
       @dragover.prevent="dragging = true"
       @dragleave.prevent="dragging = false"
       @drop.prevent="onDrop($event)"
-      @click="$refs.fileInput.click()"
     >
-      <input
-        x-ref="fileInput"
-        id="id_file"
-        name="file"
-        type="file"
-        class="hidden"
-        accept=".pdf,.jpg,.jpeg,.png,.tiff,.tif,.bmp,.webp,.xlsx,.xls,.xlsm,.csv,.tsv,.json,.jsonl,.zip"
-        @change="onFileChange($event)"
-        multiple
-      >
-
       <div class="flex flex-col items-center gap-3 px-6 py-12 text-center">
 
         <template x-if="!selectedFiles || selectedFiles.length === 0">
@@ -517,18 +538,35 @@
           </div>
         </template>
         <template x-if="selectedFiles && selectedFiles.length > 0">
-          <div class="space-y-1">
+          <div class="space-y-2">
             <p class="text-lg font-bold text-slate-800" x-text="fileNames"></p>
             <p class="text-sm text-slate-500">
               <span class="font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg" x-text="selectedFiles.length + ' {% trans 'files' %}'"></span>
               · <span x-text="totalSize"></span>
             </p>
-            <p class="text-xs font-semibold text-emerald-600">{% trans "✓ Files selected" %}</p>
+            <p class="text-xs font-semibold text-emerald-600">{% trans "✓ Files selected — click 'Start Audit' below" %}</p>
           </div>
         </template>
 
       </div>
-    </div>
+    </label>
+
+    {# Action buttons OUTSIDE the dropzone — "Add more files" uses a separate <label for> for native picker behavior. #}
+    <template x-if="selectedFiles && selectedFiles.length > 0">
+      <div class="flex justify-center gap-2 px-5 pb-3">
+        <label for="id_file"
+               class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-blue-400 hover:bg-blue-50 cursor-pointer">
+          <i data-lucide="plus" class="h-3.5 w-3.5"></i>
+          {% trans "Add more files" %}
+        </label>
+        <button type="button"
+                @click="selectedFiles = []; fileNames=''; totalSize=''; if($refs.fileInput) $refs.fileInput.value=''"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-red-400 hover:bg-red-50 hover:text-red-600">
+          <i data-lucide="x" class="h-3.5 w-3.5"></i>
+          {% trans "Clear" %}
+        </button>
+      </div>
+    </template>
 
     <!-- Alpine error -->
     <template x-if="error">

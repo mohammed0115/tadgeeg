@@ -235,5 +235,162 @@
       </tbody>
     </table>
   </div>
+
+  {# ── Top Risky Vendors widget ────────────────────────────────────────── #}
+  {% if top_risky_vendors %}
+  <div class="card" style="padding:20px; margin-top:24px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+      <h3 style="font-size:14px; font-weight:700; color:var(--primary); margin:0;">{% trans "Top Risky Vendors" %}</h3>
+      <a href="{% url 'frontend:audit_inbox' %}" style="font-size:12px; color:#dc2626; font-weight:700; text-decoration:none;">
+        {% trans "Open Approval Inbox →" %}
+      </a>
+    </div>
+    <table class="data-table" style="width:100%;">
+      <thead>
+        <tr>
+          <th>{% trans "Vendor" %}</th>
+          <th>{% trans "Invoices" %}</th>
+          <th>{% trans "High-Risk" %}</th>
+          <th>{% trans "Duplicates" %}</th>
+          <th>{% trans "Total Amount" %}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for v in top_risky_vendors %}
+        <tr>
+          <td><a href="{% url 'frontend:vendor_detail' vendor_name=v.vendor_name %}" style="font-weight:700; color:var(--primary);">{{ v.vendor_name|truncatechars:40 }}</a></td>
+          <td>{{ v.invoice_count }}</td>
+          <td><span style="color:#dc2626; font-weight:700;">{{ v.high_risk }}</span></td>
+          <td>{% if v.duplicates %}<span style="color:#b45309; font-weight:700;">{{ v.duplicates }}</span>{% else %}—{% endif %}</td>
+          <td style="font-family:monospace;">{{ v.total|default:0|floatformat:0 }} SAR</td>
+          <td><a href="{% url 'frontend:vendor_detail' vendor_name=v.vendor_name %}" class="btn btn-light" style="padding:4px 10px;font-size:11px;">{% trans "Vendor 360" %}</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {# ── Charts: risk distribution + monthly trend (Chart.js) ───────────── #}
+  <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap:18px; margin-top:24px;">
+    <div class="card" style="padding:20px;">
+      <h3 style="font-size:14px; font-weight:700; color:var(--primary); margin-bottom:14px;">{% trans "Risk Distribution" %}</h3>
+      <div style="position:relative; height:240px;">
+        <canvas id="riskChart"></canvas>
+      </div>
+    </div>
+    <div class="card" style="padding:20px;">
+      <h3 style="font-size:14px; font-weight:700; color:var(--primary); margin-bottom:14px;">{% trans "Invoices Trend (last 6 months)" %}</h3>
+      <div style="position:relative; height:240px;">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+  </div>
 </div>
+
+{# ── Demo-data CTA when org is empty ──────────────────────────────────── #}
+{% if not kpis.total_invoices %}
+<div style="margin-top:24px; padding:24px; background:linear-gradient(135deg,#f0fdf4,#ecfdf5); border:1px solid #d1fae5; border-radius:18px; display:flex; align-items:center; gap:18px; flex-wrap:wrap;">
+  <div style="width:56px;height:56px;border-radius:16px;background:#10B981;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor"/></svg>
+  </div>
+  <div style="flex:1; min-width:240px;">
+    <h3 style="margin:0 0 4px; font-size:17px; font-weight:800; color:#003366;">{% trans "Your dashboard is empty — try sample data" %}</h3>
+    <p style="margin:0; font-size:13px; color:#475569;">{% trans "Load a curated set of demo invoices, POs, GRNs, payments, and contracts to see how the platform looks in action." %}</p>
+  </div>
+  <form method="post" action="{% url 'frontend:load_demo_data' %}" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-primary btn-lg">{% trans "Load demo data" %}</button>
+  </form>
+</div>
+{% endif %}
+
+{# ── Onboarding tour modal — fires once per browser via localStorage flag #}
+<div x-data="{ show: !localStorage.getItem('tadgeeg_onboarding_seen') }" x-cloak x-show="show"
+     style="position:fixed; inset:0; background:rgba(0,17,34,.78); display:flex; align-items:center; justify-content:center; z-index:9999; padding:24px;"
+     @click="show = false; localStorage.setItem('tadgeeg_onboarding_seen','1')">
+  <div @click.stop style="background:white; border-radius:20px; max-width:560px; padding:32px; box-shadow:0 32px 64px rgba(0,0,0,.4);">
+    <div style="font-size:11px; font-weight:800; letter-spacing:1px; color:#10B981; text-transform:uppercase; margin-bottom:8px;">
+      {% trans "Quick start" %}
+    </div>
+    <h2 style="font-family:'Cairo',sans-serif; font-size:22px; font-weight:900; color:#003366; margin:0 0 12px;">
+      {% trans "Welcome to Tadgeeg" %}
+    </h2>
+    <p style="font-size:14px; color:#475569; line-height:1.7; margin:0 0 20px;">
+      {% trans "Tadgeeg automates financial-document audits with 236 rules across 21 document types. Here's how to get started:" %}
+    </p>
+    <ol style="margin:0 0 24px; padding-inline-start:22px; font-size:14px; line-height:1.9; color:#0f172a;">
+      <li><strong>{% trans "Upload" %}</strong> {% trans "— pick a document type at /documents/upload/ and drop your PDF / Excel / CSV." %}</li>
+      <li><strong>{% trans "Audit" %}</strong> {% trans "— our AI extracts the data and runs validation rules instantly." %}</li>
+      <li><strong>{% trans "Review" %}</strong> {% trans "— open the detail page to see risk score, failed rules, and linked documents." %}</li>
+      <li><strong>{% trans "Decide" %}</strong> {% trans "— approve, hold, or reject; the audit trail captures everything." %}</li>
+    </ol>
+    <div style="display:flex; gap:10px; justify-content:flex-end;">
+      <button type="button" class="btn btn-light" @click="show = false; localStorage.setItem('tadgeeg_onboarding_seen','1')">
+        {% trans "Skip" %}
+      </button>
+      <a href="{% url 'frontend:doc_upload' %}" class="btn btn-primary"
+         @click="localStorage.setItem('tadgeeg_onboarding_seen','1')">
+        {% trans "Upload first document" %}
+      </a>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (typeof Chart === 'undefined') return;
+
+    // Risk distribution (doughnut)
+    const riskEl = document.getElementById('riskChart');
+    if (riskEl) {
+      new Chart(riskEl, {
+        type: 'doughnut',
+        data: {
+          labels: ['{% trans "Low" %}', '{% trans "Medium" %}', '{% trans "High" %}', '{% trans "Critical" %}'],
+          datasets: [{
+            data: [{{ risk_breakdown.low|default:0 }}, {{ risk_breakdown.medium|default:0 }},
+                   {{ risk_breakdown.high|default:0 }}, {{ risk_breakdown.critical|default:0 }}],
+            backgroundColor: ['#10B981', '#F59E0B', '#EF4444', '#7F1D1D'],
+            borderWidth: 0,
+          }],
+        },
+        options: { responsive: true, maintainAspectRatio: false,
+                   plugins: { legend: { position: 'bottom' } } },
+      });
+    }
+
+    // Monthly invoice count + amount (combo bar+line)
+    const trendEl = document.getElementById('trendChart');
+    if (trendEl) {
+      const labels  = {{ chart_series.labels|default:"[]"|safe }};
+      const counts  = {{ chart_series.counts|default:"[]"|safe }};
+      const amounts = {{ chart_series.amounts|default:"[]"|safe }};
+      new Chart(trendEl, {
+        data: {
+          labels,
+          datasets: [
+            { type: 'bar',  label: '{% trans "Invoices" %}',  data: counts,
+              backgroundColor: 'rgba(0,51,102,.7)', yAxisID: 'y' },
+            { type: 'line', label: '{% trans "Amount (SAR)" %}', data: amounts,
+              borderColor: '#10B981', backgroundColor: 'rgba(16,185,129,.1)',
+              tension: 0.3, yAxisID: 'y1', borderWidth: 2 },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' } },
+          scales: {
+            y:  { type: 'linear', position: 'left',  beginAtZero: true,
+                  title: { display: true, text: '{% trans "Count" %}' } },
+            y1: { type: 'linear', position: 'right', beginAtZero: true, grid: { drawOnChartArea: false },
+                  title: { display: true, text: 'SAR' } },
+          },
+        },
+      });
+    }
+  });
+</script>
 {% endblock %}

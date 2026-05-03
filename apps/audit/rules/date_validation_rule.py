@@ -70,11 +70,20 @@ class DateValidationRule(AuditRule):
             anomalies.append(f"Document date {doc_date} is {days_ahead} day(s) in the future")
 
         # ── D02: Before organisation registration ─────────────────────────────
+        # A pre-registration date is only suspicious for *recent* documents.
+        # When importing legacy data from an old ERP into a freshly-created org
+        # tenant, every historical invoice is necessarily older than the org
+        # record — flagging that as HIGH gives false positives on every imported
+        # row. We skip D02 for documents older than the stale threshold (D03
+        # already covers them as MEDIUM); D02 fires only when a recent document
+        # claims a date that pre-dates the org, which is the real forgery signal.
         org_reg_date = self._get_org_registration_date(organization_id)
         if org_reg_date:
             details["org_registration_date"] = str(org_reg_date)
+            stale_cutoff = today - timedelta(days=STALE_INVOICE_YEARS * 365)
+            is_stale = doc_date < stale_cutoff
             # Allow 30 days grace (invoices issued just before registration are ok)
-            if doc_date < org_reg_date - timedelta(days=30):
+            if (not is_stale) and doc_date < org_reg_date - timedelta(days=30):
                 self.severity = Severity.HIGH
                 anomalies.append(
                     f"Document date {doc_date} is before organisation "

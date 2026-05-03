@@ -60,6 +60,20 @@ from .rules.missing_fields_rule import MissingFieldsRule
 from .rules.amount_anomaly_rule import AmountAnomalyRule
 from .rules.date_validation_rule import DateValidationRule
 from .rules.vendor_risk_rule import VendorRiskRule
+from .rules.extended_rules import (
+    ThreeWayMatchRule,
+    CurrencyConsistencyRule,
+    VATRateValidityRule,
+    RoundNumberAnomalyRule,
+    LineItemReconciliationRule,
+    NegativeAmountRule,
+    DueDateValidityRule,
+    VATNumberFormatRule,
+    VendorApprovalRule,
+    DecimalPrecisionRule,
+    ZatcaQRPresenceRule,
+    MandatoryFieldsRule,
+)
 
 logger = logging.getLogger("finai")
 
@@ -68,12 +82,24 @@ logger = logging.getLogger("finai")
 # Add new rules here — they'll be auto-discovered by evaluate().
 
 REGISTERED_RULES: list[Type[AuditRule]] = [
-    DuplicateInvoiceRule,      # R001 — Must run first (highest impact)
-    MissingFieldsRule,         # R003 — Data completeness
-    VATValidationRule,         # R002 — Compliance
-    DateValidationRule,        # R005 — Date anomalies
-    AmountAnomalyRule,         # R004 — Statistical analysis
-    VendorRiskRule,            # R006 — Vendor screening
+    DuplicateInvoiceRule,           # R001 — Must run first (highest impact)
+    MissingFieldsRule,              # R003 — Data completeness
+    VATValidationRule,              # R002 — VAT compliance
+    DateValidationRule,             # R005 — Date anomalies
+    AmountAnomalyRule,              # R004 — Statistical analysis
+    VendorRiskRule,                 # R006 — Vendor screening
+    ThreeWayMatchRule,              # R007 — PO ↔ GRN ↔ Invoice
+    CurrencyConsistencyRule,        # R008 — ISO-4217 currency
+    VATRateValidityRule,            # R009 — KSA VAT rates (0/5/15)
+    RoundNumberAnomalyRule,         # R010 — Suspicious round totals
+    LineItemReconciliationRule,     # R011 — Line items sum = subtotal
+    NegativeAmountRule,             # R012 — Reject negative amounts
+    DueDateValidityRule,            # R013 — Due date sanity
+    VATNumberFormatRule,            # R014 — KSA TRN format (15 digits, 3..3)
+    VendorApprovalRule,             # R015 — Vendor not blocked
+    DecimalPrecisionRule,           # R016 — Amounts >2 dp
+    ZatcaQRPresenceRule,            # R017 — Phase 2 QR required for SA invoices
+    MandatoryFieldsRule,            # R018 — ZATCA + ISA 500 fields
 ]
 
 # Severity → weight mapping for aggregate risk calculation
@@ -188,6 +214,13 @@ class AuditEngine:
         context = context or {}
         results: list[RuleResult] = []
 
+        # Inject the invoice/document PK into the dict so rules that delegate
+        # to back-end services (e.g. DuplicateDetector) can exclude the current
+        # row from match queries — without this, a freshly-saved invoice will
+        # match itself as a "near-certain duplicate" (R001 self-match bug).
+        if invoice_id is not None and "invoice_id" not in document:
+            document = {**document, "invoice_id": invoice_id, "document_id": invoice_id}
+
         logger.info(
             "[AuditEngine] Evaluating %d rules for document=%s invoice=%s",
             len(self.rule_classes),
@@ -219,6 +252,9 @@ class AuditEngine:
                 result.result,
                 result.explanation[:100] if result.explanation else "",
             )
+
+        # Phase 2.2 — also run every PUBLISHED custom DSL rule for this org.
+        results.extend(self._evaluate_custom_rules(document, invoice_id))
 
         # ── Aggregate ─────────────────────────────────────────────────────────
         report = self._build_report(results, invoice_id)
@@ -309,6 +345,67 @@ class AuditEngine:
         return cases
 
     # ── Internal ──────────────────────────────────────────────────────────────
+
+    def _evaluate_custom_rules(self, document: dict, invoice_id) -> list[RuleResult]:
+        """Run every PUBLISHED DSL rule for this organisation against ``document``.
+
+        Each rule produces one RuleResult so the failures show up in the same
+        AuditReport, AuditCase rows, and risk-score aggregation as the
+        built-in rules. Errors in a single rule never abort the others.
+        """
+        if not self.organization_id:
+            return []
+        try:
+            from apps.audit.models import CustomRuleDefinition
+            from apps.audit.services.rule_dsl import evaluate as eval_dsl
+        except ImportError:
+            return []
+
+        out: list[RuleResult] = []
+        qs = (
+            CustomRuleDefinition.objects
+            .filter(
+                organization_id=self.organization_id,
+                status=CustomRuleDefinition.Status.PUBLISHED,
+                is_active=True,
+                condition_type=CustomRuleDefinition.ConditionType.DSL,
+            )
+            .order_by("name")
+        )
+        for rule in qs:
+            try:
+                outcome = eval_dsl(rule.expression_dsl or {}, document)
+            except Exception as exc:   # never let one rule poison the whole audit
+                logger.warning("[AuditEngine] custom rule %s crashed: %s",
+                               rule.id, exc)
+                continue
+
+            severity_str = (outcome.severity or rule.severity or "MEDIUM").upper()
+            try:
+                severity_enum = Severity(severity_str)
+            except ValueError:
+                severity_enum = Severity.MEDIUM
+
+            result = RuleResult(
+                rule_id=f"CUSTOM-{str(rule.id)[:8]}",
+                rule_name=rule.name,
+                severity=severity_enum,
+                result=RuleStatus.FAILED if outcome.triggered else RuleStatus.PASSED,
+                explanation=outcome.message or outcome.explanation,
+                details={
+                    "custom_rule_id": str(rule.id),
+                    "action":         outcome.action,
+                    "rule_name":      rule.name,
+                    "rule_version":   rule.version,
+                },
+                document_id=invoice_id,
+            )
+            out.append(result)
+            logger.debug(
+                "[AuditEngine] Custom rule %s: triggered=%s severity=%s",
+                rule.name, outcome.triggered, severity_str,
+            )
+        return out
 
     def _build_report(
         self, results: list[RuleResult], document_id: Optional[int]

@@ -130,6 +130,12 @@ LOCAL_APPS = [
     "apps.assistant",
     "apps.webhooks",
     "apps.data_export",
+    "apps.api_mobile",
+    "apps.streaming",
+    "apps.alerts",
+    "apps.zatca",
+    "apps.banking",
+    "apps.ledger",
 ]
 
 # ─── Rule Engine Settings ──────────────────────────────────────────────────────

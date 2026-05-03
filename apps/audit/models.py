@@ -2,6 +2,7 @@
 
 import uuid
 from django.db import models
+from apps.audit.integrity import HashChainMixin
 from apps.authentication.models import User, Organization
 from apps.transactions.models import Transaction
 from core.mixins import SoftDeleteModel
@@ -262,20 +263,31 @@ class AuditCase(SoftDeleteModel):
     def save(self, *args, **kwargs):
         if not self.case_number:
             import datetime
-            from django.db import transaction
-            with transaction.atomic():
-                # Lock the org's existing cases to prevent concurrent inserts
-                # from generating the same case number.
-                count = (
-                    AuditCase.objects.select_for_update()
-                    .filter(organization=self.organization)
-                    .count()
-                )
-                year = datetime.datetime.now().year
-                self.case_number = f"CASE-{year}-{count + 1:04d}"
-                super().save(*args, **kwargs)
-        else:
-            super().save(*args, **kwargs)
+            from django.db import IntegrityError, transaction
+
+            year = datetime.datetime.now().year
+            for _ in range(5):
+                try:
+                    with transaction.atomic():
+                        last_case = (
+                            AuditCase.objects.select_for_update()
+                            .filter(organization=self.organization, case_number__startswith=f"CASE-{year}-")
+                            .order_by("-case_number")
+                            .first()
+                        )
+                        next_number = 1
+                        if last_case and last_case.case_number:
+                            try:
+                                next_number = int(last_case.case_number.rsplit("-", 1)[-1]) + 1
+                            except Exception:
+                                next_number = 1
+                        self.case_number = f"CASE-{year}-{next_number:04d}"
+                        return super().save(*args, **kwargs)
+                except IntegrityError:
+                    self.case_number = ""
+                    continue
+            raise IntegrityError("Could not generate a unique audit case number after retries.")
+        return super().save(*args, **kwargs)
 
     # delete() inherited from SoftDeleteModel
 
@@ -297,9 +309,21 @@ class CaseComment(models.Model):
 
 class CustomRuleDefinition(models.Model):
     """
-    FR-9: User-defined audit rule with configurable condition logic.
-    Rules are scoped to the organization and evaluated against invoices
-    during the audit pipeline.
+    User-defined audit rule.
+
+    Phase 2.2 adds two layers on top of the original 5 fixed condition types:
+
+      • ``Status`` — DRAFT / PUBLISHED / ARCHIVED. Only PUBLISHED rules run
+        inside the audit pipeline; everything else is invisible to the
+        engine. Drafts can be tested freely against a sandbox sample.
+      • ``expression_dsl`` — a generic JSON DSL of the form
+        ``{"when": <condition tree>, "then": {"action", "severity", "message"}}``
+        that supports nested ``all`` / ``any`` / ``not`` combinators and
+        per-field operators (>, <, ==, contains, regex, is_empty, in, ...).
+        This is what the visual rule-builder writes to.
+
+    The legacy ``condition_type`` + ``condition_params`` fields stay so
+    pre-Phase-2.2 rules keep working unchanged.
     """
 
     class Standard(models.TextChoices):
@@ -317,11 +341,19 @@ class CustomRuleDefinition(models.Model):
         LOW = "low", "Low"
 
     class ConditionType(models.TextChoices):
+        # Legacy fixed-schema types — kept for backward compatibility.
         MISSING_FIELD = "missing_field", "Field must not be empty"
         AMOUNT_THRESHOLD = "amount_threshold", "Amount above/below threshold"
         DATE_CHECK = "date_check", "Invoice date validation"
         DUPLICATE_CHECK = "duplicate_check", "Duplicate invoice number"
         PATTERN_MATCH = "pattern_match", "Field matches regex pattern"
+        # Phase 2.2 — generic DSL evaluated by RuleDSLEvaluator.
+        DSL = "dsl", "Custom DSL expression"
+
+    class Status(models.TextChoices):
+        DRAFT     = "draft",     "Draft"
+        PUBLISHED = "published", "Published"
+        ARCHIVED  = "archived",  "Archived"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(
@@ -343,9 +375,23 @@ class CustomRuleDefinition(models.Model):
             "  pattern_match:    {\"field\": \"invoice_number\", \"pattern\": \"^INV-\\\\d+$\", \"must_match\": true}"
         ),
     )
+    # Phase 2.2 generic DSL — used when condition_type='dsl'.
+    expression_dsl = models.JSONField(
+        default=dict, blank=True,
+        help_text="Generic when/then JSON DSL — populated by the visual rule builder.",
+    )
     remediation_suggestion = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    status = models.CharField(
+        max_length=12, choices=Status.choices, default=Status.DRAFT, db_index=True,
+        help_text="Only PUBLISHED rules run in the audit pipeline.",
+    )
     version = models.PositiveIntegerField(default=1)
+    published_at = models.DateTimeField(null=True, blank=True)
+    published_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="published_rules",
+    )
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="created_rules")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -354,6 +400,9 @@ class CustomRuleDefinition(models.Model):
         db_table = "custom_rule_definitions"
         ordering = ["name"]
         unique_together = [("organization", "name")]
+        indexes = [
+            models.Index(fields=["organization", "status"]),
+        ]
 
     def __str__(self):
         return f"[{self.standard.upper()}] {self.name} (v{self.version})"
@@ -382,3 +431,210 @@ class CustomRuleDefinition(models.Model):
         """
         from apps.audit.services.rule_evaluator import CustomRuleEvaluator
         return CustomRuleEvaluator.evaluate(self, invoice)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 1.3 — Working Papers + Reviewer Sign-off
+# ─────────────────────────────────────────────────────────────────────────────
+
+class WorkingPaper(HashChainMixin):
+    """A reviewable, lockable audit working paper.
+
+    Lifecycle (status field):
+      DRAFT → READY_FOR_REVIEW → REVIEWED → LOCKED   (happy path)
+                              ↘ DRAFT                 (reviewer rejects)
+
+    Hash-chain hook: ``_should_chain_now()`` returns True only when the
+    paper is LOCKED. Until then the preparer can edit freely; once locked,
+    the chain prevents any further mutation of the payload (`title`,
+    `paper_type`, `content`, etc.) — exactly the post-sign immutability
+    auditors expect.
+    """
+
+    class PaperType(models.TextChoices):
+        LEAD_SCHEDULE          = "lead_schedule",          "Lead Schedule"
+        SUBSTANTIVE_TEST       = "substantive_test",       "Substantive Test"
+        INTERNAL_CONTROL_TEST  = "internal_control_test",  "Internal Control Test"
+        ANALYTICAL_REVIEW      = "analytical_review",      "Analytical Review"
+        PBC_REQUEST            = "pbc_request",            "PBC (Prepared by Client) Request"
+        MEMO                   = "memo",                   "Audit Memo"
+
+    class Status(models.TextChoices):
+        DRAFT             = "draft",             "Draft"
+        READY_FOR_REVIEW  = "ready_for_review",  "Ready for Review"
+        REVIEWED          = "reviewed",          "Reviewed (Senior)"
+        LOCKED            = "locked",            "Locked (Partner Signed)"
+        ARCHIVED          = "archived",          "Archived"
+
+    id            = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization  = models.ForeignKey(Organization, on_delete=models.CASCADE,
+                                      related_name="working_papers")
+    reference     = models.CharField(max_length=64, db_index=True,
+                                     help_text="e.g. WP-2026-AR-001")
+    title         = models.CharField(max_length=255)
+    paper_type    = models.CharField(max_length=32, choices=PaperType.choices)
+    status        = models.CharField(max_length=24, choices=Status.choices,
+                                     default=Status.DRAFT, db_index=True)
+
+    # Free-form content captured by the preparer (lead-schedule rows,
+    # test-of-detail results, analytical ratios, ...). The structure depends
+    # on paper_type — kept as JSON so we don't need a separate table per type.
+    content       = models.JSONField(default=dict, blank=True)
+
+    # Cross-references — both to source documents and to other papers.
+    related_invoices = models.ManyToManyField(
+        "invoices.Invoice", blank=True, related_name="working_papers",
+    )
+    related_papers   = models.ManyToManyField(
+        "self", symmetrical=False, blank=True, related_name="referenced_by",
+        help_text="Other working papers this paper cites (e.g. WP-100 references WP-200.3).",
+    )
+
+    # Sign-off pointers — populated by the workflow service as each role acts.
+    prepared_by         = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                                            related_name="prepared_papers")
+    prepared_at         = models.DateTimeField(null=True, blank=True)
+    submitted_at        = models.DateTimeField(null=True, blank=True)
+
+    reviewed_by         = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                                            blank=True, related_name="reviewed_papers")
+    reviewed_at         = models.DateTimeField(null=True, blank=True)
+    reviewer_notes      = models.TextField(blank=True)
+
+    partner_signed_by   = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                                            blank=True, related_name="partner_signed_papers")
+    partner_signed_at   = models.DateTimeField(null=True, blank=True)
+    partner_notes       = models.TextField(blank=True)
+    locked_at           = models.DateTimeField(null=True, blank=True)
+
+    created_at          = models.DateTimeField(auto_now_add=True)
+    updated_at          = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "audit_working_papers"
+        ordering = ["reference", "-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "reference"],
+                name="wp_unique_reference_per_org",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["organization", "status"]),
+            models.Index(fields=["organization", "paper_type"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.reference} — {self.title}"
+
+    # ── HashChainMixin contract ──────────────────────────────────────────────
+
+    @classmethod
+    def _chain_org_filter_key(cls) -> str:
+        return "organization_id"
+
+    def _chain_organization_id(self):
+        return self.organization_id
+
+    def _chain_payload(self) -> dict:
+        """Snapshot the immutable parts of the paper. Once locked, these
+        fields cannot be edited without breaking the chain."""
+        return {
+            "id":                str(self.id),
+            "organization_id":   str(self.organization_id),
+            "reference":         self.reference,
+            "title":             self.title,
+            "paper_type":        self.paper_type,
+            "content":           self.content or {},
+            "prepared_by":       str(self.prepared_by_id) if self.prepared_by_id else None,
+            "reviewed_by":       str(self.reviewed_by_id) if self.reviewed_by_id else None,
+            "partner_signed_by": str(self.partner_signed_by_id) if self.partner_signed_by_id else None,
+        }
+
+    def _should_chain_now(self) -> bool:
+        """Defer the chain assignment until the partner signs (status=LOCKED).
+
+        While the paper is being drafted or reviewed, the preparer must be
+        able to edit it — so we return False. The workflow service flips us
+        to LOCKED and saves; at that point this returns True and the pre_save
+        signal computes the hash, freezing the row.
+        """
+        return self.status == self.Status.LOCKED
+
+    @property
+    def is_locked(self) -> bool:
+        return self.status == self.Status.LOCKED
+
+    @property
+    def can_edit(self) -> bool:
+        return self.status in {self.Status.DRAFT, self.Status.READY_FOR_REVIEW}
+
+
+class WPSignature(models.Model):
+    """A sign-off event on a working paper.
+
+    Stored as a separate row per role × user × method so the working paper
+    keeps a complete audit trail of who signed when, with which method, and
+    from which IP. The hash chain on `WorkingPaper` itself commits to the
+    signer FKs, so no additional integrity layer is needed here.
+    """
+
+    class Role(models.TextChoices):
+        PREPARER  = "preparer",  "Preparer"
+        REVIEWER  = "reviewer",  "Senior Reviewer"
+        PARTNER   = "partner",   "Partner / Engagement Quality Reviewer"
+
+    class Method(models.TextChoices):
+        DRAWN     = "drawn",     "Drawn (canvas)"
+        TYPED     = "typed",     "Typed name"
+        OTP       = "otp",       "One-time-password verification"
+        X509_CERT = "x509",      "X.509 certificate"
+
+    id        = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    paper     = models.ForeignKey(WorkingPaper, on_delete=models.CASCADE,
+                                  related_name="signatures")
+    user      = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                                  related_name="wp_signatures")
+    role      = models.CharField(max_length=16, choices=Role.choices)
+    method    = models.CharField(max_length=16, choices=Method.choices,
+                                 default=Method.TYPED)
+    # Free-form payload depending on method:
+    #   drawn  → {"strokes": [[x,y,t], ...]}
+    #   typed  → {"name": "Mohammed Al-..."}
+    #   otp    → {"verified_at": "...", "channel": "email"}
+    #   x509   → {"subject": "CN=...", "fingerprint_sha256": "...", "issuer": "..."}
+    signature_data = models.JSONField(default=dict, blank=True)
+    notes     = models.TextField(blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    signed_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "audit_wp_signatures"
+        ordering = ["-signed_at"]
+        indexes = [
+            models.Index(fields=["paper", "role"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.role} sign on {self.paper_id} by {self.user} at {self.signed_at}"
+
+
+class WPAttachment(models.Model):
+    """A supporting file attached to a working paper (e.g. a PBC document)."""
+
+    id          = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    paper       = models.ForeignKey(WorkingPaper, on_delete=models.CASCADE,
+                                    related_name="attachments")
+    file        = models.FileField(upload_to="working_papers/%Y/%m/")
+    filename    = models.CharField(max_length=255)
+    description = models.CharField(max_length=255, blank=True)
+    uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True,
+                                    related_name="wp_attachments")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "audit_wp_attachments"
+        ordering = ["-uploaded_at"]
+
+    def __str__(self) -> str:
+        return f"{self.filename} on {self.paper_id}"

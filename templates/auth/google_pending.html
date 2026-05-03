@@ -1,4 +1,4 @@
-{% load static i18n %}
+{% load static i18n asset_tags %}
 {% get_current_language as LANGUAGE_CODE %}
 {% get_current_language_bidi as LANGUAGE_BIDI %}
 <!DOCTYPE html>
@@ -8,7 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% trans "Your account is under review" %} — {{ product_name }}</title>
 <script>window.tailwind = window.tailwind || {};</script>
-<script src="{% static 'vendor/tailwind.browser.js' %}" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com'"></script>
+<script src="{% safe_static 'vendor/tailwind.browser.js' %}" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com'"></script>
   <style>
     * { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
     body {

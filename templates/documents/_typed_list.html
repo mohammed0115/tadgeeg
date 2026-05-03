@@ -64,6 +64,13 @@ doc type. Pass these context vars from the view:
       {% trans "View Report" %}
     </a>
     {% endif %}
+    {% if doc_type %}
+    <a href="{% url 'frontend:doc_list_export_excel' doc_type=doc_type %}" class="btn btn-light"
+       title="{% trans 'Export current rows as Excel' %}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      {% trans "Export Excel" %}
+    </a>
+    {% endif %}
     {% if upload_url %}
     <a href="{{ upload_url }}" class="btn btn-primary">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>

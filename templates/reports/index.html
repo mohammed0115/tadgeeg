@@ -1,11 +1,11 @@
 {% extends "layouts/dashboard_base.html" %}
-{% load i18n static %}
+{% load i18n static asset_tags %}
 
 {% block title %}{% trans "Reports" %}{% endblock %}
 {% block nav_reports %}active{% endblock %}
 
 {% block head_extra %}
-  <script defer src="{% static 'vendor/alpine.min.js' %}" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
+  <script defer src="{% safe_static 'vendor/alpine.min.js' %}" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
 {% endblock %}
 
 {% block extra_styles %}
@@ -118,6 +118,57 @@
   </div>
 </div>
 
+{# ── Real-data KPI strip ─────────────────────────────────────────────── #}
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:20px;">
+  <div style="background:white; border:1px solid var(--border-soft); border-radius:14px; padding:18px;">
+    <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; font-weight:700;">{% trans "Total Documents" %}</div>
+    <div style="font-size:26px; font-weight:800; color:var(--primary); margin-top:4px;">{{ report_kpis.doc_counts_total|default:0 }}</div>
+  </div>
+  <div style="background:white; border:1px solid var(--border-soft); border-radius:14px; padding:18px;">
+    <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; font-weight:700;">{% trans "Invoices" %}</div>
+    <div style="font-size:26px; font-weight:800; color:var(--primary); margin-top:4px;">{{ report_kpis.total_invoices|default:0 }}</div>
+  </div>
+  <div style="background:white; border:1px solid var(--border-soft); border-radius:14px; padding:18px;">
+    <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; font-weight:700;">{% trans "Total Amount" %}</div>
+    <div style="font-size:22px; font-weight:800; color:var(--primary); margin-top:4px; font-family:monospace;">{{ report_kpis.total_amount|default:0|floatformat:0 }} <span style="font-size:11px; color:var(--text-muted)">SAR</span></div>
+  </div>
+  <div style="background:white; border:1px solid #fecaca; border-radius:14px; padding:18px;">
+    <div style="font-size:11px; color:#991b1b; text-transform:uppercase; letter-spacing:0.5px; font-weight:700;">{% trans "High-Risk" %}</div>
+    <div style="font-size:26px; font-weight:800; color:#dc2626; margin-top:4px;">{{ report_kpis.high_risk_count|default:0 }}</div>
+  </div>
+  <div style="background:white; border:1px solid #fef3c7; border-radius:14px; padding:18px;">
+    <div style="font-size:11px; color:#92400e; text-transform:uppercase; letter-spacing:0.5px; font-weight:700;">{% trans "Duplicates" %}</div>
+    <div style="font-size:26px; font-weight:800; color:#b45309; margin-top:4px;">{{ report_kpis.duplicate_count|default:0 }}</div>
+  </div>
+  <div style="background:white; border:1px solid var(--border-soft); border-radius:14px; padding:18px;">
+    <div style="font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; font-weight:700;">{% trans "Avg Risk Score" %}</div>
+    <div style="font-size:26px; font-weight:800; color:var(--primary); margin-top:4px;">{{ report_kpis.avg_risk_score|default:0 }}<span style="font-size:11px;color:var(--text-muted);"> / 100</span></div>
+  </div>
+</div>
+
+{# ── Recently flagged invoices (clickable) ──────────────────────────── #}
+{% if recent_reports %}
+<div style="background:white; border:1px solid var(--border-soft); border-radius:14px; padding:18px; margin-bottom:20px;">
+  <h3 style="font-size:14px; font-weight:700; color:var(--primary); margin-bottom:14px;">
+    {% trans "Recently flagged invoices" %}
+  </h3>
+  <div style="display:flex; flex-direction:column; gap:8px;">
+    {% for r in recent_reports %}
+    <a href="/invoices/{{ r.id }}/" style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-radius:10px; background:#f8fafc; border:1px solid var(--border-soft); text-decoration:none;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="font-family:monospace; font-weight:700; color:var(--primary); font-size:13px;">{{ r.invoice_number|default:"—" }}</span>
+        <span style="color:var(--text-muted); font-size:12px;">{{ r.vendor_name|default:"—"|truncatechars:30 }}</span>
+        {% if r.is_duplicate %}<span style="background:#fef3c7; color:#92400e; padding:2px 8px; border-radius:100px; font-size:10px; font-weight:700;">{% trans "DUPLICATE" %}</span>{% endif %}
+        {% if r.risk_level == 'critical' %}<span style="background:#7f1d1d; color:#fff; padding:2px 8px; border-radius:100px; font-size:10px; font-weight:700;">{% trans "CRITICAL" %}</span>
+        {% elif r.risk_level == 'high' %}<span style="background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:100px; font-size:10px; font-weight:700;">{% trans "HIGH" %}</span>{% endif %}
+      </div>
+      <div style="font-family:monospace; font-size:13px; font-weight:700;">{{ r.total_amount|default:0|floatformat:2 }} <span style="font-size:11px; color:var(--text-muted);">SAR</span></div>
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
 <div class="type-selector">
   <span class="type-selector-label">{% trans "Document type:" %}</span>
   <select x-model="docType" @change="onTypeChange">
@@ -172,6 +223,133 @@
     </div>
     <div class="summary-card-value">95%</div>
     <p class="summary-card-sub">{% trans "ZATCA Phase 2 status" %}</p>
+  </div>
+</div>
+
+<!-- ── Quick-access invoice reports (HTML pages, not generated docs) ── -->
+<div style="margin-bottom: 28px;">
+  <h3 class="card-title" style="margin-bottom: 14px;">{% trans "Quick reports" %}</h3>
+  <div class="reports-grid">
+    <a href="{% url 'frontend:invoice_subreport' kind='risk' %}" class="report-card">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <h3>{% trans "Risk Report" %}</h3>
+      <p>{% trans "All flagged invoices ranked by risk score, with vendor and date details." %}</p>
+      <div class="report-card-action">{% trans "Open" %} →</div>
+    </a>
+    <a href="{% url 'frontend:invoice_subreport' kind='duplicates' %}" class="report-card">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+      </div>
+      <h3>{% trans "Duplicate Invoices" %}</h3>
+      <p>{% trans "Invoices flagged as near-duplicates with their original counterpart." %}</p>
+      <div class="report-card-action">{% trans "Open" %} →</div>
+    </a>
+    <a href="{% url 'frontend:invoice_subreport' kind='vendors' %}" class="report-card">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <h3>{% trans "Vendor Risk" %}</h3>
+      <p>{% trans "Vendor-by-vendor risk scoring, blocked vendors, and aging spend." %}</p>
+      <div class="report-card-action">{% trans "Open" %} →</div>
+    </a>
+    <a href="{% url 'frontend:invoice_subreport' kind='spend' %}" class="report-card">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+      </div>
+      <h3>{% trans "Spend Analysis" %}</h3>
+      <p>{% trans "Total spend, VAT breakdown, and vendor concentration." %}</p>
+      <div class="report-card-action">{% trans "Open" %} →</div>
+    </a>
+    <a href="{% url 'frontend:invoices_export_csv' %}" class="report-card">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </div>
+      <h3>{% trans "Export CSV" %}</h3>
+      <p>{% trans "Download every invoice in the org as a CSV file." %}</p>
+      <div class="report-card-action">{% trans "Download" %} →</div>
+    </a>
+    <a href="{% url 'frontend:invoices_export_xlsx' %}" class="report-card">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </div>
+      <h3>{% trans "Export Excel" %}</h3>
+      <p>{% trans "Download every invoice in the org as a styled XLSX workbook." %}</p>
+      <div class="report-card-action">{% trans "Download" %} →</div>
+    </a>
+    <a href="{% url 'frontend:audit_tools' %}" class="report-card">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+      </div>
+      <h3>{% trans "Materiality + Sampling" %}</h3>
+      <p>{% trans "ISA 320 thresholds + ISA 530 sampling for engagement planning." %}</p>
+      <div class="report-card-action">{% trans "Open" %} →</div>
+    </a>
+    <a href="{% url 'frontend:working_papers' %}" class="report-card">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      </div>
+      <h3>{% trans "Working Papers" %}</h3>
+      <p>{% trans "ISA 230 sign-off — preparer · senior reviewer · partner, with tamper-evident lock." %}</p>
+      <div class="report-card-action">{% trans "Open" %} →</div>
+    </a>
+    <a href="{% url 'frontend:audit_integrity' %}" class="report-card">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      </div>
+      <h3>{% trans "Audit Trail Integrity" %}</h3>
+      <p>{% trans "Verify the SHA-256 chain that protects every audit event from tampering." %}</p>
+      <div class="report-card-action">{% trans "Open" %} →</div>
+    </a>
+    <a href="{% url 'frontend:rule_builder' %}" class="report-card">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 4h18v4H3zm0 6h12v4H3zm0 6h18v4H3z"/></svg>
+      </div>
+      <h3>{% trans "Custom Rule Builder" %}</h3>
+      <p>{% trans "Build audit rules visually, test them on a sample, then publish to the live pipeline." %}</p>
+      <div class="report-card-action">{% trans "Open" %} →</div>
+    </a>
+    <a href="{% url 'frontend:streaming_ops' %}" class="report-card">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </div>
+      <h3>{% trans "Continuous Auditing" %}</h3>
+      <p>{% trans "Live ops: throughput, p95 latency, anomaly hits across the streaming pipeline." %}</p>
+      <div class="report-card-action">{% trans "Open" %} →</div>
+    </a>
+    <a href="{% url 'frontend:alerts_dashboard' %}" class="report-card">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      </div>
+      <h3>{% trans "Alert Routing" %}</h3>
+      <p>{% trans "Email · SMS · Slack · Teams · webhook channels with cooldown and acknowledgement." %}</p>
+      <div class="report-card-action">{% trans "Open" %} →</div>
+    </a>
+    <a href="{% url 'frontend:zatca_dashboard' %}" class="report-card">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h3>🇸🇦 {% trans "ZATCA Phase 2" %}</h3>
+      <p>{% trans "Live clearance + reporting · EGS device certificate health · readiness checklist." %}</p>
+      <div class="report-card-action">{% trans "Open" %} →</div>
+    </a>
+    <a href="{% url 'frontend:banking_dashboard' %}" class="report-card">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="1"/><path d="M5 11V7l7-4 7 4v4"/><path d="M7 21V11"/><path d="M17 21V11"/></svg>
+      </div>
+      <h3>🏦 {% trans "Bank Connectors" %}</h3>
+      <p>{% trans "Pull statements from Al Rajhi · SNB · Riyad · SAB · BSF and auto-match invoices." %}</p>
+      <div class="report-card-action">{% trans "Open" %} →</div>
+    </a>
+    <a href="{% url 'frontend:ledger_dashboard' %}" class="report-card">
+      <div class="report-card-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h20v18H2z"/><path d="M2 9h20"/><path d="M2 15h20"/><path d="M9 3v18"/></svg>
+      </div>
+      <h3>📒 {% trans "General Ledger" %}</h3>
+      <p>{% trans "Chart of accounts · balanced journal entries · trial balance · multi-currency · invoice → GL." %}</p>
+      <div class="report-card-action">{% trans "Open" %} →</div>
+    </a>
   </div>
 </div>
 

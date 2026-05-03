@@ -12735,6 +12735,15 @@ msgstr ""
 msgid "Upload Invoices"
 msgstr "رفع الفواتير"
 
+msgid "Loading"
+msgstr "جاري التحميل"
+
+msgid "Ledger"
+msgstr "دفتر الأستاذ"
+
+msgid "Ledgers"
+msgstr "دفاتر الأستاذ"
+
 #~ msgid "Case not found."
 #~ msgstr "الحالة غير موجودة."
 
@@ -13014,9 +13023,6 @@ msgstr "رفع الفواتير"
 
 #~ msgid "Goods Receipt Note"
 #~ msgstr "إشعار استلام البضاعة"
-
-#~ msgid "Ledger"
-#~ msgstr "دفتر الأستاذ"
 
 #~ msgid "User does not belong to an organization."
 #~ msgstr "المستخدم لا ينتمي إلى مؤسسة."
@@ -13432,9 +13438,6 @@ msgstr "رفع الفواتير"
 
 #~ msgid "Goods Receipt Notes"
 #~ msgstr "سندات الاستلام"
-
-#~ msgid "Ledgers"
-#~ msgstr "دفاتر الأستاذ"
 
 #~ msgid "Tax / VAT Documents"
 #~ msgstr "المستندات الضريبية"

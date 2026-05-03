@@ -537,6 +537,14 @@ class InvoiceDetailView(generics.RetrieveUpdateDestroyAPIView):
             from apps.frontend.page_views import _build_invoice_display, _ctx
 
             audit_trail = invoice.audit_events.select_related("user").order_by("-timestamp")[:40]
+
+            # Cross-doc linkage (PO ↔ GRN ↔ Payment + 3-way match) — parity with Phase-2 detail.
+            try:
+                from core.services.cross_doc_linker import find_links
+                cross_links = find_links("invoice", invoice, getattr(request.user, "organization", None))
+            except Exception:
+                cross_links = {}
+
             return render(
                 request._request,
                 "invoices/detail_premium.html",
@@ -546,6 +554,7 @@ class InvoiceDetailView(generics.RetrieveUpdateDestroyAPIView):
                     invoice=invoice,
                     invoice_display=_build_invoice_display(invoice),
                     audit_trail=audit_trail,
+                    cross_links=cross_links,
                 ),
             )
 
@@ -636,9 +645,19 @@ class InvoiceApproveView(APIView):
                 risk = None
                 has_blocking = True  # conservative: no audit run yet = block
 
+            # Admin and CAO can override blocking-rule approval; others can't.
+            # Use role check rather than `has_perm` because the Django permission
+            # is never granted on a fresh install, leaving admins unable to use
+            # their own override workflow.
+            from apps.authentication.models import User as _User
+            override_roles = {_User.Role.ADMIN, _User.Role.CHIEF_AUDIT_OFFICER}
             is_override = (
                 request.data.get("override") is True
-                and request.user.has_perm("invoices.can_override_approval")
+                and (
+                    request.user.is_superuser
+                    or request.user.role in override_roles
+                    or request.user.has_perm("invoices.can_override_approval")
+                )
             )
 
             if has_blocking and not is_override:
@@ -690,7 +709,8 @@ class InvoiceApproveView(APIView):
             try:
                 from apps.workflow.engine import WorkflowTransitionService, WorkflowState
                 workflow_svc = WorkflowTransitionService()
-                workflow_svc.transition(invoice, WorkflowState.APPROVED, request.user, context={"override_reason": override_reason} if override_reason else {})
+                workflow_svc.transition(invoice, WorkflowState.APPROVED, request.user,
+                                        override_reason=override_reason or "")
             except Exception as e:
                 import logging
                 logging.warning(f"Workflow transition logging skipped for invoice {invoice.id}: {e}")
@@ -706,7 +726,8 @@ class InvoiceApproveView(APIView):
             try:
                 from apps.workflow.engine import WorkflowTransitionService, WorkflowState
                 workflow_svc = WorkflowTransitionService()
-                workflow_svc.transition(invoice, WorkflowState.REJECTED, request.user, context={"reason": reason})
+                workflow_svc.transition(invoice, WorkflowState.REJECTED, request.user,
+                                        reason=reason)
             except Exception as e:
                 import logging
                 logging.warning(f"Workflow transition logging skipped for rejected invoice {invoice.id}: {e}")

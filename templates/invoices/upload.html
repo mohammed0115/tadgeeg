@@ -1,11 +1,11 @@
 {% extends "layouts/dashboard_base.html" %}
-{% load i18n static %}
+{% load i18n static asset_tags %}
 
 {% block title %}{% trans "Upload Documents" %}{% endblock %}
 {% block nav_upload %}active{% endblock %}
 
 {% block head_extra %}
-  <script defer src="{% static 'vendor/alpine.min.js' %}" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
+  <script defer src="{% safe_static 'vendor/alpine.min.js' %}" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
 {% endblock %}
 
 {% block extra_styles %}
@@ -84,23 +84,30 @@
     <p>{% trans "AI will analyze your documents in seconds — with full ZATCA checks and fraud detection." %}</p>
   </div>
 
-  <div class="dropzone" :class="{ 'dragover': dragging, 'uploading': uploading }"
-       @dragover.prevent="dragging = true"
-       @dragleave.prevent="dragging = false"
-       @drop.prevent="onDrop($event)"
-       @click="!uploading && $refs.fileInput.click()">
+  {# ── Native <label for=""> — single picker on click, zero JS click handlers. ── #}
+  {# When files are already selected, the for attribute is removed so the dropzone #}
+  {# becomes a plain styled div (no auto-picker). Drag/drop still works since it #}
+  {# uses Alpine's @drop event, not the for-association. #}
+  <input id="invoiceUploadFileInput" x-ref="fileInput" type="file" multiple style="display:none"
+         accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff,.zip,.xlsx,.xls,.json,.jsonl,.csv,.tsv"
+         @change="addFiles($event.target.files)">
 
-    <input x-ref="fileInput" type="file" multiple style="display:none"
-           accept=".pdf,.jpg,.jpeg,.png,.tif,.tiff,.zip,.xlsx,.xls,.json,.csv,.tsv"
-           @change="addFiles($event.target.files)">
+  <label x-bind:for="(uploading || files.length) ? null : 'invoiceUploadFileInput'"
+         class="dropzone"
+         :class="{ 'dragover': dragging, 'uploading': uploading, 'has-files': files.length && !uploading }"
+         @dragover.prevent="dragging = true"
+         @dragleave.prevent="dragging = false"
+         @drop.prevent="onDrop($event)"
+         :style="(uploading || files.length) ? 'display:block;cursor:default;' : 'display:block;cursor:pointer;'">
 
-    <div x-show="!uploading">
+    {# Initial CTA — only when no files selected and not uploading #}
+    <div x-show="!uploading && !files.length">
       <div class="dropzone-icon">
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       </div>
       <h3>{% trans "Drag files here or click to select" %}</h3>
       <p>{% trans "Supports PDF, Excel, CSV, JSON, and images — up to 50MB per file" %}</p>
-      <button class="btn btn-dark btn-lg" type="button" @click.stop="$refs.fileInput.click()">{% trans "Choose Files" %}</button>
+      <span class="btn btn-dark btn-lg" style="pointer-events:none;">{% trans "Choose Files" %}</span>
 
       <div class="file-pills">
         <span class="file-pill">📄 PDF</span>
@@ -108,6 +115,15 @@
         <span class="file-pill">📑 CSV</span>
         <span class="file-pill">⚙️ JSON</span>
         <span class="file-pill">🖼️ JPG/PNG</span>
+      </div>
+    </div>
+
+    {# After selection — green confirmation banner. NO buttons inside. The user uses #}
+    {# the "Add more files" / "Clear" / "Upload N" buttons that live OUTSIDE the dropzone. #}
+    <div x-show="!uploading && files.length" x-cloak style="text-align:center;">
+      <div style="display:inline-flex;align-items:center;gap:10px;padding:10px 16px;background:#dcfce7;border:1px solid #86efac;border-radius:100px;color:#166534;font-weight:700;font-size:14px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <span x-text="`${files.length} {% trans 'file(s) ready to upload' %}`"></span>
       </div>
     </div>
 
@@ -151,7 +167,7 @@
         </div>
       </div>
     </div>
-  </div>
+  </label>
 
   <div x-show="files.length && !uploading" x-cloak>
     <div class="file-list">
@@ -171,7 +187,11 @@
       </template>
     </div>
 
-    <div style="display:flex; gap:12px; margin-top:20px; justify-content:center;">
+    <div style="display:flex; gap:12px; margin-top:20px; justify-content:center; flex-wrap:wrap;">
+      <label for="invoiceUploadFileInput" class="btn btn-light" style="cursor:pointer;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        {% trans "Add more files" %}
+      </label>
       <button @click="files = []" class="btn btn-light" type="button">{% trans "Clear all" %}</button>
       <button @click="upload" class="btn btn-primary btn-lg" type="button" :disabled="!files.length">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -213,8 +233,44 @@
       currentFileName: '', currentStatus: '',
       result: null, resultType: 'success',
 
+      _pickerOpen: false,
+      _pickerLockedUntil: 0,
+      openPicker() {
+        // Bulletproof: don't open a second picker while one is already open
+        // OR within 800ms of the last open. Combined with @click.self on the
+        // dropzone and @click.stop.prevent on inner buttons, this triple-
+        // guards against any double-trigger source (bubbling, double-click,
+        // touch + mouse synthesis, browser quirks).
+        if (this._pickerOpen) return;
+        const now = Date.now();
+        if (now < this._pickerLockedUntil) return;
+        const fi = this.$refs.fileInput;
+        if (!fi) return;
+        this._pickerOpen = true;
+        this._pickerLockedUntil = now + 800;
+        // Reset value before opening so re-picking the same file works.
+        fi.value = '';
+        // One-time listener: as soon as picker closes (change OR cancel OR focus
+        // returns to the window), release the lock so the next click works.
+        const release = () => { this._pickerOpen = false; window.removeEventListener('focus', release); };
+        // 'cancel' fires in Chrome 113+ when user closes picker without picking.
+        fi.addEventListener('cancel', release, { once: true });
+        // 'focus' on window fires when the picker dialog closes (covers Firefox/Safari).
+        window.addEventListener('focus', release, { once: true });
+        // Fallback: release lock after 1.5s no matter what.
+        setTimeout(release, 1500);
+        fi.click();
+      },
+
       onDrop(e) { this.dragging = false; this.addFiles(e.dataTransfer.files); },
-      addFiles(list) { for (const f of list) this.files.push(f); },
+      addFiles(list) {
+        this._pickerOpen = false;  // change event closed the picker
+        // Reassign array reference so Alpine guarantees reactivity
+        // (some Alpine builds miss .push on FileList iterations).
+        const incoming = Array.from(list || []);
+        if (!incoming.length) return;
+        this.files = [...this.files, ...incoming];
+      },
       fmtSize(b) { return b > 1048576 ? (b/1048576).toFixed(1)+' MB' : (b/1024).toFixed(0)+' KB'; },
 
       async upload() {

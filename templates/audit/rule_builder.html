@@ -1,0 +1,451 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n static asset_tags %}
+
+{% block title %}{% trans "Custom Rule Builder" %}{% endblock %}
+{% block nav_audit %}active{% endblock %}
+
+{% block head_extra %}
+  <script defer src="{% safe_static 'vendor/alpine.min.js' %}"
+          onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
+{% endblock %}
+
+{% block extra_styles %}
+  [x-cloak] { display: none !important; }
+  .rb-page { max-width: 1280px; margin: 0 auto; }
+  .rb-grid { display: grid; grid-template-columns: 280px 1fr; gap: 18px; }
+  .rb-card { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 16px 20px; margin-bottom: 16px; }
+  .rb-card h3 { font-family: 'Cairo', sans-serif; font-weight: 800; font-size: 15px; color: var(--primary); margin-bottom: 10px; }
+  .rb-list { max-height: 540px; overflow: auto; }
+  .rb-list-row { padding: 10px 12px; border-radius: 10px; cursor: pointer; border: 1px solid transparent; margin-bottom: 6px; }
+  .rb-list-row:hover { background: var(--bg-soft); }
+  .rb-list-row.active { border-color: var(--primary); background: rgba(0,51,102,0.04); }
+  .rb-list-row .name { font-weight: 700; font-size: 13px; }
+  .rb-list-row .meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:100px; font-size:10px; font-weight:700; }
+  .badge-draft { background:#e2e8f0; color:#475569; }
+  .badge-published { background:#dcfce7; color:#166534; }
+  .badge-archived { background:#f1f5f9; color:#64748b; }
+
+  .rb-input, .rb-select { width:100%; padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; background:var(--bg-soft); font-size:13px; font-family:inherit; }
+  .rb-input:focus, .rb-select:focus { outline:none; border-color:var(--primary); background:white; }
+  .rb-row { display:flex; gap:8px; align-items:flex-start; flex-wrap:wrap; }
+
+  .rb-cond-block { padding: 12px; border-radius: 10px; margin: 8px 0; border-left: 3px solid var(--primary); background: var(--bg-soft); }
+  .rb-cond-block.any { border-left-color: var(--accent); }
+  .rb-cond-block.not { border-left-color: var(--danger); }
+  .rb-cond-leaf { display:flex; gap:6px; flex-wrap:wrap; align-items:center; padding: 6px 0; }
+  .rb-cond-leaf .rb-input, .rb-cond-leaf .rb-select { flex: 0 1 auto; min-width: 130px; padding: 6px 10px; font-size: 12px; }
+  .btn-mini { padding: 4px 10px; font-size: 11px; font-weight: 700; border-radius: 6px; background: white; border: 1px solid var(--border); cursor: pointer; }
+  .btn-mini:hover { border-color: var(--primary); color: var(--primary); }
+  .btn-mini-danger { color: #dc2626; border-color: #fecaca; }
+  .btn-mini-danger:hover { background:#fee2e2; color:#991b1b; }
+
+  .rb-result-row { display:flex; justify-content:space-between; padding: 6px 10px; border-radius: 6px; font-size: 12px; }
+  .rb-result-row.triggered { background:#fef3c7; color:#92400e; font-weight:700; }
+  .rb-result-row.passed { color:var(--text-muted); }
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "Custom Rule Builder" %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="rb-page" x-data="ruleBuilder()" x-init="init()">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">{% trans "Custom Rule Builder" %}</h1>
+      <p class="page-subtitle">
+        {% trans "Build audit rules visually. Test against the last 100 invoices before publishing." %}
+      </p>
+    </div>
+    <button class="btn btn-primary" type="button" @click="newRule()">
+      + {% trans "New rule" %}
+    </button>
+  </div>
+
+  <div class="rb-grid">
+
+    <!-- ─── Left: rules list ─── -->
+    <div>
+      <div class="rb-card">
+        <h3>{% trans "Rules" %}</h3>
+        <div style="display:flex; gap:6px; margin-bottom:10px;">
+          <select class="rb-select" x-model="filterStatus" @change="loadList()" style="flex:1">
+            <option value="">{% trans "All" %}</option>
+            <option value="draft">{% trans "Drafts" %}</option>
+            <option value="published">{% trans "Published" %}</option>
+            <option value="archived">{% trans "Archived" %}</option>
+          </select>
+        </div>
+        <div class="rb-list">
+          <template x-for="r in rules" :key="r.id">
+            <div class="rb-list-row" :class="{ active: selected && selected.id === r.id }"
+                 @click="loadRule(r.id)">
+              <div class="name" x-text="r.name"></div>
+              <div class="meta">
+                <span class="badge"
+                      :class="r.status === 'published' ? 'badge-published' : (r.status === 'archived' ? 'badge-archived' : 'badge-draft')"
+                      x-text="r.status"></span>
+                · v<span x-text="r.version"></span>
+                · <span x-text="r.severity"></span>
+              </div>
+            </div>
+          </template>
+          <div x-show="!rules.length" style="text-align:center;color:var(--text-muted); padding:24px 0; font-size:13px;">
+            {% trans "No rules yet. Click ‘New rule’ to start." %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Right: editor ─── -->
+    <div>
+
+      <div x-show="!selected" class="rb-card" style="text-align:center; padding:40px 20px; color:var(--text-muted);">
+        {% trans "Select a rule from the list, or create a new one to get started." %}
+      </div>
+
+      <div x-show="selected" x-cloak>
+
+        <!-- Header / actions -->
+        <div class="rb-card" style="display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; align-items:center;">
+          <div>
+            <input class="rb-input" x-model="selected.name" placeholder="{% trans 'Rule name' %}" style="font-size:16px; font-weight:800; min-width:320px; max-width:480px;">
+            <div style="margin-top:6px; font-size:12px; color:var(--text-muted);">
+              <span class="badge" :class="selected.status === 'published' ? 'badge-published' : (selected.status === 'archived' ? 'badge-archived' : 'badge-draft')" x-text="selected.status"></span>
+              <span style="margin-inline-start:8px;">v<span x-text="selected.version"></span></span>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-light"   type="button" @click="testRule()" :disabled="busy">▶ {% trans "Test" %}</button>
+            <button class="btn btn-primary" type="button" @click="saveRule()" :disabled="busy || selected.status === 'published'">💾 {% trans "Save draft" %}</button>
+            <button class="btn btn-success" type="button" @click="publishRule()" :disabled="busy || selected.status === 'published'">🚀 {% trans "Publish" %}</button>
+            <button class="btn btn-light"   type="button" @click="archiveRule()" :disabled="busy || selected.status === 'archived'">{% trans "Archive" %}</button>
+          </div>
+        </div>
+
+        <!-- Metadata -->
+        <div class="rb-card">
+          <h3>{% trans "Metadata" %}</h3>
+          <div class="rb-row">
+            <div style="flex:1; min-width:240px;">
+              <label style="font-size:11px; color:var(--text-muted); font-weight:700;">{% trans "Description" %}</label>
+              <input class="rb-input" x-model="selected.description" placeholder="{% trans 'What does this rule check?' %}">
+            </div>
+            <div style="width:160px;">
+              <label style="font-size:11px; color:var(--text-muted); font-weight:700;">{% trans "Severity" %}</label>
+              <select class="rb-select" x-model="selected.severity">
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+                <option value="critical">critical</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- WHEN tree -->
+        <div class="rb-card">
+          <h3>{% trans "When (condition)" %}</h3>
+          <div x-html="renderConditionTree(selected.expression_dsl.when, 'when')"></div>
+          <!-- Visual builder uses dedicated buttons / templates. We render via a recursive Alpine component. -->
+          <template x-if="selected.expression_dsl.when">
+            <div>
+              <div class="rb-cond-block" :class="combinatorClass(selected.expression_dsl.when)">
+                <div style="font-weight:800; font-size:12px; color:var(--primary); margin-bottom:6px;">
+                  <select class="rb-select" style="width:auto; display:inline-block;"
+                          @change="changeCombinator($event, selected.expression_dsl.when)"
+                          :value="rootCombinator(selected.expression_dsl.when)">
+                    <option value="all">{% trans "ALL of these are true" %} (AND)</option>
+                    <option value="any">{% trans "ANY of these is true" %} (OR)</option>
+                  </select>
+                </div>
+                <template x-for="(child, idx) in selected.expression_dsl.when[rootCombinator(selected.expression_dsl.when)] || []" :key="idx">
+                  <div class="rb-cond-leaf">
+                    <select class="rb-select" x-model="child.field">
+                      <template x-for="f in fields" :key="f.key">
+                        <option :value="f.key" x-text="f.label"></option>
+                      </template>
+                    </select>
+                    <select class="rb-select" x-model="child.op">
+                      <template x-for="o in allOperators" :key="o">
+                        <option :value="o" x-text="o"></option>
+                      </template>
+                    </select>
+                    <input class="rb-input" x-model="child.value" placeholder="value"
+                           x-show="!isExistenceOp(child.op)" style="flex:1;">
+                    <button class="btn-mini btn-mini-danger" type="button"
+                            @click="removeLeaf(idx)">✕</button>
+                  </div>
+                </template>
+                <button class="btn-mini" type="button" @click="addLeaf()" style="margin-top:6px;">
+                  + {% trans "Add condition" %}
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- THEN -->
+        <div class="rb-card">
+          <h3>{% trans "Then (action)" %}</h3>
+          <div class="rb-row">
+            <div style="width:160px;">
+              <label style="font-size:11px; color:var(--text-muted); font-weight:700;">{% trans "Action" %}</label>
+              <select class="rb-select" x-model="selected.expression_dsl.then.action">
+                <option value="flag">flag</option>
+                <option value="block">block</option>
+                <option value="warn">warn</option>
+              </select>
+            </div>
+            <div style="width:160px;">
+              <label style="font-size:11px; color:var(--text-muted); font-weight:700;">{% trans "Severity" %}</label>
+              <select class="rb-select" x-model="selected.expression_dsl.then.severity">
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+                <option value="critical">critical</option>
+              </select>
+            </div>
+            <div style="flex:1; min-width:240px;">
+              <label style="font-size:11px; color:var(--text-muted); font-weight:700;">{% trans "Message shown to auditor" %}</label>
+              <input class="rb-input" x-model="selected.expression_dsl.then.message" placeholder="{% trans 'e.g. Large invoice flagged for review' %}">
+            </div>
+          </div>
+        </div>
+
+        <!-- Test results -->
+        <div x-show="testResult" x-cloak class="rb-card" style="border-color: rgba(0,51,102,0.20);">
+          <h3>{% trans "Test result" %}</h3>
+          <div style="font-size:13px; margin-bottom:10px;">
+            <strong x-text="testResult?.triggered_count || 0"></strong>
+            / <strong x-text="testResult?.sample_size || 0"></strong>
+            {% trans "invoices triggered" %}
+            (<span x-text="testResult?.trigger_rate || 0"></span>%)
+          </div>
+          <div style="max-height: 220px; overflow:auto;">
+            <template x-for="row in (testResult?.rows || [])" :key="row.id">
+              <div class="rb-result-row" :class="row.triggered ? 'triggered' : 'passed'">
+                <span x-text="row.label"></span>
+                <span x-text="row.triggered ? '⚑ flagged' : '✓ passed'"></span>
+              </div>
+            </template>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function getCookie(name) {
+  const c = `; ${document.cookie}`.split(`; ${name}=`);
+  if (c.length === 2) return c.pop().split(';').shift();
+  return '';
+}
+
+function ruleBuilder() {
+  return {
+    rules: [],
+    selected: null,
+    filterStatus: '',
+    busy: false,
+    fields: [],
+    operators: { comparison: [], string: [], list: [], existence: [] },
+    allOperators: [],
+    testResult: null,
+
+    async init() {
+      await this.loadSchema();
+      await this.loadList();
+    },
+
+    async loadSchema() {
+      const r = await fetch('/api/v1/audit/rule-builder/dsl-schema/');
+      if (!r.ok) return;
+      const data = await r.json();
+      this.fields = data.fields || [];
+      this.operators = data.operators || {};
+      this.allOperators = []
+        .concat(this.operators.comparison || [])
+        .concat(this.operators.string || [])
+        .concat(this.operators.list || [])
+        .concat(this.operators.existence || []);
+    },
+
+    async loadList() {
+      const url = '/api/v1/audit/rule-builder/' + (this.filterStatus ? `?status=${this.filterStatus}` : '');
+      const r = await fetch(url);
+      if (!r.ok) return;
+      const data = await r.json();
+      this.rules = data.results || [];
+    },
+
+    async loadRule(id) {
+      const r = await fetch(`/api/v1/audit/rule-builder/${id}/`);
+      if (!r.ok) return;
+      this.selected = await r.json();
+      this.testResult = null;
+      this._normaliseDsl();
+    },
+
+    newRule() {
+      this.selected = {
+        id: null,
+        name: 'New rule',
+        description: '',
+        severity: 'medium',
+        condition_type: 'dsl',
+        expression_dsl: {
+          when: { all: [{ field: 'total_amount', op: '>', value: 100000 }] },
+          then: { action: 'flag', severity: 'high', message: '' },
+        },
+        status: 'draft',
+        version: 1,
+      };
+      this.testResult = null;
+    },
+
+    _normaliseDsl() {
+      // Make sure the editor never crashes on a malformed DSL.
+      if (!this.selected.expression_dsl || typeof this.selected.expression_dsl !== 'object') {
+        this.selected.expression_dsl = {
+          when: { all: [{ field: 'total_amount', op: '>', value: 0 }] },
+          then: { action: 'flag', severity: 'medium', message: '' },
+        };
+      }
+      const dsl = this.selected.expression_dsl;
+      if (!dsl.when || (typeof dsl.when !== 'object')) dsl.when = { all: [] };
+      if (!dsl.then || (typeof dsl.then !== 'object')) dsl.then = { action: 'flag', severity: 'medium', message: '' };
+      if (!('all' in dsl.when) && !('any' in dsl.when)) dsl.when = { all: [dsl.when] };
+    },
+
+    rootCombinator(when) {
+      return ('any' in (when || {})) ? 'any' : 'all';
+    },
+
+    combinatorClass(when) {
+      return this.rootCombinator(when);
+    },
+
+    changeCombinator(event, when) {
+      const newKey = event.target.value;
+      const oldKey = this.rootCombinator(when);
+      if (newKey === oldKey) return;
+      const list = when[oldKey] || [];
+      delete when[oldKey];
+      when[newKey] = list;
+    },
+
+    isExistenceOp(op) {
+      return (this.operators.existence || []).includes(op);
+    },
+
+    addLeaf() {
+      const dsl = this.selected.expression_dsl;
+      const key = this.rootCombinator(dsl.when);
+      dsl.when[key] = dsl.when[key] || [];
+      dsl.when[key].push({ field: 'total_amount', op: '>', value: 0 });
+    },
+
+    removeLeaf(idx) {
+      const dsl = this.selected.expression_dsl;
+      const key = this.rootCombinator(dsl.when);
+      dsl.when[key].splice(idx, 1);
+    },
+
+    renderConditionTree() { /* stub — Alpine renders via x-for above */ return ''; },
+
+    async saveRule() {
+      this.busy = true;
+      try {
+        const payload = {
+          name: this.selected.name,
+          description: this.selected.description,
+          severity: this.selected.severity,
+          condition_type: 'dsl',
+          expression_dsl: this.selected.expression_dsl,
+        };
+        const url = this.selected.id
+          ? `/api/v1/audit/rule-builder/${this.selected.id}/`
+          : '/api/v1/audit/rule-builder/';
+        const method = this.selected.id ? 'PUT' : 'POST';
+        const r = await fetch(url, {
+          method, headers: { 'Content-Type': 'application/json',
+                              'X-CSRFToken': getCookie('csrftoken') },
+          body: JSON.stringify(payload),
+        });
+        if (!r.ok) {
+          const err = await r.json();
+          alert('Save failed: ' + (err.error || r.statusText));
+          return;
+        }
+        this.selected = await r.json();
+        await this.loadList();
+        this._normaliseDsl();
+      } finally {
+        this.busy = false;
+      }
+    },
+
+    async testRule() {
+      if (!this.selected || !this.selected.id) {
+        alert('{% trans "Save the rule first, then run the test." %}');
+        return;
+      }
+      this.busy = true;
+      try {
+        const r = await fetch(`/api/v1/audit/rule-builder/${this.selected.id}/test/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json',
+                     'X-CSRFToken': getCookie('csrftoken') },
+          body: JSON.stringify({ sample_size: 100 }),
+        });
+        this.testResult = await r.json();
+      } finally {
+        this.busy = false;
+      }
+    },
+
+    async publishRule() {
+      if (!confirm('{% trans "Publish this rule to the live audit pipeline?" %}')) return;
+      this.busy = true;
+      try {
+        const r = await fetch(`/api/v1/audit/rule-builder/${this.selected.id}/publish/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        if (!r.ok) {
+          const err = await r.json();
+          alert('Publish failed: ' + (err.error || r.statusText));
+          return;
+        }
+        this.selected = await r.json();
+        await this.loadList();
+      } finally {
+        this.busy = false;
+      }
+    },
+
+    async archiveRule() {
+      if (!confirm('{% trans "Archive this rule?" %}')) return;
+      this.busy = true;
+      try {
+        await fetch(`/api/v1/audit/rule-builder/${this.selected.id}/archive/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        await this.loadList();
+        await this.loadRule(this.selected.id);
+      } finally {
+        this.busy = false;
+      }
+    },
+  };
+}
+</script>
+{% endblock %}

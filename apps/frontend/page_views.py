@@ -1190,10 +1190,44 @@ def dashboard(request):
             "sales_receipts":   SalesReceipt.objects.filter(organization=org).count(),
         }
 
+    # Charts: invoice count + amount per month (last 6 months) for sparklines.
+    chart_series = {"labels": [], "counts": [], "amounts": []}
+    top_risky_vendors = []
+    if org:
+        from django.db.models.functions import TruncMonth
+        from datetime import datetime
+        monthly = (
+            inv_qs.filter(created_at__gte=now - timedelta(days=185))
+                  .annotate(m=TruncMonth("created_at"))
+                  .values("m")
+                  .annotate(c=Count("id"), s=Sum("total_amount"))
+                  .order_by("m")
+        )
+        for row in monthly:
+            chart_series["labels"].append(row["m"].strftime("%b") if row["m"] else "—")
+            chart_series["counts"].append(int(row["c"]))
+            chart_series["amounts"].append(float(row["s"] or 0))
+
+        # Top 5 risky vendors — already computed in AI assistant context, surface here too.
+        top_risky_vendors = list(
+            inv_qs.exclude(vendor_name="")
+                  .values("vendor_name")
+                  .annotate(
+                      invoice_count=Count("id"),
+                      high_risk=Count("id", filter=Q(risk_level__in=["high","critical"])),
+                      duplicates=Count("id", filter=Q(is_duplicate=True)),
+                      total=Sum("total_amount"),
+                  )
+                  .filter(Q(high_risk__gt=0) | Q(duplicates__gt=0))
+                  .order_by("-high_risk", "-duplicates", "-total")[:5]
+        )
+
     return render(request, "dashboard/index.html", _ctx(
         request, "dashboard",
         kpis=kpis,
         risk_breakdown=risk_breakdown,
+        chart_series=chart_series,
+        top_risky_vendors=top_risky_vendors,
         recent_invoices=recent_invoices,
         monthly_growth=kpis["monthly_growth"],
     ))
@@ -1210,10 +1244,10 @@ def invoices(request):
     from apps.invoices.models import Invoice
 
     org = getattr(request.user, "organization", None)
-    qs = Invoice.objects.all()
-    if org:
-        qs = qs.filter(organization=org)
-    qs = qs.select_related("organization").order_by("-created_at")
+    # Tenant-isolation: a user with no organization MUST NOT see invoices
+    # belonging to any other tenant. Empty queryset is the fail-safe default.
+    qs = (Invoice.objects.filter(organization=org).select_related("organization")
+          .order_by("-created_at")) if org else Invoice.objects.none()
 
     # Optional filters
     status_filter = (request.GET.get("status") or "").strip().lower()
@@ -1239,7 +1273,7 @@ def invoices(request):
 
     # Status counters for the tab pills (full org scope, not filtered)
     counters = {"all": 0, "pending": 0, "approved": 0, "flagged": 0, "rejected": 0}
-    counter_qs = Invoice.objects.filter(organization=org) if org else Invoice.objects.all()
+    counter_qs = Invoice.objects.filter(organization=org) if org else Invoice.objects.none()
     counters["all"] = counter_qs.count()
     for s in ("pending", "approved", "flagged", "rejected"):
         counters[s] = counter_qs.filter(status=s).count()
@@ -1273,6 +1307,13 @@ def invoice_detail(request, pk):
     except Exception:
         return redirect("frontend:invoices")
 
+    # Cross-doc linkage: PO ↔ GRN ↔ Payment + 3-way match (parity with Phase-2 detail pages).
+    try:
+        from core.services.cross_doc_linker import find_links
+        cross_links = find_links("invoice", invoice, organization)
+    except Exception:
+        cross_links = {}
+
     invoice_display   = _build_invoice_display(invoice)
     user_can_override = request.user.has_perm("invoices.can_override_approval")
     return render(
@@ -1284,6 +1325,653 @@ def invoice_detail(request, pk):
             invoice_display=invoice_display,
             audit_trail=audit_trail,
             user_can_override=user_can_override,
+            cross_links=cross_links,
+        ),
+    )
+
+
+@login_required(login_url="/login/")
+def invoice_pdf(request, pk):
+    """Render the invoice's audit detail as a downloadable PDF."""
+    from django.http import HttpResponse, Http404
+    from django.template.loader import render_to_string
+    from apps.invoices.models import Invoice, InvoiceAuditEvent
+
+    organization = getattr(request.user, "organization", None)
+    try:
+        invoice = Invoice.objects.select_related("approved_by", "validation").get(pk=pk)
+    except Invoice.DoesNotExist:
+        raise Http404("Invoice not found")
+    if organization and invoice.organization_id != organization.id:
+        raise Http404("Invoice not found")
+
+    audit_trail = list(
+        InvoiceAuditEvent.objects.filter(invoice=invoice).select_related("user").order_by("-timestamp")[:40]
+    )
+    try:
+        from core.services.cross_doc_linker import find_links
+        cross_links = find_links("invoice", invoice, organization)
+    except Exception:
+        cross_links = {}
+
+    html = render_to_string(
+        "invoices/invoice_pdf.html",
+        _ctx(
+            request, "invoices",
+            invoice=invoice,
+            invoice_display=_build_invoice_display(invoice),
+            audit_trail=audit_trail,
+            cross_links=cross_links,
+        ),
+        request=request,
+    )
+
+    try:
+        from apps.reports.views import _render_report_pdf_bytes
+        pdf_bytes = _render_report_pdf_bytes(html, request.build_absolute_uri("/"))
+    except Exception as exc:
+        # WeasyPrint unavailable / failed → return inline HTML so the user gets *something*
+        return HttpResponse(html, content_type="text/html; charset=utf-8")
+
+    safe_id = (invoice.invoice_number or str(invoice.id))[:60].replace(" ", "_")
+    response = HttpResponse(pdf_bytes, content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="invoice_{safe_id}.pdf"'
+    return response
+
+
+@login_required(login_url="/login/")
+def run_audit(request, doc_type, pk):
+    """
+    Manually re-run validators on a single document.
+    POST only. Returns JSON for AJAX callers; redirects back to detail page on form POST.
+    """
+    from django.http import JsonResponse, Http404
+    from django.shortcuts import redirect as _redirect
+    from apps.documents.models import Document
+    from apps.documents.typed_models import (
+        PurchaseOrder, BankStatement, PayrollSheet, ExpenseReport,
+        VATReturn, FixedAsset, SalesReceipt, GoodsReceiptNote, PaymentVoucher,
+    )
+    from apps.documents.typed_models_v2 import (
+        SalesOrder, Quotation, ProformaInvoice, ReceiptVoucher, CashVoucher,
+        GeneralLedger, Ledger, Contract, SupplierStatement, CustomerStatement, JournalEntry,
+    )
+    from apps.invoices.models import Invoice
+    from core.services.doc_validators.doc_validators import run_document_validation
+
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    org = getattr(request.user, "organization", None)
+    if not org:
+        return JsonResponse({"error": "no_organization"}, status=400)
+
+    MODEL_MAP = {
+        "invoice": Invoice, "sales_invoice": Invoice,
+        "purchase_order": PurchaseOrder, "bank_statement": BankStatement,
+        "payroll": PayrollSheet, "expense_report": ExpenseReport,
+        "vat_return": VATReturn, "fixed_asset": FixedAsset, "sales_receipt": SalesReceipt,
+        "goods_receipt_note": GoodsReceiptNote, "payment_voucher": PaymentVoucher,
+        "sales_order": SalesOrder, "quotation": Quotation,
+        "proforma_invoice": ProformaInvoice, "receipt_voucher": ReceiptVoucher,
+        "cash_voucher": CashVoucher, "general_ledger": GeneralLedger, "ledger": Ledger,
+        "contract": Contract, "supplier_statement": SupplierStatement,
+        "customer_statement": CustomerStatement, "journal_entry": JournalEntry,
+    }
+    Model = MODEL_MAP.get(doc_type)
+    if Model is None:
+        return JsonResponse({"error": f"unknown doc_type: {doc_type}"}, status=400)
+
+    obj = Model.objects.filter(organization=org, pk=pk).first()
+    if obj is None:
+        raise Http404(f"{doc_type} not found")
+
+    try:
+        result = run_document_validation(doc_type, obj)
+        # Persist results to the row when fields exist (AuditMixin schema)
+        for field in ("validation_score", "risk_level", "rules_passed", "rules_failed", "failed_rule_codes"):
+            if hasattr(obj, field) and field in result:
+                setattr(obj, field, result[field])
+        obj.save(update_fields=[f for f in ("validation_score","risk_level","rules_passed","rules_failed","failed_rule_codes") if hasattr(obj, f)])
+    except Exception as exc:
+        return JsonResponse({"error": str(exc)[:200]}, status=500)
+
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    if is_ajax:
+        return JsonResponse({
+            "ok": True, "doc_type": doc_type, "id": str(pk),
+            "rules_passed": result.get("rules_passed", 0),
+            "rules_failed": result.get("rules_failed", 0),
+            "risk_level": result.get("risk_level", "low"),
+        })
+    # form POST → bounce back to detail page
+    detail_paths = {
+        "invoice": f"/invoices/{pk}/", "sales_invoice": f"/invoices/{pk}/",
+        "purchase_order": f"/documents/purchase-orders/{pk}/",
+        "bank_statement": f"/documents/bank-statements/{pk}/",
+        "payroll": f"/documents/payroll/{pk}/",
+        "expense_report": f"/documents/expense-reports/{pk}/",
+        "vat_return": f"/documents/vat-returns/{pk}/",
+        "fixed_asset": f"/documents/fixed-assets/{pk}/",
+        "sales_receipt": f"/documents/sales-receipts/{pk}/",
+        "goods_receipt_note": f"/documents/grns/{pk}/",
+        "payment_voucher": f"/documents/payment-vouchers/{pk}/",
+        "sales_order": f"/documents/sales-orders/{pk}/",
+        "quotation": f"/documents/quotations/{pk}/",
+        "proforma_invoice": f"/documents/proforma-invoices/{pk}/",
+        "receipt_voucher": f"/documents/receipt-vouchers/{pk}/",
+        "cash_voucher": f"/documents/cash-vouchers/{pk}/",
+        "general_ledger": f"/documents/general-ledgers/{pk}/",
+        "ledger": f"/documents/ledgers/{pk}/",
+        "contract": f"/documents/contracts/{pk}/",
+        "supplier_statement": f"/documents/supplier-statements/{pk}/",
+        "customer_statement": f"/documents/customer-statements/{pk}/",
+        "journal_entry": f"/documents/journal-entries/{pk}/",
+    }
+    return _redirect(detail_paths.get(doc_type, "/documents/"))
+
+
+@login_required(login_url="/login/")
+def vendor_detail(request, vendor_name):
+    """Vendor 360 — every invoice / PO / payment / contract for one vendor."""
+    from urllib.parse import unquote
+    from django.db.models import Sum, Count, Q
+    from datetime import timedelta
+    from django.utils import timezone
+    from apps.invoices.models import Invoice
+    from apps.documents.typed_models import PurchaseOrder, GoodsReceiptNote, PaymentVoucher
+    from apps.documents.typed_models_v2 import Contract
+
+    org = getattr(request.user, "organization", None)
+    name = unquote(vendor_name).strip()
+
+    if not org:
+        return render(request, "vendors/detail.html", _ctx(
+            request, "vendors", vendor=None, message="No organization"))
+
+    # Aggregate everything tied to this vendor name (case-insensitive match)
+    invs = Invoice.objects.filter(organization=org, vendor_name__iexact=name)
+    pos  = PurchaseOrder.objects.filter(organization=org, vendor_name__iexact=name)
+    grns = GoodsReceiptNote.objects.filter(organization=org, vendor_name__iexact=name)
+    pays = PaymentVoucher.objects.filter(organization=org, payee_name__iexact=name)
+    contracts = Contract.objects.filter(organization=org, party_b__iexact=name)
+
+    inv_total = invs.aggregate(s=Sum("total_amount"))["s"] or 0
+    pay_total = pays.aggregate(s=Sum("total_amount"))["s"] or 0
+    high_risk = invs.filter(risk_level__in=["high", "critical"]).count()
+    duplicates = invs.filter(is_duplicate=True).count()
+
+    # Risk score: weighted average from invoices
+    if invs.exists():
+        avg_risk = invs.aggregate(a=Sum("risk_score"))["a"] or 0
+        risk_score = int(avg_risk / invs.count())
+    else:
+        risk_score = 0
+
+    summary = {
+        "name": name,
+        "invoice_count": invs.count(),
+        "po_count": pos.count(),
+        "grn_count": grns.count(),
+        "payment_count": pays.count(),
+        "contract_count": contracts.count(),
+        "total_invoiced": float(inv_total or 0),
+        "total_paid": float(pay_total or 0),
+        "outstanding": float((inv_total or 0) - (pay_total or 0)),
+        "high_risk_count": high_risk,
+        "duplicate_count": duplicates,
+        "risk_score": risk_score,
+        "risk_level": "critical" if risk_score >= 81 else "high" if risk_score >= 51
+                      else "medium" if risk_score >= 21 else "low",
+        "first_seen": invs.order_by("created_at").values_list("created_at", flat=True).first(),
+        "last_seen":  invs.order_by("-created_at").values_list("created_at", flat=True).first(),
+        "vat_numbers": list(invs.exclude(vendor_vat_number="").values_list("vendor_vat_number", flat=True).distinct()[:5]),
+    }
+    recent_invoices = list(invs.order_by("-invoice_date")[:25].values(
+        "id", "invoice_number", "invoice_date", "total_amount", "currency",
+        "status", "risk_level", "is_duplicate"
+    ))
+    return render(request, "vendors/detail.html", _ctx(
+        request, "vendors",
+        vendor=summary,
+        invoices=recent_invoices,
+        pos=list(pos.order_by("-po_date")[:10].values("id","po_number","po_date","total_amount","currency")),
+        contracts=list(contracts.values("id","contract_number","start_date","end_date","contract_value","status")[:10]),
+    ))
+
+
+@login_required(login_url="/login/")
+def audit_inbox(request):
+    """Approval inbox — every flagged document waiting for a decision."""
+    from apps.invoices.models import Invoice
+    from apps.documents.typed_models import (PurchaseOrder, BankStatement, PayrollSheet,
+        ExpenseReport, VATReturn, FixedAsset, SalesReceipt,
+        GoodsReceiptNote, PaymentVoucher)
+    from apps.documents.typed_models_v2 import (SalesOrder, Quotation, ProformaInvoice,
+        ReceiptVoucher, CashVoucher, Contract, SupplierStatement, CustomerStatement)
+
+    org = getattr(request.user, "organization", None)
+    inbox = []
+    if org:
+        # Invoices flagged or critical
+        for inv in Invoice.objects.filter(organization=org).filter(
+            status__in=["flagged", "pending"]
+        ).order_by("-created_at")[:50]:
+            inbox.append({
+                "doc_type": "invoice",
+                "id": str(inv.id),
+                "number": inv.invoice_number or "—",
+                "party": inv.vendor_name or "—",
+                "amount": float(inv.total_amount or 0),
+                "currency": inv.currency or "SAR",
+                "risk_level": inv.risk_level or "low",
+                "rules_failed": getattr(getattr(inv, "validation", None), "rules_failed", 0) or 0,
+                "url": f"/invoices/{inv.id}/",
+                "created_at": inv.created_at,
+            })
+        # All Phase-2 typed docs flagged
+        type_map = [
+            ("purchase_order", PurchaseOrder, "po_number", "vendor_name"),
+            ("bank_statement", BankStatement, "account_number", "bank_name"),
+            ("goods_receipt_note", GoodsReceiptNote, "grn_number", "vendor_name"),
+            ("payment_voucher", PaymentVoucher, "payment_number", "payee_name"),
+            ("contract", Contract, "contract_number", "party_b"),
+            ("sales_order", SalesOrder, "so_number", "customer_name"),
+            ("expense_report", ExpenseReport, "report_number", "employee_name"),
+        ]
+        for dtype, Model, num_field, party_field in type_map:
+            for obj in Model.objects.filter(organization=org, audit_status__in=["flagged","pending"]).order_by("-created_at")[:30]:
+                inbox.append({
+                    "doc_type": dtype,
+                    "id": str(obj.id),
+                    "number": getattr(obj, num_field, "") or "—",
+                    "party":  getattr(obj, party_field, "") or "—",
+                    "amount": float(getattr(obj, "total_amount", 0) or 0),
+                    "currency": getattr(obj, "currency", "SAR") or "SAR",
+                    "risk_level": getattr(obj, "risk_level", "low") or "low",
+                    "rules_failed": getattr(obj, "rules_failed", 0) or 0,
+                    "url": f"/documents/{dtype.replace('_','-')}s/{obj.id}/" if dtype != "goods_receipt_note" else f"/documents/grns/{obj.id}/",
+                    "created_at": obj.created_at,
+                })
+    # Sort: critical first, then high, then by date
+    severity_order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    inbox.sort(key=lambda x: (severity_order.get(x["risk_level"], 9),
+                              -(x.get("created_at").timestamp() if x.get("created_at") else 0)))
+    return render(request, "audit/inbox.html", _ctx(
+        request, "audit",
+        inbox=inbox,
+        total_pending=len(inbox),
+        critical_count=sum(1 for x in inbox if x["risk_level"] == "critical"),
+        high_count=sum(1 for x in inbox if x["risk_level"] == "high"),
+    ))
+
+
+@login_required(login_url="/login/")
+def load_demo_data(request):
+    """
+    POST-only — populate the caller's organisation with a small set of
+    demo invoices, POs, GRNs, payments, contracts, and statements so first-
+    time users see filled dashboards / charts / reports instead of zeros.
+
+    Idempotent: no-op (with a warning message) if the org already has data.
+    """
+    from django.http import JsonResponse, Http404
+    from django.shortcuts import redirect as _redirect
+    from datetime import date, timedelta
+    from decimal import Decimal
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    org = getattr(request.user, "organization", None)
+    if not org:
+        return JsonResponse({"error": "no_organization"}, status=400)
+
+    from apps.invoices.models import Invoice
+    if Invoice.objects.filter(organization=org).count() > 5:
+        msg = "Org already has data — demo loader skipped to avoid duplicates."
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return JsonResponse({"ok": False, "skipped": True, "message": msg})
+        return _redirect("/dashboard/")
+
+    from apps.documents.models import Document
+    from apps.documents.typed_models import (
+        PurchaseOrder, GoodsReceiptNote, PaymentVoucher, BankStatement,
+    )
+    from apps.documents.typed_models_v2 import (
+        Contract, SupplierStatement, SalesOrder,
+    )
+
+    def _doc(name):
+        return Document.objects.create(
+            organization=org,
+            file=SimpleUploadedFile(name, b"demo"),
+            original_filename=name, file_size=10,
+            mime_type="application/octet-stream",
+            document_type=Document.DocumentType.OTHER,
+            uploaded_by=request.user,
+        )
+
+    today = date.today()
+    created = {"invoices": 0, "pos": 0, "grns": 0, "payments": 0,
+               "contracts": 0, "supplier_statements": 0, "sales_orders": 0}
+
+    # 6 invoices spanning low/medium/high risk + one duplicate pair
+    vendors = [
+        ("Acme Corp",   "300000111100003", Decimal("12500"), "low"),
+        ("Acme Corp",   "300000111100003", Decimal("12500"), "high"),  # duplicate of #1
+        ("Beta LLC",    "300000222200003", Decimal("87000"), "medium"),
+        ("Gamma Inc",   "300000333300003", Decimal("4500"),  "low"),
+        ("Delta Trade", "300000444400003", Decimal("250000"),"high"),
+        ("Epsilon",     "300000555500003", Decimal("3200"),  "critical"),
+    ]
+    invoices = []
+    for i, (vendor, vat, amount, risk) in enumerate(vendors, 1):
+        inv = Invoice.objects.create(
+            organization=org,
+            invoice_number=f"DEMO-INV-{i:03d}",
+            invoice_date=today - timedelta(days=i * 5),
+            vendor_name=vendor, vendor_vat_number=vat,
+            currency="SAR",
+            subtotal=amount, vat_amount=amount * Decimal("0.15"),
+            total_amount=amount * Decimal("1.15"),
+            risk_score={"low": 12, "medium": 35, "high": 65, "critical": 88}[risk],
+            risk_level=risk, status="validated",
+            is_duplicate=(i == 2),
+        )
+        invoices.append(inv)
+        created["invoices"] += 1
+
+    # 3 POs matching the first 3 invoices (clean 3-way match for #1, mismatched for #3)
+    for i, inv in enumerate(invoices[:3], 1):
+        po = PurchaseOrder.objects.create(
+            organization=org, document=_doc(f"po-{i}.pdf"), uploaded_by=request.user,
+            po_number=f"DEMO-PO-{i:03d}",
+            po_date=inv.invoice_date - timedelta(days=10),
+            vendor_name=inv.vendor_name,
+            total_amount=inv.total_amount if i != 3 else inv.total_amount * Decimal("0.9"),
+            currency="SAR",
+        )
+        created["pos"] += 1
+        # GRN for the first PO only (clean match)
+        if i == 1:
+            GoodsReceiptNote.objects.create(
+                organization=org, document=_doc(f"grn-{i}.pdf"), uploaded_by=request.user,
+                grn_number=f"DEMO-GRN-{i:03d}",
+                grn_date=inv.invoice_date - timedelta(days=3),
+                po_number=po.po_number, po_id=po.id,
+                invoice_number=inv.invoice_number,
+                vendor_name=inv.vendor_name,
+                total_amount=inv.total_amount,
+            )
+            created["grns"] += 1
+        # Payment for invoice #1 only
+        if i == 1:
+            PaymentVoucher.objects.create(
+                organization=org, document=_doc(f"pv-{i}.pdf"), uploaded_by=request.user,
+                payment_number=f"DEMO-PV-{i:03d}",
+                payment_date=inv.invoice_date + timedelta(days=14),
+                payee_name=inv.vendor_name,
+                amount=inv.total_amount, total_amount=inv.total_amount,
+                linked_invoice_id=inv.id, linked_invoice_number=inv.invoice_number,
+                linked_po_number=po.po_number, payment_method="bank_transfer",
+                approval_status="approved",
+            )
+            created["payments"] += 1
+
+    # 1 contract covering Acme
+    Contract.objects.create(
+        organization=org, document=_doc("ct.pdf"), uploaded_by=request.user,
+        contract_number="DEMO-CT-001", title="Annual Services Agreement",
+        party_a=org.name, party_b="Acme Corp", party_b_type="vendor",
+        start_date=date(today.year, 1, 1), end_date=date(today.year, 12, 31),
+        is_signed=True, status="active",
+        contract_value=Decimal("500000"), currency="SAR",
+        payment_terms="Net 30",
+    )
+    created["contracts"] += 1
+
+    # 1 supplier statement
+    SupplierStatement.objects.create(
+        organization=org, document=_doc("ss.pdf"), uploaded_by=request.user,
+        supplier_name="Acme Corp",
+        period_from=today - timedelta(days=90), period_to=today,
+        opening_balance=Decimal("0"), closing_balance=Decimal("28750"),
+        total_invoiced=Decimal("28750"), total_paid=Decimal("0"),
+    )
+    created["supplier_statements"] += 1
+
+    # 1 sales order
+    SalesOrder.objects.create(
+        organization=org, document=_doc("so.pdf"), uploaded_by=request.user,
+        so_number="DEMO-SO-001", so_date=today - timedelta(days=2),
+        customer_name="Big Customer Co",
+        currency="SAR", subtotal=Decimal("10000"),
+        vat_amount=Decimal("1500"), total_amount=Decimal("11500"),
+        status="confirmed",
+    )
+    created["sales_orders"] += 1
+
+    msg = f"Loaded demo data: {created}"
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return JsonResponse({"ok": True, "created": created, "message": msg})
+    return _redirect("/dashboard/")
+
+
+@login_required(login_url="/login/")
+def doc_list_export_excel(request, doc_type):
+    """Export the current org's rows for a doc-type as XLSX."""
+    from django.http import HttpResponse, Http404
+    from apps.documents.typed_models import (
+        PurchaseOrder, BankStatement, PayrollSheet, ExpenseReport,
+        VATReturn, FixedAsset, SalesReceipt, GoodsReceiptNote, PaymentVoucher,
+    )
+    from apps.documents.typed_models_v2 import (
+        SalesOrder, Quotation, ProformaInvoice, ReceiptVoucher, CashVoucher,
+        GeneralLedger, Ledger, Contract, SupplierStatement, CustomerStatement, JournalEntry,
+    )
+    MODEL_MAP = {
+        "purchase_order": PurchaseOrder, "bank_statement": BankStatement,
+        "payroll": PayrollSheet, "expense_report": ExpenseReport,
+        "vat_return": VATReturn, "fixed_asset": FixedAsset, "sales_receipt": SalesReceipt,
+        "goods_receipt_note": GoodsReceiptNote, "payment_voucher": PaymentVoucher,
+        "sales_order": SalesOrder, "quotation": Quotation,
+        "proforma_invoice": ProformaInvoice, "receipt_voucher": ReceiptVoucher,
+        "cash_voucher": CashVoucher, "general_ledger": GeneralLedger, "ledger": Ledger,
+        "contract": Contract, "supplier_statement": SupplierStatement,
+        "customer_statement": CustomerStatement, "journal_entry": JournalEntry,
+    }
+    Model = MODEL_MAP.get(doc_type)
+    if Model is None:
+        raise Http404("unknown doc_type")
+
+    org = getattr(request.user, "organization", None)
+    qs = Model.objects.filter(organization=org).order_by("-created_at")[:5000] if org else Model.objects.none()
+
+    # Pick the most useful columns from the model's concrete fields (skip JSON / FK / AuditMixin internals)
+    skip = {"organization", "uploaded_by", "document", "validation_details", "ai_recommendations"}
+    cols = [
+        f.name for f in Model._meta.get_fields()
+        if getattr(f, "concrete", False) and not f.is_relation
+        and f.name not in skip
+        and f.get_internal_type() not in {"JSONField"}
+    ][:25]
+
+    try:
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill
+    except ImportError:
+        return HttpResponse("openpyxl not installed on server", status=500)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = doc_type[:31]
+    # Header
+    for c, col in enumerate(cols, 1):
+        cell = ws.cell(row=1, column=c, value=col.replace("_", " ").title())
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill("solid", fgColor="003366")
+    # Rows
+    for r, obj in enumerate(qs, 2):
+        for c, col in enumerate(cols, 1):
+            v = getattr(obj, col, None)
+            if hasattr(v, "isoformat"):
+                v = v.isoformat()
+            ws.cell(row=r, column=c, value=v if v is None or isinstance(v, (int, float, str, bool)) else str(v))
+
+    import io as _io
+    buf = _io.BytesIO()
+    wb.save(buf)
+    response = HttpResponse(
+        buf.getvalue(),
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+    response["Content-Disposition"] = f'attachment; filename="{doc_type}_export.xlsx"'
+    return response
+
+
+@login_required(login_url="/login/")
+def invoices_export(request, fmt):
+    """
+    Export the org's invoices as CSV or Excel.
+
+    GET /invoices/export.csv  → text/csv
+    GET /invoices/export.xlsx → application/vnd...spreadsheet
+    Same status/risk/q filters as the list view apply.
+    """
+    from django.http import HttpResponse, Http404
+    from apps.invoices.models import Invoice
+
+    org = getattr(request.user, "organization", None)
+    qs = (Invoice.objects.filter(organization=org).select_related("organization")
+          .order_by("-created_at")) if org else Invoice.objects.none()
+
+    status_filter = (request.GET.get("status") or "").strip().lower()
+    if status_filter and status_filter != "all":
+        qs = qs.filter(status=status_filter)
+    risk_filter = (request.GET.get("risk") or "").strip().lower()
+    if risk_filter and risk_filter != "all":
+        qs = qs.filter(risk_level=risk_filter)
+    search = (request.GET.get("q") or "").strip()
+    if search:
+        from django.db.models import Q
+        qs = qs.filter(
+            Q(invoice_number__icontains=search)
+            | Q(vendor_name__icontains=search)
+            | Q(vendor_name_ar__icontains=search)
+        )
+
+    qs = qs[:5000]
+    cols = [
+        ("invoice_number", "Invoice #"),
+        ("invoice_date",   "Date"),
+        ("vendor_name",    "Vendor"),
+        ("vendor_vat_number", "Vendor VAT"),
+        ("customer_name",  "Customer"),
+        ("subtotal",       "Subtotal"),
+        ("vat_amount",     "VAT"),
+        ("total_amount",   "Total"),
+        ("currency",       "Currency"),
+        ("status",         "Status"),
+        ("risk_level",     "Risk"),
+        ("risk_score",     "Risk Score"),
+        ("is_duplicate",   "Duplicate"),
+        ("has_qr_code",    "Has QR"),
+        ("qr_code_valid",  "QR Valid"),
+        ("created_at",     "Uploaded"),
+    ]
+
+    def _val(obj, name):
+        v = getattr(obj, name, None)
+        if hasattr(v, "isoformat"):
+            return v.isoformat()
+        if v is None:
+            return ""
+        return v
+
+    if fmt == "csv":
+        import csv, io
+        buf = io.StringIO()
+        w = csv.writer(buf)
+        w.writerow([h for _, h in cols])
+        for inv in qs:
+            w.writerow([_val(inv, k) for k, _ in cols])
+        response = HttpResponse(buf.getvalue(), content_type="text/csv; charset=utf-8")
+        response["Content-Disposition"] = 'attachment; filename="invoices.csv"'
+        return response
+
+    if fmt == "xlsx":
+        try:
+            import openpyxl
+            from openpyxl.styles import Font, PatternFill
+        except ImportError:
+            return HttpResponse("openpyxl not installed", status=500)
+        import io as _io
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Invoices"
+        for c, (_, h) in enumerate(cols, 1):
+            cell = ws.cell(row=1, column=c, value=h)
+            cell.font = Font(bold=True, color="FFFFFF")
+            cell.fill = PatternFill("solid", fgColor="003366")
+        for r, inv in enumerate(qs, 2):
+            for c, (k, _) in enumerate(cols, 1):
+                v = _val(inv, k)
+                ws.cell(row=r, column=c, value=v if isinstance(v, (int, float, str, bool)) else str(v))
+        buf = _io.BytesIO()
+        wb.save(buf)
+        response = HttpResponse(
+            buf.getvalue(),
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        response["Content-Disposition"] = 'attachment; filename="invoices.xlsx"'
+        return response
+
+    raise Http404("unsupported format")
+
+
+@login_required(login_url="/login/")
+def invoice_subreport(request, kind):
+    """
+    HTML wrapper for the JSON sub-reports under /api/v1/invoices/reports/.
+    Renders a server-side page with the same data the JSON endpoint returns,
+    so auditors can read the report instead of parsing JSON.
+
+    kind ∈ {risk, duplicates, vendors, spend}
+    """
+    from django.http import Http404
+    from apps.invoices.views import (
+        InvoiceRiskReportView, DuplicateInvoiceReportView,
+        VendorRiskReportView, SpendAnalysisReportView,
+    )
+
+    view_cls = {
+        "risk":       InvoiceRiskReportView,
+        "duplicates": DuplicateInvoiceReportView,
+        "vendors":    VendorRiskReportView,
+        "spend":      SpendAnalysisReportView,
+    }.get(kind)
+    if view_cls is None:
+        raise Http404("unknown report")
+
+    # Re-use the API view's data path so HTML and JSON stay in sync.
+    api_response = view_cls.as_view()(request)
+    data = api_response.data if hasattr(api_response, "data") else {}
+
+    return render(
+        request,
+        "invoices/subreport.html",
+        _ctx(
+            request, "reports",
+            report_kind=kind,
+            report_data=data,
+            report_title={
+                "risk":       "تقرير المخاطر",
+                "duplicates": "تقرير الفواتير المكررة",
+                "vendors":    "تقرير مخاطر الموردين",
+                "spend":      "تحليل الإنفاق",
+            }[kind],
         ),
     )
 
@@ -1304,8 +1992,630 @@ def audit_session_detail(request, pk):
 
 
 @login_required(login_url="/login/")
+def ledger_dashboard(request):
+    """Phase 7.1 — General Ledger landing page.
+
+    Shows the trial balance + the most recent journal entries. Posting +
+    voiding go via the JSON API at /api/v1/ledger/*.
+    """
+    from apps.ledger import reports as gl_reports
+    from apps.ledger import services as gl
+    from apps.ledger.models import Account, JournalEntry
+
+    org = getattr(request.user, "organization", None)
+    tb = {"rows": [], "totals": {}}
+    entries = []
+    accounts_count = 0
+    if org:
+        gl.ensure_default_accounts(org)
+        tb = gl_reports.trial_balance(org)[0]
+        entries = list(
+            JournalEntry.objects.filter(organization=org)
+            .order_by("-entry_date", "-created_at")[:30]
+        )
+        accounts_count = Account.objects.filter(organization=org, is_active=True).count()
+
+    return render(request, "ledger/dashboard.html", _ctx(
+        request, "compliance",
+        trial_balance=tb,
+        entries=entries,
+        accounts_count=accounts_count,
+    ))
+
+
+@login_required(login_url="/login/")
+def banking_dashboard(request):
+    """Phase 5 — Bank Connectors landing page.
+
+    Lists existing connections + the reconciliation queue. Sync + onboarding
+    actions hit the JSON API at /api/v1/banking/*.
+    """
+    from apps.banking.models import BankConnection, Reconciliation
+    from apps.banking.connectors.registry import REGISTRY
+
+    org = getattr(request.user, "organization", None)
+    connections, recons, counts = [], [], {}
+    if org:
+        connections = list(
+            BankConnection.objects.filter(organization=org)
+            .prefetch_related("accounts").order_by("bank_code", "-updated_at")
+        )
+        recons = list(
+            Reconciliation.objects.filter(organization=org,
+                                          status=Reconciliation.Status.SUGGESTED)
+            .select_related("transaction", "invoice")
+            .order_by("-score", "-created_at")[:25]
+        )
+        for s in ("suggested", "confirmed", "rejected", "manual"):
+            counts[s] = Reconciliation.objects.filter(organization=org, status=s).count()
+
+    return render(request, "banking/dashboard.html", _ctx(
+        request, "compliance",
+        connections=connections,
+        recons=recons,
+        counts=counts,
+        available_banks=[(c, cls.display_name) for c, cls in REGISTRY.items()],
+    ))
+
+
+@login_required(login_url="/login/")
+def zatca_dashboard(request):
+    """Phase 4 — ZATCA Phase 2 compliance dashboard.
+
+    Server-renders a shell that hits the JSON dashboard endpoint for the
+    real numbers. Devices + submissions tables come straight from the DB.
+    """
+    from apps.zatca.models import EGSDevice, InvoiceSubmission, RejectionCode
+    from apps.zatca.rejection_codes import seed_rejection_codes
+
+    org = getattr(request.user, "organization", None)
+    seed_rejection_codes()
+
+    devices = []
+    submissions = []
+    if org:
+        devices = list(
+            EGSDevice.objects.filter(organization=org).order_by("-updated_at")
+        )
+        submissions = list(
+            InvoiceSubmission.objects.filter(organization=org)
+            .order_by("-created_at")[:25]
+        )
+
+    return render(request, "zatca/dashboard.html", _ctx(
+        request, "compliance",
+        devices=devices,
+        submissions=submissions,
+    ))
+
+
+@login_required(login_url="/login/")
+def alerts_dashboard(request):
+    """Phase 3.2 — manage alert rules + see the events log + acknowledge.
+
+    Server-rendered shell; the form-driven interactions hit the JSON API
+    under ``/api/v1/alerts/*``.
+    """
+    from apps.alerts.models import AlertEvent, AlertRule
+
+    org = getattr(request.user, "organization", None)
+    rules: list = []
+    events: list = []
+    counts = {"sent": 0, "failed": 0, "suppressed": 0, "acknowledged": 0}
+    if org:
+        rules = list(AlertRule.objects.filter(organization=org).order_by("-updated_at"))
+        events = list(
+            AlertEvent.objects.filter(organization=org)
+            .select_related("rule")
+            .order_by("-sent_at")[:100]
+        )
+        for s in counts:
+            counts[s] = AlertEvent.objects.filter(organization=org, status=s).count()
+
+    return render(request, "alerts/index.html", _ctx(
+        request, "audit",
+        rules=rules, events=events, counts=counts,
+    ))
+
+
+@login_required(login_url="/login/")
+def streaming_ops(request):
+    """Phase 3.1 — live ops dashboard for the continuous-auditing stream.
+
+    Shows throughput, p95 latency, error rate, recent anomaly hits, and
+    bus stats (queue depth + DLQ length) so on-call can see the pipeline's
+    health at a glance.
+    """
+    from apps.streaming.worker import metrics
+    from apps.streaming.models import AnomalyHit
+
+    org = getattr(request.user, "organization", None)
+    window = int(request.GET.get("window") or 30)
+    m = metrics(window_minutes=window)
+
+    recent_hits = []
+    if org:
+        recent_hits = list(
+            AnomalyHit.objects.filter(organization=org)
+            .order_by("-occurred_at")[:25]
+        )
+
+    return render(request, "streaming/ops.html", _ctx(
+        request, "audit",
+        metrics=m,
+        recent_hits=recent_hits,
+        window_minutes=window,
+    ))
+
+
+@login_required(login_url="/login/")
+def rule_builder(request):
+    """Visual custom-rule builder page.
+
+    Server-side just renders the shell — the form is fully client-side
+    (Alpine.js + fetch against /api/v1/audit/rule-builder/*) so the auditor
+    can build, test, and publish rules without a page reload.
+    """
+    return render(request, "audit/rule_builder.html", _ctx(request, "audit"))
+
+
+@login_required(login_url="/login/")
+def working_papers(request):
+    """List all working papers in the user's org with filters."""
+    from apps.audit.models import WorkingPaper
+
+    org = getattr(request.user, "organization", None)
+    qs = (WorkingPaper.objects.filter(organization=org)
+          .select_related("prepared_by", "reviewed_by", "partner_signed_by")
+          .prefetch_related("signatures")
+          .order_by("-updated_at")) if org else WorkingPaper.objects.none()
+
+    status_filter = (request.GET.get("status") or "").strip().lower()
+    if status_filter and status_filter != "all":
+        qs = qs.filter(status=status_filter)
+
+    type_filter = (request.GET.get("type") or "").strip().lower()
+    if type_filter and type_filter != "all":
+        qs = qs.filter(paper_type=type_filter)
+
+    search = (request.GET.get("q") or "").strip()
+    if search:
+        from django.db.models import Q
+        qs = qs.filter(Q(reference__icontains=search) | Q(title__icontains=search))
+
+    counts = {s: 0 for s in ("draft", "ready_for_review", "reviewed", "locked", "archived")}
+    if org:
+        for s in counts:
+            counts[s] = WorkingPaper.objects.filter(organization=org, status=s).count()
+
+    return render(request, "working_papers/list.html", _ctx(
+        request, "audit",
+        papers=list(qs[:200]),
+        counts=counts,
+        status_filter=status_filter or "all",
+        type_filter=type_filter or "all",
+        search=search,
+        paper_types=WorkingPaper.PaperType.choices,
+    ))
+
+
+@login_required(login_url="/login/")
+def working_paper_detail(request, pk):
+    """Detail page — preparer edits, reviewer/partner sign, anyone reads."""
+    from django.http import Http404
+    from apps.audit.models import WorkingPaper
+
+    org = getattr(request.user, "organization", None)
+    try:
+        paper = (WorkingPaper.objects
+                 .select_related("prepared_by", "reviewed_by", "partner_signed_by")
+                 .prefetch_related("signatures__user", "related_invoices",
+                                   "related_papers", "attachments")
+                 .get(pk=pk))
+    except WorkingPaper.DoesNotExist:
+        raise Http404("Working paper not found")
+
+    if org and paper.organization_id != org.id:
+        raise Http404("Working paper not found")
+
+    return render(request, "working_papers/detail.html", _ctx(
+        request, "audit",
+        paper=paper,
+        signatures=list(paper.signatures.all()),
+        can_submit=(paper.status == WorkingPaper.Status.DRAFT
+                    and paper.prepared_by_id == request.user.id),
+        can_review=(paper.status == WorkingPaper.Status.READY_FOR_REVIEW
+                    and (request.user.is_superuser or
+                         request.user.role in {request.user.Role.SENIOR_AUDITOR,
+                                               request.user.Role.CHIEF_AUDIT_OFFICER,
+                                               request.user.Role.ADMIN})),
+        can_partner_sign=(paper.status == WorkingPaper.Status.REVIEWED
+                          and (request.user.is_superuser or
+                               request.user.role in {request.user.Role.CHIEF_AUDIT_OFFICER,
+                                                     request.user.Role.ADMIN,
+                                                     request.user.Role.EXTERNAL_AUDITOR})),
+    ))
+
+
+@login_required(login_url="/login/")
+def working_paper_create(request):
+    """Create a new draft working paper."""
+    from django.shortcuts import redirect as _redirect
+    from apps.audit.models import WorkingPaper
+    from apps.audit.services.working_papers import next_reference
+
+    org = getattr(request.user, "organization", None)
+    if not org:
+        return _redirect("frontend:working_papers")
+
+    if request.method == "POST":
+        title = (request.POST.get("title") or "").strip()
+        paper_type = (request.POST.get("paper_type") or "").strip()
+        content_text = (request.POST.get("content") or "").strip()
+        if not title or paper_type not in dict(WorkingPaper.PaperType.choices):
+            return render(request, "working_papers/form.html", _ctx(
+                request, "audit",
+                paper_types=WorkingPaper.PaperType.choices,
+                title=title, paper_type=paper_type, content=content_text,
+                error="Title and a valid paper type are required.",
+            ))
+        paper = WorkingPaper.objects.create(
+            organization=org,
+            reference=next_reference(org, paper_type),
+            title=title,
+            paper_type=paper_type,
+            content={"notes": content_text} if content_text else {},
+            status=WorkingPaper.Status.DRAFT,
+            prepared_by=request.user,
+        )
+        return _redirect("frontend:working_paper_detail", pk=paper.id)
+
+    return render(request, "working_papers/form.html", _ctx(
+        request, "audit",
+        paper_types=WorkingPaper.PaperType.choices,
+    ))
+
+
+@login_required(login_url="/login/")
+def working_paper_action(request, pk):
+    """POST endpoint: submit / review-approve / review-reject / partner-sign."""
+    from django.http import HttpResponse, JsonResponse, Http404
+    from django.shortcuts import redirect as _redirect
+    from apps.audit.models import WorkingPaper
+    from django.core.exceptions import PermissionDenied
+    from apps.audit.services.working_papers import (
+        submit_for_review, review_paper, partner_sign, WorkingPaperWorkflowError,
+    )
+
+    if request.method != "POST":
+        return HttpResponse(status=405)
+
+    org = getattr(request.user, "organization", None)
+    try:
+        paper = WorkingPaper.objects.get(pk=pk)
+    except WorkingPaper.DoesNotExist:
+        raise Http404("Working paper not found")
+    if org and paper.organization_id != org.id:
+        raise Http404("Working paper not found")
+
+    action = (request.POST.get("action") or "").strip().lower()
+    notes = (request.POST.get("notes") or "").strip()
+    typed_name = (request.POST.get("typed_name") or "").strip() or request.user.full_name
+    ip = request.META.get("REMOTE_ADDR")
+    sig_data = {"name": typed_name}
+
+    try:
+        if action == "submit":
+            submit_for_review(paper, request.user)
+        elif action == "review_approve":
+            review_paper(paper, request.user, decision="approve",
+                         notes=notes, signature_data=sig_data, ip_address=ip)
+        elif action == "review_reject":
+            review_paper(paper, request.user, decision="reject",
+                         notes=notes, signature_data=sig_data, ip_address=ip)
+        elif action == "partner_sign":
+            partner_sign(paper, request.user, notes=notes,
+                         signature_data=sig_data, ip_address=ip)
+        else:
+            return JsonResponse({"error": "unknown action"}, status=400)
+    except WorkingPaperWorkflowError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+    except PermissionDenied as exc:
+        return JsonResponse({"error": str(exc)}, status=403)
+
+    return _redirect("frontend:working_paper_detail", pk=paper.id)
+
+
+@login_required(login_url="/login/")
+def audit_integrity(request):
+    """Walk every audit hash chain in the user's org and surface any break.
+
+    Phase 1.1 of the Enterprise Roadmap — this is the tripwire that fires
+    when a row in the audit trail is mutated outside the application (e.g.
+    via a SQL shell or backup-restore that lost a row).
+    """
+    from apps.audit.integrity import verify_chain, HashChainMixin
+    from apps.invoices.models import InvoiceAuditEvent
+
+    org = getattr(request.user, "organization", None)
+    if not org:
+        return render(request, "audit/integrity.html", _ctx(
+            request, "audit", reports=[], chain_models=[], total_rows=0,
+            total_breaks=0, all_intact=True,
+        ))
+
+    # Collect every concrete subclass of HashChainMixin so the page grows
+    # automatically as Working Papers, AuditCase, etc. join the chain in
+    # later phases.
+    chain_models: list[type] = []
+    stack = list(HashChainMixin.__subclasses__())
+    seen = set()
+    while stack:
+        cls = stack.pop()
+        if cls in seen:
+            continue
+        seen.add(cls)
+        if not getattr(cls._meta, "abstract", False):
+            chain_models.append(cls)
+        stack.extend(cls.__subclasses__())
+
+    reports = []
+    total_rows   = 0
+    total_breaks = 0
+    for Model in chain_models:
+        try:
+            rep = verify_chain(Model, str(org.id))
+        except Exception as exc:
+            reports.append({
+                "model": Model.__name__,
+                "rows_checked": 0,
+                "head_hash": "",
+                "head_hash_full": "",
+                "is_intact": False,
+                "break_count": 1,
+                "breaks": [{"chain_position": 0, "row_id": "",
+                            "reason": f"verification_failed: {exc}",
+                            "expected": "", "actual": ""}],
+            })
+            continue
+        d = rep.to_dict()
+        reports.append(d)
+        total_rows   += d["rows_checked"]
+        total_breaks += d["break_count"]
+
+    return render(request, "audit/integrity.html", _ctx(
+        request, "audit",
+        reports=reports,
+        chain_models=[c.__name__ for c in chain_models],
+        total_rows=total_rows,
+        total_breaks=total_breaks,
+        all_intact=(total_breaks == 0),
+    ))
+
+
+@login_required(login_url="/login/")
+def audit_tools(request):
+    """ISA 320 Materiality calculator + ISA 530 Sampling engine — single page.
+
+    Reads benchmark + sample-size from query string when supplied; otherwise
+    renders an empty form. The page exposes the same maths the Big-4 firms use
+    so an external auditor can run a rough plan without leaving Tadgeeg.
+
+    Phase 1.2 extensions:
+      • judgment factors that pull the percentage inside the band
+        (industry_risk, control_environment, prior_misstatements,
+         going_concern_doubt, first_year_audit)
+      • multi-component allocation across segments (`?components=Riyadh:60,Jeddah:40`)
+      • sample error projection (most-likely error + upper-error-limit)
+        when the auditor enters per-item misstatements as `?errors=100,250,...`
+    """
+    from apps.audit.services import materiality as M
+    from apps.audit.services import sampling as S
+    from apps.invoices.models import Invoice
+    from decimal import Decimal
+
+    org = getattr(request.user, "organization", None)
+    benchmark_key = request.GET.get("benchmark") or "profit_before_tax"
+    benchmark_amount = request.GET.get("amount") or ""
+    sample_method = request.GET.get("method") or "random"
+    sample_size = int(request.GET.get("size") or 0) or None
+    seed = int(request.GET.get("seed") or 42)
+    confidence_pct = int(request.GET.get("confidence") or 95)
+
+    # Phase 1.2: judgment factors. The form posts each as its own param
+    # (?industry_risk=high&control_environment=weak&...) so they round-trip
+    # naturally through the GET query string.
+    judgment_factors = {
+        k: v for k, v in (
+            ("industry_risk",         request.GET.get("industry_risk")),
+            ("control_environment",   request.GET.get("control_environment")),
+            ("prior_misstatements",   request.GET.get("prior_misstatements")),
+            ("going_concern_doubt",   request.GET.get("going_concern_doubt")),
+            ("first_year_audit",      request.GET.get("first_year_audit")),
+        ) if v
+    }
+
+    # Multi-component allocation: "Riyadh:60,Jeddah:30,Dammam:10".
+    components_param = (request.GET.get("components") or "").strip()
+    components = []
+    if components_param:
+        for piece in components_param.split(","):
+            if ":" not in piece:
+                continue
+            name, weight = piece.split(":", 1)
+            try:
+                components.append({
+                    "name": name.strip(),
+                    "weight_pct": Decimal(weight.strip()),
+                })
+            except Exception:
+                continue
+
+    # Per-item sample errors: "100,250.50,1200".
+    errors_param = (request.GET.get("errors") or "").strip()
+    sample_errors = []
+    if errors_param:
+        for piece in errors_param.split(","):
+            try:
+                sample_errors.append(Decimal(piece.strip()))
+            except Exception:
+                continue
+
+    materiality_result = None
+    flagged_above = []
+    sampling_result = None
+    error_projection = None
+    pop_count = 0
+
+    if org:
+        invoice_qs = Invoice.objects.filter(organization=org).order_by("-created_at")
+        pop_count = invoice_qs.count()
+
+        if benchmark_amount:
+            try:
+                materiality_result = M.calculate(
+                    benchmark_amount=Decimal(benchmark_amount),
+                    benchmark_key=benchmark_key,
+                    judgment_factors=judgment_factors or None,
+                    components=components or None,
+                ).to_dict()
+                flagged_above = M.flag_invoices_above_threshold(
+                    invoice_qs[:1000],
+                    Decimal(str(materiality_result["performance_materiality"])),
+                )[:50]
+            except Exception:
+                materiality_result = None
+
+        if pop_count and sample_size:
+            pop = list(invoice_qs[:5000])
+            try:
+                if sample_method == "systematic":
+                    sampling_result = S.systematic_sample(pop, sample_size, seed).to_dict()
+                elif sample_method == "monetary_unit":
+                    interval = (
+                        sum(float(getattr(i, "total_amount", 0) or 0) for i in pop) / sample_size
+                        if sample_size > 0 else 1
+                    )
+                    sampling_result = S.monetary_unit_sample(pop, interval, seed=seed).to_dict()
+                else:
+                    sampling_result = S.random_sample(pop, sample_size, seed).to_dict()
+            except Exception:
+                sampling_result = None
+
+            # Phase 1.2: project errors to the population if the auditor
+            # supplied per-item misstatements. The interval comes from the
+            # sampling result (MUS) or pop-total ÷ sample-size for attribute
+            # methods.
+            if sample_errors and sampling_result:
+                pm = (Decimal(str(materiality_result["performance_materiality"]))
+                      if materiality_result else None)
+                if sample_method == "monetary_unit":
+                    interval = sampling_result.get("notes", [])
+                    # Pull the numeric interval out of the notes line.
+                    interval_val = sum(float(getattr(i, "total_amount", 0) or 0)
+                                       for i in pop) / sample_size
+                else:
+                    interval_val = sum(float(getattr(i, "total_amount", 0) or 0)
+                                       for i in pop) / sample_size
+                try:
+                    error_projection = S.project_error(
+                        sample_errors=sample_errors,
+                        sampling_interval=interval_val,
+                        population_size=pop_count,
+                        sample_size=sample_size,
+                        confidence_pct=confidence_pct,
+                        performance_materiality=pm,
+                        method=sample_method,
+                    ).to_dict()
+                except Exception:
+                    error_projection = None
+
+    return render(request, "audit/tools.html", _ctx(
+        request, "reports",
+        benchmark_key=benchmark_key,
+        benchmark_amount=benchmark_amount,
+        sample_method=sample_method,
+        sample_size=sample_size or "",
+        seed=seed,
+        confidence_pct=confidence_pct,
+        components_param=components_param,
+        errors_param=errors_param,
+        judgment_factors=judgment_factors,
+        materiality_result=materiality_result,
+        flagged_above=flagged_above,
+        sampling_result=sampling_result,
+        error_projection=error_projection,
+        pop_count=pop_count,
+        benchmarks=[
+            {"key": k, "name": v.name,
+             "pct_low": float(v.pct_low * 100), "pct_high": float(v.pct_high * 100),
+             "rationale": v.rationale}
+            for k, v in M.BENCHMARKS.items()
+        ],
+        suggested_size=S.suggest_sample_size(pop_count) if pop_count else 0,
+    ))
+
+
+@login_required(login_url="/login/")
 def reports(request):
-    return render(request, "reports/index.html", _ctx(request, "reports", report_types=_report_types(), selected_type=request.GET.get("type", "invoice")))
+    """Reports landing — real KPIs + per-doc-type report links."""
+    org = getattr(request.user, "organization", None)
+    kpis = {
+        "total_invoices": 0, "total_amount": 0, "avg_risk_score": 0,
+        "high_risk_count": 0, "duplicate_count": 0, "rules_failed_30d": 0,
+        "doc_counts_total": 0,
+    }
+    recent_reports = []
+    if org:
+        from django.db.models import Sum, Avg, Count, Q
+        from datetime import timedelta
+        from django.utils import timezone
+        from apps.invoices.models import Invoice
+        from apps.documents.typed_models import (
+            PurchaseOrder, BankStatement, PayrollSheet, ExpenseReport,
+            VATReturn, FixedAsset, SalesReceipt, GoodsReceiptNote, PaymentVoucher,
+        )
+        from apps.documents.typed_models_v2 import (
+            SalesOrder, Quotation, ProformaInvoice, ReceiptVoucher, CashVoucher,
+            GeneralLedger, Ledger, Contract, SupplierStatement, CustomerStatement,
+            JournalEntry,
+        )
+
+        invs = Invoice.objects.filter(organization=org)
+        kpis["total_invoices"]   = invs.count()
+        kpis["total_amount"]     = float(invs.aggregate(s=Sum("total_amount"))["s"] or 0)
+        kpis["avg_risk_score"]   = round(float(invs.aggregate(a=Avg("risk_score"))["a"] or 0), 1)
+        kpis["high_risk_count"]  = invs.filter(risk_level__in=["high", "critical"]).count()
+        kpis["duplicate_count"]  = invs.filter(is_duplicate=True).count()
+
+        # Sum across all 21 doc-type tables
+        all_typed_models = [
+            PurchaseOrder, BankStatement, PayrollSheet, ExpenseReport, VATReturn,
+            FixedAsset, SalesReceipt, GoodsReceiptNote, PaymentVoucher,
+            SalesOrder, Quotation, ProformaInvoice, ReceiptVoucher, CashVoucher,
+            GeneralLedger, Ledger, Contract, SupplierStatement, CustomerStatement,
+            JournalEntry,
+        ]
+        kpis["doc_counts_total"] = (
+            kpis["total_invoices"] +
+            sum(M.objects.filter(organization=org).count() for M in all_typed_models)
+        )
+
+        # Top 5 most-recent flagged invoices (anchor for "recent reports")
+        recent_reports = list(
+            invs.filter(Q(risk_level__in=["high", "critical"]) | Q(is_duplicate=True))
+                .order_by("-updated_at")
+                .values("id", "invoice_number", "vendor_name", "total_amount",
+                        "risk_level", "is_duplicate", "updated_at")[:5]
+        )
+
+    return render(request, "reports/index.html", _ctx(
+        request, "reports",
+        report_types=_report_types(),
+        selected_type=request.GET.get("type", "invoice"),
+        report_kpis=kpis,
+        recent_reports=recent_reports,
+    ))
 
 
 def _weight_for_rule(rule_code):
@@ -2087,6 +3397,10 @@ def analytics(request):
     monthly = []
     risk_dist = []
     top_vendors = []
+    status_dist = []
+    vat_monthly = []
+    rule_failures = []
+    doc_type_mix = []
     summary = {"total_invoices": 0, "total_pos": 0, "total_amount": 0, "avg_invoice": 0}
 
     if org:
@@ -2096,12 +3410,17 @@ def analytics(request):
         # Monthly invoice + amount series for the last 12 months.
         by_month = (
             inv_qs.annotate(m=TruncMonth("created_at"))
-            .values("m").annotate(c=Count("id"), s=Sum("total_amount"))
+            .values("m").annotate(c=Count("id"), s=Sum("total_amount"), v=Sum("vat_amount"))
             .order_by("m")
         )
         monthly = [
             {"month": r["m"].strftime("%Y-%m") if r["m"] else "?",
              "count": r["c"], "amount": float(r["s"] or 0)}
+            for r in by_month
+        ]
+        vat_monthly = [
+            {"month": r["m"].strftime("%Y-%m") if r["m"] else "?",
+             "vat": float(r["v"] or 0)}
             for r in by_month
         ]
 
@@ -2111,6 +3430,12 @@ def analytics(request):
             {"level": level,
              "count": all_inv.filter(risk_level=level).count()}
             for level in ("low", "medium", "high", "critical")
+        ]
+
+        # Status distribution (workflow snapshot)
+        status_dist = [
+            {"status": s, "count": all_inv.filter(status=s).count()}
+            for s in ("pending", "processing", "flagged", "approved", "rejected")
         ]
 
         # Top 10 vendors by invoice + PO total
@@ -2125,15 +3450,79 @@ def analytics(request):
             key=lambda r: r["total"], reverse=True,
         )[:10]
 
+        # Rule-failure histogram from AuditCases
+        try:
+            from apps.audit.models import AuditCase
+            cases = AuditCase.objects.filter(organization=org).values_list("title", flat=True)
+            ctr = defaultdict(int)
+            for t in cases:
+                # Title looks like "[R001] Duplicate Invoice Detection"
+                code = (t or "").split("]", 1)[0].lstrip("[")
+                if code.startswith("R") and code[1:].isdigit():
+                    ctr[code] += 1
+            rule_failures = [{"rule": k, "count": v} for k, v in sorted(ctr.items())]
+        except Exception:
+            rule_failures = []
+
+        # Document-type mix across all 21 typed models + invoice
+        try:
+            from apps.documents.typed_models import (
+                BankStatement, PayrollSheet, ExpenseReport, VATReturn,
+                FixedAsset, SalesReceipt, GoodsReceiptNote, PaymentVoucher,
+            )
+            from apps.documents.typed_models_v2 import (
+                SalesOrder, Quotation, ProformaInvoice, ReceiptVoucher, CashVoucher,
+                GeneralLedger, Ledger, Contract, SupplierStatement, CustomerStatement,
+                JournalEntry,
+            )
+            doc_models = [
+                ("Invoice",            Invoice),
+                ("Purchase Order",     PurchaseOrder),
+                ("Bank Statement",     BankStatement),
+                ("Payroll",            PayrollSheet),
+                ("Expense Report",     ExpenseReport),
+                ("VAT Return",         VATReturn),
+                ("Fixed Asset",        FixedAsset),
+                ("Sales Receipt",      SalesReceipt),
+                ("GRN",                GoodsReceiptNote),
+                ("Payment Voucher",    PaymentVoucher),
+                ("Sales Order",        SalesOrder),
+                ("Quotation",          Quotation),
+                ("Proforma Invoice",   ProformaInvoice),
+                ("Receipt Voucher",    ReceiptVoucher),
+                ("Cash Voucher",       CashVoucher),
+                ("General Ledger",     GeneralLedger),
+                ("Sub-Ledger",         Ledger),
+                ("Contract",           Contract),
+                ("Supplier Statement", SupplierStatement),
+                ("Customer Statement", CustomerStatement),
+                ("Journal Entry",      JournalEntry),
+            ]
+            doc_type_mix = [
+                {"name": label, "count": M.objects.filter(organization=org).count()}
+                for label, M in doc_models
+            ]
+            doc_type_mix = [d for d in doc_type_mix if d["count"] > 0]
+            doc_type_mix.sort(key=lambda r: r["count"], reverse=True)
+        except Exception:
+            doc_type_mix = []
+
         summary["total_invoices"] = all_inv.count()
         summary["total_pos"] = PurchaseOrder.objects.filter(organization=org).count()
         summary["total_amount"] = float(all_inv.aggregate(s=Sum("total_amount"))["s"] or 0)
         summary["avg_invoice"] = round(summary["total_amount"] / summary["total_invoices"], 2) if summary["total_invoices"] else 0
 
+    import json as _json
     return render(request, "analytics/index.html", _ctx(
         request, "analytics",
-        monthly=monthly, risk_dist=risk_dist,
-        top_vendors=top_vendors, summary=summary,
+        monthly=_json.dumps(monthly),
+        risk_dist=_json.dumps(risk_dist),
+        status_dist=_json.dumps(status_dist),
+        vat_monthly=_json.dumps(vat_monthly),
+        rule_failures=_json.dumps(rule_failures),
+        doc_type_mix=_json.dumps(doc_type_mix),
+        top_vendors=top_vendors,
+        summary=summary,
     ))
 
 
@@ -2586,6 +3975,7 @@ def _phase4_list(request, doc_type, Model, *,
     return render(request, "documents/_typed_list.html", _ctx(
         request, "documents",
         doc_type_label=label,
+        doc_type=doc_type,
         doc_type_subtitle=subtitle,
         doc_type_icon=icon,
         upload_url=f"/documents/upload/?type={doc_type}",

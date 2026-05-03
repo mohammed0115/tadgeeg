@@ -394,6 +394,8 @@ def process_single_file(
                 organization_id=org.id,
                 invoice_id=invoice.id,
                 persist=True,
+                invoice=invoice,
+                created_by=user,
             )
         except Exception as exc:
             logger.warning("Audit engine failed for %s: %s", filename, exc)
@@ -411,6 +413,28 @@ def process_single_file(
         )
     except Exception as exc:
         logger.warning("Rule engine pipeline trigger failed for %s: %s", filename, exc)
+
+    # Phase 3.1 — publish onto the continuous-audit stream so window
+    # detectors (velocity, sudden-spike, vendor-concentration) and any
+    # alert channels see the upload immediately. Failures here must not
+    # break the upload flow — the stream is best-effort.
+    try:
+        from apps.streaming import bus as _bus
+        _bus.publish(
+            "invoice.uploaded",
+            payload={
+                "invoice_id":   str(invoice.id),
+                "vendor_name":  invoice.vendor_name or "",
+                "total_amount": float(invoice.total_amount or 0),
+                "currency":     invoice.currency or "",
+                "risk_level":   invoice.risk_level or "",
+            },
+            stream=_bus.STREAM_INVOICES,
+            organization_id=str(org.id),
+        )
+    except Exception as exc:
+        logger.warning("[streaming] publish invoice.uploaded failed for %s: %s",
+                       filename, exc)
 
     # ── Steps 8-11: Validation, risk scoring, final DB save ───────────────────
     with transaction.atomic():

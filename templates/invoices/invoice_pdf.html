@@ -1,0 +1,164 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="{{ request.LANGUAGE_CODE|default:'en' }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
+<head>
+  <meta charset="UTF-8">
+  <title>{% trans "Invoice Audit Report" %} — {{ invoice.invoice_number|default:invoice.id }}</title>
+  <style>
+    @page { size: A4; margin: 18mm 14mm; }
+    body { font-family: 'Cairo', 'Tajawal', Arial, sans-serif; color: #0f172a; font-size: 11px; line-height: 1.55; }
+    h1, h2, h3 { font-family: 'Cairo', 'Tajawal', Arial, sans-serif; color: #003366; margin: 0 0 6px; }
+    h1 { font-size: 22px; } h2 { font-size: 15px; margin-top: 18px; } h3 { font-size: 12px; }
+    .header { background: linear-gradient(135deg, #003366, #10B981); color: #fff; padding: 18px; border-radius: 8px; margin-bottom: 16px; }
+    .header h1 { color: #fff; }
+    .header .meta { font-size: 11px; opacity: 0.9; }
+    .kpi-row { display: flex; gap: 8px; margin: 12px 0; }
+    .kpi { flex: 1; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; }
+    .kpi-label { font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: 0.4px; }
+    .kpi-value { font-size: 18px; font-weight: 800; color: #003366; }
+    .badge { padding: 2px 8px; border-radius: 100px; font-size: 9px; font-weight: 700; display: inline-block; }
+    .badge-low      { background: #dcfce7; color: #166534; }
+    .badge-medium   { background: #fef3c7; color: #92400e; }
+    .badge-high     { background: #fee2e2; color: #991b1b; }
+    .badge-critical { background: #7f1d1d; color: #fff; }
+    table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+    th, td { padding: 6px 8px; border: 1px solid #e2e8f0; text-align: start; vertical-align: top; }
+    th { background: #f1f5f9; font-weight: 700; color: #334155; font-size: 10px; }
+    .section { margin-bottom: 14px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; }
+    .footer { margin-top: 24px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 9px; color: #64748b; text-align: center; }
+    .three-way { padding: 10px; border-radius: 6px; margin-bottom: 10px; }
+    .three-way.clean { background: #dcfce7; border: 1px solid #86efac; color: #166534; }
+    .three-way.broken { background: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; }
+    .mono { font-family: 'Courier New', monospace; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>{% trans "Invoice Audit Report" %}</h1>
+  <div class="meta">
+    <strong>{{ invoice.invoice_number|default:"—" }}</strong>
+    &nbsp;·&nbsp; {{ invoice.vendor_name|default:"—" }}
+    &nbsp;·&nbsp; {{ invoice.invoice_date|date:"Y-m-d"|default:"—" }}
+    &nbsp;·&nbsp; <span class="mono">{{ invoice.total_amount|default:0 }} {{ invoice.currency|default:"SAR" }}</span>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <div class="kpi">
+    <div class="kpi-label">{% trans "Validation Score" %}</div>
+    <div class="kpi-value">{{ invoice.validation.validation_score|default:"—" }}<span style="font-size:11px;color:#64748b;"> / 100</span></div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">{% trans "Risk Level" %}</div>
+    <div class="kpi-value">
+      <span class="badge badge-{{ invoice.risk_level|default:'low' }}">
+        {% if invoice.risk_level == 'critical' %}{% trans "Critical" %}
+        {% elif invoice.risk_level == 'high' %}{% trans "High" %}
+        {% elif invoice.risk_level == 'medium' %}{% trans "Medium" %}
+        {% else %}{% trans "Low" %}{% endif %}
+      </span>
+    </div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">{% trans "Rules Passed" %}</div>
+    <div class="kpi-value" style="color:#10B981;">{{ invoice.validation.rules_passed|default:0 }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">{% trans "Rules Failed" %}</div>
+    <div class="kpi-value" style="color:#dc2626;">{{ invoice.validation.rules_failed|default:0 }}</div>
+  </div>
+</div>
+
+<h2>{% trans "Invoice Information" %}</h2>
+<table>
+  <tr><th style="width:30%">{% trans "Invoice Number" %}</th><td>{{ invoice.invoice_number|default:"—" }}</td>
+      <th style="width:30%">{% trans "Invoice Date" %}</th><td>{{ invoice.invoice_date|date:"Y-m-d"|default:"—" }}</td></tr>
+  <tr><th>{% trans "Vendor" %}</th><td>{{ invoice.vendor_name|default:"—" }}</td>
+      <th>{% trans "VAT Number" %}</th><td class="mono">{{ invoice.vendor_vat_number|default:"—" }}</td></tr>
+  <tr><th>{% trans "Customer" %}</th><td>{{ invoice.customer_name|default:"—" }}</td>
+      <th>{% trans "Customer VAT" %}</th><td class="mono">{{ invoice.customer_vat_number|default:"—" }}</td></tr>
+  <tr><th>{% trans "Subtotal" %}</th><td class="mono">{{ invoice.subtotal|default:0 }}</td>
+      <th>{% trans "VAT Amount" %}</th><td class="mono">{{ invoice.vat_amount|default:0 }}</td></tr>
+  <tr><th>{% trans "Total" %}</th><td class="mono"><strong>{{ invoice.total_amount|default:0 }} {{ invoice.currency|default:"SAR" }}</strong></td>
+      <th>{% trans "Status" %}</th><td>{{ invoice.status|default:"—" }}</td></tr>
+</table>
+
+{% if cross_links.three_way_match.applicable %}
+<h2>{% trans "Three-Way Match" %}</h2>
+<div class="three-way {% if cross_links.three_way_match.is_clean %}clean{% else %}broken{% endif %}">
+  <strong>
+    {% if cross_links.three_way_match.is_clean %}
+      ✓ {% trans "Clean — Invoice ↔ PO ↔ GRN reconcile" %}
+    {% else %}
+      ⚠ {% trans "Issues detected:" %}
+    {% endif %}
+  </strong>
+  {% if cross_links.three_way_match.issues %}
+    <ul style="margin:6px 0 0; padding-inline-start:20px;">
+      {% for issue in cross_links.three_way_match.issues %}<li class="mono">{{ issue }}</li>{% endfor %}
+    </ul>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if cross_links %}
+<h2>{% trans "Linked Documents" %}</h2>
+<table>
+  <thead><tr><th>{% trans "Type" %}</th><th>{% trans "Reference" %}</th><th>{% trans "Date" %}</th><th>{% trans "Amount" %}</th><th>{% trans "Match" %}</th></tr></thead>
+  <tbody>
+  {% for slot, link in cross_links.items %}
+    {% if slot != "three_way_match" and link and link.id %}
+    <tr>
+      <td>{{ slot|cut:"_"|title }}</td>
+      <td class="mono">{{ link.display_id|default:"—" }}</td>
+      <td>{{ link.date|default:"—" }}</td>
+      <td class="mono">{{ link.amount|floatformat:2 }} {{ link.currency }}</td>
+      <td class="mono">{{ link.match_type }}{% if link.amount_diff %} (Δ {{ link.amount_diff|floatformat:2 }}){% endif %}</td>
+    </tr>
+    {% endif %}
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if invoice.validation.failed_rule_codes %}
+<h2>{% trans "Failed Audit Rules" %}</h2>
+<table>
+  <thead><tr><th>{% trans "Rule Code" %}</th><th>{% trans "Severity" %}</th></tr></thead>
+  <tbody>
+  {% for code in invoice.validation.failed_rule_codes %}
+    <tr><td class="mono"><strong>{{ code }}</strong></td><td><span class="badge badge-medium">—</span></td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+{% if invoice.ai_summary %}
+<h2>{% trans "AI Summary" %}</h2>
+<div class="section">{{ invoice.ai_summary }}</div>
+{% endif %}
+
+{% if audit_trail %}
+<h2>{% trans "Audit Trail" %}</h2>
+<table>
+  <thead><tr><th>{% trans "When" %}</th><th>{% trans "User" %}</th><th>{% trans "Action" %}</th></tr></thead>
+  <tbody>
+  {% for event in audit_trail %}
+    <tr>
+      <td class="mono">{{ event.timestamp|date:"Y-m-d H:i" }}</td>
+      <td>{{ event.user.email|default:"system" }}</td>
+      <td>{{ event.event_type|default:"—" }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<div class="footer">
+  {% trans "Generated by Tadgeeg Financial Audit Platform" %} · tadgeeg.com<br>
+  {{ invoice.id }}
+</div>
+
+</body>
+</html>

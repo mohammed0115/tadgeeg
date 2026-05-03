@@ -1,0 +1,141 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Audit Trail Integrity" %}{% endblock %}
+{% block nav_audit %}active{% endblock %}
+
+{% block extra_styles %}
+  .integrity-page { max-width: 1200px; margin: 0 auto; }
+  .status-banner { display: flex; align-items: center; gap: 18px; padding: 22px 28px; border-radius: 18px; margin-bottom: 22px; }
+  .status-banner.intact { background: linear-gradient(135deg, rgba(16,185,129,0.08), white); border: 1px solid rgba(16,185,129,0.25); }
+  .status-banner.broken { background: linear-gradient(135deg, rgba(239,68,68,0.08), white); border: 1px solid rgba(239,68,68,0.30); }
+  .status-icon { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .status-banner.intact .status-icon { background: rgba(16,185,129,0.15); color: #047857; }
+  .status-banner.broken .status-icon { background: rgba(239,68,68,0.15); color: #b91c1c; }
+  .status-text h2 { font-family: 'Cairo', sans-serif; font-weight: 800; font-size: 22px; margin-bottom: 4px; color: var(--primary); }
+  .status-text p { color: var(--text-muted); font-size: 13px; line-height: 1.7; }
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+  .stat-card { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
+  .stat-card .label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .stat-card .value { font-family: 'Cairo', sans-serif; font-weight: 900; font-size: 24px; color: var(--primary); margin-top: 6px; }
+  .chain-card { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; margin-bottom: 16px; }
+  .chain-card h3 { font-family: 'Cairo', sans-serif; font-weight: 800; font-size: 16px; color: var(--primary); margin-bottom: 6px; }
+  .chain-card .meta { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+  .chain-card .meta span code { background: var(--bg-soft); padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+  .badge { display:inline-block; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; }
+  .badge-ok { background: #dcfce7; color: #166534; }
+  .badge-bad { background: #fee2e2; color: #991b1b; }
+  .break-row { background: #fef2f2; border-left: 3px solid var(--danger); padding: 10px 14px; border-radius: 6px; margin-top: 8px; font-size: 13px; }
+  .break-row code { background: white; padding: 1px 6px; border-radius: 4px; }
+  @media (max-width: 768px) { .stats-row { grid-template-columns: 1fr 1fr; } }
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "Audit Trail Integrity" %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="integrity-page">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">{% trans "Audit Trail Integrity" %}</h1>
+      <p class="page-subtitle">{% trans "Tamper-evident SHA-256 chain across every audit-relevant event." %}</p>
+    </div>
+  </div>
+
+  {% if all_intact %}
+    <div class="status-banner intact">
+      <div class="status-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="status-text">
+        <h2>{% trans "All chains intact" %}</h2>
+        <p>{% trans "Every event in this organisation's audit trail hashes correctly to the chain head. No row has been mutated since it was recorded." %}</p>
+      </div>
+    </div>
+  {% else %}
+    <div class="status-banner broken">
+      <div class="status-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <div class="status-text">
+        <h2>{% trans "Chain breaks detected" %}</h2>
+        <p>{% trans "One or more rows in the audit trail no longer hash correctly. This usually means a row was edited or deleted outside the application — investigate the listed positions immediately." %}</p>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="label">{% trans "Chains checked" %}</div>
+      <div class="value">{{ chain_models|length }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">{% trans "Rows verified" %}</div>
+      <div class="value">{{ total_rows }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">{% trans "Breaks found" %}</div>
+      <div class="value" {% if total_breaks %}style="color:var(--danger)"{% endif %}>{{ total_breaks }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">{% trans "Status" %}</div>
+      <div class="value" style="font-size:18px;">
+        {% if all_intact %}
+          <span class="badge badge-ok">✓ {% trans "Intact" %}</span>
+        {% else %}
+          <span class="badge badge-bad">✕ {% trans "Tampering" %}</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {% for rep in reports %}
+    <div class="chain-card">
+      <h3>{{ rep.model }}</h3>
+      <div class="meta">
+        <span>{% trans "Rows" %}: <strong>{{ rep.rows_checked }}</strong></span>
+        <span>{% trans "Head hash" %}: <code>{{ rep.head_hash|default:"(empty)" }}</code></span>
+        {% if rep.is_intact %}
+          <span class="badge badge-ok">{% trans "Intact" %}</span>
+        {% else %}
+          <span class="badge badge-bad">{% trans "Breaks" %}: {{ rep.break_count }}</span>
+        {% endif %}
+      </div>
+
+      {% if rep.breaks %}
+        <h4 style="font-size:13px; font-weight:800; color:var(--danger); margin: 8px 0 6px;">
+          {% trans "Tampered rows" %}
+        </h4>
+        {% for b in rep.breaks %}
+          <div class="break-row">
+            <strong>{% trans "Position" %} #{{ b.chain_position }}</strong> ·
+            <code>{{ b.row_id }}</code> ·
+            <em>{{ b.reason }}</em>
+            {% if b.expected %}
+              <div style="margin-top:4px; font-size:11px; color:var(--text-muted);">
+                {% trans "Expected" %} <code>{{ b.expected }}</code> · {% trans "Got" %} <code>{{ b.actual }}</code>
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  {% empty %}
+    <div class="chain-card">
+      <p style="color:var(--text-muted); text-align: center; padding: 30px 0;">
+        {% trans "No chain models registered yet." %}
+      </p>
+    </div>
+  {% endfor %}
+
+  <div style="margin-top: 22px; padding: 16px 20px; background: rgba(0,51,102,0.04); border: 1px solid rgba(0,51,102,0.10); border-radius: 12px; font-size: 12px; color: var(--text-muted); line-height: 1.7;">
+    <strong style="color:var(--primary);">{% trans "How the chain works:" %}</strong>
+    {% trans "Every audit row records SHA-256(previous_hash + canonical_payload + timestamp + organization_id). On save, the application computes and stores this hash along with a pointer to the previous row. If anyone later edits a row in the database, its stored event_hash no longer matches the recomputed value — and every downstream row's previous_hash pointer breaks too. Verification is read-only and runs in O(n) over the chain." %}
+  </div>
+
+</div>
+{% endblock %}

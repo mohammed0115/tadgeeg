@@ -1,0 +1,357 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n static asset_tags %}
+
+{% block title %}{% trans "Alerts" %}{% endblock %}
+{% block nav_audit %}active{% endblock %}
+
+{% block head_extra %}
+  <script defer src="{% safe_static 'vendor/alpine.min.js' %}"
+          onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
+{% endblock %}
+
+{% block extra_styles %}
+  [x-cloak] { display: none !important; }
+  .alerts-page { max-width: 1280px; margin: 0 auto; }
+  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:22px; }
+  .kpi-card { background:white; border:1px solid var(--border); border-radius:14px; padding:16px 18px; }
+  .kpi-card .label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; }
+  .kpi-card .value { font-family:'Cairo',sans-serif; font-weight:900; font-size:28px; color:var(--primary); margin-top:6px; }
+  .a-card { background:white; border:1px solid var(--border); border-radius:14px; padding:18px 22px; margin-bottom:16px; }
+  .a-card h3 { font-family:'Cairo',sans-serif; font-weight:800; font-size:15px; color:var(--primary); margin-bottom:12px; }
+
+  .data-table { width:100%; border-collapse:separate; border-spacing:0; }
+  .data-table th { background:var(--bg-soft); padding:10px 12px; font-size:11px; font-weight:800; text-align:start; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; }
+  .data-table td { padding:10px 12px; font-size:13px; border-top:1px solid var(--border-soft); vertical-align:top; }
+
+  .badge { display:inline-block; padding:3px 10px; border-radius:100px; font-size:11px; font-weight:700; }
+  .badge-sent { background:#dcfce7; color:#166534; }
+  .badge-failed { background:#fee2e2; color:#991b1b; }
+  .badge-suppressed { background:#f1f5f9; color:#475569; }
+  .badge-acknowledged { background:#dbeafe; color:#1e40af; }
+  .badge-active { background:#dcfce7; color:#166534; }
+  .badge-inactive { background:#f1f5f9; color:#64748b; }
+  .badge-channel { background:rgba(0,51,102,0.06); color:var(--primary); padding:2px 7px; font-size:10px; font-weight:700; margin-inline-end:4px; }
+
+  .a-input, .a-select { width:100%; padding:9px 12px; border:1.5px solid var(--border); border-radius:8px; background:var(--bg-soft); font-size:13px; font-family:inherit; }
+  .a-input:focus, .a-select:focus { outline:none; border-color:var(--primary); background:white; }
+
+  .channel-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:6px 0; }
+  .channel-row .a-input, .channel-row .a-select { flex:1 1 auto; min-width:130px; }
+  .btn-mini { padding:4px 10px; font-size:11px; font-weight:700; border-radius:6px; background:white; border:1px solid var(--border); cursor:pointer; }
+  .btn-mini:hover { border-color:var(--primary); color:var(--primary); }
+  .btn-mini-danger { color:#dc2626; border-color:#fecaca; }
+  .btn-mini-danger:hover { background:#fee2e2; }
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "Alerts" %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="alerts-page" x-data="alertsApp()" x-init="init()">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">{% trans "Alerts" %}</h1>
+      <p class="page-subtitle">{% trans "Route streaming anomalies to email · SMS · Slack · Teams · webhook." %}</p>
+    </div>
+    <button type="button" class="btn btn-primary" @click="newRule()">
+      + {% trans "New rule" %}
+    </button>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="label">{% trans "Sent" %}</div>
+      <div class="value" style="color:var(--success)">{{ counts.sent }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">{% trans "Failed" %}</div>
+      <div class="value" style="color:var(--danger)">{{ counts.failed }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">{% trans "Suppressed (cooldown)" %}</div>
+      <div class="value" style="color:var(--text-muted)">{{ counts.suppressed }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">{% trans "Acknowledged" %}</div>
+      <div class="value" style="color:var(--info)">{{ counts.acknowledged }}</div>
+    </div>
+  </div>
+
+  <!-- Rule editor (Alpine modal) -->
+  <div x-show="editing" x-cloak class="a-card" style="border-color:var(--primary); position:sticky; top:14px; z-index:30;">
+    <h3 x-text="editing && editing.id ? '{% trans "Edit rule" %}' : '{% trans "New rule" %}'"></h3>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+      <div>
+        <label style="font-size:11px; color:var(--text-muted); font-weight:700;">{% trans "Name" %}</label>
+        <input class="a-input" x-model="editing.name" placeholder="{% trans 'e.g. Critical anomalies → audit team' %}">
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--text-muted); font-weight:700;">{% trans "Trigger detector (blank = all)" %}</label>
+        <select class="a-select" x-model="editing.trigger_detector">
+          <option value="">{% trans "(any detector)" %}</option>
+          <option value="velocity">velocity</option>
+          <option value="sudden_spike">sudden_spike</option>
+          <option value="vendor_concentration">vendor_concentration</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--text-muted); font-weight:700;">{% trans "Min severity" %}</label>
+        <select class="a-select" x-model="editing.min_severity">
+          <option value="low">low and above</option>
+          <option value="medium">medium and above</option>
+          <option value="high">high and above</option>
+          <option value="critical">critical only</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:11px; color:var(--text-muted); font-weight:700;">{% trans "Cooldown (minutes)" %}</label>
+        <input class="a-input" type="number" min="0" x-model.number="editing.cooldown_minutes">
+      </div>
+    </div>
+
+    <div style="margin-top:12px;">
+      <label style="font-size:11px; color:var(--text-muted); font-weight:700; margin-bottom:6px; display:block;">
+        {% trans "Channels" %}
+      </label>
+      <template x-for="(ch, i) in editing.channels" :key="i">
+        <div class="channel-row">
+          <select class="a-select" x-model="ch.type" style="max-width:140px;">
+            <option value="email">email</option>
+            <option value="sms">sms</option>
+            <option value="slack">slack</option>
+            <option value="teams">teams</option>
+            <option value="webhook">webhook</option>
+          </select>
+          <template x-if="ch.type === 'email' || ch.type === 'sms'">
+            <input class="a-input" x-model="ch.to" placeholder="{% trans 'email1, email2  /  +9665...' %}">
+          </template>
+          <template x-if="ch.type === 'slack' || ch.type === 'teams'">
+            <input class="a-input" x-model="ch.webhook_url" placeholder="https://hooks.slack.com/... or https://outlook.office.com/...">
+          </template>
+          <template x-if="ch.type === 'webhook'">
+            <input class="a-input" x-model="ch.url" placeholder="https://your-server/alerts">
+          </template>
+          <button type="button" class="btn-mini btn-mini-danger" @click="removeChannel(i)">✕</button>
+        </div>
+      </template>
+      <div style="margin-top:6px;">
+        <button type="button" class="btn-mini" @click="addChannel()">+ {% trans "Add channel" %}</button>
+      </div>
+    </div>
+
+    <div style="margin-top:14px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <label style="font-size:13px;">
+        <input type="checkbox" x-model="editing.is_active"> {% trans "Active" %}
+      </label>
+      <span style="flex:1"></span>
+      <button type="button" class="btn btn-light" @click="cancelEdit()">{% trans "Cancel" %}</button>
+      <button type="button" class="btn btn-primary" @click="saveRule()" :disabled="busy">
+        {% trans "Save rule" %}
+      </button>
+      <button type="button" class="btn btn-success" x-show="editing.id" @click="testRule(editing.id)" :disabled="busy">
+        {% trans "Send test" %}
+      </button>
+    </div>
+  </div>
+
+  <!-- Rules list -->
+  <div class="a-card">
+    <h3>{% trans "Routing rules" %}</h3>
+    <table class="data-table">
+      <thead><tr>
+        <th>{% trans "Name" %}</th>
+        <th>{% trans "Trigger" %}</th>
+        <th>{% trans "Min severity" %}</th>
+        <th>{% trans "Channels" %}</th>
+        <th>{% trans "Cooldown" %}</th>
+        <th>{% trans "Status" %}</th>
+        <th></th>
+      </tr></thead>
+      <tbody>
+        {% for r in rules %}
+          <tr>
+            <td><strong>{{ r.name }}</strong>
+              {% if r.description %}<div style="font-size:11px; color:var(--text-muted); margin-top:2px;">{{ r.description|truncatechars:80 }}</div>{% endif %}
+            </td>
+            <td><code>{{ r.trigger_detector|default:"any" }}</code></td>
+            <td>{{ r.get_min_severity_display }}</td>
+            <td>
+              {% for c in r.channels %}<span class="badge badge-channel">{{ c.type }}</span>{% endfor %}
+            </td>
+            <td>{{ r.cooldown_minutes }} min</td>
+            <td>
+              {% if r.is_active %}<span class="badge badge-active">{% trans "Active" %}</span>
+              {% else %}<span class="badge badge-inactive">{% trans "Inactive" %}</span>{% endif %}
+            </td>
+            <td><button class="btn-mini" type="button" @click="editRule('{{ r.id }}')">{% trans "Edit" %}</button></td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="7" style="text-align:center; padding:40px 0; color:var(--text-muted);">
+            {% trans "No alert rules yet. Click ‘New rule’ to set up your first one." %}
+          </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Events log -->
+  <div class="a-card">
+    <h3>{% trans "Recent alert events" %}</h3>
+    <table class="data-table">
+      <thead><tr>
+        <th>{% trans "When" %}</th>
+        <th>{% trans "Channel" %}</th>
+        <th>{% trans "Status" %}</th>
+        <th>{% trans "Severity" %}</th>
+        <th>{% trans "Summary" %}</th>
+        <th></th>
+      </tr></thead>
+      <tbody>
+        {% for ev in events %}
+          <tr>
+            <td class="text-muted">{{ ev.sent_at|date:"Y-m-d H:i" }}</td>
+            <td><code>{{ ev.channel_type }}</code><div style="font-size:11px; color:var(--text-muted)">{{ ev.channel_target|truncatechars:48 }}</div></td>
+            <td><span class="badge badge-{{ ev.status }}">{{ ev.get_status_display }}</span></td>
+            <td>{{ ev.severity }}</td>
+            <td style="max-width:420px;">{{ ev.summary|truncatechars:140 }}
+              {% if ev.error_message %}<div style="font-size:11px; color:var(--danger); margin-top:2px;">{{ ev.error_message|truncatechars:140 }}</div>{% endif %}
+            </td>
+            <td>
+              {% if ev.status == 'sent' or ev.status == 'failed' %}
+                <button class="btn-mini" type="button" @click="ackEvent('{{ ev.id }}')">{% trans "Acknowledge" %}</button>
+              {% elif ev.acknowledged_at %}
+                <span style="font-size:11px; color:var(--text-muted)">✓ {{ ev.acknowledged_at|date:"H:i" }}</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="6" style="text-align:center; padding:40px 0; color:var(--text-muted);">
+            {% trans "No alerts dispatched yet." %}
+          </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<script>
+function getCookie(name) {
+  const c = `; ${document.cookie}`.split(`; ${name}=`);
+  if (c.length === 2) return c.pop().split(';').shift();
+  return '';
+}
+
+function alertsApp() {
+  return {
+    editing: null, busy: false,
+    init() {},
+    newRule() {
+      this.editing = {
+        id: null, name: 'New rule',
+        description: '',
+        trigger_type: 'anomaly', trigger_detector: '',
+        min_severity: 'medium', cooldown_minutes: 30,
+        channels: [{ type: 'email', to: '' }],
+        is_active: true,
+      };
+    },
+    cancelEdit() { this.editing = null; },
+    addChannel()    { this.editing.channels.push({ type: 'email', to: '' }); },
+    removeChannel(i){ this.editing.channels.splice(i, 1); },
+
+    async editRule(id) {
+      const r = await fetch(`/api/v1/alerts/rules/${id}/`);
+      if (!r.ok) return;
+      this.editing = await r.json();
+      // Channels are stored as a list of dicts on the server — make sure
+      // the UI fields exist on each row even if empty.
+      this.editing.channels = (this.editing.channels || []).map(c => ({
+        type: c.type || 'email',
+        to: Array.isArray(c.to) ? c.to.join(', ') : (c.to || ''),
+        webhook_url: c.webhook_url || '',
+        url: c.url || '',
+        secret: c.secret || '',
+      }));
+    },
+
+    _normaliseChannels() {
+      return (this.editing.channels || []).map(c => {
+        const out = { type: c.type };
+        if (c.type === 'email' || c.type === 'sms') {
+          out.to = String(c.to || '').split(',').map(s => s.trim()).filter(Boolean);
+        }
+        if (c.type === 'slack' || c.type === 'teams') {
+          out.webhook_url = (c.webhook_url || '').trim();
+        }
+        if (c.type === 'webhook') {
+          out.url = (c.url || '').trim();
+          if (c.secret) out.secret = c.secret;
+        }
+        return out;
+      });
+    },
+
+    async saveRule() {
+      this.busy = true;
+      try {
+        const body = {
+          name: this.editing.name,
+          description: this.editing.description || '',
+          trigger_type: this.editing.trigger_type,
+          trigger_detector: this.editing.trigger_detector || '',
+          min_severity: this.editing.min_severity,
+          cooldown_minutes: this.editing.cooldown_minutes,
+          channels: this._normaliseChannels(),
+          is_active: !!this.editing.is_active,
+        };
+        const url = this.editing.id ? `/api/v1/alerts/rules/${this.editing.id}/`
+                                    : '/api/v1/alerts/rules/';
+        const method = this.editing.id ? 'PUT' : 'POST';
+        const r = await fetch(url, {
+          method, headers: { 'Content-Type': 'application/json',
+                              'X-CSRFToken': getCookie('csrftoken') },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) {
+          const err = await r.json();
+          alert('Save failed: ' + (err.error || r.statusText));
+          return;
+        }
+        location.reload();
+      } finally { this.busy = false; }
+    },
+
+    async testRule(id) {
+      this.busy = true;
+      try {
+        const r = await fetch(`/api/v1/alerts/rules/${id}/test/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        const data = await r.json();
+        alert(r.ok
+          ? `{% trans "Test dispatched" %}: sent=${data.dispatch.sent}, failed=${data.dispatch.failed}, suppressed=${data.dispatch.suppressed}`
+          : `{% trans "Test failed" %}: ${data.error || r.statusText}`);
+      } finally { this.busy = false; }
+    },
+
+    async ackEvent(id) {
+      try {
+        await fetch(`/api/v1/alerts/events/${id}/ack/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        });
+        location.reload();
+      } catch (e) {}
+    },
+  };
+}
+</script>
+{% endblock %}

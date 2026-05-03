@@ -1,0 +1,62 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "New Working Paper" %}{% endblock %}
+{% block nav_audit %}active{% endblock %}
+
+{% block extra_styles %}
+  .wp-form { max-width: 760px; margin: 0 auto; background:white; border:1px solid var(--border); border-radius:14px; padding:24px 28px; }
+  .wp-form label { display:block; font-size:12px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; margin-top:14px; }
+  .wp-form input, .wp-form select, .wp-form textarea {
+    width:100%; padding:11px 14px; border:1.5px solid var(--border); border-radius:10px;
+    background:var(--bg-soft); font-size:14px; font-family:inherit;
+  }
+  .wp-form textarea { min-height: 160px; resize: vertical; }
+  .wp-form input:focus, .wp-form select:focus, .wp-form textarea:focus { outline:none; border-color:var(--primary); background:white; }
+  .wp-form .err { background:#fee2e2; border:1px solid #fecaca; color:#991b1b; padding:10px 14px; border-radius:8px; font-size:13px; margin-bottom:14px; }
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <a href="{% url 'frontend:working_papers' %}" style="color:var(--text-muted)">{% trans "Working Papers" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "New" %}</span>
+{% endblock %}
+
+{% block content %}
+<form method="post" class="wp-form">
+  {% csrf_token %}
+
+  <h1 style="font-family:'Cairo',sans-serif; font-size:22px; font-weight:800; color:var(--primary); margin-bottom:6px;">
+    {% trans "New Working Paper" %}
+  </h1>
+  <p style="color:var(--text-muted); font-size:13px; margin-bottom:18px;">
+    {% trans "The paper starts in DRAFT — you can edit and submit it for review at any time." %}
+  </p>
+
+  {% if error %}
+    <div class="err">{{ error }}</div>
+  {% endif %}
+
+  <label>{% trans "Title" %}</label>
+  <input type="text" name="title" value="{{ title|default:'' }}" required
+         placeholder="{% trans 'e.g. Accounts Receivable Lead Schedule — FY2026' %}">
+
+  <label>{% trans "Paper type" %}</label>
+  <select name="paper_type" required>
+    <option value="">— {% trans "Select" %} —</option>
+    {% for k, label in paper_types %}
+      <option value="{{ k }}" {% if k == paper_type %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+
+  <label>{% trans "Initial notes (optional)" %}</label>
+  <textarea name="content" placeholder="{% trans 'Free-form audit notes; you can edit this later before locking.' %}">{{ content|default:'' }}</textarea>
+
+  <div style="margin-top:22px; display:flex; gap:10px; justify-content:flex-end;">
+    <a href="{% url 'frontend:working_papers' %}" class="btn btn-light">{% trans "Cancel" %}</a>
+    <button type="submit" class="btn btn-primary">{% trans "Create draft" %}</button>
+  </div>
+</form>
+{% endblock %}

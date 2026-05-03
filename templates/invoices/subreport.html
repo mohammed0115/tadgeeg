@@ -1,0 +1,161 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{{ report_title }}{% endblock %}
+{% block nav_reports %}active{% endblock %}
+
+{% block extra_styles %}
+  .sub-page { max-width: 1200px; margin: 0 auto; }
+  .sub-hero { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 22px; flex-wrap: wrap; gap: 14px; }
+  .sub-hero h1 { font-family: 'Cairo', sans-serif; font-size: 26px; font-weight: 900; color: var(--primary); margin-bottom: 4px; }
+  .sub-hero p { color: var(--text-muted); font-size: 13px; }
+  .sub-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 22px; }
+  .kpi-card { background: white; border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
+  .kpi-card .label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .kpi-card .value { font-size: 24px; font-weight: 800; color: var(--primary); margin-top: 6px; }
+  .data-table { width: 100%; background: white; border: 1px solid var(--border); border-radius: 14px; border-collapse: separate; border-spacing: 0; overflow: hidden; }
+  .data-table th { background: var(--bg-soft); padding: 12px 14px; text-align: start; font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .data-table td { padding: 12px 14px; font-size: 13px; border-top: 1px solid var(--border-soft); }
+  .data-table tr:hover td { background: var(--bg-soft); }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 700; }
+  .pill-high { background: #fee2e2; color: #991b1b; }
+  .pill-medium { background: #fef3c7; color: #92400e; }
+  .pill-low { background: #dcfce7; color: #166534; }
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <a href="{% url 'frontend:reports' %}" style="color:var(--text-muted)">{% trans "Reports" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{{ report_title }}</span>
+{% endblock %}
+
+{% block content %}
+<div class="sub-page">
+
+  <div class="sub-hero">
+    <div>
+      <h1>{{ report_title }}</h1>
+      <p>{% trans "Generated at" %} <code>{{ report_data.generated_at }}</code></p>
+    </div>
+    <div class="sub-actions">
+      <a href="{% url 'frontend:invoices' %}" class="btn btn-light">{% trans "Back to invoices" %}</a>
+      <a href="{% url 'frontend:reports' %}" class="btn btn-light">{% trans "All reports" %}</a>
+    </div>
+  </div>
+
+  {# ── Risk Report ───────────────────────────────────────────────────────── #}
+  {% if report_kind == 'risk' %}
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="label">{% trans "Flagged invoices" %}</div><div class="value">{{ report_data.count|default:0 }}</div></div>
+      <div class="kpi-card"><div class="label">{% trans "Total amount" %}</div><div class="value">{{ report_data.stats.total|default:0|floatformat:2 }}</div></div>
+      <div class="kpi-card"><div class="label">{% trans "Avg risk score" %}</div><div class="value">{{ report_data.stats.avg_risk|default:0|floatformat:1 }}</div></div>
+    </div>
+
+    <table class="data-table">
+      <thead><tr>
+        <th>{% trans "Invoice #" %}</th><th>{% trans "Vendor" %}</th>
+        <th>{% trans "Total" %}</th><th>{% trans "Risk" %}</th><th>{% trans "Date" %}</th>
+      </tr></thead>
+      <tbody>
+        {% for r in report_data.results %}
+        <tr>
+          <td><a href="{% url 'frontend:invoice_detail' pk=r.id %}"><code>{{ r.invoice_number }}</code></a></td>
+          <td>{{ r.vendor_name|default:"—" }}</td>
+          <td>{{ r.total_amount|default:0|floatformat:2 }}</td>
+          <td>
+            <span class="pill {% if r.risk_level == 'high' or r.risk_level == 'critical' %}pill-high{% elif r.risk_level == 'medium' %}pill-medium{% else %}pill-low{% endif %}">
+              {{ r.risk_level|default:"—" }} ({{ r.risk_score|default:0|floatformat:0 }})
+            </span>
+          </td>
+          <td>{{ r.invoice_date|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:40px">{% trans "No flagged invoices." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  {# ── Duplicates Report ────────────────────────────────────────────────── #}
+  {% if report_kind == 'duplicates' %}
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="label">{% trans "Duplicates flagged" %}</div><div class="value">{{ report_data.total_duplicates|default:0 }}</div></div>
+    </div>
+    <table class="data-table">
+      <thead><tr>
+        <th>{% trans "Invoice #" %}</th><th>{% trans "Vendor" %}</th>
+        <th>{% trans "Total" %}</th><th>{% trans "Duplicate of" %}</th>
+      </tr></thead>
+      <tbody>
+        {% for r in report_data.invoices %}
+        <tr>
+          <td><a href="{% url 'frontend:invoice_detail' pk=r.id %}"><code>{{ r.invoice_number }}</code></a></td>
+          <td>{{ r.vendor_name|default:"—" }}</td>
+          <td>{{ r.total_amount|default:0|floatformat:2 }}</td>
+          <td><code>{{ r.duplicate_of|default:"—" }}</code></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:40px">{% trans "No duplicates detected." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  {# ── Vendor Risk Report ──────────────────────────────────────────────── #}
+  {% if report_kind == 'vendors' %}
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="label">{% trans "Total vendors" %}</div><div class="value">{{ report_data.summary.total_vendors|default:0 }}</div></div>
+      <div class="kpi-card"><div class="label">{% trans "High-risk" %}</div><div class="value">{{ report_data.summary.high_risk_vendors|default:0 }}</div></div>
+      <div class="kpi-card"><div class="label">{% trans "Blocked" %}</div><div class="value">{{ report_data.summary.blocked_vendors|default:0 }}</div></div>
+      <div class="kpi-card"><div class="label">{% trans "Avg risk" %}</div><div class="value">{{ report_data.summary.avg_risk_score|default:0|floatformat:1 }}</div></div>
+    </div>
+    <table class="data-table">
+      <thead><tr>
+        <th>{% trans "Vendor" %}</th><th>{% trans "Invoices" %}</th>
+        <th>{% trans "Total spend" %}</th><th>{% trans "Risk score" %}</th><th>{% trans "Status" %}</th>
+      </tr></thead>
+      <tbody>
+        {% for v in report_data.vendors %}
+        <tr>
+          <td>{{ v.vendor_name|default:"—" }}</td>
+          <td>{{ v.invoice_count|default:0 }}</td>
+          <td>{{ v.total_amount|default:0|floatformat:2 }}</td>
+          <td>{{ v.risk_score|default:0|floatformat:0 }}</td>
+          <td>{{ v.status|default:"active" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:40px">{% trans "No vendor data yet." %}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
+  {# ── Spend Analysis ────────────────────────────────────────────────── #}
+  {% if report_kind == 'spend' %}
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="label">{% trans "Grand total" %}</div><div class="value">{{ report_data.overall.grand_total|default:0|floatformat:2 }}</div></div>
+      <div class="kpi-card"><div class="label">{% trans "Total VAT" %}</div><div class="value">{{ report_data.overall.total_vat|default:0|floatformat:2 }}</div></div>
+      <div class="kpi-card"><div class="label">{% trans "Total invoices" %}</div><div class="value">{{ report_data.overall.total_invoices|default:0 }}</div></div>
+      <div class="kpi-card"><div class="label">{% trans "Avg invoice" %}</div><div class="value">{{ report_data.overall.avg_invoice|default:0|floatformat:2 }}</div></div>
+      <div class="kpi-card"><div class="label">{% trans "Flagged total" %}</div><div class="value">{{ report_data.overall.flagged_total|default:0|floatformat:2 }}</div></div>
+    </div>
+    {% if report_data.by_vendor %}
+    <h3 style="font-family:'Cairo',sans-serif;font-weight:800;color:var(--primary);margin:20px 0 10px">{% trans "By vendor (top 20)" %}</h3>
+    <table class="data-table">
+      <thead><tr>
+        <th>{% trans "Vendor" %}</th><th>{% trans "Invoices" %}</th><th>{% trans "Total" %}</th>
+      </tr></thead>
+      <tbody>
+        {% for v in report_data.by_vendor %}
+        <tr><td>{{ v.vendor_name|default:"—" }}</td><td>{{ v.count|default:0 }}</td><td>{{ v.total|default:0|floatformat:2 }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  {% endif %}
+
+</div>
+{% endblock %}

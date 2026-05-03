@@ -1,0 +1,158 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "General Ledger" %}{% endblock %}
+{% block nav_compliance %}active{% endblock %}
+
+{% block extra_styles %}
+  .gl-page { max-width: 1280px; margin: 0 auto; }
+  .gl-banner { background: linear-gradient(135deg, var(--primary) 0%, #002244 100%); color: white; border-radius: 18px; padding: 22px 28px; margin-bottom: 22px; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+  .gl-banner h2 { font-family:'Cairo',sans-serif; font-size:22px; font-weight:800; }
+  .gl-banner p  { color: rgba(255,255,255,0.78); font-size:13px; max-width:720px; }
+
+  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:14px; margin-bottom:22px; }
+  .kpi-card { background:white; border:1px solid var(--border); border-radius:14px; padding:16px 18px; }
+  .kpi-card .label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; }
+  .kpi-card .value { font-family:'Cairo',sans-serif; font-weight:900; font-size:24px; color:var(--primary); margin-top:6px; line-height:1; }
+  .kpi-card.good .value { color: var(--success); }
+  .kpi-card.alert .value { color: var(--danger); }
+
+  .gl-card { background:white; border:1px solid var(--border); border-radius:14px; padding:18px 22px; margin-bottom:16px; }
+  .gl-card h3 { font-family:'Cairo',sans-serif; font-weight:800; font-size:15px; color:var(--primary); margin-bottom:12px; }
+
+  .data-table { width:100%; border-collapse:separate; border-spacing:0; }
+  .data-table th { background:var(--bg-soft); padding:10px 12px; font-size:11px; font-weight:800; text-align:start; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; }
+  .data-table td { padding:10px 12px; font-size:13px; border-top:1px solid var(--border-soft); }
+  .data-table td.num { text-align: end; font-family: monospace; }
+
+  .badge { display:inline-block; padding:3px 10px; border-radius:100px; font-size:11px; font-weight:700; }
+  .badge-posted { background:#dcfce7; color:#166534; }
+  .badge-draft  { background:#fef3c7; color:#92400e; }
+  .badge-voided { background:#fee2e2; color:#991b1b; }
+  .badge-asset    { background:#dbeafe; color:#1e40af; }
+  .badge-liability{ background:#fee2e2; color:#991b1b; }
+  .badge-equity   { background:#f3e8ff; color:#6b21a8; }
+  .badge-revenue  { background:#dcfce7; color:#166534; }
+  .badge-expense  { background:#fef3c7; color:#92400e; }
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "General Ledger" %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="gl-page">
+
+  <div class="gl-banner">
+    <div style="flex:1; min-width:320px;">
+      <h2>📒 {% trans "General Ledger" %}</h2>
+      <p>{% trans "Chart of accounts, balanced journal entries, trial balance, and per-account ledger — the GL backbone every Tier-1 ERP needs." %}</p>
+    </div>
+    <div>
+      <span class="badge badge-asset" style="font-size:13px; padding:6px 14px;">
+        {% trans "Accounts:" %} {{ accounts_count }}
+      </span>
+    </div>
+  </div>
+
+  <!-- KPIs from trial balance -->
+  <div class="kpi-grid">
+    <div class="kpi-card {% if trial_balance.totals.is_balanced %}good{% else %}alert{% endif %}">
+      <div class="label">{% trans "Trial balance" %}</div>
+      <div class="value">
+        {% if trial_balance.totals.is_balanced %}✓ {% trans "Balanced" %}{% else %}✕ {% trans "Out of balance" %}{% endif %}
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">{% trans "Total debits" %}</div>
+      <div class="value">{{ trial_balance.totals.debit|default:0|floatformat:2 }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">{% trans "Total credits" %}</div>
+      <div class="value">{{ trial_balance.totals.credit|default:0|floatformat:2 }}</div>
+    </div>
+    <div class="kpi-card {% if trial_balance.totals.diff %}alert{% else %}good{% endif %}">
+      <div class="label">{% trans "Difference" %}</div>
+      <div class="value">{{ trial_balance.totals.diff|default:0|floatformat:2 }}</div>
+    </div>
+  </div>
+
+  <!-- Trial balance -->
+  <div class="gl-card">
+    <h3>{% trans "Trial balance" %} <span style="font-weight:400; color:var(--text-muted); font-size:12px;">— {% trans "as of today" %}</span></h3>
+    {% if trial_balance.rows %}
+      <table class="data-table">
+        <thead><tr>
+          <th>{% trans "Code" %}</th>
+          <th>{% trans "Account" %}</th>
+          <th>{% trans "Type" %}</th>
+          <th class="num">{% trans "Debit" %}</th>
+          <th class="num">{% trans "Credit" %}</th>
+          <th class="num">{% trans "Balance" %}</th>
+        </tr></thead>
+        <tbody>
+          {% for row in trial_balance.rows %}
+            <tr>
+              <td><code>{{ row.code }}</code></td>
+              <td>{{ row.name }}</td>
+              <td><span class="badge badge-{{ row.account_type }}">{{ row.account_type }}</span></td>
+              <td class="num">{{ row.debit|floatformat:2 }}</td>
+              <td class="num">{{ row.credit|floatformat:2 }}</td>
+              <td class="num"><strong>{{ row.balance|floatformat:2 }}</strong></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p style="text-align:center; color:var(--text-muted); padding:30px 0;">
+        {% trans "No posted entries yet. Post an invoice via /api/v1/ledger/post-invoice/ to populate the trial balance." %}
+      </p>
+    {% endif %}
+  </div>
+
+  <!-- Recent entries -->
+  <div class="gl-card">
+    <h3>{% trans "Recent journal entries" %}</h3>
+    {% if entries %}
+      <table class="data-table">
+        <thead><tr>
+          <th>{% trans "Number" %}</th>
+          <th>{% trans "Date" %}</th>
+          <th>{% trans "Description" %}</th>
+          <th>{% trans "Source" %}</th>
+          <th>{% trans "Status" %}</th>
+          <th class="num">{% trans "Total" %}</th>
+        </tr></thead>
+        <tbody>
+          {% for e in entries %}
+            <tr>
+              <td><code>{{ e.entry_number }}</code></td>
+              <td>{{ e.entry_date|date:"Y-m-d" }}</td>
+              <td>{{ e.description|truncatechars:60 }}
+                {% if e.reference %}<div style="font-size:11px; color:var(--text-muted);">ref: {{ e.reference }}</div>{% endif %}
+              </td>
+              <td>{{ e.get_source_display }}</td>
+              <td><span class="badge badge-{{ e.status }}">{{ e.get_status_display }}</span></td>
+              <td class="num">{{ e.total_debits|floatformat:2 }} {{ e.currency }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p style="text-align:center; color:var(--text-muted); padding:30px 0;">
+        {% trans "No entries yet." %}
+      </p>
+    {% endif %}
+  </div>
+
+  <div class="gl-card" style="background: var(--bg-soft); border-color: rgba(0,51,102,0.10);">
+    <h3>{% trans "How it works" %}</h3>
+    <p style="font-size:12px; color:var(--text-muted); line-height:1.7; margin: 0;">
+      {% trans "Every invoice you upload can be auto-posted to the ledger via POST /api/v1/ledger/post-invoice/ with {invoice_id, direction}. Sales invoices debit AR + credit Revenue + VAT Output; purchase invoices debit Expense + VAT Input + credit AP. Bank reconciliations post the cash leg automatically once an invoice is matched. Posted entries are immutable (audit hash chain) — voiding generates a compensating entry rather than editing the original." %}
+    </p>
+  </div>
+
+</div>
+{% endblock %}

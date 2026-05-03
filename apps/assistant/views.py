@@ -81,6 +81,33 @@ Control Failure · Segregation of Duties · Materiality · PIH chain · TRN form
 """
 
 
+def _build_fallback_answer(message: str, context: dict) -> str:
+    """Return a deterministic, DB-grounded answer when the LLM is unavailable."""
+    summary = context.get("invoice_summary") or {}
+    totals = context.get("totals") or {}
+    top_rules = context.get("top_failing_rules_30d") or []
+    risky_vendors = context.get("top_risky_vendors") or []
+
+    lines = [
+        "ملخص سريع من بيانات النظام الحالية:",
+        f"- عدد الفواتير: {summary.get('approved', 0) + summary.get('pending_review', 0) + summary.get('flagged', 0) + summary.get('rejected', 0)}",
+        f"- الفواتير عالية/حرجة المخاطر: {summary.get('high_risk', 0)}",
+        f"- الفواتير المكررة: {summary.get('duplicates', 0)}",
+        f"- الفواتير قيد المراجعة: {summary.get('pending_review', 0)}",
+        f"- إجمالي المستندات الأساسية: فواتير {totals.get('invoices', 0)}، أوامر شراء {totals.get('purchase_orders', 0)}، سندات دفع {totals.get('payment_vouchers', 0)}",
+    ]
+    if top_rules:
+        top = ", ".join(f"{item.get('code')} ({item.get('count')})" for item in top_rules[:3])
+        lines.append(f"- أكثر القواعد فشلاً آخر 30 يوم: {top}")
+    if risky_vendors:
+        top_vendor = risky_vendors[0]
+        lines.append(
+            f"- أعلى مورد خطورة حاليًا: {top_vendor.get('name')} بعدد {top_vendor.get('high_risk_invoices', 0)} فواتير عالية المخاطر"
+        )
+    lines.append("تعذر الوصول إلى خدمة الذكاء الاصطناعي الآن، لذا هذا الرد مبني فقط على بيانات النظام المتاحة بدون استنتاجات إضافية.")
+    return "\n".join(lines)
+
+
 # ── Conversation memory (cache-backed, per user) ──────────────────────────────
 #
 # Key shape: assistant:hist:<user_id>. Stores list[{"role","content"}], capped
@@ -471,9 +498,10 @@ class AssistantChatView(APIView):
         except Exception as exc:
             logger.exception("assistant chat failed: %s", exc)
             return Response({
-                "answer": "عذراً، حدث خطأ أثناء المعالجة. حاول مرة أخرى.",
+                "answer": _build_fallback_answer(message, context),
+                "fallback": True,
                 "error": str(exc)[:200],
-            }, status=500)
+            }, status=200)
 
 
 class AssistantResetView(APIView):

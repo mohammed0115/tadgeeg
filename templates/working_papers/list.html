@@ -1,0 +1,102 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Working Papers" %}{% endblock %}
+{% block nav_audit %}active{% endblock %}
+
+{% block extra_styles %}
+  .wp-page { max-width: 1200px; margin: 0 auto; }
+  .filter-bar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:18px; padding:14px 18px; background:white; border:1px solid var(--border-soft); border-radius:14px; }
+  .filter-bar input, .filter-bar select { padding:10px 14px; border:1.5px solid var(--border); border-radius:10px; background:var(--bg-soft); font-size:13px; font-family:inherit; }
+  .status-tabs { display:flex; gap:6px; background:var(--bg-soft); padding:4px; border-radius:10px; }
+  .status-tab { padding:8px 14px; font-size:13px; font-weight:600; color:var(--text-muted); border-radius:8px; }
+  .status-tab.active { background:white; color:var(--primary); box-shadow:0 2px 4px rgba(0,51,102,0.08); }
+  .status-tab .count { display:inline-block; margin-inline-start:4px; padding:2px 8px; background:rgba(0,51,102,0.08); color:var(--primary); border-radius:100px; font-size:11px; font-weight:800; }
+  .data-table { width:100%; background:white; border-collapse:separate; border-spacing:0; border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+  .data-table th { background:var(--bg-soft); padding:12px 14px; font-size:11px; font-weight:800; text-align:start; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em; }
+  .data-table td { padding:12px 14px; font-size:13px; border-top:1px solid var(--border-soft); }
+  .badge { display:inline-block; padding:3px 10px; border-radius:100px; font-size:11px; font-weight:700; }
+  .badge-draft { background:#e2e8f0; color:#475569; }
+  .badge-review { background:#fef3c7; color:#92400e; }
+  .badge-reviewed { background:#dbeafe; color:#1e40af; }
+  .badge-locked { background:#dcfce7; color:#166534; }
+  .badge-archived { background:#f1f5f9; color:#64748b; }
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'frontend:dashboard' %}" style="color:var(--text-muted)">{% trans "Dashboard" %}</a>
+  <span style="color:var(--text-light)">/</span>
+  <span style="color:var(--primary);font-weight:700">{% trans "Working Papers" %}</span>
+{% endblock %}
+
+{% block content %}
+<div class="wp-page">
+
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">{% trans "Working Papers" %}</h1>
+      <p class="page-subtitle">{% trans "ISA 230 — preparer · senior reviewer · partner sign-off, with tamper-evident lock on signing." %}</p>
+    </div>
+    <a href="{% url 'frontend:working_paper_create' %}" class="btn btn-primary">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      {% trans "New Paper" %}
+    </a>
+  </div>
+
+  <form method="get" class="filter-bar">
+    <input type="text" name="q" value="{{ search }}" placeholder="{% trans 'Search by reference or title' %}" style="flex:1; min-width:240px;">
+    <select name="type">
+      <option value="all">{% trans "All types" %}</option>
+      {% for k, label in paper_types %}
+        <option value="{{ k }}" {% if k == type_filter %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-light">{% trans "Filter" %}</button>
+    <div class="status-tabs">
+      <a href="?status=all" class="status-tab {% if status_filter == 'all' %}active{% endif %}">{% trans "All" %} <span class="count">{{ counts|length }}</span></a>
+      <a href="?status=draft" class="status-tab {% if status_filter == 'draft' %}active{% endif %}">{% trans "Draft" %} <span class="count">{{ counts.draft }}</span></a>
+      <a href="?status=ready_for_review" class="status-tab {% if status_filter == 'ready_for_review' %}active{% endif %}">{% trans "Ready for review" %} <span class="count">{{ counts.ready_for_review }}</span></a>
+      <a href="?status=reviewed" class="status-tab {% if status_filter == 'reviewed' %}active{% endif %}">{% trans "Reviewed" %} <span class="count">{{ counts.reviewed }}</span></a>
+      <a href="?status=locked" class="status-tab {% if status_filter == 'locked' %}active{% endif %}">{% trans "Locked" %} <span class="count">{{ counts.locked }}</span></a>
+    </div>
+  </form>
+
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>{% trans "Reference" %}</th>
+        <th>{% trans "Title" %}</th>
+        <th>{% trans "Type" %}</th>
+        <th>{% trans "Status" %}</th>
+        <th>{% trans "Preparer" %}</th>
+        <th>{% trans "Reviewer" %}</th>
+        <th>{% trans "Partner" %}</th>
+        <th>{% trans "Updated" %}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in papers %}
+        <tr>
+          <td><a href="{% url 'frontend:working_paper_detail' pk=p.id %}" style="font-weight:700; color:var(--primary);"><code>{{ p.reference }}</code></a></td>
+          <td>{{ p.title }}</td>
+          <td>{{ p.get_paper_type_display }}</td>
+          <td>
+            <span class="badge {% if p.status == 'draft' %}badge-draft{% elif p.status == 'ready_for_review' %}badge-review{% elif p.status == 'reviewed' %}badge-reviewed{% elif p.status == 'locked' %}badge-locked{% else %}badge-archived{% endif %}">
+              {{ p.get_status_display }}
+            </span>
+          </td>
+          <td>{{ p.prepared_by.full_name|default:"—" }}</td>
+          <td>{{ p.reviewed_by.full_name|default:"—" }}</td>
+          <td>{{ p.partner_signed_by.full_name|default:"—" }}</td>
+          <td class="text-muted">{{ p.updated_at|date:"Y-m-d H:i" }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="8" style="text-align:center; padding:50px 0; color:var(--text-muted);">
+          {% trans "No working papers yet. Create your first paper to start an audit engagement." %}
+        </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+</div>
+{% endblock %}

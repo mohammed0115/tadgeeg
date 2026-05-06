@@ -63,6 +63,49 @@ with connection.cursor() as cur:
         # New schema or table doesn't exist — nothing to do
         pass
 PY
+
+  # Drop orphan tables left behind by a previous deploy that crashed
+  # mid-migration. MySQL DDL auto-commits, so a CreateModel that ran before a
+  # later migration failed leaves the table behind without a django_migrations
+  # row. On retry, Django re-runs CreateModel and errors with "table already
+  # exists". Detect each known case and drop the orphan so migrate can replay.
+  python - <<'PY'
+import os
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", os.getenv("DJANGO_SETTINGS_MODULE", "finai_backend.settings"))
+import django; django.setup()
+from django.db import connection
+
+# (app_label, migration_name, [tables to drop if migration not applied])
+ORPHAN_CHECKS = [
+    ("ledger", "0002_period_close", ["ledger_periods"]),
+    ("procurement", "0001_initial", [
+        "procurement_threeway_matches",
+        "procurement_pr_approvals",
+        "procurement_pr_lines",
+        "procurement_requisitions",
+    ]),
+]
+
+with connection.cursor() as cur:
+    for app, migration, tables in ORPHAN_CHECKS:
+        cur.execute(
+            "SELECT 1 FROM django_migrations WHERE app=%s AND name=%s",
+            [app, migration],
+        )
+        if cur.fetchone():
+            continue  # migration already applied; tables are legitimate
+        for table in tables:
+            cur.execute(
+                "SELECT 1 FROM information_schema.TABLES "
+                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s",
+                [table],
+            )
+            if cur.fetchone():
+                print(f"Dropping orphan table {table} (from failed prior deploy of {app}.{migration})")
+                cur.execute(f"SET FOREIGN_KEY_CHECKS=0")
+                cur.execute(f"DROP TABLE IF EXISTS `{table}`")
+                cur.execute(f"SET FOREIGN_KEY_CHECKS=1")
+PY
 fi
 
 python manage.py migrate --noinput

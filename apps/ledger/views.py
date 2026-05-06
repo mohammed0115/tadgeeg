@@ -337,3 +337,179 @@ class ExchangeRateView(APIView):
             "to_currency": rate.to_currency, "rate": float(rate.rate),
             "rate_date": rate.rate_date.isoformat(), "source": rate.source,
         }, status=201)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 7.2 — Accounting periods
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _serialise_period(p) -> dict:
+    return {
+        "id":            str(p.id),
+        "name":          p.name,
+        "fiscal_year":   p.fiscal_year,
+        "period_number": p.period_number,
+        "start_date":    p.start_date.isoformat(),
+        "end_date":      p.end_date.isoformat(),
+        "status":        p.status,
+        "closed_at":     p.closed_at.isoformat() if p.closed_at else None,
+        "closed_by":     p.closed_by.full_name if p.closed_by else "",
+        "locked_at":     p.locked_at.isoformat() if p.locked_at else None,
+        "notes":         p.notes,
+    }
+
+
+class PeriodListCreateView(APIView):
+    """List periods · seed a fiscal year of 12 monthly periods."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from apps.ledger.models import AccountingPeriod
+        org = getattr(request.user, "organization", None)
+        if not org:
+            return Response({"results": []})
+        qs = AccountingPeriod.objects.filter(organization=org)
+        if request.GET.get("year"):
+            try:
+                qs = qs.filter(fiscal_year=int(request.GET["year"]))
+            except ValueError:
+                pass
+        return Response({"results": [_serialise_period(p) for p in qs]})
+
+    def post(self, request):
+        if not _can_post(request.user):
+            return Response({"error": "finance/admin role required"}, status=403)
+        org = getattr(request.user, "organization", None)
+        if not org:
+            return Response({"error": "user has no organization"}, status=400)
+        try:
+            year = int(request.data.get("fiscal_year") or 0)
+            if year < 2000 or year > 2100:
+                raise ValueError("fiscal_year out of range")
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=400)
+        out = gl.ensure_periods_for_year(org, year)
+        return Response(out, status=201)
+
+
+class PeriodCloseView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        if not _can_post(request.user):
+            return Response({"error": "finance/admin role required"}, status=403)
+        from apps.ledger.models import AccountingPeriod
+        org = getattr(request.user, "organization", None)
+        period = AccountingPeriod.objects.filter(pk=pk, organization=org).first()
+        if not period:
+            return Response({"error": "not found"}, status=404)
+        try:
+            summary = gl.close_period(
+                period, user=request.user,
+                fx_revaluation=bool(request.data.get("fx_revaluation", True)),
+            )
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=400)
+        return Response(summary)
+
+
+class PeriodReopenView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        if not _can_post(request.user):
+            return Response({"error": "finance/admin role required"}, status=403)
+        from apps.ledger.models import AccountingPeriod
+        org = getattr(request.user, "organization", None)
+        period = AccountingPeriod.objects.filter(pk=pk, organization=org).first()
+        if not period:
+            return Response({"error": "not found"}, status=404)
+        try:
+            gl.reopen_period(period, user=request.user,
+                             reason=request.data.get("reason") or "")
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=400)
+        period.refresh_from_db()
+        return Response(_serialise_period(period))
+
+
+class PeriodLockView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        if not _can_post(request.user):
+            return Response({"error": "finance/admin role required"}, status=403)
+        from apps.ledger.models import AccountingPeriod
+        org = getattr(request.user, "organization", None)
+        period = AccountingPeriod.objects.filter(pk=pk, organization=org).first()
+        if not period:
+            return Response({"error": "not found"}, status=404)
+        try:
+            gl.lock_period(period, user=request.user)
+        except ValueError as exc:
+            return Response({"error": str(exc)}, status=400)
+        period.refresh_from_db()
+        return Response(_serialise_period(period))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 7.4 — Multi-jurisdiction tax engine
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TaxJurisdictionsView(APIView):
+    """List every jurisdiction the engine knows + their standard rates."""
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        from apps.ledger.tax_engine import supported_countries
+        return Response({"results": supported_countries()})
+
+
+class TaxValidateView(APIView):
+    """Validate a tax-registration-number for a given country.
+
+    POST {country: "SA", tax_id: "300000000000003"}
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from apps.ledger.tax_engine import get_handler
+        country = str(request.data.get("country") or "").strip()
+        tax_id  = str(request.data.get("tax_id") or "").strip()
+        if not country:
+            return Response({"error": "country is required"}, status=400)
+        handler = get_handler(country)
+        result = handler.validate_tax_id(tax_id)
+        return Response(result.to_dict())
+
+
+class TaxComputeView(APIView):
+    """Compute tax amount + GL routing for a (country, base_amount, category).
+
+    POST {country: "SA", base_amount: 1000, category: "standard"}
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from decimal import Decimal, InvalidOperation
+        from apps.ledger.tax_engine import get_handler
+
+        country  = str(request.data.get("country") or "").strip()
+        category = str(request.data.get("category") or "standard").strip()
+        try:
+            base = Decimal(str(request.data.get("base_amount") or "0"))
+        except (InvalidOperation, TypeError):
+            return Response({"error": "base_amount must be a number"}, status=400)
+        if base < 0:
+            return Response({"error": "base_amount must be non-negative"}, status=400)
+
+        kwargs = {}
+        if "state_rate" in request.data:
+            try:
+                kwargs["state_rate"] = Decimal(str(request.data["state_rate"]))
+            except (InvalidOperation, TypeError):
+                return Response({"error": "state_rate must be a number"}, status=400)
+
+        handler = get_handler(country, **kwargs)
+        result  = handler.compute(base, category=category)
+        return Response(result.to_dict())

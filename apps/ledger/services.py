@@ -26,7 +26,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Optional
 
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from apps.ledger.models import (
@@ -211,6 +211,17 @@ def post_entry(*,
 
     if not lines:
         raise ValueError("at least one line is required")
+
+    # Phase 7.2 — period guard. If the org has set up periods, the
+    # entry_date must fall inside an OPEN one. Orgs that never created
+    # periods get the legacy "always open" behaviour, so adopting period
+    # close is opt-in.
+    period = _find_period_for(organization, entry_date)
+    if period is not None and not period.is_open:
+        raise ValueError(
+            f"period '{period.name}' is {period.status} — "
+            f"cannot post into a non-open period"
+        )
 
     fx = get_or_create_fx_rate(
         organization=organization,
@@ -465,3 +476,223 @@ def void_entry(entry: JournalEntry, *, user=None,
     entry.voided_by_entry = void
     entry.save(update_fields=["voided_at", "voided_by_entry", "updated_at"])
     return void
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 7.2 — Accounting periods + period-close engine
+# ─────────────────────────────────────────────────────────────────────────────
+
+from calendar import monthrange
+
+
+def _find_period_for(organization, on_date: date):
+    """Return the period that covers ``on_date``, or None if no periods exist.
+
+    Imported lazily so the module-level fields don't pull AccountingPeriod
+    before the migration runs.
+    """
+    from apps.ledger.models import AccountingPeriod
+    return AccountingPeriod.objects.filter(
+        organization=organization,
+        start_date__lte=on_date,
+        end_date__gte=on_date,
+    ).first()
+
+
+def ensure_periods_for_year(organization, fiscal_year: int) -> dict:
+    """Create the 12 monthly periods for ``fiscal_year`` if missing.
+
+    Idempotent — calling twice creates nothing new on the second run.
+    Plays nicely with calendar fiscal years; orgs that follow a different
+    fiscal year start (April / July) override start/end on each period
+    after creation.
+    """
+    from apps.ledger.models import AccountingPeriod
+
+    created = 0
+    for month in range(1, 13):
+        last_day = monthrange(fiscal_year, month)[1]
+        _, was_created = AccountingPeriod.objects.get_or_create(
+            organization=organization,
+            fiscal_year=fiscal_year, period_number=month,
+            defaults={
+                "name":       f"{fiscal_year}-{month:02d}",
+                "start_date": date(fiscal_year, month, 1),
+                "end_date":   date(fiscal_year, month, last_day),
+                "status":     AccountingPeriod.Status.OPEN,
+            },
+        )
+        if was_created:
+            created += 1
+    total = AccountingPeriod.objects.filter(
+        organization=organization, fiscal_year=fiscal_year,
+    ).count()
+    return {"created": created, "total": total, "fiscal_year": fiscal_year}
+
+
+@transaction.atomic
+def close_period(period, *, user=None,
+                 fx_revaluation: bool = True) -> dict:
+    """Close a period — block further postings and (optionally) book the
+    FX-revaluation entry that brings every foreign-currency balance to
+    today's rate.
+
+    Returns a summary the caller / API surface can show to the user:
+    ``{ok, period, entries_count, fx_revaluation_entry_id}``.
+    """
+    from apps.ledger.models import AccountingPeriod
+
+    if period.status not in {AccountingPeriod.Status.OPEN,
+                             AccountingPeriod.Status.CLOSING}:
+        raise ValueError(f"cannot close a {period.status} period")
+
+    period.status = AccountingPeriod.Status.CLOSING
+    period.save(update_fields=["status", "updated_at"])
+
+    summary = {
+        "ok": False,
+        "period_id": str(period.id),
+        "period_name": period.name,
+        "entries_count": JournalEntry.objects.filter(
+            organization=period.organization,
+            entry_date__gte=period.start_date,
+            entry_date__lte=period.end_date,
+            status=JournalEntry.Status.POSTED,
+        ).count(),
+        "fx_revaluation_entry_id": None,
+    }
+
+    # FX revaluation: re-translate every foreign-currency balance at the
+    # rate effective on period.end_date. Skipping for now if the org has
+    # no FX rates on file — keeps the flow runnable in single-currency setups.
+    if fx_revaluation:
+        revaluation_id = _post_fx_revaluation(period, user=user)
+        summary["fx_revaluation_entry_id"] = (
+            str(revaluation_id) if revaluation_id else None
+        )
+
+    period.status = AccountingPeriod.Status.CLOSED
+    period.closed_at = timezone.now()
+    period.closed_by = user
+    period.save(update_fields=["status", "closed_at", "closed_by", "updated_at"])
+    summary["ok"] = True
+    return summary
+
+
+@transaction.atomic
+def reopen_period(period, *, user=None, reason: str = "") -> None:
+    """Reopen a CLOSED period (admin only). LOCKED periods cannot reopen."""
+    from apps.ledger.models import AccountingPeriod
+    if period.status == AccountingPeriod.Status.LOCKED:
+        raise ValueError("locked periods cannot be reopened")
+    if period.status != AccountingPeriod.Status.CLOSED:
+        raise ValueError(f"cannot reopen a {period.status} period")
+    period.status = AccountingPeriod.Status.OPEN
+    period.notes = (period.notes + f"\nReopened {timezone.now():%Y-%m-%d %H:%M} "
+                    f"by {user.email if user else '?'}: {reason or '-'}").strip()
+    period.closed_at = None
+    period.closed_by = None
+    period.save(update_fields=["status", "notes", "closed_at", "closed_by", "updated_at"])
+
+
+@transaction.atomic
+def lock_period(period, *, user=None) -> None:
+    """One-way lock — period cannot be reopened after this.
+
+    Reserved for the auditor's final sign-off on a closed period.
+    """
+    from apps.ledger.models import AccountingPeriod
+    if period.status != AccountingPeriod.Status.CLOSED:
+        raise ValueError(f"only CLOSED periods can be locked (got {period.status})")
+    period.status = AccountingPeriod.Status.LOCKED
+    period.locked_at = timezone.now()
+    period.locked_by = user
+    period.save(update_fields=["status", "locked_at", "locked_by", "updated_at"])
+
+
+def _post_fx_revaluation(period, *, user=None):
+    """Compute the unrealised FX gain/loss across every foreign-currency
+    journal line in the period and post the offsetting entry.
+
+    Returns the new entry id, or None if there's nothing to revalue.
+    """
+    from collections import defaultdict
+    from apps.ledger.models import JournalLine
+
+    org = period.organization
+
+    # Aggregate by currency: sum of (debit - credit) at original rate ×
+    # the rate effective at end_date minus the per-line base amount.
+    movements = (
+        JournalLine.objects
+        .filter(
+            entry__organization=org,
+            entry__status=JournalEntry.Status.POSTED,
+            entry__entry_date__gte=period.start_date,
+            entry__entry_date__lte=period.end_date,
+        )
+        .exclude(entry__currency=models.F("entry__base_currency"))
+        .select_related("entry")
+    )
+
+    # Build per-(currency, account) net amounts.
+    by_pair: dict = defaultdict(lambda: {"src": Decimal("0"), "base": Decimal("0")})
+    for li in movements:
+        key = (li.entry.currency, li.account_id)
+        sign_d = Decimal(str(li.debit or 0)) - Decimal(str(li.credit or 0))
+        sign_b = Decimal(str(li.base_debit or 0)) - Decimal(str(li.base_credit or 0))
+        by_pair[key]["src"]  += sign_d
+        by_pair[key]["base"] += sign_b
+        by_pair[key]["account_id"] = li.account_id
+
+    if not by_pair:
+        return None
+
+    base_currency = "SAR"
+    fx_account = get_account(org, "5400")  # FX Gain/Loss
+    if fx_account is None:
+        return None
+
+    reval_lines: list[dict] = []
+    total_diff = Decimal("0")
+
+    for (currency, account_id), agg in by_pair.items():
+        rate = get_or_create_fx_rate(
+            organization=org,
+            from_currency=currency, to_currency=base_currency,
+            rate_date=period.end_date,
+        ).rate
+        new_base = (agg["src"] * rate).quantize(Decimal("0.0001"))
+        diff = (new_base - agg["base"]).quantize(Decimal("0.0001"))
+        if diff == 0:
+            continue
+        total_diff += diff
+
+        # The account's balance in base currency moves by ``diff``.
+        # Asset/expense net gain → DR account, CR FX P/L; loss → reverse.
+        from apps.ledger.models import Account as _Acct
+        target = _Acct.objects.get(pk=account_id)
+        if diff > 0:
+            reval_lines.append({"account_code": target.code, "debit":  diff})
+        else:
+            reval_lines.append({"account_code": target.code, "credit": -diff})
+
+    if not reval_lines:
+        return None
+
+    # Single offsetting line on FX P/L so the entry balances.
+    if total_diff > 0:
+        reval_lines.append({"account_code": "5400", "credit": total_diff})
+    else:
+        reval_lines.append({"account_code": "5400", "debit":  -total_diff})
+
+    entry = post_entry(
+        organization=org, entry_date=period.end_date,
+        description=f"FX revaluation — period {period.name}",
+        source=JournalEntry.Source.SYSTEM,
+        source_object_id=str(period.id),
+        currency=base_currency, base_currency=base_currency,
+        idempotency_key=f"fx-reval:{period.id}",
+        created_by=user, lines=reval_lines,
+    )
+    return entry.id

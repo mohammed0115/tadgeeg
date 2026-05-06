@@ -43,6 +43,7 @@ urlpatterns = [
     path("api/v1/zatca/", include("apps.zatca.urls")),
     path("api/v1/banking/", include("apps.banking.urls")),
     path("api/v1/ledger/", include("apps.ledger.urls")),
+    path("api/v1/procurement/", include("apps.procurement.urls")),
     path("api/v1/documents/", include("apps.documents.urls")),
     path("api/v1/transactions/", include("apps.transactions.urls")),
     path("api/v1/audit/", include("apps.audit.urls")),

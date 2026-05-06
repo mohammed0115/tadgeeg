@@ -133,6 +133,7 @@ LOCAL_APPS = [
     "apps.zatca",
     "apps.banking",
     "apps.ledger",
+    "apps.procurement",
 ]
 
 # ─── Rule Engine Settings ──────────────────────────────────────────────────────

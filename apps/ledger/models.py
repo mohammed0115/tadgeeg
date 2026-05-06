@@ -317,3 +317,85 @@ class JournalLine(models.Model):
     def __str__(self) -> str:
         side = f"DR {self.debit}" if self.debit > 0 else f"CR {self.credit}"
         return f"{self.account.code} {side}"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Phase 7.2 — Accounting periods + period close
+# ─────────────────────────────────────────────────────────────────────────────
+
+class AccountingPeriod(models.Model):
+    """One row per fiscal period (typically calendar months).
+
+    The GL is only as trustworthy as its period-close discipline:
+    without it, anyone with the finance role can backdate journal
+    entries into a published quarter and silently rewrite history. This
+    is the SAP F-CO / Oracle Calendar concept — once a period is CLOSED,
+    ``post_entry`` rejects any attempt to write into it.
+
+    State machine: OPEN → CLOSING → CLOSED → LOCKED. CLOSED can be
+    reopened by an admin (which the audit trail records); LOCKED is
+    one-way and reserved for auditor sign-off.
+    """
+
+    class Status(models.TextChoices):
+        OPEN     = "open",     "Open"
+        CLOSING  = "closing",  "Closing in progress"
+        CLOSED   = "closed",   "Closed"
+        LOCKED   = "locked",   "Locked (auditor sign-off)"
+
+    id            = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization  = models.ForeignKey(
+        "authentication.Organization", on_delete=models.CASCADE,
+        related_name="accounting_periods",
+    )
+    fiscal_year   = models.PositiveSmallIntegerField()
+    period_number = models.PositiveSmallIntegerField(
+        help_text="1-12 for monthly accounting; 13 = year-end adjustment.",
+    )
+    name          = models.CharField(max_length=64,
+                                     help_text="e.g. '2026-05' or 'FY2026 P05'")
+    start_date    = models.DateField(db_index=True)
+    end_date      = models.DateField(db_index=True)
+    status        = models.CharField(max_length=12, choices=Status.choices,
+                                     default=Status.OPEN, db_index=True)
+    closed_at     = models.DateTimeField(null=True, blank=True)
+    closed_by     = models.ForeignKey(
+        "authentication.User", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="closed_periods",
+    )
+    locked_at     = models.DateTimeField(null=True, blank=True)
+    locked_by     = models.ForeignKey(
+        "authentication.User", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="locked_periods",
+    )
+    notes         = models.TextField(blank=True)
+    created_at    = models.DateTimeField(auto_now_add=True)
+    updated_at    = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "ledger_periods"
+        ordering = ["-fiscal_year", "-period_number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "fiscal_year", "period_number"],
+                name="ledger_period_unique_per_org",
+            ),
+            models.CheckConstraint(
+                check=models.Q(end_date__gte=models.F("start_date")),
+                name="ledger_period_dates_ordered",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["organization", "status"]),
+            models.Index(fields=["organization", "start_date", "end_date"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} [{self.status}]"
+
+    @property
+    def is_open(self) -> bool:
+        return self.status == self.Status.OPEN
+
+    def covers(self, d) -> bool:
+        return self.start_date <= d <= self.end_date

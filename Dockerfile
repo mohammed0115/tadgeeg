@@ -36,8 +36,8 @@ RUN chmod +x /entrypoint.sh
 
 COPY . .
 
-RUN mkdir -p /app/staticfiles /app/media /app/logs && \
-    chown -R www-data:www-data /app /entrypoint.sh
+RUN mkdir -p /app/staticfiles /app/media /app/logs /var/www && \
+    chown -R www-data:www-data /app /entrypoint.sh /var/www
 
 USER www-data
 

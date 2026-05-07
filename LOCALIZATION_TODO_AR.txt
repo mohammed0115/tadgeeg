@@ -1,0 +1,492 @@
+#: apps/reports/services/findings_service.py:152
+msgid "ZATCA Phase 2 mandates a QR code — request a re-issued e-invoice."
+
+#: apps/reports/services/findings_service.py:181
+msgid "Migrate cash payments to bank transfers per AML guidance."
+
+#: templates/alerts/index.html:57
+msgid "Alerts"
+
+#: templates/alerts/index.html:58
+msgid "Route streaming anomalies to email · SMS · Slack · Teams · webhook."
+
+#: templates/alerts/index.html:76
+msgid "Suppressed (cooldown)"
+
+#: templates/alerts/index.html:80
+msgid "Acknowledged"
+
+#: templates/alerts/index.html:92
+msgid "e.g. Critical anomalies → audit team"
+
+#: templates/alerts/index.html:95
+msgid "Trigger detector (blank = all)"
+
+#: templates/alerts/index.html:97
+msgid "(any detector)"
+
+#: templates/alerts/index.html:113
+msgid "Cooldown (minutes)"
+
+#: templates/alerts/index.html:132
+msgid "email1, email2  /  +9665..."
+
+#: templates/alerts/index.html:169
+msgid "Trigger"
+
+#: templates/alerts/index.html:172
+msgid "Cooldown"
+
+#: templates/alerts/index.html:196
+msgid "No alert rules yet. Click ‘New rule’ to set up your first one."
+
+#: templates/zatca/dashboard.html:203
+msgid "When"
+
+#: templates/alerts/index.html:209
+msgid "Channel"
+
+#: templates/alerts/index.html:227
+msgid "Acknowledge"
+
+#: templates/analytics/index.html:94
+msgid "VAT Collected (monthly)"
+
+#: templates/audit/inbox.html:12
+msgid "Inbox"
+
+#: templates/audit/inbox.html:19
+msgid "Documents flagged or pending — sorted by risk severity."
+
+#: templates/audit/inbox.html:82
+msgid "Inbox is empty — nothing pending review."
+
+#: templates/audit/integrity.html:45
+msgid "Tamper-evident SHA-256 chain across every audit-relevant event."
+
+#: templates/audit/integrity.html:55
+msgid "All chains intact"
+
+#: templates/audit/integrity.html:90
+msgid "Tampering"
+
+#: templates/audit/integrity.html:100
+msgid "Rows"
+
+#: templates/audit/integrity.html:101
+msgid "Head hash"
+
+#: templates/audit/integrity.html:105
+msgid "Breaks"
+
+#: templates/audit/integrity.html:111
+msgid "Tampered rows"
+
+#: templates/audit/integrity.html:130
+msgid "No chain models registered yet."
+
+#: templates/audit/integrity.html:136
+msgid "How the chain works:"
+
+#: templates/audit/rule_builder.html:59 templates/reports/index.html:309
+msgid "Custom Rule Builder"
+
+#: templates/audit/rule_builder.html:108
+msgid "Select a rule from the list, or create a new one to get started."
+
+#: templates/audit/rule_builder.html:136
+msgid "What does this rule check?"
+
+#: templates/audit/rule_builder.html:162
+msgid "ALL of these are true"
+
+#: templates/audit/rule_builder.html:163
+msgid "ANY of these is true"
+
+#: templates/audit/rule_builder.html:214
+msgid "Message shown to auditor"
+
+#: templates/audit/rule_builder.html:397
+msgid "Save the rule first, then run the test."
+
+#: templates/audit/rule_builder.html:415
+msgid "Publish this rule to the live audit pipeline?"
+
+#: templates/audit/rule_builder.html:435
+msgid "Archive this rule?"
+
+#: templates/audit/tools.html:79
+msgid "Auditor judgment factors"
+
+#: templates/audit/tools.html:79
+msgid "shift the %% within the benchmark band"
+
+#: templates/audit/tools.html:95
+msgid "Strong"
+
+#: templates/audit/tools.html:96
+msgid "Adequate"
+
+#: templates/audit/tools.html:97
+msgid "Weak"
+
+#: templates/audit/tools.html:104
+msgid "None"
+
+#: templates/audit/tools.html:106
+msgid "Many"
+
+#: templates/audit/tools.html:114
+msgid "Some"
+
+#: templates/audit/tools.html:127
+msgid "Components (name:weight%%, comma-separated)"
+
+#: templates/audit/tools.html:158
+msgid "Judgment adjustments applied:"
+
+#: templates/audit/tools.html:194
+msgid "Invoices ≥ performance materiality (top 50)"
+
+#: templates/audit/tools.html:230
+msgid "(95%% confidence, 5%% expected error)"
+
+#: templates/audit/tools.html:237
+msgid "Random"
+
+#: templates/audit/tools.html:238
+msgid "Systematic (every n-th)"
+
+#: templates/audit/tools.html:239
+msgid "Monetary-Unit (PPS)"
+
+#: templates/audit/tools.html:247
+msgid "Random seed"
+
+#: templates/audit/tools.html:274
+msgid "Draw sample"
+
+#: templates/audit/tools.html:305
+msgid "Error projection (ISA 530 §A18–A23)"
+
+#: templates/audit/tools.html:308
+msgid "Acceptable"
+
+#: templates/audit/tools.html:310
+msgid "Exceeds performance materiality"
+
+#: templates/audit/tools.html:316
+msgid "Most-likely error"
+
+#: templates/audit/tools.html:324
+msgid "Incremental allowance"
+
+#: templates/audit/tools.html:328
+msgid "Upper-error-limit"
+
+#: templates/audit/tools.html:334
+msgid "Compared against performance materiality:"
+
+#: templates/auditing/upload.html:547
+msgid "✓ Files selected — click 'Start Audit' below"
+
+#: templates/invoices/upload.html:193
+msgid "Add more files"
+
+#: templates/auth/password_reset_done.html:30
+msgid "Confirm the email address, then check spam or resend the link again."
+
+#: templates/banking/dashboard.html:99 templates/zatca/dashboard.html:128
+msgid "Environment"
+
+#: templates/banking/dashboard.html:134
+msgid "Sync"
+
+#: templates/banking/dashboard.html:140
+msgid "No banks connected yet. Click ‘Connect bank’ to add one."
+
+#: templates/banking/dashboard.html:286
+msgid "Sync done"
+
+#: templates/compliance/index.html:103
+msgid "E-invoice + TLV-encoded QR"
+
+#: templates/compliance/index.html:109
+msgid "Payroll social-insurance contributions"
+
+#: templates/compliance/index.html:110
+msgid "Tracked on payroll uploads"
+
+#: templates/compliance/index.html:115
+msgid "International Financial Reporting Standards"
+
+#: templates/compliance/index.html:116
+msgid "Recognition + measurement checks"
+
+#: templates/compliance/index.html:121
+msgid "Accrual + matching principle"
+
+#: templates/compliance/index.html:127
+msgid "Audit Evidence — Mandatory Fields"
+
+#: templates/compliance/index.html:155
+msgid "Active audit rules (R001 → R018)"
+
+#: templates/compliance/index.html:171
+msgid "Amount Anomaly (Z-score)"
+
+#: templates/compliance/index.html:174
+msgid "Three-Way Match (PO ↔ GRN ↔ Invoice)"
+
+#: templates/compliance/index.html:175
+msgid "Currency Consistency (ISO-4217)"
+
+#: templates/compliance/index.html:176
+msgid "VAT Rate Validity (KSA 0/5/15%%)"
+
+#: templates/compliance/index.html:177
+msgid "Round-Number Anomaly"
+
+#: templates/compliance/index.html:180
+msgid "Due-Date Validity"
+
+#: templates/compliance/index.html:181
+msgid "VAT Number Format (KSA TRN)"
+
+#: templates/compliance/index.html:182
+msgid "Vendor Approval Status"
+
+#: templates/dashboard/index.html:245
+msgid "Open Approval Inbox →"
+
+#: templates/dashboard/index.html:284
+msgid "Invoices Trend (last 6 months)"
+
+#: templates/dashboard/index.html:299
+msgid "Your dashboard is empty — try sample data"
+
+#: templates/dashboard/index.html:325
+msgid "— our AI extracts the data and runs validation rules instantly."
+
+#: templates/dashboard/index.html:327
+msgid "Decide"
+
+#: templates/dashboard/index.html:327
+msgid "— approve, hold, or reject; the audit trail captures everything."
+
+#: templates/dashboard/index.html:331
+msgid "Skip"
+
+#: templates/documents/_typed_detail.html:201
+msgid "Δ"
+
+#: templates/documents/_typed_list.html:69
+msgid "Export current rows as Excel"
+
+#: templates/documents/index.html:142
+msgid "Welcome — let's audit your first document"
+
+#: templates/documents/index.html:229
+msgid "Customer orders awaiting fulfilment"
+
+#: templates/documents/index.html:236
+msgid "Price quotes and validity tracking"
+
+#: templates/documents/index.html:243
+msgid "Pre-invoice quotes for customer approval"
+
+#: templates/documents/index.html:267
+msgid "GRN matching with PO and invoice"
+
+#: templates/documents/index.html:274
+msgid "Vendor payments, approvals, three-way match"
+
+#: templates/documents/index.html:301
+msgid "Double-entry postings with debit/credit balance"
+
+#: templates/documents/index.html:308
+msgid "Trial-balance snapshots per period"
+
+#: templates/documents/index.html:315
+msgid "Account-level movement detail"
+
+#: templates/documents/upload.html:299
+msgid "Validate salaries, GOSI, and detect anomalies in payroll records."
+
+#: templates/documents/vat_returns.html:45
+msgid "Quarterly VAT filings compliant with ZATCA Phase 2."
+
+#: templates/invoices/invoice_pdf.html:92
+msgid "Clean — Invoice ↔ PO ↔ GRN reconcile"
+
+#: templates/invoices/list.html:178
+msgid "Apply"
+
+#: templates/invoices/list.html:178
+msgid "to"
+
+#: templates/invoices/list.html:192
+msgid "Done."
+
+#: templates/invoices/list.html:192
+msgid "succeeded"
+
+#: templates/invoices/subreport.html:146
+msgid "By vendor (top 20)"
+
+#: templates/landing/index.html:1564
+msgid "Your browser does not support the video tag."
+
+#: templates/ledger/dashboard.html:65
+msgid "Out of balance"
+
+#: templates/ledger/dashboard.html:84
+msgid "as of today"
+
+#: templates/phase2/reports.html:432
+msgid "ZATCA and VAT compliance check results across all processed documents."
+
+#: templates/reports/index.html:161
+msgid "DUPLICATE"
+
+#: templates/reports/index.html:246
+msgid "Invoices flagged as near-duplicates with their original counterpart."
+
+#: templates/reports/index.html:254
+msgid "Vendor-by-vendor risk scoring, blocked vendors, and aging spend."
+
+#: templates/reports/index.html:262
+msgid "Total spend, VAT breakdown, and vendor concentration."
+
+#: templates/reports/index.html:270
+msgid "Download every invoice in the org as a CSV file."
+
+#: templates/reports/index.html:278
+msgid "Download every invoice in the org as a styled XLSX workbook."
+
+#: templates/reports/index.html:286
+msgid "ISA 320 thresholds + ISA 530 sampling for engagement planning."
+
+#: templates/reports/index.html:317 templates/streaming/ops.html:39
+msgid "Continuous Auditing"
+
+#: templates/reports/index.html:325
+msgid "Alert Routing"
+
+#: templates/reports/index.html:563
+msgid "Quarterly VAT analysis, ZATCA Phase 2 status, and tax position summary."
+
+#: templates/streaming/ops.html:4 templates/streaming/ops.html:47
+msgid "Continuous Auditing — Live Ops"
+
+#: templates/streaming/ops.html:52
+msgid "Window"
+
+#: templates/streaming/ops.html:55
+msgid "Bus"
+
+#: templates/streaming/ops.html:72
+msgid "Throughput"
+
+#: templates/streaming/ops.html:84
+msgid "Avg latency"
+
+#: templates/streaming/ops.html:88
+msgid "p95 latency"
+
+#: templates/streaming/ops.html:99
+msgid "Bus state"
+
+#: templates/streaming/ops.html:102
+msgid "Stream"
+
+#: templates/streaming/ops.html:103
+msgid "Length"
+
+#: templates/streaming/ops.html:123
+msgid "By event type"
+
+#: templates/streaming/ops.html:173
+msgid "No anomaly hits in this window."
+
+#: templates/streaming/ops.html:180
+msgid "How continuous auditing works"
+
+#: templates/vendors/detail.html:19
+msgid "Could not find a vendor by that name in your organisation."
+
+#: templates/vendors/detail.html:34
+msgid "Vendor 360 view — invoices, POs, payments, contracts"
+
+#: templates/vendors/detail.html:67
+msgid "Outstanding"
+
+#: templates/vendors/detail.html:123
+msgid "DUP"
+
+#: templates/working_papers/detail.html:70
+msgid "Paper is locked."
+
+#: templates/working_papers/detail.html:71
+msgid "The audit hash chain protects this paper from any further edit."
+
+#: templates/working_papers/detail.html:74
+msgid "Chain hash:"
+
+#: templates/working_papers/detail.html:82
+msgid "Sign-off"
+
+#: templates/working_papers/detail.html:121
+msgid "Reject — back to preparer"
+
+#: templates/working_papers/detail.html:154
+msgid "Signature trail"
+
+#: templates/working_papers/form.html:4 templates/working_papers/form.html:32
+msgid "New Working Paper"
+
+#: templates/working_papers/form.html:44
+msgid "e.g. Accounts Receivable Lead Schedule — FY2026"
+
+#: templates/working_papers/form.html:46
+msgid "Paper type"
+
+#: templates/working_papers/form.html:55
+msgid "Free-form audit notes; you can edit this later before locking."
+
+#: templates/working_papers/list.html:60
+msgid "Locked"
+
+#: templates/zatca/dashboard.html:77
+msgid "Cleared (B2B)"
+
+#: templates/zatca/dashboard.html:97
+msgid "Clearance rate (30d)"
+
+#: templates/zatca/dashboard.html:106
+msgid "Phase 2 readiness checklist"
+
+#: templates/zatca/dashboard.html:130
+msgid "Cert valid until"
+
+#: templates/zatca/dashboard.html:149
+msgid "Renew"
+
+#: templates/zatca/dashboard.html:164
+msgid "Certificate expiry warnings"
+
+#: templates/zatca/dashboard.html:175
+msgid "Top rejection causes (last 30d)"
+
+#: templates/zatca/dashboard.html:182
+msgid "Fix hint"
+
+#: templates/zatca/dashboard.html:207
+msgid "Chain #"
+
+#: templates/zatca/dashboard.html:208
+msgid "Hash"
+
+#: templates/zatca/dashboard.html:236
+msgid "Onboard new EGS device"
+

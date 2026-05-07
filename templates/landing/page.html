@@ -9,6 +9,27 @@
   <title>{{ page_title }} | {{ product_name }}</title>
   <meta name="description" content="{{ page_description }}">
 
+  <!-- Favicon / Search-engine logo -->
+  <link rel="icon" type="image/png" href="{% static 'img/logo.png' %}">
+  <link rel="shortcut icon" type="image/png" href="{% static 'img/logo.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'img/logo.png' %}">
+  <meta name="theme-color" content="#003366">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="{{ product_name }}">
+  <meta property="og:title" content="{{ page_title }} | {{ product_name }}">
+  <meta property="og:description" content="{{ page_description }}">
+  <meta property="og:image" content="https://www.tadgeeg.com{% static 'img/logo.png' %}">
+  <meta property="og:image:alt" content="{{ product_name }} logo">
+  <meta property="og:locale" content="{% if LANGUAGE_BIDI %}ar_SA{% else %}en_US{% endif %}">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ page_title }} | {{ product_name }}">
+  <meta name="twitter:description" content="{{ page_description }}">
+  <meta name="twitter:image" content="https://www.tadgeeg.com{% static 'img/logo.png' %}">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
@@ -470,10 +491,6 @@
           <div class="stat-cell">
             <div class="stat-cell-value">98%</div>
             <div class="stat-cell-label">{% trans "Extraction accuracy" %}</div>
-          </div>
-          <div class="stat-cell">
-            <div class="stat-cell-value">+1.2K</div>
-            <div class="stat-cell-label">{% trans "Trusted organizations" %}</div>
           </div>
         </div>
         <div class="stats-actions">

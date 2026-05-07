@@ -110,8 +110,12 @@ class Invoice(SoftDeleteModel):
     risk_level        = models.CharField(max_length=10, choices=Severity.choices, default=Severity.LOW)
     is_duplicate      = models.BooleanField(default=False)
     duplicate_of      = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True, related_name="duplicates")
-    ai_summary        = models.TextField(blank=True)            # AI智能摘要
-    ai_recommendations = models.JSONField(default=list)         # AI recommendations
+    ai_summary        = models.TextField(blank=True)
+    ai_summary_ar     = models.TextField(blank=True)
+    ai_summary_en     = models.TextField(blank=True)
+    ai_recommendations = models.JSONField(default=list)
+    ai_recommendations_ar = models.JSONField(default=list)
+    ai_recommendations_en = models.JSONField(default=list)
 
     # ── Metadata ───────────────────────────────────────────────────────────────
     processing_error  = models.TextField(blank=True)

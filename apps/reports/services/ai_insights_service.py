@@ -8,8 +8,37 @@ show one "AI Insights" section regardless of the doc type the user picked.
 """
 from __future__ import annotations
 
+import re
 from collections import Counter
 from typing import Iterable
+
+from django.utils.translation import get_language
+
+
+_AR_RANGE = re.compile(r"[؀-ۿ]")
+
+
+def _is_arabic(text: str) -> bool:
+    """Heuristic: at least one Arabic letter ⇒ treat as Arabic source."""
+    return bool(text) and bool(_AR_RANGE.search(text))
+
+
+def _pick_localized(doc, base_field: str, lang: str) -> object:
+    """Return the field value matching `lang` (ar/en) with a graceful fallback.
+
+    Resolution order:
+      1. {base_field}_{lang}    — exact match for the active language
+      2. {base_field}_{other}   — the other translated column, if populated
+      3. {base_field}            — legacy single-language column
+    """
+    other = "en" if lang == "ar" else "ar"
+    for suffix in (f"_{lang}", f"_{other}", ""):
+        val = getattr(doc, f"{base_field}{suffix}", None)
+        if isinstance(val, str) and val.strip():
+            return val
+        if isinstance(val, (list, tuple)) and any(v for v in val):
+            return val
+    return getattr(doc, base_field, None)
 
 
 # Map selected_type → (model dotted-path, identifier-field). Same dispatch
@@ -89,8 +118,14 @@ def build_ai_insights(org, selected_type: str, *, sample_size: int = 5) -> dict:
     base_qs = Model.objects.filter(organization=org)
     total_docs = base_qs.count()
 
+    lang = (get_language() or "ar")[:2]
+    candidate_fields = (
+        "ai_summary", "ai_summary_ar", "ai_summary_en",
+        "ai_recommendations", "ai_recommendations_ar", "ai_recommendations_en",
+        "anomalies_found", num_field,
+    )
     only_fields = ["id"]
-    for f in ("ai_summary", "ai_recommendations", "anomalies_found", num_field):
+    for f in candidate_fields:
         if f in field_names:
             only_fields.append(f)
     qs = base_qs.only(*only_fields)
@@ -101,8 +136,8 @@ def build_ai_insights(org, selected_type: str, *, sample_size: int = 5) -> dict:
     docs_with_ai = 0
 
     for doc in qs.iterator():
-        summary = _to_text(getattr(doc, "ai_summary", ""))
-        recs    = getattr(doc, "ai_recommendations", None)
+        summary = _to_text(_pick_localized(doc, "ai_summary", lang))
+        recs    = _pick_localized(doc, "ai_recommendations", lang)
         anoms   = getattr(doc, "anomalies_found", None)
 
         has_any = False

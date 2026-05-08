@@ -12,7 +12,7 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.dateparse import parse_date
-from django.utils.translation import gettext as _
+from django.utils.translation import gettext as _, get_language
 from django.views.decorators.csrf import ensure_csrf_cookie
 
 from apps.authentication.forms import EmailOTPResendForm, EmailOTPVerifyForm
@@ -3116,6 +3116,19 @@ def invoice_audit_report(request):
         type_label=str(_DOC_TYPE_LABELS.get(selected_type, "Documents")),
         type_singular=str(_DOC_TYPE_SINGULAR.get(selected_type, "Document")),
     )
+    # When OPENAI_API_KEY is configured, upgrade the narrative to LLM-synthesized
+    # prose grounded in the same findings register. Returns None when the key
+    # is missing, the call fails, or the response shape is invalid — in which
+    # case we keep the deterministic template above.
+    from apps.reports.services.ai_narrative_service import build_ai_narrative
+    ai_narrative = build_ai_narrative(
+        findings_register=findings_register,
+        type_label=str(_DOC_TYPE_LABELS.get(selected_type, "Documents")),
+        type_singular=str(_DOC_TYPE_SINGULAR.get(selected_type, "Document")),
+        language=(get_language() or "ar")[:2],
+    )
+    if ai_narrative is not None:
+        narrative_payload = ai_narrative
 
     # Aggregate the per-document AI fields (`ai_summary`, `ai_recommendations`,
     # `anomalies_found`) into a single section so reports surface the AI work

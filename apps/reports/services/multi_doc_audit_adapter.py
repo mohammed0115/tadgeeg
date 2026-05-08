@@ -390,6 +390,8 @@ def build_for_doc_type(org, doc_type: str) -> dict | None:
     rules_failed_total = 0
     rules_passed_total = 0
     doc_count = 0
+    total_amount = 0.0
+    currencies: set[str] = set()
 
     for doc in qs:
         doc_count += 1
@@ -404,6 +406,10 @@ def build_for_doc_type(org, doc_type: str) -> dict | None:
         view = _DocView(doc, spec)
         validations.append(_ValidationView(view, codes, details if isinstance(details, dict) else {}))
 
+        total_amount += float(view.total_amount or 0)
+        if view.currency:
+            currencies.add(view.currency)
+
         if view.risk_level in ("high", "critical"):
             risk_rows.append(view)
 
@@ -411,6 +417,7 @@ def build_for_doc_type(org, doc_type: str) -> dict | None:
     compliance_pct = (
         round(rules_passed_total / rules_applied_total * 100, 1) if rules_applied_total else 0
     )
+    primary_currency = next(iter(currencies)) if len(currencies) == 1 else "SAR"
 
     # Sort risk rows by score descending and trim
     risk_rows.sort(key=lambda r: -r.risk_score)
@@ -476,6 +483,8 @@ def build_for_doc_type(org, doc_type: str) -> dict | None:
 
     return {
         "documents":       doc_count,
+        "total_amount":    round(total_amount, 2),
+        "currency":        primary_currency,
         "rules_applied":   rules_applied_total,
         "rules_passed":    rules_passed_total,
         "rules_failed":    rules_failed_total,

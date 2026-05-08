@@ -2940,7 +2940,10 @@ def invoice_audit_report(request):
             sum(r.get("risk_score", 0) for r in top_risk) / len(top_risk), 1
         ) if top_risk else 0
         high_risk_count = sum(1 for r in top_risk if r["risk_level"] in ("high", "critical"))
-        overall = {}
+        overall = {
+            "total_amount": multi_doc_payload.get("total_amount", 0.0),
+            "currency":     multi_doc_payload.get("currency", "SAR"),
+        }
         validation_summary = {}
         # Live counterparty/vendor analysis from the doc model — replaces the
         # previous hardcoded empty list so the "Vendor Analysis" section shows
@@ -3071,6 +3074,13 @@ def invoice_audit_report(request):
                 high_risk_count = Invoice.objects.filter(
                     organization=org, risk_level__in=["high", "critical"]
                 ).count()
+                live_total_amount = float(
+                    Invoice.objects.filter(organization=org).aggregate(
+                        s=Sum("total_amount")
+                    )["s"] or 0
+                )
+                if live_total_amount and not overall.get("total_amount"):
+                    overall = {**overall, "total_amount": live_total_amount}
 
     # ── Empty-state detection ──────────────────────────────────────────────
     # The page is "empty" only when there is genuinely no live data anywhere.

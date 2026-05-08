@@ -41,18 +41,21 @@ def _pick_localized(doc, base_field: str, lang: str) -> object:
     return getattr(doc, base_field, None)
 
 
-# Map selected_type → (model dotted-path, identifier-field). Same dispatch
-# table as the audit adapter so we stay consistent.
-_AI_DOC_MAP: dict[str, tuple[str, str]] = {
-    "invoice":        ("apps.invoices.models:Invoice",                  "invoice_number"),
-    "purchase_order": ("apps.documents.models:PurchaseOrder",           "po_number"),
-    "bank_statement": ("apps.documents.models:BankStatement",           "account_number"),
-    "payroll":        ("apps.documents.models:PayrollSheet",            "payroll_period_from"),
-    "expense_report": ("apps.documents.models:ExpenseReport",           "report_number"),
-    "vat_return":     ("apps.documents.models:VATReturn",               "vat_number"),
-    "fixed_asset":    ("apps.documents.models:FixedAsset",              "fiscal_year"),
-    "sales_receipt":  ("apps.documents.models:SalesReceipt",            "receipt_number"),
-}
+# Map selected_type → (model dotted-path, identifier-field). Derived from the
+# audit adapter's _SPECS so any new doc type added there is picked up here
+# automatically — every typed model already inherits AuditMixin which carries
+# the ai_summary / ai_recommendations / anomalies_found columns.
+def _build_doc_map() -> dict[str, tuple[str, str]]:
+    from apps.reports.services.multi_doc_audit_adapter import _SPECS
+    mapping: dict[str, tuple[str, str]] = {
+        "invoice": ("apps.invoices.models:Invoice", "invoice_number"),
+    }
+    for doc_type, spec in _SPECS.items():
+        mapping[doc_type] = (spec.model_path, spec.number_field)
+    return mapping
+
+
+_AI_DOC_MAP: dict[str, tuple[str, str]] = _build_doc_map()
 
 
 def _resolve(path: str):

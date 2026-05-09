@@ -513,6 +513,77 @@ def validate_vat_return(ret) -> dict:
         "فترة الإقرار الضريبي غير محددة",
         "medium"))
 
+    # ── VATR-009 to VATR-016: ZATCA Phase 2 / VAT Implementing Regulations ──
+
+    # VATR-009 — Total sales = standard + zero + exempt (composition check)
+    declared_total = _dec(ret.total_sales)
+    composed = _dec(ret.standard_rated_sales) + _dec(ret.zero_rated_sales) + _dec(ret.exempt_sales)
+    rules.append(_rule("VATR-009", "إجمالي المبيعات = خاضعة + صفرية + معفاة",
+        abs(declared_total - composed) <= Decimal("10") or declared_total == 0,
+        f"الإجمالي المُعلَن {declared_total} ≠ مجموع المكوّنات {composed}" if abs(declared_total - composed) > Decimal("10") else "متطابق",
+        "high"))
+
+    # VATR-010 — VAT paid covers net liability (no underpayment)
+    net = _dec(ret.net_vat_payable)
+    paid = _dec(ret.vat_paid)
+    paid_ok = net <= 0 or paid >= net - Decimal("1.00")
+    rules.append(_rule("VATR-010", "السداد يغطي صافي الضريبة المستحقة",
+        paid_ok,
+        f"المستحق {net} ر.س > المسدّد {paid} ر.س" if not paid_ok else "السداد كامل",
+        "high"))
+
+    # VATR-011 — ZATCA reference present once filed
+    status = (getattr(ret, "filing_status", "") or "").lower()
+    if status in ("submitted", "accepted", "amended"):
+        zref = getattr(ret, "zatca_reference", "") or ""
+        rules.append(_rule("VATR-011", "مرجع ZATCA موجود للإقرارات المُقدَّمة",
+            bool(zref.strip()) if isinstance(zref, str) else False,
+            "الإقرار في حالة مُقدَّم لكن بدون مرجع ZATCA",
+            "high"))
+
+    # VATR-012 — Filing date not in the future
+    fdate = getattr(ret, "filing_date", None)
+    fdate_ok = (fdate is None) or (fdate <= date.today())
+    rules.append(_rule("VATR-012", "تاريخ التقديم ليس في المستقبل",
+        fdate_ok,
+        f"تاريخ التقديم {fdate} مستقبلي",
+        "high"))
+
+    # VATR-013 — Period span sane (28-95 days = monthly, quarterly, or annual stub)
+    if ret.period_from and ret.period_to:
+        span = (ret.period_to - ret.period_from).days + 1
+        span_ok = 28 <= span <= 95
+        rules.append(_rule("VATR-013", "مدة الفترة منطقية (شهرية أو ربع سنوية)",
+            span_ok,
+            f"مدة الفترة {span} يوم خارج النطاق المعقول (28-95)" if not span_ok else "المدة سليمة",
+            "medium"))
+
+    # VATR-014 — Output VAT proportional ONLY to standard-rated (not on zero/exempt)
+    # Catches a common error of charging output VAT on zero-rated/exempt.
+    std = _dec(ret.standard_rated_sales)
+    out = _dec(ret.output_vat)
+    proportional = (std == 0 and out == 0) or (std > 0 and out / std <= Decimal("0.16"))
+    rules.append(_rule("VATR-014", "ضريبة المخرجات لا تتجاوز 16% من المبيعات الخاضعة",
+        proportional,
+        f"نسبة ضريبة المخرجات/المبيعات الخاضعة = {(out/std*100 if std else 0):.1f}%" if not proportional else "النسبة سليمة",
+        "high"))
+
+    # VATR-015 — Late-filing penalty trigger (≥ 30 days flagged separately)
+    late_days = int(getattr(ret, "late_days", 0) or 0)
+    rules.append(_rule("VATR-015", "التأخير في التقديم ضمن النطاق غير العقابي (< 30 يوم)",
+        late_days < 30,
+        f"الإقرار متأخر {late_days} يوماً — قد يستوجب غرامة ZATCA" if late_days >= 30 else "ضمن النطاق",
+        "high"))
+
+    # VATR-016 — Sales/purchases sanity: input VAT shouldn't exceed standard purchases × 15%
+    purch = _dec(ret.standard_rated_purchases)
+    inp = _dec(ret.input_vat)
+    inp_ok = (purch == 0 and inp == 0) or (purch > 0 and inp / purch <= Decimal("0.16"))
+    rules.append(_rule("VATR-016", "ضريبة المدخلات لا تتجاوز 16% من المشتريات الخاضعة",
+        inp_ok,
+        f"نسبة ضريبة المدخلات/المشتريات = {(inp/purch*100 if purch else 0):.1f}%" if not inp_ok else "النسبة سليمة",
+        "high"))
+
     return _compile(rules)
 
 

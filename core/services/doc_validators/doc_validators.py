@@ -376,6 +376,99 @@ def validate_payroll(payroll) -> dict:
         f"عدد مُعلَن {payroll.employee_count} لا يتطابق مع {len(payroll.employees)} سجل" if not count_ok else "العدد متسق",
         "medium"))
 
+    # ── PAY-010 to PAY-017: Saudi Labor Law / GOSI / WPS depth ──
+    employees = list(payroll.employees or [])
+    n_emp = len(employees)
+
+    # PAY-010 — GOSI rate sanity (3%-22% of total gross)
+    gross_total = _dec(payroll.total_gross_salary)
+    gosi_total = _dec(payroll.total_gosi)
+    if gross_total > 0:
+        ratio = gosi_total / gross_total
+        gosi_ratio_ok = Decimal("0.03") <= ratio <= Decimal("0.22")
+        rules.append(_rule("PAY-010", "نسبة GOSI ضمن النطاق المنطقي (3%-22%)",
+            gosi_ratio_ok,
+            f"نسبة GOSI/الإجمالي = {ratio*100:.1f}% خارج النطاق" if not gosi_ratio_ok else "النسبة سليمة",
+            "high"))
+
+    # PAY-011 — No negative net salaries
+    neg_net = sum(1 for e in employees if _dec(e.get("net", 0)) < 0)
+    rules.append(_rule("PAY-011", "لا يوجد صافي راتب سالب",
+        neg_net == 0,
+        f"{neg_net} موظف بصافي راتب سالب" if neg_net else "كل صافي الرواتب موجبة",
+        "critical"))
+
+    # PAY-012 — Total deductions ≤ 50% of gross per employee (Article 92, Saudi Labor Law)
+    over_50pct = []
+    for e in employees:
+        gross = _dec(e.get("gross", 0))
+        deductions = _dec(e.get("deductions", 0))
+        if gross > 0 and deductions / gross > Decimal("0.50"):
+            over_50pct.append(e.get("id") or e.get("name") or "?")
+    rules.append(_rule("PAY-012", "الخصومات لا تتجاوز 50% من الراتب (المادة 92)",
+        len(over_50pct) == 0,
+        f"{len(over_50pct)} موظف بخصومات > 50% — مخالفة للمادة 92" if over_50pct else "ضمن الحدود",
+        "high"))
+
+    # PAY-013 — Minimum wage (4000 SAR) for Saudi nationals
+    below_min = []
+    for e in employees:
+        nationality = (e.get("nationality") or e.get("nationality_code") or "").lower()
+        if nationality not in ("sa", "saudi", "saudi_arabia", ""):
+            continue
+        gross = _dec(e.get("gross", 0))
+        if 0 < gross < Decimal("4000"):
+            below_min.append(e.get("id") or e.get("name") or "?")
+    rules.append(_rule("PAY-013", "الحد الأدنى للأجور للسعوديين (4000 ر.س)",
+        len(below_min) == 0,
+        f"{len(below_min)} موظف سعودي تحت الحد الأدنى" if below_min else "كل الرواتب فوق الحد الأدنى",
+        "high"))
+
+    # PAY-014 — WPS compliance: payment_date set + currency = SAR
+    wps_ok = bool(getattr(payroll, "payment_date", None)) and (
+        (getattr(payroll, "currency", "SAR") or "SAR").upper() == "SAR"
+    )
+    rules.append(_rule("PAY-014", "متطلبات حماية الأجور (WPS) مكتملة",
+        wps_ok,
+        "تاريخ الدفع غير محدد أو العملة ليست SAR — مخالفة WPS" if not wps_ok else "متوافق مع WPS",
+        "high"))
+
+    # PAY-015 — Payment date within reasonable window after period end
+    pdate = getattr(payroll, "payment_date", None)
+    pto = getattr(payroll, "payroll_period_to", None)
+    if pdate and pto:
+        days_after = (pdate - pto).days
+        # Saudi Labor Law: monthly wages paid within first week of next month
+        within_window = -2 <= days_after <= 14
+        rules.append(_rule("PAY-015", "تاريخ الدفع خلال أسبوعين من نهاية الفترة",
+            within_window,
+            f"تاريخ الدفع {days_after} يوم بعد نهاية الفترة" if not within_window else "ضمن النطاق",
+            "medium"))
+
+    # PAY-016 — Salary outlier detection (>5× median)
+    grosses = [float(_dec(e.get("gross", 0))) for e in employees if _dec(e.get("gross", 0)) > 0]
+    if len(grosses) >= 5:
+        sorted_g = sorted(grosses)
+        median = sorted_g[len(sorted_g) // 2]
+        outliers = sum(1 for g in grosses if median > 0 and g > median * 5)
+        rules.append(_rule("PAY-016", "لا توجد رواتب شاذة (> 5× الوسيط)",
+            outliers == 0,
+            f"{outliers} موظف براتب يفوق 5 أضعاف الوسيط ({median:.0f} ر.س)" if outliers else "التوزيع طبيعي",
+            "medium"))
+
+    # PAY-017 — Allowances + Gross composition consistency
+    # Each employee: allowances should be ≤ gross (basic + allowances = gross is the typical model)
+    allowance_breaches = []
+    for e in employees:
+        gross = _dec(e.get("gross", 0))
+        allow = _dec(e.get("allowances", 0))
+        if gross > 0 and allow > gross:
+            allowance_breaches.append(e.get("id") or e.get("name") or "?")
+    rules.append(_rule("PAY-017", "البدلات لا تتجاوز إجمالي الراتب",
+        len(allowance_breaches) == 0,
+        f"{len(allowance_breaches)} موظف ببدلات تتجاوز الإجمالي" if allowance_breaches else "البدلات ضمن الإجمالي",
+        "medium"))
+
     return _compile(rules)
 
 

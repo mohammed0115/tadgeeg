@@ -541,6 +541,93 @@ def validate_expense_report(report) -> dict:
         f"الإجمالي المحسوب {calc_total} لا يتطابق مع {report.total_claimed}",
         "high"))
 
+    # ── EXP-009 to EXP-016: Internal controls / segregation / fraud (ISA 240) ──
+    lines = list(report.expense_lines or [])
+    n_lines = len(lines)
+
+    # EXP-009 — Segregation of duties: approver != claimant (ISA 240)
+    approver = getattr(report, "approved_by", None)
+    claimant_id = (getattr(report, "employee_id", "") or "").strip()
+    approver_id = ""
+    if approver is not None:
+        approver_id = str(getattr(approver, "id", "") or getattr(approver, "pk", "") or "").strip()
+    seg_ok = approver is None or not claimant_id or approver_id != claimant_id
+    rules.append(_rule("EXP-009", "فصل المهام: المعتمِد ليس هو المُطالِب",
+        seg_ok,
+        "المعتمِد هو نفسه صاحب المطالبة — مخالفة لفصل المهام (ISA 240)" if not seg_ok else "فصل المهام محقق",
+        "high"))
+
+    # EXP-010 — All lines categorized
+    uncategorized = sum(1 for e in lines if not (e.get("category") or "").strip())
+    rules.append(_rule("EXP-010", "كل بند مصنّف ضمن فئة مصروفات",
+        uncategorized == 0,
+        f"{uncategorized} بند بدون تصنيف" if uncategorized else "كل البنود مصنّفة",
+        "medium"))
+
+    # EXP-011 — No future-dated expense lines
+    future_lines: list[str] = []
+    for i, e in enumerate(lines):
+        d = e.get("date")
+        if isinstance(d, str):
+            try:
+                d = date.fromisoformat(d[:10])
+            except Exception:
+                continue
+        if d and d > date.today():
+            future_lines.append(f"#{i+1}")
+    rules.append(_rule("EXP-011", "لا توجد مصروفات بتاريخ مستقبلي",
+        len(future_lines) == 0,
+        f"{len(future_lines)} بند بتاريخ مستقبلي: {future_lines[:3]}" if future_lines else "كل التواريخ سليمة",
+        "high"))
+
+    # EXP-012 — Submission within 60 days of period end
+    submitted = getattr(report, "submitted_date", None)
+    pto = getattr(report, "report_period_to", None)
+    if submitted and pto:
+        delay = (submitted - pto).days
+        delay_ok = 0 <= delay <= 60
+        rules.append(_rule("EXP-012", "تقديم التقرير خلال 60 يوماً من نهاية الفترة",
+            delay_ok,
+            f"تأخير التقديم {delay} يوم" if not delay_ok else "تم في الوقت",
+            "medium"))
+
+    # EXP-013 — Reconciliation: claimed = approved + rejected (when not in draft)
+    claimed = _dec(report.total_claimed)
+    approved = _dec(report.total_approved)
+    rejected = _dec(report.total_rejected)
+    if approved + rejected > 0:
+        recon_ok = abs(claimed - (approved + rejected)) <= Decimal("1.00")
+        rules.append(_rule("EXP-013", "المطالب = المعتمد + المرفوض",
+            recon_ok,
+            f"المطالب {claimed} ≠ المعتمد {approved} + المرفوض {rejected}" if not recon_ok else "متطابق",
+            "high"))
+
+    # EXP-014 — Description present on every line
+    no_desc = sum(1 for e in lines if not (e.get("description") or "").strip())
+    if n_lines:
+        rules.append(_rule("EXP-014", "وصف موجود لكل بند مصروف",
+            no_desc == 0,
+            f"{no_desc} بند بدون وصف" if no_desc else "كل البنود موصوفة",
+            "medium"))
+
+    # EXP-015 — No weekend expenses without justification
+    weekend_count = int(getattr(report, "weekend_expense_count", 0) or 0)
+    rules.append(_rule("EXP-015", "لا توجد مصروفات في عطلة نهاية الأسبوع",
+        weekend_count == 0,
+        f"{weekend_count} مصروف في عطلة نهاية الأسبوع" if weekend_count else "لا مصروفات في العطل",
+        "medium"))
+
+    # EXP-016 — Receipt number present when receipt is attached
+    if n_lines:
+        attached_no_num = sum(
+            1 for e in lines
+            if e.get("receipt_attached") and not (e.get("receipt_number") or "").strip()
+        )
+        rules.append(_rule("EXP-016", "رقم الإيصال موجود لكل إيصال مرفق",
+            attached_no_num == 0,
+            f"{attached_no_num} إيصال مرفق بدون رقم" if attached_no_num else "كل الإيصالات مرقّمة",
+            "medium"))
+
     return _compile(rules)
 
 

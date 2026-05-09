@@ -197,6 +197,114 @@ def validate_bank_statement(stmt) -> dict:
         "رقم IBAN مفقود أو غير صحيح (يجب SA + 22 رقم)" if not iban_ok else "IBAN صحيح",
         "medium"))
 
+    # ── BNK-010 to BNK-017: SAMA / AML / ISA 505 depth additions ──
+    txs = list(stmt.transactions or [])
+    n_tx = len(txs)
+
+    # BNK-010 — Running balance integrity (each tx balance = prev ± net)
+    # Detects edited/forged statements where individual tx amounts don't
+    # actually compose the running balance shown.
+    AML_THRESHOLD = Decimal("100000")  # SAR per single tx (used by BNK-011)
+    bal_breaks = 0
+    if n_tx >= 2:
+        prev_bal = _dec(stmt.opening_balance)
+        for tx in txs:
+            credit = _dec(tx.get("credit", 0))
+            debit  = _dec(tx.get("debit", 0))
+            shown  = tx.get("balance")
+            if shown is None or shown == "":
+                continue
+            expected = prev_bal + credit - debit
+            if abs(_dec(shown) - expected) > Decimal("1.00"):
+                bal_breaks += 1
+            prev_bal = _dec(shown)
+    rules.append(_rule("BNK-010", "تسلسل الرصيد الجاري سليم لكل معاملة",
+        bal_breaks == 0,
+        f"{bal_breaks} معاملة برصيد جارٍ غير متّسق — قد يدل على تعديل الكشف" if bal_breaks else "الرصيد الجاري متّسق",
+        "critical"))
+
+    # BNK-011 — AML single-transaction threshold (SAMA AML Rules — Article 8)
+    big_unexplained = sum(
+        1 for tx in txs
+        if max(_dec(tx.get("debit", 0)), _dec(tx.get("credit", 0))) >= AML_THRESHOLD
+        and not (tx.get("description") or tx.get("ref"))
+    )
+    rules.append(_rule("BNK-011", "معاملات تتجاوز حد AML (100,000 ر.س) موثَّقة",
+        big_unexplained == 0,
+        f"{big_unexplained} معاملة ≥ 100,000 ر.س بدون وصف أو مرجع" if big_unexplained else "كل المعاملات الكبيرة موثَّقة",
+        "high"))
+
+    # BNK-012 — Late-night transactions (uses existing flag)
+    rules.append(_rule("BNK-012", "لا توجد معاملات في ساعات متأخرة غير مبررة",
+        getattr(stmt, "late_night_tx_count", 0) == 0,
+        f"{stmt.late_night_tx_count} معاملة بين 12 منتصف الليل و 6 صباحاً" if getattr(stmt, "late_night_tx_count", 0) else "لا معاملات ليلية",
+        "medium"))
+
+    # BNK-013 — Closing balance non-negative (no overdraft without disclosure)
+    closing = _dec(stmt.closing_balance)
+    rules.append(_rule("BNK-013", "رصيد الختام غير سالب (أو السحب على المكشوف موثَّق)",
+        closing >= 0,
+        f"رصيد ختام سالب: {closing} ر.س" if closing < 0 else "الرصيد موجب",
+        "medium"))
+
+    # BNK-014 — Description quality (≥ 95% non-empty)
+    if n_tx:
+        with_desc = sum(1 for tx in txs if (tx.get("description") or "").strip())
+        desc_ratio = with_desc / n_tx
+        rules.append(_rule("BNK-014", "وصف المعاملات متوفر (≥ 95%)",
+            desc_ratio >= 0.95,
+            f"فقط {desc_ratio*100:.1f}% من المعاملات لها وصف" if desc_ratio < 0.95 else "أوصاف كاملة",
+            "medium"))
+
+    # BNK-015 — Reference number coverage (≥ 80%)
+    if n_tx:
+        with_ref = sum(1 for tx in txs if (tx.get("ref") or "").strip())
+        ref_ratio = with_ref / n_tx
+        rules.append(_rule("BNK-015", "أرقام مرجعية للمعاملات (≥ 80%)",
+            ref_ratio >= 0.80,
+            f"فقط {ref_ratio*100:.1f}% من المعاملات لها رقم مرجعي" if ref_ratio < 0.80 else "المراجع كافية",
+            "medium"))
+
+    # BNK-016 — Counterparty concentration (top counterparty ≤ 50% of volume)
+    if n_tx:
+        from collections import Counter as _Counter
+        flow: _Counter = _Counter()
+        for tx in txs:
+            key = (tx.get("description") or tx.get("counterparty") or "").strip().lower()[:60]
+            if not key:
+                continue
+            flow[key] += float(_dec(tx.get("debit", 0)) + _dec(tx.get("credit", 0)))
+        if flow:
+            top_share = flow.most_common(1)[0][1] / max(sum(flow.values()), 1.0)
+            rules.append(_rule("BNK-016", "تنوّع الأطراف المقابلة (أكبر طرف ≤ 50%)",
+                top_share <= 0.50,
+                f"أكبر طرف يستحوذ على {top_share*100:.1f}% من الحركة" if top_share > 0.50 else "تنوّع جيد",
+                "high"))
+
+    # BNK-017 — Period coverage: tx dates span at least the declared period
+    if n_tx and stmt.statement_period_from and stmt.statement_period_to:
+        try:
+            tx_dates = []
+            for tx in txs:
+                d = tx.get("date")
+                if isinstance(d, str):
+                    try:
+                        d = date.fromisoformat(d[:10])
+                    except Exception:
+                        continue
+                if d:
+                    tx_dates.append(d)
+            if tx_dates:
+                span_actual = (max(tx_dates) - min(tx_dates)).days + 1
+                span_declared = (stmt.statement_period_to - stmt.statement_period_from).days + 1
+                ratio = span_actual / max(span_declared, 1)
+                rules.append(_rule("BNK-017", "تغطية الفترة المعلنة كاملة (≥ 80%)",
+                    ratio >= 0.80,
+                    f"المعاملات تغطي {ratio*100:.1f}% فقط من الفترة المعلنة" if ratio < 0.80 else "تغطية كاملة",
+                    "medium"))
+        except Exception:
+            pass
+
     return _compile(rules)
 
 

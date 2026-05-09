@@ -494,6 +494,119 @@ def validate_fixed_assets(register) -> dict:
         f"{len(bad_dates)} أصل بتاريخ شراء مستقبلي",
         "medium"))
 
+    # ── AST-010 to AST-017: IAS 16 / SOCPA depth additions ──
+    # Per-category ranges used by AST-011 (tighter than the global 3-50y in
+    # AST-007). Grounded in standard SOCPA depreciation guidance.
+    PER_CATEGORY_LIFE = {
+        "land":      (None, None),  # not depreciated — see AST-010
+        "buildings": (20, 50),
+        "vehicles":  (4,  7),
+        "equipment": (5,  15),
+        "computers": (3,  5),
+        "furniture": (5,  15),
+        "other":     (3,  20),
+    }
+
+    # AST-010 — Land must NOT be depreciated (IAS 16.58)
+    land_dep = [a.get("asset_id", "?") for a in register.assets
+                if a.get("category") == "land"
+                and (
+                    _dec(a.get("accumulated_depreciation", 0)) > Decimal("1")
+                    or _dec(a.get("annual_depreciation", 0)) > Decimal("1")
+                )]
+    rules.append(_rule("AST-010", "الأراضي لا تخضع للإهلاك (IAS 16.58)",
+        len(land_dep) == 0,
+        f"{len(land_dep)} أرض تم إهلاكها — مخالفة لـ IAS 16.58: {land_dep[:3]}" if land_dep else "الأراضي غير مُهلكة",
+        "critical"))
+
+    # AST-011 — Useful life within per-category range (tighter than AST-007)
+    cat_life_breaches: list[str] = []
+    for a in register.assets:
+        cat = (a.get("category") or "").lower()
+        life = a.get("useful_life_years")
+        if not life or cat == "land":
+            continue
+        lo, hi = PER_CATEGORY_LIFE.get(cat, PER_CATEGORY_LIFE["other"])
+        if lo is None:
+            continue
+        if life < lo or life > hi:
+            cat_life_breaches.append(f"{a.get('asset_id','?')} ({cat}: {life}y, expected {lo}-{hi})")
+    rules.append(_rule("AST-011", "العمر الإنتاجي ضمن النطاق الموصى به للفئة",
+        len(cat_life_breaches) == 0,
+        f"{len(cat_life_breaches)} أصل خارج النطاق الموصى به: {cat_life_breaches[:3]}" if cat_life_breaches else "كل الأعمار ضمن نطاق الفئة",
+        "high"))
+
+    # AST-012 — Depreciation method consistency within category
+    methods_by_cat: dict[str, set] = {}
+    for a in register.assets:
+        cat = (a.get("category") or "").lower()
+        if not cat or cat == "land":
+            continue
+        m = a.get("method") or a.get("depreciation_method")
+        if m:
+            methods_by_cat.setdefault(cat, set()).add(m)
+    inconsistent_cats = [c for c, ms in methods_by_cat.items() if len(ms) > 1]
+    rules.append(_rule("AST-012", "اتساق طريقة الإهلاك داخل كل فئة",
+        len(inconsistent_cats) == 0,
+        f"فئات بطرق إهلاك مختلطة: {inconsistent_cats[:3]}" if inconsistent_cats else "الطرق متسقة",
+        "high"))
+
+    # AST-013 — Annual depreciation accuracy (straight-line only, ±5% tolerance)
+    dep_calc_errors: list[str] = []
+    for a in register.assets:
+        method = (a.get("method") or a.get("depreciation_method") or "").lower()
+        if method != "straight_line":
+            continue
+        cost = _dec(a.get("cost", 0))
+        salvage = _dec(a.get("salvage_value", 0))
+        life = a.get("useful_life_years")
+        annual = _dec(a.get("annual_depreciation", 0))
+        if not life or cost <= 0 or annual <= 0:
+            continue
+        expected = (cost - salvage) / Decimal(life)
+        if expected > 0 and abs(annual - expected) / expected > Decimal("0.05"):
+            dep_calc_errors.append(a.get("asset_id", "?"))
+    rules.append(_rule("AST-013", "حساب الإهلاك السنوي صحيح (طريقة القسط الثابت)",
+        len(dep_calc_errors) == 0,
+        f"{len(dep_calc_errors)} أصل بإهلاك سنوي خارج المتوقع ±5%: {dep_calc_errors[:3]}" if dep_calc_errors else "حسابات الإهلاك صحيحة",
+        "high"))
+
+    # AST-014 — Capitalization threshold (items < 1000 SAR likely should be expensed)
+    THRESHOLD = Decimal("1000")
+    below_threshold = [a.get("asset_id", "?") for a in register.assets
+                       if Decimal("0") < _dec(a.get("cost", 0)) < THRESHOLD]
+    rules.append(_rule("AST-014", "حد الرسملة محترم (لا أصول < 1000 ر.س)",
+        len(below_threshold) == 0,
+        f"{len(below_threshold)} أصل بقيمة أقل من حد الرسملة" if below_threshold else "كل الأصول فوق حد الرسملة",
+        "medium"))
+
+    # AST-015 — Asset category present (not blank, not "other" for >10% of register)
+    missing_cat = sum(1 for a in register.assets if not (a.get("category") or "").strip())
+    other_cat = sum(1 for a in register.assets if (a.get("category") or "").lower() == "other")
+    asset_n = max(len(register.assets), 1)
+    cat_quality_ok = missing_cat == 0 and (other_cat / asset_n) <= 0.10
+    rules.append(_rule("AST-015", "تصنيف الأصول واضح ومعبَّأ",
+        cat_quality_ok,
+        f"{missing_cat} بدون تصنيف، {other_cat} مصنّفة 'other' ({other_cat/asset_n*100:.1f}%)" if not cat_quality_ok else "التصنيفات واضحة",
+        "medium"))
+
+    # AST-016 — Fully depreciated assets must have zero book value
+    fully_dep_with_value = [a.get("asset_id", "?") for a in register.assets
+                            if a.get("is_fully_depreciated") is True
+                            and _dec(a.get("book_value", 0)) > Decimal("1")]
+    rules.append(_rule("AST-016", "الأصول المُهلكة بالكامل قيمتها الدفترية صفر",
+        len(fully_dep_with_value) == 0,
+        f"{len(fully_dep_with_value)} أصل مُهلك بالكامل وله قيمة دفترية: {fully_dep_with_value[:3]}" if fully_dep_with_value else "متطابقة",
+        "critical"))
+
+    # AST-017 — Asset count reconciles with assets array
+    declared = int(register.asset_count or 0)
+    actual = len(register.assets or [])
+    rules.append(_rule("AST-017", "عدد الأصول المُعلَن يطابق السجلات",
+        declared == actual,
+        f"المُعلَن {declared} ≠ الفعلي {actual}" if declared != actual else "متطابقة",
+        "medium"))
+
     return _compile(rules)
 
 

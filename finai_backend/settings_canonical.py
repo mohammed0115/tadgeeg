@@ -79,9 +79,14 @@ if not DEBUG and not _is_local:
 # ─────────────────────────────────────────────────────────────────────────────
 
 ALLOWED_HOSTS = [host.strip() for host in os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if host.strip()]
-for default_host in ("testserver", "localhost", "127.0.0.1"):
-    if default_host not in ALLOWED_HOSTS:
-        ALLOWED_HOSTS.append(default_host)
+# Test client always uses Host: testserver, so add it only when running pytest
+# or DEBUG is on. Adding it unconditionally in production breaks Django's
+# Host-header-injection defense (see Phase 2 hardening).
+_running_tests = os.environ.get("DJANGO_RUNNING_TESTS") == "1" or "pytest" in sys.argv[0] or "pytest" in (sys.modules.get("__main__") and getattr(sys.modules["__main__"], "__file__", "") or "")
+if DEBUG or _running_tests:
+    for default_host in ("testserver", "localhost", "127.0.0.1"):
+        if default_host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(default_host)
 
 CSRF_TRUSTED_ORIGINS_RAW = os.environ.get("CSRF_TRUSTED_ORIGINS", "").strip()
 if CSRF_TRUSTED_ORIGINS_RAW:
@@ -137,6 +142,8 @@ LOCAL_APPS = [
     "apps.banking",
     "apps.ledger",
     "apps.procurement",
+    "apps.platform_management",
+    "apps.vendor_dashboard",
 ]
 
 # ─── Rule Engine Settings ──────────────────────────────────────────────────────

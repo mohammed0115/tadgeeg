@@ -247,9 +247,27 @@ MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 if not DEBUG:
     STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
+# ─── Upload limits (explicit) ─────────────────────────────────────────────────
+# Don't rely on Django's built-in defaults silently — making these explicit
+# matches the application-level MAX_UPLOAD_SIZE_MB and prevents nasty
+# surprises like a 50MB upload being rejected at the Django parser level.
+_MAX_UPLOAD_MB = int(os.environ.get("MAX_UPLOAD_SIZE_MB", "50"))
+DATA_UPLOAD_MAX_MEMORY_SIZE = _MAX_UPLOAD_MB * 1024 * 1024  # parsed POST/JSON
+FILE_UPLOAD_MAX_MEMORY_SIZE = 2 * 1024 * 1024  # spool to disk above 2 MB
+# Cap form fields to avoid hashtable-overflow DoS via huge multipart bodies.
+DATA_UPLOAD_MAX_NUMBER_FIELDS = int(os.environ.get("DATA_UPLOAD_MAX_NUMBER_FIELDS", "5000"))
+
 # ─── S3 / Cloud Media Storage (NFR-2) ─────────────────────────────────────────
 # Set AWS_STORAGE_BUCKET_NAME in your .env to enable S3 for media uploads.
 # Leave unset to use local filesystem storage (default for dev).
+#
+# SECURITY CONTRACT: financial documents (Invoice.file, Document.file,
+# InvoiceBatch.source_zip) MUST be private. The bucket policy MUST NOT grant
+# public-read; ACL is set to "private" per object; URLs are signed via
+# AWS_QUERYSTRING_AUTH=True so they expire. Frontend code that needs to
+# render a download link should call DocumentDownloadView /
+# InvoiceDownloadView (which return signed URLs), never embed the raw
+# `instance.file.url` in a public template.
 _AWS_BUCKET = os.environ.get("AWS_STORAGE_BUCKET_NAME", "")
 if _AWS_BUCKET:
     DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
@@ -258,9 +276,14 @@ if _AWS_BUCKET:
     AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "")
     AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME", "me-south-1")  # Bahrain (closest to KSA)
     AWS_S3_FILE_OVERWRITE = False
-    AWS_DEFAULT_ACL = None  # Use bucket policy
+    # Per-object ACL: private. Bucket policy MUST also reject public-read.
+    AWS_DEFAULT_ACL = "private"
     AWS_S3_CUSTOM_DOMAIN = os.environ.get("AWS_S3_CUSTOM_DOMAIN", "")
-    AWS_QUERYSTRING_AUTH = False  # Public read via bucket policy
+    # Sign every URL with a short-lived query string. Default expiry 5 min.
+    AWS_QUERYSTRING_AUTH = True
+    AWS_QUERYSTRING_EXPIRE = int(os.environ.get("AWS_QUERYSTRING_EXPIRE", "300"))
+    # If a CDN sits in front of S3, it MUST be configured to forward signed
+    # query strings unchanged; otherwise downloads will 403.
     MEDIA_URL = f"https://{AWS_S3_CUSTOM_DOMAIN or f'{_AWS_BUCKET}.s3.amazonaws.com'}/"
 
 SESSION_COOKIE_AGE = 60 * 30

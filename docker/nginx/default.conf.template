@@ -15,6 +15,19 @@ server {
         access_log off;
     }
 
+    # Sensitive financial documents (uploaded invoices, batches, raw doc files)
+    # must NEVER be served directly by nginx. They bypass Django's
+    # organization/permission checks. Force them through the protected
+    # download views (DocumentDownloadView, InvoiceDownloadView) which
+    # verify request.user.organization == doc.organization and audit-log
+    # the access.
+    location ~ ^/media/(documents|invoices|batches)/ {
+        return 403;
+    }
+
+    # Public media (CMS / marketing assets / blog images / org logos) — fine
+    # to serve directly. New "private" uploads must NOT use the documents/
+    # invoices/ batches/ prefixes that financial workflows already own.
     location /media/ {
         alias /vol/media/;
         expires 7d;

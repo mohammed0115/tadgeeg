@@ -1,6 +1,21 @@
 #!/bin/sh
 set -e
 
+# Tadgeeg container entrypoint.
+#
+# Safe-by-default:
+#   1. Wait for MySQL.
+#   2. Run migrations.
+#   3. Compile messages and collect static.
+#   4. Exec the requested command (gunicorn / celery / etc.).
+#
+# It does NOT drop tables, it does NOT mutate django_migrations rows,
+# and it does NOT auto-repair schema drift. If a previous deploy crashed
+# mid-migration and the DB is in an inconsistent state, an operator must
+# invoke `python scripts/manual_schema_repair.py` deliberately, after
+# taking a backup. Auto-running destructive SQL on every container
+# restart is a foot-gun (one accidental change to a guard = data loss).
+
 cd /app
 
 if [ "${DB_ENGINE:-}" = "django.db.backends.mysql" ] || [ -n "${DB_HOST:-}" ]; then
@@ -31,80 +46,6 @@ while time.time() < deadline:
 else:
     print(f"Could not connect to database: {last_error}", file=sys.stderr)
     sys.exit(1)
-PY
-
-  # Fix schema drift: if audit_sessions exists with old schema (session_name instead of name),
-  # fake the migrations that already ran so Django doesn't try to recreate them.
-  python - <<'PY'
-import os, sys
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", os.getenv("DJANGO_SETTINGS_MODULE", "finai_backend.settings"))
-import django; django.setup()
-from django.db import connection
-
-with connection.cursor() as cur:
-    # Check if audit_sessions table has the old 'session_name' column (old schema)
-    try:
-        cur.execute("SELECT session_name FROM audit_sessions LIMIT 1")
-        # Old schema detected — drop and let migration recreate
-        print("Old audit_sessions schema detected. Dropping for clean migration...")
-        cur.execute("UPDATE invoice_batches SET audit_session_id = NULL WHERE audit_session_id IS NOT NULL")
-        cur.execute("DROP TABLE IF EXISTS audit_findings")
-        cur.execute("DROP TABLE IF EXISTS audit_sessions")
-        # Clear stale migration records
-        cur.execute("""
-            DELETE FROM django_migrations
-            WHERE (app='audit' AND name IN ('0004_auditsession','0005_auditfinding',
-                   '0006_rename_audit_findi_organiz_716be4_idx_audit_findi_organiz_dafce2_idx_and_more'))
-               OR (app='invoices' AND name='0002_invoice_audit_session_invoicebatch_audit_session')
-               OR (app='documents' AND name='0003_document_audit_session')
-        """)
-        print("Schema drift fixed. Migrations will run cleanly.")
-    except Exception:
-        # New schema or table doesn't exist — nothing to do
-        pass
-PY
-
-  # Drop orphan tables left behind by a previous deploy that crashed
-  # mid-migration. MySQL DDL auto-commits, so a CreateModel that ran before a
-  # later migration failed leaves the table behind without a django_migrations
-  # row. On retry, Django re-runs CreateModel and errors with "table already
-  # exists". Detect each known case and drop the orphan so migrate can replay.
-  python - <<'PY'
-import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", os.getenv("DJANGO_SETTINGS_MODULE", "finai_backend.settings"))
-import django; django.setup()
-from django.db import connection
-
-# (app_label, migration_name, [tables to drop if migration not applied])
-ORPHAN_CHECKS = [
-    ("ledger", "0002_period_close", ["ledger_periods"]),
-    ("procurement", "0001_initial", [
-        "procurement_threeway_matches",
-        "procurement_pr_approvals",
-        "procurement_pr_lines",
-        "procurement_requisitions",
-    ]),
-]
-
-with connection.cursor() as cur:
-    for app, migration, tables in ORPHAN_CHECKS:
-        cur.execute(
-            "SELECT 1 FROM django_migrations WHERE app=%s AND name=%s",
-            [app, migration],
-        )
-        if cur.fetchone():
-            continue  # migration already applied; tables are legitimate
-        for table in tables:
-            cur.execute(
-                "SELECT 1 FROM information_schema.TABLES "
-                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s",
-                [table],
-            )
-            if cur.fetchone():
-                print(f"Dropping orphan table {table} (from failed prior deploy of {app}.{migration})")
-                cur.execute(f"SET FOREIGN_KEY_CHECKS=0")
-                cur.execute(f"DROP TABLE IF EXISTS `{table}`")
-                cur.execute(f"SET FOREIGN_KEY_CHECKS=1")
 PY
 fi
 

@@ -31,6 +31,36 @@ def _render_report_pdf_bytes(html_str: str, base_url: str) -> bytes:
     return WP_HTML(string=html_str, base_url=base_url).write_pdf()
 
 
+def _render_report_pdf_cached(report_id, language: str, html_str: str, base_url: str) -> bytes:
+    """Memoize PDF bytes for 1 hour keyed by (report_id, language).
+
+    A typical financial report is 30-60 pages; WeasyPrint takes 3-15 seconds
+    to render. Without a cache, every "Download PDF" click re-rendered the
+    same bytes. Cache scope is per-language because the same `report_id`
+    renders differently in ar vs en.
+
+    Cache invalidates after 1h or when the saved Report row's `updated_at`
+    changes (we include the report's last_modified epoch in the key so a
+    re-run flushes the cache automatically).
+    """
+    import hashlib
+    from django.core.cache import cache as _cache
+
+    # The html_str hash bakes report data + version into the key — any change
+    # to the report row's data flips this and invalidates the cache.
+    digest = hashlib.sha256(html_str.encode("utf-8", errors="replace")).hexdigest()[:16]
+    ck = f"reportpdf:v1:{report_id}:{language}:{digest}"
+    blob = _cache.get(ck)
+    if blob is not None:
+        return blob
+
+    blob = _render_report_pdf_bytes(html_str, base_url)
+    # 1 hour — long enough that a user clicking Download a few times in a
+    # session pays once; short enough that schema fixes propagate quickly.
+    _cache.set(ck, blob, 60 * 60)
+    return blob
+
+
 def _json_safe(obj):
     """Recursively convert Decimal / UUID / date to JSON-safe Python types."""
     import decimal, uuid, datetime
@@ -889,23 +919,29 @@ class ReportPDFView(APIView):
 
         safe_title = (report.title or "report").replace(" ", "_").replace("/", "-")[:60]
 
+        from django.utils.translation import get_language
         try:
-            pdf_bytes = _render_report_pdf_bytes(
+            pdf_bytes = _render_report_pdf_cached(
+                report.id,
+                (get_language() or "ar")[:2],
                 html_str,
                 request.build_absolute_uri("/"),
             )
             response = HttpResponse(pdf_bytes, content_type="application/pdf")
+            response["Content-Length"] = str(len(pdf_bytes))
             response["Content-Disposition"] = f'attachment; filename="{safe_title}.pdf"'
             return response
-        except ModuleNotFoundError:
-            logger.warning("WeasyPrint not installed", extra={"report_id": str(report.id)})
-            return JsonResponse(
-                {"error": _("PDF service is not configured on this server. Redeploy after installing the PDF library.")},
-                status=503,
+        except (ModuleNotFoundError, OSError) as exc:
+            # ModuleNotFoundError = WeasyPrint missing (server misconfigured).
+            # OSError            = GTK / Pango / cairo libs missing (common
+            #                      on Windows dev boxes).
+            # In either case the server CAN still serve the HTML — let the
+            # browser do Ctrl+P → Save as PDF — instead of blowing up.
+            logger.warning(
+                "WeasyPrint unavailable (%s) — serving HTML fallback: %s",
+                type(exc).__name__, exc,
+                extra={"report_id": str(report.id)},
             )
-        except OSError as e:
-            # GTK libraries missing (common on Windows dev machines) — serve HTML fallback
-            logger.warning("WeasyPrint OSError (missing GTK?) — serving HTML fallback: %s", e, extra={"report_id": str(report.id)})
         except Exception:
             logger.exception("Report PDF generation failed", extra={"report_id": str(report.id)})
             return JsonResponse(

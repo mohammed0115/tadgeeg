@@ -16,6 +16,19 @@ services:
       retries: 12
       start_period: 30s
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 5s
+
   web:
     build:
       context: .
@@ -23,14 +36,25 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      # Override the default localhost broker so .delay()/apply_async actually
+      # reach the redis service in this stack. Settings reads REDIS_URL via
+      # finai_backend/settings_canonical.py.
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     command: >
       gunicorn finai_backend.wsgi:application
       --bind 0.0.0.0:8000
       --workers ${GUNICORN_WORKERS:-3}
       --timeout ${GUNICORN_TIMEOUT:-120}
+      --max-requests ${GUNICORN_MAX_REQUESTS:-1000}
+      --max-requests-jitter ${GUNICORN_MAX_REQUESTS_JITTER:-100}
       --access-logfile -
       --error-logfile -
     expose:
@@ -38,6 +62,60 @@ services:
     volumes:
       - static_volume:/app/staticfiles
       - media_volume:/app/media
+      - logs_volume:/app/logs
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # Worker reuses the same image and code; entrypoint waits for DB.
+    # --concurrency low by default so the worker doesn't fight gunicorn for
+    # CPU on small boxes; tune via env.
+    command: >
+      celery -A finai_backend worker
+      --loglevel=${CELERY_LOG_LEVEL:-info}
+      --concurrency=${CELERY_CONCURRENCY:-2}
+      --max-tasks-per-child=${CELERY_MAX_TASKS_PER_CHILD:-200}
+      --hostname=worker@%h
+    volumes:
+      - media_volume:/app/media
+      - logs_volume:/app/logs
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # Single beat instance — running multiple beat containers would duplicate
+    # every scheduled task. The DatabaseScheduler stores schedules in MySQL
+    # so changes via /admin/ are picked up without restart.
+    command: >
+      celery -A finai_backend beat
+      --loglevel=${CELERY_LOG_LEVEL:-info}
+    volumes:
       - logs_volume:/app/logs
 
   nginx:
@@ -58,6 +136,7 @@ services:
 
 volumes:
   mysql_data:
+  redis_data:
   static_volume:
   media_volume:
   logs_volume:

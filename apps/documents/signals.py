@@ -1,14 +1,22 @@
 """
 Auto-trigger rule engine audit on typed document save.
 
-Handles all typed document models defined in apps.documents.typed_models.
-Each post_save signal fires run_audit_task asynchronously via Celery,
-scoped to the document's organization for full tenant isolation.
+Handles all typed document models defined in apps.documents.typed_models AND
+typed_models_v2 (the 11 phase-2 types). Each post_save signal fires
+run_audit_compat_task asynchronously via Celery, scoped to the document's
+organization for full tenant isolation.
+
+The dispatch is wrapped in `transaction.on_commit(...)` so that:
+  • If the surrounding transaction rolls back, the audit task is NEVER queued.
+  • The Celery worker can SELECT the row immediately on pickup (it's already
+    committed); without on_commit, fast workers race the writer and SELECT
+    nothing.
 """
 import logging
 import threading
 from contextlib import contextmanager
 
+from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
@@ -113,37 +121,54 @@ def _broker_reachable() -> bool:
 
 
 def _dispatch_audit(instance, document_type: str) -> None:
-    """Fire run_audit_compat_task.delay() in a non-blocking, fault-tolerant way."""
+    """Queue the audit task ON COMMIT only — never inside an open transaction.
+
+    Without `transaction.on_commit`, fast Celery workers can pick up the task
+    before the writing transaction commits and SELECT 0 rows. The on_commit
+    hook is also a no-op when the outer transaction rolls back, so we never
+    spawn a phantom audit run.
+    """
     if not _broker_reachable():
         logger.debug("[Signal] Broker unreachable; skipping audit dispatch for %s %s",
                      document_type, instance.pk)
         return
+
     try:
         org_id = str(instance.organization_id)
         doc_id = str(instance.pk)
-
-        if _has_active_run(doc_id, document_type, org_id):
-            logger.info(
-                "[Signal] Skipping duplicate dispatch: type=%s doc=%s already active",
-                document_type, doc_id,
-            )
-            return
-
-        from apps.rule_engine.tasks.audit_tasks_v2 import run_audit_compat_task
-        run_audit_compat_task.delay(
-            document_id=doc_id,
-            document_type=document_type,
-            organization_id=org_id,
-            triggered_by="auto_signal",
-        )
-        logger.info(
-            f"[Signal] Queued audit: type={document_type}, doc={doc_id}, org={org_id}"
-        )
     except Exception as exc:
-        # Never let a signal failure break the document save
         logger.warning(
-            f"[Signal] Failed to queue audit for {document_type} {instance.pk}: {exc}"
+            f"[Signal] Could not resolve org/doc id for {document_type} {instance!r}: {exc}"
         )
+        return
+
+    def _send():
+        try:
+            if _has_active_run(doc_id, document_type, org_id):
+                logger.info(
+                    "[Signal] Skipping duplicate dispatch: type=%s doc=%s already active",
+                    document_type, doc_id,
+                )
+                return
+            from apps.rule_engine.tasks.audit_tasks_v2 import run_audit_compat_task
+            run_audit_compat_task.delay(
+                document_id=doc_id,
+                document_type=document_type,
+                organization_id=org_id,
+                triggered_by="auto_signal",
+            )
+            logger.info(
+                f"[Signal] Queued audit: type={document_type}, doc={doc_id}, org={org_id}"
+            )
+        except Exception as exc:
+            # Never let a signal failure break the document save
+            logger.warning(
+                f"[Signal] Failed to queue audit for {document_type} {doc_id}: {exc}"
+            )
+
+    # If we're inside a transaction, defer to commit. If we're not, on_commit
+    # runs immediately — same behavior as a direct .delay() call.
+    transaction.on_commit(_send)
 
 
 # ── Per-model signal handlers ─────────────────────────────────────────────────
@@ -200,3 +225,74 @@ def on_fixed_asset_save(sender, instance, created, **kwargs):
 def on_sales_receipt_save(sender, instance, created, **kwargs):
     if _should_trigger(instance):
         _dispatch_audit(instance, "sales_receipt")
+
+
+# ── Phase-2 typed-doc handlers ────────────────────────────────────────────────
+# These previously had NO post_save audit dispatch — uploading a Contract or
+# JournalEntry never auto-triggered the rule engine. Pairing them with the
+# same handler shape so coverage is uniform across all 21 typed-doc models.
+
+@receiver(post_save, sender="documents.SalesOrder")
+def on_sales_order_save(sender, instance, created, **kwargs):
+    if _should_trigger(instance):
+        _dispatch_audit(instance, "sales_order")
+
+
+@receiver(post_save, sender="documents.Quotation")
+def on_quotation_save(sender, instance, created, **kwargs):
+    if _should_trigger(instance):
+        _dispatch_audit(instance, "quotation")
+
+
+@receiver(post_save, sender="documents.ProformaInvoice")
+def on_proforma_invoice_save(sender, instance, created, **kwargs):
+    if _should_trigger(instance):
+        _dispatch_audit(instance, "proforma_invoice")
+
+
+@receiver(post_save, sender="documents.ReceiptVoucher")
+def on_receipt_voucher_save(sender, instance, created, **kwargs):
+    if _should_trigger(instance):
+        _dispatch_audit(instance, "receipt_voucher")
+
+
+@receiver(post_save, sender="documents.CashVoucher")
+def on_cash_voucher_save(sender, instance, created, **kwargs):
+    if _should_trigger(instance):
+        _dispatch_audit(instance, "cash_voucher")
+
+
+@receiver(post_save, sender="documents.GeneralLedger")
+def on_general_ledger_save(sender, instance, created, **kwargs):
+    if _should_trigger(instance):
+        _dispatch_audit(instance, "general_ledger")
+
+
+@receiver(post_save, sender="documents.Ledger")
+def on_ledger_save(sender, instance, created, **kwargs):
+    if _should_trigger(instance):
+        _dispatch_audit(instance, "ledger")
+
+
+@receiver(post_save, sender="documents.Contract")
+def on_contract_save(sender, instance, created, **kwargs):
+    if _should_trigger(instance):
+        _dispatch_audit(instance, "contract")
+
+
+@receiver(post_save, sender="documents.SupplierStatement")
+def on_supplier_statement_save(sender, instance, created, **kwargs):
+    if _should_trigger(instance):
+        _dispatch_audit(instance, "supplier_statement")
+
+
+@receiver(post_save, sender="documents.CustomerStatement")
+def on_customer_statement_save(sender, instance, created, **kwargs):
+    if _should_trigger(instance):
+        _dispatch_audit(instance, "customer_statement")
+
+
+@receiver(post_save, sender="documents.JournalEntry")
+def on_journal_entry_save(sender, instance, created, **kwargs):
+    if _should_trigger(instance):
+        _dispatch_audit(instance, "journal_entry")

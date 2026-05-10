@@ -32,22 +32,40 @@
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
   </svg>
-  <span>{% trans "Coverage: GCC" %}</span>
+  {% if request.user.organization.country %}
+    <span>{% blocktrans with country=request.user.organization.country %}Coverage: {{ country }}{% endblocktrans %}</span>
+  {% else %}
+    <span>{% trans "Coverage: GCC" %}</span>
+  {% endif %}
 {% endblock %}
 
 {% block content %}
+{% if no_organization %}
+<div style="padding:18px 22px; background:#fff7ed; border:1px solid #fed7aa; border-radius:12px; margin-bottom:24px; display:flex; gap:14px; align-items:center;">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  <div style="flex:1;">
+    <strong style="color:#9a3412;">{% trans "You're not associated with an organization yet." %}</strong>
+    <div style="font-size:13px; color:#7c2d12; margin-top:4px;">
+      {% trans "Until your account is added to an organization, the dashboard has no data to show." %}
+    </div>
+  </div>
+  <a href="{% url 'frontend:profile' %}" class="btn btn-primary" style="white-space:nowrap;">{% trans "Go to profile" %}</a>
+</div>
+{% endif %}
+
 <div class="page-header">
   <div>
     <h1 class="page-title">{% trans "Main Dashboard" %}</h1>
     <p class="page-subtitle">{% blocktrans with product=product_name %}{{ product }} — Unified AI-powered financial document auditor{% endblocktrans %}</p>
   </div>
   <div style="display:flex; gap:10px;">
-    <button class="btn btn-light">
+    {# Export button now wires to the existing report export endpoint. #}
+    <a href="{% url 'frontend:invoices' %}?export=excel" class="btn btn-light">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
       </svg>
       {% trans "Export" %}
-    </button>
+    </a>
     <a href="{% url 'frontend:upload' %}" class="btn btn-primary">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -57,7 +75,7 @@
   </div>
 </div>
 
-<!-- Stats -->
+<!-- Stats — first row -->
 <div class="stats-grid">
   <div class="stat-card blue">
     {% if monthly_growth >= 0 %}
@@ -83,7 +101,10 @@
     <div class="stat-card-sub">{% trans "Average OCR confidence" %}</div>
   </div>
 
-  <div class="stat-card {% if kpis.fraud_alerts == 0 %}green{% elif kpis.fraud_alerts < 5 %}amber{% else %}red{% endif %}">
+  {# Drill-down: clicking the Fraud card filters /invoices/?status=flagged #}
+  <a href="{% url 'frontend:invoices' %}?status=flagged"
+     class="stat-card {% if kpis.fraud_alerts == 0 %}green{% elif kpis.fraud_alerts < 5 %}amber{% else %}red{% endif %}"
+     style="text-decoration:none; color:inherit; cursor:pointer;">
     {% if kpis.fraud_alerts == 0 %}
       <span class="stat-card-trend up">{% trans "Safe" %}</span>
     {% else %}
@@ -95,9 +116,12 @@
     <div class="stat-card-label">{% trans "Fraud / High-Risk" %}</div>
     <div class="stat-card-value">{{ kpis.fraud_alerts|default:0 }}</div>
     <div class="stat-card-sub">{{ kpis.high_risk_count|default:0 }} {% trans "high-risk invoices" %}</div>
-  </div>
+  </a>
 
-  <div class="stat-card amber">
+  {# Drill-down: clicking Compliance opens flagged invoices (those failing QR) #}
+  <a href="{% url 'frontend:invoices' %}?compliance=qr_invalid"
+     class="stat-card amber"
+     style="text-decoration:none; color:inherit; cursor:pointer;">
     <span class="stat-card-trend">ZATCA</span>
     <div class="stat-card-icon">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
@@ -105,42 +129,52 @@
     <div class="stat-card-label">{% trans "Compliance Alerts" %}</div>
     <div class="stat-card-value">{{ kpis.compliance_alerts|default:0 }}</div>
     <div class="stat-card-sub">{% trans "Invoices missing valid QR" %}</div>
-  </div>
+  </a>
 </div>
 
+<!-- Stats — second row -->
 <div class="stats-grid" style="margin-top:18px">
-  <div class="stat-card blue">
+  <a href="{% url 'frontend:invoices' %}" class="stat-card blue" style="text-decoration:none; color:inherit;">
     <div class="stat-card-icon">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
     </div>
     <div class="stat-card-label">{% trans "Total Invoices" %}</div>
     <div class="stat-card-value">{{ kpis.total_invoices|default:0 }}</div>
     <div class="stat-card-sub">{% trans "All time" %}</div>
-  </div>
-  <div class="stat-card green">
+  </a>
+  <a href="/documents/purchase-orders/" class="stat-card green" style="text-decoration:none; color:inherit;">
     <div class="stat-card-icon">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
     </div>
     <div class="stat-card-label">{% trans "Purchase Orders" %}</div>
     <div class="stat-card-value">{{ kpis.total_pos|default:0 }}</div>
     <div class="stat-card-sub">{% trans "All time" %}</div>
-  </div>
+  </a>
   <div class="stat-card amber">
     <div class="stat-card-icon">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
     </div>
     <div class="stat-card-label">{% trans "Total Invoiced" %}</div>
-    <div class="stat-card-value" style="font-size:22px">{{ kpis.total_amount|floatformat:0|default:0 }}</div>
-    <div class="stat-card-sub">SAR · VAT: {{ kpis.vat_total|floatformat:0|default:0 }}</div>
+    {# Per-currency breakdown — surfaces a multi-currency DB honestly. #}
+    {% if kpis.total_amount_by_currency %}
+      <div class="stat-card-value" style="font-size:18px;">
+        {% for ccy, amt in kpis.total_amount_by_currency.items %}
+          <div>{{ amt|floatformat:0 }} <span style="font-size:12px;color:var(--text-muted)">{{ ccy }}</span></div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="stat-card-value" style="font-size:22px">0 <span style="font-size:12px;color:var(--text-muted)">{{ kpis.primary_currency|default:"SAR" }}</span></div>
+    {% endif %}
+    <div class="stat-card-sub">{% trans "VAT" %}: {{ kpis.vat_total|floatformat:0|default:0 }} {{ kpis.primary_currency|default:"SAR" }}</div>
   </div>
-  <div class="stat-card red">
+  <a href="{% url 'frontend:invoices' %}?status=pending" class="stat-card red" style="text-decoration:none; color:inherit;">
     <div class="stat-card-icon">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg>
     </div>
     <div class="stat-card-label">{% trans "Pending Review" %}</div>
     <div class="stat-card-value">{{ kpis.pending_review|default:0 }}</div>
     <div class="stat-card-sub">{% trans "Awaiting human approval" %}</div>
-  </div>
+  </a>
 </div>
 
 <!-- CTA Banner -->
@@ -162,9 +196,12 @@
   <div class="upload-icon">
     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
   </div>
-  <h3 class="upload-title">{% trans "Drag files here or click to select" %}</h3>
-  <p class="upload-desc">{% trans "Supports PDF, Excel, CSV, JSON, and images — up to 50MB per file" %}</p>
-  <a href="{% url 'frontend:upload' %}" class="btn btn-dark">{% trans "Upload Documents" %}</a>
+  {# Whole card is now a link to the real upload page (was decorative). #}
+  <a href="{% url 'frontend:upload' %}" style="display:block; text-decoration:none; color:inherit;">
+    <h3 class="upload-title">{% trans "Drag files here or click to select" %}</h3>
+    <p class="upload-desc">{% trans "Supports PDF, Excel, CSV, JSON, and images — up to 50MB per file" %}</p>
+    <span class="btn btn-dark">{% trans "Upload Documents" %}</span>
+  </a>
   <div class="file-types">
     <span class="file-type">PDF</span>
     <span class="file-type">XLSX</span>
@@ -182,10 +219,11 @@
       <p style="font-size:12px;color:var(--text-muted)">{% trans "Last 10 analyzed documents" %}</p>
     </div>
     <div style="display:flex; gap:8px;">
-      <button class="btn btn-light">
+      {# Filter button now jumps to the invoice list, where real filters live. #}
+      <a href="{% url 'frontend:invoices' %}" class="btn btn-light">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
         {% trans "Filter" %}
-      </button>
+      </a>
       <a href="{% url 'frontend:invoices' %}" class="btn btn-light">{% trans "View all" %} ←</a>
     </div>
   </div>
@@ -210,12 +248,12 @@
                 <div class="file-icon pdf">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                 </div>
-                {{ inv.filename|default:inv.invoice_number }}
+                {{ inv.invoice_number|default:inv.vendor_name|default:"—" }}
               </div>
             </td>
             <td class="text-muted">{{ inv.created_at|date:"Y-m-d" }}</td>
-            <td><span class="badge badge-{% if inv.status == 'approved' %}success{% elif inv.status == 'flagged' %}warning{% elif inv.status == 'rejected' %}danger{% else %}info{% endif %}">{{ inv.get_status_display|default:inv.status }}</span></td>
-            <td><span class="badge badge-{% if inv.risk_level == 'low' %}success{% elif inv.risk_level == 'medium' %}warning{% elif inv.risk_level == 'high' %}danger{% else %}info{% endif %}">{{ inv.risk_level|default:"--" }}</span></td>
+            <td><span class="badge badge-{% if inv.status == 'approved' %}success{% elif inv.status == 'flagged' %}warning{% elif inv.status == 'rejected' %}danger{% else %}info{% endif %}">{{ inv.get_status_display }}</span></td>
+            <td><span class="badge badge-{% if inv.risk_level == 'low' %}success{% elif inv.risk_level == 'medium' %}warning{% elif inv.risk_level == 'high' %}danger{% else %}info{% endif %}">{{ inv.get_risk_level_display|default:"—" }}</span></td>
             <td>
               <a href="{% url 'frontend:invoice_detail' pk=inv.id %}" class="row-action">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6" transform="scale(-1,1) translate(-24,0)"/></svg>
@@ -273,20 +311,36 @@
   {% endif %}
 
   {# ── Charts: risk distribution + monthly trend (Chart.js) ───────────── #}
+  {% with rb_total=risk_breakdown.low|add:risk_breakdown.medium|add:risk_breakdown.high|add:risk_breakdown.critical %}
   <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap:18px; margin-top:24px;">
     <div class="card" style="padding:20px;">
       <h3 style="font-size:14px; font-weight:700; color:var(--primary); margin-bottom:14px;">{% trans "Risk Distribution" %}</h3>
       <div style="position:relative; height:240px;">
-        <canvas id="riskChart"></canvas>
+        {% if rb_total > 0 %}
+          <canvas id="riskChart"></canvas>
+        {% else %}
+          <div style="height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-muted);">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+            <div style="font-size:13px;margin-top:8px;">{% trans "No documents to score yet" %}</div>
+          </div>
+        {% endif %}
       </div>
     </div>
     <div class="card" style="padding:20px;">
       <h3 style="font-size:14px; font-weight:700; color:var(--primary); margin-bottom:14px;">{% trans "Invoices Trend (last 6 months)" %}</h3>
       <div style="position:relative; height:240px;">
-        <canvas id="trendChart"></canvas>
+        {% if chart_series.labels %}
+          <canvas id="trendChart"></canvas>
+        {% else %}
+          <div style="height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text-muted);">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            <div style="font-size:13px;margin-top:8px;">{% trans "Upload invoices to see the monthly trend" %}</div>
+          </div>
+        {% endif %}
       </div>
     </div>
   </div>
+  {% endwith %}
 </div>
 
 {# ── Demo-data CTA when org is empty ──────────────────────────────────── #}

@@ -1,16 +1,93 @@
+# --- VCS / IDE ---
 .git
 .gitignore
+.gitattributes
+.github
+.idea
+.vscode
+.editorconfig
+
+# --- Python ---
 .venv
+venv
 __pycache__
 *.pyc
 *.pyo
 *.pyd
+*.egg-info
+.eggs
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.tox
+.coverage
+.coverage.*
+htmlcov
+coverage.xml
+.hypothesis
+
+# --- Secrets / local config ---
 .env
+.env.*
+!.env.example
+
+# --- Local DB / runtime artifacts ---
 db.sqlite3
 db.sqlite3.*
 db_runtime.sqlite3
+*.sqlite3
+*.sqlite3-journal
+
+# --- Build outputs / runtime mounts (mounted as volumes at runtime) ---
 media
+media/*
 staticfiles
+staticfiles/*
 logs
+logs/*
 node_modules
+
+# --- Logs / diagnostics ---
 *.log
+
+# --- Heavy test fixtures / sample data ---
+# Should NOT ship inside production images. Makes the image huge,
+# contains Arabic filenames that may exceed POSIX NAME_MAX on some
+# filesystems, and can include real customer-shaped data that does
+# not belong on disk.
+Dataset
+Dataset/*
+
+# --- Documentation that doesn't need to ship to runtime ---
+# Keep README + LICENSE; everything in Docs/ is dev/operator-only.
+Docs
+Docs/*
+docs
+docs/*
+
+# --- Loose archive / spreadsheet test fixtures at the repo root ---
+*.zip
+*.pdf
+*.xlsx
+*.xls
+*.csv
+*.jsonl
+
+# --- Test outputs / artifacts ---
+outputbase.txt
+*.har
+*.pcap
+
+# --- Docker-related local overrides ---
+docker-compose.override.yml
+docker-compose.local.yml
+
+# --- Local-only scripts ---
+*.sh.local
+
+# --- IDE / OS junk ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~

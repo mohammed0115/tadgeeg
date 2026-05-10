@@ -1,0 +1,23 @@
+{
+  "generated_at": "2026-05-10",
+  "product": "Tadgeeg | تدقيق",
+  "internal_engine": "FinAI Engine",
+  "files": [
+    "AI_ALGORITHMS_CATALOG.md",
+    "AI_MODEL_VALIDATION_REPORT.md",
+    "API_AND_ERP_INTEGRATION_CONTRACTS.md",
+    "END_TO_END_USER_SCENARIOS.md",
+    "FINANCIAL_REPORTING_SPECIFICATION.md",
+    "PRODUCTION_READINESS_CHECKLIST.md",
+    "README.md",
+    "SCALABILITY_AND_PERFORMANCE_PLAN.md",
+    "SECURITY_AND_COMPLIANCE_ARCHITECTURE.md",
+    "TADGEEG_ENTERPRISE_SRS.md",
+    "ZATCA_PHASE_2_TECHNICAL_COMPLIANCE.md"
+  ],
+  "source_context": [
+    "tadgeeg_othaim_investor_pitch_20260508182312.pdf",
+    "FinAI_What_The_System_Does.pdf",
+    "prior static code gap analysis from uploaded Tadgeeg source zip"
+  ]
+}

@@ -1,0 +1,31 @@
+{% load i18n %}
+{% get_current_language as CURRENT_LANGUAGE %}
+{% comment %}
+Compact <select>-based language switcher.
+
+Use this on marketing / landing pages where the button-pair version takes
+too much horizontal space (especially after Arabic translation, where the
+two button labels — العربية / الإنجليزية — wrap awkwardly).
+
+Submits the form when the user picks a different option, so there is no
+"Apply" button to click.
+
+The default `extra_classes` style matches the landing-page chrome
+(white bg, slate border). Override per-page when needed.
+{% endcomment %}
+<form method="post" action="/i18n/setlang/"
+      class="{{ extra_classes|default:'inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/90 p-1 text-xs font-semibold text-slate-700 shadow-sm' }}">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path|default:'/' }}">
+  <label for="lang-select" class="sr-only">{% trans "Language" %}</label>
+  <select name="language" id="lang-select"
+          onchange="this.form.submit()"
+          class="rounded-xl bg-transparent px-3 py-2 outline-none cursor-pointer focus:ring-2 focus:ring-slate-300">
+    <option value="ar" {% if CURRENT_LANGUAGE == 'ar' %}selected{% endif %}>{% trans "Arabic" %}</option>
+    <option value="en" {% if CURRENT_LANGUAGE == 'en' %}selected{% endif %}>{% trans "English" %}</option>
+  </select>
+  {# Submit fallback for users without JS — always visible to assistive tech, hidden visually. #}
+  <noscript>
+    <button type="submit" class="rounded-xl px-2 py-1 text-xs">{% trans "Apply" %}</button>
+  </noscript>
+</form>

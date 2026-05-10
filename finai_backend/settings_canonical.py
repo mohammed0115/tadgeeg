@@ -106,6 +106,7 @@ DJANGO_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.humanize",  # provides {% load humanize %} → intcomma, naturaltime
 ]
 
 THIRD_PARTY_APPS = [
@@ -233,6 +234,11 @@ LOCALE_PATHS = [BASE_DIR / "locale"]
 TIME_ZONE = "Asia/Riyadh"
 USE_I18N = True
 USE_TZ = True
+# USE_L10N is the Django default since 4.0 (always on); kept here as
+# documentation. We rely on Django's locale machinery to render dates and
+# numbers per request.LANGUAGE_CODE. Set USE_THOUSAND_SEPARATOR so amounts
+# render with locale-appropriate separators (e.g., 257,050 instead of 257050).
+USE_THOUSAND_SEPARATOR = True
 
 # ─── Static / Media ───────────────────────────────────────────────────────────
 STATIC_URL = "/static/"

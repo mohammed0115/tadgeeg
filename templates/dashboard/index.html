@@ -1,5 +1,5 @@
 {% extends "layouts/dashboard_base.html" %}
-{% load i18n %}
+{% load i18n humanize %}
 
 {% block title %}{% trans "Dashboard" %}{% endblock %}
 {% block nav_dashboard %}active{% endblock %}
@@ -159,13 +159,13 @@
     {% if kpis.total_amount_by_currency %}
       <div class="stat-card-value" style="font-size:18px;">
         {% for ccy, amt in kpis.total_amount_by_currency.items %}
-          <div>{{ amt|floatformat:0 }} <span style="font-size:12px;color:var(--text-muted)">{{ ccy }}</span></div>
+          <div>{{ amt|floatformat:0|intcomma:False }} <span style="font-size:12px;color:var(--text-muted)">{{ ccy }}</span></div>
         {% endfor %}
       </div>
     {% else %}
       <div class="stat-card-value" style="font-size:22px">0 <span style="font-size:12px;color:var(--text-muted)">{{ kpis.primary_currency|default:"SAR" }}</span></div>
     {% endif %}
-    <div class="stat-card-sub">{% trans "VAT" %}: {{ kpis.vat_total|floatformat:0|default:0 }} {{ kpis.primary_currency|default:"SAR" }}</div>
+    <div class="stat-card-sub">{% trans "VAT" %}: {{ kpis.vat_total|floatformat:0|intcomma:False|default:0 }} {{ kpis.primary_currency|default:"SAR" }}</div>
   </div>
   <a href="{% url 'frontend:invoices' %}?status=pending" class="stat-card red" style="text-decoration:none; color:inherit;">
     <div class="stat-card-icon">
@@ -301,7 +301,7 @@
           <td>{{ v.invoice_count }}</td>
           <td><span style="color:#dc2626; font-weight:700;">{{ v.high_risk }}</span></td>
           <td>{% if v.duplicates %}<span style="color:#b45309; font-weight:700;">{{ v.duplicates }}</span>{% else %}—{% endif %}</td>
-          <td style="font-family:monospace;">{{ v.total|default:0|floatformat:0 }} SAR</td>
+          <td style="font-family:monospace;">{{ v.total|default:0|floatformat:0|intcomma:False }} SAR</td>
           <td><a href="{% url 'frontend:vendor_detail' vendor_name=v.vendor_name %}" class="btn btn-light" style="padding:4px 10px;font-size:11px;">{% trans "Vendor 360" %}</a></td>
         </tr>
         {% endfor %}

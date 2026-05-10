@@ -2836,18 +2836,16 @@ msgstr "حدث خطأ غير متوقّع. تم إبلاغ فريقنا."
 #: templates/alerts/index.html:4 templates/alerts/index.html:49
 #: templates/alerts/index.html:57
 msgid "Alerts"
-msgstr ""
+msgstr "تنبيهات"
 
 #: templates/alerts/index.html:58
 msgid "Route streaming anomalies to email · SMS · Slack · Teams · webhook."
-msgstr ""
+msgstr "توجيه انحرافات المسار إلى البريد الإلكتروني · الرسائل القصيرة · سلاك · الفرق · webhook."
 
 #: templates/alerts/index.html:61 templates/alerts/index.html:87
 #: templates/audit/rule_builder.html:65
-#, fuzzy
-#| msgid "New leads"
 msgid "New rule"
-msgstr "جهات اتصال جديدة"
+msgstr "قاعدة جديدة"
 
 #: templates/alerts/index.html:68 templates/auth/password_reset_done.html:5
 msgid "Sent"
@@ -2892,17 +2890,15 @@ msgstr "فشلت"
 
 #: templates/alerts/index.html:76
 msgid "Suppressed (cooldown)"
-msgstr ""
+msgstr "مُخفف (فترة التهدئة)"
 
 #: templates/alerts/index.html:80
 msgid "Acknowledged"
-msgstr ""
+msgstr "تم الاعتراف"
 
 #: templates/alerts/index.html:87
-#, fuzzy
-#| msgid "Audit Rule"
 msgid "Edit rule"
-msgstr "قاعدة تدقيق"
+msgstr "تعديل القاعدة"
 
 #: templates/alerts/index.html:91 templates/alerts/index.html:168
 #: templates/cms_admin/faq.html:135 templates/cms_admin/faq.html:139
@@ -2921,41 +2917,35 @@ msgstr "الاسم"
 
 #: templates/alerts/index.html:92
 msgid "e.g. Critical anomalies → audit team"
-msgstr ""
+msgstr "مثل: انحرافات حرجة → فريق التدقيق"
 
 #: templates/alerts/index.html:95
 msgid "Trigger detector (blank = all)"
-msgstr ""
+msgstr "محفز الكاشف (فارغ = الكل)"
 
 #: templates/alerts/index.html:97
 msgid "(any detector)"
-msgstr ""
+msgstr "(أي كاشف)"
 
 #: templates/alerts/index.html:104 templates/alerts/index.html:170
-#, fuzzy
-#| msgid "High Severity"
 msgid "Min severity"
-msgstr "شدّة عالية"
+msgstr "الحد الأدنى من الشدة"
 
 #: templates/alerts/index.html:113
 msgid "Cooldown (minutes)"
-msgstr ""
+msgstr "فترة التهدئة (بالدقائق)"
 
 #: templates/alerts/index.html:120 templates/alerts/index.html:171
-#, fuzzy
-#| msgid "Save Changes"
 msgid "Channels"
-msgstr "حفظ التغييرات"
+msgstr "القنوات"
 
 #: templates/alerts/index.html:132
 msgid "email1, email2  /  +9665..."
-msgstr ""
+msgstr "البريد1، البريد2  /  +9665..."
 
 #: templates/alerts/index.html:144
-#, fuzzy
-#| msgid "Add Page"
 msgid "Add channel"
-msgstr "إضافة صفحة"
+msgstr "إضافة قناة"
 
 #: templates/alerts/index.html:150 templates/alerts/index.html:189
 #: templates/documents/purchase_orders.html:73
@@ -3005,30 +2995,24 @@ msgid "Cancel"
 msgstr "إلغاء"
 
 #: templates/alerts/index.html:155
-#, fuzzy
-#| msgid "Save Profile"
 msgid "Save rule"
-msgstr "حفظ الملف الشخصي"
+msgstr "حفظ القاعدة"
 
 #: templates/alerts/index.html:158
-#, fuzzy
-#| msgid "Send reset link"
 msgid "Send test"
-msgstr "إرسال رابط الاستعادة"
+msgstr "إرسال اختبار"
 
 #: templates/alerts/index.html:165
-#, fuzzy
-#| msgid "Running audit rules..."
 msgid "Routing rules"
-msgstr "جارٍ تشغيل قواعد التدقيق..."
+msgstr "قواعد التوجيه"
 
 #: templates/alerts/index.html:169
 msgid "Trigger"
-msgstr ""
+msgstr "تحفيز"
 
 #: templates/alerts/index.html:172
 msgid "Cooldown"
-msgstr ""
+msgstr "فترة التهدئة"
 
 #: templates/alerts/index.html:173 templates/alerts/index.html:210
 #: templates/audit/index.html:67 templates/audit/integrity.html:85
@@ -3094,23 +3078,21 @@ msgstr "تعديل"
 
 #: templates/alerts/index.html:196
 msgid "No alert rules yet. Click ‘New rule’ to set up your first one."
-msgstr ""
+msgstr "لا توجد قواعد تنبيه حتى الآن. انقر على 'قاعدة جديدة' لإعداد أول قاعدة لك."
 
 #: templates/alerts/index.html:205
-#, fuzzy
-#| msgid "Recent Operations"
 msgid "Recent alert events"
-msgstr "العمليات الحديثة"
+msgstr "أحداث التنبيه الأخيرة"
 
 #: templates/alerts/index.html:208 templates/invoices/invoice_pdf.html:145
 #: templates/streaming/ops.html:147 templates/working_papers/detail.html:161
 #: templates/zatca/dashboard.html:203
 msgid "When"
-msgstr ""
+msgstr "عندما"
 
 #: templates/alerts/index.html:209
 msgid "Channel"
-msgstr ""
+msgstr "القناة"
 
 #: templates/alerts/index.html:211 templates/audit/rule_builder.html:139
 #: templates/audit/rule_builder.html:205 templates/compliance/index.html:164
@@ -3129,25 +3111,19 @@ msgstr "الملخّص"
 
 #: templates/alerts/index.html:227
 msgid "Acknowledge"
-msgstr ""
+msgstr "الاعتراف"
 
 #: templates/alerts/index.html:235
-#, fuzzy
-#| msgid "No reports generated yet"
 msgid "No alerts dispatched yet."
-msgstr "لم يتم إنشاء تقارير بعد"
+msgstr "لم يتم إرسال أي تنبيهات بعد."
 
 #: templates/alerts/index.html:340
-#, fuzzy
-#| msgid "Not matched"
 msgid "Test dispatched"
-msgstr "غير متطابق"
+msgstr "تم إرسال الاختبار"
 
 #: templates/alerts/index.html:341
-#, fuzzy
-#| msgid "Request failed"
 msgid "Test failed"
-msgstr "فشل الطلب"
+msgstr "فشل الاختبار"
 
 #: templates/analytics/index.html:4 templates/analytics/index.html:35
 #: templates/analytics/index.html:41 templates/layouts/dashboard_base.html:425
@@ -3206,27 +3182,21 @@ msgid "Risk Distribution"
 msgstr "توزيع المخاطرة"
 
 #: templates/analytics/index.html:90
-#, fuzzy
-#| msgid "Risk Distribution"
 msgid "Workflow Status Distribution"
-msgstr "توزيع المخاطرة"
+msgstr "توزيع حالة سير العمل"
 
 #: templates/analytics/index.html:94
 msgid "VAT Collected (monthly)"
-msgstr ""
+msgstr "ضريبة القيمة المضافة المحصلة (شهرياً)"
 
 #: templates/analytics/index.html:101
-#, fuzzy
-#| msgid "Audit Rule Quality"
 msgid "Audit-Rule Failure Histogram"
-msgstr "جودة قواعد التدقيق"
+msgstr "رسم بياني لفشل قاعدة التدقيق"
 
 # --- Auditing partials ---
 #: templates/analytics/index.html:105
-#, fuzzy
-#| msgid "Document Type"
 msgid "Document-Type Mix"
-msgstr "نوع المستند"
+msgstr "مزيج نوع الوثيقة"
 
 #: templates/analytics/index.html:111
 msgid "Top Vendors by Volume"
@@ -3477,24 +3447,20 @@ msgid "Assignment failed"
 msgstr "فشل الإسناد"
 
 #: templates/audit/inbox.html:4 templates/audit/inbox.html:18
-#, fuzzy
-#| msgid "Approve Invoice"
 msgid "Approval Inbox"
-msgstr "اعتماد الفاتورة"
+msgstr "صندوق الوارد للموافقة"
 
 #: templates/audit/inbox.html:12
 msgid "Inbox"
-msgstr ""
+msgstr "صندوق الوارد"
 
 #: templates/audit/inbox.html:19
 msgid "Documents flagged or pending — sorted by risk severity."
-msgstr ""
+msgstr "المستندات المميزة أو المعلقة — مرتبة حسب شدة المخاطر."
 
 #: templates/audit/inbox.html:25
-#, fuzzy
-#| msgid "Total Spend"
 msgid "Total Pending"
-msgstr "إجمالي الإنفاق"
+msgstr "الإجمالي المعلق"
 
 #: templates/audit/inbox.html:42 templates/cms_admin/jobs.html:84
 #: templates/cms_admin/media.html:131 templates/cms_admin/media.html:268
@@ -3516,10 +3482,8 @@ msgid "Reference"
 msgstr "المرجع"
 
 #: templates/audit/inbox.html:44
-#, fuzzy
-#| msgid "Partial"
 msgid "Party"
-msgstr "جزئي"
+msgstr "الطرف المعني"
 
 #: templates/audit/inbox.html:45 templates/audit/tools.html:200
 #: templates/audit/tools.html:349 templates/compliance/index.html:196
@@ -3596,7 +3560,7 @@ msgstr "مراجعة"
 
 #: templates/audit/inbox.html:82
 msgid "Inbox is empty — nothing pending review."
-msgstr ""
+msgstr "صندوق الوارد فارغ — لا شيء معلق للمراجعة."
 
 #: templates/audit/index.html:4 templates/audit/index.html:16
 #: templates/audit/index.html:22 templates/base.html:426
@@ -3692,81 +3656,69 @@ msgstr "رفع المستندات"
 
 #: templates/audit/integrity.html:4 templates/audit/integrity.html:36
 #: templates/audit/integrity.html:44 templates/reports/index.html:301
-#, fuzzy
-#| msgid "Audit Trail"
 msgid "Audit Trail Integrity"
-msgstr "سِجل التدقيق"
+msgstr "سلامة سجل التدقيق"
 
 #: templates/audit/integrity.html:45
 msgid "Tamper-evident SHA-256 chain across every audit-relevant event."
-msgstr ""
+msgstr "سلسلة SHA-256 المقاومة للتلاعب عبر كل حدث ذي صلة بالتدقيق."
 
 #: templates/audit/integrity.html:55
 msgid "All chains intact"
-msgstr ""
+msgstr "جميع السلاسل سليمة"
 
 #: templates/audit/integrity.html:56
 msgid ""
 "Every event in this organisation's audit trail hashes correctly to the chain "
 "head. No row has been mutated since it was recorded."
-msgstr ""
+msgstr "كل حدث في سجل تدقيق هذه المنظمة يتطابق بشكل صحيح مع رأس السلسلة. لم يتم تعديل أي صف منذ تسجيله."
 
 #: templates/audit/integrity.html:65
-#, fuzzy
-#| msgid "anomalies detected"
 msgid "Chain breaks detected"
-msgstr "شذوذات مكتشفة"
+msgstr "تم اكتشاف انقطاعات في السلسلة"
 
 #: templates/audit/integrity.html:66
 msgid ""
 "One or more rows in the audit trail no longer hash correctly. This usually "
 "means a row was edited or deleted outside the application — investigate the "
 "listed positions immediately."
-msgstr ""
+msgstr "صف أو أكثر في سجل التدقيق لم يعد يتطابق بشكل صحيح. هذا يعني عادةً أنه تم تعديل صف أو حذفه خارج التطبيق — تحقق من المواقع المدرجة على الفور."
 
 #: templates/audit/integrity.html:73
-#, fuzzy
-#| msgid "Cross-checked"
 msgid "Chains checked"
-msgstr "تم التدقيق المتقاطع"
+msgstr "تم فحص السلاسل"
 
 #: templates/audit/integrity.html:77
-#, fuzzy
-#| msgid "Verified"
 msgid "Rows verified"
-msgstr "مُتحقَّق"
+msgstr "تم التحقق من الصفوف"
 
 #: templates/audit/integrity.html:81
-#, fuzzy
-#| msgid "No leads found."
 msgid "Breaks found"
-msgstr "لم يتم العثور على جهات اتصال."
+msgstr "تم العثور على انقطاعات"
 
 #: templates/audit/integrity.html:88 templates/audit/integrity.html:103
-#, fuzzy
-#| msgid "Contact"
 msgid "Intact"
-msgstr "تواصل"
+msgstr "سليم"
 
 #: templates/audit/integrity.html:90
 msgid "Tampering"
-msgstr ""
+msgstr "تلاعب"
 
 #: templates/audit/integrity.html:100
 msgid "Rows"
-msgstr ""
+msgstr "الصفوف"
 
 #: templates/audit/integrity.html:101
 msgid "Head hash"
-msgstr ""
+msgstr "تجزئة الرأس"
 
 #: templates/audit/integrity.html:105
 msgid "Breaks"
-msgstr ""
+msgstr "انكسارات"
 
 #: templates/audit/integrity.html:111
 msgid "Tampered rows"
-msgstr ""
+msgstr "صفوف تم التلاعب بها"
 
 #: templates/audit/integrity.html:115 templates/reports/report_pdf.html:432
 #: templates/working_papers/detail.html:75
@@ -3779,18 +3731,16 @@ msgid "Expected"
 msgstr "المتوقّع"
 
 #: templates/audit/integrity.html:120
-#, fuzzy
-#| msgid "Growth"
 msgid "Got"
-msgstr "النمو والتشغيل"
+msgstr "حصلت على"
 
 #: templates/audit/integrity.html:130
 msgid "No chain models registered yet."
-msgstr ""
+msgstr "لا توجد نماذج سلسلة مسجلة حتى الآن."
 
 #: templates/audit/integrity.html:136
 msgid "How the chain works:"
-msgstr ""
+msgstr "كيف تعمل السلسلة:"
 
 #: templates/audit/integrity.html:137
 msgid ""
@@ -3800,18 +3750,18 @@ msgid ""
 "row in the database, its stored event_hash no longer matches the recomputed "
 "value — and every downstream row's previous_hash pointer breaks too. "
 "Verification is read-only and runs in O(n) over the chain."
-msgstr ""
+msgstr "يسجل كل صف تدقيق SHA-256(previous_hash + canonical_payload + timestamp + organization_id). عند الحفظ، يقوم التطبيق بحساب وتخزين هذه التجزئة مع مؤشر إلى الصف السابق. إذا قام أي شخص لاحقًا بتعديل صف في قاعدة البيانات، فإن event_hash المخزنة لم تعد تتطابق مع القيمة المعاد حسابها — وينكسر أيضًا مؤشر previous_hash لكل صف لاحق. التحقق هو للقراءة فقط ويعمل في O(n) عبر السلسلة."
 
 #: templates/audit/rule_builder.html:4 templates/audit/rule_builder.html:51
 #: templates/audit/rule_builder.html:59 templates/reports/index.html:309
 msgid "Custom Rule Builder"
-msgstr ""
+msgstr "منشئ القواعد المخصصة"
 
 #: templates/audit/rule_builder.html:61
 msgid ""
 "Build audit rules visually. Test against the last 100 invoices before "
 "publishing."
-msgstr ""
+msgstr "بناء قواعد التدقيق بصريًا. اختبار ضد آخر 100 فاتورة قبل النشر."
 
 #: templates/audit/rule_builder.html:77 templates/invoices/detail.html:829
 #: templates/invoices/list.html:61
@@ -3822,10 +3772,8 @@ msgid "All"
 msgstr "الكل"
 
 #: templates/audit/rule_builder.html:78
-#, fuzzy
-#| msgid "Draft"
 msgid "Drafts"
-msgstr "مسوّدة"
+msgstr "المسودات"
 
 #: templates/audit/rule_builder.html:79 templates/cms_admin/jobs.html:49
 #: templates/cms_admin/jobs.html:87 templates/cms_admin/jobs.html:446
@@ -3850,18 +3798,14 @@ msgid "Archived"
 msgstr "مؤرشف"
 
 #: templates/audit/rule_builder.html:98
-#, fuzzy
-#| msgid "No questions. Click \"Add Question\" to start."
 msgid "No rules yet. Click ‘New rule’ to start."
-msgstr "لا توجد أسئلة. انقر \"إضافة سؤال\" للبدء."
+msgstr "لا توجد قواعد بعد. انقر على 'قاعدة جديدة' للبدء."
 
 #: templates/audit/rule_builder.html:108
 msgid "Select a rule from the list, or create a new one to get started."
-msgstr ""
+msgstr "اختر قاعدة من القائمة، أو أنشئ واحدة جديدة للبدء."
 
 #: templates/audit/rule_builder.html:116
-#, fuzzy
-#| msgid "Rule Name"
 msgid "Rule name"
 msgstr "اسم القاعدة"
 
@@ -3872,10 +3816,8 @@ msgid "Test"
 msgstr "اختبار"
 
 #: templates/audit/rule_builder.html:124
-#, fuzzy
-#| msgid "Save Stats"
 msgid "Save draft"
-msgstr "حفظ الإحصائيات"
+msgstr "حفظ المسودة"
 
 #: templates/audit/rule_builder.html:125 templates/cms_admin/pages.html:92
 msgid "Publish"
@@ -3888,10 +3830,8 @@ msgid "Archive"
 msgstr "أرشفة"
 
 #: templates/audit/rule_builder.html:132
-#, fuzzy
-#| msgid "Raw data"
 msgid "Metadata"
-msgstr "بيانات خام"
+msgstr "البيانات الوصفية"
 
 #: templates/audit/rule_builder.html:135 templates/cms_admin/homepage.html:190
 #: templates/cms_admin/homepage.html:194 templates/cms_admin/homepage.html:275
@@ -3916,175 +3856,141 @@ msgstr "الوصف"
 
 #: templates/audit/rule_builder.html:136
 msgid "What does this rule check?"
-msgstr ""
+msgstr "ماذا تتحقق هذه القاعدة؟"
 
 #: templates/audit/rule_builder.html:152
-#, fuzzy
-#| msgid "Recommendation"
 msgid "When (condition)"
-msgstr "التوصية"
+msgstr "متى (الشرط)"
 
 #: templates/audit/rule_builder.html:162
 msgid "ALL of these are true"
-msgstr ""
+msgstr "جميع هذه صحيحة"
 
 #: templates/audit/rule_builder.html:163
 msgid "ANY of these is true"
-msgstr ""
+msgstr "أي من هذه صحيحة"
 
 #: templates/audit/rule_builder.html:185
-#, fuzzy
-#| msgid "Add Organization"
 msgid "Add condition"
-msgstr "إضافة مؤسسة"
+msgstr "إضافة شرط"
 
 #: templates/audit/rule_builder.html:194
-#, fuzzy
-#| msgid "Text Extraction"
 msgid "Then (action)"
-msgstr "استخراج النص"
+msgstr "ثم (الإجراء)"
 
 #: templates/audit/rule_builder.html:214
 msgid "Message shown to auditor"
-msgstr ""
+msgstr "رسالة تظهر للمراجع"
 
 #: templates/audit/rule_builder.html:215
-#, fuzzy
-#| msgid "Invoice escalated for senior review."
 msgid "e.g. Large invoice flagged for review"
-msgstr "تم تصعيد الفاتورة لمراجعة المدقق الأول."
+msgstr "على سبيل المثال: فاتورة كبيرة تم وضع علامة عليها للمراجعة"
 
 #: templates/audit/rule_builder.html:222
-#, fuzzy
-#| msgid "Current results"
 msgid "Test result"
-msgstr "النتائج الحالية"
+msgstr "نتيجة الاختبار"
 
 #: templates/audit/rule_builder.html:226
-#, fuzzy
-#| msgid "Invoices processed"
 msgid "invoices triggered"
-msgstr "الفواتير المعالَجة"
+msgstr "الفواتير التي تم تفعيلها"
 
 #: templates/audit/rule_builder.html:397
 msgid "Save the rule first, then run the test."
-msgstr ""
+msgstr "احفظ القاعدة أولاً، ثم قم بتشغيل الاختبار."
 
 #: templates/audit/rule_builder.html:415
 msgid "Publish this rule to the live audit pipeline?"
-msgstr ""
+msgstr "هل تريد نشر هذه القاعدة في خط تدقيق مباشر؟"
 
 #: templates/audit/rule_builder.html:435
 msgid "Archive this rule?"
-msgstr ""
+msgstr "هل تريد أرشفة هذه القاعدة؟"
 
 #: templates/audit/tools.html:4 templates/audit/tools.html:33
 #: templates/audit/tools.html:41
-#, fuzzy
-#| msgid "Audit Pending"
 msgid "Audit Planning Tools"
-msgstr "التدقيق قيد الانتظار"
+msgstr "أدوات تخطيط التدقيق"
 
 #: templates/audit/tools.html:42
 msgid ""
 "Materiality benchmarks (ISA 320) and sampling strategies (ISA 530) for the "
 "engagement plan."
-msgstr ""
+msgstr "معايير الأهمية (ISA 320) واستراتيجيات العينة (ISA 530) لخطة المشاركة."
 
 #: templates/audit/tools.html:49
-#, fuzzy
-#| msgid "Materiality & Patterns"
 msgid "Materiality Calculator"
-msgstr "الأهمية النسبية والأنماط"
+msgstr "حاسبة الأهمية"
 
 #: templates/audit/tools.html:51
 msgid ""
 "Pick a benchmark, enter the audited amount, and Tadgeeg returns overall, "
 "performance, and clearly-trivial thresholds."
-msgstr ""
+msgstr "اختر معيارًا، أدخل المبلغ المدقق، وستقوم تدقيق بإرجاع الحدود العامة والأداء والحدود الواضحة."
 
 #: templates/audit/tools.html:56 templates/audit/tools.html:137
-#, fuzzy
-#| msgid "At benchmark"
 msgid "Benchmark"
-msgstr "عند المعيار"
+msgstr "معيار"
 
 #: templates/audit/tools.html:66
-#, fuzzy
-#| msgid "Base amount"
 msgid "Benchmark amount"
-msgstr "المبلغ الأساسي"
+msgstr "مبلغ المعيار"
 
 #: templates/audit/tools.html:71
-#, fuzzy
-#| msgid "Complete"
 msgid "Compute"
-msgstr "مكتمل"
+msgstr "احسب"
 
 #: templates/audit/tools.html:79
 msgid "Auditor judgment factors"
-msgstr ""
+msgstr "عوامل حكم المدقق"
 
 #: templates/audit/tools.html:79
 #, python-format
 msgid "shift the %% within the benchmark band"
-msgstr ""
+msgstr "تحويل %% داخل نطاق المعيار"
 
 #: templates/audit/tools.html:83
-#, fuzzy
-#| msgid "Industry"
 msgid "Industry risk"
-msgstr "القطاع"
+msgstr "مخاطر الصناعة"
 
 #: templates/audit/tools.html:87
-#, fuzzy
-#| msgid "Generate"
 msgid "Moderate"
-msgstr "إنشاء"
+msgstr "معتدل"
 
 #: templates/audit/tools.html:92
-#, fuzzy
-#| msgid "Development environment:"
 msgid "Control environment"
-msgstr "بيئة التطوير:"
+msgstr "بيئة التحكم"
 
 #: templates/audit/tools.html:95
 msgid "Strong"
-msgstr ""
+msgstr "قوي"
 
 #: templates/audit/tools.html:96
 msgid "Adequate"
-msgstr ""
+msgstr "كافٍ"
 
 #: templates/audit/tools.html:97
 msgid "Weak"
-msgstr ""
+msgstr "ضعيف"
 
 #: templates/audit/tools.html:101
-#, fuzzy
-#| msgid "Customer Statements"
 msgid "Prior misstatements"
-msgstr "كشوف العملاء"
+msgstr "بيانات غير صحيحة سابقة"
 
 #: templates/audit/tools.html:104
 msgid "None"
-msgstr ""
+msgstr "لا شيء"
 
 #: templates/audit/tools.html:105
-#, fuzzy
-#| msgid "New"
 msgid "Few"
-msgstr "جديد"
+msgstr "قليل"
 
 #: templates/audit/tools.html:106
 msgid "Many"
-msgstr ""
+msgstr "كثير"
 
 #: templates/audit/tools.html:110
-#, fuzzy
-#| msgid "Going Concern Assessment"
 msgid "Going concern doubt"
-msgstr "تقييم الاستمرارية"
+msgstr "شك في الاستمرارية"
 
 #: templates/audit/tools.html:113 templates/audit/tools.html:122
 #: templates/documents/_typed_detail.html:99
@@ -4094,7 +4000,7 @@ msgstr "لا"
 
 #: templates/audit/tools.html:114
 msgid "Some"
-msgstr ""
+msgstr "بعض"
 
 #: templates/audit/tools.html:115 templates/audit/tools.html:123
 #: templates/documents/_typed_detail.html:99
@@ -4103,49 +4009,37 @@ msgid "Yes"
 msgstr "نعم"
 
 #: templates/audit/tools.html:119
-#, fuzzy
-#| msgid "Failed to start audit"
 msgid "First-year audit?"
-msgstr "فشل بدء التدقيق"
+msgstr "تدقيق السنة الأولى؟"
 
 #: templates/audit/tools.html:127
 #, python-format
 msgid "Components (name:weight%%, comma-separated)"
-msgstr ""
+msgstr "المكونات (الاسم:الوزن%%، مفصولة بفواصل)"
 
 #: templates/audit/tools.html:141
-#, fuzzy
-#| msgid "Within materiality"
 msgid "Overall materiality"
-msgstr "ضمن الأهمية النسبية"
+msgstr "المادية العامة"
 
 #: templates/audit/tools.html:145
-#, fuzzy
-#| msgid "Within materiality"
 msgid "Performance materiality"
-msgstr "ضمن الأهمية النسبية"
+msgstr "المادية للأداء"
 
 #: templates/audit/tools.html:149 templates/audit/tools.html:174
-#, fuzzy
-#| msgid "Clear all"
 msgid "Clearly trivial"
-msgstr "مسح الكل"
+msgstr "تافه بوضوح"
 
 #: templates/audit/tools.html:158
 msgid "Judgment adjustments applied:"
-msgstr ""
+msgstr "تعديلات الحكم المطبقة:"
 
 #: templates/audit/tools.html:168
-#, fuzzy
-#| msgid "Compliance Violation"
 msgid "Component allocation"
-msgstr "انتهاك امتثال"
+msgstr "توزيع المكونات"
 
 #: templates/audit/tools.html:172
-#, fuzzy
-#| msgid "Compose"
 msgid "Component"
-msgstr "إنشاء"
+msgstr "مكون"
 
 #: templates/audit/tools.html:172
 #: templates/reports/invoice_audit_report.html:156
@@ -4154,80 +4048,64 @@ msgid "Weight"
 msgstr "الوزن"
 
 #: templates/audit/tools.html:173
-#, fuzzy
-#| msgid "overall"
 msgid "Overall"
-msgstr "إجمالي"
+msgstr "عام"
 
 #: templates/audit/tools.html:173
-#, fuzzy
-#| msgid "Proforma Invoice"
 msgid "Performance"
-msgstr "فاتورة مبدئية"
+msgstr "أداء"
 
 #: templates/audit/tools.html:194
 msgid "Invoices ≥ performance materiality (top 50)"
-msgstr ""
+msgstr "الفواتير ≥ الأهمية الأداء (أعلى 50)"
 
 #: templates/audit/tools.html:200
-#, fuzzy
-#| msgid "Exceeds Limit"
 msgid "Exceeds by"
-msgstr "تجاوز الحد"
+msgstr "يتجاوز بمقدار"
 
 #: templates/audit/tools.html:223
-#, fuzzy
-#| msgid "Compliance Engine"
 msgid "Sampling Engine"
-msgstr "محرّك الامتثال"
+msgstr "محرك العينة"
 
 #: templates/audit/tools.html:225
 msgid ""
 "Pick a method and sample size; Tadgeeg generates a deterministic sample with "
 "a reproducible seed for the working papers."
-msgstr ""
+msgstr "اختر طريقة وحجم العينة؛ ستقوم تدقيق بإنشاء عينة حتمية مع بذور قابلة للتكرار لأوراق العمل."
 
 #: templates/audit/tools.html:229
-#, fuzzy
-#| msgid "Violations"
 msgid "Population:"
-msgstr "المخالفات"
+msgstr "السكان:"
 
 #: templates/audit/tools.html:229
-#, fuzzy
-#| msgid "No invoices linked to this session"
 msgid "invoices in this org"
-msgstr "لا توجد فواتير مرتبطة بهذه الجلسة"
+msgstr "الفواتير في هذه المنظمة"
 
 #: templates/audit/tools.html:230
-#, fuzzy
-#| msgid "Report sample size"
 msgid "Suggested sample size:"
-msgstr "حجم العينة المعتمدة بالتقرير"
+msgstr "حجم العينة المقترح:"
 
 #: templates/audit/tools.html:230
 #, python-format
 msgid "(95%% confidence, 5%% expected error)"
-msgstr ""
+msgstr "(95%% ثقة، 5%% خطأ متوقع)"
 
 #: templates/audit/tools.html:235 templates/audit/tools.html:279
 #: templates/working_papers/detail.html:160
-#, fuzzy
-#| msgid "Payment Method"
 msgid "Method"
-msgstr "طريقة الدفع"
+msgstr "طريقة"
 
 #: templates/audit/tools.html:237
 msgid "Random"
-msgstr ""
+msgstr "عشوائي"
 
 #: templates/audit/tools.html:238
 msgid "Systematic (every n-th)"
-msgstr ""
+msgstr "منهجي (كل n-ث)"
 
 #: templates/audit/tools.html:239
 msgid "Monetary-Unit (PPS)"
-msgstr ""
+msgstr "وحدة نقدية (PPS)"
 
 #: templates/audit/tools.html:243
 #: templates/reports/invoice_audit_report_pdf.html:224
@@ -4236,33 +4114,27 @@ msgstr "حجم العينة"
 
 #: templates/audit/tools.html:247
 msgid "Random seed"
-msgstr ""
+msgstr "بذور عشوائية"
 
 #: templates/audit/tools.html:251 templates/auditing/history.html:36
 msgid "Confidence"
 msgstr "الثقة"
 
 #: templates/audit/tools.html:260
-#, fuzzy
-#| msgid "Tags (comma-separated)"
 msgid "Sample errors (per-item, comma-separated)"
-msgstr "الوسوم (مفصولة بفواصل)"
+msgstr "أخطاء العينة (لكل عنصر، مفصولة بفواصل)"
 
 #: templates/audit/tools.html:274
 msgid "Draw sample"
-msgstr ""
+msgstr "سحب عينة"
 
 #: templates/audit/tools.html:283
-#, fuzzy
-#| msgid "Violations"
 msgid "Population"
-msgstr "المخالفات"
+msgstr "السكان"
 
 #: templates/audit/tools.html:287
-#, fuzzy
-#| msgid "Sample size"
 msgid "Sampled"
-msgstr "حجم العينة"
+msgstr "تم أخذ عينة منها"
 
 #: templates/audit/tools.html:291
 #: templates/reports/partials/_key_audit_matters.html:34
@@ -4271,43 +4143,39 @@ msgstr "التغطية"
 
 #: templates/audit/tools.html:305
 msgid "Error projection (ISA 530 §A18–A23)"
-msgstr ""
+msgstr "توقع الخطأ (ISA 530 §A18–A23)"
 
 #: templates/audit/tools.html:308
 msgid "Acceptable"
-msgstr ""
+msgstr "مقبول"
 
 #: templates/audit/tools.html:310
 msgid "Exceeds performance materiality"
-msgstr ""
+msgstr "يتجاوز الأهمية الأداء"
 
 #: templates/audit/tools.html:316
 msgid "Most-likely error"
-msgstr ""
+msgstr "أكثر خطأ محتمل"
 
 #: templates/audit/tools.html:320
-#, fuzzy
-#| msgid "Basis of Opinion"
 msgid "Basic precision"
-msgstr "أساس الرأي"
+msgstr "الدقة الأساسية"
 
 #: templates/audit/tools.html:324
 msgid "Incremental allowance"
-msgstr ""
+msgstr "بدل إضافي"
 
 #: templates/audit/tools.html:328
 msgid "Upper-error-limit"
-msgstr ""
+msgstr "حد الخطأ الأعلى"
 
 #: templates/audit/tools.html:334
 msgid "Compared against performance materiality:"
-msgstr ""
+msgstr "مقارنة مع الأهمية الأداء:"
 
 #: templates/audit/tools.html:343
-#, fuzzy
-#| msgid "Affected invoices:"
 msgid "Selected invoices"
-msgstr "الفواتير المتأثّرة:"
+msgstr "الفواتير المختارة"
 
 #: templates/audit/tools.html:349 templates/auditing/history.html:32
 #: templates/cms_admin/media.html:134 templates/compliance/index.html:196
@@ -4784,12 +4652,12 @@ msgstr "PDF، صور، Excel، CSV، JSON، ZIP — حتى 50 ميجابايت �
 
 #: templates/auditing/upload.html:547
 msgid "✓ Files selected — click 'Start Audit' below"
-msgstr ""
+msgstr "✓ الملفات المحددة — انقر على 'ابدأ التدقيق' أدناه"
 
 #: templates/auditing/upload.html:560 templates/documents/upload.html:238
 #: templates/invoices/upload.html:193
 msgid "Add more files"
-msgstr ""
+msgstr "إضافة المزيد من الملفات"
 
 #: templates/auditing/upload.html:566 templates/invoices/list.html:82
 #: templates/phase2/activity.html:70 templates/phase2/files.html:260
@@ -5564,52 +5432,38 @@ msgstr "تعذر إنشاء الحساب الآن."
 
 #: templates/banking/dashboard.html:4 templates/banking/dashboard.html:52
 #: templates/banking/dashboard.html:60 templates/reports/index.html:341
-#, fuzzy
-#| msgid "Connection"
 msgid "Bank Connectors"
-msgstr "الاتصال"
+msgstr "موصلات البنوك"
 
 #: templates/banking/dashboard.html:61
 msgid ""
 "Pull bank statements directly into Tadgeeg, then match them against open "
 "invoices automatically."
-msgstr ""
+msgstr "سحب كشوف الحسابات البنكية مباشرة إلى تدقيق، ثم مطابقتها تلقائيًا مع الفواتير المفتوحة."
 
 #: templates/banking/dashboard.html:65
-#, fuzzy
-#| msgid "Balance Reconciliation"
 msgid "Re-run reconciliation"
-msgstr "تسوية الرصيد"
+msgstr "إعادة تشغيل التسوية"
 
 #: templates/banking/dashboard.html:68
-#, fuzzy
-#| msgid "Connection"
 msgid "Connect bank"
-msgstr "الاتصال"
+msgstr "اتصل بالبنك"
 
 #: templates/banking/dashboard.html:76
-#, fuzzy
-#| msgid "Connection"
 msgid "Connections"
-msgstr "الاتصال"
+msgstr "الاتصالات"
 
 #: templates/banking/dashboard.html:80
-#, fuzzy
-#| msgid "Suggested Fix"
 msgid "Suggested matches"
-msgstr "الإصلاح المُقترَح"
+msgstr "المطابقات المقترحة"
 
 #: templates/banking/dashboard.html:84
-#, fuzzy
-#| msgid "Confirm"
 msgid "Confirmed"
-msgstr "تأكيد"
+msgstr "تم التأكيد"
 
 #: templates/banking/dashboard.html:95
-#, fuzzy
-#| msgid "Connection"
 msgid "Connected banks"
-msgstr "الاتصال"
+msgstr "البنوك المتصلة"
 
 #: templates/banking/dashboard.html:98
 #: templates/documents/detail/bank_statement_detail.html:238
@@ -5618,33 +5472,27 @@ msgstr "البنك"
 
 #: templates/banking/dashboard.html:99 templates/zatca/dashboard.html:128
 msgid "Environment"
-msgstr ""
+msgstr "البيئة"
 
 #: templates/banking/dashboard.html:101
-#, fuzzy
-#| msgid "Amount"
 msgid "Accounts"
-msgstr "المبلغ"
+msgstr "الحسابات"
 
 #: templates/banking/dashboard.html:102
-#, fuzzy
-#| msgid "Last sign-in:"
 msgid "Last sync"
-msgstr "آخر دخول:"
+msgstr "آخر مزامنة"
 
 #: templates/banking/dashboard.html:134
 msgid "Sync"
-msgstr ""
+msgstr "مزامنة"
 
 #: templates/banking/dashboard.html:140
 msgid "No banks connected yet. Click ‘Connect bank’ to add one."
-msgstr ""
+msgstr "لا توجد بنوك متصلة بعد. انقر على 'اتصل بالبنك' لإضافة واحد."
 
 #: templates/banking/dashboard.html:149
-#, fuzzy
-#| msgid "Balance Reconciliation"
 msgid "Reconciliation queue"
-msgstr "تسوية الرصيد"
+msgstr "طابور التسوية"
 
 #: templates/banking/dashboard.html:152 templates/phase2/audits.html:96
 #: templates/reports/document_audit_report.html:384
@@ -5653,16 +5501,12 @@ msgid "Score"
 msgstr "الدرجة"
 
 #: templates/banking/dashboard.html:153
-#, fuzzy
-#| msgid "Transactions"
 msgid "Transaction"
-msgstr "الدفعات"
+msgstr "معاملة"
 
 #: templates/banking/dashboard.html:155
-#, fuzzy
-#| msgid "Reason:"
 msgid "Reasons"
-msgstr "السبب:"
+msgstr "الأسباب"
 
 #: templates/banking/dashboard.html:192 templates/partials/i18n_strings.html:92
 msgid "Confirm"
@@ -5677,47 +5521,37 @@ msgstr "رفض"
 msgid ""
 "No suggestions in the queue. Click ‘Re-run reconciliation’ to score the "
 "latest transactions."
-msgstr ""
+msgstr "لا توجد اقتراحات في قائمة الانتظار. انقر على 'إعادة تشغيل التسوية' لتسجيل أحدث المعاملات."
 
 #: templates/banking/dashboard.html:210
-#, fuzzy
-#| msgid "Connection"
 msgid "Connect a bank"
-msgstr "الاتصال"
+msgstr "اتصل ببنك"
 
 #: templates/banking/dashboard.html:218
-#, fuzzy
-#| msgid "Folder (optional)"
 msgid "Display name (optional)"
-msgstr "المجلّد (اختياري)"
+msgstr "اسم العرض (اختياري)"
 
 #: templates/banking/dashboard.html:226
 msgid ""
 "Sandbox / Production modes need API credentials issued by the bank's "
 "developer portal."
-msgstr ""
+msgstr "تحتاج أوضاع Sandbox / Production إلى بيانات اعتماد API صادرة عن بوابة مطور البنك."
 
 #: templates/banking/dashboard.html:231
-#, fuzzy
-#| msgid "Connection"
 msgid "Connect"
-msgstr "الاتصال"
+msgstr "اتصل"
 
 #: templates/banking/dashboard.html:286
 msgid "Sync done"
-msgstr ""
+msgstr "تمت المزامنة"
 
 #: templates/banking/dashboard.html:299
-#, fuzzy
-#| msgid "Balance Reconciliation"
 msgid "Reconciliation done"
-msgstr "تسوية الرصيد"
+msgstr "تمت المصالحة"
 
 #: templates/banking/dashboard.html:299
-#, fuzzy
-#| msgid "questions"
 msgid "new suggestions"
-msgstr "سؤال"
+msgstr "اقتراحات جديدة"
 
 #: templates/base.html:308
 msgid "Dismiss notification"
@@ -7422,68 +7256,56 @@ msgid "High-risk + duplicates"
 msgstr "مخاطرة عالية + مكرّرات"
 
 #: templates/compliance/index.html:96
-#, fuzzy
-#| msgid "Compliance alert"
 msgid "Compliance frameworks"
-msgstr "تنبيه امتثال"
+msgstr "أطر الامتثال"
 
 #: templates/compliance/index.html:97
-#, fuzzy
-#| msgid "Formal audit opinion based on international standards."
 msgid "Saudi & GCC + International standards"
-msgstr "رأي تدقيق رسمي مبني على المعايير الدولية."
+msgstr "المعايير السعودية والخليجية + المعايير الدولية"
 
 #: templates/compliance/index.html:103
 msgid "E-invoice + TLV-encoded QR"
-msgstr ""
+msgstr "الفاتورة الإلكترونية + رمز QR مشفر بتنسيق TLV"
 
 #: templates/compliance/index.html:109
 msgid "Payroll social-insurance contributions"
-msgstr ""
+msgstr "مساهمات التأمين الاجتماعي للرواتب"
 
 #: templates/compliance/index.html:110
 msgid "Tracked on payroll uploads"
-msgstr ""
+msgstr "تم تتبعها على تحميلات الرواتب"
 
 #: templates/compliance/index.html:115
 msgid "International Financial Reporting Standards"
-msgstr ""
+msgstr "معايير التقارير المالية الدولية"
 
 #: templates/compliance/index.html:116
 msgid "Recognition + measurement checks"
-msgstr ""
+msgstr "فحوصات الاعتراف + القياس"
 
 #: templates/compliance/index.html:121
 msgid "Accrual + matching principle"
-msgstr ""
+msgstr "مبدأ الاستحقاق + المطابقة"
 
 #: templates/compliance/index.html:122
-#, fuzzy
-#| msgid "Vendor Validation"
 msgid "Period-cutoff validation"
-msgstr "التحقّق من المورد"
+msgstr "التحقق من قطع الفترة"
 
 #: templates/compliance/index.html:127
 msgid "Audit Evidence — Mandatory Fields"
-msgstr ""
+msgstr "أدلة التدقيق — الحقول الإلزامية"
 
 #: templates/compliance/index.html:133
-#, fuzzy
-#| msgid "Fraud & Anomaly Detection"
 msgid "Fraud Risk — Anomaly + Duplicate"
-msgstr "اكتشاف الاحتيال والشذوذ"
+msgstr "مخاطر الاحتيال — الشذوذ + التكرار"
 
 #: templates/compliance/index.html:139
-#, fuzzy
-#| msgid "Risk Assessment"
 msgid "Risk Assessment — Vendor Profile"
-msgstr "تقييم المخاطر"
+msgstr "تقييم المخاطر — ملف البائع"
 
 #: templates/compliance/index.html:145
-#, fuzzy
-#| msgid "Auditor Opinion"
 msgid "Audit Opinion"
-msgstr "رأي المدقق"
+msgstr "رأي التدقيق"
 
 #: templates/compliance/index.html:147 templates/phase2/reports.html:322
 #: templates/reports/index.html:367 templates/reports/index.html:376
@@ -7494,13 +7316,13 @@ msgstr "إنشاء"
 
 #: templates/compliance/index.html:155
 msgid "Active audit rules (R001 → R018)"
-msgstr ""
+msgstr "قواعد التدقيق النشطة (R001 → R018)"
 
 #: templates/compliance/index.html:157
 msgid ""
 "Rules that run synchronously on every uploaded document. Each rule produces "
 "an explanatory finding when it fails."
-msgstr ""
+msgstr "قواعد تعمل بشكل متزامن على كل مستند تم تحميله. كل قاعدة تنتج نتيجة تفسيرية عند الفشل."
 
 #: templates/compliance/index.html:162
 #: templates/reports/invoice_audit_report.html:154
@@ -7515,97 +7337,77 @@ msgid "Standard"
 msgstr "قياسي"
 
 #: templates/compliance/index.html:168
-#, fuzzy
-#| msgid "Duplicate & Anomaly Detection"
 msgid "Duplicate Invoice Detection"
-msgstr "كشف التكرار والشذوذ"
+msgstr "كشف الفواتير المكررة"
 
 #: templates/compliance/index.html:169
-#, fuzzy
-#| msgid "VAT Net Calculation"
 msgid "VAT Calculation & Compliance"
-msgstr "احتساب صافي الضريبة"
+msgstr "حساب ضريبة القيمة المضافة والامتثال"
 
 #: templates/compliance/index.html:170
-#, fuzzy
-#| msgid "Critical Findings"
 msgid "Missing Critical Fields"
-msgstr "اكتشافات حرجة"
+msgstr "حقول حيوية مفقودة"
 
 #: templates/compliance/index.html:171
 msgid "Amount Anomaly (Z-score)"
-msgstr ""
+msgstr "شذوذ المبلغ (Z-score)"
 
 #: templates/compliance/index.html:172
-#, fuzzy
-#| msgid "Anomaly Detection"
 msgid "Date Anomaly Detection"
-msgstr "كشف الشذوذ"
+msgstr "كشف الشذوذ في التواريخ"
 
 #: templates/compliance/index.html:173
-#, fuzzy
-#| msgid "Overall Risk Score"
 msgid "Vendor Risk Screening"
-msgstr "درجة المخاطرة الإجمالية"
+msgstr "ت screening مخاطر البائعين"
 
 #: templates/compliance/index.html:174
 msgid "Three-Way Match (PO ↔ GRN ↔ Invoice)"
-msgstr ""
+msgstr "مطابقة ثلاثية (PO ↔ GRN ↔ فاتورة)"
 
 #: templates/compliance/index.html:175
 msgid "Currency Consistency (ISO-4217)"
-msgstr ""
+msgstr "اتساق العملة (ISO-4217)"
 
 #: templates/compliance/index.html:176
 #, python-format
 msgid "VAT Rate Validity (KSA 0/5/15%%)"
-msgstr ""
+msgstr "صلاحية معدل ضريبة القيمة المضافة (KSA 0/5/15%%)"
 
 #: templates/compliance/index.html:177
 msgid "Round-Number Anomaly"
-msgstr ""
+msgstr "شذوذ الرقم المستدير"
 
 #: templates/compliance/index.html:178
-#, fuzzy
-#| msgid "Balance Reconciliation"
 msgid "Line-Item Reconciliation"
-msgstr "تسوية الرصيد"
+msgstr "مصالحة العناصر الفردية"
 
 #: templates/compliance/index.html:179
-#, fuzzy
-#| msgid "Fraud Detection"
 msgid "Negative Amount Detection"
-msgstr "اكتشاف الاحتيال"
+msgstr "كشف المبالغ السلبية"
 
 #: templates/compliance/index.html:180
 msgid "Due-Date Validity"
-msgstr ""
+msgstr "صلاحية تاريخ الاستحقاق"
 
 #: templates/compliance/index.html:181
 msgid "VAT Number Format (KSA TRN)"
-msgstr ""
+msgstr "تنسيق رقم ضريبة القيمة المضافة (KSA TRN)"
 
 #: templates/compliance/index.html:182
 msgid "Vendor Approval Status"
-msgstr ""
+msgstr "حالة موافقة المورد"
 
 #: templates/compliance/index.html:183
-#, fuzzy
-#| msgid "Decision"
 msgid "Decimal Precision"
-msgstr "القرار"
+msgstr "دقة الأرقام العشرية"
 
 #: templates/compliance/index.html:184
-#, fuzzy
-#| msgid "ZATCA QR Code"
 msgid "ZATCA QR Code Presence"
-msgstr "رمز QR لـ ZATCA"
+msgstr "وجود رمز الاستجابة السريعة ZATCA"
 
 #: templates/compliance/index.html:185
-#, fuzzy
-#| msgid "Upload Invoice Files"
 msgid "Mandatory Tax-Invoice Fields"
-msgstr "رفع ملفات الفواتير"
+msgstr "حقول الفاتورة الضريبية الإلزامية"
 
 #: templates/compliance/index.html:192 templates/dashboard/index.html:107
 msgid "Invoices missing valid QR"
@@ -7759,109 +7561,91 @@ msgid "Upload your first invoice or document and our AI will analyze it."
 msgstr "ارفع أوّل فاتورة أو مستند وسيُحلّله الذكاء الاصطناعي."
 
 #: templates/dashboard/index.html:243
-#, fuzzy
-#| msgid "Total Vendors"
 msgid "Top Risky Vendors"
-msgstr "إجمالي الموردين"
+msgstr "أعلى البائعين ذوي المخاطر"
 
 #: templates/dashboard/index.html:245
 msgid "Open Approval Inbox →"
-msgstr ""
+msgstr "فتح صندوق الوارد للموافقة →"
 
 #: templates/dashboard/index.html:253 templates/reports/index.html:136
-#, fuzzy
-#| msgid "High Risk"
 msgid "High-Risk"
-msgstr "مخاطر عالية"
+msgstr "عالي المخاطر"
 
 #: templates/dashboard/index.html:267 templates/vendors/detail.html:4
-#, fuzzy
-#| msgid "Vendor"
 msgid "Vendor 360"
-msgstr "المورد"
+msgstr "ملف البائع 360"
 
 #: templates/dashboard/index.html:284
 msgid "Invoices Trend (last 6 months)"
-msgstr ""
+msgstr "اتجاه الفواتير (آخر 6 أشهر)"
 
 #: templates/dashboard/index.html:299
 msgid "Your dashboard is empty — try sample data"
-msgstr ""
+msgstr "لوحتك فارغة — جرب بيانات عينة"
 
 #: templates/dashboard/index.html:300
 msgid ""
 "Load a curated set of demo invoices, POs, GRNs, payments, and contracts to "
 "see how the platform looks in action."
-msgstr ""
+msgstr "قم بتحميل مجموعة من الفواتير التجريبية، أوامر الشراء، إشعارات الاستلام، المدفوعات، والعقود لرؤية كيفية عمل المنصة."
 
 #: templates/dashboard/index.html:304 templates/documents/index.html:156
-#, fuzzy
-#| msgid "Failed to load video data"
 msgid "Load demo data"
-msgstr "تعذّر تحميل بيانات الفيديو"
+msgstr "تحميل بيانات العرض التوضيحي"
 
 #: templates/dashboard/index.html:315
-#, fuzzy
-#| msgid "Quick approve"
 msgid "Quick start"
-msgstr "اعتماد سريع"
+msgstr "بدء سريع"
 
 #: templates/dashboard/index.html:318
-#, fuzzy
-#| msgid "Welcome back"
 msgid "Welcome to Tadgeeg"
-msgstr "أهلاً بعودتك"
+msgstr "مرحبًا بكم في تدقيق"
 
 #: templates/dashboard/index.html:321
 msgid ""
 "Tadgeeg automates financial-document audits with 236 rules across 21 "
 "document types. Here's how to get started:"
-msgstr ""
+msgstr "تدجيج يقوم بأتمتة تدقيق الوثائق المالية مع 236 قاعدة عبر 21 نوع من الوثائق. إليك كيفية البدء:"
 
 #: templates/dashboard/index.html:324
 msgid ""
 "— pick a document type at /documents/upload/ and drop your PDF / Excel / CSV."
-msgstr ""
+msgstr "— اختر نوع الوثيقة في /documents/upload/ واسحب ملف PDF / Excel / CSV."
 
 #: templates/dashboard/index.html:325
 msgid "— our AI extracts the data and runs validation rules instantly."
-msgstr ""
+msgstr "— يقوم الذكاء الاصطناعي لدينا باستخراج البيانات وتشغيل قواعد التحقق على الفور."
 
 #: templates/dashboard/index.html:326
 msgid ""
 "— open the detail page to see risk score, failed rules, and linked documents."
-msgstr ""
+msgstr "— افتح صفحة التفاصيل لرؤية درجة المخاطر، القواعد الفاشلة، والوثائق المرتبطة."
 
 #: templates/dashboard/index.html:327
 msgid "Decide"
-msgstr ""
+msgstr "قرر"
 
 #: templates/dashboard/index.html:327
 msgid "— approve, hold, or reject; the audit trail captures everything."
-msgstr ""
+msgstr "— وافق، أو احتفظ، أو ارفض؛ تسجل آثار التدقيق كل شيء."
 
 #: templates/dashboard/index.html:331
 msgid "Skip"
-msgstr ""
+msgstr "تخطي"
 
 #: templates/dashboard/index.html:377
-#, fuzzy
-#| msgid "Amount"
 msgid "Amount (SAR)"
-msgstr "المبلغ"
+msgstr "المبلغ (ريال سعودي)"
 
 #: templates/dashboard/index.html:387 templates/streaming/ops.html:127
 #: templates/zatca/dashboard.html:180
-#, fuzzy
-#| msgid "Country"
 msgid "Count"
-msgstr "الدولة"
+msgstr "العدد"
 
 #: templates/documents/_typed_detail.html:33
-#, fuzzy
-#| msgid "Validation Results"
 msgid "Validation results and document fields"
-msgstr "نتائج التحقّق"
+msgstr "نتائج التحقق وحقول الوثائق"
 
 #: templates/documents/_typed_detail.html:39
 #: templates/documents/detail/bank_statement_detail.html:17
@@ -7913,28 +7697,22 @@ msgstr "التوصية:"
 
 #: templates/documents/_typed_detail.html:147
 #: templates/invoices/detail.html:295 templates/invoices/invoice_pdf.html:106
-#, fuzzy
-#| msgid "Audited Documents"
 msgid "Linked Documents"
-msgstr "المستندات المُدقَّقة"
+msgstr "الوثائق المرتبطة"
 
 #: templates/documents/_typed_detail.html:159
 #: templates/invoices/detail.html:304
-#, fuzzy
-#| msgid "3-Way Match Engine"
 msgid "3-Way Match Clean"
-msgstr "محرك المطابقة الثلاثية"
+msgstr "مطابقة ثلاثية نظيفة"
 
 #: templates/documents/_typed_detail.html:162
 #: templates/invoices/detail.html:307
-#, fuzzy
-#| msgid "3-Way Match Engine"
 msgid "3-Way Match Issues"
-msgstr "محرك المطابقة الثلاثية"
+msgstr "مشكلات المطابقة الثلاثية"
 
 #: templates/documents/_typed_detail.html:201
 msgid "Δ"
-msgstr ""
+msgstr "Δ"
 
 #: templates/documents/_typed_detail.html:241
 #: templates/reports/document_audit_report.html:752
@@ -7950,14 +7728,12 @@ msgstr "عرض التقرير"
 
 #: templates/documents/_typed_list.html:69
 msgid "Export current rows as Excel"
-msgstr ""
+msgstr "تصدير الصفوف الحالية كملف Excel"
 
 #: templates/documents/_typed_list.html:71 templates/invoices/list.html:44
 #: templates/reports/index.html:277
-#, fuzzy
-#| msgid "Export"
 msgid "Export Excel"
-msgstr "تصدير"
+msgstr "تصدير إلى Excel"
 
 #: templates/documents/_typed_list.html:85
 #: templates/documents/bank_statements.html:65
@@ -8633,30 +8409,22 @@ msgstr "رفع جديد"
 
 #: templates/documents/index.html:142
 msgid "Welcome — let's audit your first document"
-msgstr ""
+msgstr "مرحبًا — دعنا نقوم بتدقيق مستندك الأول"
 
 #: templates/documents/index.html:145
-#, fuzzy
-#| msgid ""
-#| "Pick the document type and upload — our AI will extract data and run "
-#| "audit checks."
 msgid ""
 "Pick any of the 21 document types below, click Upload, drop a PDF / Excel / "
 "CSV, and our AI will extract the data and run audit rules instantly."
-msgstr ""
-"اختر نوع المستند وارفعه — سيستخرج الذكاء الاصطناعي البيانات ويُشغّل فحوصات "
-"التدقيق."
+msgstr "اختر أيًا من 21 نوعًا من الوثائق أدناه، انقر على تحميل، اسحب ملف PDF / Excel / CSV، وسيتولى الذكاء الاصطناعي لدينا استخراج البيانات وتشغيل قواعد التدقيق على الفور."
 
 #: templates/documents/index.html:150
-#, fuzzy
-#| msgid "Upload first document"
 msgid "Upload your first document"
-msgstr "رفع أوّل مستند"
+msgstr "قم بتحميل وثيقتك الأولى"
 
 #: templates/documents/index.html:154
 msgid ""
 "Populate the org with sample invoices, POs, GRNs, etc. — useful for demos."
-msgstr ""
+msgstr "قم بملء المؤسسة بفواتير، أوامر شراء، إشعارات استلام، إلخ. — مفيد للعروض التقديمية."
 
 #: templates/documents/index.html:169
 msgid "Sales invoices and tax documents"
@@ -8691,40 +8459,32 @@ msgid "Travel and operational expense filings"
 msgstr "إقرارات مصروفات السفر والعمليات"
 
 #: templates/documents/index.html:224
-#, fuzzy
-#| msgid "Some accounts are inactive"
 msgid "Sales & Accounts Receivable"
-msgstr "بعض الحسابات غير فعالة"
+msgstr "المبيعات والحسابات المستحقة"
 
 #: templates/documents/index.html:229
 msgid "Customer orders awaiting fulfilment"
-msgstr ""
+msgstr "طلبات العملاء في انتظار التنفيذ"
 
 #: templates/documents/index.html:236
 msgid "Price quotes and validity tracking"
-msgstr ""
+msgstr "عروض الأسعار وتتبع الصلاحية"
 
 #: templates/documents/index.html:243
 msgid "Pre-invoice quotes for customer approval"
-msgstr ""
+msgstr "عروض الأسعار قبل الفاتورة لموافقة العميل"
 
 #: templates/documents/index.html:250
-#, fuzzy
-#| msgid "Reconcile customer balances and aging buckets."
 msgid "Per-customer balance and aging reports"
-msgstr "مطابقة أرصدة العملاء وفئات الأعمار."
+msgstr "تقارير الرصيد والشيخوخة لكل عميل"
 
 #: templates/documents/index.html:255
-#, fuzzy
-#| msgid "Purchasing & AP"
 msgid "Purchasing & Accounts Payable"
-msgstr "المشتريات والذمم الدائنة"
+msgstr "المشتريات والحسابات الدائنة"
 
 #: templates/documents/index.html:260
-#, fuzzy
-#| msgid "Balance Reconciliation"
 msgid "Per-vendor balance reconciliation"
-msgstr "تسوية الرصيد"
+msgstr "مصالحة رصيد كل بائع"
 
 #: templates/documents/index.html:266 templates/documents/upload.html:285
 #: templates/vendors/detail.html:83
@@ -8733,43 +8493,35 @@ msgstr "إشعارات استلام البضائع"
 
 #: templates/documents/index.html:267
 msgid "GRN matching with PO and invoice"
-msgstr ""
+msgstr "مطابقة إشعار الاستلام مع أمر الشراء والفاتورة"
 
 #: templates/documents/index.html:274
 msgid "Vendor payments, approvals, three-way match"
-msgstr ""
+msgstr "مدفوعات الموردين، الموافقات، المطابقة الثلاثية"
 
 #: templates/documents/index.html:279
-#, fuzzy
-#| msgid "Cash Vouchers"
 msgid "Cash & Vouchers"
-msgstr "سندات نقدية"
+msgstr "النقد والقسائم"
 
 #: templates/documents/index.html:284
-#, fuzzy
-#| msgid "Validate cash inflows from customers and approvals."
 msgid "Cash inflow vouchers from customers"
-msgstr "التحقق من المتحصلات من العملاء والموافقات."
+msgstr "قسائم تدفق النقد من العملاء"
 
 #: templates/documents/index.html:291
-#, fuzzy
-#| msgid "Track petty cash movements and supporting documentation."
 msgid "Petty-cash movements and approvals"
-msgstr "تتبع حركات الصندوق الصغير والمستندات المؤيدة."
+msgstr "حركات وموافقات النقدية الصغيرة"
 
 #: templates/documents/index.html:296
-#, fuzzy
-#| msgid "GL & Compliance"
 msgid "General Ledger & Compliance"
-msgstr "دفتر الأستاذ والامتثال"
+msgstr "الدفتر العام والامتثال"
 
 #: templates/documents/index.html:301
 msgid "Double-entry postings with debit/credit balance"
-msgstr ""
+msgstr "تسجيلات مزدوجة مع رصيد مدين/دائن"
 
 #: templates/documents/index.html:308
 msgid "Trial-balance snapshots per period"
-msgstr ""
+msgstr "لقطات ميزان المراجعة لكل فترة"
 
 #: templates/documents/index.html:314 templates/documents/upload.html:295
 msgid "Sub-Ledgers"
@@ -8777,13 +8529,11 @@ msgstr "الدفاتر الفرعية"
 
 #: templates/documents/index.html:315
 msgid "Account-level movement detail"
-msgstr ""
+msgstr "تفاصيل حركة الحساب على المستوى الحسابي"
 
 #: templates/documents/index.html:322
-#, fuzzy
-#| msgid "Upload Customer Statements"
 msgid "Vendor and customer agreements"
-msgstr "تحميل كشوف حسابات العملاء"
+msgstr "اتفاقيات الموردين والعملاء"
 
 #: templates/documents/payroll.html:45
 msgid "Monthly payroll with GOSI calculations and audit checks."
@@ -8897,10 +8647,8 @@ msgid "Drop files here for"
 msgstr "أفلِت الملفات هنا لـ"
 
 #: templates/documents/upload.html:176 templates/invoices/upload.html:126
-#, fuzzy
-#| msgid "file(s) uploaded"
 msgid "file(s) ready to upload"
-msgstr "ملف(ات) مرفوعة"
+msgstr "ملف(ات) جاهزة للتحميل"
 
 #: templates/documents/upload.html:183 templates/invoices/upload.html:133
 msgid "AI is analyzing your document"
@@ -9569,44 +9317,32 @@ msgid "Unable to re-run the audit. Try again."
 msgstr "تعذّر إعادة تشغيل التدقيق. حاول مرة أخرى."
 
 #: templates/invoices/invoice_pdf.html:73
-#, fuzzy
-#| msgid "Profile Information"
 msgid "Invoice Information"
-msgstr "معلومات الملف الشخصي"
+msgstr "معلومات الفاتورة"
 
 #: templates/invoices/invoice_pdf.html:80
-#, fuzzy
-#| msgid "Customer"
 msgid "Customer VAT"
-msgstr "العميل"
+msgstr "ضريبة القيمة المضافة على العملاء"
 
 #: templates/invoices/invoice_pdf.html:88
-#, fuzzy
-#| msgid "3-Way Match Engine"
 msgid "Three-Way Match"
-msgstr "محرك المطابقة الثلاثية"
+msgstr "مطابقة ثلاثية"
 
 #: templates/invoices/invoice_pdf.html:92
 msgid "Clean — Invoice ↔ PO ↔ GRN reconcile"
-msgstr ""
+msgstr "تنظيف — تسوية الفاتورة ↔ أمر الشراء ↔ إشعار الاستلام"
 
 #: templates/invoices/invoice_pdf.html:94
-#, fuzzy
-#| msgid "anomalies detected"
 msgid "Issues detected:"
-msgstr "شذوذات مكتشفة"
+msgstr "المشكلات المكتشفة:"
 
 #: templates/invoices/invoice_pdf.html:108
-#, fuzzy
-#| msgid "Matched"
 msgid "Match"
-msgstr "متطابق"
+msgstr "مطابقة"
 
 #: templates/invoices/invoice_pdf.html:126
-#, fuzzy
-#| msgid "Most Failed Audit Rules"
 msgid "Failed Audit Rules"
-msgstr "أكثر قواعد التدقيق فشلاً"
+msgstr "قواعد التدقيق الفاشلة"
 
 #: templates/invoices/invoice_pdf.html:128
 #: templates/reports/executive_report.html:529
@@ -9618,10 +9354,8 @@ msgid "Rule Code"
 msgstr "رمز القاعدة"
 
 #: templates/invoices/invoice_pdf.html:159
-#, fuzzy
-#| msgid "AI-Powered Financial Auditing Platform"
 msgid "Generated by Tadgeeg Financial Audit Platform"
-msgstr "منصّة التدقيق المالي بالذكاء الاصطناعي"
+msgstr "تم إنشاؤه بواسطة منصة تدقيق المالية من تدقيق"
 
 #: templates/invoices/list.html:35
 msgid "Browse and manage all uploaded invoices"
@@ -9642,22 +9376,16 @@ msgid "Search"
 msgstr "بحث"
 
 #: templates/invoices/list.html:71
-#, fuzzy
-#| msgid "Invoice rejected"
 msgid "invoice selected"
-msgstr "تم رفض الفاتورة"
+msgstr "الفاتورة المختارة"
 
 #: templates/invoices/list.html:71
-#, fuzzy
-#| msgid "Invoice rejected"
 msgid "invoices selected"
-msgstr "تم رفض الفاتورة"
+msgstr "الفواتير المختارة"
 
 #: templates/invoices/list.html:79
-#, fuzzy
-#| msgid "Flags"
 msgid "Flag"
-msgstr "علامات"
+msgstr "علم"
 
 #: templates/invoices/list.html:127
 msgid ""
@@ -9668,44 +9396,36 @@ msgstr ""
 "المخاطر تلقائياً."
 
 #: templates/invoices/list.html:175
-#, fuzzy
-#| msgid "reason is required for rejection."
 msgid "Reason (required for reject):"
-msgstr "سبب الرفض مطلوب."
+msgstr "السبب (مطلوب للرفض):"
 
 #: templates/invoices/list.html:178
 msgid "Apply"
-msgstr ""
+msgstr "تطبيق"
 
 #: templates/invoices/list.html:178
 msgid "to"
-msgstr ""
+msgstr "إلى"
 
 #: templates/invoices/list.html:178
-#, fuzzy
-#| msgid "invoices"
 msgid "invoices?"
-msgstr "فاتورة"
+msgstr "الفواتير؟"
 
 #: templates/invoices/list.html:192
 msgid "Done."
-msgstr ""
+msgstr "تم."
 
 #: templates/invoices/list.html:192
 msgid "succeeded"
-msgstr ""
+msgstr "نجح"
 
 #: templates/invoices/list.html:195
-#, fuzzy
-#| msgid "Error"
 msgid "Error:"
-msgstr "خطأ"
+msgstr "خطأ:"
 
 #: templates/invoices/list.html:198
-#, fuzzy
-#| msgid "Network error"
 msgid "Network error."
-msgstr "خطأ في الشبكة"
+msgstr "خطأ في الشبكة."
 
 #: templates/invoices/partials/_qr_code_display.html:16
 msgid "ZATCA QR Code"
@@ -9799,88 +9519,60 @@ msgid "completed"
 msgstr "مكتمل"
 
 #: templates/invoices/subreport.html:41
-#, fuzzy
-#| msgid "Generated At"
 msgid "Generated at"
-msgstr "تاريخ الإنشاء"
+msgstr "تم الإنشاء في"
 
 #: templates/invoices/subreport.html:44
-#, fuzzy
-#| msgid "Back to Home"
 msgid "Back to invoices"
-msgstr "العودة إلى الرئيسية"
+msgstr "العودة إلى الفواتير"
 
 #: templates/invoices/subreport.html:45
-#, fuzzy
-#| msgid "reports"
 msgid "All reports"
-msgstr "تقارير"
+msgstr "جميع التقارير"
 
 #: templates/invoices/subreport.html:52
-#, fuzzy
-#| msgid "Flagged Invoices"
 msgid "Flagged invoices"
-msgstr "الفواتير المُبلَّغ عنها"
+msgstr "الفواتير المعلّمة"
 
 #: templates/invoices/subreport.html:53
-#, fuzzy
-#| msgid "Total Amount"
 msgid "Total amount"
-msgstr "الإجمالي النهائي"
+msgstr "المبلغ الإجمالي"
 
 #: templates/invoices/subreport.html:54
-#, fuzzy
-#| msgid "Avg Risk Score"
 msgid "Avg risk score"
-msgstr "متوسط درجة المخاطرة"
+msgstr "متوسط درجة المخاطر"
 
 #: templates/invoices/subreport.html:76
-#, fuzzy
-#| msgid "Review flagged invoices"
 msgid "No flagged invoices."
-msgstr "مراجعة الفواتير المعلقة"
+msgstr "لا توجد فواتير معلّمة."
 
 #: templates/invoices/subreport.html:85
-#, fuzzy
-#| msgid "Duplicate Rate"
 msgid "Duplicates flagged"
-msgstr "معدّل التكرار"
+msgstr "تم تعليم التكرارات"
 
 #: templates/invoices/subreport.html:90
-#, fuzzy
-#| msgid "Duplicate"
 msgid "Duplicate of"
-msgstr "مكرّرة"
+msgstr "نسخة من"
 
 #: templates/invoices/subreport.html:101
-#, fuzzy
-#| msgid "No anomalies detected."
 msgid "No duplicates detected."
-msgstr "لم يتم اكتشاف حالات شذوذ."
+msgstr "لم يتم اكتشاف تكرارات."
 
 #: templates/invoices/subreport.html:110
-#, fuzzy
-#| msgid "Total Vendors"
 msgid "Total vendors"
 msgstr "إجمالي الموردين"
 
 #: templates/invoices/subreport.html:111
-#, fuzzy
-#| msgid "High risk"
 msgid "High-risk"
-msgstr "مخاطرة عالية"
+msgstr "عالي المخاطر"
 
 #: templates/invoices/subreport.html:112
-#, fuzzy
-#| msgid "Blocks"
 msgid "Blocked"
-msgstr "يحجب"
+msgstr "محظور"
 
 #: templates/invoices/subreport.html:113
-#, fuzzy
-#| msgid "avg risk"
 msgid "Avg risk"
-msgstr "متوسط المخاطرة"
+msgstr "متوسط المخاطر"
 
 #: templates/invoices/subreport.html:118
 #: templates/reports/invoice_audit_report_pdf.html:225
@@ -9893,36 +9585,28 @@ msgid "Risk score"
 msgstr "درجة المخاطرة"
 
 #: templates/invoices/subreport.html:139
-#, fuzzy
-#| msgid "total"
 msgid "Grand total"
-msgstr "إجمالي"
+msgstr "الإجمالي العام"
 
 #: templates/invoices/subreport.html:140
-#, fuzzy
-#| msgid "Total KAMs"
 msgid "Total VAT"
-msgstr "إجمالي أمور التدقيق الرئيسية"
+msgstr "إجمالي ضريبة القيمة المضافة"
 
 #: templates/invoices/subreport.html:141
 msgid "Total invoices"
 msgstr "إجمالي الفواتير"
 
 #: templates/invoices/subreport.html:142
-#, fuzzy
-#| msgid "Avg Invoice"
 msgid "Avg invoice"
 msgstr "متوسط الفاتورة"
 
 #: templates/invoices/subreport.html:143
-#, fuzzy
-#| msgid "Flagged"
 msgid "Flagged total"
-msgstr "مُبلَّغة"
+msgstr "الإجمالي المعلّم"
 
 #: templates/invoices/subreport.html:146
 msgid "By vendor (top 20)"
-msgstr ""
+msgstr "حسب البائع (أفضل 20)"
 
 #: templates/invoices/upload.html:83
 msgid "Upload and Process Documents"
@@ -10097,7 +9781,7 @@ msgstr "لا حاجة لبطاقة ائتمان. يمكنك الإلغاء في 
 
 #: templates/landing/index.html:1564
 msgid "Your browser does not support the video tag."
-msgstr ""
+msgstr "متصفحك لا يدعم علامة الفيديو."
 
 #: templates/layouts/base_platform_admin.html:15
 #: templates/layouts/partials/platform_topbar.html:32
@@ -10210,51 +9894,39 @@ msgstr "سياق المؤسسة"
 msgid ""
 "Chart of accounts, balanced journal entries, trial balance, and per-account "
 "ledger — the GL backbone every Tier-1 ERP needs."
-msgstr ""
+msgstr "جدول الحسابات، قيود اليومية المتوازنة، الميزان التجريبي، ودفتر الحسابات لكل حساب - العمود الفقري لنظام ERP من المستوى الأول."
 
 #: templates/ledger/dashboard.html:55
-#, fuzzy
-#| msgid "Account Name"
 msgid "Accounts:"
-msgstr "اسم الحساب"
+msgstr "الحسابات:"
 
 #: templates/ledger/dashboard.html:63 templates/ledger/dashboard.html:84
-#, fuzzy
-#| msgid "Balance"
 msgid "Trial balance"
-msgstr "الرصيد"
+msgstr "ميزان المراجعة"
 
 #: templates/ledger/dashboard.html:65
-#, fuzzy
-#| msgid "Balance"
 msgid "Balanced"
-msgstr "الرصيد"
+msgstr "متوازن"
 
 #: templates/ledger/dashboard.html:65
 msgid "Out of balance"
-msgstr ""
+msgstr "غير متوازن"
 
 #: templates/ledger/dashboard.html:69
-#, fuzzy
-#| msgid "Total Debits"
 msgid "Total debits"
-msgstr "إجمالي السحوبات"
+msgstr "إجمالي المدينين"
 
 #: templates/ledger/dashboard.html:73
-#, fuzzy
-#| msgid "Total Credits"
 msgid "Total credits"
-msgstr "إجمالي الإيداعات"
+msgstr "إجمالي الاعتمادات"
 
 #: templates/ledger/dashboard.html:77
-#, fuzzy
-#| msgid "Reference"
 msgid "Difference"
-msgstr "المرجع"
+msgstr "الفرق"
 
 #: templates/ledger/dashboard.html:84
 msgid "as of today"
-msgstr ""
+msgstr "اعتبارًا من اليوم"
 
 #: templates/ledger/dashboard.html:88
 #: templates/reports/document_audit_report.html:627
@@ -10264,40 +9936,30 @@ msgid "Code"
 msgstr "الرمز"
 
 #: templates/ledger/dashboard.html:89
-#, fuzzy
-#| msgid "Amount"
 msgid "Account"
-msgstr "المبلغ"
+msgstr "الحساب"
 
 #: templates/ledger/dashboard.html:110
 msgid ""
 "No posted entries yet. Post an invoice via /api/v1/ledger/post-invoice/ to "
 "populate the trial balance."
-msgstr ""
+msgstr "لا توجد قيود منشورة بعد. قم بنشر فاتورة عبر /api/v1/ledger/post-invoice/ لملء الميزان التجريبي."
 
 #: templates/ledger/dashboard.html:117
-#, fuzzy
-#| msgid "Journal Entries"
 msgid "Recent journal entries"
-msgstr "قيود اليومية"
+msgstr "مدخلات السجل الأخيرة"
 
 #: templates/ledger/dashboard.html:121
-#, fuzzy
-#| msgid "PO Number"
 msgid "Number"
-msgstr "رقم أمر الشراء"
+msgstr "العدد"
 
 #: templates/ledger/dashboard.html:145
-#, fuzzy
-#| msgid "No notes yet."
 msgid "No entries yet."
-msgstr "لا توجد ملاحظات بعد."
+msgstr "لا توجد مدخلات بعد."
 
 #: templates/ledger/dashboard.html:151
-#, fuzzy
-#| msgid "See how it works"
 msgid "How it works"
-msgstr "شاهد كيف يعمل"
+msgstr "كيف يعمل"
 
 #: templates/ledger/dashboard.html:153
 msgid ""
@@ -10307,7 +9969,7 @@ msgid ""
 "credit AP. Bank reconciliations post the cash leg automatically once an "
 "invoice is matched. Posted entries are immutable (audit hash chain) — "
 "voiding generates a compensating entry rather than editing the original."
-msgstr ""
+msgstr "يمكن نشر كل فاتورة تقوم بتحميلها تلقائيًا إلى دفتر الحسابات عبر POST /api/v1/ledger/post-invoice/ مع {invoice_id, direction}. فواتير المبيعات تدين الحسابات المدينة + ائتمان الإيرادات + ضريبة القيمة المضافة الناتجة؛ فواتير الشراء تدين المصروفات + ضريبة القيمة المضافة المدخلة + ائتمان الحسابات الدائنة. تسويات البنك تنشر الساق النقدية تلقائيًا بمجرد مطابقة فاتورة. القيود المنشورة غير قابلة للتغيير (سلسلة تجزئة التدقيق) - إلغاء يولد قيد تعويضي بدلاً من تعديل الأصل."
 
 #: templates/partials/_pagination.html:15
 msgid "Pagination"
@@ -10989,10 +10651,8 @@ msgid "Drop file here or click to browse"
 msgstr "أفلِت الملف هنا أو انقر للتصفّح"
 
 #: templates/phase2/files.html:255
-#, fuzzy
-#| msgid "Save Profile"
 msgid "Change file"
-msgstr "حفظ الملف الشخصي"
+msgstr "تغيير الملف"
 
 #: templates/phase2/files.html:276
 msgid "Folder (optional)"
@@ -12969,14 +12629,12 @@ msgid "Generate analysis reports across your documents."
 msgstr "أنشئ تقارير تحليلية عبر مستنداتك."
 
 #: templates/reports/index.html:153
-#, fuzzy
-#| msgid "Review flagged invoices"
 msgid "Recently flagged invoices"
-msgstr "مراجعة الفواتير المعلقة"
+msgstr "الفواتير التي تم الإبلاغ عنها مؤخرًا"
 
 #: templates/reports/index.html:161
 msgid "DUPLICATE"
-msgstr ""
+msgstr "مكرر"
 
 #: templates/reports/index.html:162
 #: templates/reports/partials/_key_audit_matters.html:69
@@ -13018,15 +12676,13 @@ msgid "ZATCA Phase 2 status"
 msgstr "حالة المرحلة الثانية لـ ZATCA"
 
 #: templates/reports/index.html:231
-#, fuzzy
-#| msgid "Automatic reports"
 msgid "Quick reports"
-msgstr "التقارير التلقائية"
+msgstr "تقارير سريعة"
 
 #: templates/reports/index.html:238
 msgid ""
 "All flagged invoices ranked by risk score, with vendor and date details."
-msgstr ""
+msgstr "جميع الفواتير المميزة مرتبة حسب درجة المخاطر، مع تفاصيل البائع والتاريخ."
 
 #: templates/reports/index.html:245 templates/reports/index.html:458
 #: templates/reports/invoice_audit_report.html:400
@@ -13036,114 +12692,104 @@ msgstr "الفواتير المكرّرة"
 
 #: templates/reports/index.html:246
 msgid "Invoices flagged as near-duplicates with their original counterpart."
-msgstr ""
+msgstr "فواتير مميزة كقريبة من التكرار مع نظيرها الأصلي."
 
 #: templates/reports/index.html:253
-#, fuzzy
-#| msgid "Vendor List"
 msgid "Vendor Risk"
-msgstr "قائمة الموردين"
+msgstr "مخاطر البائعين"
 
 #: templates/reports/index.html:254
 msgid "Vendor-by-vendor risk scoring, blocked vendors, and aging spend."
-msgstr ""
+msgstr "تقييم المخاطر حسب البائع، البائعون المحجوبون، والإنفاق المتقادم."
 
 #: templates/reports/index.html:261
-#, fuzzy
-#| msgid "Trend Analysis"
 msgid "Spend Analysis"
-msgstr "تحليل الاتجاهات"
+msgstr "تحليل الإنفاق"
 
 #: templates/reports/index.html:262
 msgid "Total spend, VAT breakdown, and vendor concentration."
-msgstr ""
+msgstr "إجمالي الإنفاق، تحليل ضريبة القيمة المضافة، وتركيز البائعين."
 
 #: templates/reports/index.html:270
 msgid "Download every invoice in the org as a CSV file."
-msgstr ""
+msgstr "قم بتنزيل كل فاتورة في المؤسسة كملف CSV."
 
 #: templates/reports/index.html:278
 msgid "Download every invoice in the org as a styled XLSX workbook."
-msgstr ""
+msgstr "قم بتنزيل كل فاتورة في المؤسسة كملف XLSX منسق."
 
 #: templates/reports/index.html:285
-#, fuzzy
-#| msgid "Materiality & Patterns"
 msgid "Materiality + Sampling"
-msgstr "الأهمية النسبية والأنماط"
+msgstr "الأهمية + العينة"
 
 #: templates/reports/index.html:286
 msgid "ISA 320 thresholds + ISA 530 sampling for engagement planning."
-msgstr ""
+msgstr "حدود ISA 320 + عينة ISA 530 لتخطيط المشاركة."
 
 #: templates/reports/index.html:293 templates/working_papers/detail.html:42
 #: templates/working_papers/form.html:22 templates/working_papers/list.html:4
 #: templates/working_papers/list.html:29 templates/working_papers/list.html:37
-#, fuzzy
-#| msgid "Working at %(product)s"
 msgid "Working Papers"
-msgstr "العمل في %(product)s"
+msgstr "الأوراق العملية"
 
 #: templates/reports/index.html:294
 msgid ""
 "ISA 230 sign-off — preparer · senior reviewer · partner, with tamper-evident "
 "lock."
-msgstr ""
+msgstr "توقيع ISA 230 - المعدّ · المراجع الأول · الشريك، مع قفل يظهر التلاعب."
 
 #: templates/reports/index.html:302
 msgid ""
 "Verify the SHA-256 chain that protects every audit event from tampering."
-msgstr ""
+msgstr "تحقق من سلسلة SHA-256 التي تحمي كل حدث تدقيق من التلاعب."
 
 #: templates/reports/index.html:310
 msgid ""
 "Build audit rules visually, test them on a sample, then publish to the live "
 "pipeline."
-msgstr ""
+msgstr "قم ببناء قواعد التدقيق بصريًا، اختبرها على عينة، ثم انشرها في خط الأنابيب المباشر."
 
 #: templates/reports/index.html:317 templates/streaming/ops.html:39
 msgid "Continuous Auditing"
-msgstr ""
+msgstr "التدقيق المستمر"
 
 #: templates/reports/index.html:318
 msgid ""
 "Live ops: throughput, p95 latency, anomaly hits across the streaming "
 "pipeline."
-msgstr ""
+msgstr "العمليات الحية: الإنتاجية، زمن الاستجابة p95، ضربات الشذوذ عبر خط الأنابيب المتدفق."
 
 #: templates/reports/index.html:325
 msgid "Alert Routing"
-msgstr ""
+msgstr "توجيه التنبيهات"
 
 #: templates/reports/index.html:326
 msgid ""
 "Email · SMS · Slack · Teams · webhook channels with cooldown and "
 "acknowledgement."
-msgstr ""
+msgstr "البريد الإلكتروني · الرسائل القصيرة · سلاك · الفرق · قنوات الويب هوك مع فترة تبريد وإقرار."
 
 #: templates/reports/index.html:333 templates/zatca/dashboard.html:58
-#, fuzzy
-#| msgid "ZATCA Phase 2 status"
 msgid "ZATCA Phase 2"
-msgstr "حالة المرحلة الثانية لـ ZATCA"
+msgstr "المرحلة 2 من زاتكا"
 
 #: templates/reports/index.html:334
 msgid ""
 "Live clearance + reporting · EGS device certificate health · readiness "
 "checklist."
-msgstr ""
+msgstr "التخليص المباشر + التقارير · صحة شهادة جهاز EGS · قائمة التحقق من الجاهزية."
 
 #: templates/reports/index.html:342
 msgid ""
 "Pull statements from Al Rajhi · SNB · Riyad · SAB · BSF and auto-match "
 "invoices."
-msgstr ""
+msgstr "سحب البيانات من الراجحي · SNB · الرياض · SAB · BSF ومطابقة الفواتير تلقائيًا."
 
 #: templates/reports/index.html:350
 msgid ""
 "Chart of accounts · balanced journal entries · trial balance · multi-"
 "currency · invoice → GL."
-msgstr ""
+msgstr "جدول الحسابات · قيود اليومية المتوازنة · الميزان التجريبي · متعدد العملات · فاتورة → GL."
 
 #: templates/reports/index.html:358
 msgid "Available Reports"
@@ -15251,104 +14897,88 @@ msgstr "تمت إزالة المزوّد."
 
 #: templates/streaming/ops.html:4 templates/streaming/ops.html:47
 msgid "Continuous Auditing — Live Ops"
-msgstr ""
+msgstr "التدقيق المستمر - العمليات الحية"
 
 #: templates/streaming/ops.html:48
 msgid ""
 "Throughput, latency, and anomaly hits across the streaming audit pipeline."
-msgstr ""
+msgstr "الإنتاجية، زمن الاستجابة، وضربات الشذوذ عبر خط أنابيب التدقيق المتدفق."
 
 #: templates/streaming/ops.html:52
 msgid "Window"
-msgstr ""
+msgstr "نافذة"
 
 #: templates/streaming/ops.html:55
 msgid "Bus"
-msgstr ""
+msgstr "حافلة"
 
 #: templates/streaming/ops.html:72
 msgid "Throughput"
-msgstr ""
+msgstr "الإنتاجية"
 
 #: templates/streaming/ops.html:76
-#, fuzzy
-#| msgid "Invoices processed"
 msgid "Events processed"
-msgstr "الفواتير المعالَجة"
+msgstr "الأحداث المعالجة"
 
 #: templates/streaming/ops.html:80
-#, fuzzy
-#| msgid "Error Rate"
 msgid "Error rate"
-msgstr "معدّل الخطأ"
+msgstr "معدل الخطأ"
 
 #: templates/streaming/ops.html:84
 msgid "Avg latency"
-msgstr ""
+msgstr "متوسط زمن الاستجابة"
 
 #: templates/streaming/ops.html:88
 msgid "p95 latency"
-msgstr ""
+msgstr "زمن الاستجابة p95"
 
 #: templates/streaming/ops.html:92
-#, fuzzy
-#| msgid "Anomalies"
 msgid "Anomalies fired"
-msgstr "الشذوذ"
+msgstr "الانحرافات التي تم اكتشافها"
 
 #: templates/streaming/ops.html:99
 msgid "Bus state"
-msgstr ""
+msgstr "حالة الحافلة"
 
 #: templates/streaming/ops.html:102
 msgid "Stream"
-msgstr ""
+msgstr "تدفق"
 
 #: templates/streaming/ops.html:103
 msgid "Length"
-msgstr ""
+msgstr "الطول"
 
 #: templates/streaming/ops.html:104
-#, fuzzy
-#| msgid "Rule Groups"
 msgid "Groups"
-msgstr "مجموعات القواعد"
+msgstr "المجموعات"
 
 #: templates/streaming/ops.html:123
 msgid "By event type"
-msgstr ""
+msgstr "حسب نوع الحدث"
 
 #: templates/streaming/ops.html:126
-#, fuzzy
-#| msgid "File Events"
 msgid "Event"
-msgstr "أحداث الملف"
+msgstr "الحدث"
 
 #: templates/streaming/ops.html:143
-#, fuzzy
-#| msgid "Recent Reports"
 msgid "Recent anomaly hits"
-msgstr "التقارير الحديثة"
+msgstr "الانحرافات الأخيرة التي تم اكتشافها"
 
 #: templates/streaming/ops.html:148
-#, fuzzy
-#| msgid "Auto Detect"
 msgid "Detector"
-msgstr "اكتشاف تلقائي"
+msgstr "الكاشف"
 
 #: templates/streaming/ops.html:151
-#, fuzzy
-#| msgid "Pagination"
 msgid "Explanation"
-msgstr "ترقيم الصفحات"
+msgstr "الشرح"
 
 #: templates/streaming/ops.html:173
 msgid "No anomaly hits in this window."
-msgstr ""
+msgstr "لا توجد ضربات شذوذ في هذه النافذة."
 
 #: templates/streaming/ops.html:180
 msgid "How continuous auditing works"
-msgstr ""
+msgstr "كيف يعمل التدقيق المستمر"
 
 #: templates/streaming/ops.html:182
 #, python-format
@@ -15360,7 +14990,7 @@ msgid ""
 "vendor crossing 30%% of org spend). Each trigger persists an AnomalyHit row "
 "that this dashboard reads. Phase 3.2 will pipe these hits into email / SMS / "
 "Slack channels."
-msgstr ""
+msgstr "كل فاتورة تم تحميلها تنشر حدثًا على الحافلة. يقوم عامل باستهلاك الحدث ويشغل ثلاثة كاشفات نوافذ ضده: السرعة (البائع الذي يقدم عددًا كبيرًا من الفواتير في فترة قصيرة)، الزيادة المفاجئة (مبلغ الفاتورة يتجاوز 5σ من تاريخ البائع الخاص)، وتركيز البائع (بائع واحد يتجاوز 30%% من إنفاق المنظمة). كل مشغل يحتفظ بسجل AnomalyHit الذي تقرأه هذه اللوحة. المرحلة 3.2 ستقوم بتوجيه هذه الضربات إلى قنوات البريد الإلكتروني / الرسائل القصيرة / Slack."
 
 #: templates/transactions.html:17
 msgid "Unified feed of invoices and purchase orders across the organisation."
@@ -16271,86 +15901,64 @@ msgstr "أرشيف متعدّد الملفات"
 
 # --- Reports: API error messages ---
 #: templates/vendors/detail.html:18
-#, fuzzy
-#| msgid "Report not found."
 msgid "Vendor not found"
-msgstr "التقرير غير موجود."
+msgstr "البائع غير موجود"
 
 #: templates/vendors/detail.html:19
 msgid "Could not find a vendor by that name in your organisation."
-msgstr ""
+msgstr "لم يتم العثور على بائع بهذا الاسم في منظمتك."
 
 #: templates/vendors/detail.html:20
-#, fuzzy
-#| msgid "Back to Reports"
 msgid "Back to Vendors"
-msgstr "العودة إلى التقارير"
+msgstr "العودة إلى البائعين"
 
 #: templates/vendors/detail.html:34
 msgid "Vendor 360 view — invoices, POs, payments, contracts"
-msgstr ""
+msgstr "عرض 360 درجة للبائع — الفواتير، أوامر الشراء، المدفوعات، العقود"
 
 #: templates/vendors/detail.html:63
-#, fuzzy
-#| msgid "Total Pages"
 msgid "Total Paid"
-msgstr "إجمالي الصفحات"
+msgstr "إجمالي المدفوعات"
 
 #: templates/vendors/detail.html:67
 msgid "Outstanding"
-msgstr ""
+msgstr "معلق"
 
 #: templates/vendors/detail.html:71
-#, fuzzy
-#| msgid "High-risk + duplicates"
 msgid "High-Risk + Duplicates"
-msgstr "مخاطرة عالية + مكرّرات"
+msgstr "عالي المخاطر + المكررات"
 
 #: templates/vendors/detail.html:87
-#, fuzzy
-#| msgid "Payment Date"
 msgid "Payments"
-msgstr "تاريخ الدفع"
+msgstr "المدفوعات"
 
 #: templates/vendors/detail.html:91
-#, fuzzy
-#| msgid "Contracts"
 msgid "Active Contracts"
-msgstr "العقود"
+msgstr "العقود النشطة"
 
 #: templates/vendors/detail.html:99
-#, fuzzy
-#| msgid "Reject Invoice"
 msgid "Recent Invoices"
-msgstr "رفض الفاتورة"
+msgstr "الفواتير الأخيرة"
 
 #: templates/vendors/detail.html:123
 msgid "DUP"
-msgstr ""
+msgstr "مكرر"
 
 #: templates/vendors/detail.html:137
-#, fuzzy
-#| msgid "Contract Audit Report"
 msgid "Contracts with this vendor"
-msgstr "تقرير تدقيق العقود"
+msgstr "العقود مع هذا البائع"
 
 #: templates/vendors/detail.html:139
-#, fuzzy
-#| msgid "Contract"
 msgid "Contract #"
-msgstr "عقد"
+msgstr "رقم العقد"
 
 #: templates/vendors/detail.html:139
-#, fuzzy
-#| msgid "Period:"
 msgid "Period"
-msgstr "الفترة:"
+msgstr "الفترة"
 
 #: templates/vendors/detail.html:139
-#, fuzzy
-#| msgid "Values"
 msgid "Value"
-msgstr "القيم"
+msgstr "القيمة"
 
 #: templates/vendors/index.html:37
 msgid "Manage suppliers and review their transaction history"
@@ -16413,314 +16021,248 @@ msgstr "رفع الفواتير"
 
 #: templates/working_papers/detail.html:70
 msgid "Paper is locked."
-msgstr ""
+msgstr "الورقة مقفلة."
 
 #: templates/working_papers/detail.html:71
 msgid "The audit hash chain protects this paper from any further edit."
-msgstr ""
+msgstr "سلسلة تجزئة التدقيق تحمي هذه الورقة من أي تعديل إضافي."
 
 #: templates/working_papers/detail.html:74
 msgid "Chain hash:"
-msgstr ""
+msgstr "تجزئة السلسلة:"
 
 #: templates/working_papers/detail.html:82
 msgid "Sign-off"
-msgstr ""
+msgstr "الموافقة"
 
 #: templates/working_papers/detail.html:85
 #: templates/working_papers/list.html:71
-#, fuzzy
-#| msgid "Prepared by"
 msgid "Preparer"
-msgstr "إعداد"
+msgstr "المعدّ"
 
 #: templates/working_papers/detail.html:90
-#, fuzzy
-#| msgid "Send for Senior Review"
 msgid "Senior Reviewer"
-msgstr "إرسال لمراجعة المدقق الأول"
+msgstr "المراجع الأول"
 
 #: templates/working_papers/detail.html:95
 #: templates/working_papers/list.html:73
-#, fuzzy
-#| msgid "Partners"
 msgid "Partner"
-msgstr "الشركاء"
+msgstr "الشريك"
 
 #: templates/working_papers/detail.html:106
-#, fuzzy
-#| msgid "Start for free"
 msgid "Submit for review"
-msgstr "ابدأ مجانًا"
+msgstr "تقديم للمراجعة"
 
 #: templates/working_papers/detail.html:113
-#, fuzzy
-#| msgid "Reviewer"
 msgid "Reviewer notes"
-msgstr "المراجع"
+msgstr "ملاحظات المراجع"
 
 #: templates/working_papers/detail.html:115
-#, fuzzy
-#| msgid "Approved"
 msgid "Approve & forward"
-msgstr "مُعتمدة"
+msgstr "الموافقة وإعادة الإرسال"
 
 #: templates/working_papers/detail.html:119
-#, fuzzy
-#| msgid "Attention required"
 msgid "Reason for rejection (required)"
-msgstr "يتطلب انتباهاً"
+msgstr "سبب الرفض (مطلوب)"
 
 #: templates/working_papers/detail.html:121
 msgid "Reject — back to preparer"
-msgstr ""
+msgstr "رفض — العودة إلى المُعدّ"
 
 #: templates/working_papers/detail.html:128
-#, fuzzy
-#| msgid "Escalation Reason (optional)"
 msgid "Partner notes (optional)"
-msgstr "سبب التصعيد (اختياري)"
+msgstr "ملاحظات الشريك (اختياري)"
 
 #: templates/working_papers/detail.html:130
-#, fuzzy
-#| msgid "Partners & Customers"
 msgid "Partner sign & lock"
-msgstr "الشركاء والعملاء"
+msgstr "توقيع الشريك وقفل"
 
 #: templates/working_papers/detail.html:137
-#, fuzzy
-#| msgid "Reviewer"
 msgid "Reviewer notes:"
-msgstr "المراجع"
+msgstr "ملاحظات المراجع:"
 
 #: templates/working_papers/detail.html:142
-#, fuzzy
-#| msgid "Partners"
 msgid "Partner notes:"
-msgstr "الشركاء"
+msgstr "ملاحظات الشريك:"
 
 #: templates/working_papers/detail.html:154
 msgid "Signature trail"
-msgstr ""
+msgstr "أثر التوقيع"
 
 #: templates/working_papers/form.html:4 templates/working_papers/form.html:32
 msgid "New Working Paper"
-msgstr ""
+msgstr "ورقة عمل جديدة"
 
 #: templates/working_papers/form.html:35
 msgid ""
 "The paper starts in DRAFT — you can edit and submit it for review at any "
 "time."
-msgstr ""
+msgstr "تبدأ الورقة في حالة المسودة — يمكنك تعديلها وتقديمها للمراجعة في أي وقت."
 
 #: templates/working_papers/form.html:44
 msgid "e.g. Accounts Receivable Lead Schedule — FY2026"
-msgstr ""
+msgstr "على سبيل المثال: جدول قيادة الحسابات المستحقة — السنة المالية 2026"
 
 #: templates/working_papers/form.html:46
 msgid "Paper type"
-msgstr ""
+msgstr "نوع الورقة"
 
 #: templates/working_papers/form.html:48
-#, fuzzy
-#| msgid "Select Page:"
 msgid "Select"
-msgstr "اختر الصفحة:"
+msgstr "اختر"
 
 #: templates/working_papers/form.html:54
-#, fuzzy
-#| msgid "Folder (optional)"
 msgid "Initial notes (optional)"
-msgstr "المجلّد (اختياري)"
+msgstr "ملاحظات أولية (اختياري)"
 
 #: templates/working_papers/form.html:55
 msgid "Free-form audit notes; you can edit this later before locking."
-msgstr ""
+msgstr "ملاحظات تدقيق حرة الشكل؛ يمكنك تعديل هذا لاحقًا قبل القفل."
 
 #: templates/working_papers/form.html:59
-#, fuzzy
-#| msgid "Created"
 msgid "Create draft"
-msgstr "تم الإنشاء"
+msgstr "إنشاء مسودة"
 
 #: templates/working_papers/list.html:38
 msgid ""
 "ISA 230 — preparer · senior reviewer · partner sign-off, with tamper-evident "
 "lock on signing."
-msgstr ""
+msgstr "ISA 230 — المُعدّ · المراجع الأول · توقيع الشريك، مع قفل واضح على التوقيع."
 
 #: templates/working_papers/list.html:42
-#, fuzzy
-#| msgid "New Page"
 msgid "New Paper"
-msgstr "صفحة جديدة"
+msgstr "ورقة جديدة"
 
 #: templates/working_papers/list.html:47
-#, fuzzy
-#| msgid "Search by name or email..."
 msgid "Search by reference or title"
-msgstr "البحث بالاسم أو البريد الإلكتروني..."
+msgstr "البحث بالمرجع أو العنوان"
 
 #: templates/working_papers/list.html:58
-#, fuzzy
-#| msgid "Send for Senior Review"
 msgid "Ready for review"
-msgstr "إرسال لمراجعة المدقق الأول"
+msgstr "جاهز للمراجعة"
 
 #: templates/working_papers/list.html:59
-#, fuzzy
-#| msgid "Reviewer"
 msgid "Reviewed"
-msgstr "المراجع"
+msgstr "تمت المراجعة"
 
 #: templates/working_papers/list.html:60
 msgid "Locked"
-msgstr ""
+msgstr "مغلق"
 
 #: templates/working_papers/list.html:72
 msgid "Reviewer"
 msgstr "المراجع"
 
 #: templates/working_papers/list.html:74
-#, fuzzy
-#| msgid "Update"
 msgid "Updated"
-msgstr "تحديث"
+msgstr "تم التحديث"
 
 #: templates/working_papers/list.html:95
-#, fuzzy
-#| msgid "No folders yet. Create your first folder above."
 msgid ""
 "No working papers yet. Create your first paper to start an audit engagement."
-msgstr "لا توجد مجلّدات بعد. أنشئ أوّل مجلّد لك أعلاه."
+msgstr "لا توجد أوراق عمل حتى الآن. أنشئ ورقتك الأولى لبدء عملية التدقيق."
 
 #: templates/zatca/dashboard.html:4
-#, fuzzy
-#| msgid "ZATCA Phase 2 Compliance"
 msgid "ZATCA Phase 2 — Compliance"
-msgstr "امتثال المرحلة الثانية لـ ZATCA"
+msgstr "المرحلة الثانية من زاتكا — الامتثال"
 
 #: templates/zatca/dashboard.html:66
-#, fuzzy
-#| msgid "ZATCA Phase 2 Compliance"
 msgid "ZATCA Phase 2 — Compliance Dashboard"
-msgstr "امتثال المرحلة الثانية لـ ZATCA"
+msgstr "المرحلة الثانية من زاتكا — لوحة تحكم الامتثال"
 
 #: templates/zatca/dashboard.html:67
 msgid ""
 "Live counters for clearance + reporting, EGS device certificate health, and "
 "a one-glance readiness checklist."
-msgstr ""
+msgstr "عدادات حية للتخليص + التقارير، صحة شهادة جهاز EGS، وقائمة فحص جاهزية سريعة."
 
 #: templates/zatca/dashboard.html:77
 msgid "Cleared (B2B)"
-msgstr ""
+msgstr "تم التخليص (B2B)"
 
 #: templates/zatca/dashboard.html:81
-#, fuzzy
-#| msgid "Report #"
 msgid "Reported (B2C)"
-msgstr "رقم التقرير"
+msgstr "تم الإبلاغ (B2C)"
 
 #: templates/zatca/dashboard.html:85
-#, fuzzy
-#| msgid "Warnings"
 msgid "With warnings"
-msgstr "تحذيرات"
+msgstr "مع تحذيرات"
 
 #: templates/zatca/dashboard.html:97
 msgid "Clearance rate (30d)"
-msgstr ""
+msgstr "معدل التخليص (30 يومًا)"
 
 #: templates/zatca/dashboard.html:106
 msgid "Phase 2 readiness checklist"
-msgstr ""
+msgstr "قائمة فحص جاهزية المرحلة 2"
 
 #: templates/zatca/dashboard.html:121
-#, fuzzy
-#| msgid "Services"
 msgid "EGS devices"
-msgstr "الخدمات"
+msgstr "أجهزة EGS"
 
 #: templates/zatca/dashboard.html:122
-#, fuzzy
-#| msgid "Upload new invoices"
 msgid "Onboard new device"
-msgstr "رفع فواتير جديدة"
+msgstr "إضافة جهاز جديد"
 
 #: templates/zatca/dashboard.html:127
-#, fuzzy
-#| msgid "Services"
 msgid "Device"
-msgstr "الخدمات"
+msgstr "جهاز"
 
 #: templates/zatca/dashboard.html:130
 msgid "Cert valid until"
-msgstr ""
+msgstr "الشهادة صالحة حتى"
 
 #: templates/zatca/dashboard.html:149
 msgid "Renew"
-msgstr ""
+msgstr "تجديد"
 
 #: templates/zatca/dashboard.html:154
-#, fuzzy
-#| msgid "No services. Click \"Add Service\" to start."
 msgid "No EGS devices registered. Click ‘Onboard new device’ to start."
-msgstr "لا توجد خدمات. انقر \"إضافة خدمة\" للبدء."
+msgstr "لا توجد أجهزة EGS مسجلة. انقر على 'إضافة جهاز جديد' للبدء."
 
 #: templates/zatca/dashboard.html:164
 msgid "Certificate expiry warnings"
-msgstr ""
+msgstr "تحذيرات انتهاء صلاحية الشهادة"
 
 #: templates/zatca/dashboard.html:168
-#, fuzzy
-#| msgid "days"
 msgid "days left"
-msgstr "يوم"
+msgstr "أيام متبقية"
 
 #: templates/zatca/dashboard.html:175
 msgid "Top rejection causes (last 30d)"
-msgstr ""
+msgstr "أعلى أسباب الرفض (آخر 30 يومًا)"
 
 #: templates/zatca/dashboard.html:182
 msgid "Fix hint"
-msgstr ""
+msgstr "تلميح للإصلاح"
 
 #: templates/zatca/dashboard.html:200
-#, fuzzy
-#| msgid "Recent Operations"
 msgid "Recent submissions"
-msgstr "العمليات الحديثة"
+msgstr "التقديمات الأخيرة"
 
 #: templates/zatca/dashboard.html:204
-#, fuzzy
-#| msgid "ZATCA"
 msgid "ZATCA UUID"
-msgstr "ZATCA"
+msgstr "UUID زاتكا"
 
 #: templates/zatca/dashboard.html:207
 msgid "Chain #"
-msgstr ""
+msgstr "سلسلة #"
 
 #: templates/zatca/dashboard.html:208
 msgid "Hash"
-msgstr ""
+msgstr "تجزئة"
 
 #: templates/zatca/dashboard.html:224
-#, fuzzy
-#| msgid "No media assets yet."
 msgid "No submissions yet."
-msgstr "لا توجد أصول وسائط بعد."
+msgstr "لا توجد تقديمات حتى الآن."
 
 #: templates/zatca/dashboard.html:236
 msgid "Onboard new EGS device"
-msgstr ""
+msgstr "إدخال جهاز EGS جديد"
 
 #: templates/zatca/dashboard.html:253
-#, fuzzy
-#| msgid "Dashboard"
 msgid "Onboard"
-msgstr "لوحة التحكم"
+msgstr "إضافة"
 
 #~ msgid "✓ Files selected"
 #~ msgstr "✓ تم اختيار الملفات"

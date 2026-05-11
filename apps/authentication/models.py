@@ -10,6 +10,8 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from core.utils.encrypted_field import EncryptedCharField
+
 
 _LEGACY_ROLE_NAME_MAP = {
     "admin": "admin",
@@ -132,7 +134,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     mfa_enabled = models.BooleanField(default=False)
-    mfa_secret = models.CharField(max_length=64, blank=True)
+    # mfa_secret holds the user's TOTP base32 secret. The field encrypts the
+    # value at rest via core.utils.encrypted_field.EncryptedCharField — a
+    # DB-read attack on this column alone yields ciphertext, not usable
+    # second factors. Legacy plaintext rows from before this migration are
+    # passed through on read and re-encrypted on the next write.
+    # max_length is generous (320) to hold the Fernet ciphertext + safety
+    # margin; the plaintext is base32, typically 16-32 chars.
+    mfa_secret = EncryptedCharField(max_length=320, blank=True)
     email_verified_at = models.DateTimeField(null=True, blank=True)
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
     failed_login_attempts = models.PositiveIntegerField(default=0)

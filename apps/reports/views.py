@@ -1243,6 +1243,211 @@ class ReportPDFStatusView(APIView):
         return Response(payload, status=202)
 
 
+# ─── Profit & Loss + Balance Sheet ────────────────────────────────────────────
+# Both reports derive directly from the existing Ledger rows in the org. Each
+# Ledger carries `account_type` (free-text, e.g. "Asset" / "Liability" /
+# "Equity" / "Revenue" / "Expense"), opening_balance, closing_balance, and
+# the period bounds.
+#
+# The classification map below is intentionally permissive — many orgs ship
+# Arabic synonyms, and the .account_type column is free-text. Anything that
+# doesn't match any bucket falls into "unclassified", which the report
+# surfaces so operators can fix the source data without losing visibility.
+
+_PNL_REVENUE  = {"revenue", "income", "sales", "إيراد", "إيرادات", "مبيعات"}
+_PNL_EXPENSE  = {"expense", "expenses", "cost", "cogs", "مصروف", "مصاريف", "تكلفة"}
+_BS_ASSET     = {"asset", "assets", "أصل", "أصول"}
+_BS_LIABILITY = {"liability", "liabilities", "payable", "خصم", "خصوم", "التزام"}
+_BS_EQUITY    = {"equity", "capital", "حقوق ملكية", "رأس مال", "حقوق المساهمين"}
+
+
+def _classify_account_type(value: str) -> str:
+    key = (value or "").strip().lower()
+    if key in _PNL_REVENUE:  return "revenue"
+    if key in _PNL_EXPENSE:  return "expense"
+    if key in _BS_ASSET:     return "asset"
+    if key in _BS_LIABILITY: return "liability"
+    if key in _BS_EQUITY:    return "equity"
+    return "unclassified"
+
+
+def _ledger_rows(org, period_from=None, period_to=None):
+    """Tenant-scoped Ledger rows in the requested period, only the fields
+    these reports need so we don't drag in the heavy JSON columns."""
+    from apps.documents.typed_models_v2 import Ledger
+
+    qs = (Ledger.objects.filter(organization=org)
+                         .only("id", "account_number", "account_name",
+                               "account_type", "currency",
+                               "opening_balance", "closing_balance",
+                               "period_from", "period_to"))
+    if period_from:
+        qs = qs.filter(period_to__gte=period_from)
+    if period_to:
+        qs = qs.filter(period_from__lte=period_to)
+    return qs
+
+
+class ProfitAndLossReportView(APIView):
+    """GET /api/v1/reports/profit-and-loss/ — P&L derived from Ledger rows."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Reports"],
+        summary="Profit & Loss statement (derived from per-account ledgers)",
+        parameters=[
+            OpenApiParameter("period_from", description="ISO date (inclusive)"),
+            OpenApiParameter("period_to",   description="ISO date (inclusive)"),
+        ],
+    )
+    def get(self, request):
+        from datetime import date as _date
+        try:
+            period_from = _date.fromisoformat(request.query_params["period_from"]) \
+                if request.query_params.get("period_from") else None
+            period_to = _date.fromisoformat(request.query_params["period_to"]) \
+                if request.query_params.get("period_to") else None
+        except ValueError:
+            return Response({"error": _("Invalid period dates")}, status=400)
+
+        rows = _ledger_rows(request.user.organization, period_from, period_to)
+        revenue_lines = []
+        expense_lines = []
+        unclassified  = []
+        total_rev = 0.0
+        total_exp = 0.0
+
+        for r in rows:
+            bucket = _classify_account_type(r.account_type or "")
+            # P&L convention: revenue = credit balance (we approximate via the
+            # change between opening and closing for both revenue and expense).
+            opening = float(r.opening_balance or 0)
+            closing = float(r.closing_balance or 0)
+            movement = closing - opening
+            line = {
+                "account_number": r.account_number,
+                "account_name":   r.account_name,
+                "account_type":   r.account_type,
+                "movement":       round(movement, 2),
+                "opening":        round(opening, 2),
+                "closing":        round(closing, 2),
+                "currency":       r.currency or "SAR",
+            }
+            if bucket == "revenue":
+                revenue_lines.append(line)
+                total_rev += movement
+            elif bucket == "expense":
+                expense_lines.append(line)
+                total_exp += movement
+            elif bucket in ("asset", "liability", "equity"):
+                continue  # belongs on the Balance Sheet, not P&L
+            else:
+                unclassified.append(line)
+
+        net_income = total_rev - total_exp
+        return Response({
+            "period_from":     str(period_from) if period_from else None,
+            "period_to":       str(period_to)   if period_to   else None,
+            "revenue": {
+                "total": round(total_rev, 2),
+                "lines": revenue_lines,
+            },
+            "expenses": {
+                "total": round(total_exp, 2),
+                "lines": expense_lines,
+            },
+            "net_income": round(net_income, 2),
+            "unclassified": unclassified,
+            "notes": (
+                "Derived from per-account Ledger rows in the requested period. "
+                "Movement = closing_balance - opening_balance. Rows whose "
+                "account_type does not match a revenue/expense/asset/liability/"
+                "equity synonym appear under 'unclassified' — fix the source "
+                "Ledger.account_type to clear them."
+            ),
+        })
+
+
+class BalanceSheetReportView(APIView):
+    """GET /api/v1/reports/balance-sheet/ — Balance Sheet from Ledger rows."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        tags=["Reports"],
+        summary="Balance Sheet (derived from per-account ledgers)",
+        parameters=[
+            OpenApiParameter("as_of", description="ISO date (snapshot date)"),
+        ],
+    )
+    def get(self, request):
+        from datetime import date as _date
+        as_of = None
+        if v := request.query_params.get("as_of"):
+            try:
+                as_of = _date.fromisoformat(v)
+            except ValueError:
+                return Response({"error": _("Invalid as_of date")}, status=400)
+
+        # We pull every ledger row whose period_to ≤ as_of (latest snapshot per
+        # account). For the simple derivation we trust the most recent
+        # closing_balance per account_number.
+        rows = _ledger_rows(request.user.organization, period_to=as_of)
+
+        latest_per_account: dict = {}
+        for r in rows:
+            key = r.account_number or str(r.id)
+            existing = latest_per_account.get(key)
+            if existing is None or (r.period_to and existing.period_to
+                                    and r.period_to > existing.period_to):
+                latest_per_account[key] = r
+
+        assets, liabilities, equity, unclassified = [], [], [], []
+        total_a = total_l = total_e = 0.0
+        for r in latest_per_account.values():
+            bucket = _classify_account_type(r.account_type or "")
+            closing = float(r.closing_balance or 0)
+            line = {
+                "account_number": r.account_number,
+                "account_name":   r.account_name,
+                "account_type":   r.account_type,
+                "balance":        round(closing, 2),
+                "currency":       r.currency or "SAR",
+            }
+            if bucket == "asset":
+                assets.append(line); total_a += closing
+            elif bucket == "liability":
+                liabilities.append(line); total_l += closing
+            elif bucket == "equity":
+                equity.append(line); total_e += closing
+            elif bucket in ("revenue", "expense"):
+                continue  # belongs on the P&L
+            else:
+                unclassified.append(line)
+
+        balanced = abs(total_a - (total_l + total_e)) < 1.00
+        return Response({
+            "as_of": str(as_of) if as_of else None,
+            "assets":      {"total": round(total_a, 2), "lines": assets},
+            "liabilities": {"total": round(total_l, 2), "lines": liabilities},
+            "equity":      {"total": round(total_e, 2), "lines": equity},
+            "check": {
+                "assets":              round(total_a, 2),
+                "liabilities_plus_equity": round(total_l + total_e, 2),
+                "difference":          round(total_a - (total_l + total_e), 2),
+                "balanced":            balanced,
+            },
+            "unclassified": unclassified,
+            "notes": (
+                "Latest closing_balance per account_number on or before as_of. "
+                "Assets should equal Liabilities + Equity; the 'check' object "
+                "surfaces the difference. Rows whose account_type does not "
+                "match a known bucket appear under 'unclassified'."
+            ),
+        })
+
+
 # ─── Three-Way Match Report ────────────────────────────────────────────────────
 # The ThreeWayMatchService at apps/rule_engine/services/three_way_match.py has
 # been doing all the work; what was missing was an HTTP endpoint that runs it

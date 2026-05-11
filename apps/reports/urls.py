@@ -19,6 +19,13 @@ urlpatterns = [
     # apps/rule_engine/services/three_way_match.py; this is the HTTP wrapper.
     path("three-way-match/", views.ThreeWayMatchReportView.as_view(), name="three-way-match-report"),
 
+    # P&L + Balance Sheet — derived from Ledger rows. See
+    # ProfitAndLossReportView / BalanceSheetReportView in views.py for the
+    # classification rules. Both endpoints surface an 'unclassified' bucket
+    # so operators can clean up source data without losing visibility.
+    path("profit-and-loss/", views.ProfitAndLossReportView.as_view(), name="profit-and-loss-report"),
+    path("balance-sheet/",   views.BalanceSheetReportView.as_view(),  name="balance-sheet-report"),
+
     # Async PDF: POST queues a render task, GET polls status. Once "done",
     # client downloads from the existing sync /pdf/ endpoint (warm cache).
     path("<uuid:pk>/pdf/async/", views.ReportPDFAsyncView.as_view(), name="report-pdf-async"),

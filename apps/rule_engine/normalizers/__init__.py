@@ -98,3 +98,7 @@ from apps.rule_engine.normalizers import fixed_asset_normalizer      # noqa: E40
 from apps.rule_engine.normalizers import sales_receipt_normalizer    # noqa: E402, F401
 from apps.rule_engine.normalizers import grn_normalizer              # noqa: E402, F401
 from apps.rule_engine.normalizers import payment_normalizer          # noqa: E402, F401
+# Phase-2 doc types — sales_order, quotation, proforma_invoice,
+# receipt_voucher, cash_voucher, general_ledger, ledger, contract,
+# supplier_statement, customer_statement, journal_entry — one file for all 11.
+from apps.rule_engine.normalizers import phase2_normalizers          # noqa: E402, F401

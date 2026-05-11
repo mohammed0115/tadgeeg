@@ -130,3 +130,58 @@ class AuditFindingAdmin(admin.ModelAdmin):
             obj.get_severity_display(),
         )
     severity_badge.short_description = "Severity"
+
+
+# ─── AI Validation Harness admin ──────────────────────────────────────────────
+from apps.auditing.models import AIValidationDataset, AIValidationRun
+
+
+@admin.register(AIValidationDataset)
+class AIValidationDatasetAdmin(admin.ModelAdmin):
+    list_display = ["name", "version", "document_type", "language",
+                    "document_count", "created_at"]
+    search_fields = ["name", "document_type"]
+    list_filter = ["document_type", "language"]
+
+
+@admin.register(AIValidationRun)
+class AIValidationRunAdmin(admin.ModelAdmin):
+    list_display = ["component", "model_version", "headline", "decision",
+                    "created_at"]
+    list_filter = ["component", "decision"]
+    search_fields = ["model_version", "dataset__name"]
+    readonly_fields = ["raw_metrics", "created_at", "completed_at",
+                       "true_positives", "false_positives",
+                       "true_negatives", "false_negatives"]
+    fieldsets = (
+        ("Identity", {
+            "fields": ("dataset", "component", "model_version"),
+        }),
+        ("Classifier metrics", {
+            "fields": ("precision", "recall", "f1_score", "accuracy",
+                       "false_positive_rate", "false_negative_rate",
+                       "true_positives", "false_positives",
+                       "true_negatives", "false_negatives"),
+        }),
+        ("OCR metrics", {
+            "fields": ("field_accuracy", "document_accuracy",
+                       "character_error_rate", "word_error_rate",
+                       "average_processing_ms"),
+            "classes": ("collapse",),
+        }),
+        ("Forecast metrics", {
+            "fields": ("mape", "mae", "rmse", "bias"),
+            "classes": ("collapse",),
+        }),
+        ("Sign-off", {
+            "fields": ("decision", "approver", "approver_notes"),
+        }),
+        ("Audit", {
+            "fields": ("raw_metrics", "created_at", "completed_at"),
+        }),
+    )
+
+    @admin.display(description="Headline metric")
+    def headline(self, obj):
+        v = obj.headline_metric()
+        return f"{v:.4f}" if v is not None else "—"

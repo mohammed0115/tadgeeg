@@ -236,3 +236,149 @@ class AccountingRuleEvaluation(models.Model):
 
     def __str__(self):
         return f"[{self.standard}] {self.rule_code}: {self.rule_status}"
+
+
+# ─── AI Validation Harness ────────────────────────────────────────────────────
+# Scaffolding to track AI-component validation runs (OCR, fraud detection,
+# duplicate detection, forecasting). The README pack mandates evidence
+# behind every public accuracy claim — these models store that evidence.
+# Datasets themselves live outside the codebase (CSV uploads or S3); the
+# model just persists the metrics so the platform can answer "what's the
+# current measured precision/recall of duplicate detection?" honestly.
+
+class AIValidationDataset(models.Model):
+    """A labeled dataset used for one validation run.
+
+    The actual rows / files are uploaded by an operator (out of band) and
+    referenced by `source_uri`. The model carries only metadata: name,
+    version, language, document count, plus a description so operators
+    can audit which dataset produced which metric.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        "authentication.Organization",
+        on_delete=models.CASCADE,
+        related_name="ai_validation_datasets",
+        null=True, blank=True,
+        help_text="NULL = platform-wide dataset shared across tenants.",
+    )
+    name = models.CharField(max_length=255)
+    version = models.CharField(max_length=32, default="1.0")
+    description = models.TextField(blank=True)
+    language = models.CharField(max_length=8, default="ar",
+                                help_text="ISO 639-1 — 'ar', 'en', 'mixed'")
+    document_type = models.CharField(max_length=64, blank=True,
+                                     help_text="e.g. 'invoice', 'purchase_order'")
+    source_uri = models.URLField(blank=True,
+                                 help_text="S3/local path to the labeled CSV/JSONL file.")
+    document_count = models.PositiveIntegerField(default=0)
+    labeling_method = models.CharField(max_length=64, blank=True,
+                                        help_text="manual / semi-auto / vendor")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "ai_validation_datasets"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["organization"]),
+            models.Index(fields=["document_type"]),
+        ]
+
+    def __str__(self):
+        return f"{self.name} v{self.version} ({self.document_count} docs)"
+
+
+class AIValidationRun(models.Model):
+    """One execution of a validation suite against a dataset.
+
+    Stores the metrics the AI_MODEL_VALIDATION_REPORT spec requires:
+    precision / recall / F1 / false-positive / false-negative for
+    classifier-type claims; MAPE / MAE / RMSE / bias for forecasting
+    claims; document/field accuracy for OCR.
+
+    All metric fields are nullable — different claims surface different
+    subsets. Operators populate via the `validate_ai_claim` management
+    command (see apps/auditing/management/commands/).
+    """
+
+    class Component(models.TextChoices):
+        OCR              = "ocr",              "Invoice OCR / extraction"
+        HANDWRITING      = "handwriting",      "Handwritten receipt recognition"
+        DUPLICATE        = "duplicate",        "Duplicate invoice detection"
+        FRAUD            = "fraud",            "Fraud / anomaly detection"
+        VAT_CHECK        = "vat_check",        "VAT recalculation"
+        CASH_FORECAST    = "cash_forecast",    "Cash-flow forecasting"
+        VENDOR_RISK      = "vendor_risk",      "Vendor risk scoring"
+        BENFORD          = "benford",          "Benford's law"
+        OTHER            = "other",            "Other"
+
+    class Decision(models.TextChoices):
+        APPROVED       = "approved",       "Approved"
+        WITH_LIMITS    = "with_limits",    "Approved with limitations"
+        NOT_APPROVED   = "not_approved",   "Not approved"
+        PENDING        = "pending",        "Pending review"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    dataset = models.ForeignKey(
+        AIValidationDataset, on_delete=models.PROTECT,
+        related_name="runs",
+    )
+    component = models.CharField(max_length=32, choices=Component.choices,
+                                  db_index=True)
+    model_version = models.CharField(max_length=64,
+                                      help_text="e.g. 'gpt-4o-2026-05', "
+                                                "'pyocr-tesseract-5.3'")
+    # Classifier metrics — all 0..1 except counts.
+    precision = models.FloatField(null=True, blank=True)
+    recall    = models.FloatField(null=True, blank=True)
+    f1_score  = models.FloatField(null=True, blank=True)
+    accuracy  = models.FloatField(null=True, blank=True)
+    false_positive_rate = models.FloatField(null=True, blank=True)
+    false_negative_rate = models.FloatField(null=True, blank=True)
+    # Forecasting metrics.
+    mape = models.FloatField(null=True, blank=True)
+    mae  = models.FloatField(null=True, blank=True)
+    rmse = models.FloatField(null=True, blank=True)
+    bias = models.FloatField(null=True, blank=True)
+    # OCR-specific.
+    field_accuracy        = models.FloatField(null=True, blank=True)
+    document_accuracy     = models.FloatField(null=True, blank=True)
+    character_error_rate  = models.FloatField(null=True, blank=True)
+    word_error_rate       = models.FloatField(null=True, blank=True)
+    average_processing_ms = models.PositiveIntegerField(null=True, blank=True)
+    # Counts for explainability.
+    true_positives  = models.PositiveIntegerField(null=True, blank=True)
+    false_positives = models.PositiveIntegerField(null=True, blank=True)
+    true_negatives  = models.PositiveIntegerField(null=True, blank=True)
+    false_negatives = models.PositiveIntegerField(null=True, blank=True)
+    # Decision + approver.
+    decision  = models.CharField(max_length=16, choices=Decision.choices,
+                                 default=Decision.PENDING)
+    approver  = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+                                   null=True, blank=True, related_name="+")
+    approver_notes = models.TextField(blank=True)
+    # Free-form raw metrics for one-off claims.
+    raw_metrics = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "ai_validation_runs"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["component", "-created_at"]),
+            models.Index(fields=["dataset", "-created_at"]),
+            models.Index(fields=["decision"]),
+        ]
+
+    def __str__(self):
+        return f"{self.component} v{self.model_version} ({self.decision})"
+
+    def headline_metric(self) -> float | None:
+        """Return the most useful single metric for the component."""
+        if self.component == self.Component.OCR:
+            return self.field_accuracy or self.document_accuracy
+        if self.component in (self.Component.CASH_FORECAST,):
+            return self.mape
+        return self.f1_score or self.accuracy

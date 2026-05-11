@@ -15,6 +15,11 @@ from .bulk_upload_views import (
     BulkUploadJobListCreateView, BulkUploadJobDetailView,
     BulkUploadJobRetryFailedView,
 )
+from .phase2_views import (
+    ContractListView, ContractDetailView,
+    JournalEntryListView, JournalEntryDetailView,
+    SalesOrderListView, SalesOrderDetailView,
+)
 
 urlpatterns = [
     path("",        views.DocumentListView.as_view(),    name="document-list"),
@@ -51,4 +56,14 @@ urlpatterns = [
     path("bulk-upload-jobs/",                BulkUploadJobListCreateView.as_view(),  name="bulk-upload-job-list-create"),
     path("bulk-upload-jobs/<uuid:pk>/",      BulkUploadJobDetailView.as_view(),      name="bulk-upload-job-detail"),
     path("bulk-upload-jobs/<uuid:pk>/retry-failed/", BulkUploadJobRetryFailedView.as_view(), name="bulk-upload-job-retry"),
+
+    # ── Phase-2 typed doc-type APIs ───────────────────────────────────────────
+    # First 3 of the 13 phase-2 types — Contract, JournalEntry, SalesOrder.
+    # Remaining 8 follow the same pattern when product priorities call for them.
+    path("contracts/",                  ContractListView.as_view(),       name="contract-list"),
+    path("contracts/<uuid:pk>/",        ContractDetailView.as_view(),     name="contract-detail"),
+    path("journal-entries/",            JournalEntryListView.as_view(),   name="journal-entry-list"),
+    path("journal-entries/<uuid:pk>/",  JournalEntryDetailView.as_view(), name="journal-entry-detail"),
+    path("sales-orders/",               SalesOrderListView.as_view(),     name="sales-order-list"),
+    path("sales-orders/<uuid:pk>/",     SalesOrderDetailView.as_view(),   name="sales-order-detail"),
 ]

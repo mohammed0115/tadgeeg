@@ -387,32 +387,60 @@ def process_single_file(
         ai_engine = FinancialAIEngine(organization_id=org.id, country_code=country_code, use_ai=True)
         analysis = ai_engine.analyse(ingestion)
 
-        # ── Step 7a: Legacy audit engine (structural rules + AuditCase) ───────
+        # ── Step 7a: Legacy audit engine ──────────────────────────────────────
+        # Canonical audit pipeline is now the V2 rule engine (see Step 7b).
+        # The legacy `run_audit()` sync path is kept ONLY as a rollback escape
+        # hatch: set `USE_NEW_RULE_ENGINE = False` in settings to revert.
+        # When the new engine is on (default in production), this branch is
+        # skipped to avoid the double-trigger that produced duplicate findings.
+        from django.conf import settings as _settings
+        if not getattr(_settings, "USE_NEW_RULE_ENGINE", True):
+            try:
+                run_audit(
+                    analysis.to_dict(),
+                    organization_id=org.id,
+                    invoice_id=invoice.id,
+                    persist=True,
+                    invoice=invoice,
+                    created_by=user,
+                )
+            except Exception as exc:
+                logger.warning("Legacy audit engine failed for %s: %s", filename, exc)
+
+    # ── Step 7b: V2 rule engine — canonical audit pipeline ────────────────────
+    # Dispatched via Celery so the request returns quickly. Two safety guards:
+    #   1. `transaction.on_commit` defers the .delay() until the writing
+    #      transaction commits. Without it, a fast worker can race the writer
+    #      and SELECT zero rows; if the writer rolls back, a phantom task fires.
+    #   2. An idempotency check via the rule_engine.AuditRun dedup window
+    #      prevents the same (document_id, document_type, org) running twice
+    #      back-to-back when the signal layer also dispatches.
+    def _dispatch_v2():
         try:
-            run_audit(
-                analysis.to_dict(),
-                organization_id=org.id,
-                invoice_id=invoice.id,
-                persist=True,
-                invoice=invoice,
-                created_by=user,
+            from apps.rule_engine.tasks.audit_tasks import run_audit_task
+            # Mirror the idempotency guard the post_save signal uses, so a
+            # path that goes Upload → Invoice.save() → signal AND processor
+            # doesn't double-trigger.
+            from apps.documents.signals import _has_active_run as _dedup
+            org_id_s = str(org.id)
+            doc_id_s = str(invoice.id)
+            if _dedup(doc_id_s, "sales_invoice", org_id_s):
+                logger.info(
+                    "[processor] Audit already in-flight for invoice=%s — skipping duplicate dispatch",
+                    doc_id_s,
+                )
+                return
+            run_audit_task.delay(
+                document_id=doc_id_s,
+                document_type="sales_invoice",
+                organization_id=org_id_s,
+                triggered_by="upload",
             )
         except Exception as exc:
-            logger.warning("Audit engine failed for %s: %s", filename, exc)
+            logger.warning("Rule engine pipeline trigger failed for %s: %s", filename, exc)
 
-    # ── Step 7b: V2 rule engine — dispatched async OUTSIDE the transaction ────
-    # Running this inside the transaction would hold the DB connection open
-    # for the entire Celery round-trip.
-    try:
-        from apps.rule_engine.tasks.audit_tasks import run_audit_task
-        run_audit_task.delay(
-            document_id=str(invoice.id),
-            document_type="sales_invoice",
-            organization_id=str(org.id),
-            triggered_by="upload",
-        )
-    except Exception as exc:
-        logger.warning("Rule engine pipeline trigger failed for %s: %s", filename, exc)
+    from django.db import transaction as _tx
+    _tx.on_commit(_dispatch_v2)
 
     # Phase 3.1 — publish onto the continuous-audit stream so window
     # detectors (velocity, sudden-spike, vendor-concentration) and any

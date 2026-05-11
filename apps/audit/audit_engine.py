@@ -478,7 +478,20 @@ def run_audit(
     created_by=None,
 ) -> AuditReport:
     """
-    One-call audit evaluation.
+    DEPRECATED legacy audit pipeline. Kept ONLY for rollback.
+
+    The canonical audit pipeline is now ``apps.rule_engine.tasks.audit_tasks
+    .run_audit_task`` driven by ``AuditPipeline`` in
+    ``apps.rule_engine.executors``. See Docs/AUDIT_PIPELINE_CANONICAL.md.
+
+    This function is no longer called from production upload paths when
+    ``settings.USE_NEW_RULE_ENGINE`` is True (the default). It remains as
+    an escape hatch: flip the flag to False to revert to this engine
+    while a regression is investigated.
+
+    Removal plan: delete this and the AuditEngine class once
+    USE_NEW_RULE_ENGINE has run cleanly in production for 2 release
+    cycles with no rollbacks.
 
     Args:
         document:        Normalised document dict.

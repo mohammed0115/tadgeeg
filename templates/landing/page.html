@@ -432,8 +432,7 @@
       </ul>
 
       <div class="nav-actions">
-        {# Compact <select>-based switcher — keeps the navbar tidy when the
-           Arabic translation expands the button text. #}
+        {# Compact <select>-based switcher — keeps the navbar tidy when the Arabic translation expands the button text. #}
         {% include "partials/language_switcher_select.html" with extra_classes="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/90 p-1 text-xs font-semibold text-slate-700 shadow-sm" %}
         <a href="{% url 'frontend:login' %}" class="btn btn-outline">{% trans "Sign In" %}</a>
         <a href="{% url 'frontend:register' %}" class="btn btn-primary">{% trans "Start Free Trial" %}</a>

@@ -19,6 +19,14 @@ from .phase2_views import (
     ContractListView, ContractDetailView,
     JournalEntryListView, JournalEntryDetailView,
     SalesOrderListView, SalesOrderDetailView,
+    QuotationListView, QuotationDetailView,
+    ProformaInvoiceListView, ProformaInvoiceDetailView,
+    ReceiptVoucherListView, ReceiptVoucherDetailView,
+    CashVoucherListView, CashVoucherDetailView,
+    GeneralLedgerListView, GeneralLedgerDetailView,
+    LedgerListView, LedgerDetailView,
+    SupplierStatementListView, SupplierStatementDetailView,
+    CustomerStatementListView, CustomerStatementDetailView,
 )
 
 urlpatterns = [
@@ -66,4 +74,22 @@ urlpatterns = [
     path("journal-entries/<uuid:pk>/",  JournalEntryDetailView.as_view(), name="journal-entry-detail"),
     path("sales-orders/",               SalesOrderListView.as_view(),     name="sales-order-list"),
     path("sales-orders/<uuid:pk>/",     SalesOrderDetailView.as_view(),   name="sales-order-detail"),
+
+    # ── Remaining 8 phase-2 doc types ──────────────────────────────────────────
+    path("quotations/",                 QuotationListView.as_view(),         name="quotation-list"),
+    path("quotations/<uuid:pk>/",       QuotationDetailView.as_view(),       name="quotation-detail"),
+    path("proforma-invoices/",          ProformaInvoiceListView.as_view(),   name="proforma-invoice-list"),
+    path("proforma-invoices/<uuid:pk>/",ProformaInvoiceDetailView.as_view(), name="proforma-invoice-detail"),
+    path("receipt-vouchers/",           ReceiptVoucherListView.as_view(),    name="receipt-voucher-list"),
+    path("receipt-vouchers/<uuid:pk>/", ReceiptVoucherDetailView.as_view(),  name="receipt-voucher-detail"),
+    path("cash-vouchers/",              CashVoucherListView.as_view(),       name="cash-voucher-list"),
+    path("cash-vouchers/<uuid:pk>/",    CashVoucherDetailView.as_view(),     name="cash-voucher-detail"),
+    path("general-ledgers/",            GeneralLedgerListView.as_view(),     name="general-ledger-list"),
+    path("general-ledgers/<uuid:pk>/",  GeneralLedgerDetailView.as_view(),   name="general-ledger-detail"),
+    path("ledgers/",                    LedgerListView.as_view(),            name="ledger-list"),
+    path("ledgers/<uuid:pk>/",          LedgerDetailView.as_view(),          name="ledger-detail"),
+    path("supplier-statements/",        SupplierStatementListView.as_view(), name="supplier-statement-list"),
+    path("supplier-statements/<uuid:pk>/", SupplierStatementDetailView.as_view(), name="supplier-statement-detail"),
+    path("customer-statements/",        CustomerStatementListView.as_view(), name="customer-statement-list"),
+    path("customer-statements/<uuid:pk>/", CustomerStatementDetailView.as_view(), name="customer-statement-detail"),
 ]

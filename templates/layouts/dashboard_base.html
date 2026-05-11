@@ -354,7 +354,11 @@
     .ai-stage.active .ai-stage-label { color: var(--accent-dark); }
     .ai-stage.done .ai-stage-label { color: var(--text); }
 
-    .ai-overlay { position: fixed; inset: 0; background: rgba(255,255,255,.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 999; display: flex; align-items: center; justify-content: center; animation: ai-fade-in-up .3s ease; }
+    /* Top-center anchored. align-items:flex-start drops the card to the
+       top of the viewport instead of vertical centre, and padding-top
+       gives it a tasteful gap from the page chrome. justify-content:center
+       keeps it horizontally centred for both RTL and LTR. */
+    .ai-overlay { position: fixed; inset: 0; background: rgba(255,255,255,.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 999; display: flex; align-items: flex-start; justify-content: center; padding-top: 64px; animation: ai-fade-in-up .3s ease; overflow-y: auto; }
     .ai-overlay-card { background: white; border-radius: 24px; padding: 40px 32px; max-width: 480px; width: calc(100% - 32px); box-shadow: 0 30px 80px -20px rgba(0,51,102,.25), 0 0 0 1px rgba(0,51,102,.05); position: relative; }
     .ai-overlay-close { position: absolute; top: 16px; left: 16px; width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); transition: all .2s ease; }
     .ai-overlay-close:hover { background: var(--bg-soft); color: var(--danger); }

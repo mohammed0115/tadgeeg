@@ -1486,10 +1486,13 @@ class ThreeWayMatchReportView(APIView):
         )
 
         org = request.user.organization
-        # Tenant-scoped queryset of POs that carry a po_number we can match on.
+        # Tenant-scoped POs that carry a po_number. Linking direction:
+        #   • PO → Invoice via `PurchaseOrder.linked_invoice_id` (UUID FK column).
+        #   • PO → GRN     via `GoodsReceiptNote.linked_po_number` (string column).
+        # Invoice itself has no `po_number` column — link is one-way from PO.
         po_qs = (PurchaseOrder.objects.filter(organization=org)
                                        .exclude(po_number="")
-                                       .only("id", "po_number"))
+                                       .only("id", "po_number", "linked_invoice_id"))
 
         summary = {
             "scanned_pos":        po_qs.count(),
@@ -1505,10 +1508,12 @@ class ThreeWayMatchReportView(APIView):
         org_id = str(org.id)
 
         for po in po_qs.iterator():
-            inv = (Invoice.objects.filter(organization=org, po_number=po.po_number)
-                                  .only("id", "invoice_number", "total_amount",
-                                        "vendor_name", "currency", "po_number")
-                                  .first())
+            inv = None
+            if po.linked_invoice_id:
+                inv = (Invoice.objects.filter(organization=org, id=po.linked_invoice_id)
+                                      .only("id", "invoice_number", "total_amount",
+                                            "vendor_name", "currency")
+                                      .first())
             if inv is None:
                 summary["missing_invoice"] += 1
                 continue

@@ -2782,6 +2782,28 @@ def _weight_for_rule(rule_code):
 
 
 def _failed_rules_with_invoice_refs(top_failed_rules, validations):
+    """Enrich each failed rule with affected-invoice list AND severity/score.
+
+    score = severity_weight × failure_count, using the same weight scheme as
+    `core/services/doc_validators/doc_validators.SEVERITY_WEIGHTS`:
+        critical = 25, high = 15, medium = 8, low = 3.
+
+    severity is derived from the rule_code prefix when the catalog doesn't
+    resolve it. Both the bilingual `severity_label` and the numeric
+    `score` are exposed so the PDF / web report can render either form.
+    """
+    _SEV_WEIGHT = {"critical": 25, "high": 15, "medium": 8, "low": 3, "info": 1}
+    _SEV_AR = {"critical": "حرج", "high": "مرتفع", "medium": "متوسط",
+               "low": "منخفض", "info": "للعلم"}
+    # Heuristic prefix → severity. Tuned to match the doc_validators rule
+    # catalog used by the invoice audit pipeline. Unknown prefixes default
+    # to "medium" so the score is non-zero but doesn't dominate.
+    _PREFIX_SEV = {
+        "DUP": "critical", "VAT": "critical",
+        "ANO": "high",     "CTL": "high",     "DOC": "high",
+        "INV": "medium",   "HDR": "medium",
+    }
+
     top_codes = [r.get("rule_code") for r in (top_failed_rules or []) if r.get("rule_code")]
     top_codes_set = set(top_codes)
     buckets = {code: [] for code in top_codes}
@@ -2794,16 +2816,38 @@ def _failed_rules_with_invoice_refs(top_failed_rules, validations):
             if inv_no not in buckets[code]:
                 buckets[code].append(inv_no)
 
+    # Try to resolve severity from the canonical rule catalog when possible.
+    try:
+        from apps.rule_engine.catalog import resolve_rule_catalog_metadata
+        def _catalog_severity(c):
+            try:
+                return getattr(resolve_rule_catalog_metadata(c), "severity", "") or ""
+            except Exception:
+                return ""
+    except Exception:
+        def _catalog_severity(c):  # noqa: E306
+            return ""
+
     enriched = []
     for rule in (top_failed_rules or []):
-        code = rule.get("rule_code")
+        code = rule.get("rule_code") or ""
         invoice_numbers = buckets.get(code, [])
+        failure_count = int(rule.get("failures") or 0)
+        severity = (rule.get("severity")
+                    or _catalog_severity(code)
+                    or _PREFIX_SEV.get(code.split("-", 1)[0], "medium"))
+        severity = str(severity).lower()
+        weight = _SEV_WEIGHT.get(severity, _SEV_WEIGHT["medium"])
         enriched.append({
-            "rule_code": code,
-            "description": rule.get("description") or code,
-            "failure_count": int(rule.get("failures") or 0),
+            "rule_code":      code,
+            "description":    rule.get("description") or code,
+            "failure_count":  failure_count,
             "invoice_numbers": invoice_numbers,
-            "invoice_count": len(invoice_numbers),
+            "invoice_count":  len(invoice_numbers),
+            # New: severity + numeric score for the failed-rules table.
+            "severity":        severity,
+            "severity_label":  _SEV_AR.get(severity, severity),
+            "score":           weight * failure_count,
         })
     return enriched
 

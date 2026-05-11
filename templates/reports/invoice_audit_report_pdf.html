@@ -342,14 +342,18 @@
   </section>
 
   <section class="section">
-    <div class="section-title">{% trans "Most Failed Audit Rules" %}</div>
+    <div class="section-title">{% trans "Failed Audit Rules" %}</div>
+    <div class="section-kicker">
+      {% trans "Rule code, rule text, severity, and weighted score. Score = severity weight × failure count." %}
+    </div>
     <table class="data">
       <thead>
         <tr>
-          <th>{% trans "Rule Code" %}</th>
-          <th>{% trans "Description" %}</th>
-          <th>{% trans "Failure Count" %}</th>
-          <th>{% trans "Affected Invoices" %}</th>
+          <th width="14%">{% trans "Rule Code" %}</th>
+          <th width="44%">{% trans "Rule Text" %}</th>
+          <th width="12%">{% trans "Severity" %}</th>
+          <th width="10%">{% trans "Score" %}</th>
+          <th width="20%">{% trans "Affected Invoices" %}</th>
         </tr>
       </thead>
       <tbody>
@@ -357,22 +361,33 @@
           <tr>
             <td><span class="rule-chip">{{ rule.rule_code }}</span></td>
             <td>{{ rule.description }}</td>
-            <td><span class="badge badge-high">{{ rule.failure_count }}</span></td>
+            <td>
+              {% if rule.severity == 'critical' or rule.severity == 'high' %}
+                <span class="badge badge-high">{{ rule.severity_label|default:rule.severity }}</span>
+              {% elif rule.severity == 'medium' %}
+                <span class="badge badge-review">{{ rule.severity_label|default:rule.severity }}</span>
+              {% else %}
+                <span class="badge badge-safe">{{ rule.severity_label|default:rule.severity }}</span>
+              {% endif %}
+            </td>
+            <td><strong>{{ rule.score|default:0 }}</strong>
+              <div class="small">×{{ rule.failure_count|default:0 }}</div>
+            </td>
             <td>
               {% for inv in rule.invoice_numbers %}
-                {% if forloop.counter <= 8 %}
+                {% if forloop.counter <= 6 %}
                   <span class="pill">{{ inv }}</span>
                 {% endif %}
               {% empty %}
                 <span class="small">{% trans "No invoice numbers available." %}</span>
               {% endfor %}
-              {% if rule.invoice_numbers|length > 8 %}
-                <span class="small">{% blocktrans with extra=rule.invoice_numbers|length|add:'-8' %}+ {{ extra }} more{% endblocktrans %}</span>
+              {% if rule.invoice_numbers|length > 6 %}
+                <span class="small">{% blocktrans with extra=rule.invoice_numbers|length|add:'-6' %}+ {{ extra }} more{% endblocktrans %}</span>
               {% endif %}
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="4">{% trans "No failed-rule data available." %}</td></tr>
+          <tr><td colspan="5">{% trans "No failed-rule data available." %}</td></tr>
         {% endfor %}
       </tbody>
     </table>

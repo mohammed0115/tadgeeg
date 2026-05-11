@@ -734,16 +734,23 @@ cookie + session so subsequent pages render in the new language.
       // Pages that ship a richer toast component can listen for this event.
       window.dispatchEvent(new CustomEvent('notify', { detail: { message: msg, type } }));
       try {
+        // Container: fixed at top-center. left:50% + translateX(-50%) keeps
+        // the toast strip centred regardless of viewport width and stays
+        // correct under RTL because we use logical centering, not
+        // right/left anchoring. align-items:center centres each individual
+        // toast within the column when widths differ.
         const host = document.getElementById('toast-host') || (() => {
           const el = document.createElement('div');
           el.id = 'toast-host';
-          el.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;';
+          el.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;max-width:min(92vw,520px);width:auto;';
           document.body.appendChild(el);
           return el;
         })();
         const t = document.createElement('div');
         const colors = { success:'#10B981', error:'#EF4444', warning:'#F59E0B', info:'#003366' };
-        t.style.cssText = `background:${colors[type]||colors.info};color:white;padding:12px 18px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);font-size:13px;font-weight:600;max-width:360px;`;
+        // pointer-events:auto on the toast itself so the container can stay
+        // click-through while the visible toast still accepts hover/click.
+        t.style.cssText = `background:${colors[type]||colors.info};color:white;padding:12px 18px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);font-size:13px;font-weight:600;max-width:360px;text-align:center;pointer-events:auto;`;
         t.textContent = msg;
         host.appendChild(t);
         setTimeout(() => { t.style.transition = 'opacity .3s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 300); }, 3500);

@@ -230,3 +230,9 @@ from .typed_models_v2 import (  # noqa: F401  (re-exported for migrations + admi
     CustomerStatement,
     JournalEntry,
 )
+
+# Bulk-upload tracking — see apps/documents/bulk_upload_models.py.
+from .bulk_upload_models import (  # noqa: F401
+    BulkUploadJob,
+    BulkUploadItem,
+)

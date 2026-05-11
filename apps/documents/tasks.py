@@ -320,3 +320,145 @@ Tadgeeg Financial Auditing System
         logger.warning("[Task] Document %s not found, skipping email notification", document_id)
     except Exception as exc:
         logger.error("[Task] Unexpected error sending email for document %s: %s", document_id, exc)
+
+
+
+# ─── Bulk upload processing ────────────────────────────────────────────────────
+# Drives a BulkUploadJob through completion. Reuses the existing
+# process_zip / process_structured_upload pipeline from apps/invoices/services.
+# Persists per-row outcomes as BulkUploadItem so the API consumer can poll
+# progress and retry only the failed rows.
+
+@shared_task(
+    bind=True,
+    name="documents.process_bulk_upload_job",
+    max_retries=1,
+    default_retry_delay=60,
+    time_limit=3600,           # 1 h hard
+    soft_time_limit=3540,      # 59 min soft
+)
+def process_bulk_upload_job(self, job_id: str) -> dict:
+    """Process a queued BulkUploadJob end-to-end.
+
+    The job's source file lives at ``summary['stored_path']`` (set by the
+    view when it persisted the upload). We open it, route it through the
+    appropriate parser, and persist one BulkUploadItem per row / member.
+    """
+    from django.core.files.storage import default_storage
+    from django.utils import timezone as _tz
+    from apps.documents.models import BulkUploadJob, BulkUploadItem
+
+    try:
+        job = BulkUploadJob.objects.select_related("organization", "created_by").get(pk=job_id)
+    except BulkUploadJob.DoesNotExist:
+        logger.warning("[Bulk] Job %s missing on dispatch", job_id)
+        return {"job_id": job_id, "status": "missing"}
+
+    stored_path = (job.summary or {}).get("stored_path", "")
+    if not stored_path or not default_storage.exists(stored_path):
+        job.status = BulkUploadJob.Status.FAILED
+        job.summary = {**(job.summary or {}), "error": "source file not found"}
+        job.finished_at = _tz.now()
+        job.save(update_fields=["status", "summary", "finished_at"])
+        return {"job_id": job_id, "status": "failed", "error": "source missing"}
+
+    job.status = BulkUploadJob.Status.RUNNING
+    if not job.started_at:
+        job.started_at = _tz.now()
+    job.save(update_fields=["status", "started_at"])
+
+    org = job.organization
+    user = job.created_by
+    completed = failed = 0
+
+    try:
+        with default_storage.open(stored_path, "rb") as fh:
+            data = fh.read()
+        from io import BytesIO
+        file_like = BytesIO(data)
+        file_like.name = job.source_filename or "bulk.bin"
+
+        if job.source_format == BulkUploadJob.SourceFormat.ZIP:
+            from apps.invoices.services.processor import process_zip
+            results, errors, _async = process_zip(
+                file_like, org, user, batch=None, request=None, audit_session=None,
+            )
+            for idx, r in enumerate(results, start=1):
+                BulkUploadItem.objects.create(
+                    job=job, row_number=idx,
+                    source_path=r.get("filename") or "",
+                    document_type=job.document_type or "",
+                    status=BulkUploadItem.Status.SUCCEEDED,
+                    created_document_id=r.get("document_id") or r.get("id"),
+                    attempt_count=1,
+                )
+                completed += 1
+            for idx, e in enumerate(errors, start=len(results) + 1):
+                BulkUploadItem.objects.create(
+                    job=job, row_number=idx,
+                    source_path=e.get("filename") or "",
+                    document_type=job.document_type or "",
+                    status=BulkUploadItem.Status.FAILED,
+                    error_message=str(e.get("error") or "unknown"),
+                    attempt_count=1,
+                )
+                failed += 1
+        else:
+            # Structured (CSV/XLSX/JSONL) — drive through process_structured_upload.
+            from apps.invoices.services.processor import process_structured_upload
+            structured = process_structured_upload(
+                file_like, file_like.name, org, user,
+                batch=None, request=None, audit_session=None,
+            ) or {}
+            for idx, r in enumerate(structured.get("results", []) or [], start=1):
+                BulkUploadItem.objects.create(
+                    job=job, row_number=idx,
+                    source_path="",
+                    document_type=job.document_type or "",
+                    status=BulkUploadItem.Status.SUCCEEDED,
+                    created_document_id=r.get("document_id") or r.get("id"),
+                    attempt_count=1,
+                )
+                completed += 1
+            for idx, e in enumerate(structured.get("errors", []) or [], start=completed + 1):
+                BulkUploadItem.objects.create(
+                    job=job, row_number=idx,
+                    source_path="",
+                    document_type=job.document_type or "",
+                    status=BulkUploadItem.Status.FAILED,
+                    error_message=str(e.get("error") or "unknown"),
+                    attempt_count=1,
+                )
+                failed += 1
+
+        job.completed_items = completed
+        job.failed_items = failed
+        job.processed_items = completed + failed
+        job.total_items = job.processed_items
+        if failed == 0 and completed > 0:
+            job.status = BulkUploadJob.Status.COMPLETED
+        elif failed > 0 and completed > 0:
+            job.status = BulkUploadJob.Status.PARTIAL
+        elif failed > 0 and completed == 0:
+            job.status = BulkUploadJob.Status.FAILED
+        else:
+            job.status = BulkUploadJob.Status.COMPLETED
+        job.finished_at = _tz.now()
+        job.save(update_fields=[
+            "completed_items", "failed_items", "processed_items",
+            "total_items", "status", "finished_at",
+        ])
+        return {
+            "job_id":    str(job.id),
+            "status":    job.status,
+            "completed": completed,
+            "failed":    failed,
+        }
+
+    except Exception as exc:
+        logger.exception("[Bulk] Job %s failed: %s", job_id, exc)
+        job.status = BulkUploadJob.Status.FAILED
+        job.summary = {**(job.summary or {}), "error": str(exc)[:500]}
+        job.finished_at = _tz.now()
+        job.save(update_fields=["status", "summary", "finished_at"])
+        return {"job_id": str(job.id), "status": "failed", "error": str(exc)[:200]}

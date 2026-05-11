@@ -11,6 +11,10 @@ from .typed_views import (
     FixedAssetListView, FixedAssetDetailView,
     SalesReceiptListView, SalesReceiptDetailView,
 )
+from .bulk_upload_views import (
+    BulkUploadJobListCreateView, BulkUploadJobDetailView,
+    BulkUploadJobRetryFailedView,
+)
 
 urlpatterns = [
     path("",        views.DocumentListView.as_view(),    name="document-list"),
@@ -38,4 +42,13 @@ urlpatterns = [
     path("fixed-assets/<uuid:pk>/", FixedAssetDetailView.as_view(), name="fixed-asset-detail"),
     path("sales-receipts/",           SalesReceiptListView.as_view(),   name="sales-receipt-list"),
     path("sales-receipts/<uuid:pk>/", SalesReceiptDetailView.as_view(), name="sales-receipt-detail"),
+
+    # ── Bulk upload tracking ──────────────────────────────────────────────────
+    # POST   /api/v1/documents/bulk-upload-jobs/                — create job
+    # GET    /api/v1/documents/bulk-upload-jobs/                — list jobs
+    # GET    /api/v1/documents/bulk-upload-jobs/<id>/           — detail + items
+    # POST   /api/v1/documents/bulk-upload-jobs/<id>/retry-failed/ — re-run failures
+    path("bulk-upload-jobs/",                BulkUploadJobListCreateView.as_view(),  name="bulk-upload-job-list-create"),
+    path("bulk-upload-jobs/<uuid:pk>/",      BulkUploadJobDetailView.as_view(),      name="bulk-upload-job-detail"),
+    path("bulk-upload-jobs/<uuid:pk>/retry-failed/", BulkUploadJobRetryFailedView.as_view(), name="bulk-upload-job-retry"),
 ]

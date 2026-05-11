@@ -1164,3 +1164,195 @@ class ReportEmailView(APIView):
         except Exception as e:
             logger.exception("Report email failed for report %s", pk)
             return Response({"error": _("Failed to send email. Check SMTP settings.")}, status=500)
+
+
+# ─── Async PDF rendering ──────────────────────────────────────────────────────
+# The sync ReportPDFView caches its output, so repeat downloads are free —
+# but the first render of a 30-60 page audit report can take 5-15s and
+# exceed the gunicorn worker timeout. These two views give clients a way to
+# pre-warm the PDF cache via Celery and then download from the existing
+# sync endpoint with an instant cache hit.
+
+class ReportPDFAsyncView(APIView):
+    """POST: enqueue async PDF rendering. Returns task_id for polling."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Reports"], summary="Queue async PDF render for a report")
+    def post(self, request, pk):
+        try:
+            report = Report.objects.get(pk=pk, organization=request.user.organization)
+        except Report.DoesNotExist:
+            return Response({"error": _("Report not found.")}, status=404)
+
+        from django.utils.translation import get_language
+        from apps.reports.tasks import render_report_pdf
+
+        language = (get_language() or "ar")[:2]
+        try:
+            task = render_report_pdf.delay(report_id=str(report.id), language=language)
+        except Exception as exc:
+            logger.warning("Could not enqueue PDF render task: %s", exc)
+            return Response({
+                "error": _("Async rendering backend unavailable. "
+                           "Download directly via /pdf/ instead."),
+            }, status=503)
+
+        return Response({
+            "task_id":      task.id,
+            "status":       "queued",
+            "report_id":    str(report.id),
+            "language":     language,
+            "poll_url":     f"/api/v1/reports/pdf-jobs/{task.id}/",
+            "download_url": f"/api/v1/reports/{report.id}/pdf/",
+        }, status=202)
+
+
+class ReportPDFStatusView(APIView):
+    """GET: poll status of an async PDF render task."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Reports"], summary="Poll async PDF render status")
+    def get(self, request, task_id: str):
+        from celery.result import AsyncResult
+        from finai_backend.celery import app as celery_app
+
+        result = AsyncResult(task_id, app=celery_app)
+        state = result.state  # PENDING, STARTED, RETRY, FAILURE, SUCCESS
+
+        payload = {
+            "task_id": task_id,
+            "state":   state,
+        }
+        if state == "SUCCESS":
+            info = result.result or {}
+            payload["status"] = info.get("status", "done")
+            payload["report_id"] = info.get("report_id")
+            payload["download_url"] = (
+                f"/api/v1/reports/{info.get('report_id')}/pdf/"
+                if info.get("status") == "done" else None
+            )
+            return Response(payload)
+        if state in ("FAILURE", "REVOKED"):
+            payload["status"] = "failed"
+            payload["error"] = str(result.result) if result.result else "unknown"
+            return Response(payload, status=500)
+        # PENDING / STARTED / RETRY — caller should keep polling
+        payload["status"] = state.lower()
+        return Response(payload, status=202)
+
+
+# ─── Three-Way Match Report ────────────────────────────────────────────────────
+# The ThreeWayMatchService at apps/rule_engine/services/three_way_match.py has
+# been doing all the work; what was missing was an HTTP endpoint that runs it
+# across an organization and returns a digest. The spec lists this as a P0
+# report. JSON-only for now — PDF export can follow the same template pattern
+# as the other report types when needed.
+
+class ThreeWayMatchReportView(APIView):
+    """Generate a 3-way match (PO ↔ Invoice ↔ GRN) report for the current org.
+
+    For every PO that has both a matching Invoice and matching GRN (linked by
+    po_number), runs the match service and aggregates a summary. Returns:
+
+      {
+        "summary": {
+          "scanned_pos":          int,
+          "triplets_evaluated":   int,
+          "matched":              int,
+          "partial":              int,
+          "mismatched":           int,
+          "missing_invoice":      int,
+          "missing_grn":          int,
+        },
+        "discrepancies": [ ... up to 50 worst rows ... ],
+      }
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Reports"], summary="Three-way match (PO ↔ Invoice ↔ GRN) report")
+    def get(self, request):
+        from apps.documents.typed_models import PurchaseOrder, GoodsReceiptNote
+        from apps.invoices.models import Invoice
+        from apps.rule_engine.services.three_way_match import (
+            ThreeWayMatchService, MatchStatus,
+        )
+
+        org = request.user.organization
+        # Tenant-scoped queryset of POs that carry a po_number we can match on.
+        po_qs = (PurchaseOrder.objects.filter(organization=org)
+                                       .exclude(po_number="")
+                                       .only("id", "po_number"))
+
+        summary = {
+            "scanned_pos":        po_qs.count(),
+            "triplets_evaluated": 0,
+            "matched":            0,
+            "partial":            0,
+            "mismatched":         0,
+            "missing_invoice":    0,
+            "missing_grn":        0,
+        }
+        worst: list[dict] = []
+        svc = ThreeWayMatchService()
+        org_id = str(org.id)
+
+        for po in po_qs.iterator():
+            inv = (Invoice.objects.filter(organization=org, po_number=po.po_number)
+                                  .only("id", "invoice_number", "total_amount",
+                                        "vendor_name", "currency", "po_number")
+                                  .first())
+            if inv is None:
+                summary["missing_invoice"] += 1
+                continue
+            grn = (GoodsReceiptNote.objects.filter(organization=org,
+                                                   linked_po_number=po.po_number)
+                                            .only("id", "grn_number", "vendor_name")
+                                            .first())
+            if grn is None:
+                summary["missing_grn"] += 1
+                continue
+
+            try:
+                result = svc.match(po=po, invoice=inv, grn=grn, organization_id=org_id)
+            except Exception as exc:
+                logger.warning("3WM failed po=%s: %s", po.po_number, exc)
+                continue
+
+            summary["triplets_evaluated"] += 1
+            status_str = result.status.value if hasattr(result.status, "value") else str(result.status)
+            if status_str in ("match", "matched", MatchStatus.MATCH.value if hasattr(MatchStatus, "MATCH") else "match"):
+                summary["matched"] += 1
+            elif status_str in ("partial", "partial_match", MatchStatus.PARTIAL.value if hasattr(MatchStatus, "PARTIAL") else "partial"):
+                summary["partial"] += 1
+                worst.append(self._discrepancy_row(result, "partial"))
+            else:
+                summary["mismatched"] += 1
+                worst.append(self._discrepancy_row(result, status_str))
+
+        # Sort worst by match_score ascending (lowest first), trim to 50.
+        worst.sort(key=lambda r: r.get("match_score", 0))
+        return Response({
+            "summary":       summary,
+            "discrepancies": worst[:50],
+        })
+
+    @staticmethod
+    def _discrepancy_row(result, status_str: str) -> dict:
+        return {
+            "status":         status_str,
+            "match_score":    float(getattr(result, "match_score", 0) or 0),
+            "po_id":          str(getattr(result, "po_id", "") or ""),
+            "po_number":      getattr(result, "po_number", "") or "",
+            "invoice_id":     str(getattr(result, "invoice_id", "") or ""),
+            "invoice_number": getattr(result, "invoice_number", "") or "",
+            "grn_id":         str(getattr(result, "grn_id", "") or ""),
+            "grn_number":     getattr(result, "grn_number", "") or "",
+            "vendor_name":    getattr(result, "vendor_name", "") or "",
+            "currency":       getattr(result, "currency", "") or "",
+            "discrepancies":  list(getattr(result, "discrepancies", []) or [])[:10],
+            "explanation":    getattr(result, "explanation", "") or "",
+            "explanation_ar": getattr(result, "explanation_ar", "") or "",
+        }

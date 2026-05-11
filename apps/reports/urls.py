@@ -15,6 +15,15 @@ urlpatterns = [
     path("invoices/", views.InvoiceAuditReportView.as_view(), name="invoice-audit-report"),
     path("invoices/rules-summary/", views.ValidationRulesSummaryReportView.as_view(), name="rules-summary-report"),
 
+    # 3-way match (PO ↔ Invoice ↔ GRN) — service exists at
+    # apps/rule_engine/services/three_way_match.py; this is the HTTP wrapper.
+    path("three-way-match/", views.ThreeWayMatchReportView.as_view(), name="three-way-match-report"),
+
+    # Async PDF: POST queues a render task, GET polls status. Once "done",
+    # client downloads from the existing sync /pdf/ endpoint (warm cache).
+    path("<uuid:pk>/pdf/async/", views.ReportPDFAsyncView.as_view(), name="report-pdf-async"),
+    path("pdf-jobs/<str:task_id>/", views.ReportPDFStatusView.as_view(), name="report-pdf-status"),
+
     # ── Document Report Endpoints (v2 — all 8 document types) ─────────────────
     # POST: generate a report for a single document
     path("document/", dv.DocumentReportGenerateView.as_view(), name="document-report-generate"),

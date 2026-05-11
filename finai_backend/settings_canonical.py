@@ -166,6 +166,11 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "core.utils.rate_limit.OrgRateLimitMiddleware",
+    # IdempotencyMiddleware sits AFTER auth (it scopes by request.user.organization)
+    # and AFTER rate-limit (so a replay still pays its quota cost — replays are
+    # cheap but not free). It only acts on /api/ writes carrying an
+    # Idempotency-Key header.
+    "core.utils.idempotency.IdempotencyMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "core.utils.middleware.AuditTrailMiddleware",

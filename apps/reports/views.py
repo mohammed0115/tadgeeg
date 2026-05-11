@@ -3,6 +3,7 @@
 import logging
 import json
 from datetime import date
+from urllib.parse import quote
 from django.core.serializers.json import DjangoJSONEncoder
 from django.http import HttpResponse, JsonResponse
 from django.utils.translation import gettext as _
@@ -23,6 +24,25 @@ from apps.reports.services.report_data_service import ReportDataService
 from .models import Report
 
 logger = logging.getLogger("finai")
+
+
+def _attachment_disposition(filename: str) -> str:
+    """Build an HTTP-safe Content-Disposition value for an arbitrary filename.
+
+    Django wraps non-ASCII header values as RFC 2047 encoded-words
+    (``=?utf-8?b?...?=``), which is the email-header format and is NOT
+    parsed by browsers — they end up seeing the literal encoded-word as
+    the entire header value, never recognise ``attachment;`` and so do
+    not trigger a download. RFC 5987 / 6266 is the HTTP form: provide
+    an ASCII ``filename="..."`` fallback plus ``filename*=UTF-8''<pct>``.
+    """
+    ascii_fallback = filename.encode("ascii", "ignore").decode("ascii").strip()
+    # If stripping non-ASCII left only punctuation/extension (e.g. "__.pdf"),
+    # fall back to a generic "report.<ext>" so legacy clients get a usable name.
+    if not ascii_fallback or not any(ch.isalnum() for ch in ascii_fallback.rsplit(".", 1)[0]):
+        ext = filename.rsplit(".", 1)[1] if "." in filename else "bin"
+        ascii_fallback = f"report.{ext}"
+    return f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{quote(filename)}"
 
 
 def _render_report_pdf_bytes(html_str: str, base_url: str) -> bytes:
@@ -893,7 +913,7 @@ class ReportExportView(APIView):
             json.dumps(payload, cls=DjangoJSONEncoder, ensure_ascii=False, indent=2),
             content_type="application/json; charset=utf-8",
         )
-        response["Content-Disposition"] = f'attachment; filename="tadgeeg-ai-export-{org.id}.json"'
+        response["Content-Disposition"] = _attachment_disposition(f"tadgeeg-ai-export-{org.id}.json")
         return response
 
 
@@ -929,7 +949,7 @@ class ReportPDFView(APIView):
             )
             response = HttpResponse(pdf_bytes, content_type="application/pdf")
             response["Content-Length"] = str(len(pdf_bytes))
-            response["Content-Disposition"] = f'attachment; filename="{safe_title}.pdf"'
+            response["Content-Disposition"] = _attachment_disposition(f"{safe_title}.pdf")
             return response
         except (ModuleNotFoundError, OSError) as exc:
             # ModuleNotFoundError = WeasyPrint missing (server misconfigured).
@@ -951,7 +971,7 @@ class ReportPDFView(APIView):
 
         # HTML fallback: browser can use Ctrl+P → Save as PDF
         response = HttpResponse(html_str, content_type="text/html; charset=utf-8")
-        response["Content-Disposition"] = f'attachment; filename="{safe_title}.html"'
+        response["Content-Disposition"] = _attachment_disposition(f"{safe_title}.html")
         return response
 
 
@@ -1119,7 +1139,7 @@ class ReportExcelExportView(APIView):
             buf.getvalue(),
             content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-        response["Content-Disposition"] = f'attachment; filename="{safe_title}.xlsx"'
+        response["Content-Disposition"] = _attachment_disposition(f"{safe_title}.xlsx")
         return response
 
 

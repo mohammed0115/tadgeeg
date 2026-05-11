@@ -259,11 +259,11 @@ class InvoiceAuditReportPDFView(_TenantReportMixin, APIView):
         )
 
         try:
-            from apps.reports.views import _render_report_pdf_bytes
+            from apps.reports.views import _render_report_pdf_bytes, _attachment_disposition
             pdf_bytes = _render_report_pdf_bytes(html_str, request.build_absolute_uri("/"))
             response  = HttpResponse(pdf_bytes, content_type="application/pdf")
             safe_title = (report.title or "invoice_audit").replace(" ", "_")[:60]
-            response["Content-Disposition"] = f'attachment; filename="{safe_title}.pdf"'
+            response["Content-Disposition"] = _attachment_disposition(f"{safe_title}.pdf")
             return response
         except Exception as exc:
             logger.error("PDF generation failed for report %s: %s", pk, exc)

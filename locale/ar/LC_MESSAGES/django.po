@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tadgeeg\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-06 19:53+0300\n"
+"POT-Creation-Date: 2026-05-11 17:51+0300\n"
 "PO-Revision-Date: 2026-03-18 00:00+0300\n"
 "Last-Translator: Codex\n"
 "Language-Team: Arabic\n"
@@ -20,7 +20,7 @@ msgid "Invoice Header"
 msgstr "رأس الفاتورة"
 
 #: apps/audit/views.py:30 apps/reports/services/findings_service.py:103
-#: templates/dashboard/index.html:254 templates/invoices/detail.html:831
+#: templates/dashboard/index.html:292 templates/invoices/detail.html:831
 #: templates/reports/index.html:140
 #: templates/reports/invoice_audit_report_pdf.html:229
 #: templates/reports/invoice_audit_report_v2.html:197
@@ -28,7 +28,7 @@ msgstr "رأس الفاتورة"
 msgid "Duplicates"
 msgstr "التكرار"
 
-#: apps/audit/views.py:31
+#: apps/audit/views.py:31 templates/dashboard/index.html:168
 #: templates/documents/detail/purchase_order_detail.html:262
 #: templates/invoices/batch_detail.html:108 templates/phase2/audits.html:396
 #: templates/reports/invoice_audit_report_v2.html:465
@@ -49,7 +49,7 @@ msgid "Controls"
 msgstr "الرقابة"
 
 #: apps/audit/views.py:34 apps/reports/services/findings_service.py:287
-#: templates/cms_admin/media.html:224 templates/dashboard/index.html:197
+#: templates/cms_admin/media.html:224 templates/dashboard/index.html:235
 #: templates/documents/bank_statements.html:85
 #: templates/documents/expense_reports.html:85
 #: templates/documents/fixed_assets.html:85 templates/documents/payroll.html:85
@@ -82,9 +82,9 @@ msgstr "المستخدم المعيّن غير موجود."
 msgid "Audit session not found."
 msgstr "جلسة التدقيق غير موجودة."
 
-#: apps/authentication/forms.py:16 templates/auth/login.html:544
+#: apps/authentication/forms.py:16 templates/auth/login.html:551
 #: templates/auth/otp_email.html:36 templates/auth/otp_verify.html:435
-#: templates/auth/portal.html:652
+#: templates/auth/portal.html:658
 msgid "Verification Code"
 msgstr "رمز التحقق"
 
@@ -96,154 +96,154 @@ msgstr "يرجى إدخال رمز تحقق مكوّن من 6 أرقام."
 msgid "No active account was found with this email address."
 msgstr "لم يتم العثور على حساب نشط بهذا البريد الإلكتروني."
 
-#: apps/authentication/models.py:91
+#: apps/authentication/models.py:93
 msgid "Email is required"
 msgstr "البريد الإلكتروني مطلوب"
 
-#: apps/authentication/models.py:115 templates/settings/index.html:387
+#: apps/authentication/models.py:117 templates/settings/index.html:387
 msgid "System Administrator"
 msgstr "مسؤول النظام"
 
-#: apps/authentication/models.py:116 templates/settings/index.html:383
+#: apps/authentication/models.py:118 templates/settings/index.html:383
 #: templates/users/index.html:433 templates/users/index.html:460
 msgid "Chief Audit Officer"
 msgstr "كبير مدققين"
 
-#: apps/authentication/models.py:117 templates/settings/index.html:382
+#: apps/authentication/models.py:119 templates/settings/index.html:382
 #: templates/users/index.html:434 templates/users/index.html:461
 msgid "Senior Auditor"
 msgstr "مدقق أول"
 
-#: apps/authentication/models.py:118 templates/settings/index.html:381
+#: apps/authentication/models.py:120 templates/settings/index.html:381
 msgid "Junior Auditor"
 msgstr "مدقق مبتدئ"
 
-#: apps/authentication/models.py:119 templates/settings/index.html:384
+#: apps/authentication/models.py:121 templates/settings/index.html:384
 #: templates/users/index.html:436 templates/users/index.html:463
 msgid "Compliance Officer"
 msgstr "مسؤول الامتثال"
 
-#: apps/authentication/models.py:120 templates/settings/index.html:385
+#: apps/authentication/models.py:122 templates/settings/index.html:385
 #: templates/users/index.html:437 templates/users/index.html:464
 msgid "Finance Manager"
 msgstr "مدير مالي"
 
-#: apps/authentication/models.py:121 templates/settings/index.html:386
+#: apps/authentication/models.py:123 templates/settings/index.html:386
 #: templates/users/index.html:438 templates/users/index.html:465
 msgid "External Auditor"
 msgstr "مدقق خارجي"
 
-#: apps/authentication/models.py:261 templates/landing/index.html:1446
+#: apps/authentication/models.py:275 templates/landing/index.html:1479
 #: templates/vendor_dashboard/settings.html:79
 msgid "Saudi Arabia"
 msgstr "المملكة العربية السعودية"
 
-#: apps/authentication/models.py:262
+#: apps/authentication/models.py:276
 #: templates/vendor_dashboard/settings.html:80
 msgid "United Arab Emirates"
 msgstr "الإمارات العربية المتحدة"
 
-#: apps/authentication/models.py:263 templates/landing/index.html:1454
+#: apps/authentication/models.py:277 templates/landing/index.html:1487
 #: templates/vendor_dashboard/settings.html:82
 msgid "Bahrain"
 msgstr "البحرين"
 
-#: apps/authentication/models.py:264 templates/landing/index.html:1462
+#: apps/authentication/models.py:278 templates/landing/index.html:1495
 #: templates/vendor_dashboard/settings.html:81
 msgid "Kuwait"
 msgstr "الكويت"
 
-#: apps/authentication/models.py:265 templates/landing/index.html:1466
+#: apps/authentication/models.py:279 templates/landing/index.html:1499
 #: templates/vendor_dashboard/settings.html:84
 msgid "Oman"
 msgstr "عُمان"
 
-#: apps/authentication/models.py:266 templates/landing/index.html:1458
+#: apps/authentication/models.py:280 templates/landing/index.html:1491
 #: templates/vendor_dashboard/settings.html:83
 msgid "Qatar"
 msgstr "قطر"
 
-#: apps/authentication/models.py:269
+#: apps/authentication/models.py:283
 msgid "Saudi Riyal"
 msgstr "ريال سعودي"
 
-#: apps/authentication/models.py:270
+#: apps/authentication/models.py:284
 msgid "UAE Dirham"
 msgstr "درهم إماراتي"
 
-#: apps/authentication/models.py:271
+#: apps/authentication/models.py:285
 msgid "Bahraini Dinar"
 msgstr "دينار بحريني"
 
-#: apps/authentication/models.py:272
+#: apps/authentication/models.py:286
 msgid "Kuwaiti Dinar"
 msgstr "دينار كويتي"
 
-#: apps/authentication/models.py:273
+#: apps/authentication/models.py:287
 msgid "Omani Rial"
 msgstr "ريال عُماني"
 
-#: apps/authentication/models.py:274
+#: apps/authentication/models.py:288
 msgid "Qatari Riyal"
 msgstr "ريال قطري"
 
-#: apps/authentication/models.py:282
+#: apps/authentication/models.py:296
 #: templates/vendor_dashboard/settings.html:57
 msgid "Commercial Registration Number"
 msgstr "رقم السجل التجاري"
 
-#: apps/authentication/models.py:284
+#: apps/authentication/models.py:298
 msgid "Month (1-12)"
 msgstr "الشهر (1-12)"
 
-#: apps/authentication/models.py:329
+#: apps/authentication/models.py:343
 msgid "User Login"
 msgstr "تسجيل دخول المستخدم"
 
-#: apps/authentication/models.py:330
+#: apps/authentication/models.py:344
 msgid "User Logout"
 msgstr "تسجيل خروج المستخدم"
 
-#: apps/authentication/models.py:331
+#: apps/authentication/models.py:345
 msgid "Failed Login"
 msgstr "محاولة تسجيل دخول فاشلة"
 
 # --- Auditing partials ---
-#: apps/authentication/models.py:332
+#: apps/authentication/models.py:346
 msgid "Document Upload"
 msgstr "رفع مستند"
 
-#: apps/authentication/models.py:333
+#: apps/authentication/models.py:347
 msgid "Document Processed"
 msgstr "تمت معالجة المستند"
 
-#: apps/authentication/models.py:334
+#: apps/authentication/models.py:348
 msgid "Transaction Created"
 msgstr "تم إنشاء معاملة"
 
-#: apps/authentication/models.py:335
+#: apps/authentication/models.py:349
 msgid "Transaction Updated"
 msgstr "تم تحديث المعاملة"
 
-#: apps/authentication/models.py:336
+#: apps/authentication/models.py:350
 msgid "Anomaly Detected"
 msgstr "تم اكتشاف شذوذ"
 
-#: apps/authentication/models.py:337
+#: apps/authentication/models.py:351
 msgid "Audit Case Created"
 msgstr "تم إنشاء حالة تدقيق"
 
-#: apps/authentication/models.py:338 templates/phase2/activity.html:35
+#: apps/authentication/models.py:352 templates/phase2/activity.html:35
 #: templates/phase2/activity.html:386
 msgid "Report Generated"
 msgstr "تم إنشاء التقرير"
 
-#: apps/authentication/models.py:339
+#: apps/authentication/models.py:353
 msgid "User Created"
 msgstr "تم إنشاء المستخدم"
 
-#: apps/authentication/serializers.py:90 apps/authentication/serializers.py:160
-#: apps/frontend/page_views.py:338 templates/auth/portal.html:823
+#: apps/authentication/serializers.py:90 apps/authentication/serializers.py:168
+#: apps/frontend/page_views.py:338 templates/auth/portal.html:816
 msgid "Passwords do not match."
 msgstr "كلمتا المرور غير متطابقتين."
 
@@ -255,15 +255,15 @@ msgstr "لا يوجد حساب بهذا البريد الإلكتروني."
 msgid "Account is temporarily locked. Please try again later."
 msgstr "الحساب مقفل مؤقتاً. يرجى المحاولة لاحقاً."
 
-#: apps/authentication/serializers.py:138
+#: apps/authentication/serializers.py:145
 msgid "Invalid credentials."
 msgstr "بيانات اعتماد غير صحيحة."
 
-#: apps/authentication/serializers.py:141
+#: apps/authentication/serializers.py:148
 msgid "Account is inactive."
 msgstr "الحساب غير نشط."
 
-#: apps/authentication/serializers.py:166
+#: apps/authentication/serializers.py:174
 msgid "Current password is incorrect."
 msgstr "كلمة المرور الحالية غير صحيحة."
 
@@ -343,203 +343,209 @@ msgid ""
 "The verification code is incorrect. You have %(remaining)s attempts left."
 msgstr "رمز التحقق غير صحيح. تبقّى لديك %(remaining)s محاولات."
 
-#: apps/authentication/views.py:81
+#: apps/authentication/views.py:82
 msgid "A 6-digit verification code has been sent to your email address."
 msgstr "تم إرسال رمز تحقق مكوّن من 6 أرقام إلى بريدك الإلكتروني."
 
-#: apps/authentication/views.py:83
+#: apps/authentication/views.py:84
 msgid ""
 "A recent verification code has already been sent. Check your email and enter "
 "the code."
 msgstr "تم إرسال رمز تحقق حديث مسبقاً. تحقّق من بريدك وأدخل الرمز."
 
-#: apps/authentication/views.py:112
+#: apps/authentication/views.py:113
 msgid "Please enter your 6-digit authenticator code to complete login"
 msgstr "يرجى إدخال رمز المصادقة المكوّن من 6 أرقام لإكمال تسجيل الدخول"
 
-#: apps/authentication/views.py:187
+#: apps/authentication/views.py:188
 msgid "Too many login attempts. Try again in 15 minutes."
 msgstr "تجاوزت الحد الأقصى لمحاولات تسجيل الدخول. حاول مرة أخرى بعد 15 دقيقة."
 
-#: apps/authentication/views.py:247
+#: apps/authentication/views.py:248
 msgid "Logged out successfully."
 msgstr "تم تسجيل الخروج بنجاح."
 
-#: apps/authentication/views.py:277 templates/settings/index.html:681
+#: apps/authentication/views.py:278 templates/settings/index.html:681
 #: templates/users/index.html:424
 msgid "Password changed successfully."
 msgstr "تم تغيير كلمة المرور بنجاح"
 
-#: apps/authentication/views.py:318
+#: apps/authentication/views.py:319
 msgid ""
 "Your account is not linked to an organization. Contact your platform "
 "administrator to fix this."
 msgstr "حسابك غير مرتبط بمؤسسة. تواصل مع مسؤول المنصّة لمعالجة ذلك."
 
-#: apps/authentication/views.py:323
+#: apps/authentication/views.py:324
 msgid "You can only create users inside your own organization."
 msgstr "يمكنك إنشاء مستخدمين داخل مؤسستك فقط."
 
-#: apps/authentication/views.py:358 templates/auth/portal.html:819
+#: apps/authentication/views.py:359 templates/auth/portal.html:812
 msgid "Password must be at least 8 characters long."
 msgstr "يجب أن تكون كلمة المرور 8 أحرف على الأقل."
 
-#: apps/authentication/views.py:363
+#: apps/authentication/views.py:364
 msgid "User not found."
 msgstr "المستخدم غير موجود."
 
-#: apps/authentication/views.py:368
+#: apps/authentication/views.py:369
 msgid "You do not have permission to perform this action."
 msgstr "ليس لديك صلاحية لتنفيذ هذا الإجراء."
 
-#: apps/authentication/views.py:378
+#: apps/authentication/views.py:379
 msgid "Password updated successfully."
 msgstr "تم تغيير كلمة المرور بنجاح."
 
-#: apps/authentication/views.py:602 apps/authentication/views.py:614
-#: apps/authentication/views.py:625
+#: apps/authentication/views.py:603 apps/authentication/views.py:615
+#: apps/authentication/views.py:626
 msgid "Invalid Google token."
 msgstr "رمز Google غير صالح."
 
-#: apps/authentication/views.py:618
+#: apps/authentication/views.py:619
 msgid "Google account email has not been verified."
 msgstr "لم يتم التحقق من بريد حساب Google."
 
-#: apps/authentication/views.py:649
+#: apps/authentication/views.py:650
 msgid "This account is inactive."
 msgstr "هذا الحساب غير نشط."
 
-#: apps/authentication/views.py:693
+#: apps/authentication/views.py:694
 msgid ""
 "There is no pending verification flow. Sign in or create an account first."
 msgstr "لا يوجد تدفّق تحقق معلّق. سجّل الدخول أو أنشئ حساباً أولاً."
 
-#: apps/authentication/views.py:712
+#: apps/authentication/views.py:713
 msgid "Email verified successfully."
 msgstr "تم التحقّق من البريد الإلكتروني بنجاح."
 
-#: apps/authentication/views.py:727
+#: apps/authentication/views.py:728
 msgid "There is no pending verification flow to resend the code."
 msgstr "لا يوجد تدفّق تحقق معلّق لإعادة إرسال الرمز."
 
-#: apps/authentication/views.py:746 apps/frontend/page_views.py:1006
+#: apps/authentication/views.py:747 apps/frontend/page_views.py:1006
 msgid "A new verification code has been sent to your email address."
 msgstr "تم إرسال رمز تحقق جديد إلى بريدك الإلكتروني."
 
-#: apps/authentication/views.py:808
+#: apps/authentication/views.py:809
 msgid "pyotp / qrcode is not available on the server."
 msgstr "مكتبتا pyotp / qrcode غير متاحتين على الخادم."
 
-#: apps/authentication/views.py:838
+#: apps/authentication/views.py:839
 msgid "pyotp is not available on the server."
 msgstr "مكتبة pyotp غير متاحة على الخادم."
 
-#: apps/authentication/views.py:844
+#: apps/authentication/views.py:845
 msgid "Code and secret are required."
 msgstr "الرمز والمفتاح السرّي مطلوبان."
 
-#: apps/authentication/views.py:848 apps/authentication/views.py:886
+#: apps/authentication/views.py:849 apps/authentication/views.py:887
 msgid "The code is invalid or expired."
 msgstr "الرمز غير صحيح أو منتهي الصلاحية."
 
-#: apps/authentication/views.py:859
+#: apps/authentication/views.py:860
 msgid "Two-factor authentication has been enabled successfully."
 msgstr "تم تفعيل المصادقة الثنائية بنجاح."
 
-#: apps/authentication/views.py:874 apps/authentication/views.py:980
+#: apps/authentication/views.py:875 apps/authentication/views.py:1014
 msgid "pyotp is not available."
 msgstr "مكتبة pyotp غير متاحة."
 
-#: apps/authentication/views.py:878
+#: apps/authentication/views.py:879
 msgid "Two-factor authentication is not enabled for this account."
 msgstr "المصادقة الثنائية غير مُفعَّلة لهذا الحساب."
 
-#: apps/authentication/views.py:882
+#: apps/authentication/views.py:883
 msgid "The code is required."
 msgstr "الرمز مطلوب."
 
-#: apps/authentication/views.py:888
+#: apps/authentication/views.py:889
 msgid "Identity verified."
 msgstr "تم التحقّق من الهوية."
 
-#: apps/authentication/views.py:914
+#: apps/authentication/views.py:915
 msgid "TOTP service unavailable"
 msgstr "خدمة TOTP غير متوفّرة"
 
-#: apps/authentication/views.py:921
+#: apps/authentication/views.py:922
 msgid "Temporary token and TOTP code are required"
 msgstr "الرمز المؤقّت ورمز TOTP مطلوبان"
 
-#: apps/authentication/views.py:932 apps/frontend/page_views.py:1051
+#: apps/authentication/views.py:933 apps/frontend/page_views.py:1051
 msgid "Invalid or expired temporary token"
 msgstr "رمز مؤقّت غير صالح أو منتهي الصلاحية"
 
-#: apps/authentication/views.py:939 apps/frontend/page_views.py:1058
+#: apps/authentication/views.py:944
+#, fuzzy
+#| msgid "Account is temporarily locked. Please try again later."
+msgid "Account is temporarily locked. Try again later."
+msgstr "الحساب مقفل مؤقتاً. يرجى المحاولة لاحقاً."
+
+#: apps/authentication/views.py:951 apps/frontend/page_views.py:1058
 msgid "MFA not enabled for this user"
 msgstr "المصادقة متعدّدة العوامل غير مُفعَّلة لهذا المستخدم"
 
-#: apps/authentication/views.py:952 apps/frontend/page_views.py:1071
+#: apps/authentication/views.py:984 apps/frontend/page_views.py:1071
 msgid "Invalid or expired TOTP code"
 msgstr "رمز TOTP غير صالح أو منتهي الصلاحية"
 
-#: apps/authentication/views.py:984
+#: apps/authentication/views.py:1018
 msgid "Two-factor authentication is not enabled."
 msgstr "المصادقة الثنائية غير مُفعَّلة."
 
-#: apps/authentication/views.py:988
+#: apps/authentication/views.py:1022
 msgid "The code is required to verify before disabling."
 msgstr "الرمز مطلوب للتحقّق قبل إلغاء التفعيل."
 
-#: apps/authentication/views.py:992
+#: apps/authentication/views.py:1026
 msgid "The code is incorrect."
 msgstr "الرمز غير صحيح."
 
-#: apps/authentication/views.py:1001
+#: apps/authentication/views.py:1035
 msgid "Two-factor authentication has been disabled."
 msgstr "تم إلغاء تفعيل المصادقة الثنائية."
 
 # --- Document type labels ---
-#: apps/documents/typed_models.py:763 apps/frontend/page_views.py:2770
+#: apps/documents/typed_models.py:767 apps/frontend/page_views.py:3018
 #: apps/reports/services/findings_service.py:109
 #: templates/auditing/upload.html:609 templates/documents/upload.html:112
 #: templates/transactions.html:45
 msgid "Purchase Order"
 msgstr "أمر الشراء"
 
-#: apps/documents/typed_models.py:764 apps/frontend/page_views.py:2771
+#: apps/documents/typed_models.py:768 apps/frontend/page_views.py:3019
 #: apps/reports/services/findings_service.py:110
 #: templates/auditing/upload.html:616 templates/documents/upload.html:117
 msgid "Bank Statement"
 msgstr "كشف الحساب البنكي"
 
-#: apps/documents/typed_models.py:765 apps/frontend/page_views.py:2772
+#: apps/documents/typed_models.py:769 apps/frontend/page_views.py:3020
 msgid "Payroll Sheet"
 msgstr "كشف الرواتب"
 
-#: apps/documents/typed_models.py:766 apps/frontend/page_views.py:2773
+#: apps/documents/typed_models.py:770 apps/frontend/page_views.py:3021
 #: apps/reports/services/findings_service.py:112
 #: templates/documents/upload.html:131
 msgid "Expense Report"
 msgstr "تقرير المصروفات"
 
-#: apps/documents/typed_models.py:767 apps/frontend/page_views.py:2774
-#: apps/frontend/page_views.py:2775
+#: apps/documents/typed_models.py:771 apps/frontend/page_views.py:3022
+#: apps/frontend/page_views.py:3023
 #: apps/reports/services/findings_service.py:113
 #: templates/documents/upload.html:126
 msgid "VAT Return"
 msgstr "الإقرار الضريبي"
 
-#: apps/documents/typed_models.py:768
+#: apps/documents/typed_models.py:772
 msgid "Fixed Asset Ledger"
 msgstr "سجل الأصول الثابتة"
 
-#: apps/documents/typed_models.py:769 apps/frontend/page_views.py:2777
+#: apps/documents/typed_models.py:773 apps/frontend/page_views.py:3025
 #: apps/reports/services/findings_service.py:115
 #: templates/auditing/upload.html:651 templates/documents/upload.html:107
 msgid "Sales Receipt"
 msgstr "إيصال البيع"
 
-#: apps/documents/typed_models.py:770 apps/frontend/page_views.py:2769
+#: apps/documents/typed_models.py:774 apps/frontend/page_views.py:3017
 #: templates/audit/tools.html:199 templates/audit/tools.html:348
 #: templates/auditing/upload.html:602 templates/banking/dashboard.html:154
 #: templates/compliance/index.html:196
@@ -549,69 +555,69 @@ msgstr "إيصال البيع"
 msgid "Invoice"
 msgstr "فاتورة"
 
-#: apps/documents/typed_models.py:771 apps/frontend/page_views.py:2784
+#: apps/documents/typed_models.py:775 apps/frontend/page_views.py:3032
 msgid "Goods Receipt Note"
 msgstr "إشعار استلام البضاعة"
 
-#: apps/documents/typed_models.py:772 apps/frontend/page_views.py:2785
+#: apps/documents/typed_models.py:776 apps/frontend/page_views.py:3033
 #: templates/documents/upload.html:118
 msgid "Payment Voucher"
 msgstr "سند الصرف"
 
 # --- Document type labels ---
-#: apps/documents/typed_models_v2.py:574 apps/frontend/page_views.py:2781
+#: apps/documents/typed_models_v2.py:574 apps/frontend/page_views.py:3029
 #: templates/documents/upload.html:104
 msgid "Sales Order"
 msgstr "أمر بيع"
 
-#: apps/documents/typed_models_v2.py:575 apps/frontend/page_views.py:2782
+#: apps/documents/typed_models_v2.py:575 apps/frontend/page_views.py:3030
 #: templates/documents/upload.html:105
 msgid "Quotation"
 msgstr "عرض سعر"
 
-#: apps/documents/typed_models_v2.py:576 apps/frontend/page_views.py:2783
+#: apps/documents/typed_models_v2.py:576 apps/frontend/page_views.py:3031
 #: templates/documents/upload.html:106
 msgid "Proforma Invoice"
 msgstr "فاتورة مبدئية"
 
-#: apps/documents/typed_models_v2.py:577 apps/frontend/page_views.py:2786
+#: apps/documents/typed_models_v2.py:577 apps/frontend/page_views.py:3034
 #: templates/documents/upload.html:119
 msgid "Receipt Voucher"
 msgstr "سند قبض"
 
-#: apps/documents/typed_models_v2.py:578 apps/frontend/page_views.py:2787
+#: apps/documents/typed_models_v2.py:578 apps/frontend/page_views.py:3035
 #: templates/documents/upload.html:120
 msgid "Cash Voucher"
 msgstr "سند نقدي"
 
-#: apps/documents/typed_models_v2.py:579 apps/frontend/page_views.py:2789
+#: apps/documents/typed_models_v2.py:579 apps/frontend/page_views.py:3037
 #: templates/documents/index.html:307 templates/documents/upload.html:124
 #: templates/ledger/dashboard.html:4 templates/ledger/dashboard.html:42
 #: templates/ledger/dashboard.html:50 templates/reports/index.html:349
 msgid "General Ledger"
 msgstr "دفتر الأستاذ العام"
 
-#: apps/documents/typed_models_v2.py:580 apps/frontend/page_views.py:2790
+#: apps/documents/typed_models_v2.py:580 apps/frontend/page_views.py:3038
 msgid "Ledger"
 msgstr "دفتر الأستاذ"
 
-#: apps/documents/typed_models_v2.py:581 apps/frontend/page_views.py:2791
+#: apps/documents/typed_models_v2.py:581 apps/frontend/page_views.py:3039
 #: templates/cms_admin/jobs.html:245 templates/documents/upload.html:127
 #: templates/platform_admin/jobs.html:245
 msgid "Contract"
 msgstr "عقد"
 
-#: apps/documents/typed_models_v2.py:582 apps/frontend/page_views.py:2793
+#: apps/documents/typed_models_v2.py:582 apps/frontend/page_views.py:3041
 #: templates/documents/upload.html:114
 msgid "Supplier Statement"
 msgstr "كشف مورد"
 
-#: apps/documents/typed_models_v2.py:583 apps/frontend/page_views.py:2794
+#: apps/documents/typed_models_v2.py:583 apps/frontend/page_views.py:3042
 #: templates/documents/upload.html:108
 msgid "Customer Statement"
 msgstr "كشف عميل"
 
-#: apps/documents/typed_models_v2.py:584 apps/frontend/page_views.py:2788
+#: apps/documents/typed_models_v2.py:584 apps/frontend/page_views.py:3036
 #: templates/documents/upload.html:123
 msgid "Journal Entry"
 msgstr "قيد يومية"
@@ -744,7 +750,7 @@ msgstr "الفواتير والموردون عاليـو المخاطر"
 
 #: apps/frontend/page_views.py:165 templates/reports/index.html:402
 #: templates/reports/invoice_audit_report.html:430
-#: templates/reports/invoice_audit_report_pdf.html:417
+#: templates/reports/invoice_audit_report_pdf.html:432
 #: templates/reports/report_pdf.html:275
 msgid "Vendor Analysis"
 msgstr "تحليل الموردين"
@@ -785,7 +791,7 @@ msgstr "تدقيق كشف الرواتب"
 msgid "Salaries, deductions, and insurance compliance"
 msgstr "الرواتب والاستقطاعات والامتثال للتأمينات"
 
-#: apps/frontend/page_views.py:211 apps/frontend/page_views.py:2804
+#: apps/frontend/page_views.py:211 apps/frontend/page_views.py:3052
 msgid "Expense Report Audit"
 msgstr "تدقيق تقرير المصروفات"
 
@@ -877,7 +883,7 @@ msgstr ""
 #: templates/reports/invoice_audit_report_pdf.html:202
 #: templates/reports/invoice_audit_report_pdf.html:228
 #: templates/reports/invoice_audit_report_pdf.html:317
-#: templates/reports/invoice_audit_report_pdf.html:386
+#: templates/reports/invoice_audit_report_pdf.html:401
 #: templates/reports/invoice_audit_report_v2.html:192
 #: templates/reports/invoice_audit_report_v2.html:394
 #: templates/reports/invoice_audit_report_v2.html:421
@@ -935,7 +941,7 @@ msgstr "مرفوضة"
 #: templates/reports/invoice_audit_report.html:366
 #: templates/reports/invoice_audit_report.html:382
 #: templates/reports/invoice_audit_report_pdf.html:204
-#: templates/reports/invoice_audit_report_pdf.html:387
+#: templates/reports/invoice_audit_report_pdf.html:402
 #: templates/reports/partials/_report_header.html:11
 #: templates/vendors/index.html:65 templates/vendors/index.html:109
 msgid "Needs Review"
@@ -1043,9 +1049,9 @@ msgstr "خطط مرنة لفرق التدقيق والامتثال"
 
 #: apps/frontend/page_views.py:663 templates/cms_admin/base_cms.html:73
 #: templates/cms_admin/dashboard.html:272 templates/cms_admin/seo.html:213
-#: templates/landing/index.html:1159 templates/landing/index.html:1183
-#: templates/landing/index.html:1532 templates/landing/page.html:407
-#: templates/landing/page.html:427 templates/platform_admin/cms/pricing.html:5
+#: templates/landing/index.html:1195 templates/landing/index.html:1220
+#: templates/landing/index.html:1565 templates/landing/page.html:428
+#: templates/landing/page.html:449 templates/platform_admin/cms/pricing.html:5
 #: templates/platform_admin/seo.html:195
 msgid "Pricing"
 msgstr "التسعير"
@@ -1109,9 +1115,9 @@ msgid "Talk to the %(product)s team"
 msgstr "تواصل مع فريق %(product)s"
 
 #: apps/frontend/page_views.py:693 templates/cms_admin/seo.html:215
-#: templates/cms_admin/settings.html:137 templates/landing/index.html:1161
-#: templates/landing/index.html:1185 templates/landing/index.html:1533
-#: templates/landing/page.html:409 templates/landing/page.html:429
+#: templates/cms_admin/settings.html:137 templates/landing/index.html:1197
+#: templates/landing/index.html:1222 templates/landing/index.html:1566
+#: templates/landing/page.html:430 templates/landing/page.html:451
 #: templates/platform_admin/seo.html:196
 msgid "Contact"
 msgstr "تواصل"
@@ -1140,8 +1146,8 @@ msgstr "مساعدة تقنية وإرشاد تأهيلي."
 msgid "Privacy and data protection"
 msgstr "الخصوصية وحماية البيانات"
 
-#: apps/frontend/page_views.py:708 templates/landing/page.html:410
-#: templates/landing/page.html:430
+#: apps/frontend/page_views.py:708 templates/landing/page.html:431
+#: templates/landing/page.html:452
 msgid "Privacy"
 msgstr "الخصوصية"
 
@@ -1309,14 +1315,14 @@ msgstr "تم تسجيل الدخول بنجاح!"
 msgid "An error occurred during MFA verification"
 msgstr "حدث خطأ أثناء التحقّق بالعامل المتعدّد"
 
-#: apps/frontend/page_views.py:2736 templates/base.html:371
-#: templates/base.html:385 templates/cms_admin/pricing.html:94
-#: templates/dashboard/index.html:252 templates/dashboard/index.html:375
+#: apps/frontend/page_views.py:2984 templates/base.html:377
+#: templates/base.html:391 templates/cms_admin/pricing.html:94
+#: templates/dashboard/index.html:290 templates/dashboard/index.html:429
 #: templates/documents/index.html:168 templates/invoices/detail.html:9
 #: templates/invoices/list.html:4 templates/invoices/list.html:28
 #: templates/invoices/list.html:34 templates/invoices/subreport.html:117
 #: templates/invoices/subreport.html:149
-#: templates/layouts/dashboard_base.html:401 templates/reports/index.html:128
+#: templates/layouts/dashboard_base.html:405 templates/reports/index.html:128
 #: templates/reports/index.html:175 templates/reports/index.html:560
 #: templates/reports/invoice_audit_report_v2.html:653
 #: templates/reports/partials/_findings_register.html:95
@@ -1327,8 +1333,8 @@ msgstr "حدث خطأ أثناء التحقّق بالعامل المتعدّد"
 msgid "Invoices"
 msgstr "الفواتير"
 
-#: apps/frontend/page_views.py:2737 templates/base.html:468
-#: templates/dashboard/index.html:124
+#: apps/frontend/page_views.py:2985 templates/base.html:474
+#: templates/dashboard/index.html:149
 #: templates/documents/detail/purchase_order_detail.html:8
 #: templates/documents/index.html:175
 #: templates/documents/purchase_orders.html:4
@@ -1340,7 +1346,7 @@ msgstr "الفواتير"
 msgid "Purchase Orders"
 msgstr "أوامر الشراء"
 
-#: apps/frontend/page_views.py:2738 templates/base.html:473
+#: apps/frontend/page_views.py:2986 templates/base.html:479
 #: templates/documents/bank_statements.html:4
 #: templates/documents/bank_statements.html:34
 #: templates/documents/bank_statements.html:44
@@ -1350,9 +1356,9 @@ msgstr "أوامر الشراء"
 msgid "Bank Statements"
 msgstr "كشوفات الحساب البنكي"
 
-#: apps/frontend/page_views.py:2739
+#: apps/frontend/page_views.py:2987
 #: apps/reports/services/findings_service.py:111
-#: templates/auditing/upload.html:623 templates/base.html:478
+#: templates/auditing/upload.html:623 templates/base.html:484
 #: templates/documents/index.html:211 templates/documents/payroll.html:4
 #: templates/documents/payroll.html:34 templates/documents/payroll.html:44
 #: templates/documents/upload.html:130 templates/documents/upload.html:299
@@ -1360,7 +1366,7 @@ msgstr "كشوفات الحساب البنكي"
 msgid "Payroll"
 msgstr "الرواتب"
 
-#: apps/frontend/page_views.py:2740 templates/base.html:483
+#: apps/frontend/page_views.py:2988 templates/base.html:489
 #: templates/documents/detail/expense_report_detail.html:8
 #: templates/documents/expense_reports.html:4
 #: templates/documents/expense_reports.html:34
@@ -1370,8 +1376,8 @@ msgstr "الرواتب"
 msgid "Expense Reports"
 msgstr "تقارير المصروفات"
 
-#: apps/frontend/page_views.py:2741 apps/frontend/page_views.py:2742
-#: templates/base.html:488 templates/documents/detail/vat_return_detail.html:8
+#: apps/frontend/page_views.py:2989 apps/frontend/page_views.py:2990
+#: templates/base.html:494 templates/documents/detail/vat_return_detail.html:8
 #: templates/documents/index.html:204 templates/documents/upload.html:296
 #: templates/documents/vat_returns.html:4
 #: templates/documents/vat_returns.html:34
@@ -1380,8 +1386,8 @@ msgstr "تقارير المصروفات"
 msgid "VAT Returns"
 msgstr "إقرارات ضريبة القيمة المضافة"
 
-#: apps/frontend/page_views.py:2743 templates/auditing/upload.html:644
-#: templates/base.html:493 templates/documents/detail/fixed_asset_detail.html:8
+#: apps/frontend/page_views.py:2991 templates/auditing/upload.html:644
+#: templates/base.html:499 templates/documents/detail/fixed_asset_detail.html:8
 #: templates/documents/fixed_assets.html:4
 #: templates/documents/fixed_assets.html:34
 #: templates/documents/fixed_assets.html:44 templates/documents/index.html:189
@@ -1390,7 +1396,7 @@ msgstr "إقرارات ضريبة القيمة المضافة"
 msgid "Fixed Assets"
 msgstr "الأصول الثابتة"
 
-#: apps/frontend/page_views.py:2744 templates/base.html:498
+#: apps/frontend/page_views.py:2992 templates/base.html:504
 #: templates/documents/detail/sales_receipt_detail.html:8
 #: templates/documents/index.html:182 templates/documents/sales_receipts.html:4
 #: templates/documents/sales_receipts.html:34
@@ -1400,99 +1406,99 @@ msgstr "الأصول الثابتة"
 msgid "Sales Receipts"
 msgstr "إيصالات المبيعات"
 
-#: apps/frontend/page_views.py:2746 templates/documents/upload.html:276
+#: apps/frontend/page_views.py:2994 templates/documents/upload.html:276
 msgid "Sales Invoices"
 msgstr "فواتير البيع"
 
-#: apps/frontend/page_views.py:2747 templates/documents/upload.html:283
+#: apps/frontend/page_views.py:2995 templates/documents/upload.html:283
 msgid "Purchase Invoices"
 msgstr "فواتير الشراء"
 
-#: apps/frontend/page_views.py:2748 templates/documents/index.html:228
+#: apps/frontend/page_views.py:2996 templates/documents/index.html:228
 #: templates/documents/upload.html:277
 msgid "Sales Orders"
 msgstr "أوامر البيع"
 
-#: apps/frontend/page_views.py:2749 templates/documents/index.html:235
+#: apps/frontend/page_views.py:2997 templates/documents/index.html:235
 #: templates/documents/upload.html:278
 msgid "Quotations"
 msgstr "عروض الأسعار"
 
-#: apps/frontend/page_views.py:2750 templates/documents/index.html:242
+#: apps/frontend/page_views.py:2998 templates/documents/index.html:242
 #: templates/documents/upload.html:279
 msgid "Proforma Invoices"
 msgstr "الفواتير المبدئية"
 
-#: apps/frontend/page_views.py:2751
+#: apps/frontend/page_views.py:2999
 msgid "Goods Receipt Notes"
 msgstr "سندات الاستلام"
 
-#: apps/frontend/page_views.py:2752 templates/documents/index.html:273
+#: apps/frontend/page_views.py:3000 templates/documents/index.html:273
 #: templates/documents/upload.html:289
 msgid "Payment Vouchers"
 msgstr "سندات الدفع"
 
-#: apps/frontend/page_views.py:2753 templates/documents/index.html:283
+#: apps/frontend/page_views.py:3001 templates/documents/index.html:283
 #: templates/documents/upload.html:290
 msgid "Receipt Vouchers"
 msgstr "سندات القبض"
 
-#: apps/frontend/page_views.py:2754 templates/documents/index.html:290
+#: apps/frontend/page_views.py:3002 templates/documents/index.html:290
 #: templates/documents/upload.html:291
 msgid "Cash Vouchers"
 msgstr "سندات نقدية"
 
-#: apps/frontend/page_views.py:2755 templates/documents/index.html:300
+#: apps/frontend/page_views.py:3003 templates/documents/index.html:300
 #: templates/documents/upload.html:293
 msgid "Journal Entries"
 msgstr "قيود اليومية"
 
-#: apps/frontend/page_views.py:2756 templates/documents/upload.html:294
+#: apps/frontend/page_views.py:3004 templates/documents/upload.html:294
 msgid "General Ledgers"
 msgstr "دفاتر الأستاذ العامة"
 
-#: apps/frontend/page_views.py:2757
+#: apps/frontend/page_views.py:3005
 msgid "Ledgers"
 msgstr "دفاتر الأستاذ"
 
-#: apps/frontend/page_views.py:2758 templates/documents/index.html:321
+#: apps/frontend/page_views.py:3006 templates/documents/index.html:321
 #: templates/documents/upload.html:297
 msgid "Contracts"
 msgstr "العقود"
 
-#: apps/frontend/page_views.py:2759
+#: apps/frontend/page_views.py:3007
 msgid "Tax / VAT Documents"
 msgstr "المستندات الضريبية"
 
-#: apps/frontend/page_views.py:2760 templates/documents/index.html:259
+#: apps/frontend/page_views.py:3008 templates/documents/index.html:259
 #: templates/documents/upload.html:286
 msgid "Supplier Statements"
 msgstr "كشوف الموردين"
 
-#: apps/frontend/page_views.py:2761 templates/documents/index.html:249
+#: apps/frontend/page_views.py:3009 templates/documents/index.html:249
 #: templates/documents/upload.html:281
 msgid "Customer Statements"
 msgstr "كشوف العملاء"
 
-#: apps/frontend/page_views.py:2776
+#: apps/frontend/page_views.py:3024
 #: apps/reports/services/findings_service.py:114
 #: templates/documents/upload.html:132
 msgid "Fixed Asset"
 msgstr "أصل ثابت"
 
-#: apps/frontend/page_views.py:2779 templates/documents/upload.html:103
+#: apps/frontend/page_views.py:3027 templates/documents/upload.html:103
 msgid "Sales Invoice"
 msgstr "فاتورة بيع"
 
-#: apps/frontend/page_views.py:2780 templates/documents/upload.html:111
+#: apps/frontend/page_views.py:3028 templates/documents/upload.html:111
 msgid "Purchase Invoice"
 msgstr "فاتورة شراء"
 
-#: apps/frontend/page_views.py:2792
+#: apps/frontend/page_views.py:3040
 msgid "Tax / VAT Document"
 msgstr "مستند ضريبي"
 
-#: apps/frontend/page_views.py:2800 templates/invoices/invoice_pdf.html:6
+#: apps/frontend/page_views.py:3048 templates/invoices/invoice_pdf.html:6
 #: templates/invoices/invoice_pdf.html:38
 #: templates/reports/invoice_audit_report.html:5
 #: templates/reports/invoice_audit_report_pdf.html:200
@@ -1503,92 +1509,92 @@ msgstr "مستند ضريبي"
 msgid "Invoice Audit Report"
 msgstr "تقرير تدقيق الفواتير"
 
-#: apps/frontend/page_views.py:2801
+#: apps/frontend/page_views.py:3049
 msgid "Purchase Order Audit Report"
 msgstr "تقرير تدقيق أوامر الشراء"
 
-#: apps/frontend/page_views.py:2802
+#: apps/frontend/page_views.py:3050
 msgid "Bank Statement Audit Report"
 msgstr "تقرير تدقيق كشوف الحسابات"
 
-#: apps/frontend/page_views.py:2803
+#: apps/frontend/page_views.py:3051
 msgid "Payroll Audit Report"
 msgstr "تقرير تدقيق كشوف الرواتب"
 
-#: apps/frontend/page_views.py:2805 apps/frontend/page_views.py:2806
+#: apps/frontend/page_views.py:3053 apps/frontend/page_views.py:3054
 msgid "VAT Return Audit Report"
 msgstr "تقرير تدقيق إقرارات الضريبة"
 
-#: apps/frontend/page_views.py:2807
+#: apps/frontend/page_views.py:3055
 msgid "Fixed Asset Audit Report"
 msgstr "تقرير تدقيق الأصول الثابتة"
 
-#: apps/frontend/page_views.py:2808
+#: apps/frontend/page_views.py:3056
 msgid "Sales Receipt Audit Report"
 msgstr "تقرير تدقيق إيصالات البيع"
 
-#: apps/frontend/page_views.py:2810
+#: apps/frontend/page_views.py:3058
 msgid "Sales Invoice Audit Report"
 msgstr "تقرير تدقيق فواتير البيع"
 
-#: apps/frontend/page_views.py:2811
+#: apps/frontend/page_views.py:3059
 msgid "Purchase Invoice Audit Report"
 msgstr "تقرير تدقيق فواتير الشراء"
 
-#: apps/frontend/page_views.py:2812
+#: apps/frontend/page_views.py:3060
 msgid "Sales Order Audit Report"
 msgstr "تقرير تدقيق أوامر البيع"
 
-#: apps/frontend/page_views.py:2813
+#: apps/frontend/page_views.py:3061
 msgid "Quotation Audit Report"
 msgstr "تقرير تدقيق عروض الأسعار"
 
-#: apps/frontend/page_views.py:2814
+#: apps/frontend/page_views.py:3062
 msgid "Proforma Invoice Audit Report"
 msgstr "تقرير تدقيق الفواتير المبدئية"
 
-#: apps/frontend/page_views.py:2815
+#: apps/frontend/page_views.py:3063
 msgid "Goods Receipt Note Audit Report"
 msgstr "تقرير تدقيق سندات الاستلام"
 
-#: apps/frontend/page_views.py:2816
+#: apps/frontend/page_views.py:3064
 msgid "Payment Voucher Audit Report"
 msgstr "تقرير تدقيق سندات الدفع"
 
-#: apps/frontend/page_views.py:2817
+#: apps/frontend/page_views.py:3065
 msgid "Receipt Voucher Audit Report"
 msgstr "تقرير تدقيق سندات القبض"
 
-#: apps/frontend/page_views.py:2818
+#: apps/frontend/page_views.py:3066
 msgid "Cash Voucher Audit Report"
 msgstr "تقرير تدقيق السندات النقدية"
 
-#: apps/frontend/page_views.py:2819
+#: apps/frontend/page_views.py:3067
 msgid "Journal Entry Audit Report"
 msgstr "تقرير تدقيق قيود اليومية"
 
-#: apps/frontend/page_views.py:2820
+#: apps/frontend/page_views.py:3068
 msgid "General Ledger Audit Report"
 msgstr "تقرير تدقيق دفتر الأستاذ العام"
 
 # --- Auditing result page ---
-#: apps/frontend/page_views.py:2821
+#: apps/frontend/page_views.py:3069
 msgid "Ledger Audit Report"
 msgstr "تقرير تدقيق دفتر الأستاذ"
 
-#: apps/frontend/page_views.py:2822
+#: apps/frontend/page_views.py:3070
 msgid "Contract Audit Report"
 msgstr "تقرير تدقيق العقود"
 
-#: apps/frontend/page_views.py:2823
+#: apps/frontend/page_views.py:3071
 msgid "Tax / VAT Document Audit Report"
 msgstr "تقرير تدقيق المستندات الضريبية"
 
-#: apps/frontend/page_views.py:2824
+#: apps/frontend/page_views.py:3072
 msgid "Supplier Statement Audit Report"
 msgstr "تقرير تدقيق كشوف الموردين"
 
-#: apps/frontend/page_views.py:2825
+#: apps/frontend/page_views.py:3073
 msgid "Customer Statement Audit Report"
 msgstr "تقرير تدقيق كشوف العملاء"
 
@@ -1598,7 +1604,7 @@ msgstr "تمت معالجة الملف المكرر مسبقًا داخل جلس
 
 #: apps/invoices/views.py:137 templates/reports/document_audit_report.html:1134
 #: templates/reports/invoice_audit_report.html:436
-#: templates/reports/invoice_audit_report_pdf.html:421
+#: templates/reports/invoice_audit_report_pdf.html:436
 msgid "Vendor Name"
 msgstr "اسم المورد"
 
@@ -1641,7 +1647,7 @@ msgstr "المجموع الفرعي"
 msgid "VAT Amount"
 msgstr "ضريبة القيمة"
 
-#: apps/invoices/views.py:144 templates/dashboard/index.html:255
+#: apps/invoices/views.py:144 templates/dashboard/index.html:293
 #: templates/documents/purchase_orders.html:89
 #: templates/invoices/partials/_qr_code_display.html:93
 #: templates/reports/document_audit_report.html:543
@@ -1757,7 +1763,7 @@ msgstr "خطر"
 #: apps/notifications/models.py:24
 #: apps/reports/services/findings_service.py:229
 #: templates/audit/detail.html:270 templates/audit/inbox.html:29
-#: templates/dashboard/index.html:352 templates/documents/_typed_detail.html:66
+#: templates/dashboard/index.html:406 templates/documents/_typed_detail.html:66
 #: templates/documents/_typed_list.html:88
 #: templates/documents/_typed_list.html:128
 #: templates/invoices/batch_detail.html:92 templates/invoices/detail.html:870
@@ -1782,7 +1788,7 @@ msgid "Critical"
 msgstr "حرج"
 
 #: apps/notifications/models.py:27 navigation/vendor_menu.py:47
-#: templates/audit/inbox.html:10 templates/dashboard/index.html:325
+#: templates/audit/inbox.html:10 templates/dashboard/index.html:379
 msgid "Audit"
 msgstr "التدقيق والتقارير"
 
@@ -1790,9 +1796,9 @@ msgstr "التدقيق والتقارير"
 msgid "Fraud"
 msgstr "احتيال"
 
-#: apps/notifications/models.py:29 templates/base.html:440
+#: apps/notifications/models.py:29 templates/base.html:446
 #: templates/compliance/index.html:4 templates/compliance/index.html:38
-#: templates/compliance/index.html:44 templates/layouts/dashboard_base.html:421
+#: templates/compliance/index.html:44 templates/layouts/dashboard_base.html:425
 #: templates/phase2/audits.html:394
 #: templates/reports/document_audit_report.html:852
 #: templates/reports/document_audit_report.html:1468
@@ -1803,8 +1809,8 @@ msgstr "احتيال"
 msgid "Compliance"
 msgstr "امتثال"
 
-#: apps/notifications/models.py:30 templates/dashboard/index.html:231
-#: templates/dashboard/index.html:324 templates/documents/_typed_list.html:77
+#: apps/notifications/models.py:30 templates/dashboard/index.html:269
+#: templates/dashboard/index.html:378 templates/documents/_typed_list.html:77
 #: templates/documents/upload.html:88 templates/documents/upload.html:197
 #: templates/documents/upload.html:243 templates/invoices/upload.html:147
 #: templates/invoices/upload.html:198 templates/partials/i18n_strings.html:131
@@ -2258,7 +2264,7 @@ msgstr "اطلب رقماً ضريبياً صالحاً للبائع؛ مطلو�
 #: templates/auditing/partials/anomalies_list.html:28
 #: templates/auditing/partials/summary_cards.html:53
 #: templates/auditing/result.html:143 templates/auditing/result.html:157
-#: templates/auditing/upload.html:777 templates/dashboard/index.html:352
+#: templates/auditing/upload.html:777 templates/dashboard/index.html:406
 #: templates/documents/_typed_detail.html:68
 #: templates/documents/_typed_list.html:89
 #: templates/documents/_typed_list.html:129
@@ -2286,7 +2292,7 @@ msgstr "عالي"
 #: templates/auditing/partials/anomalies_list.html:30
 #: templates/auditing/partials/summary_cards.html:58
 #: templates/auditing/result.html:145 templates/auditing/result.html:159
-#: templates/auditing/upload.html:779 templates/dashboard/index.html:352
+#: templates/auditing/upload.html:779 templates/dashboard/index.html:406
 #: templates/documents/_typed_detail.html:70
 #: templates/documents/_typed_list.html:90
 #: templates/documents/_typed_list.html:130
@@ -2314,7 +2320,7 @@ msgstr "متوسط"
 #: templates/auditing/partials/anomalies_list.html:32
 #: templates/auditing/partials/summary_cards.html:63
 #: templates/auditing/result.html:147 templates/auditing/result.html:161
-#: templates/auditing/upload.html:781 templates/dashboard/index.html:352
+#: templates/auditing/upload.html:781 templates/dashboard/index.html:406
 #: templates/documents/_typed_detail.html:72
 #: templates/documents/_typed_list.html:91
 #: templates/documents/_typed_list.html:131
@@ -2358,7 +2364,7 @@ msgstr "حقّق وعالج قبل الاعتماد؛ تواصل مع المرا
 #: templates/documents/purchase_orders.html:32
 #: templates/documents/sales_receipts.html:32
 #: templates/documents/upload.html:86 templates/documents/vat_returns.html:32
-#: templates/layouts/dashboard_base.html:409
+#: templates/layouts/dashboard_base.html:413
 #: templates/platform_admin/media.html:79
 #: templates/reports/executive_report.html:126
 msgid "Documents"
@@ -2462,34 +2468,27 @@ msgstr ""
 "أجرِ تدريباً موجّهاً على الضوابط التي تسبّبت بمعظم الإخفاقات عبر %(count)s "
 "%(type)s."
 
-#: apps/reports/views.py:277
+#: apps/reports/views.py:307
 msgid "A rule violation was detected and requires detailed review."
 msgstr "تم رصد مخالفة لهذه القاعدة وتحتاج مراجعة تفصيلية."
 
 # --- Reports: API error messages ---
-#: apps/reports/views.py:878 apps/reports/views.py:931
-#: apps/reports/views.py:1099
+#: apps/reports/views.py:908 apps/reports/views.py:967
+#: apps/reports/views.py:1135 apps/reports/views.py:1186
 msgid "Report not found."
 msgstr "التقرير غير موجود."
 
-#: apps/reports/views.py:903
-msgid ""
-"PDF service is not configured on this server. Redeploy after installing the "
-"PDF library."
-msgstr ""
-"خدمة PDF غير مهيأة على الخادم حاليًا. أعد نشر الخدمة بعد تثبيت مكتبة PDF."
-
-#: apps/reports/views.py:912
+#: apps/reports/views.py:948
 msgid ""
 "Failed to generate PDF for this report. Check the server log and try again."
 msgstr ""
 "تعذر توليد ملف PDF لهذا التقرير حاليًا. راجع سجل الخادم ثم أعد المحاولة."
 
-#: apps/reports/views.py:937
+#: apps/reports/views.py:973
 msgid "openpyxl not available on server."
 msgstr "openpyxl غير متاح على السيرفر."
 
-#: apps/reports/views.py:1121
+#: apps/reports/views.py:1157
 #, python-format
 msgid ""
 "Attached report: %(title)s\n"
@@ -2500,14 +2499,31 @@ msgstr ""
 "\n"
 "تم إنشاؤه في %(dt)s"
 
-#: apps/reports/views.py:1127
+#: apps/reports/views.py:1163
 #, python-format
 msgid "Report sent to %(recipient)s"
 msgstr "تم إرسال التقرير إلى %(recipient)s"
 
-#: apps/reports/views.py:1130
+#: apps/reports/views.py:1166
 msgid "Failed to send email. Check SMTP settings."
 msgstr "تعذر إرسال البريد الإلكتروني. راجع إعدادات SMTP."
+
+#: apps/reports/views.py:1197
+msgid ""
+"Async rendering backend unavailable. Download directly via /pdf/ instead."
+msgstr ""
+
+#: apps/reports/views.py:1312
+#, fuzzy
+#| msgid "Invalid code"
+msgid "Invalid period dates"
+msgstr "رمز غير صالح"
+
+#: apps/reports/views.py:1391
+#, fuzzy
+#| msgid "Invalid code"
+msgid "Invalid as_of date"
+msgstr "رمز غير صالح"
 
 # --- Dashboard context ---
 #: core/auth/redirect_service.py:46 core/dashboard_context.py:52
@@ -2525,7 +2541,7 @@ msgstr "لوحة المنظمة"
 #: templates/analytics/index.html:33 templates/audit/inbox.html:8
 #: templates/audit/index.html:14 templates/audit/integrity.html:34
 #: templates/audit/rule_builder.html:49 templates/audit/tools.html:29
-#: templates/banking/dashboard.html:50 templates/base.html:366
+#: templates/banking/dashboard.html:50 templates/base.html:372
 #: templates/compliance/index.html:36 templates/dashboard/index.html:4
 #: templates/documents/_typed_detail.html:18
 #: templates/documents/_typed_list.html:42
@@ -2540,8 +2556,8 @@ msgstr "لوحة المنظمة"
 #: templates/invoices/subreport.html:28 templates/invoices/upload.html:75
 #: templates/layouts/base_vendor_dashboard.html:15
 #: templates/layouts/dashboard_base.html:9
-#: templates/layouts/dashboard_base.html:393
-#: templates/layouts/dashboard_base.html:455
+#: templates/layouts/dashboard_base.html:397
+#: templates/layouts/dashboard_base.html:459
 #: templates/layouts/partials/platform_topbar.html:34
 #: templates/layouts/partials/vendor_topbar.html:35
 #: templates/ledger/dashboard.html:40 templates/reports/index.html:96
@@ -2582,7 +2598,7 @@ msgstr "استخدم %(n)d على الأقل من: رقم، حرف صغير، ح
 
 # --- Navigation: Platform Admin ---
 #: navigation/platform_menu.py:11 navigation/vendor_menu.py:11
-#: templates/base.html:359 templates/layouts/dashboard_base.html:390
+#: templates/base.html:365 templates/layouts/dashboard_base.html:394
 msgid "Main"
 msgstr "الرئيسية"
 
@@ -2751,8 +2767,8 @@ msgid "Audit Results"
 msgstr "نتائج التدقيق"
 
 #: navigation/vendor_menu.py:63 templates/audit/tools.html:31
-#: templates/base.html:405 templates/invoices/subreport.html:30
-#: templates/layouts/dashboard_base.html:405 templates/phase2/activity.html:34
+#: templates/base.html:411 templates/invoices/subreport.html:30
+#: templates/layouts/dashboard_base.html:409 templates/phase2/activity.html:34
 #: templates/phase2/base_phase2.html:64 templates/phase2/reports.html:4
 #: templates/phase2/reports.html:5 templates/reports/index.html:4
 #: templates/reports/index.html:98 templates/reports/index.html:106
@@ -2790,8 +2806,8 @@ msgstr "استخدام التخزين"
 msgid "Billing"
 msgstr "الباقة / الفوترة"
 
-#: navigation/vendor_menu.py:99 templates/layouts/dashboard_base.html:461
-#: templates/layouts/dashboard_base.html:468
+#: navigation/vendor_menu.py:99 templates/layouts/dashboard_base.html:465
+#: templates/layouts/dashboard_base.html:472
 #: templates/platform_admin/settings.html:123 templates/settings/index.html:140
 #: templates/vendor_dashboard/notifications.html:3
 #: templates/vendor_dashboard/notifications.html:4
@@ -2840,7 +2856,9 @@ msgstr "تنبيهات"
 
 #: templates/alerts/index.html:58
 msgid "Route streaming anomalies to email · SMS · Slack · Teams · webhook."
-msgstr "توجيه انحرافات المسار إلى البريد الإلكتروني · الرسائل القصيرة · سلاك · الفرق · webhook."
+msgstr ""
+"توجيه انحرافات المسار إلى البريد الإلكتروني · الرسائل القصيرة · سلاك · الفرق "
+"· webhook."
 
 #: templates/alerts/index.html:61 templates/alerts/index.html:87
 #: templates/audit/rule_builder.html:65
@@ -3020,7 +3038,7 @@ msgstr "فترة التهدئة"
 #: templates/cms_admin/jobs.html:85 templates/cms_admin/jobs.html:178
 #: templates/cms_admin/jobs.html:374 templates/cms_admin/leads.html:88
 #: templates/cms_admin/leads.html:216 templates/cms_admin/pages.html:62
-#: templates/cms_admin/pages.html:149 templates/dashboard/index.html:199
+#: templates/cms_admin/pages.html:149 templates/dashboard/index.html:237
 #: templates/documents/_typed_list.html:108
 #: templates/documents/bank_statements.html:88
 #: templates/documents/detail/purchase_order_detail.html:264
@@ -3078,13 +3096,14 @@ msgstr "تعديل"
 
 #: templates/alerts/index.html:196
 msgid "No alert rules yet. Click ‘New rule’ to set up your first one."
-msgstr "لا توجد قواعد تنبيه حتى الآن. انقر على 'قاعدة جديدة' لإعداد أول قاعدة لك."
+msgstr ""
+"لا توجد قواعد تنبيه حتى الآن. انقر على 'قاعدة جديدة' لإعداد أول قاعدة لك."
 
 #: templates/alerts/index.html:205
 msgid "Recent alert events"
 msgstr "أحداث التنبيه الأخيرة"
 
-#: templates/alerts/index.html:208 templates/invoices/invoice_pdf.html:145
+#: templates/alerts/index.html:208 templates/invoices/invoice_pdf.html:175
 #: templates/streaming/ops.html:147 templates/working_papers/detail.html:161
 #: templates/zatca/dashboard.html:203
 msgid "When"
@@ -3096,9 +3115,10 @@ msgstr "القناة"
 
 #: templates/alerts/index.html:211 templates/audit/rule_builder.html:139
 #: templates/audit/rule_builder.html:205 templates/compliance/index.html:164
-#: templates/invoices/invoice_pdf.html:128
+#: templates/invoices/invoice_pdf.html:135
 #: templates/reports/document_audit_report.html:630
 #: templates/reports/executive_report.html:530
+#: templates/reports/invoice_audit_report_pdf.html:354
 #: templates/reports/invoice_audit_report_v2.html:597
 #: templates/reports/partials/_findings_register.html:91
 #: templates/streaming/ops.html:149
@@ -3126,7 +3146,7 @@ msgid "Test failed"
 msgstr "فشل الاختبار"
 
 #: templates/analytics/index.html:4 templates/analytics/index.html:35
-#: templates/analytics/index.html:41 templates/layouts/dashboard_base.html:425
+#: templates/analytics/index.html:41 templates/layouts/dashboard_base.html:429
 msgid "Analytics"
 msgstr "التحليلات"
 
@@ -3145,7 +3165,7 @@ msgid "Last 30 days"
 msgstr "آخر 30 يوماً"
 
 #: templates/analytics/index.html:53 templates/compliance/index.html:69
-#: templates/dashboard/index.html:116
+#: templates/dashboard/index.html:141
 #: templates/reports/invoice_audit_report_pdf.html:224
 #: templates/reports/invoice_audit_report_v2.html:173
 #: templates/reports/report_pdf.html:200
@@ -3153,7 +3173,7 @@ msgid "Total Invoices"
 msgstr "إجمالي الفواتير"
 
 #: templates/analytics/index.html:55 templates/analytics/index.html:61
-#: templates/dashboard/index.html:118 templates/dashboard/index.html:126
+#: templates/dashboard/index.html:143 templates/dashboard/index.html:151
 msgid "All time"
 msgstr "كل الأوقات"
 
@@ -3161,7 +3181,7 @@ msgstr "كل الأوقات"
 msgid "Total POs"
 msgstr "إجمالي أوامر الشراء"
 
-#: templates/analytics/index.html:65 templates/dashboard/index.html:132
+#: templates/analytics/index.html:65 templates/dashboard/index.html:157
 #: templates/vendors/detail.html:59
 msgid "Total Invoiced"
 msgstr "إجمالي الفواتير"
@@ -3176,7 +3196,7 @@ msgstr "متوسط الفاتورة"
 msgid "Monthly Volume (last 12 months)"
 msgstr "الحجم الشهري (آخر 12 شهراً)"
 
-#: templates/analytics/index.html:83 templates/dashboard/index.html:278
+#: templates/analytics/index.html:83 templates/dashboard/index.html:317
 #: templates/reports/invoice_audit_report_v2.html:369
 msgid "Risk Distribution"
 msgstr "توزيع المخاطرة"
@@ -3204,7 +3224,7 @@ msgstr "أكبر الموردين حسب الحجم"
 
 #: templates/analytics/index.html:115 templates/audit/tools.html:199
 #: templates/audit/tools.html:348 templates/compliance/index.html:196
-#: templates/dashboard/index.html:251
+#: templates/dashboard/index.html:289
 #: templates/documents/detail/purchase_order_detail.html:239
 #: templates/documents/purchase_orders.html:93
 #: templates/invoices/batch_detail.html:106 templates/invoices/detail.html:87
@@ -3533,14 +3553,14 @@ msgstr "تم الإنشاء"
 
 #: templates/audit/inbox.html:49 templates/audit/rule_builder.html:197
 #: templates/auditing/history.html:37 templates/cms_admin/dashboard.html:141
-#: templates/dashboard/index.html:201 templates/documents/_typed_list.html:109
+#: templates/dashboard/index.html:239 templates/documents/_typed_list.html:109
 #: templates/documents/bank_statements.html:89
 #: templates/documents/expense_reports.html:89
 #: templates/documents/fixed_assets.html:89 templates/documents/payroll.html:89
 #: templates/documents/purchase_orders.html:125
 #: templates/documents/sales_receipts.html:89
 #: templates/documents/vat_returns.html:89
-#: templates/invoices/invoice_pdf.html:145 templates/invoices/list.html:99
+#: templates/invoices/invoice_pdf.html:175 templates/invoices/list.html:99
 #: templates/phase2/activity.html:164
 #: templates/platform_admin/activity_logs.html:103
 #: templates/reports/index.html:490
@@ -3549,7 +3569,7 @@ msgstr "تم الإنشاء"
 msgid "Action"
 msgstr "إجراء"
 
-#: templates/audit/inbox.html:76 templates/dashboard/index.html:326
+#: templates/audit/inbox.html:76 templates/dashboard/index.html:380
 #: templates/invoices/session_detail.html:58
 #: templates/reports/invoice_audit_report_pdf.html:319
 #: templates/reports/invoice_audit_report_v2.html:386
@@ -3563,8 +3583,8 @@ msgid "Inbox is empty — nothing pending review."
 msgstr "صندوق الوارد فارغ — لا شيء معلق للمراجعة."
 
 #: templates/audit/index.html:4 templates/audit/index.html:16
-#: templates/audit/index.html:22 templates/base.html:426
-#: templates/layouts/dashboard_base.html:417
+#: templates/audit/index.html:22 templates/base.html:432
+#: templates/layouts/dashboard_base.html:421
 #: templates/reports/report_pdf.html:352
 msgid "Audit Cases"
 msgstr "حالات التدقيق"
@@ -3646,10 +3666,10 @@ msgid ""
 "the background."
 msgstr "تُنشَأ عمليات التدقيق تلقائياً عند رفع المستندات وتعمل في الخلفية."
 
-#: templates/audit/index.html:90 templates/dashboard/index.html:167
+#: templates/audit/index.html:90 templates/dashboard/index.html:203
 #: templates/documents/upload.html:4 templates/documents/upload.html:95
 #: templates/invoices/upload.html:4 templates/invoices/upload.html:77
-#: templates/layouts/dashboard_base.html:397 templates/reports/index.html:501
+#: templates/layouts/dashboard_base.html:401 templates/reports/index.html:501
 #: templates/reports/invoice_audit_report.html:61
 msgid "Upload Documents"
 msgstr "رفع المستندات"
@@ -3671,7 +3691,9 @@ msgstr "جميع السلاسل سليمة"
 msgid ""
 "Every event in this organisation's audit trail hashes correctly to the chain "
 "head. No row has been mutated since it was recorded."
-msgstr "كل حدث في سجل تدقيق هذه المنظمة يتطابق بشكل صحيح مع رأس السلسلة. لم يتم تعديل أي صف منذ تسجيله."
+msgstr ""
+"كل حدث في سجل تدقيق هذه المنظمة يتطابق بشكل صحيح مع رأس السلسلة. لم يتم "
+"تعديل أي صف منذ تسجيله."
 
 #: templates/audit/integrity.html:65
 msgid "Chain breaks detected"
@@ -3682,7 +3704,9 @@ msgid ""
 "One or more rows in the audit trail no longer hash correctly. This usually "
 "means a row was edited or deleted outside the application — investigate the "
 "listed positions immediately."
-msgstr "صف أو أكثر في سجل التدقيق لم يعد يتطابق بشكل صحيح. هذا يعني عادةً أنه تم تعديل صف أو حذفه خارج التطبيق — تحقق من المواقع المدرجة على الفور."
+msgstr ""
+"صف أو أكثر في سجل التدقيق لم يعد يتطابق بشكل صحيح. هذا يعني عادةً أنه تم "
+"تعديل صف أو حذفه خارج التطبيق — تحقق من المواقع المدرجة على الفور."
 
 #: templates/audit/integrity.html:73
 msgid "Chains checked"
@@ -3750,7 +3774,12 @@ msgid ""
 "row in the database, its stored event_hash no longer matches the recomputed "
 "value — and every downstream row's previous_hash pointer breaks too. "
 "Verification is read-only and runs in O(n) over the chain."
-msgstr "يسجل كل صف تدقيق SHA-256(previous_hash + canonical_payload + timestamp + organization_id). عند الحفظ، يقوم التطبيق بحساب وتخزين هذه التجزئة مع مؤشر إلى الصف السابق. إذا قام أي شخص لاحقًا بتعديل صف في قاعدة البيانات، فإن event_hash المخزنة لم تعد تتطابق مع القيمة المعاد حسابها — وينكسر أيضًا مؤشر previous_hash لكل صف لاحق. التحقق هو للقراءة فقط ويعمل في O(n) عبر السلسلة."
+msgstr ""
+"يسجل كل صف تدقيق SHA-256(previous_hash + canonical_payload + timestamp + "
+"organization_id). عند الحفظ، يقوم التطبيق بحساب وتخزين هذه التجزئة مع مؤشر "
+"إلى الصف السابق. إذا قام أي شخص لاحقًا بتعديل صف في قاعدة البيانات، فإن "
+"event_hash المخزنة لم تعد تتطابق مع القيمة المعاد حسابها — وينكسر أيضًا مؤشر "
+"previous_hash لكل صف لاحق. التحقق هو للقراءة فقط ويعمل في O(n) عبر السلسلة."
 
 #: templates/audit/rule_builder.html:4 templates/audit/rule_builder.html:51
 #: templates/audit/rule_builder.html:59 templates/reports/index.html:309
@@ -3847,7 +3876,6 @@ msgstr "البيانات الوصفية"
 #: templates/phase2/activity.html:165
 #: templates/reports/document_audit_report.html:631
 #: templates/reports/document_audit_report.html:1327
-#: templates/reports/invoice_audit_report_pdf.html:350
 #: templates/reports/partials/_failed_rules_table.html:15
 #: templates/reports/report_pdf.html:309
 #: templates/storage_management/provider_form.html:69
@@ -3925,7 +3953,9 @@ msgstr "حاسبة الأهمية"
 msgid ""
 "Pick a benchmark, enter the audited amount, and Tadgeeg returns overall, "
 "performance, and clearly-trivial thresholds."
-msgstr "اختر معيارًا، أدخل المبلغ المدقق، وستقوم تدقيق بإرجاع الحدود العامة والأداء والحدود الواضحة."
+msgstr ""
+"اختر معيارًا، أدخل المبلغ المدقق، وستقوم تدقيق بإرجاع الحدود العامة والأداء "
+"والحدود الواضحة."
 
 #: templates/audit/tools.html:56 templates/audit/tools.html:137
 msgid "Benchmark"
@@ -4071,7 +4101,9 @@ msgstr "محرك العينة"
 msgid ""
 "Pick a method and sample size; Tadgeeg generates a deterministic sample with "
 "a reproducible seed for the working papers."
-msgstr "اختر طريقة وحجم العينة؛ ستقوم تدقيق بإنشاء عينة حتمية مع بذور قابلة للتكرار لأوراق العمل."
+msgstr ""
+"اختر طريقة وحجم العينة؛ ستقوم تدقيق بإنشاء عينة حتمية مع بذور قابلة للتكرار "
+"لأوراق العمل."
 
 #: templates/audit/tools.html:229
 msgid "Population:"
@@ -4179,7 +4211,7 @@ msgstr "الفواتير المختارة"
 
 #: templates/audit/tools.html:349 templates/auditing/history.html:32
 #: templates/cms_admin/media.html:134 templates/compliance/index.html:196
-#: templates/dashboard/index.html:198
+#: templates/dashboard/index.html:236
 #: templates/documents/bank_statements.html:86
 #: templates/documents/detail/bank_statement_detail.html:253
 #: templates/documents/detail/expense_report_detail.html:252
@@ -4260,7 +4292,7 @@ msgid "Next"
 msgstr "التالي"
 
 # --- Auditing partials ---
-#: templates/auditing/history.html:184 templates/dashboard/index.html:229
+#: templates/auditing/history.html:184 templates/dashboard/index.html:267
 #: templates/partials/i18n_strings.html:116
 msgid "No documents yet"
 msgstr "لا توجد مستندات بعد"
@@ -4269,7 +4301,7 @@ msgstr "لا توجد مستندات بعد"
 msgid "Upload your first financial document to start automated auditing"
 msgstr "ارفع أوّل مستند مالي للبدء بالتدقيق الآلي"
 
-#: templates/auditing/history.html:190 templates/dashboard/index.html:335
+#: templates/auditing/history.html:190 templates/dashboard/index.html:389
 msgid "Upload first document"
 msgstr "رفع أوّل مستند"
 
@@ -4293,12 +4325,14 @@ msgid "Per user selection"
 msgstr "حسب اختيار المستخدم"
 
 #: templates/auditing/partials/summary_cards.html:18
+#: templates/partials/language_switcher_select.html:20
 msgid "Language"
 msgstr "اللغة"
 
 #: templates/auditing/partials/summary_cards.html:20
 #: templates/auditing/result.html:55 templates/auditing/upload.html:673
 #: templates/partials/language_switcher.html:10
+#: templates/partials/language_switcher_select.html:24
 #: templates/platform_admin/cms/homepage.html:60
 msgid "Arabic"
 msgstr "العربية"
@@ -4306,6 +4340,7 @@ msgstr "العربية"
 #: templates/auditing/partials/summary_cards.html:21
 #: templates/auditing/result.html:55
 #: templates/partials/language_switcher.html:16
+#: templates/partials/language_switcher_select.html:25
 msgid "English"
 msgstr "الإنجليزية"
 
@@ -4324,7 +4359,7 @@ msgid "Confidence Score"
 msgstr "درجة الثقة"
 
 #: templates/auditing/partials/summary_cards.html:50
-#: templates/dashboard/index.html:200 templates/documents/_typed_detail.html:63
+#: templates/dashboard/index.html:238 templates/documents/_typed_detail.html:63
 #: templates/invoices/detail.html:391 templates/invoices/invoice_pdf.html:53
 #: templates/phase2/audit_result.html:109
 #: templates/reports/document_audit_report.html:383
@@ -4400,7 +4435,7 @@ msgstr "تقرير التدقيق المالي"
 msgid "Back to History"
 msgstr "العودة للسجل"
 
-#: templates/auditing/result.html:30 templates/dashboard/index.html:55
+#: templates/auditing/result.html:30 templates/dashboard/index.html:73
 msgid "New Document"
 msgstr "مستند جديد"
 
@@ -4718,36 +4753,6 @@ msgstr "عرض الكل"
 msgid "Latest Uploaded Documents"
 msgstr "أحدث المستندات المرفوعة"
 
-#: templates/auth/emails/password_reset_email.txt:1
-#: templates/auth/otp_email.html:30
-#, python-format
-msgid "Hello %(name)s,"
-msgstr "مرحباً %(name)s،"
-
-#: templates/auth/emails/password_reset_email.txt:3
-#, python-format
-msgid ""
-"We received a request to reset the password for your %(product)s account."
-msgstr "استلمنا طلباً لإعادة تعيين كلمة المرور لحسابك في %(product)s."
-
-#: templates/auth/emails/password_reset_email.txt:5
-msgid "Use the following link to create a new password:"
-msgstr "استخدم الرابط التالي لإنشاء كلمة مرور جديدة:"
-
-#: templates/auth/emails/password_reset_email.txt:8
-msgid "If you did not request this action, you can safely ignore this email."
-msgstr "إذا لم تطلب هذا الإجراء، يمكنك تجاهل هذه الرسالة بأمان."
-
-#: templates/auth/emails/password_reset_email.txt:10
-#, python-format
-msgid "%(product)s by %(company)s"
-msgstr "%(product)s من %(company)s"
-
-#: templates/auth/emails/password_reset_subject.txt:1
-#, python-format
-msgid "Password Reset - %(product)s"
-msgstr "إعادة تعيين كلمة المرور - %(product)s"
-
 #: templates/auth/google_pending.html:9
 msgid "Your account is under review"
 msgstr "حسابك قيد المراجعة"
@@ -4773,9 +4778,9 @@ msgstr ""
 "سيتم ربط حسابك بمؤسستك قريبًا. ستصلك رسالة بريد إلكتروني عند اكتمال التفعيل "
 "لتتمكن من الوصول الكامل إلى لوحة التحكم."
 
-#: templates/auth/google_pending.html:64 templates/auth/login.html:465
-#: templates/auth/password_reset_form.html:15 templates/auth/portal.html:483
-#: templates/auth/portal.html:569
+#: templates/auth/google_pending.html:64 templates/auth/login.html:472
+#: templates/auth/password_reset_form.html:15 templates/auth/portal.html:489
+#: templates/auth/portal.html:575
 msgid "Email Address"
 msgstr "عنوان البريد الإلكتروني"
 
@@ -4788,9 +4793,9 @@ msgstr "عنوان البريد الإلكتروني"
 #: templates/documents/detail/purchase_order_detail.html:6
 #: templates/documents/detail/sales_receipt_detail.html:6
 #: templates/documents/detail/vat_return_detail.html:6
-#: templates/landing/index.html:1157 templates/landing/index.html:1181
-#: templates/landing/index.html:1530 templates/landing/page.html:406
-#: templates/landing/page.html:426 templates/platform_admin/seo.html:192
+#: templates/landing/index.html:1193 templates/landing/index.html:1218
+#: templates/landing/index.html:1563 templates/landing/page.html:427
+#: templates/landing/page.html:448 templates/platform_admin/seo.html:192
 msgid "Home"
 msgstr "الرئيسية"
 
@@ -4799,77 +4804,77 @@ msgstr "الرئيسية"
 msgid "Logout"
 msgstr "تسجيل الخروج"
 
-#: templates/auth/login.html:9 templates/auth/login.html:435
-#: templates/auth/login.html:510 templates/auth/portal.html:9
-#: templates/auth/portal.html:457 templates/auth/portal.html:526
-#: templates/landing/index.html:1166 templates/landing/index.html:1187
-#: templates/landing/page.html:415 templates/landing/page.html:432
+#: templates/auth/login.html:9 templates/auth/login.html:442
+#: templates/auth/login.html:517 templates/auth/portal.html:9
+#: templates/auth/portal.html:463 templates/auth/portal.html:532
+#: templates/landing/index.html:1203 templates/landing/index.html:1224
+#: templates/landing/page.html:437 templates/landing/page.html:454
 msgid "Sign In"
 msgstr "تسجيل الدخول"
 
-#: templates/auth/login.html:417 templates/auth/otp_verify.html:392
-#: templates/auth/password_reset_base.html:429 templates/auth/portal.html:439
-#: templates/landing/page.html:484
+#: templates/auth/login.html:424 templates/auth/otp_verify.html:392
+#: templates/auth/password_reset_base.html:429 templates/auth/portal.html:445
+#: templates/landing/page.html:502
 msgid "Back to Home"
 msgstr "العودة إلى الرئيسية"
 
-#: templates/auth/login.html:436
+#: templates/auth/login.html:443
 msgid "Welcome back! Please enter your credentials to access the dashboard."
 msgstr "أهلاً بعودتك! يرجى إدخال بيانات اعتمادك للوصول إلى لوحة التحكم."
 
-#: templates/auth/login.html:478 templates/auth/portal.html:496
-#: templates/auth/portal.html:581
+#: templates/auth/login.html:485 templates/auth/portal.html:502
+#: templates/auth/portal.html:587
 msgid "Password"
 msgstr "كلمة المرور"
 
-#: templates/auth/login.html:479 templates/auth/portal.html:497
+#: templates/auth/login.html:486 templates/auth/portal.html:503
 msgid "Forgot password?"
 msgstr "نسيت كلمة المرور؟"
 
-#: templates/auth/login.html:503 templates/auth/portal.html:521
+#: templates/auth/login.html:510 templates/auth/portal.html:527
 msgid "Remember me on this device"
 msgstr "تذكّرني على هذا الجهاز"
 
-#: templates/auth/login.html:510 templates/auth/portal.html:526
+#: templates/auth/login.html:517 templates/auth/portal.html:532
 msgid "Signing in..."
 msgstr "جارٍ تسجيل الدخول..."
 
-#: templates/auth/login.html:515 templates/auth/portal.html:539
+#: templates/auth/login.html:522 templates/auth/portal.html:545
 msgid "Don't have an account?"
 msgstr "ليس لديك حساب؟"
 
-#: templates/auth/login.html:516 templates/auth/portal.html:540
+#: templates/auth/login.html:523 templates/auth/portal.html:546
 msgid "Start your free trial now"
 msgstr "ابدأ تجربتك المجانية الآن"
 
-#: templates/auth/login.html:524
+#: templates/auth/login.html:531
 msgid "All data encrypted with AES-256 and SOC 2 standards"
 msgstr "جميع البيانات مشفّرة بمعيار AES-256 ومعايير SOC 2"
 
-#: templates/auth/login.html:530 templates/auth/portal.html:642
+#: templates/auth/login.html:537 templates/auth/portal.html:648
 msgid "Two-Factor Verification"
 msgstr "التحقّق الثنائي"
 
-#: templates/auth/login.html:531 templates/auth/portal.html:643
+#: templates/auth/login.html:538 templates/auth/portal.html:649
 msgid "Enter the 6-digit code from your authenticator app."
 msgstr "أدخل الرمز المكوّن من 6 أرقام من تطبيق المصادقة."
 
-#: templates/auth/login.html:554 templates/auth/otp_verify.html:458
-#: templates/auth/portal.html:660
+#: templates/auth/login.html:561 templates/auth/otp_verify.html:458
+#: templates/auth/portal.html:666
 msgid "Verifying..."
 msgstr "جارٍ التحقق..."
 
-#: templates/auth/login.html:554 templates/auth/portal.html:660
+#: templates/auth/login.html:561 templates/auth/portal.html:666
 msgid "Verify"
 msgstr "تحقَّق"
 
-#: templates/auth/login.html:560 templates/auth/password_reset_base.html:431
+#: templates/auth/login.html:567 templates/auth/password_reset_base.html:431
 #: templates/auth/password_reset_done.html:36
-#: templates/auth/password_reset_form.html:50 templates/auth/portal.html:666
+#: templates/auth/password_reset_form.html:50 templates/auth/portal.html:672
 msgid "Back to login"
 msgstr "العودة إلى تسجيل الدخول"
 
-#: templates/auth/login.html:575 templates/auth/portal.html:685
+#: templates/auth/login.html:582 templates/auth/portal.html:691
 msgid ""
 "Financial auditing <span class=\"highlight\">powered by AI</span> to take "
 "your business further."
@@ -4877,56 +4882,42 @@ msgstr ""
 "تدقيق مالي <span class=\"highlight\">مدعوم بالذكاء الاصطناعي</span> ليرفع "
 "أعمالك إلى المستوى التالي."
 
-#: templates/auth/login.html:581 templates/auth/portal.html:691
-#: templates/landing/index.html:1220 templates/landing/page.html:468
+#: templates/auth/login.html:588 templates/auth/portal.html:697
+#: templates/landing/index.html:1253 templates/landing/page.html:490
 msgid "Automation rate"
 msgstr "معدّل الأتمتة"
 
-#: templates/auth/login.html:585 templates/auth/portal.html:695
-#: templates/landing/index.html:1224 templates/landing/page.html:472
+#: templates/auth/login.html:592 templates/auth/portal.html:701
+#: templates/landing/index.html:1257 templates/landing/page.html:494
 msgid "Extraction accuracy"
 msgstr "دقّة الاستخراج"
 
-#: templates/auth/login.html:589 templates/auth/portal.html:699
-#: templates/landing/index.html:1216
-msgid "Invoices processed"
-msgstr "الفواتير المعالَجة"
-
-#: templates/auth/login.html:593 templates/auth/portal.html:703
-#: templates/landing/page.html:476
-msgid "Trusted organizations"
-msgstr "مؤسسات موثوقة"
-
-#: templates/auth/login.html:601 templates/auth/portal.html:709
-msgid "Join 1,200+ organizations in the Gulf"
-msgstr "انضم إلى أكثر من 1,200 مؤسسة في الخليج"
-
-#: templates/auth/login.html:630
+#: templates/auth/login.html:622
 msgid "Please fill in all fields"
 msgstr "يرجى ملء جميع الحقول"
 
-#: templates/auth/login.html:651
+#: templates/auth/login.html:643
 msgid "Please enter the two-factor authentication code"
 msgstr "يرجى إدخال رمز المصادقة الثنائية"
 
-#: templates/auth/login.html:661
+#: templates/auth/login.html:653
 msgid "Invalid login credentials"
 msgstr "بيانات تسجيل دخول غير صحيحة"
 
-#: templates/auth/login.html:663 templates/documents/upload.html:416
+#: templates/auth/login.html:655 templates/documents/upload.html:416
 #: templates/invoices/upload.html:337
 msgid "Server connection error"
 msgstr "خطأ في الاتصال بالخادم"
 
-#: templates/auth/login.html:670 templates/auth/portal.html:788
+#: templates/auth/login.html:662 templates/auth/portal.html:781
 msgid "Please enter a 6-digit code"
 msgstr "يرجى إدخال رمز مكوّن من 6 أرقام"
 
-#: templates/auth/login.html:689 templates/auth/portal.html:804
+#: templates/auth/login.html:681 templates/auth/portal.html:797
 msgid "Invalid code"
 msgstr "رمز غير صالح"
 
-#: templates/auth/login.html:691 templates/auth/portal.html:806
+#: templates/auth/login.html:683 templates/auth/portal.html:799
 msgid "MFA verification failed"
 msgstr "فشل التحقّق بالمصادقة متعدّدة العوامل"
 
@@ -4937,6 +4928,11 @@ msgstr "رمز التحقق بالبريد الإلكتروني"
 #: templates/auth/otp_email.html:23 templates/auth/password_reset_base.html:493
 msgid "Email verification"
 msgstr "التحقق عبر البريد"
+
+#: templates/auth/otp_email.html:30
+#, python-format
+msgid "Hello %(name)s,"
+msgstr "مرحباً %(name)s،"
 
 #: templates/auth/otp_email.html:32
 msgid ""
@@ -5079,8 +5075,8 @@ msgstr "تعذّر التحقق من الرمز الآن."
 msgid "Verification completed successfully."
 msgstr "تم التحقق بنجاح."
 
-#: templates/auth/otp_verify.html:641 templates/auth/portal.html:780
-#: templates/auth/portal.html:845
+#: templates/auth/otp_verify.html:641 templates/auth/portal.html:773
+#: templates/auth/portal.html:838
 msgid "A server connection error occurred."
 msgstr "حدث خطأ في الاتصال بالخادم."
 
@@ -5351,82 +5347,82 @@ msgstr "إرسال رابط الاستعادة"
 msgid "Remembered your password?"
 msgstr "تذكّرت كلمة المرور؟"
 
-#: templates/auth/portal.html:9 templates/auth/portal.html:458
-#: templates/auth/portal.html:622
+#: templates/auth/portal.html:9 templates/auth/portal.html:464
+#: templates/auth/portal.html:628
 msgid "Create Account"
 msgstr "إنشاء حساب"
 
-#: templates/auth/portal.html:463
+#: templates/auth/portal.html:469
 msgid "Welcome back"
 msgstr "أهلاً بعودتك"
 
-#: templates/auth/portal.html:464
+#: templates/auth/portal.html:470
 msgid "Sign in to access your dashboard."
 msgstr "سجّل الدخول للوصول إلى لوحة تحكّمك."
 
-#: templates/auth/portal.html:506 templates/auth/portal.html:589
+#: templates/auth/portal.html:512 templates/auth/portal.html:595
 msgid "Show or hide password"
 msgstr "إظهار أو إخفاء كلمة المرور"
 
-#: templates/auth/portal.html:531 templates/auth/portal.html:627
+#: templates/auth/portal.html:537 templates/auth/portal.html:633
 msgid "Or continue with"
 msgstr "أو تابع عبر"
 
-#: templates/auth/portal.html:534 templates/auth/portal.html:630
+#: templates/auth/portal.html:540 templates/auth/portal.html:636
 msgid "Continue with Google"
 msgstr "المتابعة عبر Google"
 
-#: templates/auth/portal.html:546
+#: templates/auth/portal.html:552
 msgid "Create Your Account"
 msgstr "أنشئ حسابك"
 
-#: templates/auth/portal.html:547
+#: templates/auth/portal.html:553
 msgid "Start your free trial — no credit card required."
 msgstr "ابدأ تجربتك المجانية — لا حاجة لبطاقة ائتمان."
 
-#: templates/auth/portal.html:557 templates/settings/index.html:172
+#: templates/auth/portal.html:563 templates/settings/index.html:172
 #: templates/settings/index.html:371
 msgid "Full Name"
 msgstr "الاسم الكامل"
 
-#: templates/auth/portal.html:563 templates/settings/index.html:372
+#: templates/auth/portal.html:569 templates/settings/index.html:372
 msgid "Mohammed Ahmed"
 msgstr "محمد أحمد"
 
-#: templates/auth/portal.html:603 templates/vendor_dashboard/settings.html:120
+#: templates/auth/portal.html:609 templates/vendor_dashboard/settings.html:120
 msgid "Confirm Password"
 msgstr "تأكيد كلمة المرور"
 
-#: templates/auth/portal.html:622
+#: templates/auth/portal.html:628
 msgid "Creating account..."
 msgstr "جارٍ إنشاء الحساب..."
 
-#: templates/auth/portal.html:635
+#: templates/auth/portal.html:641
 msgid "Already have an account?"
 msgstr "لديك حساب بالفعل؟"
 
-#: templates/auth/portal.html:636
+#: templates/auth/portal.html:642
 msgid "Sign in"
 msgstr "تسجيل الدخول"
 
-#: templates/auth/portal.html:672 templates/landing/page.html:495
+#: templates/auth/portal.html:678 templates/landing/page.html:513
 #, python-format
 msgid "© 2026 %(product)s. A product by %(company)s."
 msgstr "© 2026 %(product)s. منتج من %(company)s."
 
-#: templates/auth/portal.html:749
+#: templates/auth/portal.html:742
 msgid "Please enter your email address and password."
 msgstr "يرجى إدخال عنوان البريد الإلكتروني وكلمة المرور."
 
-#: templates/auth/portal.html:775
+#: templates/auth/portal.html:768
 msgid "Unable to sign in. Please try again."
 msgstr "تعذر تسجيل الدخول. يرجى المحاولة مرة أخرى."
 
-#: templates/auth/portal.html:815
+#: templates/auth/portal.html:808
 msgid "Please complete all required fields."
 msgstr "يرجى إكمال جميع الحقول المطلوبة."
 
-#: templates/auth/portal.html:840
+#: templates/auth/portal.html:833
 msgid "Unable to create the account right now."
 msgstr "تعذر إنشاء الحساب الآن."
 
@@ -5439,7 +5435,9 @@ msgstr "موصلات البنوك"
 msgid ""
 "Pull bank statements directly into Tadgeeg, then match them against open "
 "invoices automatically."
-msgstr "سحب كشوف الحسابات البنكية مباشرة إلى تدقيق، ثم مطابقتها تلقائيًا مع الفواتير المفتوحة."
+msgstr ""
+"سحب كشوف الحسابات البنكية مباشرة إلى تدقيق، ثم مطابقتها تلقائيًا مع الفواتير "
+"المفتوحة."
 
 #: templates/banking/dashboard.html:65
 msgid "Re-run reconciliation"
@@ -5494,9 +5492,11 @@ msgstr "لا توجد بنوك متصلة بعد. انقر على 'اتصل با
 msgid "Reconciliation queue"
 msgstr "طابور التسوية"
 
-#: templates/banking/dashboard.html:152 templates/phase2/audits.html:96
+#: templates/banking/dashboard.html:152 templates/invoices/invoice_pdf.html:136
+#: templates/phase2/audits.html:96
 #: templates/reports/document_audit_report.html:384
 #: templates/reports/document_audit_report.html:454
+#: templates/reports/invoice_audit_report_pdf.html:355
 msgid "Score"
 msgstr "الدرجة"
 
@@ -5521,7 +5521,9 @@ msgstr "رفض"
 msgid ""
 "No suggestions in the queue. Click ‘Re-run reconciliation’ to score the "
 "latest transactions."
-msgstr "لا توجد اقتراحات في قائمة الانتظار. انقر على 'إعادة تشغيل التسوية' لتسجيل أحدث المعاملات."
+msgstr ""
+"لا توجد اقتراحات في قائمة الانتظار. انقر على 'إعادة تشغيل التسوية' لتسجيل "
+"أحدث المعاملات."
 
 #: templates/banking/dashboard.html:210
 msgid "Connect a bank"
@@ -5535,7 +5537,9 @@ msgstr "اسم العرض (اختياري)"
 msgid ""
 "Sandbox / Production modes need API credentials issued by the bank's "
 "developer portal."
-msgstr "تحتاج أوضاع Sandbox / Production إلى بيانات اعتماد API صادرة عن بوابة مطور البنك."
+msgstr ""
+"تحتاج أوضاع Sandbox / Production إلى بيانات اعتماد API صادرة عن بوابة مطور "
+"البنك."
 
 #: templates/banking/dashboard.html:231
 msgid "Connect"
@@ -5553,11 +5557,11 @@ msgstr "تمت المصالحة"
 msgid "new suggestions"
 msgstr "اقتراحات جديدة"
 
-#: templates/base.html:308
+#: templates/base.html:314
 msgid "Dismiss notification"
 msgstr "إغلاق الإشعار"
 
-#: templates/base.html:378 templates/base.html:463
+#: templates/base.html:384 templates/base.html:469
 #: templates/documents/_typed_list.html:155
 #: templates/documents/bank_statements.html:115
 #: templates/documents/expense_reports.html:115
@@ -5569,43 +5573,43 @@ msgstr "إغلاق الإشعار"
 msgid "Upload Document"
 msgstr "رفع مستند"
 
-#: templates/base.html:393 templates/invoices/batches.html:3
+#: templates/base.html:399 templates/invoices/batches.html:3
 msgid "Batches"
 msgstr "الدفعات"
 
-#: templates/base.html:398 templates/layouts/dashboard_base.html:414
+#: templates/base.html:404 templates/layouts/dashboard_base.html:418
 msgid "Analysis"
 msgstr "التحليل"
 
-#: templates/base.html:412 templates/layouts/dashboard_base.html:429
+#: templates/base.html:418 templates/layouts/dashboard_base.html:433
 #: templates/vendors/detail.html:10 templates/vendors/index.html:4
 #: templates/vendors/index.html:30 templates/vendors/index.html:36
 msgid "Vendors"
 msgstr "الموردون"
 
-#: templates/base.html:419
+#: templates/base.html:425
 msgid "Anomaly Detection"
 msgstr "كشف الشذوذ"
 
-#: templates/base.html:433
+#: templates/base.html:439
 msgid "AI Auditor"
 msgstr "المدقق الذكي"
 
-#: templates/base.html:448 templates/transactions.html:4
+#: templates/base.html:454 templates/transactions.html:4
 #: templates/transactions.html:10 templates/transactions.html:16
 msgid "Transactions"
 msgstr "الدفعات"
 
-#: templates/base.html:455
+#: templates/base.html:461
 msgid "Financial Documents"
 msgstr "المستندات المالية"
 
-#: templates/base.html:507 templates/cms_admin/pricing.html:90
+#: templates/base.html:513 templates/cms_admin/pricing.html:90
 msgid "Users"
 msgstr "المستخدمون"
 
-#: templates/base.html:514 templates/cms_admin/base_cms.html:97
-#: templates/layouts/dashboard_base.html:437
+#: templates/base.html:520 templates/cms_admin/base_cms.html:97
+#: templates/layouts/dashboard_base.html:441
 #: templates/platform_admin/dashboard.html:118
 #: templates/platform_admin/settings.html:4 templates/settings/index.html:4
 #: templates/settings/index.html:111 templates/settings/index.html:119
@@ -5614,35 +5618,35 @@ msgstr "المستخدمون"
 msgid "Settings"
 msgstr "الإعدادات"
 
-#: templates/base.html:523
+#: templates/base.html:529
 msgid "Light mode"
 msgstr "الوضع الفاتح"
 
-#: templates/base.html:523
+#: templates/base.html:529
 msgid "Dark mode"
 msgstr "الوضع الداكن"
 
-#: templates/base.html:528
+#: templates/base.html:534
 msgid "Collapse sidebar"
 msgstr "طي الشريط الجانبي"
 
-#: templates/base.html:571
+#: templates/base.html:577
 msgid "New Invoice"
 msgstr "فاتورة جديدة"
 
-#: templates/base.html:655
+#: templates/base.html:661
 msgid "Operation completed successfully"
 msgstr "تمت العملية بنجاح"
 
-#: templates/base.html:656
+#: templates/base.html:662
 msgid "Unable to complete the operation"
 msgstr "تعذّر إتمام العملية"
 
-#: templates/base.html:657
+#: templates/base.html:663
 msgid "Notice"
 msgstr "تنبيه"
 
-#: templates/base.html:658
+#: templates/base.html:664
 msgid "Attention required"
 msgstr "يتطلب انتباهاً"
 
@@ -5824,8 +5828,8 @@ msgstr "فشل الحفظ"
 
 #: templates/cms_admin/base_cms.html:61 templates/cms_admin/dashboard.html:270
 #: templates/cms_admin/homepage.html:351 templates/cms_admin/seo.html:211
-#: templates/landing/index.html:1160 templates/landing/index.html:1184
-#: templates/landing/page.html:408 templates/landing/page.html:428
+#: templates/landing/index.html:1196 templates/landing/index.html:1221
+#: templates/landing/page.html:429 templates/landing/page.html:450
 msgid "About"
 msgstr "حول"
 
@@ -5895,8 +5899,8 @@ msgid "Item"
 msgstr "العنصر"
 
 #: templates/cms_admin/dashboard.html:143
-#: templates/invoices/invoice_pdf.html:145
-#: templates/layouts/dashboard_base.html:520 templates/phase2/activity.html:167
+#: templates/invoices/invoice_pdf.html:175
+#: templates/layouts/dashboard_base.html:524 templates/phase2/activity.html:167
 #: templates/platform_admin/activity_logs.html:105
 #: templates/settings/index.html:438 templates/working_papers/detail.html:159
 msgid "User"
@@ -6450,8 +6454,8 @@ msgstr "ملاحظات داخلية"
 msgid "Add internal notes..."
 msgstr "أضِف ملاحظات داخلية..."
 
-#: templates/cms_admin/jobs.html:387 templates/landing/index.html:1557
-#: templates/layouts/dashboard_base.html:536
+#: templates/cms_admin/jobs.html:387 templates/landing/index.html:1590
+#: templates/layouts/dashboard_base.html:540
 msgid "Close"
 msgstr "إغلاق"
 
@@ -7133,8 +7137,8 @@ msgid "Icon (Lucide name)"
 msgstr "الأيقونة (اسم Lucide)"
 
 #: templates/cms_admin/services_editor.html:144
-#: templates/cms_admin/settings.html:138 templates/landing/index.html:1158
-#: templates/landing/index.html:1182 templates/landing/index.html:1531
+#: templates/cms_admin/settings.html:138 templates/landing/index.html:1194
+#: templates/landing/index.html:1219 templates/landing/index.html:1564
 msgid "Features"
 msgstr "المميزات"
 
@@ -7322,7 +7326,9 @@ msgstr "قواعد التدقيق النشطة (R001 → R018)"
 msgid ""
 "Rules that run synchronously on every uploaded document. Each rule produces "
 "an explanatory finding when it fails."
-msgstr "قواعد تعمل بشكل متزامن على كل مستند تم تحميله. كل قاعدة تنتج نتيجة تفسيرية عند الفشل."
+msgstr ""
+"قواعد تعمل بشكل متزامن على كل مستند تم تحميله. كل قاعدة تنتج نتيجة تفسيرية "
+"عند الفشل."
 
 #: templates/compliance/index.html:162
 #: templates/reports/invoice_audit_report.html:154
@@ -7409,7 +7415,7 @@ msgstr "وجود رمز الاستجابة السريعة ZATCA"
 msgid "Mandatory Tax-Invoice Fields"
 msgstr "حقول الفاتورة الضريبية الإلزامية"
 
-#: templates/compliance/index.html:192 templates/dashboard/index.html:107
+#: templates/compliance/index.html:192 templates/dashboard/index.html:131
 msgid "Invoices missing valid QR"
 msgstr "فواتير تفتقر إلى QR صالح"
 
@@ -7433,20 +7439,47 @@ msgstr "لا يمكن التراجع عن هذا الإجراء. سيتم تمي
 msgid "Delete Permanently"
 msgstr "حذف نهائي"
 
-#: templates/dashboard/index.html:35
+#: templates/dashboard/index.html:36
+#, python-format
+msgid "Coverage: %(country)s"
+msgstr ""
+
+#: templates/dashboard/index.html:38
 msgid "Coverage: GCC"
 msgstr "التغطية: دول الخليج"
 
-#: templates/dashboard/index.html:41
+#: templates/dashboard/index.html:47
+#, fuzzy
+#| msgid "You are not associated with an organization yet."
+msgid "You're not associated with an organization yet."
+msgstr "لست مرتبطاً بمؤسسة بعد."
+
+#: templates/dashboard/index.html:49
+#, fuzzy
+#| msgid ""
+#| "Your account is not linked to an organization. Contact your platform "
+#| "administrator to fix this."
+msgid ""
+"Until your account is added to an organization, the dashboard has no data to "
+"show."
+msgstr "حسابك غير مرتبط بمؤسسة. تواصل مع مسؤول المنصّة لمعالجة ذلك."
+
+#: templates/dashboard/index.html:52
+#, fuzzy
+#| msgid "Go to login"
+msgid "Go to profile"
+msgstr "الانتقال إلى تسجيل الدخول"
+
+#: templates/dashboard/index.html:58
 msgid "Main Dashboard"
 msgstr "لوحة التحكم الرئيسية"
 
-#: templates/dashboard/index.html:42
+#: templates/dashboard/index.html:59
 #, python-format
 msgid "%(product)s — Unified AI-powered financial document auditor"
 msgstr "%(product)s — مدقق المستندات المالية الموحّد المدعوم بالذكاء الاصطناعي"
 
-#: templates/dashboard/index.html:49
+#: templates/dashboard/index.html:67
 #: templates/documents/bank_statements.html:51
 #: templates/documents/expense_reports.html:51
 #: templates/documents/fixed_assets.html:51 templates/documents/payroll.html:51
@@ -7458,63 +7491,63 @@ msgstr "%(product)s — مدقق المستندات المالية الموحّ�
 msgid "Export"
 msgstr "تصدير"
 
-#: templates/dashboard/index.html:71 templates/landing/index.html:1358
+#: templates/dashboard/index.html:89 templates/landing/index.html:1391
 msgid "Process Automation"
 msgstr "أتمتة العمليات"
 
-#: templates/dashboard/index.html:73
+#: templates/dashboard/index.html:91
 msgid "Invoices auto-extracted without errors"
 msgstr "فواتير تم استخراجها تلقائياً دون أخطاء"
 
-#: templates/dashboard/index.html:77 templates/documents/upload.html:202
+#: templates/dashboard/index.html:95 templates/documents/upload.html:202
 #: templates/invoices/upload.html:152
 msgid "OCR"
 msgstr "OCR"
 
-#: templates/dashboard/index.html:81
+#: templates/dashboard/index.html:99
 msgid "Data Accuracy"
 msgstr "دقّة البيانات"
 
-#: templates/dashboard/index.html:83
+#: templates/dashboard/index.html:101
 msgid "Average OCR confidence"
 msgstr "متوسط ثقة OCR"
 
-#: templates/dashboard/index.html:88
+#: templates/dashboard/index.html:109
 #: templates/reports/invoice_audit_report.html:370
 #: templates/reports/invoice_audit_report.html:386
 #: templates/reports/invoice_audit_report_pdf.html:321
-#: templates/reports/invoice_audit_report_pdf.html:388
+#: templates/reports/invoice_audit_report_pdf.html:403
 #: templates/reports/invoice_audit_report_v2.html:378
 #: templates/reports/invoice_audit_report_v2.html:417
 #: templates/reports/invoice_audit_report_v2.html:689
 msgid "Safe"
 msgstr "آمنة"
 
-#: templates/dashboard/index.html:95
+#: templates/dashboard/index.html:116
 msgid "Fraud / High-Risk"
 msgstr "احتيال / مخاطرة عالية"
 
-#: templates/dashboard/index.html:97
+#: templates/dashboard/index.html:118
 msgid "high-risk invoices"
 msgstr "فواتير عالية المخاطرة"
 
-#: templates/dashboard/index.html:105
+#: templates/dashboard/index.html:129
 msgid "Compliance Alerts"
 msgstr "تنبيهات الامتثال"
 
-#: templates/dashboard/index.html:140
+#: templates/dashboard/index.html:174
 msgid "Pending Review"
 msgstr "بانتظار المراجعة"
 
-#: templates/dashboard/index.html:142
+#: templates/dashboard/index.html:176
 msgid "Awaiting human approval"
 msgstr "في انتظار الموافقة البشرية"
 
-#: templates/dashboard/index.html:150
+#: templates/dashboard/index.html:184
 msgid "Start auditing your financial documents now"
 msgstr "ابدأ تدقيق مستنداتك المالية الآن"
 
-#: templates/dashboard/index.html:151
+#: templates/dashboard/index.html:185
 msgid ""
 "Upload invoices, bank statements, or VAT records and our system will analyze "
 "them in seconds."
@@ -7522,123 +7555,142 @@ msgstr ""
 "ارفع الفواتير أو كشوف الحسابات أو سجلات ضريبة القيمة المضافة وسيُحلّلها نظامنا "
 "خلال ثوانٍ."
 
-#: templates/dashboard/index.html:155
+#: templates/dashboard/index.html:189
 msgid "Start Upload"
 msgstr "بدء الرفع"
 
-#: templates/dashboard/index.html:165 templates/documents/upload.html:166
+#: templates/dashboard/index.html:201 templates/documents/upload.html:166
 #: templates/invoices/upload.html:108
 msgid "Drag files here or click to select"
 msgstr "اسحب الملفات هنا أو انقر للاختيار"
 
-#: templates/dashboard/index.html:166 templates/documents/upload.html:167
+#: templates/dashboard/index.html:202 templates/documents/upload.html:167
 #: templates/invoices/upload.html:109
 msgid "Supports PDF, Excel, CSV, JSON, and images — up to 50MB per file"
 msgstr "يدعم PDF و Excel و CSV و JSON والصور — حتى 50 ميجابايت لكل ملف"
 
-#: templates/dashboard/index.html:181
+#: templates/dashboard/index.html:218
 msgid "Recent Operations"
 msgstr "العمليات الحديثة"
 
-#: templates/dashboard/index.html:182
+#: templates/dashboard/index.html:219
 msgid "Last 10 analyzed documents"
 msgstr "آخر 10 مستندات مُحلَّلة"
 
-#: templates/dashboard/index.html:187 templates/documents/_typed_list.html:93
+#: templates/dashboard/index.html:225 templates/documents/_typed_list.html:93
 #: templates/working_papers/list.html:54
 msgid "Filter"
 msgstr "تصفية"
 
-#: templates/dashboard/index.html:189 templates/phase2/dashboard.html:143
+#: templates/dashboard/index.html:227 templates/phase2/dashboard.html:143
 #: templates/platform_admin/dashboard.html:133 templates/reports/index.html:480
 #: templates/vendor_dashboard/dashboard.html:135
 #: templates/vendor_dashboard/storage.html:102
 msgid "View all"
 msgstr "عرض الكل"
 
-#: templates/dashboard/index.html:230
+#: templates/dashboard/index.html:268
 msgid "Upload your first invoice or document and our AI will analyze it."
 msgstr "ارفع أوّل فاتورة أو مستند وسيُحلّله الذكاء الاصطناعي."
 
-#: templates/dashboard/index.html:243
+#: templates/dashboard/index.html:281
 msgid "Top Risky Vendors"
 msgstr "أعلى البائعين ذوي المخاطر"
 
-#: templates/dashboard/index.html:245
+#: templates/dashboard/index.html:283
 msgid "Open Approval Inbox →"
 msgstr "فتح صندوق الوارد للموافقة →"
 
-#: templates/dashboard/index.html:253 templates/reports/index.html:136
+#: templates/dashboard/index.html:291 templates/reports/index.html:136
 msgid "High-Risk"
 msgstr "عالي المخاطر"
 
-#: templates/dashboard/index.html:267 templates/vendors/detail.html:4
+#: templates/dashboard/index.html:305 templates/vendors/detail.html:4
 msgid "Vendor 360"
 msgstr "ملف البائع 360"
 
-#: templates/dashboard/index.html:284
+#: templates/dashboard/index.html:324
+#, fuzzy
+#| msgid "No documents to audit yet"
+msgid "No documents to score yet"
+msgstr "لا توجد مستندات للتدقيق بعد"
+
+#: templates/dashboard/index.html:330
 msgid "Invoices Trend (last 6 months)"
 msgstr "اتجاه الفواتير (آخر 6 أشهر)"
 
-#: templates/dashboard/index.html:299
+#: templates/dashboard/index.html:337
+#, fuzzy
+#| msgid "Upload invoices or purchase orders to populate this feed."
+msgid "Upload invoices to see the monthly trend"
+msgstr "ارفع الفواتير أو أوامر الشراء لتعبئة هذا الموجز."
+
+#: templates/dashboard/index.html:353
 msgid "Your dashboard is empty — try sample data"
 msgstr "لوحتك فارغة — جرب بيانات عينة"
 
-#: templates/dashboard/index.html:300
+#: templates/dashboard/index.html:354
 msgid ""
 "Load a curated set of demo invoices, POs, GRNs, payments, and contracts to "
 "see how the platform looks in action."
-msgstr "قم بتحميل مجموعة من الفواتير التجريبية، أوامر الشراء، إشعارات الاستلام، المدفوعات، والعقود لرؤية كيفية عمل المنصة."
+msgstr ""
+"قم بتحميل مجموعة من الفواتير التجريبية، أوامر الشراء، إشعارات الاستلام، "
+"المدفوعات، والعقود لرؤية كيفية عمل المنصة."
 
-#: templates/dashboard/index.html:304 templates/documents/index.html:156
+#: templates/dashboard/index.html:358 templates/documents/index.html:156
 msgid "Load demo data"
 msgstr "تحميل بيانات العرض التوضيحي"
 
-#: templates/dashboard/index.html:315
+#: templates/dashboard/index.html:369
 msgid "Quick start"
 msgstr "بدء سريع"
 
-#: templates/dashboard/index.html:318
+#: templates/dashboard/index.html:372
 msgid "Welcome to Tadgeeg"
 msgstr "مرحبًا بكم في تدقيق"
 
-#: templates/dashboard/index.html:321
+#: templates/dashboard/index.html:375
 msgid ""
 "Tadgeeg automates financial-document audits with 236 rules across 21 "
 "document types. Here's how to get started:"
-msgstr "تدجيج يقوم بأتمتة تدقيق الوثائق المالية مع 236 قاعدة عبر 21 نوع من الوثائق. إليك كيفية البدء:"
+msgstr ""
+"تدجيج يقوم بأتمتة تدقيق الوثائق المالية مع 236 قاعدة عبر 21 نوع من الوثائق. "
+"إليك كيفية البدء:"
 
-#: templates/dashboard/index.html:324
+#: templates/dashboard/index.html:378
 msgid ""
 "— pick a document type at /documents/upload/ and drop your PDF / Excel / CSV."
 msgstr "— اختر نوع الوثيقة في /documents/upload/ واسحب ملف PDF / Excel / CSV."
 
-#: templates/dashboard/index.html:325
+#: templates/dashboard/index.html:379
 msgid "— our AI extracts the data and runs validation rules instantly."
-msgstr "— يقوم الذكاء الاصطناعي لدينا باستخراج البيانات وتشغيل قواعد التحقق على الفور."
+msgstr ""
+"— يقوم الذكاء الاصطناعي لدينا باستخراج البيانات وتشغيل قواعد التحقق على "
+"الفور."
 
-#: templates/dashboard/index.html:326
+#: templates/dashboard/index.html:380
 msgid ""
 "— open the detail page to see risk score, failed rules, and linked documents."
-msgstr "— افتح صفحة التفاصيل لرؤية درجة المخاطر، القواعد الفاشلة، والوثائق المرتبطة."
+msgstr ""
+"— افتح صفحة التفاصيل لرؤية درجة المخاطر، القواعد الفاشلة، والوثائق المرتبطة."
 
-#: templates/dashboard/index.html:327
+#: templates/dashboard/index.html:381
 msgid "Decide"
 msgstr "قرر"
 
-#: templates/dashboard/index.html:327
+#: templates/dashboard/index.html:381
 msgid "— approve, hold, or reject; the audit trail captures everything."
 msgstr "— وافق، أو احتفظ، أو ارفض؛ تسجل آثار التدقيق كل شيء."
 
-#: templates/dashboard/index.html:331
+#: templates/dashboard/index.html:385
 msgid "Skip"
 msgstr "تخطي"
 
-#: templates/dashboard/index.html:377
+#: templates/dashboard/index.html:431
 msgid "Amount (SAR)"
 msgstr "المبلغ (ريال سعودي)"
 
-#: templates/dashboard/index.html:387 templates/streaming/ops.html:127
+#: templates/dashboard/index.html:441 templates/streaming/ops.html:127
 #: templates/zatca/dashboard.html:180
 msgid "Count"
 msgstr "العدد"
@@ -7882,7 +7934,7 @@ msgstr "عرض"
 #: templates/documents/detail/purchase_order_detail.html:126
 #: templates/documents/detail/sales_receipt_detail.html:126
 #: templates/documents/detail/vat_return_detail.html:118
-#: templates/invoices/invoice_pdf.html:138
+#: templates/invoices/invoice_pdf.html:157
 msgid "AI Summary"
 msgstr "ملخّص الذكاء الاصطناعي"
 
@@ -8415,7 +8467,10 @@ msgstr "مرحبًا — دعنا نقوم بتدقيق مستندك الأول"
 msgid ""
 "Pick any of the 21 document types below, click Upload, drop a PDF / Excel / "
 "CSV, and our AI will extract the data and run audit rules instantly."
-msgstr "اختر أيًا من 21 نوعًا من الوثائق أدناه، انقر على تحميل، اسحب ملف PDF / Excel / CSV، وسيتولى الذكاء الاصطناعي لدينا استخراج البيانات وتشغيل قواعد التدقيق على الفور."
+msgstr ""
+"اختر أيًا من 21 نوعًا من الوثائق أدناه، انقر على تحميل، اسحب ملف PDF / Excel / "
+"CSV، وسيتولى الذكاء الاصطناعي لدينا استخراج البيانات وتشغيل قواعد التدقيق "
+"على الفور."
 
 #: templates/documents/index.html:150
 msgid "Upload your first document"
@@ -8424,7 +8479,9 @@ msgstr "قم بتحميل وثيقتك الأولى"
 #: templates/documents/index.html:154
 msgid ""
 "Populate the org with sample invoices, POs, GRNs, etc. — useful for demos."
-msgstr "قم بملء المؤسسة بفواتير، أوامر شراء، إشعارات استلام، إلخ. — مفيد للعروض التقديمية."
+msgstr ""
+"قم بملء المؤسسة بفواتير، أوامر شراء، إشعارات استلام، إلخ. — مفيد للعروض "
+"التقديمية."
 
 #: templates/documents/index.html:169
 msgid "Sales invoices and tax documents"
@@ -9111,7 +9168,7 @@ msgstr "بنود الفاتورة"
 msgid "Details of items or services extracted from the document."
 msgstr "تفاصيل الأصناف أو الخدمات المستخرَجة من المستند."
 
-#: templates/invoices/detail.html:345 templates/invoices/invoice_pdf.html:143
+#: templates/invoices/detail.html:345 templates/invoices/invoice_pdf.html:173
 #: templates/reports/document_audit_report.html:1535
 msgid "Audit Trail"
 msgstr "سِجل التدقيق"
@@ -9341,19 +9398,35 @@ msgid "Match"
 msgstr "مطابقة"
 
 #: templates/invoices/invoice_pdf.html:126
+#: templates/reports/invoice_audit_report_pdf.html:345
 msgid "Failed Audit Rules"
 msgstr "قواعد التدقيق الفاشلة"
 
 #: templates/invoices/invoice_pdf.html:128
+msgid ""
+"Rule code, rule text, severity, and score. Score = severity weight (critical "
+"25 · high 15 · medium 8 · low 3)."
+msgstr "رمز القاعدة، نص القاعدة، الشدّة، والدرجة. الدرجة = وزن الشدّة (حرج 25 · مرتفع 15 · متوسط 8 · منخفض 3)."
+
+#: templates/invoices/invoice_pdf.html:133
 #: templates/reports/executive_report.html:529
 #: templates/reports/invoice_audit_report.html:281
-#: templates/reports/invoice_audit_report_pdf.html:349
+#: templates/reports/invoice_audit_report_pdf.html:352
 #: templates/reports/partials/_failed_rules_table.html:14
 #: templates/reports/report_pdf.html:308
 msgid "Rule Code"
 msgstr "رمز القاعدة"
 
-#: templates/invoices/invoice_pdf.html:159
+#: templates/invoices/invoice_pdf.html:134
+#: templates/reports/invoice_audit_report_pdf.html:353
+msgid "Rule Text"
+msgstr "نص القاعدة"
+
+#: templates/invoices/invoice_pdf.html:162
+msgid "AI Recommendations"
+msgstr "توصيات الذكاء الاصطناعي"
+
+#: templates/invoices/invoice_pdf.html:189
 msgid "Generated by Tadgeeg Financial Audit Platform"
 msgstr "تم إنشاؤه بواسطة منصة تدقيق المالية من تدقيق"
 
@@ -9400,6 +9473,7 @@ msgid "Reason (required for reject):"
 msgstr "السبب (مطلوب للرفض):"
 
 #: templates/invoices/list.html:178
+#: templates/partials/language_switcher_select.html:29
 msgid "Apply"
 msgstr "تطبيق"
 
@@ -9644,55 +9718,55 @@ msgstr "جارٍ التحقّق من امتثال المرحلة الثانية 
 msgid "Running fraud + duplicate detection rules..."
 msgstr "جارٍ تشغيل قواعد اكتشاف الاحتيال والتكرار..."
 
-#: templates/landing/index.html:1152
+#: templates/landing/index.html:1188
 msgid "Financial Auditing"
 msgstr "التدقيق المالي"
 
-#: templates/landing/index.html:1167 templates/landing/index.html:1188
-#: templates/landing/index.html:1204 templates/landing/page.html:416
-#: templates/landing/page.html:433 templates/landing/page.html:481
+#: templates/landing/index.html:1204 templates/landing/index.html:1225
+#: templates/landing/index.html:1241 templates/landing/page.html:438
+#: templates/landing/page.html:455 templates/landing/page.html:499
 msgid "Start Free Trial"
 msgstr "ابدأ التجربة المجانية"
 
-#: templates/landing/index.html:1197
+#: templates/landing/index.html:1234
 msgid "The Future of Financial Auditing"
 msgstr "مستقبل التدقيق المالي"
 
-#: templates/landing/index.html:1198
+#: templates/landing/index.html:1235
 msgid "In the Cloud, Here Today."
 msgstr "على السحابة، متاح اليوم."
 
-#: templates/landing/index.html:1205 templates/landing/index.html:1209
+#: templates/landing/index.html:1242 templates/landing/index.html:1246
 msgid "Request Demo"
 msgstr "اطلب عرضاً توضيحياً"
 
-#: templates/landing/index.html:1359
+#: templates/landing/index.html:1392
 msgid "Reduce human errors and accelerate audit time."
 msgstr "قلِّل الأخطاء البشرية وسرِّع وقت التدقيق."
 
-#: templates/landing/index.html:1372
+#: templates/landing/index.html:1405
 msgid "Smart Technical Reports"
 msgstr "تقارير تقنية ذكية"
 
-#: templates/landing/index.html:1373 templates/landing/index.html:1429
+#: templates/landing/index.html:1406 templates/landing/index.html:1462
 msgid ""
 "Generate comprehensive reports compliant with international standards in one "
 "click."
 msgstr "أنشئ تقارير شاملة متوافقة مع المعايير الدولية بنقرة واحدة."
 
-#: templates/landing/index.html:1383
+#: templates/landing/index.html:1416
 msgid "High Data Security"
 msgstr "أمان بيانات عالٍ"
 
-#: templates/landing/index.html:1384
+#: templates/landing/index.html:1417
 msgid "Advanced cloud encryption and protection for company and client data."
 msgstr "تشفير وحماية سحابية متقدّمة لبيانات الشركة والعملاء."
 
-#: templates/landing/index.html:1393
+#: templates/landing/index.html:1426
 msgid "Why auditors choose Tadgeeg"
 msgstr "لماذا يختار المدققون تدقيق"
 
-#: templates/landing/index.html:1394
+#: templates/landing/index.html:1427
 msgid ""
 "We provide all the tools you need to ensure the highest standards of quality "
 "and security in financial operations."
@@ -9700,38 +9774,38 @@ msgstr ""
 "نوفّر جميع الأدوات التي تحتاجها لضمان أعلى معايير الجودة والأمان في العمليات "
 "المالية."
 
-#: templates/landing/index.html:1404
+#: templates/landing/index.html:1437
 #, python-format
 msgid "95%% Automation"
 msgstr "أتمتة بنسبة 95%%"
 
-#: templates/landing/index.html:1405
+#: templates/landing/index.html:1438
 msgid ""
 "Fully automated workflow for review and audit, minimizing human intervention."
 msgstr "سير عمل آلي بالكامل للمراجعة والتدقيق، يُقلّل التدخّل البشري."
 
-#: templates/landing/index.html:1416 templates/phase2/audit_result.html:460
+#: templates/landing/index.html:1449 templates/phase2/audit_result.html:460
 #: templates/phase2/audits.html:31 templates/phase2/audits.html:240
 #: templates/vendor_dashboard/reports.html:23
 msgid "Fraud Detection"
 msgstr "اكتشاف الاحتيال"
 
-#: templates/landing/index.html:1417
+#: templates/landing/index.html:1450
 msgid ""
 "Over 10 specialized algorithms to instantly detect fraud indicators and "
 "suspicious transactions."
 msgstr ""
 "أكثر من 10 خوارزميات متخصّصة لاكتشاف مؤشّرات الاحتيال والمعاملات المشبوهة فوراً."
 
-#: templates/landing/index.html:1428
+#: templates/landing/index.html:1461
 msgid "Smart Reports"
 msgstr "تقارير ذكية"
 
-#: templates/landing/index.html:1441
+#: templates/landing/index.html:1474
 msgid "We cover the GCC region"
 msgstr "نُغطّي منطقة الخليج"
 
-#: templates/landing/index.html:1442
+#: templates/landing/index.html:1475
 msgid ""
 "Our solutions are compliant with all tax authorities in the region to ensure "
 "your business runs smoothly across borders."
@@ -9739,31 +9813,31 @@ msgstr ""
 "تتوافق حلولنا مع جميع الهيئات الضريبية في المنطقة لضمان سَير أعمالك بسلاسة "
 "عبر الحدود."
 
-#: templates/landing/index.html:1450
+#: templates/landing/index.html:1483
 msgid "UAE"
 msgstr "الإمارات"
 
-#: templates/landing/index.html:1473
+#: templates/landing/index.html:1506
 msgid "Compliance Certifications"
 msgstr "شهادات الامتثال"
 
-#: templates/landing/index.html:1481
+#: templates/landing/index.html:1514
 msgid "Information security management"
 msgstr "إدارة أمن المعلومات"
 
-#: templates/landing/index.html:1490
+#: templates/landing/index.html:1523
 msgid "Audited security and privacy controls"
 msgstr "ضوابط أمان وخصوصية مُدقَّقة"
 
-#: templates/landing/index.html:1499
+#: templates/landing/index.html:1532
 msgid "Saudi e-invoicing compliant"
 msgstr "متوافق مع الفوترة الإلكترونية السعودية"
 
-#: templates/landing/index.html:1513
+#: templates/landing/index.html:1546
 msgid "Ready to transform your financial audit process?"
 msgstr "جاهز لتحويل عملية تدقيقك المالي؟"
 
-#: templates/landing/index.html:1514
+#: templates/landing/index.html:1547
 msgid ""
 "Join the companies using Tadgeeg to accelerate financial review and raise "
 "compliance quality."
@@ -9771,15 +9845,15 @@ msgstr ""
 "انضم إلى الشركات التي تستخدم تدقيق لتسريع المراجعة المالية ورفع جودة "
 "الامتثال."
 
-#: templates/landing/index.html:1516
+#: templates/landing/index.html:1549
 msgid "Start your 14-day free trial"
 msgstr "ابدأ تجربتك المجانية لمدة 14 يوماً"
 
-#: templates/landing/index.html:1518
+#: templates/landing/index.html:1551
 msgid "No credit card required. Cancel anytime."
 msgstr "لا حاجة لبطاقة ائتمان. يمكنك الإلغاء في أي وقت."
 
-#: templates/landing/index.html:1564
+#: templates/landing/index.html:1597
 msgid "Your browser does not support the video tag."
 msgstr "متصفحك لا يدعم علامة الفيديو."
 
@@ -9802,79 +9876,79 @@ msgstr "طيّ"
 msgid "You do not have permission to access platform management."
 msgstr "ليس لديك صلاحية للوصول إلى إدارة المنصّة."
 
-#: templates/layouts/dashboard_base.html:441
+#: templates/layouts/dashboard_base.html:445
 msgid "Sign Out"
 msgstr "تسجيل الخروج"
 
-#: templates/layouts/dashboard_base.html:469
+#: templates/layouts/dashboard_base.html:473
 msgid "Mark all read"
 msgstr "تمييز الكل كمقروء"
 
-#: templates/layouts/dashboard_base.html:493
+#: templates/layouts/dashboard_base.html:497
 msgid "No notifications yet"
 msgstr "لا توجد إشعارات بعد"
 
-#: templates/layouts/dashboard_base.html:494
+#: templates/layouts/dashboard_base.html:498
 msgid "You'll see audit alerts and uploads here."
 msgstr "سترى تنبيهات التدقيق والملفات المرفوعة هنا."
 
-#: templates/layouts/dashboard_base.html:498
+#: templates/layouts/dashboard_base.html:502
 #: templates/partials/i18n_strings.html:129 templates/phase2/activity.html:77
 #: templates/phase2/audits.html:41 templates/phase2/reports.html:36
 #: templates/settings/index.html:429 templates/zatca/dashboard.html:70
 msgid "Refresh"
 msgstr "تحديث"
 
-#: templates/layouts/dashboard_base.html:512
+#: templates/layouts/dashboard_base.html:516
 msgid "Switch language"
 msgstr "تبديل اللغة"
 
-#: templates/layouts/dashboard_base.html:520 templates/users/index.html:432
+#: templates/layouts/dashboard_base.html:524 templates/users/index.html:432
 #: templates/users/index.html:459
 msgid "System Admin"
 msgstr "مدير النظام"
 
-#: templates/layouts/dashboard_base.html:536
+#: templates/layouts/dashboard_base.html:540
 msgid "AI Assistant"
 msgstr "المساعد الذكي"
 
-#: templates/layouts/dashboard_base.html:542
+#: templates/layouts/dashboard_base.html:546
 msgid "Tadgeeg AI"
 msgstr "تدقيق AI"
 
-#: templates/layouts/dashboard_base.html:543
+#: templates/layouts/dashboard_base.html:547
 msgid "Ask about your invoices, audits, or compliance"
 msgstr "اسأل عن فواتيرك أو تدقيقاتك أو الامتثال"
 
-#: templates/layouts/dashboard_base.html:545
+#: templates/layouts/dashboard_base.html:549
 #: templates/storage_management/file_monitor.html:78
 #: templates/storage_management/providers.html:147
 msgid "Reset"
 msgstr "إعادة تعيين"
 
-#: templates/layouts/dashboard_base.html:561
+#: templates/layouts/dashboard_base.html:565
 msgid "Ask anything…"
 msgstr "اسأل عن أي شيء…"
 
-#: templates/layouts/dashboard_base.html:606
+#: templates/layouts/dashboard_base.html:610
 msgid "مرحباً! أسألني عن فواتيرك أو نتائج التدقيق."
 msgstr "مرحباً! اسألني عن فواتيرك أو نتائج التدقيق."
 
-#: templates/layouts/dashboard_base.html:637
+#: templates/layouts/dashboard_base.html:641
 msgid "تم مسح المحادثة. كيف أساعدك؟"
 msgstr "تم مسح المحادثة. كيف أساعدك؟"
 
-#: templates/layouts/dashboard_base.html:668
+#: templates/layouts/dashboard_base.html:672
 #: templates/partials/i18n_strings.html:83
 msgid "Something went wrong."
 msgstr "حدث خطأ ما."
 
-#: templates/layouts/dashboard_base.html:671
+#: templates/layouts/dashboard_base.html:675
 #: templates/partials/i18n_strings.html:87
 msgid "Connection error."
 msgstr "خطأ في الاتصال."
 
-#: templates/layouts/dashboard_base.html:812
+#: templates/layouts/dashboard_base.html:823
 msgid "Just now"
 msgstr "الآن"
 
@@ -9894,7 +9968,9 @@ msgstr "سياق المؤسسة"
 msgid ""
 "Chart of accounts, balanced journal entries, trial balance, and per-account "
 "ledger — the GL backbone every Tier-1 ERP needs."
-msgstr "جدول الحسابات، قيود اليومية المتوازنة، الميزان التجريبي، ودفتر الحسابات لكل حساب - العمود الفقري لنظام ERP من المستوى الأول."
+msgstr ""
+"جدول الحسابات، قيود اليومية المتوازنة، الميزان التجريبي، ودفتر الحسابات لكل "
+"حساب - العمود الفقري لنظام ERP من المستوى الأول."
 
 #: templates/ledger/dashboard.html:55
 msgid "Accounts:"
@@ -9943,7 +10019,9 @@ msgstr "الحساب"
 msgid ""
 "No posted entries yet. Post an invoice via /api/v1/ledger/post-invoice/ to "
 "populate the trial balance."
-msgstr "لا توجد قيود منشورة بعد. قم بنشر فاتورة عبر /api/v1/ledger/post-invoice/ لملء الميزان التجريبي."
+msgstr ""
+"لا توجد قيود منشورة بعد. قم بنشر فاتورة عبر /api/v1/ledger/post-invoice/ "
+"لملء الميزان التجريبي."
 
 #: templates/ledger/dashboard.html:117
 msgid "Recent journal entries"
@@ -9969,7 +10047,14 @@ msgid ""
 "credit AP. Bank reconciliations post the cash leg automatically once an "
 "invoice is matched. Posted entries are immutable (audit hash chain) — "
 "voiding generates a compensating entry rather than editing the original."
-msgstr "يمكن نشر كل فاتورة تقوم بتحميلها تلقائيًا إلى دفتر الحسابات عبر POST /api/v1/ledger/post-invoice/ مع {invoice_id, direction}. فواتير المبيعات تدين الحسابات المدينة + ائتمان الإيرادات + ضريبة القيمة المضافة الناتجة؛ فواتير الشراء تدين المصروفات + ضريبة القيمة المضافة المدخلة + ائتمان الحسابات الدائنة. تسويات البنك تنشر الساق النقدية تلقائيًا بمجرد مطابقة فاتورة. القيود المنشورة غير قابلة للتغيير (سلسلة تجزئة التدقيق) - إلغاء يولد قيد تعويضي بدلاً من تعديل الأصل."
+msgstr ""
+"يمكن نشر كل فاتورة تقوم بتحميلها تلقائيًا إلى دفتر الحسابات عبر POST /api/v1/"
+"ledger/post-invoice/ مع {invoice_id, direction}. فواتير المبيعات تدين "
+"الحسابات المدينة + ائتمان الإيرادات + ضريبة القيمة المضافة الناتجة؛ فواتير "
+"الشراء تدين المصروفات + ضريبة القيمة المضافة المدخلة + ائتمان الحسابات "
+"الدائنة. تسويات البنك تنشر الساق النقدية تلقائيًا بمجرد مطابقة فاتورة. القيود "
+"المنشورة غير قابلة للتغيير (سلسلة تجزئة التدقيق) - إلغاء يولد قيد تعويضي "
+"بدلاً من تعديل الأصل."
 
 #: templates/partials/_pagination.html:15
 msgid "Pagination"
@@ -12445,7 +12530,7 @@ msgstr "× %(v0)s"
 
 #: templates/reports/executive_report.html:348 templates/reports/index.html:374
 #: templates/reports/invoice_audit_report.html:354
-#: templates/reports/invoice_audit_report_pdf.html:382
+#: templates/reports/invoice_audit_report_pdf.html:397
 #: templates/vendor_dashboard/reports.html:24
 msgid "Risk Analysis"
 msgstr "تحليل المخاطرة"
@@ -12552,7 +12637,7 @@ msgid "Anomaly Pattern Analysis — AI Interpretation"
 msgstr "تحليل أنماط الشذوذ — تفسير الذكاء الاصطناعي"
 
 #: templates/reports/executive_report.html:698
-#: templates/reports/invoice_audit_report_pdf.html:447
+#: templates/reports/invoice_audit_report_pdf.html:462
 #: templates/reports/partials/_recommendations.html:4
 msgid "Recommendations & Actions"
 msgstr "التوصيات والإجراءات"
@@ -12682,11 +12767,12 @@ msgstr "تقارير سريعة"
 #: templates/reports/index.html:238
 msgid ""
 "All flagged invoices ranked by risk score, with vendor and date details."
-msgstr "جميع الفواتير المميزة مرتبة حسب درجة المخاطر، مع تفاصيل البائع والتاريخ."
+msgstr ""
+"جميع الفواتير المميزة مرتبة حسب درجة المخاطر، مع تفاصيل البائع والتاريخ."
 
 #: templates/reports/index.html:245 templates/reports/index.html:458
 #: templates/reports/invoice_audit_report.html:400
-#: templates/reports/invoice_audit_report_pdf.html:397
+#: templates/reports/invoice_audit_report_pdf.html:412
 msgid "Duplicate Invoices"
 msgstr "الفواتير المكرّرة"
 
@@ -12747,7 +12833,9 @@ msgstr "تحقق من سلسلة SHA-256 التي تحمي كل حدث تدقي�
 msgid ""
 "Build audit rules visually, test them on a sample, then publish to the live "
 "pipeline."
-msgstr "قم ببناء قواعد التدقيق بصريًا، اختبرها على عينة، ثم انشرها في خط الأنابيب المباشر."
+msgstr ""
+"قم ببناء قواعد التدقيق بصريًا، اختبرها على عينة، ثم انشرها في خط الأنابيب "
+"المباشر."
 
 #: templates/reports/index.html:317 templates/streaming/ops.html:39
 msgid "Continuous Auditing"
@@ -12757,7 +12845,9 @@ msgstr "التدقيق المستمر"
 msgid ""
 "Live ops: throughput, p95 latency, anomaly hits across the streaming "
 "pipeline."
-msgstr "العمليات الحية: الإنتاجية، زمن الاستجابة p95، ضربات الشذوذ عبر خط الأنابيب المتدفق."
+msgstr ""
+"العمليات الحية: الإنتاجية، زمن الاستجابة p95، ضربات الشذوذ عبر خط الأنابيب "
+"المتدفق."
 
 #: templates/reports/index.html:325
 msgid "Alert Routing"
@@ -12767,7 +12857,9 @@ msgstr "توجيه التنبيهات"
 msgid ""
 "Email · SMS · Slack · Teams · webhook channels with cooldown and "
 "acknowledgement."
-msgstr "البريد الإلكتروني · الرسائل القصيرة · سلاك · الفرق · قنوات الويب هوك مع فترة تبريد وإقرار."
+msgstr ""
+"البريد الإلكتروني · الرسائل القصيرة · سلاك · الفرق · قنوات الويب هوك مع فترة "
+"تبريد وإقرار."
 
 #: templates/reports/index.html:333 templates/zatca/dashboard.html:58
 msgid "ZATCA Phase 2"
@@ -12777,19 +12869,23 @@ msgstr "المرحلة 2 من زاتكا"
 msgid ""
 "Live clearance + reporting · EGS device certificate health · readiness "
 "checklist."
-msgstr "التخليص المباشر + التقارير · صحة شهادة جهاز EGS · قائمة التحقق من الجاهزية."
+msgstr ""
+"التخليص المباشر + التقارير · صحة شهادة جهاز EGS · قائمة التحقق من الجاهزية."
 
 #: templates/reports/index.html:342
 msgid ""
 "Pull statements from Al Rajhi · SNB · Riyad · SAB · BSF and auto-match "
 "invoices."
-msgstr "سحب البيانات من الراجحي · SNB · الرياض · SAB · BSF ومطابقة الفواتير تلقائيًا."
+msgstr ""
+"سحب البيانات من الراجحي · SNB · الرياض · SAB · BSF ومطابقة الفواتير تلقائيًا."
 
 #: templates/reports/index.html:350
 msgid ""
 "Chart of accounts · balanced journal entries · trial balance · multi-"
 "currency · invoice → GL."
-msgstr "جدول الحسابات · قيود اليومية المتوازنة · الميزان التجريبي · متعدد العملات · فاتورة → GL."
+msgstr ""
+"جدول الحسابات · قيود اليومية المتوازنة · الميزان التجريبي · متعدد العملات · "
+"فاتورة → GL."
 
 #: templates/reports/index.html:358
 msgid "Available Reports"
@@ -13159,17 +13255,17 @@ msgid "Avg Risk:"
 msgstr "متوسط المخاطرة:"
 
 #: templates/reports/invoice_audit_report.html:396
-#: templates/reports/invoice_audit_report_pdf.html:394
+#: templates/reports/invoice_audit_report_pdf.html:409
 msgid "Duplicate & Anomaly Detection"
 msgstr "كشف التكرار والشذوذ"
 
 #: templates/reports/invoice_audit_report.html:404
-#: templates/reports/invoice_audit_report_pdf.html:398
+#: templates/reports/invoice_audit_report_pdf.html:413
 msgid "Dominant Vendor"
 msgstr "المورد المهيمن"
 
 #: templates/reports/invoice_audit_report.html:408
-#: templates/reports/invoice_audit_report_pdf.html:399
+#: templates/reports/invoice_audit_report_pdf.html:414
 msgid "Vendor Dependency"
 msgstr "نسبة الاعتماد على المورد"
 
@@ -13178,31 +13274,31 @@ msgid "No anomaly patterns available."
 msgstr "لا توجد أنماط شذوذ متاحة."
 
 #: templates/reports/invoice_audit_report.html:437
-#: templates/reports/invoice_audit_report_pdf.html:422
+#: templates/reports/invoice_audit_report_pdf.html:437
 #: templates/reports/report_pdf.html:280
 msgid "Invoice Count"
 msgstr "عدد الفواتير"
 
 #: templates/reports/invoice_audit_report.html:438
-#: templates/reports/invoice_audit_report_pdf.html:423
+#: templates/reports/invoice_audit_report_pdf.html:438
 #: templates/reports/invoice_audit_report_v2.html:654
 #: templates/reports/report_pdf.html:281
 msgid "Total Spend"
 msgstr "إجمالي الإنفاق"
 
 #: templates/reports/invoice_audit_report.html:440
-#: templates/reports/invoice_audit_report_pdf.html:425
+#: templates/reports/invoice_audit_report_pdf.html:440
 #: templates/reports/report_pdf.html:283
 msgid "Spend Share"
 msgstr "حصة الإنفاق"
 
 #: templates/reports/invoice_audit_report.html:441
-#: templates/reports/invoice_audit_report_pdf.html:426
+#: templates/reports/invoice_audit_report_pdf.html:441
 msgid "Flagged Invoices"
 msgstr "الفواتير المُبلَّغ عنها"
 
 #: templates/reports/invoice_audit_report.html:459
-#: templates/reports/invoice_audit_report_pdf.html:440
+#: templates/reports/invoice_audit_report_pdf.html:455
 msgid "No vendor data available."
 msgstr "لا توجد بيانات موردين."
 
@@ -13292,55 +13388,49 @@ msgstr "لا توجد تفاصيل مخالفات."
 msgid "No high-risk invoices."
 msgstr "لا توجد فواتير عالية المخاطر."
 
-#: templates/reports/invoice_audit_report_pdf.html:345
-#: templates/reports/partials/_failed_rules_table.html:4
-#: templates/reports/report_pdf.html:304
-msgid "Most Failed Audit Rules"
-msgstr "أكثر قواعد التدقيق فشلاً"
+#: templates/reports/invoice_audit_report_pdf.html:347
+msgid ""
+"Rule code, rule text, severity, and weighted score. Score = severity weight "
+"× failure count."
+msgstr "رمز القاعدة، نص القاعدة، الشدّة، والدرجة المرجَّحة. الدرجة = وزن الشدّة × عدد مرات الإخفاق."
 
-#: templates/reports/invoice_audit_report_pdf.html:351
-#: templates/reports/partials/_failed_rules_table.html:16
-#: templates/reports/report_pdf.html:310
-msgid "Failure Count"
-msgstr "عدد الإخفاقات"
-
-#: templates/reports/invoice_audit_report_pdf.html:352
+#: templates/reports/invoice_audit_report_pdf.html:356
 #: templates/reports/invoice_audit_report_v2.html:262
 #: templates/reports/partials/_findings_register.html:97
 msgid "Affected Invoices"
 msgstr "الفواتير المتأثرة"
 
-#: templates/reports/invoice_audit_report_pdf.html:367
+#: templates/reports/invoice_audit_report_pdf.html:382
 msgid "No invoice numbers available."
 msgstr "لا توجد أرقام فواتير متاحة."
 
-#: templates/reports/invoice_audit_report_pdf.html:370
+#: templates/reports/invoice_audit_report_pdf.html:385
 #, python-format
 msgid "+ %(extra)s more"
 msgstr "+ %(extra)s أخرى"
 
-#: templates/reports/invoice_audit_report_pdf.html:375
+#: templates/reports/invoice_audit_report_pdf.html:390
 msgid "No failed-rule data available."
 msgstr "لا توجد بيانات إخفاقات متاحة."
 
-#: templates/reports/invoice_audit_report_pdf.html:385
+#: templates/reports/invoice_audit_report_pdf.html:400
 #: templates/reports/report_pdf.html:230 templates/reports/report_pdf.html:452
 msgid "Average Risk Score"
 msgstr "متوسط درجة المخاطر"
 
-#: templates/reports/invoice_audit_report_pdf.html:424
+#: templates/reports/invoice_audit_report_pdf.html:439
 #: templates/reports/report_pdf.html:282
 msgid "Average"
 msgstr "المتوسط"
 
-#: templates/reports/invoice_audit_report_pdf.html:452
+#: templates/reports/invoice_audit_report_pdf.html:467
 #: templates/reports/invoice_audit_report_v2.html:782
 #: templates/reports/partials/_recommendations.html:10
 #: templates/reports/report_pdf.html:183
 msgid "Immediate Actions"
 msgstr "إجراءات فورية"
 
-#: templates/reports/invoice_audit_report_pdf.html:462
+#: templates/reports/invoice_audit_report_pdf.html:477
 #: templates/reports/invoice_audit_report_v2.html:801
 #: templates/reports/partials/_recommendations.html:21
 msgid "Future Improvements"
@@ -13545,6 +13635,16 @@ msgstr "ملخّصات الذكاء الاصطناعي (عيّنة)"
 #: templates/reports/partials/_ai_insights.html:84
 msgid "No AI summaries available."
 msgstr "لا توجد ملخّصات ذكاء اصطناعي متاحة."
+
+#: templates/reports/partials/_failed_rules_table.html:4
+#: templates/reports/report_pdf.html:304
+msgid "Most Failed Audit Rules"
+msgstr "أكثر قواعد التدقيق فشلاً"
+
+#: templates/reports/partials/_failed_rules_table.html:16
+#: templates/reports/report_pdf.html:310
+msgid "Failure Count"
+msgstr "عدد الإخفاقات"
 
 # --- Report partials ---
 #: templates/reports/partials/_failed_rules_table.html:17
@@ -14990,7 +15090,13 @@ msgid ""
 "vendor crossing 30%% of org spend). Each trigger persists an AnomalyHit row "
 "that this dashboard reads. Phase 3.2 will pipe these hits into email / SMS / "
 "Slack channels."
-msgstr "كل فاتورة تم تحميلها تنشر حدثًا على الحافلة. يقوم عامل باستهلاك الحدث ويشغل ثلاثة كاشفات نوافذ ضده: السرعة (البائع الذي يقدم عددًا كبيرًا من الفواتير في فترة قصيرة)، الزيادة المفاجئة (مبلغ الفاتورة يتجاوز 5σ من تاريخ البائع الخاص)، وتركيز البائع (بائع واحد يتجاوز 30%% من إنفاق المنظمة). كل مشغل يحتفظ بسجل AnomalyHit الذي تقرأه هذه اللوحة. المرحلة 3.2 ستقوم بتوجيه هذه الضربات إلى قنوات البريد الإلكتروني / الرسائل القصيرة / Slack."
+msgstr ""
+"كل فاتورة تم تحميلها تنشر حدثًا على الحافلة. يقوم عامل باستهلاك الحدث ويشغل "
+"ثلاثة كاشفات نوافذ ضده: السرعة (البائع الذي يقدم عددًا كبيرًا من الفواتير في "
+"فترة قصيرة)، الزيادة المفاجئة (مبلغ الفاتورة يتجاوز 5σ من تاريخ البائع "
+"الخاص)، وتركيز البائع (بائع واحد يتجاوز 30%% من إنفاق المنظمة). كل مشغل "
+"يحتفظ بسجل AnomalyHit الذي تقرأه هذه اللوحة. المرحلة 3.2 ستقوم بتوجيه هذه "
+"الضربات إلى قنوات البريد الإلكتروني / الرسائل القصيرة / Slack."
 
 #: templates/transactions.html:17
 msgid "Unified feed of invoices and purchase orders across the organisation."
@@ -16097,7 +16203,8 @@ msgstr "ورقة عمل جديدة"
 msgid ""
 "The paper starts in DRAFT — you can edit and submit it for review at any "
 "time."
-msgstr "تبدأ الورقة في حالة المسودة — يمكنك تعديلها وتقديمها للمراجعة في أي وقت."
+msgstr ""
+"تبدأ الورقة في حالة المسودة — يمكنك تعديلها وتقديمها للمراجعة في أي وقت."
 
 #: templates/working_papers/form.html:44
 msgid "e.g. Accounts Receivable Lead Schedule — FY2026"
@@ -16127,7 +16234,8 @@ msgstr "إنشاء مسودة"
 msgid ""
 "ISA 230 — preparer · senior reviewer · partner sign-off, with tamper-evident "
 "lock on signing."
-msgstr "ISA 230 — المُعدّ · المراجع الأول · توقيع الشريك، مع قفل واضح على التوقيع."
+msgstr ""
+"ISA 230 — المُعدّ · المراجع الأول · توقيع الشريك، مع قفل واضح على التوقيع."
 
 #: templates/working_papers/list.html:42
 msgid "New Paper"
@@ -16174,7 +16282,8 @@ msgstr "المرحلة الثانية من زاتكا — لوحة تحكم ال
 msgid ""
 "Live counters for clearance + reporting, EGS device certificate health, and "
 "a one-glance readiness checklist."
-msgstr "عدادات حية للتخليص + التقارير، صحة شهادة جهاز EGS، وقائمة فحص جاهزية سريعة."
+msgstr ""
+"عدادات حية للتخليص + التقارير، صحة شهادة جهاز EGS، وقائمة فحص جاهزية سريعة."
 
 #: templates/zatca/dashboard.html:77
 msgid "Cleared (B2B)"
@@ -16263,6 +16372,41 @@ msgstr "إدخال جهاز EGS جديد"
 #: templates/zatca/dashboard.html:253
 msgid "Onboard"
 msgstr "إضافة"
+
+#~ msgid ""
+#~ "PDF service is not configured on this server. Redeploy after installing "
+#~ "the PDF library."
+#~ msgstr ""
+#~ "خدمة PDF غير مهيأة على الخادم حاليًا. أعد نشر الخدمة بعد تثبيت مكتبة PDF."
+
+#, python-format
+#~ msgid ""
+#~ "We received a request to reset the password for your %(product)s account."
+#~ msgstr "استلمنا طلباً لإعادة تعيين كلمة المرور لحسابك في %(product)s."
+
+#~ msgid "Use the following link to create a new password:"
+#~ msgstr "استخدم الرابط التالي لإنشاء كلمة مرور جديدة:"
+
+#~ msgid ""
+#~ "If you did not request this action, you can safely ignore this email."
+#~ msgstr "إذا لم تطلب هذا الإجراء، يمكنك تجاهل هذه الرسالة بأمان."
+
+#, python-format
+#~ msgid "%(product)s by %(company)s"
+#~ msgstr "%(product)s من %(company)s"
+
+#, python-format
+#~ msgid "Password Reset - %(product)s"
+#~ msgstr "إعادة تعيين كلمة المرور - %(product)s"
+
+#~ msgid "Invoices processed"
+#~ msgstr "الفواتير المعالَجة"
+
+#~ msgid "Trusted organizations"
+#~ msgstr "مؤسسات موثوقة"
+
+#~ msgid "Join 1,200+ organizations in the Gulf"
+#~ msgstr "انضم إلى أكثر من 1,200 مؤسسة في الخليج"
 
 #~ msgid "✓ Files selected"
 #~ msgstr "✓ تم اختيار الملفات"

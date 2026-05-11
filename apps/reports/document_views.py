@@ -182,11 +182,11 @@ class DocumentReportPDFView(APIView):
         html_str = render_to_string("reports/document_audit_report.html", context, request=request)
 
         try:
-            from apps.reports.views import _render_report_pdf_bytes
+            from apps.reports.views import _render_report_pdf_bytes, _attachment_disposition
             pdf_bytes = _render_report_pdf_bytes(html_str, request.build_absolute_uri("/"))
             response = HttpResponse(pdf_bytes, content_type="application/pdf")
             safe_title = (report.title or "report").replace(" ", "_")[:60]
-            response["Content-Disposition"] = f'attachment; filename="{safe_title}.pdf"'
+            response["Content-Disposition"] = _attachment_disposition(f"{safe_title}.pdf")
             return response
         except OSError as exc:
             logger.warning("WeasyPrint OSError (missing system libs) for document report %s: %s", pk, exc)

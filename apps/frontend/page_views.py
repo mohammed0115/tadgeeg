@@ -1579,7 +1579,8 @@ def invoice_pdf(request, pk):
 
     safe_id = (invoice.invoice_number or str(invoice.id))[:60].replace(" ", "_")
     response = HttpResponse(pdf_bytes, content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename="invoice_{safe_id}.pdf"'
+    from apps.reports.views import _attachment_disposition
+    response["Content-Disposition"] = _attachment_disposition(f"invoice_{safe_id}.pdf")
     return response
 
 

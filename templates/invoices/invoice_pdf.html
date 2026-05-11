@@ -122,21 +122,51 @@
 </table>
 {% endif %}
 
-{% if invoice.validation.failed_rule_codes %}
+{% if failed_rules_table %}
 <h2>{% trans "Failed Audit Rules" %}</h2>
+<p style="font-size:10px;color:#64748b;margin:0 0 6px;">
+  {% trans "Rule code, rule text, severity, and score. Score = severity weight (critical 25 · high 15 · medium 8 · low 3)." %}
+</p>
 <table>
-  <thead><tr><th>{% trans "Rule Code" %}</th><th>{% trans "Severity" %}</th></tr></thead>
+  <thead>
+    <tr>
+      <th style="width:14%;">{% trans "Rule Code" %}</th>
+      <th style="width:54%;">{% trans "Rule Text" %}</th>
+      <th style="width:18%;">{% trans "Severity" %}</th>
+      <th style="width:14%;">{% trans "Score" %}</th>
+    </tr>
+  </thead>
   <tbody>
-  {% for code in invoice.validation.failed_rule_codes %}
-    <tr><td class="mono"><strong>{{ code }}</strong></td><td><span class="badge badge-medium">—</span></td></tr>
+  {% for rule in failed_rules_table %}
+    <tr>
+      <td class="mono"><strong>{{ rule.code }}</strong></td>
+      <td>{{ rule.text }}</td>
+      <td>
+        <span class="badge badge-{{ rule.severity|default:'medium' }}">
+          {{ rule.severity_label|default:rule.severity }}
+        </span>
+      </td>
+      <td class="mono"><strong>{{ rule.score|default:0 }}</strong></td>
+    </tr>
   {% endfor %}
   </tbody>
 </table>
 {% endif %}
 
-{% if invoice.ai_summary %}
+{% if ai_summary_localized %}
 <h2>{% trans "AI Summary" %}</h2>
-<div class="section">{{ invoice.ai_summary }}</div>
+<div class="section">{{ ai_summary_localized }}</div>
+{% endif %}
+
+{% if ai_recommendations_localized %}
+<h2>{% trans "AI Recommendations" %}</h2>
+<div class="section">
+  <ul style="margin:0;padding-left:18px;padding-right:18px;">
+    {% for rec in ai_recommendations_localized %}
+      <li style="margin-bottom:4px;">{{ rec }}</li>
+    {% endfor %}
+  </ul>
+</div>
 {% endif %}
 
 {% if audit_trail %}

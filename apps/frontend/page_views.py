@@ -1489,6 +1489,7 @@ def invoice_pdf(request, pk):
     """Render the invoice's audit detail as a downloadable PDF."""
     from django.http import HttpResponse, Http404
     from django.template.loader import render_to_string
+    from django.utils.translation import get_language
     from apps.invoices.models import Invoice, InvoiceAuditEvent
 
     organization = getattr(request.user, "organization", None)
@@ -1508,6 +1509,52 @@ def invoice_pdf(request, pk):
     except Exception:
         cross_links = {}
 
+    # Language-aware AI fields + a rich failed-rules table built from
+    # validation_details (each rule carries description / message / severity
+    # in Arabic). Compute here so the template stays purely presentational.
+    lang = (get_language() or "ar")[:2]
+    other = "en" if lang == "ar" else "ar"
+
+    def _pick(base: str):
+        for suffix in (f"_{lang}", f"_{other}", ""):
+            val = getattr(invoice, f"{base}{suffix}", None)
+            if isinstance(val, str) and val.strip():
+                return val
+            if isinstance(val, (list, tuple)) and any(v for v in val):
+                return val
+        return getattr(invoice, base, None)
+
+    ai_summary_localized = _pick("ai_summary") or ""
+    ai_recommendations_localized = _pick("ai_recommendations") or []
+    if isinstance(ai_recommendations_localized, str):
+        ai_recommendations_localized = [ai_recommendations_localized]
+
+    # Build failed_rules_table from validation_details.
+    _SEV_WEIGHT = {"critical": 25, "high": 15, "medium": 8, "low": 3, "info": 1}
+    _SEV_AR = {"critical": "حرج", "high": "مرتفع", "medium": "متوسط",
+               "low": "منخفض", "info": "للعلم"}
+    failed_rules_table: list[dict] = []
+    v = getattr(invoice, "validation", None)
+    details = (getattr(v, "validation_details", None) or {}) if v else {}
+    failed_codes = (getattr(v, "failed_rule_codes", None) or []) if v else []
+    for code in failed_codes:
+        d = details.get(code) if isinstance(details, dict) else None
+        severity = ((d or {}).get("severity") or "medium").lower()
+        # Prefer the Arabic-localized human description over the raw message
+        # when both exist; fall back to the rule code when neither does.
+        text = (d or {}).get("description") or (d or {}).get("message") or code
+        weight = _SEV_WEIGHT.get(severity, _SEV_WEIGHT["medium"])
+        failed_rules_table.append({
+            "code":           code,
+            "text":           text,
+            "severity":       severity,
+            "severity_label": _SEV_AR.get(severity, severity),
+            "score":          weight,
+        })
+    # Sort: critical first, then high, medium, low. Stable on rule_code.
+    _SEV_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
+    failed_rules_table.sort(key=lambda r: (_SEV_RANK.get(r["severity"], 9), r["code"]))
+
     html = render_to_string(
         "invoices/invoice_pdf.html",
         _ctx(
@@ -1516,6 +1563,9 @@ def invoice_pdf(request, pk):
             invoice_display=_build_invoice_display(invoice),
             audit_trail=audit_trail,
             cross_links=cross_links,
+            ai_summary_localized=ai_summary_localized,
+            ai_recommendations_localized=ai_recommendations_localized,
+            failed_rules_table=failed_rules_table,
         ),
         request=request,
     )

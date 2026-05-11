@@ -131,19 +131,27 @@ class LoginSerializer(serializers.Serializer):
         user_auth = authenticate(email=user.email, password=password)
 
         if not user_auth:
-            user.failed_login_attempts += 1
+            # Atomic counter — F() so two parallel wrong-password attempts
+            # both register, instead of racing for the same "current + 1".
+            from django.db.models import F
+            User.objects.filter(pk=user.pk).update(
+                failed_login_attempts=F("failed_login_attempts") + 1
+            )
+            user.refresh_from_db(fields=["failed_login_attempts"])
             if user.failed_login_attempts >= 5:
-                user.locked_until = timezone.now() + timedelta(minutes=30)
-            user.save(update_fields=["failed_login_attempts", "locked_until"])
+                User.objects.filter(pk=user.pk).update(
+                    locked_until=timezone.now() + timedelta(minutes=30)
+                )
             raise serializers.ValidationError({"non_field_errors": _("Invalid credentials.")})
 
         if not user_auth.is_active:
             raise serializers.ValidationError({"non_field_errors": _("Account is inactive.")})
 
-        # Reset failed attempts on success
-        user_auth.failed_login_attempts = 0
-        user_auth.locked_until = None
-        user_auth.save(update_fields=["failed_login_attempts", "locked_until"])
+        # Reset failed attempts on success — atomic write.
+        User.objects.filter(pk=user_auth.pk).update(
+            failed_login_attempts=0,
+            locked_until=None,
+        )
 
         return {
             "user": user_auth,

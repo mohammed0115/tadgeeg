@@ -137,6 +137,11 @@ class User(AbstractBaseUser, PermissionsMixin):
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
     failed_login_attempts = models.PositiveIntegerField(default=0)
     locked_until = models.DateTimeField(null=True, blank=True)
+    # TOTP replay protection: store the counter (Unix-time / 30) of the last
+    # successfully-verified TOTP code. A second verify within the same
+    # 30-second step (or any earlier step) is rejected, so a leaked code
+    # snooped in flight can be used at most once.
+    last_totp_counter = models.BigIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

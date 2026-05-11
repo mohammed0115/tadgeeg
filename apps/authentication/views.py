@@ -6,6 +6,7 @@ from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.core.cache import cache
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import F
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext as _
@@ -933,6 +934,17 @@ class MFALoginVerifyView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
+        # ── V1: lockout guard ─────────────────────────────────────────────────
+        # The old code happily ran totp.verify() against a locked account.
+        # Combined with a 5-minute temp_token, that let an attacker keep
+        # hammering TOTP codes after the lockout — bypassing it entirely.
+        # Now: refuse the request loudly, with HTTP 423 Locked.
+        if user.is_locked():
+            return Response(
+                {"error": _("Account is temporarily locked. Try again later.")},
+                status=423,  # HTTP 423 Locked
+            )
+
         # Verify TOTP code
         if not user.mfa_enabled or not user.mfa_secret:
             return Response(
@@ -940,23 +952,45 @@ class MFALoginVerifyView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # ── V4: TOTP replay protection ────────────────────────────────────────
+        # A TOTP code is valid for ~30 s (±valid_window=1 step). Without a
+        # replay guard, an attacker who snoops one code in flight (e.g. via
+        # a logging leak) can re-use it inside that window. Track the
+        # 30-second counter of the last accepted code and reject anything
+        # ≤ that counter.
+        import time as _time
+        counter_now = int(_time.time() // 30)
+
         totp = pyotp.TOTP(user.mfa_secret)
-        if not totp.verify(totp_code, valid_window=1):
-            # Track failed MFA attempts
-            user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+        verified = totp.verify(totp_code, valid_window=1)
+        if verified and user.last_totp_counter is not None and counter_now <= user.last_totp_counter:
+            verified = False  # code already used in this (or an earlier) step
+
+        if not verified:
+            # ── V2: atomic counter ───────────────────────────────────────────
+            # Previous code did user.failed_login_attempts += 1; user.save() —
+            # classic read-modify-write race. Two parallel wrong-code requests
+            # could each read N and write N+1, advancing only ONCE instead of
+            # twice. Use F() so the DB does the addition.
+            User.objects.filter(pk=user.pk).update(
+                failed_login_attempts=F("failed_login_attempts") + 1
+            )
+            user.refresh_from_db(fields=["failed_login_attempts"])
             if user.failed_login_attempts >= 5:
-                user.locked_until = timezone.now() + timedelta(minutes=30)
-            user.save()
-            
+                User.objects.filter(pk=user.pk).update(
+                    locked_until=timezone.now() + timedelta(minutes=30)
+                )
             return Response(
                 {"error": _("Invalid or expired TOTP code")},
                 status=status.HTTP_401_UNAUTHORIZED
             )
 
-        # MFA successful - issue full tokens
-        user.failed_login_attempts = 0
-        user.last_login = timezone.now()
-        user.save()
+        # MFA successful — atomic clear of counters + record TOTP counter.
+        User.objects.filter(pk=user.pk).update(
+            failed_login_attempts=0,
+            last_login=timezone.now(),
+            last_totp_counter=counter_now,
+        )
         
         log_action(request, AuditLog.Action.LOGIN, "user", str(user.id),
                    details={"mfa": "verified"})

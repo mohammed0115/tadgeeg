@@ -821,6 +821,72 @@
       margin-bottom: 48px;
     }
 
+    /* --- Entrance animations for the 10-up features grid ---------------- */
+    @keyframes featureCardIn {
+      from { opacity: 0; transform: translateY(28px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0)    scale(1); }
+    }
+    @keyframes featureIconIn {
+      0%   { opacity: 0; transform: scale(0.4) rotate(-12deg); }
+      60%  { opacity: 1; transform: scale(1.12) rotate(4deg); }
+      100% { opacity: 1; transform: scale(1)    rotate(0); }
+    }
+    @keyframes featureNumIn {
+      0%   { opacity: 0; transform: scale(0); }
+      70%  { opacity: 1; transform: scale(1.18); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    @keyframes featureNumPulse {
+      0%, 100% { box-shadow: 0 4px 10px -2px rgba(16, 185, 129, 0.35); }
+      50%      { box-shadow: 0 4px 18px 0 rgba(16, 185, 129, 0.55); }
+    }
+
+    /* Pre-reveal hidden state. .is-visible triggers the cascade. */
+    .features-10-grid .feature-card.reveal {
+      opacity: 0;
+      transform: translateY(28px) scale(0.97);
+      transition: none; /* let keyframes drive the entrance */
+    }
+    .features-10-grid .feature-card.reveal .feature-icon,
+    .features-10-grid .feature-card.reveal .feature-num {
+      opacity: 0;
+    }
+    .features-10-grid .feature-card.reveal.is-visible {
+      animation: featureCardIn 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation-delay: var(--reveal-delay, 0s);
+    }
+    .features-10-grid .feature-card.reveal.is-visible .feature-icon {
+      animation: featureIconIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+      animation-delay: calc(var(--reveal-delay, 0s) + 0.18s);
+    }
+    .features-10-grid .feature-card.reveal.is-visible .feature-num {
+      animation:
+        featureNumIn 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both,
+        featureNumPulse 2.6s ease-in-out 1.5s infinite;
+      animation-delay: calc(var(--reveal-delay, 0s) + 0.32s);
+    }
+
+    /* Card-level hover polish, on top of the existing .feature-card:hover */
+    .features-10-grid .feature-card:hover .feature-num {
+      transform: translateY(-2px) scale(1.08);
+      transition: transform 0.3s ease;
+    }
+    .features-10-grid .feature-card:hover .feature-icon {
+      transform: rotate(-6deg) scale(1.08);
+    }
+
+    /* Respect users who prefer no motion */
+    @media (prefers-reduced-motion: reduce) {
+      .features-10-grid .feature-card.reveal,
+      .features-10-grid .feature-card.reveal.is-visible,
+      .features-10-grid .feature-card.reveal.is-visible .feature-icon,
+      .features-10-grid .feature-card.reveal.is-visible .feature-num {
+        opacity: 1 !important;
+        transform: none !important;
+        animation: none !important;
+      }
+    }
+
     /* ============ Why Section ============ */
     .why {
       padding: 80px 0 100px;
@@ -1422,7 +1488,7 @@
 
       <div class="features-10-grid">
 
-        <div class="feature-card reveal">
+        <div class="feature-card reveal" style="--reveal-delay: 0.0s">
           <div class="feature-icon">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -1436,7 +1502,7 @@
           <p class="feature-desc">{% trans "Scans invoices and extracts core data with high accuracy from PDFs, images, and structured files." %}</p>
         </div>
 
-        <div class="feature-card reveal">
+        <div class="feature-card reveal" style="--reveal-delay: 0.06s">
           <div class="feature-icon">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M17 1l4 4-4 4"/>
@@ -1450,7 +1516,7 @@
           <p class="feature-desc">{% trans "Matches invoices with bank statements, receipts, purchase orders, and payment vouchers to reduce errors." %}</p>
         </div>
 
-        <div class="feature-card reveal">
+        <div class="feature-card reveal" style="--reveal-delay: 0.12s">
           <div class="feature-icon">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M9 11l3 3L22 4"/>
@@ -1462,7 +1528,7 @@
           <p class="feature-desc">{% trans "Reviews financial operations against VAT, ZATCA, and local and international regulations." %}</p>
         </div>
 
-        <div class="feature-card reveal">
+        <div class="feature-card reveal" style="--reveal-delay: 0.18s">
           <div class="feature-icon">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <circle cx="11" cy="11" r="7"/>
@@ -1476,7 +1542,7 @@
           <p class="feature-desc">{% trans "Uses AI to detect duplicates, anomalies, and suspicious transactions." %}</p>
         </div>
 
-        <div class="feature-card reveal">
+        <div class="feature-card reveal" style="--reveal-delay: 0.24s">
           <div class="feature-icon">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <ellipse cx="12" cy="5" rx="9" ry="3"/>
@@ -1491,7 +1557,7 @@
           <p class="feature-desc">{% trans "Consolidates financial data from multiple sources into a single secure platform." %}</p>
         </div>
 
-        <div class="feature-card reveal">
+        <div class="feature-card reveal" style="--reveal-delay: 0.3s">
           <div class="feature-icon">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <rect x="3" y="3" width="6" height="6" rx="1"/>
@@ -1506,7 +1572,7 @@
           <p class="feature-desc">{% trans "Reduces manual work by automating audit steps, reviews, alerts, and report generation." %}</p>
         </div>
 
-        <div class="feature-card reveal">
+        <div class="feature-card reveal" style="--reveal-delay: 0.36s">
           <div class="feature-icon">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M21 12a9 9 0 1 1-9-9"/>
@@ -1519,7 +1585,7 @@
           <p class="feature-desc">{% trans "Helps finance teams complete month-end and year-end close faster and more accurately." %}</p>
         </div>
 
-        <div class="feature-card reveal">
+        <div class="feature-card reveal" style="--reveal-delay: 0.42s">
           <div class="feature-icon">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -1534,7 +1600,7 @@
           <p class="feature-desc">{% trans "Produces comprehensive financial and audit reports with actionable indicators for management and reviewers." %}</p>
         </div>
 
-        <div class="feature-card reveal">
+        <div class="feature-card reveal" style="--reveal-delay: 0.48s">
           <div class="feature-icon">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6l-8-4z"/>
@@ -1547,7 +1613,7 @@
           <p class="feature-desc">{% trans "Protects financial data with encryption, role-based access, audit trails, and secure storage." %}</p>
         </div>
 
-        <div class="feature-card reveal">
+        <div class="feature-card reveal" style="--reveal-delay: 0.54s">
           <div class="feature-icon">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M19 11h2v4a2 2 0 0 1-2 2h-4v-3a2 2 0 1 0-4 0v3H7a2 2 0 0 1-2-2v-4H3a2 2 0 1 0 0-4h2V5a2 2 0 0 1 2-2h4v2a2 2 0 1 0 4 0V3h4a2 2 0 0 1 2 2v2"/>

@@ -50,6 +50,7 @@ urlpatterns = [
     path("api/v1/analytics/", include("apps.analytics.urls")),
     path("api/v1/compliance/", include("apps.compliance.urls")),
     path("api/v1/compliance/dashboard/", ComplianceDashboardView.as_view(), name="compliance-dashboard-compat"),
+    path("api/v1/payments/", include(("apps.payments.urls", "payments"), namespace="payments")),
     path("audit/dashboard/overview/", AuditDashboardOverviewView.as_view(), name="dashboard-overview-compat"),
     path("invoices/<uuid:pk>/",            InvoiceDetailView.as_view(),        name="invoice-detail-compat"),
     path("invoices/<uuid:pk>/review/",     InvoiceManualReviewView.as_view(),  name="invoice-review-compat"),

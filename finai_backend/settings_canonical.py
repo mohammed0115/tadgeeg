@@ -145,6 +145,7 @@ LOCAL_APPS = [
     "apps.procurement",
     "apps.platform_management",
     "apps.vendor_dashboard",
+    "apps.payments",
 ]
 
 # ─── Rule Engine Settings ──────────────────────────────────────────────────────
@@ -361,6 +362,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": "100/day",
         "user": "1000/day",
+        "payments_create": "30/min",
     },
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.AcceptHeaderVersioning",
     "ALLOWED_VERSIONS": ["1.0", "1.1", "2.0"],
@@ -572,3 +574,38 @@ ADMIN_IP_ALLOWLIST = [
     for ip in os.environ.get("ADMIN_IP_ALLOWLIST", "").split(",")
     if ip.strip()
 ]
+
+
+# ─── Payments ────────────────────────────────────────────────────────────────
+# All keys are read from the environment. The active provider is
+# locked by ``PAYMENT_PROVIDER`` — callers cannot override it per request.
+PAYMENT_PROVIDER = os.environ.get("PAYMENT_PROVIDER", "").strip().lower()
+PAYMENT_MODE     = os.environ.get("PAYMENT_MODE", "test").strip().lower()
+
+# Moyasar
+MOYASAR_SECRET_KEY      = os.environ.get("MOYASAR_SECRET_KEY", "")
+MOYASAR_PUBLISHABLE_KEY = os.environ.get("MOYASAR_PUBLISHABLE_KEY", "")
+MOYASAR_BASE_URL        = os.environ.get("MOYASAR_BASE_URL", "https://api.moyasar.com/v1")
+MOYASAR_CALLBACK_URL    = os.environ.get("MOYASAR_CALLBACK_URL", "")
+MOYASAR_WEBHOOK_SECRET  = os.environ.get("MOYASAR_WEBHOOK_SECRET", "")
+
+# Tap Payments
+TAP_SECRET_KEY     = os.environ.get("TAP_SECRET_KEY", "")
+TAP_PUBLIC_KEY     = os.environ.get("TAP_PUBLIC_KEY", "")
+TAP_BASE_URL       = os.environ.get("TAP_BASE_URL", "https://api.tap.company/v2")
+TAP_WEBHOOK_URL    = os.environ.get("TAP_WEBHOOK_URL", "")
+TAP_REDIRECT_URL   = os.environ.get("TAP_REDIRECT_URL", "")
+TAP_WEBHOOK_SECRET = os.environ.get("TAP_WEBHOOK_SECRET", "")
+
+# Telr
+TELR_STORE_ID            = os.environ.get("TELR_STORE_ID", "")
+TELR_AUTH_KEY            = os.environ.get("TELR_AUTH_KEY", "")
+TELR_BASE_URL            = os.environ.get("TELR_BASE_URL", "https://secure.telr.com")
+TELR_RETURN_AUTH_URL     = os.environ.get("TELR_RETURN_AUTH_URL", "")
+TELR_RETURN_DECLINED_URL = os.environ.get("TELR_RETURN_DECLINED_URL", "")
+TELR_RETURN_CANCELLED_URL = os.environ.get("TELR_RETURN_CANCELLED_URL", "")
+
+# Shared customer-facing URLs
+PAYMENT_SUCCESS_URL = os.environ.get("PAYMENT_SUCCESS_URL", "")
+PAYMENT_CANCEL_URL  = os.environ.get("PAYMENT_CANCEL_URL", "")
+PAYMENT_FAILURE_URL = os.environ.get("PAYMENT_FAILURE_URL", "")

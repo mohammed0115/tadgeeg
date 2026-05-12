@@ -1,0 +1,282 @@
+"""High-level payment orchestration.
+
+This is the only layer business code should touch. It deliberately knows
+nothing about specific providers — everything goes through the gateway
+factory + adapter contract.
+"""
+from __future__ import annotations
+
+import logging
+from decimal import Decimal
+from typing import Optional
+
+from django.db import transaction as db_transaction
+from django.utils import timezone
+
+from apps.payments.choices import (
+    PAID_STATUSES,
+    PaymentStatus,
+    TERMINAL_STATUSES,
+)
+from apps.payments.gateways.base import GatewayError
+from apps.payments.gateways.factory import get_payment_gateway
+from apps.payments.models import PaymentLog, PaymentTransaction
+
+
+logger = logging.getLogger("payments.service")
+
+
+class PaymentValidationError(ValueError):
+    """Raised when input to PaymentService is invalid."""
+
+
+class PaymentService:
+    """Stateless orchestrator — instantiate freely, no shared state."""
+
+    # ------------------------------------------------- transaction lifecycle
+
+    def create_transaction(
+        self,
+        *,
+        organization,
+        user,
+        amount,
+        currency: str = "SAR",
+        purpose: str,
+        reference_type: str = "",
+        reference_id: str = "",
+        provider: Optional[str] = None,
+        success_url: str = "",
+        cancel_url: str = "",
+        failure_url: str = "",
+        idempotency_key: Optional[str] = None,
+        metadata: Optional[dict] = None,
+        request_ip: Optional[str] = None,
+        user_agent: str = "",
+    ) -> PaymentTransaction:
+        """Create a new PaymentTransaction and kick off the gateway call.
+
+        Returns the persisted transaction with ``checkout_url`` populated
+        (when the provider returns one). On idempotency-key match,
+        returns the prior transaction unchanged — even if it later
+        transitioned to a terminal state."""
+        amount = _coerce_amount(amount)
+        if amount <= 0:
+            raise PaymentValidationError("amount must be > 0")
+
+        currency = (currency or "SAR").upper()
+        if len(currency) != 3:
+            raise PaymentValidationError("currency must be a 3-letter ISO code")
+
+        if idempotency_key:
+            existing = PaymentTransaction.objects.filter(
+                idempotency_key=idempotency_key,
+                organization=organization,
+            ).first()
+            if existing is not None:
+                return existing
+
+        gateway = get_payment_gateway(provider)
+
+        with db_transaction.atomic():
+            txn = PaymentTransaction.objects.create(
+                organization=organization,
+                user=user,
+                provider=gateway.PROVIDER,
+                purpose=purpose,
+                reference_type=reference_type or "",
+                reference_id=str(reference_id or ""),
+                amount=amount,
+                currency=currency,
+                status=PaymentStatus.PENDING,
+                success_url=success_url or "",
+                cancel_url=cancel_url or "",
+                failure_url=failure_url or "",
+                idempotency_key=idempotency_key or None,
+                raw_request=metadata or {},
+                request_ip=request_ip,
+                user_agent=user_agent or "",
+            )
+            PaymentLog.objects.create(
+                transaction=txn, event_type="created",
+                status_before="", status_after=txn.status,
+                message=f"PaymentTransaction created (provider={gateway.PROVIDER})",
+                payload=metadata or {},
+            )
+
+        # Gateway call happens OUTSIDE the atomic block — we want the
+        # transaction row to survive even if the provider call fails so
+        # there is something to retry against.
+        try:
+            response = gateway.create_payment(txn)
+        except GatewayError as exc:
+            self.mark_failed(txn, reason=str(exc), payload={})
+            raise
+
+        prior = txn.status
+        txn.provider_payment_id = response.provider_payment_id or txn.provider_payment_id
+        txn.provider_reference  = response.provider_reference  or txn.provider_reference
+        txn.checkout_url        = response.checkout_url        or txn.checkout_url
+        txn.raw_response        = response.raw_response or {}
+        # If provider returned a recognised status, take it; otherwise
+        # the safe default for a hosted-checkout flow is REDIRECT_REQUIRED.
+        new_status = response.status or PaymentStatus.REDIRECT_REQUIRED
+        if new_status == PaymentStatus.PENDING and txn.checkout_url:
+            new_status = PaymentStatus.REDIRECT_REQUIRED
+        txn.status = new_status
+        txn.save(update_fields=[
+            "provider_payment_id", "provider_reference", "checkout_url",
+            "raw_response", "status", "updated_at",
+        ])
+        PaymentLog.objects.create(
+            transaction=txn, event_type="gateway_created",
+            status_before=prior, status_after=txn.status,
+            message="Gateway create_payment succeeded",
+            payload=response.as_dict(),
+        )
+        return txn
+
+    # ------------------------------------------------ state transitions
+
+    def mark_paid(self, txn: PaymentTransaction, payload: Optional[dict] = None) -> bool:
+        """Set status=paid and run the business action.
+
+        Returns True if the transition happened, False if the txn was
+        already paid (so callers can short-circuit business actions on
+        duplicate webhooks)."""
+        # Re-read under a row lock to make this idempotent under
+        # concurrent webhook deliveries.
+        with db_transaction.atomic():
+            locked = (
+                PaymentTransaction.objects
+                .select_for_update()
+                .get(pk=txn.pk)
+            )
+            if locked.status == PaymentStatus.PAID:
+                PaymentLog.objects.create(
+                    transaction=locked, event_type="paid_duplicate",
+                    status_before=locked.status, status_after=locked.status,
+                    message="Duplicate paid event ignored",
+                    payload=payload or {},
+                )
+                return False
+            prior = locked.status
+            locked.status  = PaymentStatus.PAID
+            locked.paid_at = timezone.now()
+            locked.save(update_fields=["status", "paid_at", "updated_at"])
+            PaymentLog.objects.create(
+                transaction=locked, event_type="paid",
+                status_before=prior, status_after=locked.status,
+                message="Payment confirmed",
+                payload=payload or {},
+            )
+            # Mutate the caller's instance to reflect new state.
+            txn.status  = locked.status
+            txn.paid_at = locked.paid_at
+
+        try:
+            self._run_business_action(txn, payload or {})
+        except Exception:  # business actions must never undo the paid state
+            logger.exception("Business action for txn %s raised", txn.pk)
+        return True
+
+    def mark_failed(self, txn: PaymentTransaction, *, reason: str, payload: Optional[dict] = None) -> bool:
+        with db_transaction.atomic():
+            locked = (
+                PaymentTransaction.objects
+                .select_for_update()
+                .get(pk=txn.pk)
+            )
+            if locked.status in TERMINAL_STATUSES and locked.status != PaymentStatus.PAID:
+                return False
+            if locked.status == PaymentStatus.PAID:
+                # Paid trumps failed — never demote a confirmed payment.
+                return False
+            prior = locked.status
+            locked.status        = PaymentStatus.FAILED
+            locked.failed_reason = (reason or "")[:512]
+            locked.save(update_fields=["status", "failed_reason", "updated_at"])
+            PaymentLog.objects.create(
+                transaction=locked, event_type="failed",
+                status_before=prior, status_after=locked.status,
+                message=(reason or "")[:512],
+                payload=payload or {},
+            )
+            txn.status        = locked.status
+            txn.failed_reason = locked.failed_reason
+        return True
+
+    def mark_canceled(self, txn: PaymentTransaction, *, payload: Optional[dict] = None) -> bool:
+        with db_transaction.atomic():
+            locked = (
+                PaymentTransaction.objects
+                .select_for_update()
+                .get(pk=txn.pk)
+            )
+            if locked.status in TERMINAL_STATUSES:
+                return False
+            prior = locked.status
+            locked.status = PaymentStatus.CANCELED
+            locked.save(update_fields=["status", "updated_at"])
+            PaymentLog.objects.create(
+                transaction=locked, event_type="canceled",
+                status_before=prior, status_after=locked.status,
+                payload=payload or {},
+            )
+            txn.status = locked.status
+        return True
+
+    # -------------------------------------------------------- syncing
+
+    def sync_status(self, txn: PaymentTransaction) -> PaymentTransaction:
+        """Re-query the provider and reconcile our row. Authoritative when
+        webhook delivery is unreliable (e.g. user closed the tab)."""
+        if not txn.provider_payment_id:
+            raise PaymentValidationError("Transaction has no provider_payment_id yet")
+        gateway = get_payment_gateway(txn.provider)
+        response = gateway.retrieve_payment(txn.provider_payment_id)
+
+        prior = txn.status
+        target = response.status or txn.status
+        # Don't move to a non-terminal state if we are already terminal.
+        if txn.status in TERMINAL_STATUSES and target not in TERMINAL_STATUSES:
+            return txn
+
+        if target == PaymentStatus.PAID:
+            self.mark_paid(txn, payload=response.raw_response)
+        elif target == PaymentStatus.FAILED:
+            self.mark_failed(txn, reason="Failed on retrieve sync", payload=response.raw_response)
+        elif target == PaymentStatus.CANCELED:
+            self.mark_canceled(txn, payload=response.raw_response)
+        elif target != txn.status:
+            txn.status = target
+            txn.save(update_fields=["status", "updated_at"])
+            PaymentLog.objects.create(
+                transaction=txn, event_type="sync",
+                status_before=prior, status_after=target,
+                message="Status updated from retrieve_payment",
+                payload=response.raw_response or {},
+            )
+        return txn
+
+    # -------------------------------------------------- business hook
+
+    def _run_business_action(self, txn: PaymentTransaction, payload: dict) -> None:
+        """Hook point for activating subscriptions, marking invoices paid, etc.
+
+        Intentionally a no-op in this scaffold — wire concrete handlers
+        in the apps that own the referenced resource (e.g. subscriptions
+        signal handlers listen for ``PaymentLog`` ``paid`` events)."""
+        from apps.payments.signals import payment_paid
+        payment_paid.send(sender=PaymentTransaction, transaction=txn, payload=payload)
+
+
+# ----------------------------------------------------------- helpers
+
+def _coerce_amount(value) -> Decimal:
+    if isinstance(value, Decimal):
+        return value
+    try:
+        return Decimal(str(value))
+    except Exception as exc:  # noqa: BLE001
+        raise PaymentValidationError(f"amount is not a valid decimal: {value!r}") from exc

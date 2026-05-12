@@ -152,6 +152,7 @@ LOCAL_APPS = [
     "apps.platform_management",
     "apps.vendor_dashboard",
     "apps.payments",
+    "apps.billing",
 ]
 
 # ─── Rule Engine Settings ──────────────────────────────────────────────────────

@@ -20,6 +20,7 @@ from apps.payments.choices import (
     PaymentPurpose,
     PaymentStatus,
 )
+from apps.payments.encryption import EncryptedTextField
 
 
 class PaymentTransaction(models.Model):
@@ -124,6 +125,51 @@ class PaymentLog(models.Model):
         return f"{self.event_type} on {self.transaction_id}"
 
 
+class FailedWebhookEvent(models.Model):
+    """Dead-letter queue for webhook deliveries we couldn't process.
+
+    Anything that doesn't reach a clean ``OK`` outcome — bad signature,
+    unparseable body, no matching transaction — is captured here so an
+    operator can investigate and replay via the admin once the
+    underlying cause is fixed (typically: misconfigured webhook secret,
+    or a transaction created on a different env).
+    """
+    class Reason(models.TextChoices):
+        UNVERIFIED   = "unverified",   "Signature/verification failed"
+        BAD_PAYLOAD  = "bad_payload",  "Unparseable body"
+        UNKNOWN_TXN  = "unknown_txn",  "No matching transaction"
+        DISPATCH_ERR = "dispatch_err", "Error during dispatch"
+
+    id          = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    provider    = models.CharField(max_length=16)
+    reason      = models.CharField(max_length=20, choices=Reason.choices)
+    message     = models.CharField(max_length=512, blank=True, default="")
+
+    # Raw HTTP envelope — enough to replay the request through the same
+    # adapter once the underlying problem is fixed.
+    body        = models.BinaryField(blank=True, null=True)
+    headers     = models.JSONField(default=dict, blank=True)
+
+    # Forensic
+    remote_ip   = models.GenericIPAddressField(null=True, blank=True)
+    user_agent  = models.CharField(max_length=512, blank=True, default="")
+
+    replayed    = models.BooleanField(default=False)
+    replayed_at = models.DateTimeField(null=True, blank=True)
+
+    created_at  = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["provider", "reason"]),
+            models.Index(fields=["replayed"]),
+        ]
+
+    def __str__(self):
+        return f"{self.provider}:{self.reason} @ {self.created_at:%Y-%m-%d %H:%M}"
+
+
 class PaymentProviderConfig(models.Model):
     """Optional per-tenant override for provider credentials.
 
@@ -140,10 +186,10 @@ class PaymentProviderConfig(models.Model):
     is_active  = models.BooleanField(default=True)
 
     public_key  = models.CharField(max_length=256, blank=True, default="")
-    # NOTE: secret_key should be encrypted at rest. The current column is
-    # plaintext-shaped for migration simplicity — wrap with django-fernet
-    # or a secret-manager reference before going to production.
-    secret_key  = models.CharField(max_length=512, blank=True, default="")
+    # Stored as a Fernet token (symmetric AES-128-CBC + HMAC). Encryption
+    # is transparent — read/write the field as plain text. Column is TEXT
+    # because Fernet ciphertext is variable-length.
+    secret_key  = EncryptedTextField(blank=True, default="")
     merchant_id = models.CharField(max_length=128, blank=True, default="")
     store_id    = models.CharField(max_length=128, blank=True, default="")
     extra_config = models.JSONField(default=dict, blank=True)

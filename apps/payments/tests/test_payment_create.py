@@ -38,7 +38,7 @@ class PaymentServiceCreateTests(TestCase):
         mock_create.return_value = self._fake_gateway_response()
         txn = PaymentService().create_transaction(
             organization=self.org, user=self.user,
-            amount=Decimal("100.00"), purpose="subscription",
+            amount=Decimal("100.00"), purpose="wallet_topup",
         )
         self.assertEqual(txn.status, PaymentStatus.REDIRECT_REQUIRED)
         self.assertEqual(txn.provider, "moyasar")
@@ -54,7 +54,7 @@ class PaymentServiceCreateTests(TestCase):
         with self.assertRaises(PaymentValidationError):
             PaymentService().create_transaction(
                 organization=self.org, user=self.user,
-                amount=Decimal("0"), purpose="invoice",
+                amount=Decimal("0"), purpose="wallet_topup",
             )
         mock_create.assert_not_called()
 
@@ -63,11 +63,11 @@ class PaymentServiceCreateTests(TestCase):
         mock_create.return_value = self._fake_gateway_response()
         txn_a = PaymentService().create_transaction(
             organization=self.org, user=self.user, amount=Decimal("10.00"),
-            purpose="invoice", idempotency_key="key-1",
+            purpose="wallet_topup", idempotency_key="key-1",
         )
         txn_b = PaymentService().create_transaction(
             organization=self.org, user=self.user, amount=Decimal("99.00"),
-            purpose="invoice", idempotency_key="key-1",
+            purpose="wallet_topup", idempotency_key="key-1",
         )
         self.assertEqual(txn_a.pk, txn_b.pk)
         # The second call must NOT have invoked the gateway again.
@@ -95,7 +95,7 @@ class CreatePaymentAPITests(TestCase):
         r = self.client.post(
             reverse("payments:create"),
             data={
-                "amount": "50.00", "currency": "SAR", "purpose": "invoice",
+                "amount": "50.00", "currency": "SAR", "purpose": "wallet_topup",
                 "provider": "tap",  # ← ignored; serializer doesn't declare this field
             },
             format="json",
@@ -114,7 +114,7 @@ class CreatePaymentAPITests(TestCase):
         self.client.force_authenticate(self.user_b)
         r = self.client.post(
             reverse("payments:create"),
-            data={"amount": "20.00", "currency": "SAR", "purpose": "invoice"},
+            data={"amount": "20.00", "currency": "SAR", "purpose": "wallet_topup"},
             format="json",
         )
         txn_b = PaymentTransaction.objects.get(pk=r.json()["transaction_id"])
@@ -128,7 +128,7 @@ class CreatePaymentAPITests(TestCase):
         self.client.force_authenticate(self.user_a)
         r = self.client.post(
             reverse("payments:create"),
-            data={"amount": "0", "currency": "SAR", "purpose": "invoice"},
+            data={"amount": "0", "currency": "SAR", "purpose": "wallet_topup"},
             format="json",
         )
         self.assertEqual(r.status_code, 400)

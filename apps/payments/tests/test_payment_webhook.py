@@ -41,7 +41,7 @@ class MoyasarWebhookTests(TestCase):
         ):
             self.txn = PaymentService().create_transaction(
                 organization=self.org, user=self.user,
-                amount=Decimal("75.00"), purpose="invoice",
+                amount=Decimal("75.00"), purpose="wallet_topup",
             )
 
     def _post_webhook(self, body, *, signature=None):

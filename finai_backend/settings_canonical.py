@@ -82,7 +82,13 @@ ALLOWED_HOSTS = [host.strip() for host in os.environ.get("ALLOWED_HOSTS", "local
 # Test client always uses Host: testserver, so add it only when running pytest
 # or DEBUG is on. Adding it unconditionally in production breaks Django's
 # Host-header-injection defense (see Phase 2 hardening).
-_running_tests = os.environ.get("DJANGO_RUNNING_TESTS") == "1" or "pytest" in sys.argv[0] or "pytest" in (sys.modules.get("__main__") and getattr(sys.modules["__main__"], "__file__", "") or "")
+_running_tests = (
+    os.environ.get("DJANGO_RUNNING_TESTS") == "1"
+    or "pytest" in sys.argv[0]
+    or "pytest" in (sys.modules.get("__main__") and getattr(sys.modules["__main__"], "__file__", "") or "")
+    or "test" in sys.argv
+)
+TESTING = _running_tests
 if DEBUG or _running_tests:
     for default_host in ("testserver", "localhost", "127.0.0.1"):
         if default_host not in ALLOWED_HOSTS:
@@ -500,6 +506,10 @@ CELERY_BEAT_SCHEDULE = {
         "task": "audit.run_weekly_audit_summary",
         "schedule": crontab(hour=9, minute=0, day_of_week=1),  # Monday 9 AM
     },
+    "payments-reconcile-stale": {
+        "task": "payments.reconcile_stale_payments",
+        "schedule": crontab(minute="*/10"),  # every 10 min — catches dropped webhooks
+    },
 }
 
 # ─── OpenAI ───────────────────────────────────────────────────────────────────
@@ -581,6 +591,12 @@ ADMIN_IP_ALLOWLIST = [
 # locked by ``PAYMENT_PROVIDER`` — callers cannot override it per request.
 PAYMENT_PROVIDER = os.environ.get("PAYMENT_PROVIDER", "").strip().lower()
 PAYMENT_MODE     = os.environ.get("PAYMENT_MODE", "test").strip().lower()
+
+# Symmetric encryption key for sensitive credentials at rest
+# (PaymentProviderConfig.secret_key etc). Generate with:
+#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# REQUIRED in non-DEBUG deployments.
+FIELD_ENCRYPTION_KEY = os.environ.get("FIELD_ENCRYPTION_KEY", "")
 
 # Moyasar
 MOYASAR_SECRET_KEY      = os.environ.get("MOYASAR_SECRET_KEY", "")

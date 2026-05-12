@@ -10,6 +10,7 @@ urlpatterns = [
     path("create/",                  views.CreatePaymentView.as_view(),  name="create"),
     path("<uuid:pk>/",               views.PaymentDetailView.as_view(),  name="detail"),
     path("<uuid:pk>/sync/",          views.PaymentSyncView.as_view(),    name="sync"),
+    path("<uuid:pk>/refund/",        views.PaymentRefundView.as_view(),  name="refund"),
 
     # Provider webhooks (unauthenticated; verified via signature inside the adapter)
     path("webhooks/moyasar/",        views.webhook_moyasar,              name="webhook-moyasar"),

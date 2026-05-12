@@ -1,10 +1,14 @@
-from django.contrib import admin
+from django.contrib import admin, messages
+from django.test.client import RequestFactory
+from django.utils import timezone
 
 from apps.payments.models import (
+    FailedWebhookEvent,
     PaymentLog,
     PaymentProviderConfig,
     PaymentTransaction,
 )
+from apps.payments.services.webhook_service import process_webhook
 
 
 class PaymentLogInline(admin.TabularInline):
@@ -50,6 +54,55 @@ class PaymentLogAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False
+
+
+@admin.register(FailedWebhookEvent)
+class FailedWebhookEventAdmin(admin.ModelAdmin):
+    list_display  = ("id", "provider", "reason", "replayed", "created_at")
+    list_filter   = ("provider", "reason", "replayed")
+    search_fields = ("message", "id")
+    ordering = ("-created_at",)
+    readonly_fields = ("id", "provider", "reason", "message", "headers",
+                       "remote_ip", "user_agent", "replayed", "replayed_at",
+                       "created_at")
+    actions = ["replay_selected"]
+
+    def has_add_permission(self, request):
+        return False
+
+    @admin.action(description="Replay selected webhooks through process_webhook")
+    def replay_selected(self, request, queryset):
+        ok = err = 0
+        factory = RequestFactory()
+        for evt in queryset.filter(replayed=False):
+            content_type = (evt.headers or {}).get("CONTENT_TYPE", "application/json")
+            replay_request = factory.post(
+                f"/api/v1/payments/webhooks/{evt.provider}/",
+                data=bytes(evt.body or b""),
+                content_type=content_type,
+            )
+            # Restore the headers the adapter relies on for signature verify.
+            for header_name, value in (evt.headers or {}).items():
+                if header_name.startswith("HTTP_"):
+                    replay_request.META[header_name] = value
+            try:
+                code, _ = process_webhook(evt.provider, replay_request)
+            except Exception as exc:  # noqa: BLE001
+                err += 1
+                self.message_user(request, f"{evt.id}: {exc}", level=messages.ERROR)
+                continue
+            if code == "ok":
+                evt.replayed = True
+                evt.replayed_at = timezone.now()
+                evt.save(update_fields=["replayed", "replayed_at"])
+                ok += 1
+            else:
+                err += 1
+        self.message_user(
+            request,
+            f"Replayed {ok} successfully, {err} still failing.",
+            level=messages.SUCCESS if not err else messages.WARNING,
+        )
 
 
 @admin.register(PaymentProviderConfig)

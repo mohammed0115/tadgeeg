@@ -10,3 +10,12 @@ from django.dispatch import Signal
 # Fired exactly once per PaymentTransaction when it transitions to PAID.
 # Args: transaction (PaymentTransaction), payload (dict)
 payment_paid = Signal()
+
+# Purpose-typed signals — downstream apps subscribe to the one they care
+# about and don't have to inspect transaction.purpose themselves.
+# Args: transaction (PaymentTransaction), payload (dict)
+subscription_paid  = Signal()
+invoice_paid       = Signal()
+service_order_paid = Signal()
+wallet_topped_up   = Signal()
+

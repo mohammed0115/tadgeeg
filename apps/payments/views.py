@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
+from apps.authentication.permissions import IsAdminUser
 from apps.payments.gateways.base import GatewayError
 from apps.payments.models import PaymentTransaction
 from apps.payments.serializers import (
@@ -120,6 +121,30 @@ class PaymentSyncView(APIView):
             return Response({"detail": str(exc)}, status=drf_status.HTTP_502_BAD_GATEWAY)
         except PaymentValidationError as exc:
             return Response({"detail": str(exc)}, status=drf_status.HTTP_400_BAD_REQUEST)
+        return Response(PaymentTransactionSerializer(txn).data)
+
+
+class PaymentRefundView(APIView):
+    """POST /api/v1/payments/<id>/refund/
+
+    Admin-only (``can_manage_users`` capability). Body may optionally
+    include ``{"amount": "..."}`` for a partial refund; missing/null
+    means full refund.
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def post(self, request, pk):
+        organization = getattr(request.user, "organization", None)
+        txn = get_object_or_404(
+            PaymentTransaction, pk=pk, organization=organization,
+        )
+        amount = request.data.get("amount") if isinstance(request.data, dict) else None
+        try:
+            PaymentService().refund(txn, amount=amount)
+        except PaymentValidationError as exc:
+            return Response({"detail": str(exc)}, status=drf_status.HTTP_400_BAD_REQUEST)
+        except GatewayError as exc:
+            return Response({"detail": str(exc)}, status=drf_status.HTTP_502_BAD_GATEWAY)
         return Response(PaymentTransactionSerializer(txn).data)
 
 

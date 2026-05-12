@@ -19,7 +19,11 @@ from apps.payments.gateways.base import (
     WebhookVerificationError,
 )
 from apps.payments.gateways.factory import get_payment_gateway
-from apps.payments.models import PaymentLog, PaymentTransaction
+from apps.payments.models import (
+    FailedWebhookEvent,
+    PaymentLog,
+    PaymentTransaction,
+)
 from apps.payments.services.payment_service import PaymentService
 
 
@@ -40,6 +44,10 @@ def process_webhook(provider: str, request) -> Tuple[str, int]:
     HTTP status is intentionally 200 even for ignored/unknown events so
     providers don't escalate retries — but the result code lets us
     surface anomalies in logs / metrics.
+
+    Anything that doesn't reach a clean ``OK`` is also written to the
+    FailedWebhookEvent dead-letter queue so an operator can replay it
+    after fixing the underlying issue.
     """
     try:
         gateway = get_payment_gateway(provider)
@@ -51,9 +59,12 @@ def process_webhook(provider: str, request) -> Tuple[str, int]:
     try:
         if not gateway.verify_webhook(request):
             logger.warning("Webhook %s rejected — verification failed", provider)
+            _dlq(provider, FailedWebhookEvent.Reason.UNVERIFIED,
+                 "Signature/verification failed", request)
             return WebhookResult.UNVERIFIED, 401
     except WebhookVerificationError as exc:
         logger.warning("Webhook %s verification raised: %s", provider, exc)
+        _dlq(provider, FailedWebhookEvent.Reason.UNVERIFIED, str(exc), request)
         return WebhookResult.UNVERIFIED, 401
 
     # 2. Parse payload into our normalised event shape.
@@ -61,9 +72,12 @@ def process_webhook(provider: str, request) -> Tuple[str, int]:
         event: WebhookEvent = gateway.parse_webhook(request)
     except (WebhookVerificationError, ValueError) as exc:
         logger.warning("Webhook %s payload parse failed: %s", provider, exc)
+        _dlq(provider, FailedWebhookEvent.Reason.BAD_PAYLOAD, str(exc), request)
         return WebhookResult.BAD_PAYLOAD, 400
 
     if not event.provider_payment_id:
+        _dlq(provider, FailedWebhookEvent.Reason.BAD_PAYLOAD,
+             "Missing provider_payment_id", request)
         return WebhookResult.BAD_PAYLOAD, 400
 
     # 3. Match transaction.
@@ -73,11 +87,13 @@ def process_webhook(provider: str, request) -> Tuple[str, int]:
         .first()
     )
     if txn is None:
-        # Record an orphaned event for forensics; don't fail the webhook.
         logger.warning(
-            "Webhook %s for unknown provider_payment_id %s — recording as orphan",
+            "Webhook %s for unknown provider_payment_id %s — recording in DLQ",
             provider, event.provider_payment_id,
         )
+        _dlq(provider, FailedWebhookEvent.Reason.UNKNOWN_TXN,
+             f"No transaction for provider_payment_id={event.provider_payment_id}",
+             request)
         return WebhookResult.UNKNOWN_TXN, 200
 
     # 4. Always persist the raw webhook for audit before mutating state.
@@ -108,3 +124,20 @@ def process_webhook(provider: str, request) -> Tuple[str, int]:
         )
 
     return WebhookResult.OK, 200
+
+
+def _dlq(provider: str, reason, message: str, request) -> None:
+    """Capture an unprocessable webhook for forensic review + replay."""
+    try:
+        FailedWebhookEvent.objects.create(
+            provider=provider,
+            reason=reason,
+            message=(message or "")[:512],
+            body=request.body or b"",
+            headers={k: v for k, v in request.META.items()
+                     if k.startswith("HTTP_") or k in ("CONTENT_TYPE", "CONTENT_LENGTH")},
+            remote_ip=request.META.get("REMOTE_ADDR"),
+            user_agent=request.META.get("HTTP_USER_AGENT", "")[:512],
+        )
+    except Exception:  # pragma: no cover — DLQ failure must never break the webhook
+        logger.exception("Could not write to FailedWebhookEvent DLQ")

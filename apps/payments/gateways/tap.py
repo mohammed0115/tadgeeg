@@ -21,6 +21,7 @@ from decimal import Decimal
 from typing import Optional
 
 import requests
+from apps.payments.gateways._http import http_get, http_post
 from django.conf import settings
 
 from apps.payments.choices import PaymentStatus
@@ -115,7 +116,7 @@ class TapGateway(BasePaymentGateway):
             "post":     {"url": self.webhook_url},
         }
         try:
-            r = requests.post(
+            r = http_post(
                 f"{self.base_url}/charges",
                 json=body, headers=self._headers(), timeout=_TIMEOUT,
             )
@@ -131,7 +132,7 @@ class TapGateway(BasePaymentGateway):
 
     def retrieve_payment(self, provider_payment_id: str) -> GatewayResponse:
         try:
-            r = requests.get(
+            r = http_get(
                 f"{self.base_url}/charges/{provider_payment_id}",
                 headers=self._headers(), timeout=_TIMEOUT,
             )
@@ -186,7 +187,7 @@ class TapGateway(BasePaymentGateway):
         if amount is not None:
             body["amount"] = str(Decimal(amount).quantize(Decimal("0.01")))
         try:
-            r = requests.post(
+            r = http_post(
                 f"{self.base_url}/refunds",
                 json=body, headers=self._headers(), timeout=_TIMEOUT,
             )

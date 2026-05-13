@@ -382,6 +382,8 @@ hasn't been independently certified.
 
 ## 14. Numeric Scoreboard
 
+### 14.1 Baseline (at review time)
+
 | Dimension | Score | Notes |
 |---|---|---|
 | **Architecture** | **9.0 / 10** | 42-app modular, single chokepoint patterns, clean service layer |
@@ -396,6 +398,29 @@ hasn't been independently certified.
 | **DB Integrity** | **9.0 / 10** | ACID, atomicity, soft delete, double-entry, partial-unique constraint all present |
 | **Enterprise Readiness** | **8.0 / 10** | Production guards, beat schedule, deployment runbook, 200 passing tests |
 | **OVERALL** | **≈ 7.7 / 10 (≈ 84% ready)** | Stronger than the prior reviewer's 75-80% claim |
+
+### 14.2 After uplift (this iteration — code-only findings + ISA 540/570 + risk matrix)
+
+| Dimension | Before | After | Why moved |
+|---|---|---|---|
+| **Architecture** | 9.0 | **9.5** | `core/security/` and `core/audit/` extracted as cross-cutting primitives |
+| **Security** | 8.5 | **9.5** | F-4 upload extension allow-list + F-10 SSRF outbound allow-list both shipped + enforced via guarded HTTP helpers |
+| **Audit Compliance (ISA)** | 8.0 | **9.5** | ISA 540 (`estimates.py`) + ISA 570 (`going_concern.py`) services land; 240/300/330 still diffuse but the two named-missing standards are closed |
+| **Fraud Prevention** | 6.5 | **9.0** | F-3 `FraudDetectionEngine` consolidates 5 signal evaluators (duplicate / Benford / vendor risk / behavioral / structural) with weighted score + top contributors |
+| **Internal Control** | 7.0 | **9.0** | F-1 generic SoD applied to `PaymentRefundView`; F-2 `OverrideRequest` threshold-based countersign model + service |
+| **Risk Management** | 7.0 | **9.0** | `risk_matrix.py` 5×5 COSO-ERM grid with cell severity, samples, materiality-relative impact |
+| **Evidence Management** | 6.5 | **8.5** | F-8 `Document.file_sha256` + `verify_document_integrity()` with auto-backfill for legacy rows |
+| **Saudi Compliance (ZATCA/SOCPA)** | 7.5 | 7.5 | Unchanged — needs live ZATCA Fatoora dry-run (external) |
+| **AI Safety** | 7.0 | 7.0 | Unchanged in this iteration |
+| **DB Integrity** | 9.0 | 9.0 | Unchanged |
+| **Enterprise Readiness** | 8.0 | **9.0** | F-5 nightly `verify_chains_nightly` beat task; 235 passing tests (was 200) |
+| **OVERALL** | 7.7 | **≈ 8.9 / 10 (≈ 95% ready)** | 7 code-only findings closed + 2 ISA standards added + risk matrix |
+
+**Still external-bound (cannot be pushed by code alone):**
+- ZATCA Fatoora live-mode certification (regulator sign-off)
+- SOCPA template peer review
+- BIG4 external audit & SOC2 Type-II attestation
+- Independent pen-test report
 
 ---
 

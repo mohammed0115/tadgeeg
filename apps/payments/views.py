@@ -138,6 +138,25 @@ class PaymentRefundView(APIView):
         txn = get_object_or_404(
             PaymentTransaction, pk=pk, organization=organization,
         )
+
+        # Segregation of Duties (F-1): the user who initiated a payment
+        # cannot also refund it. Four-eyes principle on the financial
+        # exit path matches what we enforce on invoice approval.
+        from core.audit.sod import SoDViolation, enforce_sod
+        try:
+            enforce_sod(
+                actor=request.user,
+                object_=txn,
+                stage="approve",
+                maker_field="user",     # PaymentTransaction.user holds the maker
+            )
+        except SoDViolation as exc:
+            return Response(
+                {"detail": exc.user_message, "code": "sod_violation",
+                 "conflicting_with": exc.conflicts_with},
+                status=drf_status.HTTP_403_FORBIDDEN,
+            )
+
         amount = request.data.get("amount") if isinstance(request.data, dict) else None
         try:
             PaymentService().refund(txn, amount=amount)

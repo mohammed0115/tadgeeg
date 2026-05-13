@@ -474,6 +474,70 @@ class VendorProfile(models.Model):
 
 # ─── Invoice Audit Trail ──────────────────────────────────────────────────────
 
+class OverrideRequest(models.Model):
+    """Pending two-approver override on a high-value invoice (F-2).
+
+    The InvoiceApproveView's Golden-Rule override path was previously
+    single-approver. For invoices at/above ``APPROVAL_OVERRIDE_THRESHOLD_SAR``
+    the override now needs a second admin to countersign within the
+    configured window (default 24h), else the row auto-expires and
+    the invoice stays BLOCKED.
+
+    Policy helpers live in
+    ``apps.invoices.services.multi_approver`` — this is the persistence
+    surface only.
+    """
+    class Status(models.TextChoices):
+        PENDING       = "pending",       "Pending countersign"
+        COUNTERSIGNED = "countersigned", "Countersigned"
+        EXPIRED       = "expired",       "Expired"
+        WITHDRAWN     = "withdrawn",     "Withdrawn"
+
+    id           = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE,
+        related_name="approval_override_requests",
+    )
+    invoice      = models.ForeignKey(
+        "invoices.Invoice", on_delete=models.CASCADE,
+        related_name="override_requests",
+    )
+    requested_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True,
+        related_name="override_requests_made",
+    )
+    countersigned_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="override_requests_countersigned",
+    )
+    reason       = models.TextField()
+    amount       = models.DecimalField(max_digits=18, decimal_places=2)
+    threshold    = models.DecimalField(max_digits=18, decimal_places=2)
+    status       = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.PENDING,
+        db_index=True,
+    )
+    expires_at   = models.DateTimeField()
+    created_at   = models.DateTimeField(auto_now_add=True)
+    countersigned_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["organization", "status"]),
+            models.Index(fields=["invoice", "status"]),
+            models.Index(fields=["expires_at"]),
+        ]
+
+    def __str__(self):
+        return f"Override {self.invoice_id} {self.amount} ({self.status})"
+
+    @property
+    def is_expired(self) -> bool:
+        from django.utils import timezone
+        return self.status == self.Status.PENDING and self.expires_at < timezone.now()
+
+
 class InvoiceAuditEvent(HashChainMixin):
     """Every action on an invoice is recorded here (Rule Group 8).
 

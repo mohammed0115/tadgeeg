@@ -529,9 +529,8 @@ msgid ""
 msgstr ""
 
 #: apps/billing/middleware.py:143 apps/billing/views.py:29
-#| msgid "The verification code has expired. Resend a new code to continue."
 msgid "Your subscription has expired. Please renew to continue."
-msgstr "انتهت صلاحية رمز التحقق. أعِد إرسال رمز جديد للمتابعة."
+msgstr "انتهت صلاحية اشتراكك. يرجى التجديد للمتابعة."
 
 #: apps/billing/middleware.py:145 templates/billing/subscription.html:84
 #| msgid "Please choose one or more files first."
@@ -539,14 +538,12 @@ msgid "Please choose a plan to continue."
 msgstr "يرجى اختيار باقة للمتابعة."
 
 #: apps/billing/quota_gate.py:67
-#| msgid "Manage your subscription plan and invoices"
 msgid "Please choose a subscription plan before auditing invoices."
-msgstr "أدِر خطة اشتراكك والفواتير"
+msgstr "يرجى اختيار باقة اشتراك قبل تدقيق الفواتير."
 
 #: apps/billing/quota_gate.py:69
-#| msgid "The verification code has expired. Resend a new code to continue."
 msgid "Your subscription has expired. Please renew to continue auditing."
-msgstr "انتهت صلاحية رمز التحقق. أعِد إرسال رمز جديد للمتابعة."
+msgstr "انتهت صلاحية اشتراكك. يرجى التجديد لمتابعة التدقيق."
 
 #: apps/billing/quota_gate.py:71 templates/billing/subscription.html:168
 msgid "You have used all available invoices in your current plan."

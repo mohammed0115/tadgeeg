@@ -539,6 +539,13 @@ CELERY_BEAT_SCHEDULE = {
         # confirmed the drift rate is low enough to auto-fix safely.
         "schedule": crontab(hour=3, minute=15),
     },
+    "audit-verify-chains-nightly": {
+        "task": "audit.verify_chains_nightly",
+        # 03:30 — after counter-drift detector. Walks every (chained
+        # model × organisation) and logs the first chain break.
+        # See apps/audit/tasks_chain_verify.py.
+        "schedule": crontab(hour=3, minute=30),
+    },
 }
 
 # ─── OpenAI ───────────────────────────────────────────────────────────────────
@@ -638,6 +645,23 @@ PAYMENT_STRICT_WEBHOOK_PROVIDER = (
 #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 # REQUIRED in non-DEBUG deployments.
 FIELD_ENCRYPTION_KEY = os.environ.get("FIELD_ENCRYPTION_KEY", "")
+
+# ─── Outbound HTTP allow-list (F-10 / SSRF mitigation) ────────────────────
+# core.security.outbound_guard.assert_outbound_allowed() routes every
+# payment-adapter outbound call through this list. An empty list is
+# strict-deny; ['*'] is an explicit bypass (dev only).
+_OUTBOUND_DEFAULT = ",".join([
+    "api.moyasar.com", ".moyasar.com",
+    "api.tap.company", ".tap.company",
+    "secure.telr.com", ".telr.com",
+    "fatoora.zatca.gov.sa", "sandbox.zatca.gov.sa", ".zatca.gov.sa",
+    "api.openai.com",
+])
+OUTBOUND_HTTP_ALLOWLIST = [
+    h.strip() for h in os.environ.get(
+        "OUTBOUND_HTTP_ALLOWLIST", "*" if DEBUG else _OUTBOUND_DEFAULT
+    ).split(",") if h.strip()
+]
 
 # Moyasar
 MOYASAR_SECRET_KEY      = os.environ.get("MOYASAR_SECRET_KEY", "")

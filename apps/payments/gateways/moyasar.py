@@ -20,6 +20,7 @@ from decimal import Decimal
 from typing import Optional
 
 import requests
+from apps.payments.gateways._http import http_get, http_post
 from django.conf import settings
 
 from apps.payments.choices import PaymentStatus
@@ -91,7 +92,7 @@ class MoyasarGateway(BasePaymentGateway):
             },
         }
         try:
-            r = requests.post(
+            r = http_post(
                 f"{self.base_url}/payments",
                 json=body, auth=self._auth(), timeout=_TIMEOUT,
             )
@@ -109,7 +110,7 @@ class MoyasarGateway(BasePaymentGateway):
 
     def retrieve_payment(self, provider_payment_id: str) -> GatewayResponse:
         try:
-            r = requests.get(
+            r = http_get(
                 f"{self.base_url}/payments/{provider_payment_id}",
                 auth=self._auth(), timeout=_TIMEOUT,
             )
@@ -175,7 +176,7 @@ class MoyasarGateway(BasePaymentGateway):
         if amount is not None:
             body["amount"] = self._to_smallest_unit(amount)
         try:
-            r = requests.post(
+            r = http_post(
                 f"{self.base_url}/payments/{transaction.provider_payment_id}/refund",
                 json=body, auth=self._auth(), timeout=_TIMEOUT,
             )

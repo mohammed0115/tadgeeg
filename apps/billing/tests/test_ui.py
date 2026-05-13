@@ -102,7 +102,7 @@ class PlansPageTests(TestCase):
 
     def test_free_trial_button_disabled_after_use(self):
         SubscriptionService().create_free_trial(self.org)
-        r = self.client.get(reverse("billing:plans"))
+        r = self.client.get(reverse("billing:plans"), HTTP_ACCEPT_LANGUAGE="en")
         html = r.content.decode("utf-8")
         # The trial button changes to a disabled outline button.
         self.assertIn("Trial unavailable", html)
@@ -154,14 +154,14 @@ class SubscriptionPageTests(TestCase):
         self.assertIn("width: 80%", html)
 
     def test_empty_state_when_no_subscription(self):
-        r = self.client.get(reverse("billing:subscription"))
+        r = self.client.get(reverse("billing:subscription"), HTTP_ACCEPT_LANGUAGE="en")
         self.assertEqual(r.status_code, 200)
         html = r.content.decode("utf-8")
         self.assertIn("don't have an active subscription", html.lower())
 
     def test_quota_full_warning_card_appears(self):
         self._activate(used=500)
-        r = self.client.get(reverse("billing:subscription"))
+        r = self.client.get(reverse("billing:subscription"), HTTP_ACCEPT_LANGUAGE="en")
         html = r.content.decode("utf-8")
         self.assertIn("used all available invoices", html.lower())
 
@@ -220,7 +220,7 @@ class UsagePageTests(TestCase):
         self.assertIn("?page=2", html)
 
     def test_usage_empty_state(self):
-        r = self.client.get(reverse("billing:usage"))
+        r = self.client.get(reverse("billing:usage"), HTTP_ACCEPT_LANGUAGE="en")
         html = r.content.decode("utf-8")
         self.assertIn("No usage events", html)
 

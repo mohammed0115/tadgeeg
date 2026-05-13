@@ -162,7 +162,7 @@ class DashboardSubscriptionCardTests(TestCase):
         sub.used_invoices = 320
         sub.save(update_fields=["used_invoices"])
 
-        r = self.client.get("/dashboard/", follow=False)
+        r = self.client.get("/dashboard/", follow=False, HTTP_ACCEPT_LANGUAGE="en")
         # Dashboard view may itself error on unrelated bits — what we
         # care about is the subscription card markup. Use the JSON
         # context-processor introspection if the view 500s.

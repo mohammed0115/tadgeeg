@@ -46,6 +46,14 @@ class Document(models.Model):
     file = models.FileField(upload_to="documents/%Y/%m/")
     original_filename = models.CharField(max_length=255)
     file_size = models.PositiveIntegerField(help_text="Size in bytes")
+    # SHA-256 of the file bytes captured at upload time (F-8 — Enterprise
+    # Audit Review Finding 8). Lets the audit trail prove a file on disk
+    # hasn't been swapped after upload — call
+    # ``apps.documents.services.integrity.verify_document_integrity(doc)``
+    # to recompute and compare. Indexed because the field also powers
+    # duplicate-upload detection (two files with the same hash are the
+    # same file regardless of filename).
+    file_sha256 = models.CharField(max_length=64, blank=True, default="", db_index=True)
     mime_type = models.CharField(max_length=100)
     document_type = models.CharField(
         max_length=30, choices=DocumentType.choices, default=DocumentType.OTHER

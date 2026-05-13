@@ -212,7 +212,7 @@ class ExpiredSubscriptionBlocksAccessTests(TestCase):
     def test_expired_subscription_message_says_renew(self):
         """The middleware distinguishes 'never had one' from 'expired'."""
         self.client.force_login(self.user)
-        r = self.client.get("/api/v1/invoices/")
+        r = self.client.get("/api/v1/invoices/", HTTP_ACCEPT_LANGUAGE="en")
         self.assertEqual(r.status_code, 402)
         self.assertIn("expired", r.json()["detail"].lower())
 

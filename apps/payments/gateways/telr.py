@@ -19,6 +19,7 @@ from decimal import Decimal
 from typing import Optional
 
 import requests
+from apps.payments.gateways._http import http_get, http_post
 from django.conf import settings
 
 from apps.payments.choices import PaymentStatus
@@ -91,7 +92,7 @@ class TelrGateway(BasePaymentGateway):
             "return_decl":  transaction.failure_url or self.return_declined_url,
         }
         try:
-            r = requests.post(
+            r = http_post(
                 f"{self.base_url}/gateway/order.json",
                 json=body, timeout=_TIMEOUT,
             )
@@ -129,7 +130,7 @@ class TelrGateway(BasePaymentGateway):
             "order_ref":   provider_payment_id,
         }
         try:
-            r = requests.post(
+            r = http_post(
                 f"{self.base_url}/gateway/order.json",
                 json=body, timeout=_TIMEOUT,
             )

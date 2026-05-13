@@ -152,9 +152,17 @@ class RefundEndpointTests(TestCase):
         User = get_user_model()
         self.client = APIClient()
         self.org = make_org()
+        # Maker: initiated the original payment.
         self.admin = User.objects.create_user(
             email="admin@example.com", password="StrongPass123!",
             full_name="Admin", role=User.Role.ADMIN, organization=self.org,
+        )
+        # Checker: refunds. Segregation of Duties (F-1) requires a different
+        # admin to approve the refund — the user who created the payment
+        # cannot also approve its reversal.
+        self.approver = User.objects.create_user(
+            email="approver@example.com", password="StrongPass123!",
+            full_name="Approver", role=User.Role.ADMIN, organization=self.org,
         )
         self.member = make_user(organization=self.org, email="member@example.com")
 
@@ -183,7 +191,7 @@ class RefundEndpointTests(TestCase):
             provider_reference="", checkout_url="",
             status=PaymentStatus.REFUNDED, raw_response={"refund_id": "r_1"},
         )
-        self.client.force_authenticate(self.admin)
+        self.client.force_authenticate(self.approver)
         r = self.client.post(reverse("payments:refund", kwargs={"pk": self.txn.pk}))
         self.assertEqual(r.status_code, 200, r.content)
         self.txn.refresh_from_db()
@@ -199,9 +207,18 @@ class RefundEndpointTests(TestCase):
     def test_cannot_refund_an_unpaid_transaction(self):
         self.txn.status = PaymentStatus.PENDING
         self.txn.save(update_fields=["status"])
-        self.client.force_authenticate(self.admin)
+        self.client.force_authenticate(self.approver)
         r = self.client.post(reverse("payments:refund", kwargs={"pk": self.txn.pk}))
         self.assertEqual(r.status_code, 400)
+
+    @mock.patch("apps.payments.gateways.moyasar.MoyasarGateway.refund_payment")
+    def test_maker_cannot_also_refund_sod(self, mock_refund):
+        """F-1: the admin who initiated the payment may not approve its refund."""
+        self.client.force_authenticate(self.admin)
+        r = self.client.post(reverse("payments:refund", kwargs={"pk": self.txn.pk}))
+        self.assertEqual(r.status_code, 403)
+        self.assertEqual(r.json().get("code"), "sod_violation")
+        mock_refund.assert_not_called()
 
 
 # ─── #8 — Webhook DLQ ───────────────────────────────────────────────────────

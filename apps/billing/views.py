@@ -321,6 +321,23 @@ class CurrentSubscriptionView(APIView):
         })
 
 
+class BulkUploadPageView(APIView):
+    """GET /billing/bulk-upload/
+
+    Renders the bulk-upload page. Stage 9's H-3 fix — surfaces the
+    backend's 402 ``QUOTA_NOT_ENOUGH`` response with a friendly dialog
+    that lets the user either upgrade or re-submit with
+    ``accept_partial=true``. The POST itself goes to the existing
+    /api/v1/documents/bulk-upload-jobs/ endpoint via fetch.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return render(request, "billing/bulk_upload.html", {
+            "active_nav": "bulk_upload",
+        })
+
+
 class UsagePageView(APIView):
     """GET /billing/usage/?page=N
 

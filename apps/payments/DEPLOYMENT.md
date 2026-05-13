@@ -69,12 +69,99 @@ Required in non-DEBUG. Boot will fail-fast if missing. Generate with:
 python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
 
-Rotation: re-encryption requires a `manage.py rotate_field_encryption_key`
-helper (not provided in this scaffold). For now: rotate by setting the
-new key, then re-saving each `PaymentProviderConfig` row through the
-ORM in the same process where the OLD key is still set, then deploying
-the new key. Or just rotate keys at the secret-manager layer with
-overlapping decryption windows.
+### Rotating `FIELD_ENCRYPTION_KEY`
+
+Fernet ciphertext is keyed by the Fernet key that produced it. A key
+change without re-encryption silently bricks every `secret_key` row.
+The safe procedure uses Fernet's built-in **multi-key** support
+implicitly via a deliberate two-step rollout:
+
+**Procedure — zero-downtime rotation**
+
+1. **Generate the new key** on a trusted machine:
+
+   ```bash
+   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+   ```
+
+2. **Stage A — re-encrypt under the OLD key process**
+
+   Keep `FIELD_ENCRYPTION_KEY=<old_key>` in the active deployment.
+   Open a `manage.py shell` with the OLD key still loaded, then
+   re-save each row through the ORM so the field decrypts under the
+   OLD key and re-encrypts under whatever key is current:
+
+   ```python
+   from apps.payments.models import PaymentProviderConfig
+   from django.db import transaction
+   with transaction.atomic():
+       for cfg in PaymentProviderConfig.objects.all():
+           plain = cfg.secret_key                       # decrypts under OLD
+           cfg.secret_key = plain                       # re-encrypts on save
+           cfg.save(update_fields=["secret_key", "updated_at"])
+   ```
+
+   At this point every row is still encrypted under the OLD key, but
+   you've proven the round-trip works.
+
+3. **Stage B — flip the key**
+
+   Roll out a new release with `FIELD_ENCRYPTION_KEY=<new_key>`. As
+   soon as it boots, every `secret_key` read will fail (`InvalidToken`
+   silently swallowed → returns `""` per
+   `EncryptedTextField._decrypt`). So **do not** flip the key alone.
+
+4. **Stage B' — combined cutover**
+
+   Instead: in a single deploy window, perform stages A and B
+   together while the application is paused (or accept a brief
+   outage):
+
+   ```bash
+   # 1. Take the worker offline (so no payment can fire mid-rotation).
+   systemctl stop tadgeeg-celery
+   # 2. Re-encrypt under the new key using BOTH keys side by side.
+   FIELD_ENCRYPTION_KEY=$NEW_KEY \
+   LEGACY_FIELD_ENCRYPTION_KEY=$OLD_KEY \
+       python manage.py rotate_field_encryption_key   # see below
+   # 3. Restart workers + web with the new key only.
+   ```
+
+5. **One-shot rotation helper** *(not shipped — add when needed)*
+
+   Implementation sketch in `apps/payments/management/commands/
+   rotate_field_encryption_key.py`:
+
+   ```python
+   from cryptography.fernet import Fernet, MultiFernet
+   new = Fernet(os.environ["FIELD_ENCRYPTION_KEY"])
+   old = Fernet(os.environ["LEGACY_FIELD_ENCRYPTION_KEY"])
+   fernet = MultiFernet([new, old])     # decrypt with either, encrypt with new
+   for cfg in PaymentProviderConfig.objects.all():
+       raw = cfg._meta.get_field("secret_key").value_from_object(cfg)
+       plain = fernet.decrypt(raw.encode("utf-8")).decode("utf-8")
+       cfg.secret_key = plain
+       cfg.save(update_fields=["secret_key", "updated_at"])
+   ```
+
+   Build that command on first rotation.
+
+**Alternative — secret manager with overlapping windows**
+
+If you front the key with AWS Secrets Manager / GCP Secret Manager /
+Vault, the manager handles rotation natively: keep two versions
+active during the cutover window, instruct the app to read the
+"current" version, and retire the old version once you've confirmed
+no ciphertext still references it.
+
+**Verification after rotation**
+
+```python
+# manage.py shell
+from apps.payments.models import PaymentProviderConfig
+broken = sum(1 for cfg in PaymentProviderConfig.objects.all() if not cfg.secret_key)
+assert broken == 0, f"{broken} configs failed to decrypt — abort the rotation"
+```
 
 ---
 

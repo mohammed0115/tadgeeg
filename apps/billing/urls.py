@@ -10,4 +10,5 @@ urlpatterns = [
     path("select-plan/",  views.SelectPlanView.as_view(),          name="select-plan"),
     path("subscription/", views.CurrentSubscriptionView.as_view(), name="subscription"),
     path("usage/",        views.UsagePageView.as_view(),           name="usage"),
+    path("bulk-upload/",  views.BulkUploadPageView.as_view(),      name="bulk-upload"),
 ]

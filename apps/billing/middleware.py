@@ -42,6 +42,7 @@ _WHITELIST_PREFIXES = (
     "/billing/select-plan/",
     "/billing/subscription/",   # so the user can SEE that they're expired
     "/billing/usage/",          # usage history accessible during onboarding/expiry
+    "/billing/bulk-upload/",    # bulk-upload page shows the 402 quota dialog
     # Payments
     "/payments/",
     "/api/v1/payments/",

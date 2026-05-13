@@ -118,6 +118,7 @@ Pages override the title, extra_styles, and content blocks.
       <a href="/billing/plans/"        {% if active_nav == 'plans' %}class="active"{% endif %}>{% trans "Plans" %}</a>
       <a href="/billing/subscription/" {% if active_nav == 'subscription' %}class="active"{% endif %}>{% trans "Subscription" %}</a>
       <a href="/billing/usage/"        {% if active_nav == 'usage' %}class="active"{% endif %}>{% trans "Usage" %}</a>
+      <a href="/billing/bulk-upload/"  {% if active_nav == 'bulk_upload' %}class="active"{% endif %}>{% trans "Bulk upload" %}</a>
       <a href="/dashboard/">{% trans "Dashboard" %}</a>
       <a href="/logout/" class="danger">{% trans "Sign out" %}</a>
     </nav>

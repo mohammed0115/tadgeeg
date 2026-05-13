@@ -525,6 +525,12 @@ CELERY_BEAT_SCHEDULE = {
         "task": "payments.reconcile_stale_payments",
         "schedule": crontab(minute="*/10"),  # every 10 min — catches dropped webhooks
     },
+    "billing-expire-subscriptions": {
+        "task": "billing.expire_subscriptions",
+        # Top of every hour. Idempotent — already-expired rows are
+        # filtered out by SubscriptionService.expire_old_subscriptions.
+        "schedule": crontab(minute=0),
+    },
 }
 
 # ─── OpenAI ───────────────────────────────────────────────────────────────────

@@ -69,6 +69,12 @@ class QuotaExceeded(Exception):
             return _("Your subscription has expired. Please renew to continue auditing.")
         if self.reason == "quota_exceeded":
             return _("You have used all available invoices in your current plan.")
+        if self.reason == "rerun_confirmation_required":
+            return _(
+                "This document has already been audited. A fresh re-audit will "
+                "consume one invoice from your quota. Pass force_rerun_confirmed=True "
+                "to continue."
+            )
         return _("Audit blocked by billing quota.")
 
 
@@ -104,6 +110,7 @@ def run_audit_with_quota(
     *,
     triggered_by: str = "upload",
     force_rerun: bool = False,
+    force_rerun_confirmed: bool = False,
     engine_override=None,
 ):
     """Drop-in for ``run_audit_compat`` with a billing reserve/consume
@@ -116,6 +123,16 @@ def run_audit_with_quota(
         already-paid invoice must not charge again.
       • Otherwise: ``QuotaService.can_audit`` → reserve → pipeline →
         consume (success) or release (system error).
+
+    Re-bill confirmation (Stage 9 — H-2):
+      Setting ``force_rerun=True`` is interpreted as "I want a fresh
+      audit even though this document was already billed." That fresh
+      run is billed as a separate consume. To prevent accidental
+      double-billing (e.g. retried POST), the caller MUST also set
+      ``force_rerun_confirmed=True``. If force_rerun=True and the
+      document is already billed but the caller did NOT confirm, the
+      gate refuses with ``QuotaExceeded("rerun_confirmation_required")``.
+      First-time runs (no prior consume) ignore both flags.
     """
     from apps.rule_engine.pipeline.v2.compat import (
         run_audit_compat as _original,
@@ -126,8 +143,10 @@ def run_audit_with_quota(
     doc, org = _resolve_document_and_org(document_id, organization_id)
     svc = QuotaService()
 
+    already_billed = _already_billed(org, doc)
+
     # Already paid? Re-running analytics on a billed document is free.
-    if not force_rerun and _already_billed(org, doc):
+    if not force_rerun and already_billed:
         logger.info(
             "[quota_gate] document %s already billed for org %s — pipeline runs without re-charge",
             document_id, organization_id,
@@ -137,6 +156,12 @@ def run_audit_with_quota(
             organization_id=organization_id, triggered_by=triggered_by,
             force_rerun=force_rerun, engine_override=engine_override,
         )
+
+    # Force-rerun on an already-billed document MUST be explicitly
+    # confirmed — protects against accidental double-charging from a
+    # retried POST or a stuck "Re-audit" button.
+    if force_rerun and already_billed and not force_rerun_confirmed:
+        raise QuotaExceeded("rerun_confirmation_required")
 
     # Quota check.
     decision = svc.can_audit(org)

@@ -213,6 +213,13 @@ class JournalEntry(HashChainMixin):
         "authentication.User", on_delete=models.SET_NULL,
         null=True, blank=True, related_name="created_ledger_entries",
     )
+    # F-1 / ISA 240 §32(a): manual journal-entry postings require a
+    # different approver than the maker. ``posted_by`` records who
+    # transitioned the entry from DRAFT → POSTED.
+    posted_by     = models.ForeignKey(
+        "authentication.User", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="posted_ledger_entries",
+    )
     created_at    = models.DateTimeField(auto_now_add=True)
     updated_at    = models.DateTimeField(auto_now=True)
 

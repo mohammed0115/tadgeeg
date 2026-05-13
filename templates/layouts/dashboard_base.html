@@ -433,6 +433,26 @@
             {% trans "Vendors" %}
           </a>
         </div>
+
+        {# Billing group — gated to org admins / finance managers via
+           apps.billing.context_processors.billing.show_billing_nav. #}
+        {% if billing.show_billing_nav %}
+        <div class="nav-group">
+          <div class="nav-group-title">{% trans "Billing & Subscription" %}</div>
+          <a href="/billing/subscription/" class="nav-item {% block nav_subscription %}{% endblock %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            {% trans "My subscription" %}
+          </a>
+          <a href="/billing/plans/" class="nav-item {% block nav_plans %}{% endblock %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            {% trans "Plans & upgrade" %}
+          </a>
+          <a href="/billing/usage/" class="nav-item {% block nav_usage %}{% endblock %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+            {% trans "Usage history" %}
+          </a>
+        </div>
+        {% endif %}
       </nav>
 
       <div class="sidebar-footer">

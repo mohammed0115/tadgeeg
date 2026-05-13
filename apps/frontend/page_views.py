@@ -667,18 +667,30 @@ def _render_marketing_page(request, *, page_key, title, eyebrow, description, bu
 
 
 def pricing(request):
-    return _render_marketing_page(
+    """Public pricing page — renders the four canonical plans LIVE from
+    the Plan table so a price change in the DB shows up here without a
+    redeploy. Falls back to a static layout if apps.billing isn't
+    installed (so unrelated deployments don't break)."""
+    plans = []
+    try:
+        from apps.billing.services.plan_service import list_purchasable_plans
+        plans = list(list_purchasable_plans())
+    except Exception:                       # noqa: BLE001 — degrade gracefully
+        plans = []
+
+    ctx = _public_ctx(
         request,
         page_key="pricing",
-        title=_("Flexible plans for auditing and compliance teams"),
-        eyebrow=_("Pricing"),
-        description=_("Start quickly with a plan sized for your team, with a clear path to expand as document volume and workflows grow."),
-        bullets=[
-            _("Starter plan for small and mid-sized audit teams."),
-            _("Enterprise plan with stronger tenant isolation and broader review workflows."),
-            _("Gradual activation of advanced features such as executive reporting and integrations."),
-        ],
+        page_title=str(_("Pricing & plans")),
+        page_eyebrow=str(_("Pricing")),
+        page_description=str(_(
+            "Choose the plan that fits your audit volume. Every plan includes "
+            "the full Tadgeeg AI pipeline, fraud detection, and ZATCA-ready exports."
+        )),
+        plans=plans,
+        is_authenticated=request.user.is_authenticated,
     )
+    return render(request, "landing/pricing.html", ctx)
 
 
 def about(request):

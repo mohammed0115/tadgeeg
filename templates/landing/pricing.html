@@ -1,0 +1,184 @@
+{% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'ar' }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page_title }} — Tadgeeg</title>
+  <meta name="description" content="{{ page_description }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary:       #073763;
+      --primary-dark:  #052747;
+      --accent:        #11B565;
+      --accent-dark:   #0E9C56;
+      --bg:            #F5F8FB;
+      --card:          #ffffff;
+      --border:        #E5EAF0;
+      --border-soft:   #EEF1F6;
+      --text:          #1A2433;
+      --text-muted:    #5B6B81;
+      --text-light:    #8A98AD;
+      --shadow-sm:     0 1px 2px rgba(7,55,99,0.04);
+      --shadow-md:     0 4px 14px -2px rgba(7,55,99,0.06);
+      --shadow-lg:     0 14px 28px -10px rgba(7,55,99,0.14);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Tajawal','Cairo', system-ui, sans-serif;
+      color: var(--text); background: var(--bg);
+      line-height: 1.6; min-height: 100vh;
+    }
+    h1, h2, h3 { font-family: 'Cairo', sans-serif; color: var(--primary); }
+
+    .topbar { background: white; border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; }
+    .topbar .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; color: var(--primary); text-decoration: none; }
+    .topbar .logo .mark { width: 32px; height: 32px; }
+    .topbar nav { display: flex; gap: 18px; align-items: center; }
+    .topbar nav a { color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; }
+    .topbar nav a:hover, .topbar nav a.active { color: var(--primary); }
+    .topbar .cta { background: var(--accent); color: white; padding: 8px 16px; border-radius: 10px; font-weight: 700; }
+    .topbar .cta:hover { background: var(--accent-dark); color: white; }
+
+    .hero { text-align: center; padding: 72px 24px 16px; max-width: 720px; margin: 0 auto; }
+    .eyebrow { display: inline-block; background: rgba(17,181,101,0.12); color: var(--accent-dark); padding: 4px 12px; border-radius: 100px; font-weight: 800; font-size: 12px; letter-spacing: 0.5px; margin-bottom: 16px; }
+    .hero h1 { font-size: clamp(28px, 3.6vw, 42px); font-weight: 900; letter-spacing: -0.6px; margin-bottom: 12px; }
+    .hero p { color: var(--text-muted); font-size: 17px; }
+
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 24px 80px; }
+    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; align-items: stretch; }
+    @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 580px)  { .grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 20px; padding: 28px 24px;
+      box-shadow: var(--shadow-sm);
+      position: relative; display: flex; flex-direction: column;
+      transition: transform .25s ease, box-shadow .25s ease;
+    }
+    .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+    .card.featured { border: 2px solid var(--accent); box-shadow: var(--shadow-lg); }
+    .card.featured::before {
+      content: '{% trans "Most popular" %}';
+      position: absolute; top: -12px; inset-inline-start: 24px;
+      background: var(--accent); color: white;
+      font-size: 11px; font-weight: 800;
+      padding: 4px 12px; border-radius: 100px; letter-spacing: 0.3px;
+    }
+    .card.trial { background: linear-gradient(180deg, rgba(17,181,101,0.04), white); }
+
+    .badge-first { display: inline-block; background: rgba(17,181,101,0.12); color: var(--accent-dark); font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 100px; margin-bottom: 12px; letter-spacing: 0.3px; }
+    .plan-name { font-size: 18px; font-weight: 800; color: var(--primary); margin-bottom: 4px; }
+    .plan-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 18px; min-height: 38px; }
+    .price { display: flex; align-items: baseline; gap: 6px; margin: 6px 0 6px; }
+    .price .num { font-family: 'Cairo', sans-serif; font-size: 36px; font-weight: 900; color: var(--primary); line-height: 1; }
+    .price .currency { font-size: 14px; color: var(--text-muted); font-weight: 600; }
+    .price .free { font-size: 28px; font-weight: 900; color: var(--accent-dark); }
+    .duration { font-size: 12px; color: var(--text-muted); margin-bottom: 18px; }
+    .features { list-style: none; padding: 0; margin: 0 0 22px 0; flex: 1; }
+    .features li { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 13.5px; color: var(--text); border-bottom: 1px solid var(--border-soft); }
+    .features li:last-child { border-bottom: 0; }
+    .features li .check { width: 16px; height: 16px; flex-shrink: 0; color: var(--accent); }
+    .btn { display: inline-flex; align-items: center; justify-content: center; width: 100%; padding: 12px 16px; border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; border: 1px solid transparent; transition: all .2s ease; text-decoration: none; }
+    .btn-primary { background: var(--accent); color: white; box-shadow: 0 4px 10px -2px rgba(17,181,101,0.32); }
+    .btn-primary:hover { background: var(--accent-dark); color: white; }
+    .btn-outline { background: white; color: var(--primary); border-color: var(--border); }
+    .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+
+    .footnote { text-align: center; margin-top: 32px; font-size: 13px; color: var(--text-muted); }
+    .footnote a { color: var(--primary); font-weight: 600; }
+
+    .empty { background: white; border: 1px dashed var(--border); border-radius: 16px; padding: 56px 24px; text-align: center; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="logo" href="{% url 'frontend:home' %}">
+      <svg class="mark" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+        <circle cx="50" cy="50" r="46" stroke="#073763" stroke-width="6"/>
+        <path d="M28 50 L44 66 L72 36" stroke="#11B565" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <span>Tadgeeg</span>
+    </a>
+    <nav>
+      <a href="{% url 'frontend:home' %}">{% trans "Home" %}</a>
+      <a href="{% url 'frontend:pricing' %}" class="active">{% trans "Pricing" %}</a>
+      <a href="{% url 'frontend:about' %}">{% trans "About" %}</a>
+      <a href="{% url 'frontend:contact' %}">{% trans "Contact" %}</a>
+      {% if is_authenticated %}
+        <a href="{% url 'frontend:dashboard' %}" class="cta">{% trans "Dashboard" %}</a>
+      {% else %}
+        <a href="{% url 'frontend:register' %}" class="cta">{% trans "Start free trial" %}</a>
+      {% endif %}
+    </nav>
+  </header>
+
+  <section class="hero">
+    <span class="eyebrow">{{ page_eyebrow }}</span>
+    <h1>{{ page_title }}</h1>
+    <p>{{ page_description }}</p>
+  </section>
+
+  <main class="wrap">
+    {% if not plans %}
+      <div class="empty">
+        {% trans "Pricing is being prepared. Please check back shortly." %}
+      </div>
+    {% else %}
+      <div class="grid">
+        {% for plan in plans %}
+          {% with code=plan.code %}
+          <article class="card {% if code == 'business' %}featured{% endif %} {% if plan.is_trial %}trial{% endif %}" data-plan="{{ code }}">
+            {% if plan.is_trial %}<span class="badge-first">{% trans "First time only" %}</span>{% endif %}
+            <h3 class="plan-name">{{ plan.name_ar|default:plan.name_en }}</h3>
+            <p class="plan-desc">{{ plan.description_ar|default:plan.description_en|default:"" }}</p>
+            <div class="price">
+              {% if plan.is_free %}
+                <span class="free">{% trans "Free" %}</span>
+              {% else %}
+                <span class="num">{{ plan.price|floatformat:0 }}</span>
+                <span class="currency">{{ plan.currency }} / {% trans "month" %}</span>
+              {% endif %}
+            </div>
+            <div class="duration">
+              {% blocktrans with count=plan.invoice_limit days=plan.duration_days %}{{ count }} invoices · {{ days }} days{% endblocktrans %}
+            </div>
+            <ul class="features">
+              <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>{% blocktrans with count=plan.invoice_limit %}{{ count }} invoice audits{% endblocktrans %}</span></li>
+              <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>{% trans "Bulk upload (CSV / Excel / ZIP)" %}</span></li>
+              <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>{% trans "Fraud + ZATCA compliance checks" %}</span></li>
+              <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  <span>{% trans "Email + dashboard reports" %}</span></li>
+            </ul>
+            {% if is_authenticated %}
+              <a class="btn {% if code == 'business' %}btn-primary{% else %}btn-outline{% endif %}" href="/billing/plans/">
+                {% if plan.is_trial %}{% trans "Start trial" %}
+                {% elif code == 'business' %}{% trans "Choose this plan" %}
+                {% else %}{% trans "Subscribe" %}{% endif %}
+              </a>
+            {% else %}
+              <a class="btn {% if code == 'business' %}btn-primary{% else %}btn-outline{% endif %}" href="{% url 'frontend:register' %}">
+                {% trans "Start free trial" %}
+              </a>
+            {% endif %}
+          </article>
+          {% endwith %}
+        {% endfor %}
+      </div>
+      <p class="footnote">
+        {% trans "Already subscribed?" %}
+        <a href="/billing/subscription/">{% trans "Manage your subscription →" %}</a>
+      </p>
+    {% endif %}
+  </main>
+</body>
+</html>

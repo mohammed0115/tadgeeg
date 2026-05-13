@@ -53,6 +53,55 @@
 </div>
 {% endif %}
 
+{# ── Subscription card (Stage 7 follow-up — Billing UI integration) ────
+   Shows the org's current plan, usage, and remaining quota. The
+   `billing` namespace is provided by apps.billing.context_processors.
+#}
+{% if not no_organization %}
+  {% if billing.has_subscription %}
+    <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:22px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;">
+      <div style="display:flex;gap:24px;align-items:center;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">{% trans "Current plan" %}</div>
+          <div style="font-family:Cairo,sans-serif;font-size:18px;font-weight:800;color:var(--primary);">
+            {{ billing.plan_name }}
+            {% if billing.status == 'trialing' %}<span style="background:#DBEAFE;color:#1E40AF;font-size:10px;font-weight:800;padding:2px 8px;border-radius:100px;margin-inline-start:6px;">{% trans "Trial" %}</span>
+            {% elif billing.status == 'active' %}<span style="background:#DCFCE7;color:#166534;font-size:10px;font-weight:800;padding:2px 8px;border-radius:100px;margin-inline-start:6px;">{% trans "Active" %}</span>
+            {% endif %}
+          </div>
+        </div>
+        <div style="flex:1;min-width:240px;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px;">
+            <span>{{ billing.used_invoices }} / {{ billing.invoice_limit }} {% trans "audited" %}</span>
+            <span>{{ billing.remaining_invoices }} {% trans "remaining" %}</span>
+          </div>
+          <div style="height:8px;background:#EEF1F6;border-radius:100px;overflow:hidden;">
+            <div style="height:100%;width:{{ billing.usage_percent }}%;background:{% if billing.usage_percent >= 90 %}#EF4444{% elif billing.usage_percent >= 70 %}#F59E0B{% else %}#10B981{% endif %};transition:width .4s ease;"></div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <a href="/billing/subscription/" class="btn btn-outline" style="white-space:nowrap;font-size:13px;">{% trans "Manage" %}</a>
+        <a href="/billing/plans/" class="btn btn-primary" style="white-space:nowrap;font-size:13px;">{% trans "Upgrade" %}</a>
+      </div>
+    </div>
+  {% else %}
+    <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:14px;padding:18px 22px;margin-bottom:22px;display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;">
+      <div style="flex:1;min-width:260px;">
+        <strong style="color:#92400E;">
+          {% if billing.is_expired %}{% trans "Your subscription has expired." %}
+          {% else %}{% trans "No active subscription." %}{% endif %}
+        </strong>
+        <div style="font-size:13px;color:#78350F;margin-top:4px;">
+          {% if billing.is_expired %}{% trans "Renew your plan to continue auditing invoices." %}
+          {% else %}{% trans "Please choose a subscription plan to start auditing invoices." %}{% endif %}
+        </div>
+      </div>
+      <a href="/billing/plans/" class="btn btn-primary" style="white-space:nowrap;">{% trans "Choose a plan" %}</a>
+    </div>
+  {% endif %}
+{% endif %}
+
 <div class="page-header">
   <div>
     <h1 class="page-title">{% trans "Main Dashboard" %}</h1>

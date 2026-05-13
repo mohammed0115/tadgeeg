@@ -216,6 +216,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "django.template.context_processors.i18n",
                 "core.context_processors.branding",
+                "apps.billing.context_processors.billing",
             ],
         },
     },

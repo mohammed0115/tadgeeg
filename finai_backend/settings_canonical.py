@@ -173,6 +173,11 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # SubscriptionRequiredMiddleware sits right after auth so we can read
+    # request.user, but BEFORE rate-limit so a user without a sub gets a
+    # clear 402 instead of a misleading 503 if the rate-limiter backend
+    # is unavailable.
+    "apps.billing.middleware.SubscriptionRequiredMiddleware",
     "core.utils.rate_limit.OrgRateLimitMiddleware",
     # IdempotencyMiddleware sits AFTER auth (it scopes by request.user.organization)
     # and AFTER rate-limit (so a replay still pays its quota cost — replays are
@@ -186,6 +191,8 @@ MIDDLEWARE = [
     # NOTE: SecurityHeadersMiddleware is already applied at position 4
     # via core.utils.security_headers.SecurityHeadersMiddleware — removed duplicate here.
 ]
+
+SUBSCRIPTION_REQUIRED = os.environ.get("SUBSCRIPTION_REQUIRED", "true").lower() != "false"
 
 ROOT_URLCONF = "finai_backend.urls"
 

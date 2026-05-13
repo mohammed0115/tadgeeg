@@ -256,7 +256,18 @@ def _public_ctx(request, **extra):
 
 
 def _post_auth_redirect(user):
-    return "/verify-email/" if not getattr(user, "is_email_verified", False) else "/dashboard/"
+    if not getattr(user, "is_email_verified", False):
+        return "/verify-email/"
+    # After email verification, route through billing onboarding when the
+    # org has no usable subscription. Superusers + staff bypass — they
+    # use the dashboard for support work.
+    if not (user.is_superuser or user.is_staff):
+        org = getattr(user, "organization", None)
+        if org is not None:
+            from apps.billing.services.quota_service import QuotaService
+            if QuotaService().get_active_subscription(org) is None:
+                return "/billing/plans/"
+    return "/dashboard/"
 
 
 def _otp_error_status(error: EmailOTPError) -> int:
@@ -290,7 +301,7 @@ def _otp_pending_payload(user, challenge, *, sent: bool):
 def _verified_login_payload(request, user):
     return {
         "success": True,
-        "redirect": "/dashboard/",
+        "redirect": _post_auth_redirect(user),
         "tokens": complete_verified_login(request, user),
     }
 

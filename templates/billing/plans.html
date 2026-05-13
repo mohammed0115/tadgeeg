@@ -1,0 +1,96 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'ar' }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% trans "Choose Your Plan" %} — Tadgeeg</title>
+  <style>
+    /* Stage 7 will replace this with the full UI. Keep it readable for now. */
+    body { font-family: -apple-system, "Segoe UI", Tajawal, Arial, sans-serif;
+           background: #f5f8fb; color: #073763; margin: 0; padding: 40px 20px; }
+    .wrap { max-width: 1100px; margin: 0 auto; }
+    h1 { color: #073763; }
+    .lead { color: #4b5563; margin-bottom: 32px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+    .card { background: white; border: 1px solid #e5eaf0; border-radius: 16px;
+            padding: 24px; box-shadow: 0 2px 8px rgba(7,55,99,0.04); }
+    .card h3 { margin: 0 0 8px; color: #073763; }
+    .price { font-size: 28px; font-weight: 800; color: #073763; margin: 12px 0; }
+    .price .currency { font-size: 14px; color: #6b7280; font-weight: 500; }
+    .limit { color: #6b7280; margin-bottom: 16px; }
+    .desc  { color: #4b5563; font-size: 14px; min-height: 40px; }
+    button { background: #11B565; color: white; border: none; border-radius: 10px;
+             padding: 12px 18px; cursor: pointer; font-weight: 600; width: 100%; }
+    button:disabled { background: #cbd5e1; cursor: not-allowed; }
+    .badge-trial { display: inline-block; background: #11B565; color: white;
+                   font-size: 11px; padding: 2px 8px; border-radius: 100px;
+                   margin-bottom: 8px; }
+    .err { color: #b91c1c; margin-top: 8px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>{% trans "Choose Your Plan" %}</h1>
+    <p class="lead">{% trans "Pick a plan to start auditing invoices. You can upgrade later." %}</p>
+
+    <div class="grid">
+      {% for plan in plans %}
+        <div class="card" data-plan="{{ plan.code }}">
+          {% if plan.is_trial %}
+            <span class="badge-trial">{% trans "First time" %}</span>
+          {% endif %}
+          <h3>{{ plan.name_ar|default:plan.name_en }}</h3>
+          <div class="price">
+            {{ plan.price|floatformat:0 }} <span class="currency">{{ plan.currency }}</span>
+          </div>
+          <div class="limit">{{ plan.invoice_limit }} {% trans "invoices" %} / {{ plan.duration_days }} {% trans "days" %}</div>
+          <div class="desc">{{ plan.description_ar|default:plan.description_en }}</div>
+          <button
+            type="button"
+            data-code="{{ plan.code }}"
+            {% if plan.is_trial and has_used_free_trial %}disabled{% endif %}
+            onclick="selectPlan(this.dataset.code, this)">
+            {% if plan.is_trial %}{% trans "Start free trial" %}{% else %}{% trans "Subscribe" %}{% endif %}
+          </button>
+          {% if plan.is_trial and has_used_free_trial %}
+            <div class="err">{% trans "Free trial already used for this organization." %}</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <script>
+    function csrftoken() {
+      const m = document.cookie.match(/csrftoken=([^;]+)/);
+      return m ? decodeURIComponent(m[1]) : "";
+    }
+    async function selectPlan(code, btn) {
+      btn.disabled = true;
+      btn.textContent = "...";
+      try {
+        const r = await fetch("/billing/select-plan/", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrftoken(),
+            "Accept": "application/json",
+          },
+          body: JSON.stringify({ plan_code: code }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (r.ok && data.next) {
+          window.location.href = data.next;
+          return;
+        }
+        alert(data.detail || "Request failed.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = btn.dataset.code.startsWith("free") ? "{% trans 'Start free trial' %}" : "{% trans 'Subscribe' %}";
+      }
+    }
+  </script>
+</body>
+</html>

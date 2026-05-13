@@ -9,4 +9,5 @@ urlpatterns = [
     path("plans/",        views.PlansView.as_view(),               name="plans"),
     path("select-plan/",  views.SelectPlanView.as_view(),          name="select-plan"),
     path("subscription/", views.CurrentSubscriptionView.as_view(), name="subscription"),
+    path("usage/",        views.UsagePageView.as_view(),           name="usage"),
 ]

@@ -1,0 +1,130 @@
+{% load i18n %}
+{% comment %}
+Shared head + topbar + base styles for billing pages.
+
+Self-contained on purpose: when a user's subscription is expired they
+still need to reach /billing/subscription/, and the full dashboard
+chrome assumes an active sub. Keep this minimal.
+
+Pages override the title, extra_styles, and content blocks.
+{% endcomment %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'ar' }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Billing — Tadgeeg{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary:       #073763;
+      --primary-dark:  #052747;
+      --accent:        #11B565;
+      --accent-dark:   #0E9C56;
+      --bg:            #F5F8FB;
+      --card:          #ffffff;
+      --border:        #E5EAF0;
+      --border-soft:   #EEF1F6;
+      --text:          #1A2433;
+      --text-muted:    #5B6B81;
+      --text-light:    #8A98AD;
+      --shadow-sm:     0 1px 2px rgba(7,55,99,0.04);
+      --shadow-md:     0 4px 14px -2px rgba(7,55,99,0.06);
+      --shadow-lg:     0 14px 28px -10px rgba(7,55,99,0.14);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Tajawal', 'Cairo', system-ui, sans-serif;
+      color: var(--text); background: var(--bg);
+      line-height: 1.6; min-height: 100vh;
+    }
+    h1, h2, h3 { font-family: 'Cairo', sans-serif; color: var(--primary); }
+    a { color: var(--primary); }
+
+    .topbar {
+      background: white; border-bottom: 1px solid var(--border);
+      padding: 14px 28px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .topbar .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; color: var(--primary); }
+    .topbar .logo .mark { width: 32px; height: 32px; }
+    .topbar .links { display: flex; gap: 18px; align-items: center; }
+    .topbar a { color: var(--text-muted); text-decoration: none; font-size: 14px; font-weight: 500; }
+    .topbar a:hover { color: var(--primary); }
+    .topbar a.active { color: var(--primary); }
+    .topbar a.danger { color: #b91c1c; }
+
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 40px 28px 80px; }
+
+    .page-head { margin-bottom: 28px; }
+    .page-head h1 { font-size: clamp(24px, 2.8vw, 32px); font-weight: 900; letter-spacing: -0.3px; }
+    .page-head p  { color: var(--text-muted); margin-top: 6px; font-size: 15px; }
+
+    .card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+      padding: 24px;
+      margin-bottom: 18px;
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid transparent;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-primary:hover { background: var(--accent-dark); }
+    .btn-outline { background: white; color: var(--primary); border-color: var(--border); }
+    .btn-outline:hover { border-color: var(--primary); }
+
+    .pill {
+      display: inline-block;
+      font-size: 12px; font-weight: 700;
+      padding: 4px 10px; border-radius: 100px;
+      letter-spacing: 0.3px;
+    }
+    .pill-active   { background: #DCFCE7; color: #166534; }
+    .pill-trialing { background: #DBEAFE; color: #1E40AF; }
+    .pill-pending  { background: #FEF3C7; color: #92400E; }
+    .pill-expired  { background: #FEE2E2; color: #991B1B; }
+    .pill-failed   { background: #FEE2E2; color: #991B1B; }
+
+    {% block extra_styles %}{% endblock %}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="logo">
+      <svg class="mark" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+        <circle cx="50" cy="50" r="46" stroke="#073763" stroke-width="6"/>
+        <path d="M28 50 L44 66 L72 36" stroke="#11B565" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <span>Tadgeeg</span>
+    </div>
+    <nav class="links">
+      <a href="/billing/plans/"        {% if active_nav == 'plans' %}class="active"{% endif %}>{% trans "Plans" %}</a>
+      <a href="/billing/subscription/" {% if active_nav == 'subscription' %}class="active"{% endif %}>{% trans "Subscription" %}</a>
+      <a href="/billing/usage/"        {% if active_nav == 'usage' %}class="active"{% endif %}>{% trans "Usage" %}</a>
+      <a href="/dashboard/">{% trans "Dashboard" %}</a>
+      <a href="/logout/" class="danger">{% trans "Sign out" %}</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

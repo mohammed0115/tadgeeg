@@ -41,6 +41,7 @@ _WHITELIST_PREFIXES = (
     "/billing/plans/",
     "/billing/select-plan/",
     "/billing/subscription/",   # so the user can SEE that they're expired
+    "/billing/usage/",          # usage history accessible during onboarding/expiry
     # Payments
     "/payments/",
     "/api/v1/payments/",

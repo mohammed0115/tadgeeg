@@ -19,8 +19,14 @@ from __future__ import annotations
 from datetime import timedelta
 
 from django.conf import settings
+from django.core.paginator import Paginator
 from django.shortcuts import redirect, render
 from django.utils import timezone
+from django.utils.translation import gettext as _
+
+
+def _stringify_expired_message() -> str:
+    return str(_("Your subscription has expired. Please renew to continue."))
 from rest_framework import status as drf_status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -106,26 +112,52 @@ def _initiate_payment(request, subscription, plan):
     return txn, None
 
 
+def _wants_html(request) -> bool:
+    """Decide whether to render HTML or JSON for billing pages.
+
+    JSON wins when an explicit Accept header asks for it (SPA/API), or
+    when the request is to a path that lives under /api/. Otherwise we
+    render the template so a browser GET works without extra config.
+    """
+    accept = (request.headers.get("Accept") or "").lower()
+    if "application/json" in accept and "text/html" not in accept:
+        return False
+    if request.path.startswith("/api/"):
+        return False
+    return True
+
+
 class PlansView(APIView):
     """GET /billing/plans/
 
-    Returns the four canonical plans. Content negotiation:
-    - ``Accept: application/json`` (or any /api/ caller) → JSON.
-    - Browser → renders the ``billing/plans.html`` template
-      (Stage 7 will style it; for now we ship a minimal template).
+    Content negotiation:
+    - HTML (browser)            → templates/billing/plans.html
+    - JSON (SPA, ?format=json)  → {plans, has_used_free_trial}
     """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         plans = list_purchasable_plans()
-        if request.accepted_renderer.format == "json" or "application/json" in request.headers.get("Accept", ""):
+        used_trial = self._has_used_free_trial(request.user.organization)
+        if not _wants_html(request):
             return Response({
                 "plans": PlanSerializer(plans, many=True).data,
-                "has_used_free_trial": self._has_used_free_trial(request.user.organization),
+                "has_used_free_trial": used_trial,
             })
+
+        # Surface a friendly message when the user has been bounced here
+        # because their previous subscription expired.
+        expired_message = ""
+        if OrganizationSubscription.objects.filter(
+            organization=request.user.organization,
+            status="expired",
+        ).exists():
+            expired_message = _stringify_expired_message()
         return render(request, "billing/plans.html", {
             "plans": plans,
-            "has_used_free_trial": self._has_used_free_trial(request.user.organization),
+            "has_used_free_trial": used_trial,
+            "expired_message": expired_message,
+            "active_nav": "plans",
         })
 
     @staticmethod
@@ -236,7 +268,15 @@ class SelectPlanView(APIView):
 
 
 class CurrentSubscriptionView(APIView):
-    """GET /billing/subscription/ — what the current org is paying for now."""
+    """GET /billing/subscription/
+
+    HTML: render templates/billing/subscription.html.
+    JSON: ``{"subscription": <SubscriptionSerializer>|null}``.
+
+    Falls back to the most-recent (any status) subscription when there
+    is no usable one, so a user whose plan just expired still lands on
+    a meaningful page with renew/upgrade buttons instead of an empty
+    'no subscription' card."""
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -249,5 +289,85 @@ class CurrentSubscriptionView(APIView):
         from apps.billing.services.quota_service import QuotaService
         sub = QuotaService().get_active_subscription(organization)
         if sub is None:
-            return Response({"subscription": None}, status=drf_status.HTTP_200_OK)
-        return Response({"subscription": SubscriptionSerializer(sub).data})
+            # Show the most recent row (likely expired/payment_failed)
+            # so the UI can render renew/retry buttons rather than a
+            # bare "no subscription" empty state.
+            sub = (
+                OrganizationSubscription.objects
+                .select_related("plan")
+                .filter(organization=organization)
+                .order_by("-created_at")
+                .first()
+            )
+
+        if not _wants_html(request):
+            if sub is None:
+                return Response({"subscription": None})
+            return Response({"subscription": SubscriptionSerializer(sub).data})
+
+        # HTML render
+        usage_pct = 0
+        remaining = 0
+        if sub is not None and sub.invoice_limit > 0:
+            usage_pct = int(round(
+                (sub.used_invoices + sub.reserved_invoices) * 100 / sub.invoice_limit
+            ))
+            remaining = sub.remaining_invoices
+        return render(request, "billing/subscription.html", {
+            "subscription": sub,
+            "usage_pct":    usage_pct,
+            "remaining":    remaining,
+            "active_nav":   "subscription",
+        })
+
+
+class UsagePageView(APIView):
+    """GET /billing/usage/?page=N
+
+    Paginated ``UsageLedger`` table for the current organization.
+    HTML by default; JSON when Accept asks for it.
+    """
+    permission_classes = [IsAuthenticated]
+
+    PAGE_SIZE = 25
+
+    def get(self, request):
+        from apps.billing.models import UsageLedger
+        organization = getattr(request.user, "organization", None)
+        if organization is None:
+            return Response(
+                {"detail": "User is not attached to an organization."},
+                status=drf_status.HTTP_400_BAD_REQUEST,
+            )
+
+        qs = (
+            UsageLedger.objects
+            .filter(organization=organization)
+            .order_by("-created_at")
+            .values(
+                "id", "action", "quantity", "reason",
+                "document_id", "audit_run_id", "subscription_id",
+                "created_at",
+            )
+        )
+        try:
+            page_num = max(1, int(request.GET.get("page", 1)))
+        except (TypeError, ValueError):
+            page_num = 1
+
+        paginator = Paginator(qs, self.PAGE_SIZE)
+        page_obj  = paginator.get_page(page_num)
+
+        if not _wants_html(request):
+            return Response({
+                "results": list(page_obj.object_list),
+                "page":     page_obj.number,
+                "pages":    paginator.num_pages,
+                "count":    paginator.count,
+                "page_size": self.PAGE_SIZE,
+            })
+
+        return render(request, "billing/usage.html", {
+            "page_obj":   page_obj,
+            "active_nav": "usage",
+        })

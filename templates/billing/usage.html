@@ -1,0 +1,109 @@
+{% extends "billing/_shell.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Usage history" %} — Tadgeeg{% endblock %}
+
+{% block extra_styles %}
+  .table-wrap { overflow-x: auto; border-radius: 14px; border: 1px solid var(--border); background: white; box-shadow: var(--shadow-sm); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  thead { background: var(--bg); }
+  thead th {
+    text-align: start; padding: 12px 14px;
+    font-weight: 700; color: var(--text-muted);
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td { padding: 12px 14px; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: var(--bg); }
+  .mono { font-family: 'Courier New', monospace; font-size: 12px; color: var(--text-muted); }
+
+  .action-pill {
+    display: inline-block; font-size: 11px; font-weight: 800;
+    padding: 3px 10px; border-radius: 100px; letter-spacing: 0.3px;
+  }
+  .action-pill.reserve { background: #DBEAFE; color: #1E40AF; }
+  .action-pill.consume { background: #DCFCE7; color: #166534; }
+  .action-pill.release { background: #FEF3C7; color: #92400E; }
+  .action-pill.refund  { background: #F3E8FF; color: #6B21A8; }
+
+  .pagination {
+    display: flex; gap: 8px; justify-content: center; align-items: center;
+    margin-top: 20px; flex-wrap: wrap;
+  }
+  .pagination a, .pagination span {
+    padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
+    border: 1px solid var(--border); color: var(--primary); text-decoration: none;
+    background: white;
+  }
+  .pagination .current { background: var(--primary); color: white; border-color: var(--primary); }
+  .pagination .disabled { color: var(--text-light); border-color: var(--border-soft); cursor: not-allowed; }
+
+  .empty-row td { text-align: center; padding: 40px; color: var(--text-muted); }
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{% trans "Usage history" %}</h1>
+  <p>{% trans "Every reserve, consume, release, and refund event for this organization." %}</p>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>{% trans "When" %}</th>
+        <th>{% trans "Action" %}</th>
+        <th>{% trans "Document" %}</th>
+        <th>{% trans "Quantity" %}</th>
+        <th>{% trans "Reason" %}</th>
+        <th>{% trans "Subscription" %}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for entry in page_obj %}
+        <tr>
+          <td class="mono">{{ entry.created_at|date:"Y-m-d H:i" }}</td>
+          <td><span class="action-pill {{ entry.action }}">
+            {% if entry.action == 'reserve' %}{% trans "Reserve" %}
+            {% elif entry.action == 'consume' %}{% trans "Consume" %}
+            {% elif entry.action == 'release' %}{% trans "Release" %}
+            {% elif entry.action == 'refund'  %}{% trans "Refund" %}
+            {% else %}{{ entry.action }}{% endif %}
+          </span></td>
+          <td class="mono">
+            {% if entry.document_id %}{{ entry.document_id|truncatechars:14 }}{% else %}—{% endif %}
+          </td>
+          <td><strong>{{ entry.quantity }}</strong></td>
+          <td>{{ entry.reason|default:"—" }}</td>
+          <td class="mono">{{ entry.subscription_id|truncatechars:14 }}</td>
+        </tr>
+      {% empty %}
+        <tr class="empty-row">
+          <td colspan="6">{% trans "No usage events recorded yet." %}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+  <nav class="pagination" aria-label="{% trans 'Pagination' %}">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}">‹ {% trans "Previous" %}</a>
+    {% else %}
+      <span class="disabled">‹ {% trans "Previous" %}</span>
+    {% endif %}
+
+    <span class="current">
+      {% blocktrans with current=page_obj.number total=page_obj.paginator.num_pages %}Page {{ current }} of {{ total }}{% endblocktrans %}
+    </span>
+
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}">{% trans "Next" %} ›</a>
+    {% else %}
+      <span class="disabled">{% trans "Next" %} ›</span>
+    {% endif %}
+  </nav>
+{% endif %}
+{% endblock %}

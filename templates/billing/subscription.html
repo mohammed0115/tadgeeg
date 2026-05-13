@@ -1,0 +1,173 @@
+{% extends "billing/_shell.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "My subscription" %} — Tadgeeg{% endblock %}
+
+{% block extra_styles %}
+  .grid-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .stat {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    box-shadow: var(--shadow-sm);
+  }
+  .stat .label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .stat .value { font-family: 'Cairo', sans-serif; font-size: 26px; font-weight: 900; color: var(--primary); }
+  .stat.remaining .value { color: var(--accent-dark); }
+  .stat.used .value      { color: var(--primary); }
+
+  .progress-card { padding: 28px; }
+  .progress {
+    height: 14px;
+    background: var(--border-soft);
+    border-radius: 100px;
+    overflow: hidden;
+    margin: 10px 0 8px;
+  }
+  .progress .bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent) 0%, #34D399 100%);
+    border-radius: 100px;
+    transition: width 0.4s ease;
+  }
+  .progress.warn .bar { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
+  .progress.danger .bar { background: linear-gradient(90deg, #DC2626, #EF4444); }
+
+  .row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .summary-grid div {
+    background: var(--bg);
+    border: 1px solid var(--border-soft);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .summary-grid .k { font-size: 12px; color: var(--text-muted); }
+  .summary-grid .v { font-weight: 700; color: var(--text); margin-top: 4px; }
+
+  .empty {
+    text-align: center;
+    padding: 60px 24px;
+    background: white;
+    border: 1px dashed var(--border);
+    border-radius: 16px;
+  }
+  .empty h2 { font-size: 20px; margin-bottom: 8px; }
+  .empty p  { color: var(--text-muted); margin-bottom: 22px; }
+
+  @media (max-width: 900px) {
+    .grid-stats { grid-template-columns: repeat(2, 1fr); }
+    .summary-grid { grid-template-columns: 1fr; }
+  }
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{% trans "My subscription" %}</h1>
+  <p>{% trans "Your current plan, usage, and remaining quota." %}</p>
+</div>
+
+{% if not subscription %}
+  <div class="empty">
+    <h2>{% trans "You don't have an active subscription yet." %}</h2>
+    <p>{% trans "Please choose a plan to continue." %}</p>
+    <a class="btn btn-primary" href="/billing/plans/">{% trans "Choose a plan" %}</a>
+  </div>
+{% else %}
+
+  <div class="grid-stats">
+    <div class="stat">
+      <div class="label">{% trans "Plan" %}</div>
+      <div class="value" style="font-size:20px;">
+        {{ subscription.plan.name_ar|default:subscription.plan.name_en }}
+      </div>
+    </div>
+    <div class="stat">
+      <div class="label">{% trans "Status" %}</div>
+      <div class="value" style="font-size:14px;">
+        <span class="pill pill-{{ subscription.status }}">
+          {% if subscription.status == 'active' %}{% trans "Active" %}
+          {% elif subscription.status == 'trialing' %}{% trans "Trialing" %}
+          {% elif subscription.status == 'pending_payment' %}{% trans "Pending payment" %}
+          {% elif subscription.status == 'expired' %}{% trans "Expired" %}
+          {% elif subscription.status == 'payment_failed' %}{% trans "Payment failed" %}
+          {% else %}{{ subscription.status }}{% endif %}
+        </span>
+      </div>
+    </div>
+    <div class="stat used">
+      <div class="label">{% trans "Used" %}</div>
+      <div class="value">{{ subscription.used_invoices }}<span style="font-size:14px;color:var(--text-muted);"> / {{ subscription.invoice_limit }}</span></div>
+    </div>
+    <div class="stat remaining">
+      <div class="label">{% trans "Remaining" %}</div>
+      <div class="value">{{ remaining }}</div>
+    </div>
+  </div>
+
+  <div class="card progress-card">
+    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;">
+      <strong style="color:var(--primary);">{% trans "Usage progress" %}</strong>
+      <span style="color:var(--text-muted); font-size:13px;">
+        {% blocktrans with pct=usage_pct %}{{ pct }}% used{% endblocktrans %}
+      </span>
+    </div>
+    <div class="progress {% if usage_pct >= 90 %}danger{% elif usage_pct >= 70 %}warn{% endif %}">
+      <div class="bar" style="width: {{ usage_pct }}%;"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);">
+      <span>{% blocktrans with r=subscription.reserved_invoices %}Reserved (in flight): {{ r }}{% endblocktrans %}</span>
+      <span>{% blocktrans with u=subscription.used_invoices l=subscription.invoice_limit %}{{ u }} of {{ l }} invoices audited{% endblocktrans %}</span>
+    </div>
+
+    <div class="summary-grid">
+      <div>
+        <div class="k">{% trans "Started" %}</div>
+        <div class="v">{{ subscription.starts_at|date:"Y-m-d"|default:"—" }}</div>
+      </div>
+      <div>
+        <div class="k">{% trans "Ends" %}</div>
+        <div class="v">{{ subscription.ends_at|date:"Y-m-d"|default:"—" }}</div>
+      </div>
+      <div>
+        <div class="k">{% trans "Auto-renew" %}</div>
+        <div class="v">{% if subscription.auto_renew %}{% trans "Yes" %}{% else %}{% trans "No" %}{% endif %}</div>
+      </div>
+    </div>
+
+    <div class="row">
+      <a class="btn btn-primary" href="/billing/plans/">{% trans "Upgrade plan" %}</a>
+      <a class="btn btn-outline" href="/billing/plans/">{% trans "Renew" %}</a>
+      <a class="btn btn-outline" href="/billing/usage/">{% trans "View usage history" %}</a>
+    </div>
+  </div>
+
+  {% if subscription.status == 'expired' %}
+    <div class="card" style="background:#FEF2F2;border-color:#FECACA;color:#991B1B;">
+      <strong>{% trans "Your subscription has expired." %}</strong>
+      <p style="margin-top:6px;">{% trans "Please renew your plan to continue auditing invoices." %}</p>
+    </div>
+  {% elif subscription.status == 'payment_failed' %}
+    <div class="card" style="background:#FEF2F2;border-color:#FECACA;color:#991B1B;">
+      <strong>{% trans "Payment failed." %}</strong>
+      <p style="margin-top:6px;">{% trans "Please try again — or choose a different plan." %}</p>
+    </div>
+  {% elif remaining == 0 %}
+    <div class="card" style="background:#FFFBEB;border-color:#FDE68A;color:#92400E;">
+      <strong>{% trans "You have used all available invoices in your current plan." %}</strong>
+      <p style="margin-top:6px;">{% trans "Upgrade to continue auditing invoices this period." %}</p>
+    </div>
+  {% endif %}
+{% endif %}
+{% endblock %}

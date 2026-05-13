@@ -131,15 +131,30 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{# Analytics chart data — serialized via json_script (XSS-safe). #}
+{{ monthly|default_if_none:""|json_script:"analytics-monthly" }}
+{{ risk_dist|default_if_none:""|json_script:"analytics-risk" }}
+{{ status_dist|default_if_none:""|json_script:"analytics-status" }}
+{{ vat_monthly|default_if_none:""|json_script:"analytics-vat" }}
+{{ rule_failures|default_if_none:""|json_script:"analytics-rules" }}
+{{ doc_type_mix|default_if_none:""|json_script:"analytics-doctype" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
+        integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AzzpExeZf67qTGc4Hw5sMpisrnq"
+        crossorigin="anonymous"></script>
 <script>
 (function() {
-  const monthly      = {{ monthly|safe }};
-  const risk         = {{ risk_dist|safe }};
-  const statusDist   = {{ status_dist|default:"[]"|safe }};
-  const vatMonthly   = {{ vat_monthly|default:"[]"|safe }};
-  const ruleFailures = {{ rule_failures|default:"[]"|safe }};
-  const docTypeMix   = {{ doc_type_mix|default:"[]"|safe }};
+  function loadJSON(id, fallback) {
+    const n = document.getElementById(id);
+    if (!n) return fallback;
+    try { return JSON.parse(n.textContent) || fallback; }
+    catch (_) { return fallback; }
+  }
+  const monthly      = loadJSON('analytics-monthly', []);
+  const risk         = loadJSON('analytics-risk',    []);
+  const statusDist   = loadJSON('analytics-status',  []);
+  const vatMonthly   = loadJSON('analytics-vat',     []);
+  const ruleFailures = loadJSON('analytics-rules',   []);
+  const docTypeMix   = loadJSON('analytics-doctype', []);
 
   if (monthly.length) {
     new Chart(document.getElementById('monthly-chart'), {

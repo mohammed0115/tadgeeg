@@ -309,7 +309,9 @@ async function shareReport() {
     });
   } else {
     navigator.clipboard.writeText(reportLink);
-    alert('Link copied to clipboard');
+    if (typeof notify === 'function') {
+      notify({ type: 'success', message: '{% trans "Link copied to clipboard" %}' });
+    }
   }
 }
 

@@ -320,8 +320,8 @@ function alertsApp() {
           body: JSON.stringify(body),
         });
         if (!r.ok) {
-          const err = await r.json();
-          alert('Save failed: ' + (err.error || r.statusText));
+          const err = await r.json().catch(() => ({}));
+          notify({ type: 'error', message: '{% trans "Save failed" %}: ' + (err.error || r.statusText) });
           return;
         }
         location.reload();
@@ -335,10 +335,14 @@ function alertsApp() {
           method: 'POST',
           headers: { 'X-CSRFToken': getCookie('csrftoken') },
         });
-        const data = await r.json();
-        alert(r.ok
-          ? `{% trans "Test dispatched" %}: sent=${data.dispatch.sent}, failed=${data.dispatch.failed}, suppressed=${data.dispatch.suppressed}`
-          : `{% trans "Test failed" %}: ${data.error || r.statusText}`);
+        const data = await r.json().catch(() => ({}));
+        if (r.ok) {
+          notify({ type: 'success',
+                   message: `{% trans "Test dispatched" %}: sent=${data.dispatch.sent}, failed=${data.dispatch.failed}, suppressed=${data.dispatch.suppressed}` });
+        } else {
+          notify({ type: 'error',
+                   message: `{% trans "Test failed" %}: ${data.error || r.statusText}` });
+        }
       } finally { this.busy = false; }
     },
 

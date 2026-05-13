@@ -1,0 +1,91 @@
+{% comment %}
+Fraud signal breakdown widget — shown in invoice detail, exposes the
+top contributors from FraudAssessment so an auditor can answer
+"why is this risk 78%?"
+
+Required context:
+  fraud_assessment  — dict from FraudAssessment.to_dict()
+
+Renders the weighted total + 5-signal table + top-3 contributors panel.
+{% endcomment %}
+{% load i18n ui_tags %}
+
+<section class="card" aria-labelledby="fraud-bd-title">
+  <header class="card-header flex items-center justify-between">
+    <div>
+      <h3 id="fraud-bd-title" class="text-base font-bold text-slate-900">{% trans "Fraud signal breakdown" %}</h3>
+      <p class="text-xs text-slate-500 mt-0.5">{% trans "Weighted aggregation of duplicate / Benford / vendor / behavioral / structural signals." %}</p>
+    </div>
+    <span class="risk-{{ fraud_assessment.severity }} text-xs px-3 py-1.5">
+      {% blocktrans with score=fraud_assessment.total_score %}Score {{ score }} / 100{% endblocktrans %}
+    </span>
+  </header>
+
+  <div class="card-body grid gap-5 lg:grid-cols-[2fr_1fr]">
+
+    {# Signal table #}
+    <div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>{% trans "Signal" %}</th>
+              <th style="text-align:end">{% trans "Score" %}</th>
+              <th style="text-align:end">{% trans "Weight" %}</th>
+              <th>{% trans "Severity" %}</th>
+              <th>{% trans "Reason" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for s in fraud_assessment.signals %}
+            <tr class="{% if not s.available %}opacity-50{% endif %}">
+              <td class="font-semibold">
+                {% if s.name == 'duplicate' %}{% trans "Duplicate" %}
+                {% elif s.name == 'benford' %}{% trans "Benford-law" %}
+                {% elif s.name == 'vendor_risk' %}{% trans "Vendor risk" %}
+                {% elif s.name == 'behavioral' %}{% trans "Behavioral" %}
+                {% elif s.name == 'structural' %}{% trans "Structural" %}
+                {% else %}{{ s.name }}{% endif %}
+              </td>
+              <td style="text-align:end" class="tabular">{{ s.score }}</td>
+              <td style="text-align:end" class="tabular">{{ s.weight }}</td>
+              <td>{% include "components/_badge.html" with variant="risk-"|add:s.severity label=s.severity %}</td>
+              <td class="text-slate-600 text-xs">{{ s.reason }}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {# Top contributors panel #}
+    <aside aria-label="{% trans 'Top contributors' %}">
+      <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">
+        {% trans "Top contributors" %}
+      </h4>
+      <ol class="space-y-2">
+        {% for s in fraud_assessment.top_contributors %}
+          <li class="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
+            <span class="flex-shrink-0 w-7 h-7 rounded-lg bg-primary-500 text-white text-xs font-black flex items-center justify-center">
+              {{ forloop.counter }}
+            </span>
+            <div class="flex-1 min-w-0">
+              <div class="text-sm font-bold text-slate-900">
+                {% if s.name == 'duplicate' %}{% trans "Duplicate" %}
+                {% elif s.name == 'benford' %}{% trans "Benford-law" %}
+                {% elif s.name == 'vendor_risk' %}{% trans "Vendor risk" %}
+                {% elif s.name == 'behavioral' %}{% trans "Behavioral" %}
+                {% elif s.name == 'structural' %}{% trans "Structural" %}
+                {% else %}{{ s.name }}{% endif %}
+              </div>
+              <p class="text-xs text-slate-600 mt-0.5">{{ s.reason }}</p>
+            </div>
+          </li>
+        {% empty %}
+          <li class="text-xs text-slate-500 italic p-3">{% trans "No signals were available for ranking." %}</li>
+        {% endfor %}
+      </ol>
+    </aside>
+
+  </div>
+</section>

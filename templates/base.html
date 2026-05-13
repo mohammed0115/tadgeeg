@@ -1,4 +1,4 @@
-{% load static i18n asset_tags %}
+{% load static i18n asset_tags ui_tags %}
 {% get_current_language as LANGUAGE_CODE %}
 {% get_current_language_bidi as LANGUAGE_BIDI %}
 <!DOCTYPE html>
@@ -425,26 +425,30 @@ window.tailwind.refresh?.();
         <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Anomaly Detection" %}</span>
       </a>
 
+      {% if request.user|can:"review_findings" %}
       <a href="{% url 'frontend:audit' %}"
          data-nav="nav_audit"
          class="nav-item {% block nav_audit %}{% endblock %}">
         <i data-lucide="shield-alert" class="w-[18px] h-[18px] flex-shrink-0"></i>
-        <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Audit Cases" %}</span>
+        <span x-show="sidebarOpen" class="whitespace-nowrap flex-1">{% trans "Audit Cases" %}</span>
+        {% if approval_inbox_count %}
+          <span x-show="sidebarOpen"
+                class="text-[10px] font-bold bg-red-500 text-white rounded-full px-1.5 h-5 flex items-center justify-center flex-shrink-0"
+                aria-label="{% blocktrans count counter=approval_inbox_count %}{{ counter }} pending{% plural %}{{ counter }} pending{% endblocktrans %}">
+            {{ approval_inbox_count }}
+          </span>
+        {% endif %}
       </a>
+      {% endif %}
 
-      <a href="{% url 'auditor:upload' %}"
-         data-nav="nav_ai_auditor"
-         class="nav-item {% block nav_ai_auditor %}{% endblock %}">
-        <i data-lucide="scan-search" class="w-[18px] h-[18px] flex-shrink-0"></i>
-        <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "AI Auditor" %}</span>
-      </a>
-
+      {% if request.user|can:"review_findings" %}
       <a href="{% url 'frontend:compliance' %}"
          data-nav="nav_compliance"
          class="nav-item {% block nav_compliance %}{% endblock %}">
         <i data-lucide="shield-check" class="w-[18px] h-[18px] flex-shrink-0"></i>
         <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Compliance" %}</span>
       </a>
+      {% endif %}
 
       <!-- Documents section — collapsible -->
       <a href="{% url 'frontend:transactions' %}"
@@ -506,12 +510,14 @@ window.tailwind.refresh?.();
           </div>
         </div>
       </div>
+      {% if request.user|can:"manage_organization" %}
       <a href="{% url 'frontend:users' %}"
          data-nav="nav_users"
          class="nav-item {% block nav_users %}{% endblock %}">
         <i data-lucide="users" class="w-[18px] h-[18px] flex-shrink-0"></i>
         <span x-show="sidebarOpen" class="whitespace-nowrap">{% trans "Users" %}</span>
       </a>
+      {% endif %}
 
       <a href="{% url 'frontend:settings' %}"
          data-nav="nav_settings"

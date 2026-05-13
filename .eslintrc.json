@@ -1,0 +1,18 @@
+{
+  "env": {
+    "browser": true,
+    "es2022": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022,
+    "sourceType":  "module"
+  },
+  "rules": {
+    "no-alert":   "error",
+    "no-eval":    "error",
+    "no-implied-eval": "error",
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "no-unused-vars": "warn",
+    "prefer-const":  "warn"
+  }
+}

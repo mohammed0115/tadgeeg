@@ -1,0 +1,174 @@
+@import './tokens.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Component layers — utility-driven, consumed via templates/components/.
+ * Anything that appears more than twice across templates lives HERE,
+ * never as an inline style.
+ */
+
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; }
+  html { font-size: 16px; }
+  body {
+    font-family: 'Tajawal', 'Cairo', 'Inter', system-ui, sans-serif;
+    background: var(--bg-page);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  h1, h2, h3, h4 { font-family: 'Cairo', 'Tajawal', sans-serif; }
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /* ── Buttons ────────────────────────────────────────────────────── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2
+           rounded-xl text-sm font-semibold transition-all
+           focus-visible:outline focus-visible:outline-2;
+    border: 1px solid transparent;
+    cursor: pointer;
+  }
+  .btn:disabled { @apply opacity-50 cursor-not-allowed; }
+  .btn-primary  { @apply btn bg-primary-500 text-white hover:bg-primary-600 shadow-card; }
+  .btn-accent   { @apply btn bg-accent-500  text-white hover:bg-accent-600  shadow-card; }
+  .btn-danger   { @apply btn bg-red-500     text-white hover:bg-red-600     shadow-card; }
+  .btn-ghost    { @apply btn bg-slate-100  text-slate-700 hover:bg-slate-200; }
+  .btn-outline  { @apply btn bg-white      text-primary-700 border-slate-200 hover:border-primary-500; }
+
+  /* ── Cards ──────────────────────────────────────────────────────── */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+  .card-header { @apply px-5 py-4 border-b border-slate-100; }
+  .card-body   { @apply p-5; }
+  .card-footer { @apply px-5 py-4 border-t border-slate-100 flex gap-2; }
+
+  /* ── KPI / Stat cards ──────────────────────────────────────────── */
+  .stat-card {
+    @apply card p-5 flex flex-col gap-2 relative overflow-hidden;
+  }
+  .stat-card-label { @apply text-xs font-bold uppercase tracking-wide; color: var(--text-muted); }
+  .stat-card-value { @apply text-3xl font-black tabular-nums; color: var(--color-primary-500); font-family: 'Cairo', sans-serif; }
+  .stat-card-sub   { @apply text-xs; color: var(--text-light); }
+  .stat-card-trend { @apply absolute text-[11px] font-bold px-2 py-1 rounded-full; inset-block-start: 16px; inset-inline-end: 16px; }
+  .stat-card-trend.up   { background: #dcfce7; color: #166534; }
+  .stat-card-trend.down { background: #fee2e2; color: #991b1b; }
+
+  /* ── Badges ─────────────────────────────────────────────────────── */
+  .badge        { @apply inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold; }
+  .badge-success  { @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200; }
+  .badge-danger   { @apply badge bg-red-50     text-red-700     border border-red-200; }
+  .badge-warning  { @apply badge bg-amber-50   text-amber-700   border border-amber-200; }
+  .badge-info     { @apply badge bg-blue-50    text-blue-700    border border-blue-200; }
+  .badge-muted    { @apply badge bg-slate-100  text-slate-600   border border-slate-200; }
+  .badge-critical { @apply badge bg-red-100    text-red-800     border border-red-300; }
+
+  /* ── Risk level pills ──────────────────────────────────────────── */
+  .risk-low      { @apply badge bg-emerald-50  text-emerald-700; }
+  .risk-medium   { @apply badge bg-amber-50    text-amber-700; }
+  .risk-high     { @apply badge bg-orange-50   text-orange-700; }
+  .risk-critical { @apply badge bg-red-100     text-red-800; }
+
+  /* ── Form fields ──────────────────────────────────────────────── */
+  .form-field { @apply flex flex-col gap-1.5; }
+  .form-label { @apply text-sm font-semibold text-slate-700; }
+  .form-input,
+  .form-select,
+  .form-textarea {
+    @apply w-full px-3 py-2.5 rounded-xl text-sm
+           bg-slate-50 border border-slate-200
+           focus:bg-white focus:ring-2 focus:ring-primary-500/30 focus:border-primary-500
+           transition;
+  }
+  .form-help  { @apply text-xs; color: var(--text-muted); }
+  .form-error { @apply text-xs font-semibold text-red-600; }
+
+  /* ── Tables ──────────────────────────────────────────────────── */
+  .data-table {
+    @apply w-full text-sm;
+    border-collapse: collapse;
+  }
+  .data-table thead { background: var(--bg-soft); }
+  .data-table th {
+    @apply px-4 py-3 text-xs font-bold uppercase tracking-wider whitespace-nowrap;
+    color: var(--text-muted);
+    text-align: start;
+  }
+  .data-table td {
+    @apply px-4 py-3.5;
+    color: var(--text);
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .data-table tbody tr { transition: background 0.15s; }
+  .data-table tbody tr:hover { background: var(--bg-softer); }
+
+  .table-wrap {
+    @apply overflow-x-auto rounded-xl border;
+    border-color: var(--border);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── Empty state ────────────────────────────────────────────── */
+  .empty-state {
+    @apply flex flex-col items-center justify-center text-center py-12 px-6;
+  }
+  .empty-state-icon { @apply w-12 h-12 mb-4; color: var(--text-light); }
+  .empty-state-title { @apply text-base font-bold mb-2; color: var(--text); }
+  .empty-state-text  { @apply text-sm mb-4; color: var(--text-muted); }
+
+  /* ── Modal ──────────────────────────────────────────────────── */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgb(15 23 42 / 60%);
+    backdrop-filter: blur(4px);
+    z-index: var(--z-modal);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem;
+  }
+  .modal-box {
+    @apply card w-full max-w-lg;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+
+  /* ── Skip-to-content (a11y) ─────────────────────────────────── */
+  .skip-link {
+    position: absolute; inset-block-start: -40px; inset-inline-start: 8px;
+    background: var(--color-primary-700); color: white;
+    padding: 8px 16px; border-radius: 0 0 8px 8px;
+    z-index: var(--z-toast);
+    transition: top 0.2s;
+  }
+  .skip-link:focus { inset-block-start: 0; }
+}
+
+@layer utilities {
+  /* Make Tailwind's `print:hidden` cover screen readers too where intended */
+  .visually-hidden {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+  }
+  /* Tabular numerals — financial alignment */
+  .tabular     { font-variant-numeric: tabular-nums; }
+  .latin-nums  { font-feature-settings: 'tnum'; -moz-font-feature-settings: 'tnum'; --num-system: 'latn'; }
+}

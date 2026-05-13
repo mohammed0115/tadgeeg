@@ -200,11 +200,14 @@
     },
 
     renderServerResponse(xhr) {
+      // Safer than document.write() — never injects raw HTML into the
+      // page DOM (avoids XSS surface + preserves Alpine state).
+      // The server-rendered HTML is a *full page*; if we get one, the
+      // browser navigates to its source URL. The page itself does the
+      // re-render on load.
       const responseType = xhr.getResponseHeader('content-type') || '';
-      if (responseType.includes('text/html') && xhr.responseText) {
-        document.open();
-        document.write(xhr.responseText);
-        document.close();
+      if (responseType.includes('text/html') && xhr.responseURL) {
+        window.location.assign(xhr.responseURL);
         return true;
       }
       return false;

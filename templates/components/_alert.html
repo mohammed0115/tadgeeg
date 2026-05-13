@@ -1,0 +1,35 @@
+{% comment %}
+Inline alert / banner block.
+
+Usage:
+  {% include "components/_alert.html" with
+        variant="warning"
+        title="No subscription"
+        text="Please choose a plan to start auditing."
+        cta_label="Choose plan"
+        cta_href="/billing/plans/" %}
+
+Variants: info (default) | success | warning | danger
+{% endcomment %}
+{% load i18n %}
+{% with variant=variant|default:"info" %}
+<div role="alert"
+     class="flex items-start gap-3 p-4 rounded-xl border
+            {% if variant == 'success' %}bg-emerald-50 border-emerald-200 text-emerald-900
+            {% elif variant == 'warning' %}bg-amber-50 border-amber-200 text-amber-900
+            {% elif variant == 'danger'  %}bg-red-50 border-red-200 text-red-900
+            {% else %}bg-blue-50 border-blue-200 text-blue-900{% endif %}">
+  <i data-lucide="{% if variant == 'success' %}check-circle{% elif variant == 'warning' %}alert-triangle{% elif variant == 'danger' %}x-octagon{% else %}info{% endif %}"
+     class="w-5 h-5 flex-shrink-0 mt-0.5" aria-hidden="true"></i>
+  <div class="flex-1 min-w-0">
+    {% if title %}<p class="font-bold">{{ title }}</p>{% endif %}
+    {% if text %}<p class="text-sm mt-1">{{ text }}</p>{% endif %}
+  </div>
+  {% if cta_label and cta_href %}
+    <a href="{{ cta_href }}"
+       class="btn-{% if variant == 'danger' %}danger{% else %}primary{% endif %} text-xs py-1.5 px-3 flex-shrink-0">
+      {{ cta_label }}
+    </a>
+  {% endif %}
+</div>
+{% endwith %}

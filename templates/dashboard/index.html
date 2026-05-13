@@ -442,10 +442,24 @@ Shows the org's current plan, usage, and remaining quota. The
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+{# Chart data — serialized via json_script to neutralise any XSS risk
+   in user-controlled values (e.g. vendor names). NEVER use |safe here. #}
+{{ chart_series|default_if_none:""|json_script:"dashboard-chart-data" }}
+{{ risk_breakdown|default_if_none:""|json_script:"dashboard-risk-data" }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"
+        integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AzzpExeZf67qTGc4Hw5sMpisrnq"
+        crossorigin="anonymous"></script>
 <script>
   document.addEventListener('DOMContentLoaded', () => {
     if (typeof Chart === 'undefined') return;
+    function loadJSON(id, fallback) {
+      const node = document.getElementById(id);
+      if (!node) return fallback;
+      try { return JSON.parse(node.textContent) || fallback; }
+      catch (_) { return fallback; }
+    }
+    const chartData = loadJSON('dashboard-chart-data', {});
+    const riskData  = loadJSON('dashboard-risk-data',  {});
 
     // Risk distribution (doughnut)
     const riskEl = document.getElementById('riskChart');
@@ -455,8 +469,12 @@ Shows the org's current plan, usage, and remaining quota. The
         data: {
           labels: ['{% trans "Low" %}', '{% trans "Medium" %}', '{% trans "High" %}', '{% trans "Critical" %}'],
           datasets: [{
-            data: [{{ risk_breakdown.low|default:0 }}, {{ risk_breakdown.medium|default:0 }},
-                   {{ risk_breakdown.high|default:0 }}, {{ risk_breakdown.critical|default:0 }}],
+            data: [
+              Number(riskData.low      || 0),
+              Number(riskData.medium   || 0),
+              Number(riskData.high     || 0),
+              Number(riskData.critical || 0),
+            ],
             backgroundColor: ['#10B981', '#F59E0B', '#EF4444', '#7F1D1D'],
             borderWidth: 0,
           }],
@@ -469,9 +487,9 @@ Shows the org's current plan, usage, and remaining quota. The
     // Monthly invoice count + amount (combo bar+line)
     const trendEl = document.getElementById('trendChart');
     if (trendEl) {
-      const labels  = {{ chart_series.labels|default:"[]"|safe }};
-      const counts  = {{ chart_series.counts|default:"[]"|safe }};
-      const amounts = {{ chart_series.amounts|default:"[]"|safe }};
+      const labels  = Array.isArray(chartData.labels)  ? chartData.labels  : [];
+      const counts  = Array.isArray(chartData.counts)  ? chartData.counts  : [];
+      const amounts = Array.isArray(chartData.amounts) ? chartData.amounts : [];
       new Chart(trendEl, {
         data: {
           labels,

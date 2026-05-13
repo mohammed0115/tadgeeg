@@ -1,0 +1,22 @@
+{% comment %}
+Empty-state block for tables, lists, or sections.
+
+Usage:
+  {% include "components/_empty_state.html" with
+        title="No invoices yet"
+        text="Upload a document and we'll audit it."
+        icon="inbox"
+        cta_label="Upload"
+        cta_href="/auditor/upload/" %}
+{% endcomment %}
+{% load i18n %}
+<div class="empty-state" role="status" aria-live="polite">
+  {% if icon %}
+    <i data-lucide="{{ icon }}" class="empty-state-icon" aria-hidden="true"></i>
+  {% endif %}
+  <h3 class="empty-state-title">{{ title }}</h3>
+  {% if text %}<p class="empty-state-text">{{ text }}</p>{% endif %}
+  {% if cta_href and cta_label %}
+    <a href="{{ cta_href }}" class="btn-primary">{{ cta_label }}</a>
+  {% endif %}
+</div>

@@ -1,0 +1,7 @@
+{% comment %}
+Skip-to-content link — WCAG 2.4.1 bypass mechanism.
+Must be the first focusable element in <body>. Visually hidden until
+focused; becomes visible at the top-left/start of the viewport.
+{% endcomment %}
+{% load i18n %}
+<a href="#main-content" class="skip-link">{% trans "Skip to main content" %}</a>

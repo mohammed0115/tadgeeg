@@ -1,0 +1,46 @@
+{% comment %}
+KPI / Stat tile.
+
+Usage:
+  {% include "components/_stat_card.html" with
+        label="Fraud alerts"
+        value=kpis.fraud_alerts
+        sub="invoices flagged this period"
+        icon="shield-alert"
+        trend="+12%"
+        trend_direction="up"
+        href="/invoices/?status=flagged"
+        variant="danger" %}
+
+Variants: primary (default) | accent | warning | danger
+{% endcomment %}
+{% load i18n %}
+{% with tag="a" %}
+  {% if not href %}{% with tag="div" %}{% endwith %}{% endif %}
+
+  {% if href %}
+    <a href="{{ href }}" class="stat-card stat-card--{{ variant|default:'primary' }} no-underline focus-visible:ring-2 focus-visible:ring-primary-500/40">
+  {% else %}
+    <div class="stat-card stat-card--{{ variant|default:'primary' }}">
+  {% endif %}
+
+      {% if trend %}
+        <span class="stat-card-trend {{ trend_direction|default:'up' }}"
+              aria-label="{% trans 'Trend' %} {{ trend }}">
+          {% if trend_direction == 'down' %}↓{% else %}↑{% endif %} {{ trend }}
+        </span>
+      {% endif %}
+
+      {% if icon %}
+        <div class="stat-card-icon w-10 h-10 rounded-xl flex items-center justify-center
+                    bg-primary-50 text-primary-600 mb-2" aria-hidden="true">
+          <i data-lucide="{{ icon }}" class="w-5 h-5"></i>
+        </div>
+      {% endif %}
+
+      <div class="stat-card-label">{{ label }}</div>
+      <div class="stat-card-value tabular">{{ value|default:0 }}</div>
+      {% if sub %}<div class="stat-card-sub">{{ sub }}</div>{% endif %}
+
+  {% if href %}</a>{% else %}</div>{% endif %}
+{% endwith %}

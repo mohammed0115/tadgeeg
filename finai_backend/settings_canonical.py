@@ -218,6 +218,7 @@ TEMPLATES = [
                 "django.template.context_processors.i18n",
                 "core.context_processors.branding",
                 "apps.billing.context_processors.billing",
+                "apps.audit.context_processors.approval_inbox",
             ],
         },
     },

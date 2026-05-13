@@ -280,9 +280,16 @@
 
     @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
+    /* Mobile sidebar — uses logical inset properties so the panel
+       slides in from the start edge regardless of RTL / LTR. */
     @media (max-width: 1024px) {
-      .sidebar { position: fixed; right: -260px; transition: right 0.3s ease; box-shadow: -10px 0 30px rgba(0,0,0,0.1); }
-      .sidebar.open { right: 0; }
+      .sidebar {
+        position: fixed;
+        inset-inline-end: -260px;
+        transition: inset-inline-end 0.3s ease;
+        box-shadow: 0 0 30px rgba(0,0,0,0.1);
+      }
+      .sidebar.open { inset-inline-end: 0; }
       .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 49; }
       .sidebar-overlay.open { display: block; }
       .menu-toggle { display: flex; }
@@ -290,8 +297,13 @@
       .page { padding: 20px; }
       .user-info { display: none; }
     }
+    /* Tablet — restore stat-grid breathing room before collapsing to mobile. */
+    @media (max-width: 900px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
     @media (max-width: 640px) {
       .page-title { font-size: 22px; }
+      .stats-grid { grid-template-columns: 1fr; }
     }
 
     /* ============================================================
@@ -593,11 +605,11 @@ cookie + session so subsequent pages render in the new language.
     </div>
     <style>
       [x-cloak] { display: none !important; }
-      .ai-fab { position: fixed; bottom: 24px; left: 24px; width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(0,51,102,0.35); cursor: pointer; transition: transform 0.2s; z-index: 1000; border: none; }
+      /* Logical inset properties — same rule works in both RTL and LTR.
+         FAB and panel sit on the end edge of the viewport. */
+      .ai-fab { position: fixed; bottom: 24px; inset-inline-end: 24px; width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 24px rgba(0,51,102,0.35); cursor: pointer; transition: transform 0.2s; z-index: 1000; border: none; }
       .ai-fab:hover { transform: scale(1.08); }
-      [dir="ltr"] .ai-fab { left: auto; right: 24px; }
-      .ai-panel { position: fixed; bottom: 96px; left: 24px; width: 380px; max-width: calc(100vw - 48px); height: 540px; max-height: calc(100vh - 140px); background: white; border-radius: 18px; box-shadow: 0 20px 48px rgba(0,51,102,0.22); display: flex; flex-direction: column; z-index: 1001; border: 1px solid var(--border); overflow: hidden; }
-      [dir="ltr"] .ai-panel { left: auto; right: 24px; }
+      .ai-panel { position: fixed; bottom: 96px; inset-inline-end: 24px; width: 380px; max-width: calc(100vw - 48px); height: 540px; max-height: calc(100vh - 140px); background: white; border-radius: 18px; box-shadow: 0 20px 48px rgba(0,51,102,0.22); display: flex; flex-direction: column; z-index: 1001; border: 1px solid var(--border); overflow: hidden; }
       .ai-panel-header { padding: 18px 20px; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
       .ai-panel-title { font-family: 'Cairo', sans-serif; font-weight: 800; font-size: 16px; }
       .ai-panel-sub { font-size: 11px; opacity: 0.85; margin-top: 2px; }

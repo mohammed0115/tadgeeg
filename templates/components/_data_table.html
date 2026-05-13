@@ -1,0 +1,57 @@
+{% comment %}
+Responsive data-table wrapper.
+
+Forces overflow-x scroll on small screens (so financial tables don't
+get cropped) and ships with the standard `data-table` styles from
+static/src/css/app.css.
+
+Usage:
+  {% include "components/_data_table.html" with
+        columns=columns
+        rows=rows
+        empty_title="No invoices"
+        empty_text="Upload your first document to see audits here."
+        paginator=paginator
+        page_obj=page_obj %}
+
+`columns` = list of {"label": "...", "key": "field_name", "align": "start|end"}
+`rows`    = iterable of dicts (the row's `__getitem__` access)
+
+For non-trivial cell rendering, render the <table> directly using the
+`data-table` and `table-wrap` classes — this partial is only the basic
+shape.
+{% endcomment %}
+{% load i18n %}
+<div class="table-wrap" role="region" aria-label="{{ aria_label|default:_('Data table') }}" tabindex="0">
+  <table class="data-table">
+    <thead>
+      <tr>
+        {% for c in columns %}
+          <th scope="col" style="text-align:{{ c.align|default:'start' }}">{{ c.label }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          {% for c in columns %}
+            <td>{{ row|dict_get:c.key|default:"—" }}</td>
+          {% endfor %}
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="{{ columns|length }}">
+            {% include "components/_empty_state.html" with
+                  title=empty_title|default:_('No records found')
+                  text=empty_text|default:_('Try changing the filter or add new data.')
+                  icon="inbox" %}
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if paginator and page_obj %}
+  {% include "partials/_pagination.html" %}
+{% endif %}

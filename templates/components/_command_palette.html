@@ -1,0 +1,49 @@
+{% comment %}
+Cmd+K command palette. Mounted once in the base template.
+
+Triggered by:
+  • Cmd/Ctrl + K
+  • `<button @click="$dispatch('open-command-palette')">…`
+{% endcomment %}
+{% load i18n %}
+<div x-data="commandPalette()" x-init="init()" x-cloak
+     x-show="open" @click.self="hide()"
+     class="fixed inset-0 z-[100] bg-slate-900/40 backdrop-blur-sm flex items-start justify-center pt-24"
+     role="dialog" aria-modal="true" aria-labelledby="cmdk-title">
+  <div class="card w-full max-w-xl mx-4 overflow-hidden"
+       x-transition:enter="transition ease-out duration-150"
+       x-transition:enter-start="opacity-0 translate-y-2"
+       x-transition:enter-end="opacity-100 translate-y-0">
+    <div class="flex items-center gap-3 px-4 py-3 border-b border-slate-100">
+      <i data-lucide="search" class="w-4 h-4 text-slate-400" aria-hidden="true"></i>
+      <input x-ref="input" x-model="query" @input="onInput()"
+             type="search" autocomplete="off"
+             placeholder="{% trans 'Search pages, invoices, vendors…' %}"
+             class="flex-1 bg-transparent outline-none text-sm placeholder:text-slate-400">
+      <kbd class="text-[10px] font-bold text-slate-400 border border-slate-200 rounded px-1.5 py-0.5">ESC</kbd>
+    </div>
+    <ul class="max-h-[60vh] overflow-y-auto" role="listbox">
+      <template x-for="(r, i) in results" :key="r.id">
+        <li>
+          <a :href="r.href"
+             :class="{ 'bg-primary-50 text-primary-700': i === cursor }"
+             class="flex items-center justify-between gap-3 px-4 py-2.5 text-sm hover:bg-slate-50"
+             role="option" :aria-selected="i === cursor">
+            <span class="flex items-center gap-3 min-w-0">
+              <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-400" aria-hidden="true"></i>
+              <span class="truncate" x-text="r.title"></span>
+            </span>
+            <span class="text-[11px] uppercase tracking-wide text-slate-400" x-text="r.group"></span>
+          </a>
+        </li>
+      </template>
+      <li x-show="results.length === 0" class="px-4 py-8 text-center text-sm text-slate-400">
+        {% trans "No results" %}
+      </li>
+    </ul>
+    <div class="px-4 py-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+      <span>{% trans "Navigate with ↑↓ — Enter to open" %}</span>
+      <span>{% trans "Press Cmd+K to open anywhere" %}</span>
+    </div>
+  </div>
+</div>

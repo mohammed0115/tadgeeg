@@ -1,0 +1,27 @@
+{% comment %}
+Generic card wrapper.
+
+Usage with block syntax (preferred for non-trivial content):
+  {% include "components/_card.html" with title="Risk Breakdown" %}
+    ...your content...
+  {% endinclude %}     ← not native; use {% with %} blocks instead.
+
+For one-shot use, prefer composing directly in the template using the
+`card`, `card-header`, `card-body`, `card-footer` CSS classes
+(documented in static/src/css/app.css).
+{% endcomment %}
+{% load i18n %}
+<article class="card {{ extra_classes|default:'' }}"
+         {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}>
+  {% if title or subtitle or header_actions %}
+    <header class="card-header flex items-center justify-between gap-3 flex-wrap">
+      <div>
+        {% if title %}<h3 class="text-base font-bold text-slate-900">{{ title }}</h3>{% endif %}
+        {% if subtitle %}<p class="text-xs text-slate-500 mt-0.5">{{ subtitle }}</p>{% endif %}
+      </div>
+      {% if header_actions %}<div class="flex gap-2">{{ header_actions|safe }}</div>{% endif %}
+    </header>
+  {% endif %}
+  <div class="card-body">{{ body|safe }}</div>
+  {% if footer %}<footer class="card-footer">{{ footer|safe }}</footer>{% endif %}
+</article>

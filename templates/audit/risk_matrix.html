@@ -1,0 +1,127 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n ui_tags %}
+
+{% block title %}{% trans "Risk Matrix" %}{% endblock %}
+{% block nav_audit %}active{% endblock %}
+
+{% block breadcrumb %}
+  {% include "components/_breadcrumb.html" with crumbs=breadcrumbs %}
+{% endblock %}
+
+{% block extra_styles %}
+  .risk-grid {
+    display: grid;
+    grid-template-columns: 12ch repeat(5, 1fr);
+    gap: 2px;
+    background: var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .risk-grid > .axis-y,
+  .risk-grid > .axis-x,
+  .risk-grid > .cell { background: white; padding: 14px 10px; }
+  .axis-corner { background: var(--bg-soft); }
+  .axis-y      { font-size: 12px; font-weight: 700; color: var(--text-muted); display: flex; align-items: center; justify-content: center; text-align: center; }
+  .axis-x      { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; text-align: center; }
+  .cell        { display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: transform 0.15s; min-height: 80px; gap: 4px; }
+  .cell:hover  { transform: scale(1.02); z-index: 2; box-shadow: var(--shadow-md); }
+  .cell.low      { background: rgba(16, 185, 129, 0.10); }
+  .cell.medium   { background: rgba(245, 158, 11, 0.15); }
+  .cell.high     { background: rgba(249, 115, 22, 0.20); }
+  .cell.critical { background: rgba(239, 68, 68, 0.25); }
+  .cell .count   { font-family: 'Cairo'; font-size: 22px; font-weight: 800; color: var(--text); }
+  .cell .amount  { font-size: 11px; color: var(--text-muted); }
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom:24px">
+  <div>
+    <h1 class="page-title">{% trans "Risk Matrix" %}</h1>
+    <p class="page-subtitle">{% trans "Likelihood × Impact heat map (ISO 31000 / COSO ERM)." %}</p>
+  </div>
+  <div style="display:flex; gap:10px;">
+    <a href="{% url 'frontend:audit_inbox' %}" class="btn-primary">{% trans "Approval Inbox" %} →</a>
+  </div>
+</div>
+
+{# ── KPI strip ─────────────────────────────────────────────────────── #}
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:28px;">
+  {% include "components/_stat_card.html" with label=_("Total assessed") value=totals.count sub=totals.total_amount_label icon="layers" variant="primary" %}
+  {% include "components/_stat_card.html" with label=_("Critical") value=totals.by_severity.critical sub=_("Top-right corner") icon="alert-octagon" variant="danger" %}
+  {% include "components/_stat_card.html" with label=_("High")     value=totals.by_severity.high     sub=_("Upper-right band")   icon="alert-triangle" variant="warning" %}
+  {% include "components/_stat_card.html" with label=_("Medium")   value=totals.by_severity.medium   sub=_("Central")           icon="activity" variant="primary" %}
+  {% include "components/_stat_card.html" with label=_("Low")      value=totals.by_severity.low      sub=_("Lower-left")        icon="leaf" variant="accent" %}
+</div>
+
+{# ── 5×5 grid ──────────────────────────────────────────────────────── #}
+<div class="card" style="padding:24px">
+  <h2 style="font-size:16px; font-weight:800; color:var(--primary); margin-bottom:18px">{% trans "Heat map" %}</h2>
+
+  <div class="risk-grid" role="grid" aria-label="{% trans 'Risk heat map' %}">
+    <div class="axis-corner"></div>
+    {% for ip in axes.impact %}
+      <div class="axis-x" role="columnheader">{% trans ip|capfirst %}</div>
+    {% endfor %}
+
+    {% for li in axes.likelihood reversed %}
+      <div class="axis-y" role="rowheader">{% trans li|capfirst %}</div>
+      {% for ip in axes.impact %}
+        {% with cell=grid|dict_get:li|dict_get:ip %}
+          <a class="cell {{ cell.severity }}"
+             href="?likelihood={{ li }}&amp;impact={{ ip }}"
+             role="gridcell"
+             aria-label="{{ li }} × {{ ip }}: {{ cell.count }} {% trans 'records' %}">
+            <span class="count">{{ cell.count|default:0 }}</span>
+            {% if cell.total_amount %}
+              <span class="amount tabular">{{ cell.total_amount }} SAR</span>
+            {% endif %}
+          </a>
+        {% endwith %}
+      {% endfor %}
+    {% endfor %}
+  </div>
+
+  <p style="font-size:12px; color:var(--text-muted); margin-top:14px">
+    {% trans "Likelihood is derived from each record's risk score (0-100). Impact is scaled against performance materiality." %}
+  </p>
+</div>
+
+{# ── Drilled-in sample list ────────────────────────────────────────── #}
+{% if drilled_in %}
+<div class="card" style="margin-top:24px; padding:0">
+  <header class="card-header">
+    <h2 style="font-size:14px; font-weight:800; color:var(--primary); margin:0">
+      {% blocktrans with li=current_li ip=current_ip %}Records at {{ li }} × {{ ip }}{% endblocktrans %}
+    </h2>
+  </header>
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>{% trans "Reference" %}</th>
+          <th>{% trans "Vendor" %}</th>
+          <th style="text-align:end">{% trans "Amount" %}</th>
+          <th style="text-align:end">{% trans "Risk score" %}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for inv in drilled_in %}
+        <tr>
+          <td><a href="{% url 'frontend:invoice_detail' pk=inv.id %}" class="text-primary-700 font-bold">{{ inv.invoice_number|default:inv.id|truncatechars:14 }}</a></td>
+          <td>{{ inv.vendor_name|truncatechars:30 }}</td>
+          <td style="text-align:end" class="tabular">{{ inv.total_amount|floatformat:0 }} {{ inv.currency }}</td>
+          <td style="text-align:end" class="tabular">{{ inv.risk_score|floatformat:0 }}</td>
+          <td><a href="{% url 'frontend:invoice_detail' pk=inv.id %}" class="btn-ghost text-xs">{% trans "Open" %} →</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5">
+          {% include "components/_empty_state.html" with title=_("No records in this cell") icon="inbox" %}
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,12 @@
+{% comment %}
+Status / severity badge.
+
+Usage:
+  {% include "components/_badge.html" with variant="success" label="Approved" %}
+  {% include "components/_badge.html" with variant="risk-high" label=invoice.risk_level %}
+
+Variants:
+  success | warning | danger | info | muted | critical
+  risk-low | risk-medium | risk-high | risk-critical
+{% endcomment %}
+<span class="badge-{{ variant|default:'muted' }}">{{ label }}</span>

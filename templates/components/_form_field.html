@@ -1,0 +1,63 @@
+{% comment %}
+Form field with label + input + help + error.
+
+Usage:
+  {% include "components/_form_field.html" with
+        name="vendor_name"
+        label="Vendor"
+        type="text"
+        required=True
+        help_text="Legal name on the invoice"
+        error=form.vendor_name.errors.0 %}
+
+For currency / decimal inputs:
+  {% include "components/_form_field.html" with
+        name="amount"
+        label="Amount (SAR)"
+        type="number"
+        inputmode="decimal"
+        step="0.01"
+        required=True %}
+{% endcomment %}
+{% load i18n %}
+<div class="form-field {{ extra_classes|default:'' }}">
+  <label for="{{ name }}" class="form-label">
+    {{ label }}
+    {% if required %}<span class="text-red-600 ms-1" aria-hidden="true">*</span><span class="visually-hidden">{% trans "(required)" %}</span>{% endif %}
+  </label>
+  {% if type == "textarea" %}
+    <textarea id="{{ name }}" name="{{ name }}"
+              class="form-textarea {% if error %}border-red-400 bg-red-50{% endif %}"
+              rows="{{ rows|default:4 }}"
+              {% if required %}required aria-required="true"{% endif %}
+              {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+              {% if maxlength %}maxlength="{{ maxlength }}"{% endif %}
+              {% if error %}aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}>{{ value|default:'' }}</textarea>
+  {% elif type == "select" %}
+    <select id="{{ name }}" name="{{ name }}"
+            class="form-select {% if error %}border-red-400 bg-red-50{% endif %}"
+            {% if required %}required aria-required="true"{% endif %}
+            {% if error %}aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}>
+      {% for opt in options %}
+        <option value="{{ opt.value }}" {% if opt.value == value %}selected{% endif %}>{{ opt.label }}</option>
+      {% endfor %}
+    </select>
+  {% else %}
+    <input id="{{ name }}" name="{{ name }}"
+           type="{{ type|default:'text' }}"
+           class="form-input {% if error %}border-red-400 bg-red-50{% endif %} {% if type == 'number' %}tabular latin-nums{% endif %}"
+           value="{{ value|default:'' }}"
+           {% if required %}required aria-required="true"{% endif %}
+           {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+           {% if inputmode %}inputmode="{{ inputmode }}"{% endif %}
+           {% if step %}step="{{ step }}"{% endif %}
+           {% if min %}min="{{ min }}"{% endif %}
+           {% if max %}max="{{ max }}"{% endif %}
+           {% if maxlength %}maxlength="{{ maxlength }}"{% endif %}
+           {% if pattern %}pattern="{{ pattern }}"{% endif %}
+           {% if autocomplete %}autocomplete="{{ autocomplete }}"{% endif %}
+           {% if error %}aria-invalid="true" aria-describedby="{{ name }}-error"{% endif %}>
+  {% endif %}
+  {% if help_text %}<p id="{{ name }}-help" class="form-help">{{ help_text }}</p>{% endif %}
+  {% if error %}<p id="{{ name }}-error" class="form-error" role="alert">{{ error }}</p>{% endif %}
+</div>

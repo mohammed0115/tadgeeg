@@ -1,0 +1,103 @@
+/**
+ * Tadgeeg Design Tokens — Single Source of Truth.
+ *
+ * Every color / spacing / shadow / radius the platform uses MUST come
+ * from a token here. No hex literals in templates, no inline styles.
+ *
+ * Tokens are exposed as CSS custom properties on :root so they work
+ * both in Tailwind classes (via tailwind.config.js mapping) and in
+ * legacy templates that still write raw CSS.
+ */
+
+:root {
+  /* ─── Brand colors ───────────────────────────────────────────────── */
+  --color-primary-50:  #e6f0fa;
+  --color-primary-100: #cce0f5;
+  --color-primary-400: #3366a3;
+  --color-primary-500: #003366;
+  --color-primary-600: #002b57;
+  --color-primary-700: #002244;
+  --color-primary-900: #001122;
+
+  --color-accent-50:  #ecfdf5;
+  --color-accent-400: #34d399;
+  --color-accent-500: #10b981;
+  --color-accent-600: #059669;
+  --color-accent-700: #047857;
+
+  /* ─── Semantic colors ────────────────────────────────────────────── */
+  --color-success: var(--color-accent-500);
+  --color-warning: #f59e0b;
+  --color-danger:  #ef4444;
+  --color-info:    #3b82f6;
+
+  /* Risk levels — used in fraud / audit UIs */
+  --risk-low:      #10b981;
+  --risk-medium:   #f59e0b;
+  --risk-high:     #f97316;
+  --risk-critical: #ef4444;
+
+  /* ─── Surfaces ───────────────────────────────────────────────────── */
+  --bg-page:    #f8fafc;
+  --bg-card:    #ffffff;
+  --bg-soft:    #f1f5f9;
+  --bg-softer:  #fafbfc;
+
+  --border:        #e2e8f0;
+  --border-soft:   #f1f5f9;
+  --border-strong: #cbd5e1;
+
+  /* ─── Text ───────────────────────────────────────────────────────── */
+  --text:          #1e293b;
+  --text-muted:    #64748b;
+  --text-light:    #94a3b8;
+  --text-on-dark:  #f8fafc;
+
+  /* ─── Shadows (low z to high z) ──────────────────────────────────── */
+  --shadow-sm: 0 1px 2px 0 rgb(0 51 102 / 5%);
+  --shadow-md: 0 4px 6px -1px rgb(0 51 102 / 8%),
+               0 2px 4px -2px rgb(0 51 102 / 5%);
+  --shadow-lg: 0 10px 15px -3px rgb(0 51 102 / 10%),
+               0 4px 6px -4px rgb(0 51 102 / 5%);
+  --shadow-xl: 0 25px 50px -12px rgb(0 51 102 / 25%);
+
+  /* ─── Radii ──────────────────────────────────────────────────────── */
+  --radius-xs:  0.25rem;
+  --radius-sm:  0.5rem;
+  --radius:     0.75rem;
+  --radius-lg:  1rem;
+  --radius-xl:  1.5rem;
+  --radius-full: 9999px;
+
+  /* ─── Spacing scale (in addition to Tailwind defaults) ───────────── */
+  --space-page-x: clamp(1rem, 2.5vw, 2.5rem);
+  --space-page-y: clamp(1rem, 3vw, 2.5rem);
+
+  /* ─── Layout dimensions ──────────────────────────────────────────── */
+  --sidebar-width:     260px;
+  --sidebar-collapsed: 72px;
+  --topbar-height:     64px;
+
+  /* ─── Z-index scale (centralized) ────────────────────────────────── */
+  --z-sticky:  10;
+  --z-sidebar: 30;
+  --z-topbar:  40;
+  --z-overlay: 50;
+  --z-modal:   60;
+  --z-toast:   100;
+  --z-popover: 70;
+}
+
+/* Dark mode overrides — flip a handful of surface tokens. */
+.dark {
+  --bg-page:   #0f172a;
+  --bg-card:   #1e293b;
+  --bg-soft:   #334155;
+  --bg-softer: #475569;
+  --border:        #334155;
+  --border-soft:   #1e293b;
+  --border-strong: #475569;
+  --text:         #f1f5f9;
+  --text-muted:   #cbd5e1;
+  --text-light:   #94a3b8;
+}

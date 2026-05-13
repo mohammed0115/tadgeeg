@@ -1,0 +1,142 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n ui_tags %}
+
+{% block title %}{% trans "Override request" %}{% endblock %}
+{% block nav_invoices %}active{% endblock %}
+
+{% block breadcrumb %}
+  {% include "components/_breadcrumb.html" with crumbs=breadcrumbs %}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+  <header class="page-header">
+    <div>
+      <h1 class="page-title">{% trans "Override request" %}</h1>
+      <p class="page-subtitle">
+        {% blocktrans with amount=invoice.total_amount threshold=threshold %}
+          This approval exceeds the SAR {{ threshold }} threshold and needs a second admin
+          to countersign within {{ window_hours }} hours.
+        {% endblocktrans %}
+      </p>
+    </div>
+  </header>
+
+  {# ── Invoice summary ───────────────────────────────────────────────── #}
+  <section class="card">
+    <header class="card-header">
+      <h2 class="text-base font-bold text-slate-900">{% trans "Invoice" %}</h2>
+    </header>
+    <dl class="card-body grid gap-4 sm:grid-cols-2">
+      <div>
+        <dt class="text-xs font-bold uppercase tracking-wider text-slate-500">{% trans "Reference" %}</dt>
+        <dd class="text-sm font-mono mt-1">{{ invoice.invoice_number|default:invoice.id|truncatechars:20 }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-bold uppercase tracking-wider text-slate-500">{% trans "Vendor" %}</dt>
+        <dd class="text-sm mt-1">{{ invoice.vendor_name }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-bold uppercase tracking-wider text-slate-500">{% trans "Amount" %}</dt>
+        <dd class="text-sm font-bold mt-1 tabular">{{ invoice.total_amount|floatformat:2 }} {{ invoice.currency }}</dd>
+      </div>
+      <div>
+        <dt class="text-xs font-bold uppercase tracking-wider text-slate-500">{% trans "Risk score" %}</dt>
+        <dd class="text-sm mt-1 tabular">{{ invoice.risk_score|default:0|floatformat:0 }} / 100</dd>
+      </div>
+    </dl>
+  </section>
+
+  {# ── State branches ────────────────────────────────────────────────── #}
+  {% if existing %}
+
+    {# Existing PENDING request — Approver view #}
+    {% if existing.status == 'pending' %}
+      {% include "components/_alert.html" with
+            variant="warning"
+            title=_("Awaiting countersignature")
+            text=_("This override was requested by the user below. A different admin must approve to release it.") %}
+
+      <section class="card">
+        <header class="card-header">
+          <h2 class="text-base font-bold text-slate-900">{% trans "Pending request" %}</h2>
+        </header>
+        <dl class="card-body grid gap-4 sm:grid-cols-2">
+          <div>
+            <dt class="text-xs font-bold uppercase tracking-wider text-slate-500">{% trans "Requested by" %}</dt>
+            <dd class="text-sm mt-1">{{ existing.requested_by.full_name|default:existing.requested_by.email }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs font-bold uppercase tracking-wider text-slate-500">{% trans "Requested at" %}</dt>
+            <dd class="text-sm mt-1">{{ existing.created_at|date:"Y-m-d H:i" }}</dd>
+          </div>
+          <div>
+            <dt class="text-xs font-bold uppercase tracking-wider text-slate-500">{% trans "Expires" %}</dt>
+            <dd class="text-sm mt-1">{{ existing.expires_at|date:"Y-m-d H:i" }}</dd>
+          </div>
+          <div class="sm:col-span-2">
+            <dt class="text-xs font-bold uppercase tracking-wider text-slate-500">{% trans "Reason" %}</dt>
+            <dd class="text-sm mt-1 whitespace-pre-line">{{ existing.reason }}</dd>
+          </div>
+        </dl>
+        <footer class="card-footer flex justify-end gap-2">
+          {% if request.user.id != existing.requested_by_id %}
+            <form method="post" action="{% url 'frontend:override_countersign' override_id=existing.id %}">
+              {% csrf_token %}
+              <button type="submit" class="btn-accent">
+                <i data-lucide="user-check" class="w-4 h-4"></i>
+                {% trans "Countersign" %}
+              </button>
+            </form>
+          {% else %}
+            {% include "components/_alert.html" with
+                  variant="info"
+                  text=_("You requested this override. A different admin must countersign — Segregation of Duties.") %}
+          {% endif %}
+        </footer>
+      </section>
+
+    {% elif existing.status == 'countersigned' %}
+      {% include "components/_alert.html" with
+            variant="success"
+            title=_("Approved")
+            text=_("Override countersigned and active.") %}
+    {% elif existing.status == 'expired' %}
+      {% include "components/_alert.html" with
+            variant="danger"
+            title=_("Expired")
+            text=_("The countersign window passed. Open a new request if still required.") %}
+    {% endif %}
+
+  {% else %}
+
+    {# No request yet — Maker form #}
+    <section class="card">
+      <header class="card-header">
+        <h2 class="text-base font-bold text-slate-900">{% trans "Request override" %}</h2>
+      </header>
+      <form method="post" action="{% url 'frontend:override_open' invoice_id=invoice.id %}" class="card-body space-y-5">
+        {% csrf_token %}
+        {% include "components/_form_field.html" with
+              name="reason"
+              type="textarea"
+              label=_("Reason for override")
+              required=True
+              placeholder=_("e.g. Vendor confirmed cycle, supplier statement attached as evidence WP-202.")
+              help_text=_("This will be visible to the countersigning admin and recorded in the audit chain.")
+              maxlength=2000
+              rows=5 %}
+        <footer class="flex justify-end gap-2">
+          <a href="{% url 'frontend:invoice_detail' pk=invoice.id %}" class="btn-ghost">{% trans "Cancel" %}</a>
+          <button type="submit" class="btn-primary">
+            <i data-lucide="send" class="w-4 h-4"></i>
+            {% trans "Submit for countersignature" %}
+          </button>
+        </footer>
+      </form>
+    </section>
+
+  {% endif %}
+</div>
+{% endblock %}

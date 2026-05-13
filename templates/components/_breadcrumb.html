@@ -1,0 +1,31 @@
+{% comment %}
+Breadcrumb navigation.
+
+Usage in the parent template:
+  {% block breadcrumb %}
+    {% include "components/_breadcrumb.html" with crumbs=breadcrumbs %}
+  {% endblock %}
+
+Where breadcrumbs = [
+  {"label": "Dashboard", "href": "/dashboard/"},
+  {"label": "Audit",     "href": "/audit/"},
+  {"label": "Inbox"},                          # last entry has no href
+]
+{% endcomment %}
+{% load i18n %}
+<nav aria-label="{% trans 'Breadcrumb' %}" class="flex items-center gap-1.5 text-xs">
+  <ol class="flex items-center gap-1.5 flex-wrap min-w-0">
+    {% for c in crumbs %}
+      <li class="flex items-center gap-1.5 min-w-0">
+        {% if c.href and not forloop.last %}
+          <a href="{{ c.href }}" class="text-slate-500 hover:text-slate-900 truncate max-w-[10rem]">{{ c.label }}</a>
+        {% else %}
+          <span class="font-semibold text-primary-700 truncate max-w-[14rem]" aria-current="page">{{ c.label }}</span>
+        {% endif %}
+        {% if not forloop.last %}
+          <span class="text-slate-300" aria-hidden="true">/</span>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+</nav>

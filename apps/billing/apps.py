@@ -9,3 +9,7 @@ class BillingConfig(AppConfig):
     def ready(self):
         # Hook payment-domain signals → subscription lifecycle.
         from apps.billing import receivers  # noqa: F401
+        # Wrap the audit pipeline entry point with a quota gate so every
+        # run_audit_compat call goes through reserve → consume / release.
+        from apps.billing.quota_gate import install_gate
+        install_gate()

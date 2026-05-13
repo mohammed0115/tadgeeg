@@ -194,6 +194,13 @@ MIDDLEWARE = [
 
 SUBSCRIPTION_REQUIRED = os.environ.get("SUBSCRIPTION_REQUIRED", "true").lower() != "false"
 
+# Quota gate around run_audit_compat — every audit reserves/consumes/releases
+# from the organization's subscription. Set to False ONLY for emergency
+# debugging; with the gate off, the audit pipeline runs without billing.
+BILLING_QUOTA_GATE_ENABLED = (
+    os.environ.get("BILLING_QUOTA_GATE_ENABLED", "true").lower() != "false"
+)
+
 ROOT_URLCONF = "finai_backend.urls"
 
 TEMPLATES = [

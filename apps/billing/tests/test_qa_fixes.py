@@ -107,19 +107,18 @@ class ForceRerunConfirmationTests(TestCase):
         self.assertEqual(consumes, 1)
 
     def test_force_rerun_with_confirmation_re_bills(self):
+        """After the post-QA H-2-extra fix, allow_rebill=True flows from
+        the gate into consume_invoice_audit when both ``force_rerun`` and
+        ``force_rerun_confirmed`` are set. The second confirmed run now
+        actually creates a second CONSUME row (was 1 in the original
+        QA-fixes commit; rewritten here to reflect the corrected
+        semantics)."""
         self._run()
         self._run(force_rerun=True, force_rerun_confirmed=True)
         consumes = UsageLedger.objects.filter(
             document=self.doc, action=UsageAction.CONSUME,
         ).count()
-        # The second confirmed run charges a second consume.
-        # NOTE: QuotaService.consume_invoice_audit is document-idempotent
-        # in Stage 1, so even with confirmation the gate sees the existing
-        # consume and short-circuits. The asserted value here is the
-        # CURRENT behaviour: 1 consume. If you ever want a re-bill to
-        # actually create a new ledger row, change consume_invoice_audit
-        # to keyed-on-audit_run instead of document. See QA report H-2.
-        self.assertEqual(consumes, 1)
+        self.assertEqual(consumes, 2)
 
 
 # ─── H-3: bulk-upload page exists + behaves on 402 ──────────────────────────

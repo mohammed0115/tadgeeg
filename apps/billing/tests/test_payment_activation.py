@@ -69,7 +69,7 @@ class PaidPlanSelectionTests(TestCase):
         self.assertEqual(sub.plan.code, PlanCode.STARTER)
 
         # PaymentTransaction must have been created and linked.
-        txn = PaymentTransaction.objects.get(pk=sub.payment_transaction)
+        txn = sub.payment_transaction
         self.assertEqual(txn.purpose, "subscription")
         self.assertEqual(txn.reference_type, "organization_subscription")
         self.assertEqual(txn.reference_id, str(sub.id))
@@ -99,7 +99,7 @@ class PaidPlanSelectionTests(TestCase):
         sub = OrganizationSubscription.objects.get(organization=self.org)
         self.assertEqual(sub.status, SubscriptionStatus.PENDING_PAYMENT)
         self.assertEqual(sub.invoice_limit, 1000)
-        txn = PaymentTransaction.objects.get(pk=sub.payment_transaction)
+        txn = sub.payment_transaction
         self.assertEqual(txn.amount, Decimal("890.00"))
 
 
@@ -127,7 +127,7 @@ class WebhookActivatesSubscriptionTests(TestCase):
                 reference_type="organization_subscription",
                 reference_id=str(self.sub.id),
             )
-        self.sub.payment_transaction = self.txn.id
+        self.sub.payment_transaction = self.txn
         self.sub.save(update_fields=["payment_transaction"])
 
     def test_paid_webhook_activates_the_subscription(self):

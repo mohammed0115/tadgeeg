@@ -175,22 +175,48 @@ class QuotaService:
     @transaction.atomic
     def consume_invoice_audit(
         self, organization, *, document=None, audit_run=None,
-        quantity: int = 1, reason: str = "",
+        quantity: int = 1, reason: str = "", allow_rebill: bool = False,
     ) -> UsageLedger:
-        """Flip a prior reservation into consumption. Idempotent: if a
-        ``consume`` already exists for this document we no-op and
-        return the existing row."""
+        """Flip a prior reservation into consumption.
+
+        Idempotency:
+          • Default (``allow_rebill=False``): if a CONSUME row already
+            exists for this document, no-op and return it. This is the
+            "signal + view + celery retry" safety net.
+          • ``allow_rebill=True``: bypass the document-key check and
+            create a fresh consume keyed on (document, audit_run). Used
+            by the quota gate when ``force_rerun_confirmed=True`` so
+            an explicitly-confirmed re-audit actually re-bills.
+
+        In both modes, an existing CONSUME with the SAME audit_run_id
+        is treated as a duplicate and short-circuited — so a celery
+        retry of the same audit_run is still safe.
+        """
         if quantity <= 0:
             raise QuotaError("quantity must be > 0")
 
         if document is not None:
-            existing = UsageLedger.objects.filter(
-                organization=organization,
-                document=document,
-                action=UsageAction.CONSUME,
-            ).order_by("-created_at").first()
-            if existing is not None:
-                return existing
+            # Same-audit_run dedup always wins (celery-retry safety),
+            # regardless of allow_rebill.
+            if audit_run is not None:
+                same_run = UsageLedger.objects.filter(
+                    organization=organization,
+                    document=document,
+                    audit_run=audit_run,
+                    action=UsageAction.CONSUME,
+                ).order_by("-created_at").first()
+                if same_run is not None:
+                    return same_run
+
+            # Document-key dedup only fires when re-billing is NOT allowed.
+            if not allow_rebill:
+                existing = UsageLedger.objects.filter(
+                    organization=organization,
+                    document=document,
+                    action=UsageAction.CONSUME,
+                ).order_by("-created_at").first()
+                if existing is not None:
+                    return existing
 
         sub = self.get_active_subscription(organization)
         if sub is None:

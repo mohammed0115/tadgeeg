@@ -124,15 +124,50 @@ def _count_json(data: bytes) -> int:
     return 1  # single-object payload
 
 
-def _count_zip(data: bytes) -> int:
-    """Count member files (not directories). Skips macOS metadata."""
+_NESTED_TEXT_FORMATS = {
+    ".csv":   "csv",
+    ".jsonl": "jsonl",
+    ".json":  "json",
+    ".xlsx":  "xlsx",
+    ".xls":   "xls",
+}
+
+
+def _count_zip(data: bytes, *, _depth: int = 0) -> int:
+    """Count items inside a ZIP archive.
+
+    - Each non-tabular member (PDF, image, etc.) counts as 1.
+    - Tabular members (CSV / XLSX / JSONL / JSON) are recursively
+      inspected and their *row count* is summed in. So a ZIP that
+      contains one 50-row Excel returns 50, not 1 — closing the M-2
+      gap from the QA report.
+    - Macros, hidden files, and dirs are ignored.
+    - Recursion is capped at depth 1 to avoid ZIP-bomb pathologies
+      (nested ZIPs each count as 1 instead of recursing).
+    """
+    total = 0
     with zipfile.ZipFile(io.BytesIO(data)) as zf:
-        return sum(
-            1 for info in zf.infolist()
-            if not info.is_dir()
-            and not info.filename.startswith("__MACOSX/")
-            and not info.filename.endswith("/.DS_Store")
-        )
+        for info in zf.infolist():
+            if info.is_dir():
+                continue
+            name = info.filename
+            if name.startswith("__MACOSX/") or name.endswith("/.DS_Store"):
+                continue
+
+            ext = ("." + name.rsplit(".", 1)[-1].lower()) if "." in name else ""
+            fmt = _NESTED_TEXT_FORMATS.get(ext)
+            if fmt and _depth < 1:
+                # Tabular member — count its rows.
+                try:
+                    member_bytes = zf.read(info)
+                except Exception:
+                    total += 1
+                    continue
+                total += count_items(member_bytes, fmt, name)
+            else:
+                # Binary / unknown / nested-ZIP (depth-capped) → 1 unit.
+                total += 1
+    return total
 
 
 # ─── decision builder ────────────────────────────────────────────────────────

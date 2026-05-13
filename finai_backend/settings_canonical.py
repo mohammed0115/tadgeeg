@@ -531,6 +531,13 @@ CELERY_BEAT_SCHEDULE = {
         # filtered out by SubscriptionService.expire_old_subscriptions.
         "schedule": crontab(minute=0),
     },
+    "billing-detect-counter-drift": {
+        "task": "billing.detect_counter_drift",
+        # Nightly at 03:15 (Asia/Riyadh). Default mode is log-only —
+        # flip to {"kwargs": {"auto_correct": True}} once you've
+        # confirmed the drift rate is low enough to auto-fix safely.
+        "schedule": crontab(hour=3, minute=15),
+    },
 }
 
 # ─── OpenAI ───────────────────────────────────────────────────────────────────

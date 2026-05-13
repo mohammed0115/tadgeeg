@@ -93,9 +93,17 @@ class OrganizationSubscription(models.Model):
 
     auto_renew = models.BooleanField(default=False)
 
-    # FK to PaymentTransaction is kept opaque (UUID) so this app stays
-    # importable even if apps/payments/ is uninstalled in a deployment.
-    payment_transaction = models.UUIDField(null=True, blank=True)
+    # FK to PaymentTransaction (Stage-9 QA hardening D-2). String FK
+    # keeps this app importable when apps/payments is installed last;
+    # on_delete=SET_NULL because deleting the txn shouldn't cascade
+    # away the subscription it paid for — the sub stays so finance
+    # can still investigate. Indexed via the FK by default.
+    payment_transaction = models.ForeignKey(
+        "payments.PaymentTransaction",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="subscriptions_funded",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -105,6 +113,20 @@ class OrganizationSubscription(models.Model):
         indexes = [
             models.Index(fields=["organization", "status"]),
             models.Index(fields=["status", "ends_at"]),
+        ]
+        constraints = [
+            # One usable subscription per organisation at any time —
+            # closes the M-1 gap from the Stage 9 QA report. Backstops
+            # the application-level _reuse_recent_pending logic so two
+            # different paid plans cannot both end up ACTIVE for the
+            # same org (e.g. a race between concurrent webhook
+            # deliveries). Status migrations remain free; only the
+            # ACTIVE+TRIALING set is constrained.
+            models.UniqueConstraint(
+                fields=["organization"],
+                condition=models.Q(status__in=["active", "trialing"]),
+                name="billing_one_usable_sub_per_org",
+            ),
         ]
 
     def __str__(self):

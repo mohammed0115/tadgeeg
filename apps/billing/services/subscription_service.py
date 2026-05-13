@@ -177,8 +177,8 @@ class SubscriptionService:
             ) from exc
 
         # Stamp the linkage from sub → payment for forensic queries.
-        if sub.payment_transaction != payment_transaction.id:
-            sub.payment_transaction = payment_transaction.id
+        if sub.payment_transaction_id != payment_transaction.id:
+            sub.payment_transaction = payment_transaction
             sub.save(update_fields=["payment_transaction", "updated_at"])
 
         return self.activate_subscription(sub)

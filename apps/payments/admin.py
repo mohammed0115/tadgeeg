@@ -5,7 +5,6 @@ from django.utils import timezone
 from apps.payments.models import (
     FailedWebhookEvent,
     PaymentLog,
-    PaymentProviderConfig,
     PaymentTransaction,
 )
 from apps.payments.services.webhook_service import process_webhook
@@ -105,23 +104,6 @@ class FailedWebhookEventAdmin(admin.ModelAdmin):
         )
 
 
-@admin.register(PaymentProviderConfig)
-class PaymentProviderConfigAdmin(admin.ModelAdmin):
-    list_display  = ("organization", "provider", "is_active", "updated_at")
-    list_filter   = ("provider", "is_active")
-    search_fields = ("organization__name", "merchant_id", "store_id")
-
-    def get_readonly_fields(self, request, obj=None):
-        # secret_key must never appear in the admin form.
-        ro = ["created_at", "updated_at"]
-        if obj is not None:
-            ro.append("secret_key")
-        return ro
-
-    def get_fieldsets(self, request, obj=None):
-        return (
-            (None, {"fields": ("organization", "provider", "is_active")}),
-            ("Credentials", {"fields": ("public_key", "secret_key", "merchant_id", "store_id")}),
-            ("Extra",  {"fields": ("extra_config",)}),
-            ("Meta",   {"fields": ("created_at", "updated_at")}),
-        )
+# Removed in Stage-9 cleanup (QA report M-3): PaymentProviderConfigAdmin
+# was dropped along with its model. Re-add both together if per-tenant
+# provider overrides land.

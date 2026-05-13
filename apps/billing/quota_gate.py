@@ -213,10 +213,15 @@ def run_audit_with_quota(
             logger.exception("[quota_gate] release on AuditRun.failed raised")
         return audit_run
 
+    # If this run was an explicitly-confirmed re-audit of an
+    # already-billed document, allow the consume to create a fresh
+    # ledger row (audit_run-keyed dedup still protects from celery retries).
+    allow_rebill = bool(force_rerun and force_rerun_confirmed and already_billed)
     try:
         svc.consume_invoice_audit(
             org, document=doc, audit_run=audit_run if isinstance(audit_run, _AuditRunModel) else None,
             reason=f"triggered_by={triggered_by}",
+            allow_rebill=allow_rebill,
         )
     except QuotaError:
         # Last resort: log loudly. The reservation has already been

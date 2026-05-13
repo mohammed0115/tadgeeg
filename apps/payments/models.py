@@ -170,40 +170,12 @@ class FailedWebhookEvent(models.Model):
         return f"{self.provider}:{self.reason} @ {self.created_at:%Y-%m-%d %H:%M}"
 
 
-class PaymentProviderConfig(models.Model):
-    """Optional per-tenant override for provider credentials.
-
-    For most deployments the global env-var keys are sufficient and this
-    table stays empty. When a tenant has its own merchant account, an
-    active row here takes precedence over the env vars.
-    """
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-
-    organization = models.ForeignKey(
-        Organization, on_delete=models.CASCADE, related_name="payment_provider_configs",
-    )
-    provider   = models.CharField(max_length=16, choices=PaymentProvider.choices)
-    is_active  = models.BooleanField(default=True)
-
-    public_key  = models.CharField(max_length=256, blank=True, default="")
-    # Stored as a Fernet token (symmetric AES-128-CBC + HMAC). Encryption
-    # is transparent — read/write the field as plain text. Column is TEXT
-    # because Fernet ciphertext is variable-length.
-    secret_key  = EncryptedTextField(blank=True, default="")
-    merchant_id = models.CharField(max_length=128, blank=True, default="")
-    store_id    = models.CharField(max_length=128, blank=True, default="")
-    extra_config = models.JSONField(default=dict, blank=True)
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(
-                fields=["organization", "provider"],
-                name="payments_provider_config_org_provider_unique",
-            ),
-        ]
-
-    def __str__(self):
-        return f"{self.organization_id} → {self.provider}"
+# Removed in Stage-9 cleanup (QA report M-3):
+#   class PaymentProviderConfig(models.Model): ...
+#
+# The factory and every adapter read from env vars only. No code path
+# ever consulted the table, so it stays dropped. If per-tenant provider
+# overrides become a requirement, reintroduce this model AND wire it
+# into ``apps.payments.gateways.factory.get_payment_gateway`` (accepting
+# an organization parameter, falling back to env when no active config
+# exists). Until then, env-only is the single source of truth.

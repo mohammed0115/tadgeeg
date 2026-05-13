@@ -142,5 +142,23 @@ def _subscription_resolver(reference_type: str, reference_id: str, organization)
 register_resolver(PaymentPurpose.SUBSCRIPTION.value, _subscription_resolver)
 
 
-# SERVICE_ORDER has no built-in resolver yet — strict-deny stays until
-# a service-order domain lands and registers one.
+# ── SERVICE_ORDER — intentionally unregistered (strict-deny) ────────────────
+#
+# There is no service-order domain in this codebase. Any payment request
+# with ``purpose="service_order"`` will fail at ``resolve_or_validate``
+# with ``PriceResolutionError`` because this branch never registered a
+# resolver. That refusal surfaces as ``PaymentValidationError`` →
+# HTTP 400 at the API.
+#
+# Operationally: if you see a 400 with "No server-side price resolver
+# registered for purpose='service_order'" in the logs, your frontend
+# is sending a purpose the backend doesn't yet support — NOT a quota
+# issue. Register a resolver here when the service-order domain lands.
+#
+# Example:
+#
+#     def _service_order_resolver(reference_type, reference_id, organization):
+#         from apps.service_orders.models import ServiceOrder
+#         order = ServiceOrder.objects.get(pk=reference_id, organization=organization)
+#         return Decimal(order.amount), order.currency
+#     register_resolver(PaymentPurpose.SERVICE_ORDER.value, _service_order_resolver)

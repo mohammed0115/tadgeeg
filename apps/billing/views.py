@@ -105,8 +105,8 @@ def _initiate_payment(request, subscription, plan):
         return None, str(exc)
 
     # Link payment → subscription so future webhook receivers can find it.
-    if subscription.payment_transaction != txn.id:
-        subscription.payment_transaction = txn.id
+    if subscription.payment_transaction_id != txn.id:
+        subscription.payment_transaction = txn
         subscription.save(update_fields=["payment_transaction", "updated_at"])
 
     return txn, None
@@ -224,12 +224,11 @@ class SelectPlanView(APIView):
                 return Response({"detail": str(exc)}, status=drf_status.HTTP_400_BAD_REQUEST)
 
         # Already have a fresh checkout URL? Return it without re-charging.
-        if sub.payment_transaction:
-            from apps.payments.models import PaymentTransaction
-            existing_txn = PaymentTransaction.objects.filter(
-                pk=sub.payment_transaction, organization=organization,
-            ).first()
-            if existing_txn and existing_txn.checkout_url and not existing_txn.is_terminal:
+        # payment_transaction is now a real FK (Stage-9 D-2); reuse the
+        # linked instance directly when present.
+        existing_txn = sub.payment_transaction if sub.payment_transaction_id else None
+        if existing_txn is not None and existing_txn.organization_id == organization.id:
+            if existing_txn.checkout_url and not existing_txn.is_terminal:
                 return Response({
                     "subscription": SubscriptionSerializer(sub).data,
                     "next": existing_txn.checkout_url,

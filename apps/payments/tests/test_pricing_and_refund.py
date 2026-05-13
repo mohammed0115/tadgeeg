@@ -19,7 +19,6 @@ from apps.payments.gateways.base import GatewayError, GatewayResponse
 from apps.payments.models import (
     FailedWebhookEvent,
     PaymentLog,
-    PaymentProviderConfig,
     PaymentTransaction,
 )
 from apps.payments.services.payment_service import (
@@ -110,40 +109,39 @@ class PriceAuthorityTests(TestCase):
 
 
 # ─── #1 — Encryption at rest ────────────────────────────────────────────────
-class EncryptedSecretKeyTests(TestCase):
-    def test_secret_key_is_encrypted_on_disk_but_decrypts_through_orm(self):
-        org = make_org()
-        plaintext = "sk_test_super_secret"
-        cfg = PaymentProviderConfig.objects.create(
-            organization=org, provider="moyasar", is_active=True,
-            secret_key=plaintext,
-        )
+class EncryptedTextFieldUnitTests(TestCase):
+    """The concrete user of EncryptedTextField (PaymentProviderConfig)
+    was removed in QA-cleanup M-3, but the field itself stays — to be
+    re-used when per-tenant overrides land. These tests exercise the
+    field's encrypt/decrypt + idempotency contracts directly so
+    regressions get caught even with no model wired in."""
 
-        # ORM round-trip returns plaintext.
-        cfg.refresh_from_db()
-        self.assertEqual(cfg.secret_key, plaintext)
+    def _field(self):
+        from apps.payments.encryption import EncryptedTextField
+        return EncryptedTextField()
 
-        # Raw column value is a Fernet token, NOT the plaintext. Bypass
-        # the field's from_db_value() by going through the connection
-        # cursor directly. SQLite stores UUID columns as hyphen-less
-        # 32-char strings; Postgres stores them natively.
-        from django.db import connection
-        from django.db.backends.utils import CursorWrapper
-        with connection.cursor() as cur:
-            cur.execute("SELECT secret_key FROM payments_paymentproviderconfig")
-            rows = cur.fetchall()
-        self.assertTrue(rows, "expected at least one PaymentProviderConfig row")
-        stored = rows[0][0]
-        self.assertNotEqual(stored, plaintext)
-        self.assertTrue(stored.startswith("gAAAA"), f"Expected Fernet token, got {stored[:20]!r}")
+    def test_plaintext_round_trips_through_prep_and_decrypt(self):
+        field = self._field()
+        plain = "sk_test_super_secret"
+        token = field.get_prep_value(plain)
+        self.assertTrue(token.startswith("gAAAA"), f"expected Fernet token, got {token[:20]!r}")
+        self.assertNotEqual(token, plain)
+        self.assertEqual(field._decrypt(token), plain)
 
-    def test_empty_string_round_trips_cleanly(self):
-        org = make_org()
-        cfg = PaymentProviderConfig.objects.create(
-            organization=org, provider="tap", secret_key="",
-        )
-        cfg.refresh_from_db()
-        self.assertEqual(cfg.secret_key, "")
+    def test_empty_values_pass_through(self):
+        field = self._field()
+        self.assertEqual(field.get_prep_value(""),   "")
+        self.assertEqual(field.get_prep_value(None), None)
+        self.assertEqual(field._decrypt(""),   "")
+        self.assertEqual(field._decrypt(None), None)
+
+    def test_save_is_idempotent_for_already_encrypted_input(self):
+        field = self._field()
+        token_once  = field.get_prep_value("hello")
+        # Storing the same token again must not double-encrypt.
+        token_twice = field.get_prep_value(token_once)
+        self.assertEqual(token_once, token_twice)
+        self.assertEqual(field._decrypt(token_twice), "hello")
 
 
 # ─── #6 — Refund endpoint ───────────────────────────────────────────────────

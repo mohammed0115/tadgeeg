@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Tuple
 
+from django.conf import settings
 from django.core.exceptions import ImproperlyConfigured
 
 from apps.payments.choices import PaymentStatus
@@ -49,6 +50,18 @@ def process_webhook(provider: str, request) -> Tuple[str, int]:
     FailedWebhookEvent dead-letter queue so an operator can replay it
     after fixing the underlying issue.
     """
+    # Strict-mode: refuse webhooks for any provider other than the currently
+    # configured one. Allows operators to switch providers safely without
+    # leaving the URL surface open to stale signing keys.
+    if getattr(settings, "PAYMENT_STRICT_WEBHOOK_PROVIDER", True):
+        active = (getattr(settings, "PAYMENT_PROVIDER", "") or "").strip().lower()
+        if active and provider != active:
+            logger.warning(
+                "Webhook %s rejected — strict-mode requires provider==%s",
+                provider, active,
+            )
+            return WebhookResult.IGNORED, 404
+
     try:
         gateway = get_payment_gateway(provider)
     except ImproperlyConfigured as exc:

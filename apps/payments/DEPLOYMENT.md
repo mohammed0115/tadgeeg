@@ -17,6 +17,21 @@ For Moyasar/Tap, the value in the env MUST match the value displayed
 in the provider's dashboard exactly. A mismatch silently routes every
 event into `FailedWebhookEvent` with `reason=unverified`.
 
+### Strict provider mode
+
+`PAYMENT_STRICT_WEBHOOK_PROVIDER=true` (default) rejects webhooks
+addressed to any provider other than `PAYMENT_PROVIDER` with HTTP 404.
+This is the right default in steady state: stale signing keys on
+unused provider URLs are an attack surface.
+
+During a provider switch:
+1. Keep the OLD provider URL active by setting
+   `PAYMENT_STRICT_WEBHOOK_PROVIDER=false` (loose mode).
+2. Flip `PAYMENT_PROVIDER` to the NEW provider.
+3. Wait for all in-flight OLD-provider transactions to settle (use
+   the `payments.reconcile_stale_payments` beat task to drain).
+4. Flip `PAYMENT_STRICT_WEBHOOK_PROVIDER=true` once drained.
+
 Verify after deploy:
 
 ```bash

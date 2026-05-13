@@ -597,8 +597,20 @@ ADMIN_IP_ALLOWLIST = [
 # ─── Payments ────────────────────────────────────────────────────────────────
 # All keys are read from the environment. The active provider is
 # locked by ``PAYMENT_PROVIDER`` — callers cannot override it per request.
-PAYMENT_PROVIDER = os.environ.get("PAYMENT_PROVIDER", "").strip().lower()
-PAYMENT_MODE     = os.environ.get("PAYMENT_MODE", "test").strip().lower()
+# Default is moyasar; ``apps.payments.gateways.factory.validate_configured_provider``
+# (called from AppConfig.ready) refuses to boot if the value isn't one of
+# SUPPORTED_PAYMENT_PROVIDERS.
+PAYMENT_PROVIDER             = os.environ.get("PAYMENT_PROVIDER", "moyasar").strip().lower()
+PAYMENT_MODE                 = os.environ.get("PAYMENT_MODE", "test").strip().lower()
+SUPPORTED_PAYMENT_PROVIDERS  = ["moyasar", "tap", "telr"]
+
+# Webhook source-of-truth. When True, webhook URLs for any provider OTHER
+# than PAYMENT_PROVIDER return 404 — recommended in steady-state. Flip to
+# False during a provider switch to keep accepting in-flight settlement
+# from the old provider for already-created transactions.
+PAYMENT_STRICT_WEBHOOK_PROVIDER = (
+    os.environ.get("PAYMENT_STRICT_WEBHOOK_PROVIDER", "true").lower() != "false"
+)
 
 # Symmetric encryption key for sensitive credentials at rest
 # (PaymentProviderConfig.secret_key etc). Generate with:

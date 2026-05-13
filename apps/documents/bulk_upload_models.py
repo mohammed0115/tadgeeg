@@ -47,6 +47,12 @@ class BulkUploadJob(models.Model):
         JSON   = "json",   "JSON array"
         MIXED  = "mixed",  "Multiple kinds inside a ZIP"
 
+    class QuotaStatus(models.TextChoices):
+        NOT_CHECKED       = "not_checked",       "Not checked"
+        ALLOWED           = "allowed",           "Allowed"
+        PARTIALLY_ALLOWED = "partially_allowed", "Partially allowed"
+        QUOTA_EXCEEDED    = "quota_exceeded",    "Quota exceeded"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(
         Organization, on_delete=models.CASCADE, related_name="bulk_upload_jobs",
@@ -73,6 +79,19 @@ class BulkUploadJob(models.Model):
     completed_items = models.PositiveIntegerField(default=0)
     failed_items    = models.PositiveIntegerField(default=0)
     skipped_items   = models.PositiveIntegerField(default=0)
+
+    # ─── Billing / quota pre-check (Stage 6) ───────────────────────────────
+    # Set by apps.billing.bulk_quota.evaluate_bulk_quota when the job is
+    # submitted. allowed_items is the number we'll actually attempt to
+    # process; blocked_items is the overflow.
+    allowed_items   = models.PositiveIntegerField(default=0)
+    blocked_items   = models.PositiveIntegerField(default=0)
+    quota_required  = models.PositiveIntegerField(default=0)
+    quota_available = models.PositiveIntegerField(default=0)
+    quota_status    = models.CharField(
+        max_length=20, choices=QuotaStatus.choices,
+        default=QuotaStatus.NOT_CHECKED,
+    )
 
     # Aggregate task identifiers — typically Celery task_ids. Useful for
     # status polling and for revoke-in-flight on cancel.

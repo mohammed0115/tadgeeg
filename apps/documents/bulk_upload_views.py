@@ -67,6 +67,9 @@ class BulkUploadJobSerializer(serializers.ModelSerializer):
             "completed_items", "failed_items", "skipped_items",
             "progress_pct", "summary", "task_ids", "created_at",
             "updated_at", "started_at", "finished_at",
+            # Stage 6 billing/quota fields
+            "allowed_items", "blocked_items",
+            "quota_required", "quota_available", "quota_status",
         ]
         read_only_fields = fields
 
@@ -86,6 +89,17 @@ _SOURCE_FORMAT_MAP = {
 def _detect_format(filename: str) -> str:
     ext = os.path.splitext(filename or "")[1].lower()
     return _SOURCE_FORMAT_MAP.get(ext, BulkUploadJob.SourceFormat.MIXED)
+
+
+_TRUE_VALUES = frozenset({"1", "true", "yes", "on", "True"})
+
+
+def _coerce_bool(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip() in _TRUE_VALUES
 
 
 def _enqueue_processing(job: BulkUploadJob, upload_file) -> Optional[str]:
@@ -150,8 +164,39 @@ class BulkUploadJobListCreateView(APIView):
             }, status=413)
 
         doc_type = (request.data.get("document_type") or "").strip()
+        accept_partial = _coerce_bool(request.data.get("accept_partial"))
 
-        # Persist source bytes under MEDIA_ROOT so the worker can read it.
+        # Determine the format BEFORE saving — we need it to count items.
+        safe_name_for_format = up.name or "bulk_upload.bin"
+        source_format = _detect_format(safe_name_for_format)
+
+        # Read bytes once, into memory. We've already capped file size
+        # at MAX_UPLOAD_SIZE_MB (50 by default) so this is bounded.
+        file_bytes = up.read()
+        up.seek(0)  # rewind for the storage save below
+
+        # ── Stage 6: pre-flight quota check ─────────────────────────────
+        from apps.billing.bulk_quota import count_items, evaluate_bulk_quota
+        total_items = count_items(file_bytes, source_format, safe_name_for_format)
+        decision = evaluate_bulk_quota(
+            organization=request.user.organization,
+            total_items=total_items,
+            accept_partial=accept_partial,
+        )
+
+        if not decision.accepted:
+            return Response({
+                "success":          False,
+                "code":             decision.code,
+                "message":          decision.message,
+                "total_items":      decision.total_items,
+                "quota_required":   decision.quota_required,
+                "quota_available":  decision.quota_available,
+                "quota_status":     decision.quota_status,
+                "upgrade_required": True,
+            }, status=status.HTTP_402_PAYMENT_REQUIRED)
+
+        # ── Persist source bytes for the worker ────────────────────────
         from django.core.files.storage import default_storage
         from django.utils.text import get_valid_filename
         safe_name = get_valid_filename(up.name or "bulk_upload.bin")
@@ -164,10 +209,17 @@ class BulkUploadJobListCreateView(APIView):
             created_by=request.user,
             document_type=doc_type,
             source_filename=safe_name,
-            source_format=_detect_format(safe_name),
+            source_format=source_format,
             source_file_size=up.size,
             status=BulkUploadJob.Status.PENDING,
             summary={"stored_path": stored_path},
+            # Quota snapshot from the pre-check
+            total_items=decision.total_items,
+            allowed_items=decision.allowed_items,
+            blocked_items=decision.blocked_items,
+            quota_required=decision.quota_required,
+            quota_available=decision.quota_available,
+            quota_status=decision.quota_status,
         )
 
         task_id = _enqueue_processing(job, up)

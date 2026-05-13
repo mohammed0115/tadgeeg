@@ -38,14 +38,16 @@ class PriceAuthorityTests(TestCase):
         self.user = make_user(organization=self.org)
 
     @mock.patch("apps.payments.gateways.moyasar.MoyasarGateway.create_payment")
-    def test_subscription_with_no_resolver_is_refused(self, mock_create):
-        """No resolver is registered for subscription in this codebase
-        (no SaaS billing domain yet) — strict-deny."""
+    def test_subscription_with_unresolvable_reference_is_refused(self, mock_create):
+        """Stage 4 registered a resolver for purpose=subscription. The
+        resolver requires a valid OrganizationSubscription UUID; anything
+        else (junk string, wrong tenant, deleted row) must surface as a
+        400-class PaymentValidationError BEFORE the gateway is called."""
         with self.assertRaises(PaymentValidationError):
             PaymentService().create_transaction(
                 organization=self.org, user=self.user,
                 amount=Decimal("10.00"), purpose="subscription",
-                reference_id="some-plan-id",
+                reference_id="some-plan-id",  # not a valid UUID
             )
         mock_create.assert_not_called()
 

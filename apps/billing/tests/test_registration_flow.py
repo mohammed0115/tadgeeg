@@ -157,16 +157,32 @@ class SelectPlanFreeTrialTests(TestCase):
         self.assertEqual(r.json()["code"], "free_trial_already_used")
 
     def test_selecting_paid_plan_creates_pending_payment_subscription(self):
-        self.client.force_login(self.user)
-        r = self.client.post(
-            reverse("billing:select-plan"),
-            data={"plan_code": "starter"}, format="json",
-        )
+        """Stage 4: select-plan creates the subscription AND fires
+        PaymentService.create_transaction; ``next`` is now the gateway's
+        real checkout_url."""
+        from unittest import mock
+        from apps.payments.choices import PaymentStatus
+        from apps.payments.gateways.base import GatewayResponse
+
+        with mock.patch(
+            "apps.payments.gateways.moyasar.MoyasarGateway.create_payment",
+            return_value=GatewayResponse(
+                provider="moyasar", provider_payment_id="pay_test_xx",
+                provider_reference="", checkout_url="https://checkout.moyasar.test/xx",
+                status=PaymentStatus.REDIRECT_REQUIRED, raw_response={},
+            ),
+        ):
+            self.client.force_login(self.user)
+            r = self.client.post(
+                reverse("billing:select-plan"),
+                data={"plan_code": "starter"}, format="json",
+            )
         self.assertEqual(r.status_code, 201, r.content)
         sub = OrganizationSubscription.objects.get(organization=self.org)
         self.assertEqual(sub.status, SubscriptionStatus.PENDING_PAYMENT)
-        # Stage 4 will replace this URL with the real checkout_url.
-        self.assertTrue(r.json()["next"].startswith("/billing/checkout/"))
+        self.assertEqual(r.json()["next"], "https://checkout.moyasar.test/xx")
+        # subscription must be linked to the new payment_transaction
+        self.assertIsNotNone(sub.payment_transaction)
 
 
 class ExpiredSubscriptionBlocksAccessTests(TestCase):

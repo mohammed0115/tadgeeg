@@ -142,6 +142,64 @@ class SubscriptionService:
         subscription.save(update_fields=["status", "updated_at"])
         return subscription
 
+    # ---- payment-driven activation ----
+
+    def activate_after_payment(self, payment_transaction):
+        """Activate the subscription linked to a PAID payment transaction.
+
+        Validates the payment is for a subscription (purpose +
+        reference_type + paid status) and delegates to
+        ``activate_subscription`` which is idempotent — so a duplicate
+        webhook delivery cannot activate twice or extend the period.
+
+        Returns the activated subscription, or None if the payment was
+        not for a subscription (so the caller doesn't have to filter)."""
+        from apps.payments.choices import PaymentStatus
+
+        if payment_transaction.purpose != "subscription":
+            return None
+        if payment_transaction.reference_type != "organization_subscription":
+            return None
+        if payment_transaction.status != PaymentStatus.PAID:
+            raise SubscriptionError(
+                f"Cannot activate from non-paid payment "
+                f"(status={payment_transaction.status!r})"
+            )
+
+        try:
+            sub = OrganizationSubscription.objects.get(
+                pk=payment_transaction.reference_id,
+                organization=payment_transaction.organization,
+            )
+        except (OrganizationSubscription.DoesNotExist, ValueError) as exc:
+            raise SubscriptionError(
+                f"Subscription {payment_transaction.reference_id} not found"
+            ) from exc
+
+        # Stamp the linkage from sub → payment for forensic queries.
+        if sub.payment_transaction != payment_transaction.id:
+            sub.payment_transaction = payment_transaction.id
+            sub.save(update_fields=["payment_transaction", "updated_at"])
+
+        return self.activate_subscription(sub)
+
+    def mark_payment_failed_from_transaction(self, payment_transaction):
+        """Mirror for the failure path. Returns the subscription so the
+        caller can surface the error to the user. None if the payment is
+        not for a subscription."""
+        if payment_transaction.purpose != "subscription":
+            return None
+        if payment_transaction.reference_type != "organization_subscription":
+            return None
+        try:
+            sub = OrganizationSubscription.objects.get(
+                pk=payment_transaction.reference_id,
+                organization=payment_transaction.organization,
+            )
+        except (OrganizationSubscription.DoesNotExist, ValueError):
+            return None
+        return self.mark_payment_failed(sub)
+
     # ---- lifecycle batch jobs ----
 
     def expire_old_subscriptions(self) -> int:

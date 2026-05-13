@@ -127,6 +127,19 @@ class PaymentService:
                 payload=metadata or {},
             )
 
+        # Substitute ``{transaction_id}`` in the redirect URLs now that
+        # we have the persisted id. Callers can build URLs like
+        #   "/payments/callback/moyasar/?transaction_id={transaction_id}"
+        # without needing to pre-allocate UUIDs.
+        url_dirty = False
+        for attr in ("success_url", "cancel_url", "failure_url"):
+            val = getattr(txn, attr, "") or ""
+            if "{transaction_id}" in val:
+                setattr(txn, attr, val.format(transaction_id=str(txn.id)))
+                url_dirty = True
+        if url_dirty:
+            txn.save(update_fields=["success_url", "cancel_url", "failure_url", "updated_at"])
+
         # Gateway call happens OUTSIDE the atomic block — we want the
         # transaction row to survive even if the provider call fails so
         # there is something to retry against.
@@ -227,6 +240,17 @@ class PaymentService:
             )
             txn.status        = locked.status
             txn.failed_reason = locked.failed_reason
+
+        # Fan out the failure to whoever owns the referenced row
+        # (subscription, invoice, etc).
+        try:
+            from apps.payments.signals import payment_failed
+            payment_failed.send(
+                sender=PaymentTransaction, transaction=txn,
+                reason=reason or "", payload=payload or {},
+            )
+        except Exception:  # pragma: no cover — never undo state on receiver error
+            logger.exception("payment_failed receivers raised for txn=%s", txn.pk)
         return True
 
     def mark_canceled(self, txn: PaymentTransaction, *, payload: Optional[dict] = None) -> bool:

@@ -16,13 +16,17 @@ integration pending" or queue the redirect.
 """
 from __future__ import annotations
 
+from datetime import timedelta
+
+from django.conf import settings
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from rest_framework import status as drf_status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.billing.choices import PlanCode
+from apps.billing.choices import PlanCode, SubscriptionStatus
 from apps.billing.models import OrganizationSubscription
 from apps.billing.serializers import (
     PlanSerializer,
@@ -39,6 +43,67 @@ from apps.billing.services.subscription_service import (
     SubscriptionError,
     SubscriptionService,
 )
+
+
+# Within this window, repeatedly POSTing /select-plan/ with the same
+# plan returns the existing pending subscription + checkout_url rather
+# than creating a new payment. Stops accidental double-charging when a
+# user double-clicks the button.
+_PENDING_REUSE_WINDOW = timedelta(minutes=15)
+
+
+def _client_ip(request):
+    fwd = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if fwd:
+        return fwd.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR")
+
+
+def _initiate_payment(request, subscription, plan):
+    """Create the PaymentTransaction for a pending subscription, link
+    them, and return the gateway's checkout URL.
+
+    Kept here (not in SubscriptionService) so that apps/billing has a
+    soft dependency on apps/payments — billing is still importable
+    without payments installed; the import only fires when the user
+    actually hits the paid-plan path."""
+    from apps.payments.services.payment_service import (
+        PaymentService,
+        PaymentValidationError,
+    )
+    from apps.payments.gateways.base import GatewayError
+
+    callback_provider = (getattr(settings, "PAYMENT_PROVIDER", "") or "").strip().lower()
+    success_url_tmpl = request.build_absolute_uri(
+        f"/payments/callback/{callback_provider}/"
+    ) + "?transaction_id={transaction_id}"
+
+    try:
+        txn = PaymentService().create_transaction(
+            organization=subscription.organization,
+            user=request.user,
+            amount=plan.price,
+            currency=plan.currency,
+            purpose="subscription",
+            reference_type="organization_subscription",
+            reference_id=str(subscription.id),
+            success_url=success_url_tmpl,
+            cancel_url=request.build_absolute_uri("/billing/plans/"),
+            failure_url=request.build_absolute_uri("/billing/plans/?failed=1"),
+            idempotency_key=f"sub:{subscription.id}",
+            metadata={"plan_code": plan.code, "subscription_id": str(subscription.id)},
+            request_ip=_client_ip(request),
+            user_agent=request.META.get("HTTP_USER_AGENT", "")[:512],
+        )
+    except (PaymentValidationError, GatewayError) as exc:
+        return None, str(exc)
+
+    # Link payment → subscription so future webhook receivers can find it.
+    if subscription.payment_transaction != txn.id:
+        subscription.payment_transaction = txn.id
+        subscription.save(update_fields=["payment_transaction", "updated_at"])
+
+    return txn, None
 
 
 class PlansView(APIView):
@@ -113,20 +178,61 @@ class SelectPlanView(APIView):
                 "message": "Free trial activated.",
             }, status=drf_status.HTTP_201_CREATED)
 
-        # Paid plan path.
-        try:
-            sub = svc.create_pending_paid_subscription(organization, plan)
-        except SubscriptionError as exc:
-            return Response({"detail": str(exc)}, status=drf_status.HTTP_400_BAD_REQUEST)
+        # Paid plan path — Stage 4 wires this through PaymentService.
+        #
+        # Idempotency: if the same org already has a PENDING_PAYMENT
+        # subscription for the same plan, less than 15 minutes old, with
+        # a usable checkout_url, return that one. Stops accidental
+        # double-charging on retried form submissions.
+        sub = self._reuse_recent_pending(organization, plan)
+        if sub is None:
+            try:
+                sub = svc.create_pending_paid_subscription(organization, plan)
+            except SubscriptionError as exc:
+                return Response({"detail": str(exc)}, status=drf_status.HTTP_400_BAD_REQUEST)
 
-        # Stage 4 hooks this in. For now, surface a stable URL the
-        # frontend can use to kick off the payment flow once it lands.
+        # Already have a fresh checkout URL? Return it without re-charging.
+        if sub.payment_transaction:
+            from apps.payments.models import PaymentTransaction
+            existing_txn = PaymentTransaction.objects.filter(
+                pk=sub.payment_transaction, organization=organization,
+            ).first()
+            if existing_txn and existing_txn.checkout_url and not existing_txn.is_terminal:
+                return Response({
+                    "subscription": SubscriptionSerializer(sub).data,
+                    "next": existing_txn.checkout_url,
+                    "transaction_id": str(existing_txn.id),
+                    "message": "Existing pending payment reused.",
+                }, status=drf_status.HTTP_200_OK)
+
+        txn, error = _initiate_payment(request, sub, plan)
+        if txn is None:
+            return Response(
+                {"detail": error or "Could not initiate payment with the configured gateway."},
+                status=drf_status.HTTP_502_BAD_GATEWAY,
+            )
+
         return Response({
             "subscription": SubscriptionSerializer(sub).data,
-            "next": f"/billing/checkout/{sub.id}/",
-            "message": "Payment integration pending — pay via /api/v1/payments/create/ "
-                       "with purpose=subscription, reference_id=<subscription.id>.",
+            "next": txn.checkout_url,
+            "transaction_id": str(txn.id),
+            "message": "Payment initiated. Redirect the user to next URL.",
         }, status=drf_status.HTTP_201_CREATED)
+
+    @staticmethod
+    def _reuse_recent_pending(organization, plan):
+        cutoff = timezone.now() - _PENDING_REUSE_WINDOW
+        return (
+            OrganizationSubscription.objects
+            .filter(
+                organization=organization,
+                plan=plan,
+                status=SubscriptionStatus.PENDING_PAYMENT,
+                created_at__gte=cutoff,
+            )
+            .order_by("-created_at")
+            .first()
+        )
 
 
 class CurrentSubscriptionView(APIView):

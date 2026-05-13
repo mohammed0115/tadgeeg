@@ -101,9 +101,10 @@ def _invoice_resolver(reference_type: str, reference_id: str, organization) -> T
     resolver here instead and the public API stays unchanged.
     """
     from apps.invoices.models import Invoice
+    from django.core.exceptions import ValidationError
     try:
         inv = Invoice.objects.get(pk=reference_id, organization=organization)
-    except (Invoice.DoesNotExist, ValueError):
+    except (Invoice.DoesNotExist, ValueError, ValidationError):
         raise PriceResolutionError(
             f"Invoice {reference_id} not found in this organization."
         )
@@ -113,8 +114,33 @@ def _invoice_resolver(reference_type: str, reference_id: str, organization) -> T
 register_resolver(PaymentPurpose.INVOICE.value, _invoice_resolver)
 
 
-# SUBSCRIPTION and SERVICE_ORDER deliberately have no built-in resolver:
-# the SaaS billing domain doesn't exist in this codebase yet, so we
-# refuse those purposes rather than accept whatever amount the client
-# sends. When apps/subscriptions/ lands, register a resolver here that
-# looks up SubscriptionPlan.price by reference_id.
+def _subscription_resolver(reference_type: str, reference_id: str, organization) -> Tuple[Decimal, str]:
+    """Resolve an OrganizationSubscription's plan price.
+
+    Strict contract enforced by ``PaymentService.create_transaction``:
+      reference_type = "organization_subscription"
+      reference_id   = subscription.id
+    """
+    if reference_type and reference_type != "organization_subscription":
+        raise PriceResolutionError(
+            f"purpose=subscription expects reference_type='organization_subscription', "
+            f"got {reference_type!r}"
+        )
+    from apps.billing.models import OrganizationSubscription
+    from django.core.exceptions import ValidationError
+    try:
+        sub = OrganizationSubscription.objects.select_related("plan").get(
+            pk=reference_id, organization=organization,
+        )
+    except (OrganizationSubscription.DoesNotExist, ValueError, ValidationError):
+        raise PriceResolutionError(
+            f"Subscription {reference_id} not found in this organization."
+        )
+    return Decimal(sub.plan.price), (sub.plan.currency or "SAR").upper()
+
+
+register_resolver(PaymentPurpose.SUBSCRIPTION.value, _subscription_resolver)
+
+
+# SERVICE_ORDER has no built-in resolver yet — strict-deny stays until
+# a service-order domain lands and registers one.

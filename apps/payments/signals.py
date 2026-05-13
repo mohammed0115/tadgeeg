@@ -11,6 +11,10 @@ from django.dispatch import Signal
 # Args: transaction (PaymentTransaction), payload (dict)
 payment_paid = Signal()
 
+# Fired exactly once per PaymentTransaction when it transitions to FAILED.
+# Args: transaction (PaymentTransaction), reason (str), payload (dict)
+payment_failed = Signal()
+
 # Purpose-typed signals — downstream apps subscribe to the one they care
 # about and don't have to inspect transaction.purpose themselves.
 # Args: transaction (PaymentTransaction), payload (dict)

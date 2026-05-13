@@ -536,7 +536,7 @@ msgstr "انتهت صلاحية رمز التحقق. أعِد إرسال رمز 
 #: apps/billing/middleware.py:145 templates/billing/subscription.html:84
 #| msgid "Please choose one or more files first."
 msgid "Please choose a plan to continue."
-msgstr "يرجى اختيار ملف واحد أو أكثر أولاً."
+msgstr "يرجى اختيار باقة للمتابعة."
 
 #: apps/billing/quota_gate.py:67
 #| msgid "Manage your subscription plan and invoices"
@@ -550,7 +550,7 @@ msgstr "انتهت صلاحية رمز التحقق. أعِد إرسال رمز 
 
 #: apps/billing/quota_gate.py:71 templates/billing/subscription.html:168
 msgid "You have used all available invoices in your current plan."
-msgstr ""
+msgstr "لقد استهلكت جميع الفواتير المتاحة في باقتك الحالية."
 
 #: apps/billing/quota_gate.py:74
 msgid ""
@@ -3709,7 +3709,7 @@ msgstr "معرّف المستند"
 #: templates/audit/index.html:66 templates/billing/subscription.html:136
 #: templates/reports/partials/_progress_bar.html:91
 msgid "Started"
-msgstr "بدأ"
+msgstr "تاريخ البدء"
 
 #: templates/audit/index.html:68 templates/audit/rule_builder.html:74
 msgid "Rules"
@@ -5819,7 +5819,7 @@ msgstr ""
 #: templates/billing/subscription.html:150
 #| msgid "Upgrade Plan"
 msgid "Upgrade plan"
-msgstr "ترقية الخطة"
+msgstr "ترقية الباقة"
 
 #: templates/billing/bulk_upload.html:115
 msgid "Process the available count only"
@@ -5961,11 +5961,11 @@ msgstr "إلغاء الاشتراك"
 
 #: templates/billing/subscription.html:78
 msgid "Your current plan, usage, and remaining quota."
-msgstr ""
+msgstr "خطّتك الحالية وحجم الاستخدام والرصيد المتبقّي."
 
 #: templates/billing/subscription.html:83
 msgid "You don't have an active subscription yet."
-msgstr ""
+msgstr "ليس لديك اشتراك فعّال بعد."
 
 #: templates/billing/subscription.html:85 templates/dashboard/index.html:101
 #| msgid "Choose Files"
@@ -5976,66 +5976,66 @@ msgstr "اختر باقة"
 #: templates/platform_admin/organizations.html:65
 #: templates/vendor_dashboard/billing.html:137
 msgid "Plan"
-msgstr "الخطة"
+msgstr "الباقة"
 
 #: templates/billing/subscription.html:101
 #| msgid "Trial"
 msgid "Trialing"
-msgstr "تجربة"
+msgstr "في الفترة التجريبية"
 
 #: templates/billing/subscription.html:102
 #| msgid "Pending"
 msgid "Pending payment"
-msgstr "انتظار"
+msgstr "بانتظار الدفع"
 
 #: templates/billing/subscription.html:103
 #: templates/vendor_dashboard/billing.html:44
 msgid "Expired"
-msgstr "منتهي الصلاحية"
+msgstr "منتهية"
 
 #: templates/billing/subscription.html:104
 #| msgid "Payment Date"
 msgid "Payment failed"
-msgstr "تاريخ الدفع"
+msgstr "فشل الدفع"
 
 #: templates/billing/subscription.html:110
 #: templates/vendor_dashboard/dashboard.html:199
 msgid "Used"
-msgstr "مُستخدَم"
+msgstr "المُستخدَم"
 
 #: templates/billing/subscription.html:114
 #| msgid "Remaining Codes:"
 msgid "Remaining"
-msgstr "الرموز المتبقية:"
+msgstr "المتبقّي"
 
 #: templates/billing/subscription.html:121
 #| msgid "In progress"
 msgid "Usage progress"
-msgstr "قيد التنفيذ"
+msgstr "تقدّم الاستخدام"
 
 #: templates/billing/subscription.html:123
 #, python-format
 msgid "%(pct)s%% used"
-msgstr ""
+msgstr "%(pct)s%% مُستخدَم"
 
 #: templates/billing/subscription.html:130
 #, python-format
 msgid "Reserved (in flight): %(r)s"
-msgstr ""
+msgstr "محجوزة (قيد التنفيذ): %(r)s"
 
 #: templates/billing/subscription.html:131
 #, python-format
 msgid "%(u)s of %(l)s invoices audited"
-msgstr ""
+msgstr "%(u)s من أصل %(l)s فاتورة تم تدقيقها"
 
 #: templates/billing/subscription.html:140
 msgid "Ends"
-msgstr ""
+msgstr "تاريخ الانتهاء"
 
 #: templates/billing/subscription.html:144
 #| msgid "Auto-extract enabled"
 msgid "Auto-renew"
-msgstr "الاستخراج التلقائي مُفعَّل"
+msgstr "تجديد تلقائي"
 
 #: templates/billing/subscription.html:151 templates/zatca/dashboard.html:149
 msgid "Renew"
@@ -6043,7 +6043,7 @@ msgstr "تجديد"
 
 #: templates/billing/subscription.html:152
 msgid "View usage history"
-msgstr ""
+msgstr "عرض سجل الاستخدام"
 
 #: templates/billing/subscription.html:158 templates/dashboard/index.html:93
 msgid "Your subscription has expired."
@@ -6051,20 +6051,20 @@ msgstr "انتهى اشتراكك."
 
 #: templates/billing/subscription.html:159
 msgid "Please renew your plan to continue auditing invoices."
-msgstr ""
+msgstr "يرجى تجديد باقتك لمتابعة تدقيق الفواتير."
 
 #: templates/billing/subscription.html:163
 #| msgid "Payment Date"
 msgid "Payment failed."
-msgstr "تاريخ الدفع"
+msgstr "فشل الدفع."
 
 #: templates/billing/subscription.html:164
 msgid "Please try again — or choose a different plan."
-msgstr ""
+msgstr "يرجى المحاولة مرة أخرى أو اختيار باقة مختلفة."
 
 #: templates/billing/subscription.html:169
 msgid "Upgrade to continue auditing invoices this period."
-msgstr ""
+msgstr "قم بالترقية لمتابعة تدقيق الفواتير في هذه الفترة."
 
 #: templates/billing/usage.html:4 templates/billing/usage.html:47
 #: templates/layouts/dashboard_base.html:455

@@ -434,8 +434,10 @@
           </a>
         </div>
 
-        {# Billing group — gated to org admins / finance managers via
-           apps.billing.context_processors.billing.show_billing_nav. #}
+        {% comment %}
+        Billing group — gated to org admins / finance managers via
+        apps.billing.context_processors.billing.show_billing_nav.
+        {% endcomment %}
         {% if billing.show_billing_nav %}
         <div class="nav-group">
           <div class="nav-group-title">{% trans "Billing & Subscription" %}</div>

@@ -53,10 +53,11 @@
 </div>
 {% endif %}
 
-{# ── Subscription card (Stage 7 follow-up — Billing UI integration) ────
-   Shows the org's current plan, usage, and remaining quota. The
-   `billing` namespace is provided by apps.billing.context_processors.
-#}
+{% comment %}
+Subscription card (Stage 7 follow-up — Billing UI integration).
+Shows the org's current plan, usage, and remaining quota. The
+`billing` namespace is provided by apps.billing.context_processors.
+{% endcomment %}
 {% if not no_organization %}
   {% if billing.has_subscription %}
     <div style="background:white;border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:22px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;">

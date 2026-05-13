@@ -636,6 +636,26 @@ class InvoiceApproveView(APIView):
         if action not in ("approve", "reject"):
             return Response({"error": _("action must be 'approve' or 'reject'")}, status=400)
 
+        # ── Segregation of Duties (Four-Eyes Principle) ────────────────────────
+        # The user who uploaded an invoice must not approve it, and the
+        # user who reviewed it must not approve it. Reject covers both
+        # rules. Service raises SegregationOfDutiesError on violation;
+        # surface as JSON 403 with a clear code so the UI can render
+        # the localised message.
+        from apps.invoices.services.sod_service import (
+            SegregationOfDutiesError,
+            assert_can_approve,
+        )
+        try:
+            assert_can_approve(invoice, request.user)
+        except SegregationOfDutiesError as exc:
+            return Response(
+                {"error": exc.user_message, "code": "sod_violation",
+                 "conflicting_with": exc.conflicting_with,
+                 "action": exc.action},
+                status=403,
+            )
+
         # ── Approval Gate (Golden Rule) ────────────────────────────────────────
         if action == "approve":
             try:
@@ -841,6 +861,23 @@ class InvoiceManualReviewView(APIView):
         except Invoice.DoesNotExist:
             return Response({"error": _("Invoice not found.")}, status=404)
 
+        # Segregation of Duties: the uploader of an invoice cannot also
+        # review it. Service raises PermissionError-derived
+        # SegregationOfDutiesError → DRF maps that to 403 by default,
+        # but we surface the localised message in JSON for cleaner UX.
+        from apps.invoices.services.sod_service import (
+            SegregationOfDutiesError,
+            assert_can_review,
+        )
+        try:
+            assert_can_review(invoice, request.user)
+        except SegregationOfDutiesError as exc:
+            return Response(
+                {"error": exc.user_message, "code": "sod_violation",
+                 "conflicting_with": exc.conflicting_with},
+                status=403,
+            )
+
         corrections = request.data.get("corrections") or {}
         if not isinstance(corrections, dict):
             return Response({"error": _("corrections must be an object.")}, status=400)
@@ -880,6 +917,12 @@ class InvoiceManualReviewView(APIView):
             "reviewed_at": timezone.now().isoformat(),
         }
         invoice.extracted_data = extracted_data
+        # Stamp the SoD Checker role on the invoice. record_review writes
+        # the user + timestamp + a hash-chained audit event so the
+        # reviewer's identity is durable for the four-eyes audit.
+        from apps.invoices.services.sod_service import record_review
+        record_review(invoice, request.user, note=note or "Manual review corrections")
+
         update_fields = [field for field in applied] + ["extracted_data", "updated_at"]
         invoice.save(update_fields=list(dict.fromkeys(update_fields)))
 

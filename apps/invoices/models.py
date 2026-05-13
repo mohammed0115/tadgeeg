@@ -99,8 +99,14 @@ class Invoice(SoftDeleteModel):
     budget_code       = models.CharField(max_length=50,  blank=True)   # Rule 5.3
     department        = models.CharField(max_length=100, blank=True)
 
-    # ── Workflow ───────────────────────────────────────────────────────────────
+    # ── Workflow (with Segregation of Duties) ──────────────────────────────────
+    # SoD three-eyes pattern: uploaded_by (Maker) → reviewed_by (Checker) →
+    # approved_by (Approver). The triple must consist of distinct users on
+    # any fully-approved invoice — enforced at the service layer in
+    # apps.invoices.services.sod_service. See that module for the rationale.
     status            = models.CharField(max_length=15, choices=Status.choices, default=Status.PENDING)
+    reviewed_by       = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="reviewed_invoices")
+    reviewed_at       = models.DateTimeField(null=True, blank=True)
     approved_by       = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="approved_invoices")
     approved_at       = models.DateTimeField(null=True, blank=True)
     rejected_reason   = models.TextField(blank=True)

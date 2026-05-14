@@ -65,13 +65,28 @@ class AnomalyDetectionView(APIView):
         if max_amt := request.data.get("max_amount"):
             qs = qs.filter(amount__lte=max_amt)
 
-        # Prepare transaction dicts for AI (limit to 500)
-        tx_list = list(qs.values(
-            "id", "transaction_type", "amount", "currency", "vat_amount",
-            "category", "description", "vendor_name", "vendor_vat_number",
-            "reference_number", "invoice_number", "transaction_date",
-            "account_debit", "account_credit", "approved_by_id",
-        )[:500])
+        # Batch the population through the LLM in pages so we don't
+        # truncate at an arbitrary cap. The previous ``[:500]`` was
+        # blocking real audits — a SAR-50M month easily has 50K rows.
+        # Caller can override via ``page_size`` (default 500, max 5000).
+        page_size = max(50, min(int(request.data.get("page_size") or 500), 5000))
+        max_pages = int(request.data.get("max_pages") or 50)
+
+        from django.core.paginator import Paginator
+        paginator = Paginator(
+            qs.values(
+                "id", "transaction_type", "amount", "currency", "vat_amount",
+                "category", "description", "vendor_name", "vendor_vat_number",
+                "reference_number", "invoice_number", "transaction_date",
+                "account_debit", "account_credit", "approved_by_id",
+            ),
+            page_size,
+        )
+        tx_list = []
+        for page_num in paginator.page_range:
+            if page_num > max_pages:
+                break
+            tx_list.extend(paginator.page(page_num).object_list)
 
         for t in tx_list:
             t["id"] = str(t["id"])

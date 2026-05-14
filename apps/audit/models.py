@@ -7,6 +7,10 @@ from apps.authentication.models import User, Organization
 from apps.transactions.models import Transaction
 from core.mixins import SoftDeleteModel
 
+# Engagement-level models (ISA 300) — re-exported so Django's app loader
+# discovers them and they're importable as ``apps.audit.models.AuditEngagement``.
+from apps.audit.engagement_models import AuditEngagement  # noqa: F401
+
 
 class AuditSession(SoftDeleteModel):
     """Tracks the lifecycle and aggregate progress of a related audit upload."""
@@ -180,8 +184,16 @@ class AuditFinding(models.Model):
         return f"{self.rule_code} ({self.severity})"
 
 
-class AuditCase(SoftDeleteModel):
-    """An audit case created from an anomaly or manual finding."""
+class AuditCase(models.Model):
+    """An audit case created from an anomaly or manual finding.
+
+    ISA 230 §A21 mandates retention of engagement documentation for at
+    least 5 years. AuditCase is part of that documentation, so we
+    deliberately do NOT inherit ``SoftDeleteModel`` — an audit case is
+    immutable to deletion. The ``deleted_by`` field below is preserved
+    only for historical migration compatibility and is unused going
+    forward.
+    """
 
     class Priority(models.TextChoices):
         LOW = "low", "Low"
@@ -243,9 +255,20 @@ class AuditCase(SoftDeleteModel):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
-    # ── Soft Delete (GDPR Compliance) — is_deleted / deleted_at from SoftDeleteModel
-    deleted_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="deleted_audit_cases"
+    # ── ISA 230 retention ──────────────────────────────────────────────
+    # AuditCase no longer inherits SoftDeleteModel — these fields are
+    # kept null and unused so legacy migration rows stay queryable.
+    is_deleted   = models.BooleanField(default=False, editable=False)
+    deleted_at   = models.DateTimeField(null=True, blank=True, editable=False)
+    deleted_by   = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="deleted_audit_cases", editable=False,
+    )
+
+    # ── ISA 300 — link to parent engagement (optional for legacy cases). ──
+    engagement = models.ForeignKey(
+        "audit.AuditEngagement", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="cases",
     )
 
     class Meta:

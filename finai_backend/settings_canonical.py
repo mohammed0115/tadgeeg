@@ -154,6 +154,8 @@ LOCAL_APPS = [
     "apps.payments",
     "apps.billing",
     "apps.ai_safety",
+    "apps.erp",
+    "apps.activity_logs",
 ]
 
 # ─── Rule Engine Settings ──────────────────────────────────────────────────────

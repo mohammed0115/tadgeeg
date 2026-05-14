@@ -114,6 +114,26 @@ class Invoice(SoftDeleteModel):
     # ── AI Risk Assessment ─────────────────────────────────────────────────────
     risk_score        = models.FloatField(default=0.0)          # 0-100
     risk_level        = models.CharField(max_length=10, choices=Severity.choices, default=Severity.LOW)
+    # ISA 200 decomposition: Audit Risk = Inherent × Control × Detection.
+    # Each component is independently set so the auditor can produce a
+    # defensible audit plan and document its reasoning. The aggregate
+    # ``risk_score`` is computed from these three by the audit engine.
+    inherent_risk     = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="ISA 200: susceptibility to misstatement before controls (0-100).",
+    )
+    control_risk      = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="ISA 200: risk that controls fail to prevent/detect (0-100).",
+    )
+    detection_risk    = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="ISA 200: risk that the auditor's procedures miss it (0-100).",
+    )
+    residual_risk     = models.FloatField(
+        default=0.0,
+        help_text="COSO ERM: inherent_risk × (1 - control_effectiveness).",
+    )
     is_duplicate      = models.BooleanField(default=False)
     duplicate_of      = models.ForeignKey("self", on_delete=models.SET_NULL, null=True, blank=True, related_name="duplicates")
     ai_summary        = models.TextField(blank=True)
@@ -122,6 +142,14 @@ class Invoice(SoftDeleteModel):
     ai_recommendations = models.JSONField(default=list)
     ai_recommendations_ar = models.JSONField(default=list)
     ai_recommendations_en = models.JSONField(default=list)
+
+    # ── ERP linkage (apps.erp) ──────────────────────────────────────────────
+    # Set when this Invoice originated from an ERP ingestion run (not an
+    # uploaded file). external_source = provider code ("sap" | "oracle" | ...)
+    # external_id  = ERP's primary key for the row. (org, source, ext_id)
+    # is unique — re-ingest is idempotent via update_or_create.
+    external_source   = models.CharField(max_length=24, blank=True, default="", db_index=True)
+    external_id       = models.CharField(max_length=120, blank=True, default="", db_index=True)
 
     # ── Metadata ───────────────────────────────────────────────────────────────
     processing_error  = models.TextField(blank=True)
@@ -207,6 +235,14 @@ class Invoice(SoftDeleteModel):
             models.Index(fields=["organization", "status"]),
             models.Index(fields=["risk_level"]),
             models.Index(fields=["is_duplicate"]),
+            models.Index(fields=["organization", "external_source", "external_id"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "external_source", "external_id"],
+                condition=models.Q(external_id__gt=""),
+                name="invoice_unique_ext_per_org",
+            ),
         ]
 
     def save(self, *args, **kwargs):

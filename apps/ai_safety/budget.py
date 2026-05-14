@@ -52,12 +52,21 @@ def _spent(organization, *, scope: str) -> Decimal:
     from django.utils import timezone
     from django.db.models import Sum
     from apps.ai_safety.models import AICostEvent
-    now = timezone.now()
+    # USE_TZ=True with TIME_ZONE=Asia/Riyadh means Django's ``__date``
+    # lookup extracts the date in local time (Riyadh). To compare
+    # consistently we use ``localdate()`` for the filter value and
+    # ``localtime().year/month`` for monthly grouping — otherwise an
+    # event posted at 01:00 Riyadh (22:00 UTC the previous day) would
+    # disappear from "today's" spend.
+    today = timezone.localdate()
     qs = AICostEvent.objects.filter(organization=organization)
     if scope == "daily":
-        qs = qs.filter(created_at__date=now.date())
+        qs = qs.filter(created_at__date=today)
     elif scope == "monthly":
-        qs = qs.filter(created_at__year=now.year, created_at__month=now.month)
+        qs = qs.filter(
+            created_at__year=today.year,
+            created_at__month=today.month,
+        )
     agg = qs.aggregate(s=Sum("cost_usd"))["s"]
     return Decimal(str(agg or 0))
 

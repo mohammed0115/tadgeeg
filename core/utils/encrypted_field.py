@@ -52,13 +52,17 @@ def _get_fernet():
 
     key = getattr(settings, "MFA_FERNET_KEY", "") or ""
     if not key:
-        if not getattr(settings, "DEBUG", False):
+        is_dev_or_test = (
+            getattr(settings, "DEBUG", False)
+            or getattr(settings, "TESTING", False)
+        )
+        if not is_dev_or_test:
             raise RuntimeError(
                 "MFA_FERNET_KEY must be configured in production. Generate "
                 "via `python -c \"from cryptography.fernet import Fernet; "
                 "print(Fernet.generate_key().decode())\"` and set in env."
             )
-        # Dev fallback only.
+        # Dev / test fallback only.
         digest = hashlib.sha256(
             (settings.SECRET_KEY + ":mfa").encode("utf-8")
         ).digest()

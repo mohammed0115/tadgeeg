@@ -30,7 +30,7 @@ PLANS = [
     },
     {
         "code":           PlanCode.STARTER,
-        "name_ar":        "Starter",
+        "name_ar":        "الباقة الأساسية",
         "name_en":        "Starter",
         "description_ar": "١٠٠ فاتورة شهريًا.",
         "description_en": "100 invoices per month.",
@@ -43,7 +43,7 @@ PLANS = [
     },
     {
         "code":           PlanCode.BUSINESS,
-        "name_ar":        "Business",
+        "name_ar":        "باقة الأعمال",
         "name_en":        "Business",
         "description_ar": "٥٠٠ فاتورة شهريًا — الأكثر طلبًا.",
         "description_en": "500 invoices per month — most popular.",
@@ -56,7 +56,7 @@ PLANS = [
     },
     {
         "code":           PlanCode.PROFESSIONAL,
-        "name_ar":        "Professional",
+        "name_ar":        "الباقة الاحترافية",
         "name_en":        "Professional",
         "description_ar": "١٠٠٠ فاتورة شهريًا.",
         "description_en": "1000 invoices per month.",

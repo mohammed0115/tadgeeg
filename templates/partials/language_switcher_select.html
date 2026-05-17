@@ -21,8 +21,8 @@ The default `extra_classes` style matches the landing-page chrome
   <select name="language" id="lang-select"
           onchange="this.form.submit()"
           class="rounded-xl bg-transparent px-3 py-2 outline-none cursor-pointer focus:ring-2 focus:ring-slate-300">
-    <option value="ar" {% if CURRENT_LANGUAGE == 'ar' %}selected{% endif %}>{% trans "Arabic" %}</option>
-    <option value="en" {% if CURRENT_LANGUAGE == 'en' %}selected{% endif %}>{% trans "English" %}</option>
+    <option value="ar" {% if CURRENT_LANGUAGE == 'ar' %}selected{% endif %}>{% if CURRENT_LANGUAGE == 'ar' %}العربية{% else %}Arabic{% endif %}</option>
+    <option value="en" {% if CURRENT_LANGUAGE == 'en' %}selected{% endif %}>{% if CURRENT_LANGUAGE == 'ar' %}الإنجليزية{% else %}English{% endif %}</option>
   </select>
   {# Submit fallback for users without JS — always visible to assistive tech, hidden visually. #}
   <noscript>

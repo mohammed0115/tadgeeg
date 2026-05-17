@@ -709,17 +709,36 @@ def about(request):
 
 
 def contact(request):
-    return _render_marketing_page(
+    contact_info = {
+        "rep_name": "سامي سعود",
+        "rep_role": _("Business Lead"),
+        "phone_display": "+966 54 054 1719",
+        "phone_link": "tel:+966540541719",
+        "email": "contact@tadgeeg.com",
+        "email_link": "mailto:contact@tadgeeg.com",
+        "website_display": "www.tadgeeg.com",
+        "website_link": "https://www.tadgeeg.com",
+        "whatsapp_link": "https://wa.me/966540541719",
+        "cta_call_label": _("Call now"),
+        "cta_whatsapp_label": _("Message on WhatsApp"),
+        "cta_email_label": _("Email us"),
+    }
+    return render(
         request,
-        page_key="contact",
-        title=_("Talk to the %(product)s team") % {"product": django_settings.PRODUCT_NAME},
-        eyebrow=_("Contact"),
-        description=_("If you need a tailored demo, enterprise onboarding, or technical guidance, our team can arrange an introductory session and rollout plan."),
-        bullets=[
-            _("Tailored responses for finance and compliance teams."),
-            _("Support for pilot and enterprise launches."),
-            _("Technical assistance and onboarding guidance."),
-        ],
+        "landing/page.html",
+        _public_ctx(
+            request,
+            page_key="contact",
+            page_title=_("Talk to the %(product)s team") % {"product": django_settings.PRODUCT_NAME},
+            page_eyebrow=_("Contact"),
+            page_description=_("If you need a tailored demo, enterprise onboarding, or technical guidance, our team can arrange an introductory session and rollout plan."),
+            page_bullets=[
+                _("Tailored responses for finance and compliance teams."),
+                _("Support for pilot and enterprise launches."),
+                _("Technical assistance and onboarding guidance."),
+            ],
+            contact_info=contact_info,
+        ),
     )
 
 
@@ -1556,6 +1575,13 @@ def invoice_pdf(request, pk):
     _SEV_WEIGHT = {"critical": 25, "high": 15, "medium": 8, "low": 3, "info": 1}
     _SEV_AR = {"critical": "حرج", "high": "مرتفع", "medium": "متوسط",
                "low": "منخفض", "info": "للعلم"}
+    _SEV_EN = {"critical": "Critical", "high": "High", "medium": "Medium",
+               "low": "Low", "info": "Info"}
+    _SEV_LABELS = _SEV_AR if lang == "ar" else _SEV_EN
+    try:
+        from core.services.invoice_validator import rule_description as _rule_desc
+    except Exception:
+        _rule_desc = lambda code: code  # noqa: E731
     failed_rules_table: list[dict] = []
     v = getattr(invoice, "validation", None)
     details = (getattr(v, "validation_details", None) or {}) if v else {}
@@ -1563,15 +1589,15 @@ def invoice_pdf(request, pk):
     for code in failed_codes:
         d = details.get(code) if isinstance(details, dict) else None
         severity = ((d or {}).get("severity") or "medium").lower()
-        # Prefer the Arabic-localized human description over the raw message
-        # when both exist; fall back to the rule code when neither does.
-        text = (d or {}).get("description") or (d or {}).get("message") or code
+        # Translate the rule description to the active language; fall back to
+        # the stored Arabic message, then to the rule code.
+        text = _rule_desc(code) or (d or {}).get("message") or code
         weight = _SEV_WEIGHT.get(severity, _SEV_WEIGHT["medium"])
         failed_rules_table.append({
             "code":           code,
             "text":           text,
             "severity":       severity,
-            "severity_label": _SEV_AR.get(severity, severity),
+            "severity_label": _SEV_LABELS.get(severity, severity),
             "score":          weight,
         })
     # Sort: critical first, then high, medium, low. Stable on rule_code.

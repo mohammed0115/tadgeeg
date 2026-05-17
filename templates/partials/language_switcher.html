@@ -7,12 +7,12 @@
           name="language"
           value="ar"
           class="rounded-xl px-3 py-2 transition {% if CURRENT_LANGUAGE == 'ar' %}bg-slate-950 text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
-    {% trans "Arabic" %}
+    {% if CURRENT_LANGUAGE == 'ar' %}العربية{% else %}Arabic{% endif %}
   </button>
   <button type="submit"
           name="language"
           value="en"
           class="rounded-xl px-3 py-2 transition {% if CURRENT_LANGUAGE == 'en' %}bg-slate-950 text-white shadow-sm{% else %}text-slate-600 hover:bg-slate-100{% endif %}">
-    {% trans "English" %}
+    {% if CURRENT_LANGUAGE == 'ar' %}الإنجليزية{% else %}English{% endif %}
   </button>
 </form>

@@ -19,8 +19,20 @@ from __future__ import annotations
 import logging
 from types import SimpleNamespace
 
+from django.utils.translation import get_language
+
 
 logger = logging.getLogger("billing.context")
+
+
+def _plan_name(plan):
+    """Pick name_ar / name_en based on the current request language."""
+    if plan is None:
+        return ""
+    lang = (get_language() or "").lower()
+    if lang.startswith("ar"):
+        return plan.name_ar or plan.name_en or ""
+    return plan.name_en or plan.name_ar or ""
 
 
 _BILLING_ROLES = {
@@ -87,7 +99,7 @@ def billing(request):
         )
         return {"billing": SimpleNamespace(
             has_subscription=False,
-            plan_name=(last.plan.name_ar if last else ""),
+            plan_name=(_plan_name(last.plan) if last else ""),
             plan_code=(last.plan.code if last else ""),
             status=(last.status if last else "none"),
             invoice_limit=0,
@@ -109,7 +121,7 @@ def billing(request):
 
     return {"billing": SimpleNamespace(
         has_subscription=True,
-        plan_name=sub.plan.name_ar or sub.plan.name_en,
+        plan_name=_plan_name(sub.plan),
         plan_code=sub.plan.code,
         status=sub.status,
         invoice_limit=invoice_limit,

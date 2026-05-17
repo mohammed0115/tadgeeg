@@ -136,8 +136,8 @@
           {% with code=plan.code %}
           <article class="card {% if code == 'business' %}featured{% endif %} {% if plan.is_trial %}trial{% endif %}" data-plan="{{ code }}">
             {% if plan.is_trial %}<span class="badge-first">{% trans "First time only" %}</span>{% endif %}
-            <h3 class="plan-name">{{ plan.name_ar|default:plan.name_en }}</h3>
-            <p class="plan-desc">{{ plan.description_ar|default:plan.description_en|default:"" }}</p>
+            <h3 class="plan-name">{% if LANGUAGE_CODE == 'ar' %}{{ plan.name_ar|default:plan.name_en }}{% else %}{{ plan.name_en|default:plan.name_ar }}{% endif %}</h3>
+            <p class="plan-desc">{% if LANGUAGE_CODE == 'ar' %}{{ plan.description_ar|default:plan.description_en|default:"" }}{% else %}{{ plan.description_en|default:plan.description_ar|default:"" }}{% endif %}</p>
             <div class="price">
               {% if plan.is_free %}
                 <span class="free">{% trans "Free" %}</span>

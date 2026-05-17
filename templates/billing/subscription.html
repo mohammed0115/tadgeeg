@@ -1,5 +1,6 @@
 {% extends "billing/_shell.html" %}
 {% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
 
 {% block title %}{% trans "My subscription" %} — Tadgeeg{% endblock %}
 
@@ -90,7 +91,7 @@
     <div class="stat">
       <div class="label">{% trans "Plan" %}</div>
       <div class="value" style="font-size:20px;">
-        {{ subscription.plan.name_ar|default:subscription.plan.name_en }}
+        {% if LANGUAGE_CODE == 'ar' %}{{ subscription.plan.name_ar|default:subscription.plan.name_en }}{% else %}{{ subscription.plan.name_en|default:subscription.plan.name_ar }}{% endif %}
       </div>
     </div>
     <div class="stat">

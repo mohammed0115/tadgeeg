@@ -20,7 +20,11 @@ from typing import Optional
 logger = logging.getLogger("finai")
 
 # ─── Rule codes ──────────────────────────────────────────────────────────────
-RULES = {
+# Arabic and English descriptions are kept side-by-side so the API layer can
+# pick the right one at serialization time based on the current request
+# language. The DB still stores Arabic (legacy behavior) — translation happens
+# on read in invoices/serializers.py::InvoiceValidationResultSerializer.
+RULES_AR = {
     # Group 1 – Header
     "INV-001": "يجب أن تحتوي الفاتورة على رقم فاتورة",
     "INV-002": "يجب أن تحتوي الفاتورة على تاريخ",
@@ -63,7 +67,72 @@ RULES = {
     "DOC-004": "يجب أن تحتوي الفاتورة الإلكترونية المتوافقة مع هيئة الزكاة على رمز QR",
 }
 
-TOTAL_RULES = len(RULES)
+RULES_EN = {
+    # Group 1 – Header
+    "INV-001": "Invoice must contain an invoice number",
+    "INV-002": "Invoice must contain a date",
+    "INV-003": "Invoice must contain a vendor name",
+    "INV-004": "Invoice must contain the vendor's VAT number",
+    "INV-005": "Invoice must contain a total amount",
+    "INV-006": "Invoice must contain a currency",
+    "INV-007": "Total amount must be greater than zero",
+    "INV-008": "VAT cannot exist without a base amount (subtotal)",
+    # Group 2 – Duplicate
+    "DUP-001": "Invoice number already exists for this vendor",
+    "DUP-002": "Same vendor with the same invoice number is already recorded",
+    "DUP-003": "Same vendor, amount, and date are already recorded",
+    "DUP-004": "File content (digital fingerprint) was already uploaded",
+    "DUP-005": "Same invoice number appears in a different month",
+    # Group 3 – VAT
+    "VAT-001": "VAT rate must be 15% in Saudi Arabia",
+    "VAT-002": "VAT calculation must be correct (subtotal × rate = VAT)",
+    "VAT-003": "Subtotal + VAT must equal the total amount",
+    "VAT-004": "Vendor VAT number must be present",
+    "VAT-005": "A valid ZATCA QR code must be present",
+    # Group 4 – Anomaly
+    "ANO-001": "Invoice amount is unusually high vs. the vendor's history",
+    "ANO-002": "Vendor is new and has no prior transactions",
+    "ANO-003": "Large number of invoices from the same vendor on the same day",
+    "ANO-004": "Notable sudden price change vs. previous invoices",
+    "ANO-005": "High invoice concentration near the end of the fiscal year",
+    "ANO-006": "A single vendor accounts for more than 50% of total spend",
+    # Group 5 – Financial Controls
+    "CTL-001": "Invoice must be linked to a cost center",
+    "CTL-002": "Invoice must be linked to an accounting code",
+    "CTL-003": "Invoice amount must be within the department budget",
+    "CTL-004": "Invoice cannot be modified after approval",
+    "CTL-005": "An approver must be assigned to the invoice",
+    "CTL-006": "All changes must be recorded in the audit log",
+    # Group 6 – Document Quality
+    "DOC-001": "Document must be clear and legible",
+    "DOC-002": "Document must appear authentic (not forged)",
+    "DOC-003": "Document must not show signs of editing or tampering",
+    "DOC-004": "A ZATCA-compliant electronic invoice must contain a QR code",
+}
+
+# Backwards-compatible alias — existing code still imports RULES.
+RULES = RULES_AR
+
+TOTAL_RULES = len(RULES_AR)
+
+
+def rule_description(code: str, language: str = None) -> str:
+    """Return the description for a rule code in the given language.
+
+    ``language`` defaults to the active Django translation (Arabic if the
+    request is Arabic, English otherwise). Falls back to the other language
+    if the requested one is missing, then to the bare rule code.
+    """
+    if language is None:
+        try:
+            from django.utils.translation import get_language
+            language = get_language() or "en"
+        except Exception:
+            language = "en"
+    lang = (language or "").lower()
+    if lang.startswith("ar"):
+        return RULES_AR.get(code) or RULES_EN.get(code) or code
+    return RULES_EN.get(code) or RULES_AR.get(code) or code
 
 
 def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:

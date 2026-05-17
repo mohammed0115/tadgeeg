@@ -49,6 +49,31 @@ class InvoiceValidationResultSerializer(serializers.ModelSerializer):
         model = InvoiceValidationResult
         exclude = ["id", "invoice"]
 
+    def to_representation(self, instance):
+        """Translate per-rule descriptions to the active request language.
+
+        ``validation_details`` is stored as Arabic-only JSON at write time.
+        On read, we look each rule code up in the bilingual ``RULES_AR`` /
+        ``RULES_EN`` tables in ``core.services.invoice_validator`` and swap
+        the description so the UI matches the page language.
+        """
+        data = super().to_representation(instance)
+        details = data.get("validation_details") or {}
+        if not isinstance(details, dict) or not details:
+            return data
+        try:
+            from core.services.invoice_validator import rule_description
+        except Exception:
+            return data
+        translated = {}
+        for code, rule in details.items():
+            if isinstance(rule, dict):
+                rule = dict(rule)
+                rule["description"] = rule_description(code)
+            translated[code] = rule
+        data["validation_details"] = translated
+        return data
+
 
 class InvoiceBatchSerializer(serializers.ModelSerializer):
     uploaded_by_name = serializers.CharField(source="uploaded_by.full_name", read_only=True, default="")

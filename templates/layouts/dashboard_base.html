@@ -548,17 +548,31 @@ cookie + session so subsequent pages render in the new language.
             <input type="hidden" name="next" value="{{ request.path }}">
             <button type="submit" name="language" value="{% if LANGUAGE_CODE == 'ar' %}en{% else %}ar{% endif %}"
                     class="lang-toggle" title="{% trans 'Switch language' %}">
-              {% if LANGUAGE_CODE == 'ar' %}EN{% else %}عربي{% endif %}
+              {% if LANGUAGE_CODE == 'ar' %}الإنجليزية{% else %}Arabic{% endif %}
             </button>
           </form>
 
-          <div class="user-pill">
-            <div class="user-info">
-              <div class="user-name">{{ user.email|default:"user@tadgeeg.com" }}</div>
-              <div class="user-role">{% if user.is_staff %}{% trans "System Admin" %}{% else %}{% trans "User" %}{% endif %}</div>
-            </div>
-            <div class="user-avatar">{{ user.email|default:"U"|slice:":2"|upper }}</div>
-          </div>
+          {% if LANGUAGE_CODE == 'ar' %}
+            {% with display_name=user.organization.name_ar|default:user.organization.name|default:user.full_name|default:user.email %}
+              <div class="user-pill">
+                <div class="user-info">
+                  <div class="user-name">{{ display_name|default:"user@tadgeeg.com" }}</div>
+                  <div class="user-role">{% if user.is_staff %}{% trans "System Admin" %}{% else %}{% trans "User" %}{% endif %}</div>
+                </div>
+                <div class="user-avatar">{{ display_name|default:"U"|slice:":2"|upper }}</div>
+              </div>
+            {% endwith %}
+          {% else %}
+            {% with display_name=user.organization.name|default:user.organization.name_ar|default:user.full_name|default:user.email %}
+              <div class="user-pill">
+                <div class="user-info">
+                  <div class="user-name">{{ display_name|default:"user@tadgeeg.com" }}</div>
+                  <div class="user-role">{% if user.is_staff %}{% trans "System Admin" %}{% else %}{% trans "User" %}{% endif %}</div>
+                </div>
+                <div class="user-avatar">{{ display_name|default:"U"|slice:":2"|upper }}</div>
+              </div>
+            {% endwith %}
+          {% endif %}
         </div>
       </header>
 

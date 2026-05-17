@@ -19,8 +19,8 @@ tadgeeg.com          →  72.62.239.220
 www.tadgeeg.com      →  72.62.239.220
 dev.tadgeeg.com      →  72.62.239.220
 www.dev.tadgeeg.com  →  72.62.239.220
-test.tadgeeg.com     →  72.62.239.220
-www.test.tadgeeg.com →  72.62.239.220
+test.tadgeeg.com     →  69.62.115.97
+www.test.tadgeeg.com →  69.62.115.97
 ```
 
 > Wait 10–30 minutes for DNS to propagate. SSL will fail if DNS is not ready.

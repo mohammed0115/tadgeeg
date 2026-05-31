@@ -1163,16 +1163,12 @@ msgid "Call now"
 msgstr "اتصل الآن"
 
 #: apps/frontend/page_views.py:758
-#, fuzzy
-#| msgid "Message shown to auditor"
 msgid "Message on WhatsApp"
-msgstr "رسالة تظهر للمراجع"
+msgstr "راسلنا عبر واتساب"
 
 #: apps/frontend/page_views.py:759
-#, fuzzy
-#| msgid "Email"
 msgid "Email us"
-msgstr "البريد الإلكتروني"
+msgstr "راسلنا عبر البريد"
 
 #: apps/frontend/page_views.py:767
 #, python-format
@@ -10455,17 +10451,13 @@ msgstr "الأحكام والشروط"
 
 #: templates/landing/index.html:1368 templates/landing/index.html:1823
 #: templates/landing/page.html:828
-#, fuzzy
-#| msgid "Privacy"
 msgid "Privacy Policy"
-msgstr "الخصوصية"
+msgstr "سياسة الخصوصية"
 
 #: templates/landing/index.html:1369 templates/landing/index.html:1824
 #: templates/landing/page.html:829
-#, fuzzy
-#| msgid "Save Policy"
 msgid "Refund Policy"
-msgstr "حفظ السياسة"
+msgstr "سياسة الاسترجاع"
 
 #: templates/landing/index.html:1381
 msgid "The Future of Financial Auditing"
@@ -10702,8 +10694,6 @@ msgid "Privacy"
 msgstr "الخصوصية"
 
 #: templates/landing/page.html:699
-#, fuzzy
-#| msgid "Last Updated"
 msgid "Last updated"
 msgstr "آخر تحديث"
 

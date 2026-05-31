@@ -20,25 +20,25 @@ Used only by the landing pages (verified via grep) — safe to keep self-contain
   .lang-pill {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px;
+    gap: 1px;
+    padding: 1.5px;
     margin: 0;
     border: 1px solid var(--border, #e2e8f0);
-    border-radius: 12px;
+    border-radius: 7px;
     background: var(--bg-soft, #f8fafc);
     box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,51,102,0.05));
   }
   .lang-pill__btn {
     font-family: inherit;
-    font-size: 13px;
+    font-size: 10px;
     font-weight: 700;
     line-height: 1;
     color: var(--text-muted, #64748b);
     background: transparent;
     border: none;
-    border-radius: 9px;
-    padding: 8px 14px;
-    min-height: 38px;
+    border-radius: 5px;
+    padding: 3px 6px;
+    min-height: 20px;
     cursor: pointer;
     white-space: nowrap;
     display: inline-flex;
@@ -56,9 +56,9 @@ Used only by the landing pages (verified via grep) — safe to keep self-contain
     color: #fff;
     box-shadow: 0 2px 6px rgba(0, 51, 102, 0.25);
   }
-  /* Comfortable 44px touch targets on phones. */
+  /* Slightly larger tap target on phones (still compact). */
   @media (max-width: 768px) {
-    .lang-pill__btn { min-height: 44px; padding: 10px 14px; }
+    .lang-pill__btn { min-height: 26px; padding: 5px 8px; font-size: 11px; }
   }
 </style>
 <form method="post" action="/i18n/setlang/" class="lang-pill">

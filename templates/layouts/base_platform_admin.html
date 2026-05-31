@@ -11,7 +11,7 @@
 >
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{% block page_title %}{% trans "Platform Admin" %}{% endblock %} | {{ console_label|default:"Get Solution Admin Console" }}</title>
 
   <!-- Google Fonts: Cairo (Arabic) + Inter (English) -->
@@ -158,6 +158,19 @@
       @apply w-full max-w-2xl rounded-2xl bg-white shadow-2xl dark:bg-slate-900;
     }
   </style>
+  <style>
+    /* Native mobile-drawer polish (plain CSS so media queries + env() pass through). */
+    .app-drawer-nav { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+    @media (max-width: 1023px) {
+      .app-drawer {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+      }
+      .platform-nav-item { min-height: 44px; }
+    }
+  </style>
 </head>
 
 <body class="platform-shell" data-console-context="platform_admin">
@@ -194,8 +207,10 @@
 
   <div class="relative flex min-h-screen">
     <aside
-      class="fixed inset-y-0 right-0 z-40 flex max-w-[88vw] flex-col overflow-hidden border-l border-white/10 bg-slate-950 transition lg:static lg:max-w-none"
+      class="app-drawer fixed inset-y-0 right-0 z-40 flex max-w-[88vw] flex-col overflow-hidden border-l border-white/10 bg-slate-950 transition lg:static lg:max-w-none"
       :class="mobileNavOpen || isDesktop ? 'translate-x-0' : (isRtl ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0')"
+      @touchstart.passive="onDrawerTouchStart($event)"
+      @touchend.passive="onDrawerTouchEnd($event)"
       :style="sidebarOpen ? 'width:19rem' : 'width:5rem'"
     >
       <div class="flex min-h-[72px] items-center gap-3 border-b border-white/10 px-4">
@@ -209,13 +224,15 @@
         <button
           type="button"
           @click="mobileNavOpen = false"
-          class="mr-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-slate-300 lg:hidden"
+          aria-label="{% trans 'Close menu' %}"
+          class="mr-auto inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 text-slate-300 lg:hidden"
         >
-          <i data-lucide="x" class="h-4 w-4"></i>
+          <i data-lucide="x" class="h-5 w-5"></i>
         </button>
       </div>
 
-      <nav class="flex-1 overflow-y-auto px-2 py-4">
+      <nav class="app-drawer-nav flex-1 overflow-y-auto px-2 py-4"
+           @click="if (!isDesktop && $event.target.closest('a')) mobileNavOpen = false">
         {% include "layouts/partials/platform_sidebar.html" %}
       </nav>
 
@@ -261,10 +278,29 @@
           return document.documentElement.dir === "rtl";
         },
         init() {
+          // Lock background scroll while the mobile drawer is open (no iOS
+          // scroll-bleed); re-init icons after close.
+          this.$watch("mobileNavOpen", (v) => {
+            document.body.style.overflow = (v && !this.isDesktop) ? "hidden" : "";
+            if (!v) this.$nextTick(() => lucide.createIcons());
+          });
           window.addEventListener("resize", () => {
             this.isDesktop = window.innerWidth >= 1024;
+            if (this.isDesktop) { this.mobileNavOpen = false; document.body.style.overflow = ""; }
           });
           this.$nextTick(() => lucide.createIcons());
+        },
+        // Swipe-to-close (passive; never blocks vertical scroll). RTL drawer is
+        // on the right (swipe right → close), LTR on the left (swipe left).
+        onDrawerTouchStart(e) {
+          if (this.isDesktop || !this.mobileNavOpen) { this._sw = false; return; }
+          const t = e.changedTouches[0]; this._sx = t.clientX; this._sy = t.clientY; this._sw = true;
+        },
+        onDrawerTouchEnd(e) {
+          if (!this._sw) return; this._sw = false;
+          const t = e.changedTouches[0]; const dx = t.clientX - this._sx, dy = t.clientY - this._sy;
+          if (Math.abs(dx) < 60 || Math.abs(dx) <= Math.abs(dy)) return;
+          if (this.isRtl ? dx > 0 : dx < 0) this.mobileNavOpen = false;
         }
       };
     }

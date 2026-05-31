@@ -666,6 +666,41 @@ def _render_marketing_page(request, *, page_key, title, eyebrow, description, bu
     )
 
 
+def _render_legal_page(request, *, page_key, title, eyebrow, description, sections, updated=None):
+    """Render a long-form legal / informational page (terms, privacy, refund,
+    services) through the shared ``landing/page.html`` template.
+
+    ``sections`` is a list of dicts shaped like
+    ``{"heading": str, "body": str, "items": [str, ...]}`` (``body`` and
+    ``items`` are both optional). The template renders each section as a titled
+    prose block with an optional bullet list, while still honouring the existing
+    ``page_bullets`` / ``contact_info`` paths used by the other marketing pages.
+    """
+    return render(
+        request,
+        "landing/page.html",
+        _public_ctx(
+            request,
+            page_key=page_key,
+            page_title=title,
+            page_eyebrow=eyebrow,
+            page_description=description,
+            page_sections=sections,
+            page_updated=updated,
+        ),
+    )
+
+
+def _is_arabic(request) -> bool:
+    """Whether the active request language is Arabic.
+
+    Legal copy below is authored bilingually and selected at render time so the
+    full professional Arabic text is guaranteed to appear on the Arabic site
+    (the default) without depending on compiled ``.po``/``.mo`` catalogues for
+    these long, page-specific paragraphs."""
+    return (get_language() or "").lower().startswith("ar")
+
+
 def pricing(request):
     """Public pricing page — renders the four canonical plans LIVE from
     the Plan table so a price change in the DB shows up here without a
@@ -742,18 +777,713 @@ def contact(request):
     )
 
 
+def services(request):
+    """Public services page — a detailed catalogue of what the platform does."""
+    product = django_settings.PRODUCT_NAME
+    ar = _is_arabic(request)
+
+    if ar:
+        title = "خدمات منصة تدقيق"
+        eyebrow = "الخدمات"
+        description = (
+            "تُقدّم منصة «تدقيق» مجموعة متكاملة من خدمات التدقيق المالي الذكي "
+            "تساعد فرق المالية والمراجعة والامتثال على فحص المستندات المالية بدقة "
+            "وسرعة، وكشف المخاطر والأخطاء والاحتيال قبل اعتماد الصرف."
+        )
+        sections = [
+            {
+                "heading": "التدقيق الذكي للفواتير",
+                "body": (
+                    "نقوم بقراءة الفواتير تلقائياً واستخراج بياناتها، ثم تطبيق عشرات "
+                    "قواعد التدقيق عليها للكشف عن المشكلات قبل اعتماد الدفع."
+                ),
+                "items": [
+                    "كشف الفواتير المكرّرة والمدفوعة مسبقاً.",
+                    "التحقق من صحة احتساب ضريبة القيمة المضافة (15%) والإجماليات.",
+                    "رصد مؤشرات الاحتيال والتلاعب في المبالغ والتواريخ.",
+                    "التحقق من اكتمال البيانات الإلزامية ومطابقة متطلبات هيئة الزكاة والضريبة والجمارك (ZATCA).",
+                ],
+            },
+            {
+                "heading": "تدقيق أوامر الشراء",
+                "body": (
+                    "مطابقة أوامر الشراء مع الفواتير وإشعارات الاستلام لضمان أن ما تم "
+                    "التعاقد عليه هو ما تم استلامه وفوترته فعلياً."
+                ),
+                "items": [
+                    "مطابقة ثلاثية بين أمر الشراء والفاتورة وإشعار الاستلام.",
+                    "كشف الفروقات في الكميات والأسعار والشروط.",
+                    "متابعة تجاوزات الموازنة وحدود الصلاحيات.",
+                ],
+            },
+            {
+                "heading": "تدقيق المصروفات وكشف الشذوذ",
+                "body": (
+                    "تحليل تقارير المصروفات للتأكد من توافقها مع سياسات المنشأة "
+                    "والكشف عن الأنماط غير الاعتيادية."
+                ),
+                "items": [
+                    "التحقق من الالتزام بسياسات المصروفات وحدود الفئات.",
+                    "كشف المصروفات المكرّرة أو المبالغ فيها.",
+                    "تحليل الشذوذ الإحصائي لرصد المعاملات المشبوهة.",
+                ],
+            },
+            {
+                "heading": "تدقيق كشوف الحسابات البنكية",
+                "body": (
+                    "فحص كشوف الحسابات البنكية ومطابقتها مع السجلات المحاسبية "
+                    "للكشف عن الفروقات والمعاملات غير المبرّرة."
+                ),
+                "items": [
+                    "مطابقة الحركات البنكية مع القيود المحاسبية.",
+                    "كشف المعاملات غير المبرّرة أو المتكررة.",
+                    "تطبيق تحليل بنفورد (Benford) للكشف عن التلاعب في الأرقام.",
+                ],
+            },
+            {
+                "heading": "الذكاء الاصطناعي المالي",
+                "body": (
+                    "محرّك ذكاء اصطناعي يقرأ المستندات بلغات متعددة، ويستخرج البيانات، "
+                    "ويولّد ملخصات ذكية وتوصيات عملية لفرق المالية."
+                ),
+                "items": [
+                    "استخراج آلي للبيانات من ملفات PDF والصور والملفات الإلكترونية.",
+                    "ملخصات وتنبيهات ذكية حول المخاطر والملاحظات.",
+                    "دعم اللغتين العربية والإنجليزية في القراءة والتحليل.",
+                ],
+            },
+            {
+                "heading": "التقارير التنفيذية",
+                "body": (
+                    "تقارير جاهزة للإدارة العليا والمراجعين تغطّي المخاطر والامتثال "
+                    "والحوكمة، قابلة للتصدير ومتوافقة مع المعايير المهنية."
+                ),
+                "items": [
+                    "تقارير المخاطر وتقييم المنشآت والموردين.",
+                    "تقارير الامتثال الضريبي ومتطلبات ZATCA.",
+                    "تقارير الحوكمة وأوراق العمل وفق معايير التدقيق الدولية.",
+                ],
+            },
+        ]
+    else:
+        title = "%s platform services" % product
+        eyebrow = "Services"
+        description = (
+            "%s delivers an integrated suite of intelligent financial-audit "
+            "services that help finance, audit, and compliance teams review "
+            "financial documents accurately, and surface risk, errors, and fraud "
+            "before payments are approved." % product
+        )
+        sections = [
+            {
+                "heading": "Intelligent invoice auditing",
+                "body": (
+                    "We read invoices automatically, extract their data, and apply "
+                    "dozens of audit rules to catch issues before payment approval."
+                ),
+                "items": [
+                    "Detect duplicate and previously paid invoices.",
+                    "Validate VAT (15%) calculations and totals.",
+                    "Flag fraud and tampering indicators in amounts and dates.",
+                    "Check mandatory fields and ZATCA compliance.",
+                ],
+            },
+            {
+                "heading": "Purchase order auditing",
+                "body": (
+                    "Match purchase orders against invoices and goods-receipt notes "
+                    "to ensure what was contracted is what was received and billed."
+                ),
+                "items": [
+                    "Three-way match between PO, invoice, and receipt note.",
+                    "Detect variances in quantities, prices, and terms.",
+                    "Track budget overruns and approval limits.",
+                ],
+            },
+            {
+                "heading": "Expense auditing & anomaly detection",
+                "body": (
+                    "Analyse expense reports for policy compliance and surface "
+                    "unusual patterns."
+                ),
+                "items": [
+                    "Verify compliance with expense policies and category limits.",
+                    "Detect duplicate or inflated expenses.",
+                    "Statistical anomaly analysis for suspicious transactions.",
+                ],
+            },
+            {
+                "heading": "Bank statement auditing",
+                "body": (
+                    "Review bank statements and reconcile them against accounting "
+                    "records to surface variances and unexplained transactions."
+                ),
+                "items": [
+                    "Reconcile bank movements with accounting entries.",
+                    "Detect unexplained or repeated transactions.",
+                    "Apply Benford analysis to detect number manipulation.",
+                ],
+            },
+            {
+                "heading": "Financial artificial intelligence",
+                "body": (
+                    "An AI engine that reads documents in multiple languages, "
+                    "extracts data, and produces smart summaries and recommendations."
+                ),
+                "items": [
+                    "Automatic data extraction from PDFs, images, and digital files.",
+                    "Smart summaries and alerts about risks and findings.",
+                    "Arabic and English support in reading and analysis.",
+                ],
+            },
+            {
+                "heading": "Executive reporting",
+                "body": (
+                    "Ready-made reports for leadership and auditors covering risk, "
+                    "compliance, and governance, exportable and standards-aligned."
+                ),
+                "items": [
+                    "Risk reports and entity/vendor assessments.",
+                    "Tax compliance and ZATCA reporting.",
+                    "Governance reports and working papers aligned to ISA standards.",
+                ],
+            },
+        ]
+
+    return _render_legal_page(
+        request,
+        page_key="services",
+        title=title,
+        eyebrow=eyebrow,
+        description=description,
+        sections=sections,
+    )
+
+
 def privacy(request):
-    return _render_marketing_page(
+    """Detailed privacy & data-protection policy (payment-gateway compliant)."""
+    ar = _is_arabic(request)
+    updated = "2026-05-31"
+
+    if ar:
+        title = "سياسة الخصوصية"
+        eyebrow = "الخصوصية"
+        description = (
+            "نلتزم في منصة «تدقيق» بحماية بياناتك ومعالجتها بأعلى معايير العناية "
+            "والسرية، بما يتوافق مع نظام حماية البيانات الشخصية في المملكة العربية "
+            "السعودية. توضّح هذه السياسة البيانات التي نجمعها وكيفية استخدامها وحمايتها وحقوقك تجاهها."
+        )
+        sections = [
+            {
+                "heading": "البيانات التي نجمعها",
+                "body": "نجمع الحد اللازم من البيانات لتقديم الخدمة، وتشمل:",
+                "items": [
+                    "بيانات الحساب: الاسم، البريد الإلكتروني، رقم الجوال، وكلمة المرور (مشفّرة).",
+                    "بيانات المنشأة: اسم المنشأة، السجل التجاري، الرقم الضريبي، وبيانات الاتصال.",
+                    "بيانات المستندات: الفواتير، أوامر الشراء، كشوف الحسابات البنكية، تقارير المصروفات وما يرتبط بها من بيانات مالية ترفعها بنفسك.",
+                    "بيانات الاستخدام التقنية: سجلّات الدخول وعنوان IP ونوع المتصفح، لأغراض الأمان وتحسين الخدمة.",
+                ],
+            },
+            {
+                "heading": "كيفية استخدام البيانات",
+                "body": "نستخدم بياناتك للأغراض التالية فقط:",
+                "items": [
+                    "تشغيل خدمات التدقيق المالي الذكي وتحليل المستندات وإصدار التقارير.",
+                    "إدارة حسابك واشتراكك وتقديم الدعم الفني.",
+                    "تحسين دقة المنصة وأمنها وأدائها.",
+                    "إرسال الإشعارات التشغيلية والتنبيهات المتعلقة بحسابك.",
+                ],
+            },
+            {
+                "heading": "حماية البيانات",
+                "body": "نطبّق ضوابط تقنية وتنظيمية صارمة لحماية بياناتك:",
+                "items": [
+                    "تشفير البيانات أثناء النقل عبر بروتوكول SSL/TLS.",
+                    "نسخ احتياطية دورية لضمان استمرارية الخدمة واستعادة البيانات.",
+                    "صلاحيات وصول قائمة على الأدوار (RBAC) وعزل بيانات كل منشأة عن غيرها.",
+                    "سجلّات تدقيق (Audit Logs) لتتبّع العمليات الحساسة على البيانات.",
+                ],
+            },
+            {
+                "heading": "مشاركة البيانات",
+                "body": (
+                    "لا نبيع بياناتك ولا نشاركها مع أي طرف ثالث لأغراض تسويقية. "
+                    "تقتصر المشاركة على الحالات التالية:"
+                ),
+                "items": [
+                    "بموافقتك الصريحة كعميل.",
+                    "عند وجود أمر قضائي أو التزام نظامي يفرض ذلك.",
+                    "مع مزوّدي الخدمات التقنية اللازمين لتشغيل المنصة (مثل الاستضافة وبوابات الدفع)، وفق اتفاقيات سرية ومعالجة بيانات.",
+                ],
+            },
+            {
+                "heading": "حقوق العميل",
+                "body": "تملك في أي وقت الحق في:",
+                "items": [
+                    "الوصول إلى بياناتك وتصحيحها أو تحديثها.",
+                    "تصدير بياناتك ومستنداتك بصيغ قابلة للقراءة.",
+                    "حذف ملفاتك المرفوعة أو حذف حسابك بالكامل.",
+                    "سحب الموافقة على المعالجة ضمن الحدود النظامية.",
+                ],
+            },
+            {
+                "heading": "الاحتفاظ بالبيانات والامتثال",
+                "body": (
+                    "نحتفظ ببياناتك طوال مدة اشتراكك وللمدة اللازمة للوفاء بالالتزامات "
+                    "النظامية، ثم نحذفها أو نجعلها مجهولة المصدر. تخضع هذه السياسة "
+                    "لنظام حماية البيانات الشخصية في المملكة العربية السعودية ولوائحه التنفيذية."
+                ),
+            },
+            {
+                "heading": "التواصل بشأن الخصوصية",
+                "body": (
+                    "لأي استفسار أو طلب يتعلق بخصوصية بياناتك، يمكنك التواصل معنا عبر "
+                    "البريد الإلكتروني: contact@tadgeeg.com."
+                ),
+            },
+        ]
+    else:
+        title = "Privacy Policy"
+        eyebrow = "Privacy"
+        description = (
+            "Tadgeeg is committed to protecting your data and processing it with "
+            "the highest standards of care and confidentiality, in line with the "
+            "Saudi Personal Data Protection Law (PDPL). This policy explains what "
+            "data we collect, how we use and protect it, and your rights."
+        )
+        sections = [
+            {
+                "heading": "Data we collect",
+                "body": "We collect only the data needed to provide the service:",
+                "items": [
+                    "Account data: name, email, mobile number, and password (encrypted).",
+                    "Organization data: company name, commercial registration, VAT number, and contact details.",
+                    "Document data: invoices, purchase orders, bank statements, expense reports, and related financial data you upload.",
+                    "Technical usage data: login logs, IP address, and browser type, for security and service improvement.",
+                ],
+            },
+            {
+                "heading": "How we use data",
+                "body": "We use your data only for the following purposes:",
+                "items": [
+                    "Operating intelligent audit services, analysing documents, and generating reports.",
+                    "Managing your account and subscription and providing support.",
+                    "Improving platform accuracy, security, and performance.",
+                    "Sending operational notifications and alerts related to your account.",
+                ],
+            },
+            {
+                "heading": "Data protection",
+                "body": "We apply strict technical and organizational controls:",
+                "items": [
+                    "Encryption in transit via SSL/TLS.",
+                    "Regular backups for service continuity and recovery.",
+                    "Role-based access control (RBAC) and isolation of each organization's data.",
+                    "Audit logs to trace sensitive operations on data.",
+                ],
+            },
+            {
+                "heading": "Data sharing",
+                "body": (
+                    "We do not sell your data or share it with third parties for "
+                    "marketing. Sharing is limited to:"
+                ),
+                "items": [
+                    "With your explicit consent as the customer.",
+                    "When required by a court order or legal obligation.",
+                    "With technical service providers necessary to operate the platform (e.g. hosting, payment gateways) under confidentiality and data-processing agreements.",
+                ],
+            },
+            {
+                "heading": "Customer rights",
+                "body": "At any time you have the right to:",
+                "items": [
+                    "Access, correct, or update your data.",
+                    "Export your data and documents in readable formats.",
+                    "Delete your uploaded files or your entire account.",
+                    "Withdraw consent to processing within legal limits.",
+                ],
+            },
+            {
+                "heading": "Data retention & compliance",
+                "body": (
+                    "We retain your data for the duration of your subscription and "
+                    "as long as needed to meet legal obligations, then delete or "
+                    "anonymise it. This policy is governed by the Saudi Personal "
+                    "Data Protection Law and its regulations."
+                ),
+            },
+            {
+                "heading": "Privacy contact",
+                "body": (
+                    "For any privacy-related question or request, contact us at "
+                    "contact@tadgeeg.com."
+                ),
+            },
+        ]
+
+    return _render_legal_page(
         request,
         page_key="privacy",
-        title=_("Privacy and data protection"),
-        eyebrow=_("Privacy"),
-        description=_("We handle financial data with a high standard of care, including clear tenant isolation and audit trails for sensitive actions."),
-        bullets=[
-            _("Organization-level data isolation."),
-            _("Audit logs for sensitive operations."),
-            _("Access controls based on organizational roles."),
-        ],
+        title=title,
+        eyebrow=eyebrow,
+        description=description,
+        sections=sections,
+        updated=updated,
+    )
+
+
+def terms(request):
+    """Terms & Conditions page (payment-gateway compliant)."""
+    ar = _is_arabic(request)
+    updated = "2026-05-31"
+    product = django_settings.PRODUCT_NAME
+
+    if ar:
+        title = "الأحكام والشروط"
+        eyebrow = "الأحكام والشروط"
+        description = (
+            "توضّح هذه الأحكام والشروط القواعد المنظِّمة لاستخدام منصة «تدقيق»، "
+            "ويُعدّ استخدامك للمنصة أو الاشتراك فيها موافقةً صريحةً على هذه الأحكام."
+        )
+        sections = [
+            {
+                "heading": "تعريف المنصة وطبيعة الخدمة",
+                "body": (
+                    "منصة «تدقيق» هي أداة برمجية للتدقيق المالي الذكي تساعد المستخدم "
+                    "على فحص المستندات المالية وكشف الأخطاء والمخاطر. وهي أداة مساعِدة "
+                    "تدعم اتخاذ القرار، ولا تُعدّ بديلاً عن المحاسب القانوني أو المراجع "
+                    "المعتمد، ولا تتحمّل المنصة مسؤولية القرارات المالية أو القانونية "
+                    "التي يتخذها المستخدم بناءً على نتائجها."
+                ),
+            },
+            {
+                "heading": "أهلية الاستخدام",
+                "body": (
+                    "يجب أن يكون المستخدم شخصاً ذا أهلية نظامية أو ممثلاً مفوّضاً عن "
+                    "منشأة، وأن تكون البيانات المقدَّمة عند التسجيل صحيحة وكاملة. "
+                    "تُستخدم المنصة لأغراض تجارية ومهنية مشروعة فقط."
+                ),
+            },
+            {
+                "heading": "مسؤوليات المستخدم",
+                "items": [
+                    "ضمان صحة واكتمال البيانات والمستندات التي يرفعها على المنصة.",
+                    "المحافظة على سرية بيانات الدخول وكلمة المرور وعدم مشاركتها.",
+                    "إقرار المستخدم بملكيته أو تفويضه باستخدام المستندات التي يرفعها.",
+                    "استخدام المنصة بما يتوافق مع الأنظمة المعمول بها وعدم إساءة استخدامها.",
+                ],
+            },
+            {
+                "heading": "مسؤوليات المنصة",
+                "items": [
+                    "بذل العناية اللازمة لتوفير الخدمة وأمن البيانات واستمراريتها.",
+                    "تطبيق ضوابط حماية وتشفير وعزل لبيانات كل منشأة.",
+                    "توفير الدعم الفني ومعالجة الأعطال خلال مدة معقولة.",
+                ],
+            },
+            {
+                "heading": "الاشتراكات والفوترة",
+                "items": [
+                    "الدفع يكون مقدّماً عن مدة الاشتراك المختارة (شهرية أو سنوية).",
+                    "يتجدّد الاشتراك تلقائياً ما لم يقم المستخدم بإيقاف التجديد قبل نهاية المدة.",
+                    "يمكن إيقاف التجديد التلقائي في أي وقت مع بقاء الاشتراك فعّالاً حتى نهاية المدة المدفوعة.",
+                    "تخضع عمليات الاسترداد لسياسة الاسترجاع المنشورة على المنصة.",
+                ],
+            },
+            {
+                "heading": "تعليق الحساب أو إلغاؤه",
+                "body": (
+                    "يحقّ للمنصة تعليق أو إنهاء الحساب في حال مخالفة هذه الأحكام أو "
+                    "استخدام الخدمة بشكل غير مشروع أو يهدد أمن المنصة أو المستخدمين "
+                    "الآخرين، مع إشعار المستخدم متى أمكن ذلك."
+                ),
+            },
+            {
+                "heading": "حدود المسؤولية",
+                "body": (
+                    "تُقدَّم الخدمة «كما هي» وفق أفضل الجهود. ولا تتحمّل المنصة "
+                    "المسؤولية عن أي أضرار غير مباشرة أو تبعية، أو عن قرارات اتُّخذت "
+                    "بناءً على نتائج التحليل، أو عن أخطاء ناتجة عن بيانات غير صحيحة "
+                    "قدّمها المستخدم. وتقتصر المسؤولية القصوى للمنصة على قيمة الاشتراك "
+                    "المدفوع عن المدة محل النزاع."
+                ),
+            },
+            {
+                "heading": "القانون الواجب التطبيق",
+                "body": (
+                    "تخضع هذه الأحكام والشروط وتُفسَّر وفقاً لأنظمة المملكة العربية "
+                    "السعودية، وتختص الجهات القضائية المختصة في المملكة بالفصل في أي نزاع ينشأ عنها."
+                ),
+            },
+            {
+                "heading": "تعديل الأحكام",
+                "body": (
+                    "يجوز لـ %s تحديث هذه الأحكام من وقت لآخر، ويُعدّ استمرار "
+                    "استخدامك للمنصة بعد نشر التعديلات موافقةً عليها." % product
+                ),
+            },
+        ]
+    else:
+        title = "Terms & Conditions"
+        eyebrow = "Terms & Conditions"
+        description = (
+            "These Terms & Conditions set out the rules governing use of the "
+            "Tadgeeg platform. By using or subscribing to the platform, you "
+            "expressly agree to these terms."
+        )
+        sections = [
+            {
+                "heading": "Definition and nature of the service",
+                "body": (
+                    "Tadgeeg is an intelligent financial-audit software tool that "
+                    "helps users review financial documents and surface errors and "
+                    "risks. It is an assistive decision-support tool and is not a "
+                    "substitute for a certified accountant or licensed auditor. The "
+                    "platform is not responsible for financial or legal decisions "
+                    "users make based on its results."
+                ),
+            },
+            {
+                "heading": "Eligibility",
+                "body": (
+                    "Users must have legal capacity or be an authorised "
+                    "representative of an organization, and must provide accurate, "
+                    "complete information at registration. The platform is for "
+                    "lawful business and professional use only."
+                ),
+            },
+            {
+                "heading": "User responsibilities",
+                "items": [
+                    "Ensure the accuracy and completeness of data and documents uploaded.",
+                    "Keep login credentials and passwords confidential and not share them.",
+                    "Confirm ownership of, or authorisation to use, uploaded documents.",
+                    "Use the platform in compliance with applicable laws and not misuse it.",
+                ],
+            },
+            {
+                "heading": "Platform responsibilities",
+                "items": [
+                    "Exercise due care to provide the service and secure data and continuity.",
+                    "Apply protection, encryption, and isolation for each organization's data.",
+                    "Provide technical support and address faults within a reasonable time.",
+                ],
+            },
+            {
+                "heading": "Subscriptions and billing",
+                "items": [
+                    "Payment is made in advance for the chosen subscription period (monthly or annual).",
+                    "Subscriptions renew automatically unless the user cancels renewal before the period ends.",
+                    "Auto-renewal can be cancelled anytime; the subscription stays active until the end of the paid period.",
+                    "Refunds are subject to the refund policy published on the platform.",
+                ],
+            },
+            {
+                "heading": "Account suspension or termination",
+                "body": (
+                    "The platform may suspend or terminate an account in case of "
+                    "breach of these terms, unlawful use, or use that threatens the "
+                    "security of the platform or other users, with notice where possible."
+                ),
+            },
+            {
+                "heading": "Limitation of liability",
+                "body": (
+                    "The service is provided 'as is' on a best-effort basis. The "
+                    "platform is not liable for indirect or consequential damages, "
+                    "for decisions made based on analysis results, or for errors "
+                    "arising from inaccurate data provided by the user. The "
+                    "platform's maximum liability is limited to the subscription "
+                    "fee paid for the disputed period."
+                ),
+            },
+            {
+                "heading": "Governing law",
+                "body": (
+                    "These terms are governed by and construed in accordance with "
+                    "the laws of the Kingdom of Saudi Arabia, and the competent "
+                    "Saudi judicial authorities have jurisdiction over any dispute."
+                ),
+            },
+            {
+                "heading": "Changes to the terms",
+                "body": (
+                    "%s may update these terms from time to time. Continued use of "
+                    "the platform after changes are published constitutes acceptance." % product
+                ),
+            },
+        ]
+
+    return _render_legal_page(
+        request,
+        page_key="terms",
+        title=title,
+        eyebrow=eyebrow,
+        description=description,
+        sections=sections,
+        updated=updated,
+    )
+
+
+def refund_policy(request):
+    """Refund / cancellation policy (Saudi e-commerce compliant)."""
+    ar = _is_arabic(request)
+    updated = "2026-05-31"
+
+    if ar:
+        title = "سياسة الاسترجاع والاستبدال"
+        eyebrow = "سياسة الاسترجاع"
+        description = (
+            "توضّح هذه السياسة الحالات التي يحقّ فيها استرداد قيمة الاشتراك في منصة "
+            "«تدقيق» والحالات التي لا يُستحق فيها الاسترداد، بما يتوافق مع نظام "
+            "التجارة الإلكترونية في المملكة العربية السعودية."
+        )
+        sections = [
+            {
+                "heading": "طبيعة الخدمة",
+                "body": (
+                    "منصة «تدقيق» خدمة رقمية تُقدَّم عبر الإنترنت بنظام الاشتراك "
+                    "(SaaS)، ويبدأ تقديم الخدمة فور تفعيل الاشتراك وإتاحة الوصول إلى "
+                    "ميزات المنصة."
+                ),
+            },
+            {
+                "heading": "الفترة التجريبية",
+                "body": (
+                    "في حال توفّر فترة تجربة مجانية، يمكنك خلالها تقييم الخدمة دون "
+                    "أي رسوم، ولا يتم احتساب أي مبلغ إلا بعد انتهاء الفترة التجريبية "
+                    "وبدء الاشتراك المدفوع."
+                ),
+            },
+            {
+                "heading": "الاسترداد الكامل قبل التفعيل",
+                "body": (
+                    "يحقّ لك طلب استرداد كامل لقيمة الاشتراك إذا قدّمت الطلب قبل "
+                    "البدء الفعلي في استخدام الخدمة وقبل رفع أو معالجة أي مستندات على "
+                    "المنصة."
+                ),
+            },
+            {
+                "heading": "حالات عدم الاسترداد",
+                "body": (
+                    "نظراً لطبيعة الخدمة الرقمية، لا يُستحق الاسترداد في الحالات التالية:"
+                ),
+                "items": [
+                    "بعد البدء الفعلي في استخدام الخدمة أو معالجة المستندات على المنصة.",
+                    "عن المدة المنقضية من الاشتراك التي تم استخدام الخدمة خلالها.",
+                    "في حال إيقاف التجديد التلقائي، إذ يبقى الاشتراك فعّالاً حتى نهاية المدة المدفوعة دون استرداد للمدة المتبقية.",
+                    "عند مخالفة المستخدم لأحكام وشروط الاستخدام بما أدى إلى إيقاف الحساب.",
+                ],
+            },
+            {
+                "heading": "الحالات الاستثنائية للاسترداد",
+                "body": "يجوز النظر في طلب الاسترداد في الحالات الاستثنائية التالية:",
+                "items": [
+                    "تعذُّر تشغيل الخدمة بشكل كامل لأسباب فنية من جانب المنصة.",
+                    "وجود خطأ تقني جسيم يمنع الاستفادة من الخدمة ولم تتم معالجته خلال مدة معقولة.",
+                    "حدوث خصم مالي بالخطأ أو تكرار غير مقصود لعملية الدفع.",
+                ],
+            },
+            {
+                "heading": "إلغاء التجديد التلقائي",
+                "body": (
+                    "يمكنك إلغاء التجديد التلقائي في أي وقت من إعدادات حسابك. يؤدي "
+                    "الإلغاء إلى إيقاف الفوترة المستقبلية فقط، ويبقى اشتراكك الحالي "
+                    "فعّالاً حتى نهاية المدة المدفوعة."
+                ),
+            },
+            {
+                "heading": "آلية تقديم طلب الاسترداد",
+                "body": (
+                    "لتقديم طلب استرداد ضمن الحالات المؤهّلة، تواصل معنا عبر البريد "
+                    "الإلكتروني contact@tadgeeg.com موضّحاً بيانات الاشتراك وسبب "
+                    "الطلب. تتم معالجة الطلبات المؤهّلة خلال مدة معقولة عبر وسيلة الدفع الأصلية."
+                ),
+            },
+        ]
+    else:
+        title = "Refund & Cancellation Policy"
+        eyebrow = "Refund Policy"
+        description = (
+            "This policy explains when a Tadgeeg subscription is eligible for a "
+            "refund and when refunds are not due, in line with the Saudi "
+            "E-Commerce Law."
+        )
+        sections = [
+            {
+                "heading": "Nature of the service",
+                "body": (
+                    "Tadgeeg is a digital subscription service (SaaS) delivered "
+                    "online. The service begins as soon as the subscription is "
+                    "activated and access to platform features is granted."
+                ),
+            },
+            {
+                "heading": "Free trial",
+                "body": (
+                    "Where a free trial is available, you may evaluate the service "
+                    "at no charge during it; no amount is charged until the trial "
+                    "ends and a paid subscription begins."
+                ),
+            },
+            {
+                "heading": "Full refund before activation",
+                "body": (
+                    "You may request a full refund if you submit the request before "
+                    "actually using the service and before uploading or processing "
+                    "any documents on the platform."
+                ),
+            },
+            {
+                "heading": "Cases where refunds are not due",
+                "body": (
+                    "Given the digital nature of the service, refunds are not due in "
+                    "the following cases:"
+                ),
+                "items": [
+                    "After actual use of the service or processing of documents on the platform.",
+                    "For the elapsed portion of a subscription during which the service was used.",
+                    "When auto-renewal is cancelled — the subscription stays active until the end of the paid period with no refund for the remaining time.",
+                    "When the user breaches the terms of use in a way that leads to account suspension.",
+                ],
+            },
+            {
+                "heading": "Exceptional refund cases",
+                "body": "A refund may be considered in the following exceptional cases:",
+                "items": [
+                    "The service could not operate fully due to technical issues on the platform's side.",
+                    "A material technical defect prevents use of the service and was not resolved within a reasonable time.",
+                    "An incorrect charge or unintended duplicate payment occurred.",
+                ],
+            },
+            {
+                "heading": "Cancelling auto-renewal",
+                "body": (
+                    "You can cancel auto-renewal anytime from your account settings. "
+                    "Cancellation stops future billing only; your current "
+                    "subscription stays active until the end of the paid period."
+                ),
+            },
+            {
+                "heading": "How to request a refund",
+                "body": (
+                    "To request a refund within eligible cases, contact us at "
+                    "contact@tadgeeg.com with your subscription details and the "
+                    "reason. Eligible requests are processed within a reasonable "
+                    "time via the original payment method."
+                ),
+            },
+        ]
+
+    return _render_legal_page(
+        request,
+        page_key="refund_policy",
+        title=title,
+        eyebrow=eyebrow,
+        description=description,
+        sections=sections,
+        updated=updated,
     )
 
 

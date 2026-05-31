@@ -458,10 +458,109 @@
       .contact-card { padding: 26px 20px; }
     }
 
+    /* Legal / long-form sections (terms, privacy, refund, services) */
+    .page-sections {
+      max-width: 920px;
+      margin: 0 auto 56px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+    .legal-section {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 30px 32px;
+      box-shadow: var(--shadow-sm);
+      animation: fadeInUp 0.6s ease both;
+      transition: box-shadow 0.3s ease, border-color 0.3s ease;
+    }
+    .legal-section:hover {
+      box-shadow: var(--shadow-md);
+      border-color: rgba(16, 185, 129, 0.25);
+    }
+    .legal-section-heading {
+      font-family: 'Cairo', sans-serif;
+      font-size: 21px;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1.4;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .legal-section-heading::before {
+      content: '';
+      width: 6px;
+      height: 24px;
+      border-radius: 4px;
+      background: linear-gradient(180deg, var(--primary) 0%, var(--accent) 100%);
+      flex-shrink: 0;
+    }
+    .legal-section-body {
+      font-size: 15.5px;
+      line-height: 2;
+      color: var(--text);
+      white-space: pre-line;
+    }
+    .legal-section-body + .legal-list { margin-top: 14px; }
+    .legal-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .legal-list li {
+      position: relative;
+      padding-inline-start: 30px;
+      font-size: 15px;
+      line-height: 1.9;
+      color: var(--text);
+    }
+    .legal-list li::before {
+      content: '';
+      position: absolute;
+      inset-inline-start: 0;
+      top: 11px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.12);
+    }
+    .legal-updated {
+      max-width: 920px;
+      margin: 0 auto 28px;
+      font-size: 13px;
+      color: var(--text-light);
+      text-align: center;
+    }
+    @media (max-width: 768px) {
+      .legal-section { padding: 24px 20px; }
+      .legal-section-heading { font-size: 18px; }
+    }
+
     /* Footer */
     .footer { padding: 36px 0; border-top: 1px solid var(--border); background: white; }
     .footer-content { text-align: center; color: var(--text-muted); font-size: 13px; }
     .footer-content a { color: var(--primary); font-weight: 600; }
+    .footer-legal-links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px 24px;
+      margin-bottom: 18px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .footer-legal-links a {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      transition: color 0.2s ease;
+    }
+    .footer-legal-links a:hover { color: var(--accent-dark); }
 
     @keyframes fadeInUp {
       from { opacity: 0; transform: translateY(20px); }
@@ -474,8 +573,12 @@
     @media (max-width: 768px) {
       .nav-content { padding: 14px 20px; }
       .nav-links { display: none; }
-      .menu-toggle { display: flex; }
+      .menu-toggle { display: flex; padding: 10px; }
+      .nav-actions { gap: 8px; }
       .nav-actions .btn-outline { display: none; }
+      /* CTA lives in the mobile menu; hiding it keeps the bar from crowding
+         the logo + language pill + hamburger on phones. */
+      .nav-actions .btn-primary { display: none; }
       .page-hero { padding: 50px 0 40px; }
       .page-title { font-size: 28px; }
       .page-desc { font-size: 16px; }
@@ -544,15 +647,15 @@
 
       <ul class="nav-links">
         <li><a href="{% url 'frontend:home' %}">{% trans "Home" %}</a></li>
+        <li><a href="{% url 'frontend:services' %}" {% if page_key == 'services' %}class="active"{% endif %}>{% trans "Services" %}</a></li>
         <li><a href="{% url 'frontend:pricing' %}" {% if page_key == 'pricing' %}class="active"{% endif %}>{% trans "Pricing" %}</a></li>
         <li><a href="{% url 'frontend:about' %}" {% if page_key == 'about' %}class="active"{% endif %}>{% trans "About" %}</a></li>
         <li><a href="{% url 'frontend:contact' %}" {% if page_key == 'contact' %}class="active"{% endif %}>{% trans "Contact" %}</a></li>
-        <li><a href="{% url 'frontend:privacy' %}" {% if page_key == 'privacy' %}class="active"{% endif %}>{% trans "Privacy" %}</a></li>
       </ul>
 
       <div class="nav-actions">
-        {# Compact <select>-based switcher — keeps the navbar tidy when the Arabic translation expands the button text. #}
-        {% include "partials/language_switcher_select.html" with extra_classes="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/90 p-1 text-xs font-semibold text-slate-700 shadow-sm" %}
+        {# Custom pill language toggle (AR | EN) — see partials/language_switcher_select.html. #}
+        {% include "partials/language_switcher_select.html" %}
         <a href="{% url 'frontend:login' %}" class="btn btn-outline">{% trans "Sign In" %}</a>
         <a href="{% url 'frontend:register' %}" class="btn btn-primary">{% trans "Start Free Trial" %}</a>
         <div class="menu-toggle" onclick="toggleMenu()"><span></span><span></span><span></span></div>
@@ -565,6 +668,7 @@
   <div class="mobile-menu">
     <ul>
       <li><a href="{% url 'frontend:home' %}">{% trans "Home" %}</a></li>
+      <li><a href="{% url 'frontend:services' %}">{% trans "Services" %}</a></li>
       <li><a href="{% url 'frontend:pricing' %}">{% trans "Pricing" %}</a></li>
       <li><a href="{% url 'frontend:about' %}">{% trans "About" %}</a></li>
       <li><a href="{% url 'frontend:contact' %}">{% trans "Contact" %}</a></li>
@@ -591,6 +695,26 @@
   <!-- ===== Content ===== -->
   <section class="content-section">
     <div class="container">
+      {% if page_updated %}
+      <p class="legal-updated">{% trans "Last updated" %}: {{ page_updated }}</p>
+      {% endif %}
+
+      {% if page_sections %}
+      <div class="page-sections">
+        {% for section in page_sections %}
+        <div class="legal-section" style="animation-delay: {{ forloop.counter0 }}0ms">
+          {% if section.heading %}<h2 class="legal-section-heading">{{ section.heading }}</h2>{% endif %}
+          {% if section.body %}<div class="legal-section-body">{{ section.body }}</div>{% endif %}
+          {% if section.items %}
+          <ul class="legal-list">
+            {% for item in section.items %}<li>{{ item }}</li>{% endfor %}
+          </ul>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
       {% if page_bullets %}
       <div class="bullets-grid">
         {% for bullet in page_bullets %}
@@ -697,6 +821,14 @@
   <!-- ===== Footer ===== -->
   <footer class="footer">
     <div class="container">
+      <nav class="footer-legal-links" aria-label="{% trans 'Legal' %}">
+        <a href="{% url 'frontend:services' %}">{% trans "Services" %}</a>
+        <a href="{% url 'frontend:pricing' %}">{% trans "Pricing" %}</a>
+        <a href="{% url 'frontend:terms' %}">{% trans "Terms & Conditions" %}</a>
+        <a href="{% url 'frontend:privacy' %}">{% trans "Privacy Policy" %}</a>
+        <a href="{% url 'frontend:refund_policy' %}">{% trans "Refund Policy" %}</a>
+        <a href="{% url 'frontend:contact' %}">{% trans "Contact" %}</a>
+      </nav>
       <div class="footer-content">
         {% if LANGUAGE_CODE == 'ar' %}
           © كل الحقوق محفوظة من شركة <a href="https://gscompany.sa/" target="_blank" rel="noopener">احصل الحصل</a> 2026

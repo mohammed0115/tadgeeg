@@ -33,6 +33,7 @@
       font-family: 'Tajawal','Cairo', system-ui, sans-serif;
       color: var(--text); background: var(--bg);
       line-height: 1.6; min-height: 100vh;
+      overflow-x: hidden;
     }
     h1, h2, h3 { font-family: 'Cairo', sans-serif; color: var(--primary); }
 
@@ -95,6 +96,27 @@
     .footnote a { color: var(--primary); font-weight: 600; }
 
     .empty { background: white; border: 1px dashed var(--border); border-radius: 16px; padding: 56px 24px; text-align: center; color: var(--text-muted); }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 768px) {
+      /* The topbar nav has no hamburger — let the bar wrap so the links
+         drop below the logo and stay centered instead of overflowing. */
+      .topbar { flex-wrap: wrap; gap: 10px 14px; padding: 12px 18px; }
+      .topbar .logo { flex: 1 1 auto; }
+      .topbar nav { gap: 8px 16px; flex-wrap: wrap; justify-content: center; width: 100%; }
+      .topbar nav a { font-size: 14px; padding: 6px 2px; min-height: 40px; display: inline-flex; align-items: center; }
+      .topbar .cta { padding: 8px 16px; }
+      .hero { padding: 44px 20px 12px; }
+      .hero p { font-size: 16px; }
+      .wrap { padding: 28px 18px 64px; }
+    }
+
+    @media (max-width: 480px) {
+      .topbar nav { gap: 6px 12px; }
+      .hero { padding: 36px 16px 8px; }
+      .wrap { padding: 24px 16px 56px; }
+      .card { padding: 24px 20px; }
+    }
   </style>
 </head>
 <body>

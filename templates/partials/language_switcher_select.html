@@ -1,31 +1,79 @@
 {% load i18n %}
 {% get_current_language as CURRENT_LANGUAGE %}
 {% comment %}
-Compact <select>-based language switcher.
+Custom pill-style language toggle for the marketing / landing pages.
 
-Use this on marketing / landing pages where the button-pair version takes
-too much horizontal space (especially after Arabic translation, where the
-two button labels — العربية / الإنجليزية — wrap awkwardly).
+These pages (landing/index.html, landing/page.html) are built on bespoke CSS
+variables (--primary / --accent / --border / --bg-soft, Tajawal/Cairo fonts)
+and do NOT load Tailwind, so a raw <select> rendered the iOS/Android native
+dropdown (system arrow, system font, grey sheet) and looked off-brand.
 
-Submits the form when the user picks a different option, so there is no
-"Apply" button to click.
+Because there are only two languages, no dropdown is needed: this is a
+two-button "AR | EN" pill. Each <button> submits its own `language` value to
+/i18n/setlang/ (same mechanism as partials/language_switcher.html) — no JS,
+works without scripting, and looks identical on desktop, iOS, and Android.
 
-The default `extra_classes` style matches the landing-page chrome
-(white bg, slate border). Override per-page when needed.
+Scoped under `.lang-pill`; styles consume the landing-page CSS variables.
+Used only by the landing pages (verified via grep) — safe to keep self-contained.
 {% endcomment %}
-<form method="post" action="/i18n/setlang/"
-      class="{{ extra_classes|default:'inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white/90 p-1 text-xs font-semibold text-slate-700 shadow-sm' }}">
+<style>
+  .lang-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    margin: 0;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 12px;
+    background: var(--bg-soft, #f8fafc);
+    box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,51,102,0.05));
+  }
+  .lang-pill__btn {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-muted, #64748b);
+    background: transparent;
+    border: none;
+    border-radius: 9px;
+    padding: 8px 14px;
+    min-height: 38px;
+    cursor: pointer;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .lang-pill__btn:hover { color: var(--primary, #003366); }
+  .lang-pill__btn:focus-visible {
+    outline: 2px solid var(--accent, #10B981);
+    outline-offset: 1px;
+  }
+  .lang-pill__btn.is-active {
+    background: var(--primary, #003366);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(0, 51, 102, 0.25);
+  }
+  /* Comfortable 44px touch targets on phones. */
+  @media (max-width: 768px) {
+    .lang-pill__btn { min-height: 44px; padding: 10px 14px; }
+  }
+</style>
+<form method="post" action="/i18n/setlang/" class="lang-pill">
   {% csrf_token %}
   <input type="hidden" name="next" value="{{ request.get_full_path|default:'/' }}">
-  <label for="lang-select" class="sr-only">{% trans "Language" %}</label>
-  <select name="language" id="lang-select"
-          onchange="this.form.submit()"
-          class="rounded-xl bg-transparent px-3 py-2 outline-none cursor-pointer focus:ring-2 focus:ring-slate-300">
-    <option value="ar" {% if CURRENT_LANGUAGE == 'ar' %}selected{% endif %}>{% if CURRENT_LANGUAGE == 'ar' %}العربية{% else %}Arabic{% endif %}</option>
-    <option value="en" {% if CURRENT_LANGUAGE == 'en' %}selected{% endif %}>{% if CURRENT_LANGUAGE == 'ar' %}الإنجليزية{% else %}English{% endif %}</option>
-  </select>
-  {# Submit fallback for users without JS — always visible to assistive tech, hidden visually. #}
-  <noscript>
-    <button type="submit" class="rounded-xl px-2 py-1 text-xs">{% trans "Apply" %}</button>
-  </noscript>
+  <button type="submit" name="language" value="ar"
+          class="lang-pill__btn{% if CURRENT_LANGUAGE == 'ar' %} is-active{% endif %}"
+          {% if CURRENT_LANGUAGE == 'ar' %}aria-current="true"{% endif %}
+          aria-label="{% trans 'Arabic' %}">
+    العربية
+  </button>
+  <button type="submit" name="language" value="en"
+          class="lang-pill__btn{% if CURRENT_LANGUAGE == 'en' %} is-active{% endif %}"
+          {% if CURRENT_LANGUAGE == 'en' %}aria-current="true"{% endif %}
+          aria-label="{% trans 'English' %}">
+    English
+  </button>
 </form>

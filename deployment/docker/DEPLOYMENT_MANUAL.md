@@ -607,3 +607,115 @@ $DC exec web_test python manage.py shell
 $DC exec web_test python manage.py seed_billing_plans
 $DC exec db_test  mysql -u root -p finai_test
 ```
+
+---
+
+## 13. Env file preservation across `update`
+
+### 13.1 The problem we hit
+Earlier deployments saw `deployment/docker/env/live.env` revert to placeholder
+values (`replace-live-secret-key`, `change-live-db-password`, empty
+`EMAIL_HOST_USER`, …) after running `deploy.sh update live`. The symptom was a
+fresh container booting with `ImproperlyConfigured` errors or with the wrong
+DB password, even though the file had been hand-edited on the server.
+
+Root cause: env files are gitignored, so `git reset --hard origin/main` does
+**not** touch them directly — but any sequence that *removed* the file (a
+manual `rm`, a `git clean -fd`, or a re-run of the early `init-env` step on a
+freshly checked-out tree) caused `update.sh` to fall back to copying
+`live.env.example` over the top.
+
+### 13.2 The safeguard (already in `update.sh`)
+[deployment/docker/update.sh](deployment/docker/update.sh) now snapshots every
+`env/*.env` file to a `mktemp` directory before `git reset --hard` and
+restores them byte-for-byte afterwards:
+
+```bash
+# excerpt — deployment/docker/update.sh
+ENV_BACKUP_DIR="$(mktemp -d -t finai-env-backup-XXXXXX)"
+trap 'rm -rf "$ENV_BACKUP_DIR"' EXIT
+for env_file in "$SCRIPT_DIR"/env/*.env; do
+  cp -p "$env_file" "$ENV_BACKUP_DIR/$(basename "$env_file")"
+done
+
+git fetch origin "$BRANCH"
+git reset --hard "origin/$BRANCH"
+
+for backup in "$ENV_BACKUP_DIR"/*.env; do
+  cp -p "$backup" "$SCRIPT_DIR/env/$(basename "$backup")"
+done
+```
+
+Effect: `live.env`, `dev.env`, `test.env` survive every `update` run, even if
+a future commit accidentally tracks an env path or someone runs `git clean`
+between deploys.
+
+### 13.3 First-time setup on a fresh server
+On a brand-new clone, `live.env` doesn't exist yet. Create it from the
+template and edit it once:
+
+```bash
+cd /root/finai-deploy
+
+# Create the three env files from their .example templates (no-op if they already exist)
+bash deployment/docker/deploy.sh init-env
+
+# Fill in the live secrets
+nano deployment/docker/env/live.env
+# Required to set (placeholders all start with "replace-" or "change-"):
+#   DJANGO_SECRET_KEY      = <generate a long random string>
+#   SECRET_KEY             = <same value as DJANGO_SECRET_KEY>
+#   DB_PASSWORD            = <strong password>
+#   MYSQL_PASSWORD         = <same value as DB_PASSWORD>
+#   MYSQL_ROOT_PASSWORD    = <different strong password>
+#   EMAIL_HOST_USER        = your-sender@gmail.com
+#   EMAIL_HOST_PASSWORD    = xxxx xxxx xxxx xxxx        (Gmail App Password)
+#   DEFAULT_FROM_EMAIL     = Tadgeeg <your-sender@gmail.com>
+#   GOOGLE_CLIENT_ID       = <from Google Cloud Console>
+#   GOOGLE_CLIENT_SECRET   = <from Google Cloud Console>
+#   OPENAI_API_KEY         = <from platform.openai.com>
+```
+
+### 13.4 Updating a live deploy
+```bash
+cd /root/finai-deploy
+
+# Pull + rebuild + restart, env files preserved automatically
+bash deployment/docker/deploy.sh update live
+
+# Verify your real values still made it through
+grep -E "^(DB_PASSWORD|EMAIL_HOST_USER|OPENAI_API_KEY)=" \
+  deployment/docker/env/live.env
+# None of the values should equal "change-live-db-password" or be empty.
+```
+
+### 13.5 Reapplying an env change without a code update
+If you only changed `live.env` and don't need a git pull, skip `update` and
+just force-recreate the affected containers:
+
+```bash
+docker compose -f deployment/docker/docker-compose.yml up -d --force-recreate web_live celery_live
+docker compose -f deployment/docker/docker-compose.yml logs --tail=30 web_live \
+  | grep -E "Listening|ImproperlyConfigured"
+# Expect: "Listening at: http://0.0.0.0:8000" with NO ImproperlyConfigured error.
+```
+
+### 13.6 Recovering if `live.env` is already wiped
+If you run `update` and find `live.env` reverted to placeholder text:
+
+1. Stop the affected containers so they don't accept traffic with bad config:
+   ```bash
+   bash deployment/docker/deploy.sh stop live
+   ```
+2. Restore the file from your off-server secret store / password manager.
+3. If you don't have a copy, look for an older one on the host:
+   ```bash
+   ls -la /root/finai-deploy/deployment/docker/env/
+   find / -name 'live.env*' 2>/dev/null
+   ```
+4. Bring the stack back up with `bash deployment/docker/deploy.sh up live`
+   and re-verify with the `grep` from §13.4.
+
+> **Keep an off-server backup of `live.env`.** It is gitignored on purpose —
+> the safeguard in `update.sh` protects it across deploys, but it cannot
+> recover the file if the disk dies or the directory is wiped.

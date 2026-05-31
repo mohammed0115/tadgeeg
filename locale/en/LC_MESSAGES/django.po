@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tadgeeg\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-05-06 19:53+0300\n"
+"POT-Creation-Date: 2026-05-31 16:37+0300\n"
 "PO-Revision-Date: 2026-03-18 00:00+0300\n"
 "Last-Translator: Codex\n"
 "Language-Team: English\n"
@@ -19,7 +19,7 @@ msgid "Invoice Header"
 msgstr "Invoice Header"
 
 #: apps/audit/views.py:30 apps/reports/services/findings_service.py:103
-#: templates/dashboard/index.html:254 templates/invoices/detail.html:831
+#: templates/dashboard/index.html:342 templates/invoices/detail.html:831
 #: templates/reports/index.html:140
 #: templates/reports/invoice_audit_report_pdf.html:229
 #: templates/reports/invoice_audit_report_v2.html:197
@@ -27,7 +27,7 @@ msgstr "Invoice Header"
 msgid "Duplicates"
 msgstr "Duplicates"
 
-#: apps/audit/views.py:31
+#: apps/audit/views.py:31 templates/dashboard/index.html:218
 #: templates/documents/detail/purchase_order_detail.html:262
 #: templates/invoices/batch_detail.html:108 templates/phase2/audits.html:396
 #: templates/reports/invoice_audit_report_v2.html:465
@@ -48,7 +48,8 @@ msgid "Controls"
 msgstr "Controls"
 
 #: apps/audit/views.py:34 apps/reports/services/findings_service.py:287
-#: templates/cms_admin/media.html:224 templates/dashboard/index.html:197
+#: templates/billing/usage.html:57 templates/cms_admin/media.html:224
+#: templates/dashboard/index.html:285
 #: templates/documents/bank_statements.html:85
 #: templates/documents/expense_reports.html:85
 #: templates/documents/fixed_assets.html:85 templates/documents/payroll.html:85
@@ -84,9 +85,9 @@ msgstr "Assignee not found."
 msgid "Audit session not found."
 msgstr "Audit session not found."
 
-#: apps/authentication/forms.py:16 templates/auth/login.html:544
+#: apps/authentication/forms.py:16 templates/auth/login.html:551
 #: templates/auth/otp_email.html:36 templates/auth/otp_verify.html:435
-#: templates/auth/portal.html:652
+#: templates/auth/portal.html:658
 msgid "Verification Code"
 msgstr "Verification Code"
 
@@ -98,156 +99,156 @@ msgstr "Please enter a 6-digit verification code."
 msgid "No active account was found with this email address."
 msgstr "No active account was found with this email address."
 
-#: apps/authentication/models.py:91
+#: apps/authentication/models.py:93
 msgid "Email is required"
 msgstr "Email is required"
 
-#: apps/authentication/models.py:115 templates/settings/index.html:387
+#: apps/authentication/models.py:117 templates/settings/index.html:387
 msgid "System Administrator"
 msgstr "System Administrator"
 
-#: apps/authentication/models.py:116 templates/settings/index.html:383
+#: apps/authentication/models.py:118 templates/settings/index.html:383
 #: templates/users/index.html:433 templates/users/index.html:460
 msgid "Chief Audit Officer"
 msgstr "Chief Audit Officer"
 
-#: apps/authentication/models.py:117 templates/settings/index.html:382
+#: apps/authentication/models.py:119 templates/settings/index.html:382
 #: templates/users/index.html:434 templates/users/index.html:461
 msgid "Senior Auditor"
 msgstr "Senior Auditor"
 
-#: apps/authentication/models.py:118 templates/settings/index.html:381
+#: apps/authentication/models.py:120 templates/settings/index.html:381
 msgid "Junior Auditor"
 msgstr "Junior Auditor"
 
-#: apps/authentication/models.py:119 templates/settings/index.html:384
+#: apps/authentication/models.py:121 templates/settings/index.html:384
 #: templates/users/index.html:436 templates/users/index.html:463
 msgid "Compliance Officer"
 msgstr "Compliance Officer"
 
-#: apps/authentication/models.py:120 templates/settings/index.html:385
+#: apps/authentication/models.py:122 templates/settings/index.html:385
 #: templates/users/index.html:437 templates/users/index.html:464
 msgid "Finance Manager"
 msgstr "Finance Manager"
 
-#: apps/authentication/models.py:121 templates/settings/index.html:386
+#: apps/authentication/models.py:123 templates/settings/index.html:386
 #: templates/users/index.html:438 templates/users/index.html:465
 msgid "External Auditor"
 msgstr "External Auditor"
 
-#: apps/authentication/models.py:261 templates/landing/index.html:1446
+#: apps/authentication/models.py:275 templates/landing/index.html:1730
 #: templates/vendor_dashboard/settings.html:79
 msgid "Saudi Arabia"
 msgstr "Saudi Arabia"
 
-#: apps/authentication/models.py:262
+#: apps/authentication/models.py:276
 #: templates/vendor_dashboard/settings.html:80
 msgid "United Arab Emirates"
 msgstr "United Arab Emirates"
 
-#: apps/authentication/models.py:263 templates/landing/index.html:1454
+#: apps/authentication/models.py:277 templates/landing/index.html:1738
 #: templates/vendor_dashboard/settings.html:82
 msgid "Bahrain"
 msgstr "Bahrain"
 
-#: apps/authentication/models.py:264 templates/landing/index.html:1462
+#: apps/authentication/models.py:278 templates/landing/index.html:1746
 #: templates/vendor_dashboard/settings.html:81
 msgid "Kuwait"
 msgstr "Kuwait"
 
-#: apps/authentication/models.py:265 templates/landing/index.html:1466
+#: apps/authentication/models.py:279 templates/landing/index.html:1750
 #: templates/vendor_dashboard/settings.html:84
 msgid "Oman"
 msgstr "Oman"
 
-#: apps/authentication/models.py:266 templates/landing/index.html:1458
+#: apps/authentication/models.py:280 templates/landing/index.html:1742
 #: templates/vendor_dashboard/settings.html:83
 msgid "Qatar"
 msgstr "Qatar"
 
-#: apps/authentication/models.py:269
+#: apps/authentication/models.py:283
 msgid "Saudi Riyal"
 msgstr "Saudi Riyal"
 
-#: apps/authentication/models.py:270
+#: apps/authentication/models.py:284
 msgid "UAE Dirham"
 msgstr "UAE Dirham"
 
-#: apps/authentication/models.py:271
+#: apps/authentication/models.py:285
 msgid "Bahraini Dinar"
 msgstr "Bahraini Dinar"
 
-#: apps/authentication/models.py:272
+#: apps/authentication/models.py:286
 msgid "Kuwaiti Dinar"
 msgstr "Kuwaiti Dinar"
 
-#: apps/authentication/models.py:273
+#: apps/authentication/models.py:287
 msgid "Omani Rial"
 msgstr "Omani Rial"
 
-#: apps/authentication/models.py:274
+#: apps/authentication/models.py:288
 msgid "Qatari Riyal"
 msgstr "Qatari Riyal"
 
-#: apps/authentication/models.py:282
+#: apps/authentication/models.py:296
 #: templates/vendor_dashboard/settings.html:57
 msgid "Commercial Registration Number"
 msgstr "Commercial Registration Number"
 
-#: apps/authentication/models.py:284
+#: apps/authentication/models.py:298
 msgid "Month (1-12)"
 msgstr "Month (1-12)"
 
-#: apps/authentication/models.py:329
+#: apps/authentication/models.py:343
 msgid "User Login"
 msgstr "User Login"
 
-#: apps/authentication/models.py:330
+#: apps/authentication/models.py:344
 msgid "User Logout"
 msgstr "User Logout"
 
-#: apps/authentication/models.py:331
+#: apps/authentication/models.py:345
 msgid "Failed Login"
 msgstr "Failed Login"
 
 # --- Auditing partials ---
-#: apps/authentication/models.py:332
+#: apps/authentication/models.py:346
 msgid "Document Upload"
 msgstr "Document Upload"
 
 # --- Auditing partials ---
-#: apps/authentication/models.py:333
+#: apps/authentication/models.py:347
 msgid "Document Processed"
 msgstr "Document Processed"
 
-#: apps/authentication/models.py:334
+#: apps/authentication/models.py:348
 msgid "Transaction Created"
 msgstr "Transaction Created"
 
-#: apps/authentication/models.py:335
+#: apps/authentication/models.py:349
 msgid "Transaction Updated"
 msgstr "Transaction Updated"
 
-#: apps/authentication/models.py:336
+#: apps/authentication/models.py:350
 msgid "Anomaly Detected"
 msgstr "Anomaly Detected"
 
 # --- Auditing result page ---
-#: apps/authentication/models.py:337
+#: apps/authentication/models.py:351
 msgid "Audit Case Created"
 msgstr "Audit Case Created"
 
-#: apps/authentication/models.py:338 templates/phase2/activity.html:35
+#: apps/authentication/models.py:352 templates/phase2/activity.html:35
 #: templates/phase2/activity.html:386
 msgid "Report Generated"
 msgstr "Report Generated"
 
-#: apps/authentication/models.py:339
+#: apps/authentication/models.py:353
 msgid "User Created"
 msgstr "User Created"
 
-#: apps/authentication/serializers.py:90 apps/authentication/serializers.py:160
-#: apps/frontend/page_views.py:338 templates/auth/portal.html:823
+#: apps/authentication/serializers.py:90 apps/authentication/serializers.py:168
+#: apps/frontend/page_views.py:349 templates/auth/portal.html:816
 msgid "Passwords do not match."
 msgstr "Passwords do not match."
 
@@ -259,15 +260,15 @@ msgstr "No account found with this email address."
 msgid "Account is temporarily locked. Please try again later."
 msgstr "Account is temporarily locked. Please try again later."
 
-#: apps/authentication/serializers.py:138
+#: apps/authentication/serializers.py:145
 msgid "Invalid credentials."
 msgstr "Invalid credentials."
 
-#: apps/authentication/serializers.py:141
+#: apps/authentication/serializers.py:148
 msgid "Account is inactive."
 msgstr "Account is inactive."
 
-#: apps/authentication/serializers.py:166
+#: apps/authentication/serializers.py:174
 msgid "Current password is incorrect."
 msgstr "Current password is incorrect."
 
@@ -351,11 +352,11 @@ msgid ""
 msgstr ""
 "The verification code is incorrect. You have %(remaining)s attempts left."
 
-#: apps/authentication/views.py:81
+#: apps/authentication/views.py:82
 msgid "A 6-digit verification code has been sent to your email address."
 msgstr "A 6-digit verification code has been sent to your email address."
 
-#: apps/authentication/views.py:83
+#: apps/authentication/views.py:84
 msgid ""
 "A recent verification code has already been sent. Check your email and enter "
 "the code."
@@ -363,24 +364,24 @@ msgstr ""
 "A recent verification code has already been sent. Check your email and enter "
 "the code."
 
-#: apps/authentication/views.py:112
+#: apps/authentication/views.py:113
 msgid "Please enter your 6-digit authenticator code to complete login"
 msgstr "Please enter your 6-digit authenticator code to complete login"
 
-#: apps/authentication/views.py:187
+#: apps/authentication/views.py:188
 msgid "Too many login attempts. Try again in 15 minutes."
 msgstr "Too many login attempts. Try again in 15 minutes."
 
-#: apps/authentication/views.py:247
+#: apps/authentication/views.py:248
 msgid "Logged out successfully."
 msgstr "Logged out successfully."
 
-#: apps/authentication/views.py:277 templates/settings/index.html:681
+#: apps/authentication/views.py:278 templates/settings/index.html:681
 #: templates/users/index.html:424
 msgid "Password changed successfully."
 msgstr "Password changed successfully."
 
-#: apps/authentication/views.py:318
+#: apps/authentication/views.py:319
 msgid ""
 "Your account is not linked to an organization. Contact your platform "
 "administrator to fix this."
@@ -388,244 +389,315 @@ msgstr ""
 "Your account is not linked to an organization. Contact your platform "
 "administrator to fix this."
 
-#: apps/authentication/views.py:323
+#: apps/authentication/views.py:324
 msgid "You can only create users inside your own organization."
 msgstr "You can only create users inside your own organization."
 
-#: apps/authentication/views.py:358 templates/auth/portal.html:819
+#: apps/authentication/views.py:359 templates/auth/portal.html:812
 msgid "Password must be at least 8 characters long."
 msgstr "Password must be at least 8 characters long."
 
 # --- Reports: API error messages ---
-#: apps/authentication/views.py:363
+#: apps/authentication/views.py:364
 msgid "User not found."
 msgstr "User not found."
 
-#: apps/authentication/views.py:368
+#: apps/authentication/views.py:369
 msgid "You do not have permission to perform this action."
 msgstr "You do not have permission to perform this action."
 
-#: apps/authentication/views.py:378
+#: apps/authentication/views.py:379
 msgid "Password updated successfully."
 msgstr "Password updated successfully."
 
-#: apps/authentication/views.py:602 apps/authentication/views.py:614
-#: apps/authentication/views.py:625
+#: apps/authentication/views.py:603 apps/authentication/views.py:615
+#: apps/authentication/views.py:626
 msgid "Invalid Google token."
 msgstr "Invalid Google token."
 
-#: apps/authentication/views.py:618
+#: apps/authentication/views.py:619
 msgid "Google account email has not been verified."
 msgstr "Google account email has not been verified."
 
-#: apps/authentication/views.py:649
+#: apps/authentication/views.py:650
 msgid "This account is inactive."
 msgstr "This account is inactive."
 
-#: apps/authentication/views.py:693
+#: apps/authentication/views.py:694
 msgid ""
 "There is no pending verification flow. Sign in or create an account first."
 msgstr ""
 "There is no pending verification flow. Sign in or create an account first."
 
-#: apps/authentication/views.py:712
+#: apps/authentication/views.py:713
 msgid "Email verified successfully."
 msgstr "Email verified successfully."
 
-#: apps/authentication/views.py:727
+#: apps/authentication/views.py:728
 msgid "There is no pending verification flow to resend the code."
 msgstr "There is no pending verification flow to resend the code."
 
-#: apps/authentication/views.py:746 apps/frontend/page_views.py:1006
+#: apps/authentication/views.py:747 apps/frontend/page_views.py:1778
 msgid "A new verification code has been sent to your email address."
 msgstr "A new verification code has been sent to your email address."
 
-#: apps/authentication/views.py:808
+#: apps/authentication/views.py:809
 msgid "pyotp / qrcode is not available on the server."
 msgstr "pyotp / qrcode is not available on the server."
 
-#: apps/authentication/views.py:838
+#: apps/authentication/views.py:839
 msgid "pyotp is not available on the server."
 msgstr "pyotp is not available on the server."
 
-#: apps/authentication/views.py:844
+#: apps/authentication/views.py:845
 msgid "Code and secret are required."
 msgstr "Code and secret are required."
 
-#: apps/authentication/views.py:848 apps/authentication/views.py:886
+#: apps/authentication/views.py:849 apps/authentication/views.py:887
 msgid "The code is invalid or expired."
 msgstr "The code is invalid or expired."
 
-#: apps/authentication/views.py:859
+#: apps/authentication/views.py:860
 msgid "Two-factor authentication has been enabled successfully."
 msgstr "Two-factor authentication has been enabled successfully."
 
-#: apps/authentication/views.py:874 apps/authentication/views.py:980
+#: apps/authentication/views.py:875 apps/authentication/views.py:1014
 msgid "pyotp is not available."
 msgstr "pyotp is not available."
 
-#: apps/authentication/views.py:878
+#: apps/authentication/views.py:879
 msgid "Two-factor authentication is not enabled for this account."
 msgstr "Two-factor authentication is not enabled for this account."
 
-#: apps/authentication/views.py:882
+#: apps/authentication/views.py:883
 msgid "The code is required."
 msgstr "The code is required."
 
-#: apps/authentication/views.py:888
+#: apps/authentication/views.py:889
 msgid "Identity verified."
 msgstr "Identity verified."
 
-#: apps/authentication/views.py:914
+#: apps/authentication/views.py:915
 msgid "TOTP service unavailable"
 msgstr "TOTP service unavailable"
 
-#: apps/authentication/views.py:921
+#: apps/authentication/views.py:922
 msgid "Temporary token and TOTP code are required"
 msgstr "Temporary token and TOTP code are required"
 
-#: apps/authentication/views.py:932 apps/frontend/page_views.py:1051
+#: apps/authentication/views.py:933 apps/frontend/page_views.py:1823
 msgid "Invalid or expired temporary token"
 msgstr "Invalid or expired temporary token"
 
-#: apps/authentication/views.py:939 apps/frontend/page_views.py:1058
+#: apps/authentication/views.py:944
+#, fuzzy
+#| msgid "Account is temporarily locked. Please try again later."
+msgid "Account is temporarily locked. Try again later."
+msgstr "Account is temporarily locked. Please try again later."
+
+#: apps/authentication/views.py:951 apps/frontend/page_views.py:1830
 msgid "MFA not enabled for this user"
 msgstr "MFA not enabled for this user"
 
-#: apps/authentication/views.py:952 apps/frontend/page_views.py:1071
+#: apps/authentication/views.py:984 apps/frontend/page_views.py:1843
 msgid "Invalid or expired TOTP code"
 msgstr "Invalid or expired TOTP code"
 
-#: apps/authentication/views.py:984
+#: apps/authentication/views.py:1018
 msgid "Two-factor authentication is not enabled."
 msgstr "Two-factor authentication is not enabled."
 
-#: apps/authentication/views.py:988
+#: apps/authentication/views.py:1022
 msgid "The code is required to verify before disabling."
 msgstr "The code is required to verify before disabling."
 
-#: apps/authentication/views.py:992
+#: apps/authentication/views.py:1026
 msgid "The code is incorrect."
 msgstr "The code is incorrect."
 
-#: apps/authentication/views.py:1001
+#: apps/authentication/views.py:1035
 msgid "Two-factor authentication has been disabled."
 msgstr "Two-factor authentication has been disabled."
 
+#: apps/billing/bulk_quota.py:197
+#, fuzzy
+#| msgid "Manage your subscription plan and invoices"
+msgid "Please choose a subscription plan before uploading invoices for audit."
+msgstr "Manage your subscription plan and invoices"
+
+#: apps/billing/bulk_quota.py:213
+msgid ""
+"You have used all available invoices in your current plan. Please upgrade to "
+"continue."
+msgstr ""
+
+#: apps/billing/bulk_quota.py:244
+#, python-format
+msgid ""
+"Processing the first %(allowed)d of %(total)d invoices — the remaining "
+"%(blocked)d need an upgraded plan."
+msgstr ""
+
+#: apps/billing/bulk_quota.py:263
+#, python-format
+msgid ""
+"You have %(remaining)d invoices remaining, and this file contains %(total)d. "
+"Upload only %(remaining)d (set accept_partial=true) or upgrade your plan."
+msgstr ""
+
+#: apps/billing/middleware.py:143 apps/billing/views.py:29
+#, fuzzy
+#| msgid "The verification code has expired. Resend a new code to continue."
+msgid "Your subscription has expired. Please renew to continue."
+msgstr "The verification code has expired. Resend a new code to continue."
+
+#: apps/billing/middleware.py:145 templates/billing/subscription.html:85
+#, fuzzy
+#| msgid "Please choose one or more files first."
+msgid "Please choose a plan to continue."
+msgstr "Please choose one or more files first."
+
+#: apps/billing/quota_gate.py:67
+#, fuzzy
+#| msgid "Manage your subscription plan and invoices"
+msgid "Please choose a subscription plan before auditing invoices."
+msgstr "Manage your subscription plan and invoices"
+
+#: apps/billing/quota_gate.py:69
+#, fuzzy
+#| msgid "The verification code has expired. Resend a new code to continue."
+msgid "Your subscription has expired. Please renew to continue auditing."
+msgstr "The verification code has expired. Resend a new code to continue."
+
+#: apps/billing/quota_gate.py:71 templates/billing/subscription.html:169
+msgid "You have used all available invoices in your current plan."
+msgstr ""
+
+#: apps/billing/quota_gate.py:74
+msgid ""
+"This document has already been audited. A fresh re-audit will consume one "
+"invoice from your quota. Pass force_rerun_confirmed=True to continue."
+msgstr ""
+
+#: apps/billing/quota_gate.py:78
+msgid "Audit blocked by billing quota."
+msgstr ""
+
 # --- Document type labels ---
-#: apps/documents/typed_models.py:763 apps/frontend/page_views.py:2770
+#: apps/documents/typed_models.py:767 apps/frontend/page_views.py:3798
 #: apps/reports/services/findings_service.py:109
-#: templates/auditing/upload.html:609 templates/documents/upload.html:112
+#: templates/auditing/upload.html:612 templates/documents/upload.html:112
 #: templates/transactions.html:45
 msgid "Purchase Order"
 msgstr "Purchase Order"
 
-#: apps/documents/typed_models.py:764 apps/frontend/page_views.py:2771
+#: apps/documents/typed_models.py:768 apps/frontend/page_views.py:3799
 #: apps/reports/services/findings_service.py:110
-#: templates/auditing/upload.html:616 templates/documents/upload.html:117
+#: templates/auditing/upload.html:619 templates/documents/upload.html:117
 msgid "Bank Statement"
 msgstr "Bank Statement"
 
-#: apps/documents/typed_models.py:765 apps/frontend/page_views.py:2772
+#: apps/documents/typed_models.py:769 apps/frontend/page_views.py:3800
 msgid "Payroll Sheet"
 msgstr "Payroll Sheet"
 
-#: apps/documents/typed_models.py:766 apps/frontend/page_views.py:2773
+#: apps/documents/typed_models.py:770 apps/frontend/page_views.py:3801
 #: apps/reports/services/findings_service.py:112
 #: templates/documents/upload.html:131
 msgid "Expense Report"
 msgstr "Expense Report"
 
-#: apps/documents/typed_models.py:767 apps/frontend/page_views.py:2774
-#: apps/frontend/page_views.py:2775
+#: apps/documents/typed_models.py:771 apps/frontend/page_views.py:3802
+#: apps/frontend/page_views.py:3803
 #: apps/reports/services/findings_service.py:113
 #: templates/documents/upload.html:126
 msgid "VAT Return"
 msgstr "VAT Return"
 
-#: apps/documents/typed_models.py:768
+#: apps/documents/typed_models.py:772
 msgid "Fixed Asset Ledger"
 msgstr "Fixed Asset Ledger"
 
-#: apps/documents/typed_models.py:769 apps/frontend/page_views.py:2777
+#: apps/documents/typed_models.py:773 apps/frontend/page_views.py:3805
 #: apps/reports/services/findings_service.py:115
-#: templates/auditing/upload.html:651 templates/documents/upload.html:107
+#: templates/auditing/upload.html:654 templates/documents/upload.html:107
 msgid "Sales Receipt"
 msgstr "Sales Receipt"
 
-#: apps/documents/typed_models.py:770 apps/frontend/page_views.py:2769
+#: apps/documents/typed_models.py:774 apps/frontend/page_views.py:3797
 #: templates/audit/tools.html:199 templates/audit/tools.html:348
-#: templates/auditing/upload.html:602 templates/banking/dashboard.html:154
+#: templates/auditing/upload.html:605 templates/banking/dashboard.html:154
 #: templates/compliance/index.html:196
+#: templates/invoices/override_request.html:29
 #: templates/reports/partials/_high_risk_invoices_table.html:21
 #: templates/reports/partials/_high_risk_invoices_table.html:167
 #: templates/streaming/ops.html:152 templates/transactions.html:43
 msgid "Invoice"
 msgstr "Invoice"
 
-#: apps/documents/typed_models.py:771 apps/frontend/page_views.py:2784
+#: apps/documents/typed_models.py:775 apps/frontend/page_views.py:3812
 msgid "Goods Receipt Note"
 msgstr "Goods Receipt Note"
 
-#: apps/documents/typed_models.py:772 apps/frontend/page_views.py:2785
+#: apps/documents/typed_models.py:776 apps/frontend/page_views.py:3813
 #: templates/documents/upload.html:118
 msgid "Payment Voucher"
 msgstr "Payment Voucher"
 
 # --- Document type labels ---
-#: apps/documents/typed_models_v2.py:574 apps/frontend/page_views.py:2781
+#: apps/documents/typed_models_v2.py:574 apps/frontend/page_views.py:3809
 #: templates/documents/upload.html:104
 msgid "Sales Order"
 msgstr "Sales Order"
 
-#: apps/documents/typed_models_v2.py:575 apps/frontend/page_views.py:2782
+#: apps/documents/typed_models_v2.py:575 apps/frontend/page_views.py:3810
 #: templates/documents/upload.html:105
 msgid "Quotation"
 msgstr "Quotation"
 
-#: apps/documents/typed_models_v2.py:576 apps/frontend/page_views.py:2783
+#: apps/documents/typed_models_v2.py:576 apps/frontend/page_views.py:3811
 #: templates/documents/upload.html:106
 msgid "Proforma Invoice"
 msgstr "Proforma Invoice"
 
-#: apps/documents/typed_models_v2.py:577 apps/frontend/page_views.py:2786
+#: apps/documents/typed_models_v2.py:577 apps/frontend/page_views.py:3814
 #: templates/documents/upload.html:119
 msgid "Receipt Voucher"
 msgstr "Receipt Voucher"
 
-#: apps/documents/typed_models_v2.py:578 apps/frontend/page_views.py:2787
+#: apps/documents/typed_models_v2.py:578 apps/frontend/page_views.py:3815
 #: templates/documents/upload.html:120
 msgid "Cash Voucher"
 msgstr "Cash Voucher"
 
-#: apps/documents/typed_models_v2.py:579 apps/frontend/page_views.py:2789
+#: apps/documents/typed_models_v2.py:579 apps/frontend/page_views.py:3817
 #: templates/documents/index.html:307 templates/documents/upload.html:124
 #: templates/ledger/dashboard.html:4 templates/ledger/dashboard.html:42
 #: templates/ledger/dashboard.html:50 templates/reports/index.html:349
 msgid "General Ledger"
 msgstr "General Ledger"
 
-#: apps/documents/typed_models_v2.py:580 apps/frontend/page_views.py:2790
+#: apps/documents/typed_models_v2.py:580 apps/frontend/page_views.py:3818
 msgid "Ledger"
 msgstr "Ledger"
 
-#: apps/documents/typed_models_v2.py:581 apps/frontend/page_views.py:2791
+#: apps/documents/typed_models_v2.py:581 apps/frontend/page_views.py:3819
 #: templates/cms_admin/jobs.html:245 templates/documents/upload.html:127
 #: templates/platform_admin/jobs.html:245
 msgid "Contract"
 msgstr "Contract"
 
-#: apps/documents/typed_models_v2.py:582 apps/frontend/page_views.py:2793
+#: apps/documents/typed_models_v2.py:582 apps/frontend/page_views.py:3821
 #: templates/documents/upload.html:114
 msgid "Supplier Statement"
 msgstr "Supplier Statement"
 
-#: apps/documents/typed_models_v2.py:583 apps/frontend/page_views.py:2794
+#: apps/documents/typed_models_v2.py:583 apps/frontend/page_views.py:3822
 #: templates/documents/upload.html:108
 msgid "Customer Statement"
 msgstr "Customer Statement"
 
-#: apps/documents/typed_models_v2.py:584 apps/frontend/page_views.py:2788
+#: apps/documents/typed_models_v2.py:584 apps/frontend/page_views.py:3816
 #: templates/documents/upload.html:123
 msgid "Journal Entry"
 msgstr "Journal Entry"
@@ -763,7 +835,7 @@ msgstr "High-risk invoices and vendors"
 
 #: apps/frontend/page_views.py:165 templates/reports/index.html:402
 #: templates/reports/invoice_audit_report.html:430
-#: templates/reports/invoice_audit_report_pdf.html:417
+#: templates/reports/invoice_audit_report_pdf.html:432
 #: templates/reports/report_pdf.html:275
 msgid "Vendor Analysis"
 msgstr "Vendor Analysis"
@@ -804,7 +876,7 @@ msgstr "Payroll Audit"
 msgid "Salaries, deductions, and insurance compliance"
 msgstr "Salaries, deductions, and insurance compliance"
 
-#: apps/frontend/page_views.py:211 apps/frontend/page_views.py:2804
+#: apps/frontend/page_views.py:211 apps/frontend/page_views.py:3832
 msgid "Expense Report Audit"
 msgstr "Expense Report Audit"
 
@@ -836,52 +908,52 @@ msgstr "Sales Receipt Audit"
 msgid "Payment, cash limits, and ZATCA QR"
 msgstr "Payment, cash limits, and ZATCA QR"
 
-#: apps/frontend/page_views.py:280
+#: apps/frontend/page_views.py:291
 msgid "A verification code has been sent to your email address."
 msgstr "A verification code has been sent to your email address."
 
-#: apps/frontend/page_views.py:282
+#: apps/frontend/page_views.py:293
 msgid "An active verification code already exists. Please check your email."
 msgstr "An active verification code already exists. Please check your email."
 
-#: apps/frontend/page_views.py:306
+#: apps/frontend/page_views.py:317
 msgid "Unable to complete the request right now."
 msgstr "Unable to complete the request right now."
 
-#: apps/frontend/page_views.py:314 apps/frontend/page_views.py:331
-#: apps/frontend/page_views.py:334
+#: apps/frontend/page_views.py:325 apps/frontend/page_views.py:342
+#: apps/frontend/page_views.py:345
 msgid "The email address is invalid."
 msgstr "The email address is invalid."
 
-#: apps/frontend/page_views.py:316
+#: apps/frontend/page_views.py:327
 msgid "No account was found for this email address."
 msgstr "No account was found for this email address."
 
-#: apps/frontend/page_views.py:317 apps/frontend/page_views.py:325
+#: apps/frontend/page_views.py:328 apps/frontend/page_views.py:336
 msgid "The email address or password is incorrect."
 msgstr "The email address or password is incorrect."
 
-#: apps/frontend/page_views.py:322
+#: apps/frontend/page_views.py:333
 msgid "The account has been temporarily locked. Please try again later."
 msgstr "The account has been temporarily locked. Please try again later."
 
-#: apps/frontend/page_views.py:324
+#: apps/frontend/page_views.py:335
 msgid "This account is currently inactive."
 msgstr "This account is currently inactive."
 
-#: apps/frontend/page_views.py:332 apps/frontend/page_views.py:334
+#: apps/frontend/page_views.py:343 apps/frontend/page_views.py:345
 msgid "This email address is already in use."
 msgstr "This email address is already in use."
 
-#: apps/frontend/page_views.py:339
+#: apps/frontend/page_views.py:350
 msgid "Please review the password and try again."
 msgstr "Please review the password and try again."
 
-#: apps/frontend/page_views.py:341
+#: apps/frontend/page_views.py:352
 msgid "Full name is required."
 msgstr "Full name is required."
 
-#: apps/frontend/page_views.py:417
+#: apps/frontend/page_views.py:428
 msgid ""
 "Data was extracted automatically using local OCR. Some fields may still need "
 "human review."
@@ -889,14 +961,14 @@ msgstr ""
 "Data was extracted automatically using local OCR. Some fields may still need "
 "human review."
 
-#: apps/frontend/page_views.py:426 templates/audit/inbox.html:33
+#: apps/frontend/page_views.py:437 templates/audit/inbox.html:33
 #: templates/reports/document_audit_report.html:344
 #: templates/reports/invoice_audit_report.html:362
 #: templates/reports/invoice_audit_report.html:378
 #: templates/reports/invoice_audit_report_pdf.html:202
 #: templates/reports/invoice_audit_report_pdf.html:228
 #: templates/reports/invoice_audit_report_pdf.html:317
-#: templates/reports/invoice_audit_report_pdf.html:386
+#: templates/reports/invoice_audit_report_pdf.html:401
 #: templates/reports/invoice_audit_report_v2.html:192
 #: templates/reports/invoice_audit_report_v2.html:394
 #: templates/reports/invoice_audit_report_v2.html:421
@@ -905,15 +977,15 @@ msgstr ""
 msgid "High Risk"
 msgstr "High Risk"
 
-#: apps/frontend/page_views.py:435
+#: apps/frontend/page_views.py:446
 msgid "Medium Risk"
 msgstr "Medium Risk"
 
-#: apps/frontend/page_views.py:443 templates/invoices/detail.html:557
+#: apps/frontend/page_views.py:454 templates/invoices/detail.html:557
 msgid "Low Risk"
 msgstr "Low Risk"
 
-#: apps/frontend/page_views.py:454 templates/documents/bank_statements.html:69
+#: apps/frontend/page_views.py:465 templates/documents/bank_statements.html:69
 #: templates/documents/detail/bank_statement_detail.html:267
 #: templates/documents/detail/expense_report_detail.html:266
 #: templates/documents/detail/fixed_asset_detail.html:266
@@ -934,7 +1006,7 @@ msgstr "Low Risk"
 msgid "Approved"
 msgstr "Approved"
 
-#: apps/frontend/page_views.py:455 templates/banking/dashboard.html:88
+#: apps/frontend/page_views.py:466 templates/banking/dashboard.html:88
 #: templates/cms_admin/jobs.html:148 templates/cms_admin/jobs.html:378
 #: templates/documents/bank_statements.html:70
 #: templates/documents/expense_reports.html:70
@@ -950,22 +1022,22 @@ msgstr "Approved"
 msgid "Rejected"
 msgstr "Rejected"
 
-#: apps/frontend/page_views.py:456 templates/partials/i18n_strings.html:52
+#: apps/frontend/page_views.py:467 templates/partials/i18n_strings.html:52
 #: templates/reports/invoice_audit_report.html:366
 #: templates/reports/invoice_audit_report.html:382
 #: templates/reports/invoice_audit_report_pdf.html:204
-#: templates/reports/invoice_audit_report_pdf.html:387
+#: templates/reports/invoice_audit_report_pdf.html:402
 #: templates/reports/partials/_report_header.html:11
 #: templates/vendors/index.html:65 templates/vendors/index.html:109
 msgid "Needs Review"
 msgstr "Needs Review"
 
-#: apps/frontend/page_views.py:457 templates/invoices/batch_detail.html:85
+#: apps/frontend/page_views.py:468 templates/invoices/batch_detail.html:85
 #: templates/partials/i18n_strings.html:41
 msgid "Validated"
 msgstr "Validated"
 
-#: apps/frontend/page_views.py:458 templates/auditing/history.html:85
+#: apps/frontend/page_views.py:469 templates/auditing/history.html:85
 #: templates/auditing/result.html:69 templates/invoices/batches.html:66
 #: templates/partials/i18n_strings.html:40 templates/phase2/files.html:39
 #: templates/storage_management/file_monitor.html:56
@@ -974,7 +1046,7 @@ msgstr "Validated"
 msgid "Processing"
 msgstr "Processing"
 
-#: apps/frontend/page_views.py:459 templates/auditing/history.html:93
+#: apps/frontend/page_views.py:470 templates/auditing/history.html:93
 #: templates/auditing/result.html:77 templates/cms_admin/jobs.html:146
 #: templates/cms_admin/jobs.html:376 templates/cms_admin/jobs.html:450
 #: templates/documents/bank_statements.html:68
@@ -994,15 +1066,15 @@ msgstr "Processing"
 msgid "Pending"
 msgstr "Pending"
 
-#: apps/frontend/page_views.py:462
+#: apps/frontend/page_views.py:473
 msgid "Unknown"
 msgstr "Unknown"
 
-#: apps/frontend/page_views.py:500
+#: apps/frontend/page_views.py:511
 msgid "Unspecified"
 msgstr "Unspecified"
 
-#: apps/frontend/page_views.py:537
+#: apps/frontend/page_views.py:548
 msgid ""
 "Data was extracted automatically. Review sensitive fields before final "
 "approval."
@@ -1010,103 +1082,87 @@ msgstr ""
 "Data was extracted automatically. Review sensitive fields before final "
 "approval."
 
-#: apps/frontend/page_views.py:546
+#: apps/frontend/page_views.py:557
 msgid "PDF Text Layer"
 msgstr "PDF Text Layer"
 
-#: apps/frontend/page_views.py:547 apps/frontend/page_views.py:552
+#: apps/frontend/page_views.py:558 apps/frontend/page_views.py:563
 msgid "AI Vision (GPT-4o)"
 msgstr "AI Vision (GPT-4o)"
 
-#: apps/frontend/page_views.py:548
+#: apps/frontend/page_views.py:559
 msgid "OCR Fallback (Tesseract)"
 msgstr "OCR Fallback (Tesseract)"
 
-#: apps/frontend/page_views.py:549
+#: apps/frontend/page_views.py:560
 msgid "AI Text Extraction (GPT-4o)"
 msgstr "AI Text Extraction (GPT-4o)"
 
-#: apps/frontend/page_views.py:550
+#: apps/frontend/page_views.py:561
 msgid "AI OCR (GPT-4o)"
 msgstr "AI OCR (GPT-4o)"
 
-#: apps/frontend/page_views.py:551
+#: apps/frontend/page_views.py:562
 msgid "OCR (Tesseract)"
 msgstr "OCR (Tesseract)"
 
-#: apps/frontend/page_views.py:553
+#: apps/frontend/page_views.py:564
 msgid "Image OCR"
 msgstr "Image OCR"
 
-#: apps/frontend/page_views.py:554
+#: apps/frontend/page_views.py:565
 msgid "PDF OCR"
 msgstr "PDF OCR"
 
-#: apps/frontend/page_views.py:555
+#: apps/frontend/page_views.py:566
 msgid "Excel Parsing"
 msgstr "Excel Parsing"
 
-#: apps/frontend/page_views.py:556
+#: apps/frontend/page_views.py:567
 msgid "JSON Parsing"
 msgstr "JSON Parsing"
 
-#: apps/frontend/page_views.py:557
+#: apps/frontend/page_views.py:568
 msgid "CSV Parsing"
 msgstr "CSV Parsing"
 
-#: apps/frontend/page_views.py:558
+#: apps/frontend/page_views.py:569
 msgid "Automatic Extraction"
 msgstr "Automatic Extraction"
 
-#: apps/frontend/page_views.py:662
-msgid "Flexible plans for auditing and compliance teams"
-msgstr "Flexible plans for auditing and compliance teams"
+#: apps/frontend/page_views.py:719
+#, fuzzy
+#| msgid "Pricing Plans"
+msgid "Pricing & plans"
+msgstr "Pricing Plans"
 
-#: apps/frontend/page_views.py:663 templates/cms_admin/base_cms.html:73
+#: apps/frontend/page_views.py:720 templates/cms_admin/base_cms.html:73
 #: templates/cms_admin/dashboard.html:272 templates/cms_admin/seo.html:213
-#: templates/landing/index.html:1159 templates/landing/index.html:1183
-#: templates/landing/index.html:1532 templates/landing/page.html:407
-#: templates/landing/page.html:427 templates/platform_admin/cms/pricing.html:5
+#: templates/landing/index.html:1336 templates/landing/index.html:1362
+#: templates/landing/index.html:1821 templates/landing/page.html:651
+#: templates/landing/page.html:672 templates/landing/page.html:826
+#: templates/landing/pricing.html:133
+#: templates/platform_admin/cms/pricing.html:5
 #: templates/platform_admin/seo.html:195
 msgid "Pricing"
 msgstr "Pricing"
 
-#: apps/frontend/page_views.py:664
+#: apps/frontend/page_views.py:722
 msgid ""
-"Start quickly with a plan sized for your team, with a clear path to expand "
-"as document volume and workflows grow."
+"Choose the plan that fits your audit volume. Every plan includes the full "
+"Tadgeeg AI pipeline, fraud detection, and ZATCA-ready exports."
 msgstr ""
-"Start quickly with a plan sized for your team, with a clear path to expand "
-"as document volume and workflows grow."
 
-#: apps/frontend/page_views.py:666
-msgid "Starter plan for small and mid-sized audit teams."
-msgstr "Starter plan for small and mid-sized audit teams."
-
-#: apps/frontend/page_views.py:667
-msgid ""
-"Enterprise plan with stronger tenant isolation and broader review workflows."
-msgstr ""
-"Enterprise plan with stronger tenant isolation and broader review workflows."
-
-#: apps/frontend/page_views.py:668
-msgid ""
-"Gradual activation of advanced features such as executive reporting and "
-"integrations."
-msgstr ""
-"Gradual activation of advanced features such as executive reporting and "
-"integrations."
-
-#: apps/frontend/page_views.py:677
+#: apps/frontend/page_views.py:735
 msgid "A financial auditing platform built for the GCC market"
 msgstr "A financial auditing platform built for the GCC market"
 
-#: apps/frontend/page_views.py:678
+#: apps/frontend/page_views.py:736
 #, python-format
 msgid "About %(product)s"
 msgstr "About %(product)s"
 
-#: apps/frontend/page_views.py:679
+#: apps/frontend/page_views.py:737
 #, python-format
 msgid ""
 "%(product)s focuses on auditing invoices and financial documents with tax "
@@ -1115,32 +1171,55 @@ msgstr ""
 "%(product)s focuses on auditing invoices and financial documents with tax "
 "and financial compliance support across GCC business environments."
 
-#: apps/frontend/page_views.py:681
+#: apps/frontend/page_views.py:739
 msgid "Arabic and English support throughout the product journey."
 msgstr "Arabic and English support throughout the product journey."
 
-#: apps/frontend/page_views.py:682
+#: apps/frontend/page_views.py:740
 msgid "A focus on ZATCA, VAT, and document review."
 msgstr "A focus on ZATCA, VAT, and document review."
 
-#: apps/frontend/page_views.py:683
+#: apps/frontend/page_views.py:741
 msgid "A practical experience for finance, audit, and compliance teams."
 msgstr "A practical experience for finance, audit, and compliance teams."
 
-#: apps/frontend/page_views.py:692
+#: apps/frontend/page_views.py:748
+msgid "Sami bin Saud Al-Shrar"
+msgstr ""
+
+#: apps/frontend/page_views.py:749
+msgid "Owner"
+msgstr ""
+
+#: apps/frontend/page_views.py:757
+msgid "Call now"
+msgstr ""
+
+#: apps/frontend/page_views.py:758
+msgid "Message on WhatsApp"
+msgstr ""
+
+#: apps/frontend/page_views.py:759
+#, fuzzy
+#| msgid "Email"
+msgid "Email us"
+msgstr "Email"
+
+#: apps/frontend/page_views.py:767
 #, python-format
 msgid "Talk to the %(product)s team"
 msgstr "Talk to the %(product)s team"
 
-#: apps/frontend/page_views.py:693 templates/cms_admin/seo.html:215
-#: templates/cms_admin/settings.html:137 templates/landing/index.html:1161
-#: templates/landing/index.html:1185 templates/landing/index.html:1533
-#: templates/landing/page.html:409 templates/landing/page.html:429
+#: apps/frontend/page_views.py:768 templates/cms_admin/seo.html:215
+#: templates/cms_admin/settings.html:137 templates/landing/index.html:1338
+#: templates/landing/index.html:1364 templates/landing/index.html:1825
+#: templates/landing/page.html:653 templates/landing/page.html:674
+#: templates/landing/page.html:830 templates/landing/pricing.html:135
 #: templates/platform_admin/seo.html:196
 msgid "Contact"
 msgstr "Contact"
 
-#: apps/frontend/page_views.py:694
+#: apps/frontend/page_views.py:769
 msgid ""
 "If you need a tailored demo, enterprise onboarding, or technical guidance, "
 "our team can arrange an introductory session and rollout plan."
@@ -1148,56 +1227,27 @@ msgstr ""
 "If you need a tailored demo, enterprise onboarding, or technical guidance, "
 "our team can arrange an introductory session and rollout plan."
 
-#: apps/frontend/page_views.py:696
+#: apps/frontend/page_views.py:771
 msgid "Tailored responses for finance and compliance teams."
 msgstr "Tailored responses for finance and compliance teams."
 
-#: apps/frontend/page_views.py:697
+#: apps/frontend/page_views.py:772
 msgid "Support for pilot and enterprise launches."
 msgstr "Support for pilot and enterprise launches."
 
-#: apps/frontend/page_views.py:698
+#: apps/frontend/page_views.py:773
 msgid "Technical assistance and onboarding guidance."
 msgstr "Technical assistance and onboarding guidance."
 
-#: apps/frontend/page_views.py:707
-msgid "Privacy and data protection"
-msgstr "Privacy and data protection"
-
-#: apps/frontend/page_views.py:708 templates/landing/page.html:410
-#: templates/landing/page.html:430
-msgid "Privacy"
-msgstr "Privacy"
-
-#: apps/frontend/page_views.py:709
-msgid ""
-"We handle financial data with a high standard of care, including clear "
-"tenant isolation and audit trails for sensitive actions."
-msgstr ""
-"We handle financial data with a high standard of care, including clear "
-"tenant isolation and audit trails for sensitive actions."
-
-#: apps/frontend/page_views.py:711
-msgid "Organization-level data isolation."
-msgstr "Organization-level data isolation."
-
-#: apps/frontend/page_views.py:712
-msgid "Audit logs for sensitive operations."
-msgstr "Audit logs for sensitive operations."
-
-#: apps/frontend/page_views.py:713
-msgid "Access controls based on organizational roles."
-msgstr "Access controls based on organizational roles."
-
-#: apps/frontend/page_views.py:722
+#: apps/frontend/page_views.py:1494
 msgid "Audit and compliance insights"
 msgstr "Audit and compliance insights"
 
-#: apps/frontend/page_views.py:723
+#: apps/frontend/page_views.py:1495
 msgid "Insights"
 msgstr "Insights"
 
-#: apps/frontend/page_views.py:724
+#: apps/frontend/page_views.py:1496
 msgid ""
 "A place to share operating insights and practical guidance on financial "
 "auditing, tax compliance, and digital transformation for finance teams."
@@ -1205,27 +1255,27 @@ msgstr ""
 "A place to share operating insights and practical guidance on financial "
 "auditing, tax compliance, and digital transformation for finance teams."
 
-#: apps/frontend/page_views.py:726
+#: apps/frontend/page_views.py:1498
 msgid "Best practices for reviewing invoices and vendors."
 msgstr "Best practices for reviewing invoices and vendors."
 
-#: apps/frontend/page_views.py:727
+#: apps/frontend/page_views.py:1499
 msgid "Updates on GCC compliance requirements."
 msgstr "Updates on GCC compliance requirements."
 
-#: apps/frontend/page_views.py:728
+#: apps/frontend/page_views.py:1500
 msgid "Operational guides for enabling AI inside finance teams."
 msgstr "Operational guides for enabling AI inside finance teams."
 
-#: apps/frontend/page_views.py:737
+#: apps/frontend/page_views.py:1509
 msgid "Integrations that are ready and scalable"
 msgstr "Integrations that are ready and scalable"
 
-#: apps/frontend/page_views.py:738 templates/platform_admin/settings.html:121
+#: apps/frontend/page_views.py:1510 templates/platform_admin/settings.html:121
 msgid "Integrations"
 msgstr "Integrations"
 
-#: apps/frontend/page_views.py:739
+#: apps/frontend/page_views.py:1511
 msgid ""
 "Integration plans cover email, approval flows, and connectivity with your "
 "current finance operating environment."
@@ -1233,27 +1283,27 @@ msgstr ""
 "Integration plans cover email, approval flows, and connectivity with your "
 "current finance operating environment."
 
-#: apps/frontend/page_views.py:741
+#: apps/frontend/page_views.py:1513
 msgid "Gradual connectivity with your existing company systems."
 msgstr "Gradual connectivity with your existing company systems."
 
-#: apps/frontend/page_views.py:742
+#: apps/frontend/page_views.py:1514
 msgid "Internal APIs that can be extended for integrations."
 msgstr "Internal APIs that can be extended for integrations."
 
-#: apps/frontend/page_views.py:743
+#: apps/frontend/page_views.py:1515
 msgid "Tailored setup for organizations with specialized workflows."
 msgstr "Tailored setup for organizations with specialized workflows."
 
-#: apps/frontend/page_views.py:752
+#: apps/frontend/page_views.py:1524
 msgid "APIs ready for enterprise integration"
 msgstr "APIs ready for enterprise integration"
 
-#: apps/frontend/page_views.py:753
+#: apps/frontend/page_views.py:1525
 msgid "API"
 msgstr "API"
 
-#: apps/frontend/page_views.py:754
+#: apps/frontend/page_views.py:1526
 #, python-format
 msgid ""
 "%(product)s provides secure, organization-scoped APIs for document upload, "
@@ -1262,29 +1312,29 @@ msgstr ""
 "%(product)s provides secure, organization-scoped APIs for document upload, "
 "session tracking, and access to audit results and reports."
 
-#: apps/frontend/page_views.py:757
+#: apps/frontend/page_views.py:1529
 msgid "API authentication with clear tenant isolation."
 msgstr "API authentication with clear tenant isolation."
 
-#: apps/frontend/page_views.py:758
+#: apps/frontend/page_views.py:1530
 msgid "Endpoints for uploads, tracking, and reports."
 msgstr "Endpoints for uploads, tracking, and reports."
 
-#: apps/frontend/page_views.py:759
+#: apps/frontend/page_views.py:1531
 msgid "Suitable for ERP systems and internal business portals."
 msgstr "Suitable for ERP systems and internal business portals."
 
-#: apps/frontend/page_views.py:768
+#: apps/frontend/page_views.py:1540
 #, python-format
 msgid "Working at %(product)s"
 msgstr "Working at %(product)s"
 
-#: apps/frontend/page_views.py:769 templates/cms_admin/base_cms.html:81
+#: apps/frontend/page_views.py:1541 templates/cms_admin/base_cms.html:81
 #: templates/cms_admin/seo.html:216
 msgid "Careers"
 msgstr "Careers"
 
-#: apps/frontend/page_views.py:770
+#: apps/frontend/page_views.py:1542
 msgid ""
 "We are building a financial product that demands precise execution, and we "
 "look for teams that combine technical depth with financial and regulatory "
@@ -1294,54 +1344,54 @@ msgstr ""
 "look for teams that combine technical depth with financial and regulatory "
 "understanding."
 
-#: apps/frontend/page_views.py:772
+#: apps/frontend/page_views.py:1544
 msgid "Opportunities in engineering, product, and user experience."
 msgstr "Opportunities in engineering, product, and user experience."
 
-#: apps/frontend/page_views.py:773
+#: apps/frontend/page_views.py:1545
 msgid "A focus on trust-sensitive B2B products."
 msgstr "A focus on trust-sensitive B2B products."
 
-#: apps/frontend/page_views.py:774
+#: apps/frontend/page_views.py:1546
 msgid "A practical environment for shipping real operational products."
 msgstr "A practical environment for shipping real operational products."
 
-#: apps/frontend/page_views.py:971
+#: apps/frontend/page_views.py:1743
 msgid "Your email address has been verified successfully."
 msgstr "Your email address has been verified successfully."
 
-#: apps/frontend/page_views.py:984
+#: apps/frontend/page_views.py:1756
 msgid "The verification session has expired. Please sign in again."
 msgstr "The verification session has expired. Please sign in again."
 
-#: apps/frontend/page_views.py:988
+#: apps/frontend/page_views.py:1760
 msgid "Unable to resend the code right now."
 msgstr "Unable to resend the code right now."
 
-#: apps/frontend/page_views.py:1023 templates/partials/i18n_strings.html:89
+#: apps/frontend/page_views.py:1795 templates/partials/i18n_strings.html:89
 msgid "Method not allowed"
 msgstr "Method not allowed"
 
-#: apps/frontend/page_views.py:1040
+#: apps/frontend/page_views.py:1812
 msgid "Temporary token and 6-digit TOTP code are required"
 msgstr "Temporary token and 6-digit TOTP code are required"
 
-#: apps/frontend/page_views.py:1090
+#: apps/frontend/page_views.py:1862
 msgid "Login successful!"
 msgstr "Login successful!"
 
-#: apps/frontend/page_views.py:1098
+#: apps/frontend/page_views.py:1870
 msgid "An error occurred during MFA verification"
 msgstr "An error occurred during MFA verification"
 
-#: apps/frontend/page_views.py:2736 templates/base.html:371
-#: templates/base.html:385 templates/cms_admin/pricing.html:94
-#: templates/dashboard/index.html:252 templates/dashboard/index.html:375
+#: apps/frontend/page_views.py:3764 templates/base.html:377
+#: templates/base.html:391 templates/cms_admin/pricing.html:94
+#: templates/dashboard/index.html:340 templates/dashboard/index.html:497
 #: templates/documents/index.html:168 templates/invoices/detail.html:9
 #: templates/invoices/list.html:4 templates/invoices/list.html:28
 #: templates/invoices/list.html:34 templates/invoices/subreport.html:117
 #: templates/invoices/subreport.html:149
-#: templates/layouts/dashboard_base.html:401 templates/reports/index.html:128
+#: templates/layouts/dashboard_base.html:417 templates/reports/index.html:128
 #: templates/reports/index.html:175 templates/reports/index.html:560
 #: templates/reports/invoice_audit_report_v2.html:653
 #: templates/reports/partials/_findings_register.html:95
@@ -1353,8 +1403,8 @@ msgid "Invoices"
 msgstr "Invoices"
 
 # --- Document type labels ---
-#: apps/frontend/page_views.py:2737 templates/base.html:468
-#: templates/dashboard/index.html:124
+#: apps/frontend/page_views.py:3765 templates/base.html:478
+#: templates/dashboard/index.html:199
 #: templates/documents/detail/purchase_order_detail.html:8
 #: templates/documents/index.html:175
 #: templates/documents/purchase_orders.html:4
@@ -1366,7 +1416,7 @@ msgstr "Invoices"
 msgid "Purchase Orders"
 msgstr "Purchase Orders"
 
-#: apps/frontend/page_views.py:2738 templates/base.html:473
+#: apps/frontend/page_views.py:3766 templates/base.html:483
 #: templates/documents/bank_statements.html:4
 #: templates/documents/bank_statements.html:34
 #: templates/documents/bank_statements.html:44
@@ -1376,9 +1426,9 @@ msgstr "Purchase Orders"
 msgid "Bank Statements"
 msgstr "Bank Statements"
 
-#: apps/frontend/page_views.py:2739
+#: apps/frontend/page_views.py:3767
 #: apps/reports/services/findings_service.py:111
-#: templates/auditing/upload.html:623 templates/base.html:478
+#: templates/auditing/upload.html:626 templates/base.html:488
 #: templates/documents/index.html:211 templates/documents/payroll.html:4
 #: templates/documents/payroll.html:34 templates/documents/payroll.html:44
 #: templates/documents/upload.html:130 templates/documents/upload.html:299
@@ -1386,7 +1436,7 @@ msgstr "Bank Statements"
 msgid "Payroll"
 msgstr "Payroll"
 
-#: apps/frontend/page_views.py:2740 templates/base.html:483
+#: apps/frontend/page_views.py:3768 templates/base.html:493
 #: templates/documents/detail/expense_report_detail.html:8
 #: templates/documents/expense_reports.html:4
 #: templates/documents/expense_reports.html:34
@@ -1396,8 +1446,8 @@ msgstr "Payroll"
 msgid "Expense Reports"
 msgstr "Expense Reports"
 
-#: apps/frontend/page_views.py:2741 apps/frontend/page_views.py:2742
-#: templates/base.html:488 templates/documents/detail/vat_return_detail.html:8
+#: apps/frontend/page_views.py:3769 apps/frontend/page_views.py:3770
+#: templates/base.html:498 templates/documents/detail/vat_return_detail.html:8
 #: templates/documents/index.html:204 templates/documents/upload.html:296
 #: templates/documents/vat_returns.html:4
 #: templates/documents/vat_returns.html:34
@@ -1406,8 +1456,8 @@ msgstr "Expense Reports"
 msgid "VAT Returns"
 msgstr "VAT Returns"
 
-#: apps/frontend/page_views.py:2743 templates/auditing/upload.html:644
-#: templates/base.html:493 templates/documents/detail/fixed_asset_detail.html:8
+#: apps/frontend/page_views.py:3771 templates/auditing/upload.html:647
+#: templates/base.html:503 templates/documents/detail/fixed_asset_detail.html:8
 #: templates/documents/fixed_assets.html:4
 #: templates/documents/fixed_assets.html:34
 #: templates/documents/fixed_assets.html:44 templates/documents/index.html:189
@@ -1416,7 +1466,7 @@ msgstr "VAT Returns"
 msgid "Fixed Assets"
 msgstr "Fixed Assets"
 
-#: apps/frontend/page_views.py:2744 templates/base.html:498
+#: apps/frontend/page_views.py:3772 templates/base.html:508
 #: templates/documents/detail/sales_receipt_detail.html:8
 #: templates/documents/index.html:182 templates/documents/sales_receipts.html:4
 #: templates/documents/sales_receipts.html:34
@@ -1426,100 +1476,100 @@ msgstr "Fixed Assets"
 msgid "Sales Receipts"
 msgstr "Sales Receipts"
 
-#: apps/frontend/page_views.py:2746 templates/documents/upload.html:276
+#: apps/frontend/page_views.py:3774 templates/documents/upload.html:276
 msgid "Sales Invoices"
 msgstr "Sales Invoices"
 
-#: apps/frontend/page_views.py:2747 templates/documents/upload.html:283
+#: apps/frontend/page_views.py:3775 templates/documents/upload.html:283
 msgid "Purchase Invoices"
 msgstr "Purchase Invoices"
 
 # --- Document type labels ---
-#: apps/frontend/page_views.py:2748 templates/documents/index.html:228
+#: apps/frontend/page_views.py:3776 templates/documents/index.html:228
 #: templates/documents/upload.html:277
 msgid "Sales Orders"
 msgstr "Sales Orders"
 
-#: apps/frontend/page_views.py:2749 templates/documents/index.html:235
+#: apps/frontend/page_views.py:3777 templates/documents/index.html:235
 #: templates/documents/upload.html:278
 msgid "Quotations"
 msgstr "Quotations"
 
-#: apps/frontend/page_views.py:2750 templates/documents/index.html:242
+#: apps/frontend/page_views.py:3778 templates/documents/index.html:242
 #: templates/documents/upload.html:279
 msgid "Proforma Invoices"
 msgstr "Proforma Invoices"
 
-#: apps/frontend/page_views.py:2751
+#: apps/frontend/page_views.py:3779
 msgid "Goods Receipt Notes"
 msgstr "Goods Receipt Notes"
 
-#: apps/frontend/page_views.py:2752 templates/documents/index.html:273
+#: apps/frontend/page_views.py:3780 templates/documents/index.html:273
 #: templates/documents/upload.html:289
 msgid "Payment Vouchers"
 msgstr "Payment Vouchers"
 
-#: apps/frontend/page_views.py:2753 templates/documents/index.html:283
+#: apps/frontend/page_views.py:3781 templates/documents/index.html:283
 #: templates/documents/upload.html:290
 msgid "Receipt Vouchers"
 msgstr "Receipt Vouchers"
 
-#: apps/frontend/page_views.py:2754 templates/documents/index.html:290
+#: apps/frontend/page_views.py:3782 templates/documents/index.html:290
 #: templates/documents/upload.html:291
 msgid "Cash Vouchers"
 msgstr "Cash Vouchers"
 
-#: apps/frontend/page_views.py:2755 templates/documents/index.html:300
+#: apps/frontend/page_views.py:3783 templates/documents/index.html:300
 #: templates/documents/upload.html:293
 msgid "Journal Entries"
 msgstr "Journal Entries"
 
-#: apps/frontend/page_views.py:2756 templates/documents/upload.html:294
+#: apps/frontend/page_views.py:3784 templates/documents/upload.html:294
 msgid "General Ledgers"
 msgstr "General Ledgers"
 
-#: apps/frontend/page_views.py:2757
+#: apps/frontend/page_views.py:3785
 msgid "Ledgers"
 msgstr "Ledgers"
 
-#: apps/frontend/page_views.py:2758 templates/documents/index.html:321
+#: apps/frontend/page_views.py:3786 templates/documents/index.html:321
 #: templates/documents/upload.html:297
 msgid "Contracts"
 msgstr "Contracts"
 
-#: apps/frontend/page_views.py:2759
+#: apps/frontend/page_views.py:3787
 msgid "Tax / VAT Documents"
 msgstr "Tax / VAT Documents"
 
-#: apps/frontend/page_views.py:2760 templates/documents/index.html:259
+#: apps/frontend/page_views.py:3788 templates/documents/index.html:259
 #: templates/documents/upload.html:286
 msgid "Supplier Statements"
 msgstr "Supplier Statements"
 
-#: apps/frontend/page_views.py:2761 templates/documents/index.html:249
+#: apps/frontend/page_views.py:3789 templates/documents/index.html:249
 #: templates/documents/upload.html:281
 msgid "Customer Statements"
 msgstr "Customer Statements"
 
-#: apps/frontend/page_views.py:2776
+#: apps/frontend/page_views.py:3804
 #: apps/reports/services/findings_service.py:114
 #: templates/documents/upload.html:132
 msgid "Fixed Asset"
 msgstr "Fixed Asset"
 
-#: apps/frontend/page_views.py:2779 templates/documents/upload.html:103
+#: apps/frontend/page_views.py:3807 templates/documents/upload.html:103
 msgid "Sales Invoice"
 msgstr "Sales Invoice"
 
-#: apps/frontend/page_views.py:2780 templates/documents/upload.html:111
+#: apps/frontend/page_views.py:3808 templates/documents/upload.html:111
 msgid "Purchase Invoice"
 msgstr "Purchase Invoice"
 
-#: apps/frontend/page_views.py:2792
+#: apps/frontend/page_views.py:3820
 msgid "Tax / VAT Document"
 msgstr "Tax / VAT Document"
 
-#: apps/frontend/page_views.py:2800 templates/invoices/invoice_pdf.html:6
+#: apps/frontend/page_views.py:3828 templates/invoices/invoice_pdf.html:6
 #: templates/invoices/invoice_pdf.html:38
 #: templates/reports/invoice_audit_report.html:5
 #: templates/reports/invoice_audit_report_pdf.html:200
@@ -1531,95 +1581,95 @@ msgid "Invoice Audit Report"
 msgstr "Invoice Audit Report"
 
 # --- Document type labels ---
-#: apps/frontend/page_views.py:2801
+#: apps/frontend/page_views.py:3829
 msgid "Purchase Order Audit Report"
 msgstr "Purchase Order Audit Report"
 
-#: apps/frontend/page_views.py:2802
+#: apps/frontend/page_views.py:3830
 msgid "Bank Statement Audit Report"
 msgstr "Bank Statement Audit Report"
 
-#: apps/frontend/page_views.py:2803
+#: apps/frontend/page_views.py:3831
 msgid "Payroll Audit Report"
 msgstr "Payroll Audit Report"
 
-#: apps/frontend/page_views.py:2805 apps/frontend/page_views.py:2806
+#: apps/frontend/page_views.py:3833 apps/frontend/page_views.py:3834
 msgid "VAT Return Audit Report"
 msgstr "VAT Return Audit Report"
 
-#: apps/frontend/page_views.py:2807
+#: apps/frontend/page_views.py:3835
 msgid "Fixed Asset Audit Report"
 msgstr "Fixed Asset Audit Report"
 
-#: apps/frontend/page_views.py:2808
+#: apps/frontend/page_views.py:3836
 msgid "Sales Receipt Audit Report"
 msgstr "Sales Receipt Audit Report"
 
-#: apps/frontend/page_views.py:2810
+#: apps/frontend/page_views.py:3838
 msgid "Sales Invoice Audit Report"
 msgstr "Sales Invoice Audit Report"
 
 # --- Document type labels ---
-#: apps/frontend/page_views.py:2811
+#: apps/frontend/page_views.py:3839
 msgid "Purchase Invoice Audit Report"
 msgstr "Purchase Invoice Audit Report"
 
 # --- Document type labels ---
-#: apps/frontend/page_views.py:2812
+#: apps/frontend/page_views.py:3840
 msgid "Sales Order Audit Report"
 msgstr "Sales Order Audit Report"
 
-#: apps/frontend/page_views.py:2813
+#: apps/frontend/page_views.py:3841
 msgid "Quotation Audit Report"
 msgstr "Quotation Audit Report"
 
-#: apps/frontend/page_views.py:2814
+#: apps/frontend/page_views.py:3842
 msgid "Proforma Invoice Audit Report"
 msgstr "Proforma Invoice Audit Report"
 
-#: apps/frontend/page_views.py:2815
+#: apps/frontend/page_views.py:3843
 msgid "Goods Receipt Note Audit Report"
 msgstr "Goods Receipt Note Audit Report"
 
-#: apps/frontend/page_views.py:2816
+#: apps/frontend/page_views.py:3844
 msgid "Payment Voucher Audit Report"
 msgstr "Payment Voucher Audit Report"
 
-#: apps/frontend/page_views.py:2817
+#: apps/frontend/page_views.py:3845
 msgid "Receipt Voucher Audit Report"
 msgstr "Receipt Voucher Audit Report"
 
-#: apps/frontend/page_views.py:2818
+#: apps/frontend/page_views.py:3846
 msgid "Cash Voucher Audit Report"
 msgstr "Cash Voucher Audit Report"
 
-#: apps/frontend/page_views.py:2819
+#: apps/frontend/page_views.py:3847
 msgid "Journal Entry Audit Report"
 msgstr "Journal Entry Audit Report"
 
 # --- Document type labels ---
-#: apps/frontend/page_views.py:2820
+#: apps/frontend/page_views.py:3848
 msgid "General Ledger Audit Report"
 msgstr "General Ledger Audit Report"
 
 # --- Auditing result page ---
-#: apps/frontend/page_views.py:2821
+#: apps/frontend/page_views.py:3849
 msgid "Ledger Audit Report"
 msgstr "Ledger Audit Report"
 
-#: apps/frontend/page_views.py:2822
+#: apps/frontend/page_views.py:3850
 msgid "Contract Audit Report"
 msgstr "Contract Audit Report"
 
-#: apps/frontend/page_views.py:2823
+#: apps/frontend/page_views.py:3851
 msgid "Tax / VAT Document Audit Report"
 msgstr "Tax / VAT Document Audit Report"
 
-#: apps/frontend/page_views.py:2824
+#: apps/frontend/page_views.py:3852
 msgid "Supplier Statement Audit Report"
 msgstr "Supplier Statement Audit Report"
 
-#: apps/frontend/page_views.py:2825
+#: apps/frontend/page_views.py:3853
 msgid "Customer Statement Audit Report"
 msgstr "Customer Statement Audit Report"
 
@@ -1627,9 +1677,27 @@ msgstr "Customer Statement Audit Report"
 msgid "Duplicate file already processed in this audit session."
 msgstr "Duplicate file already processed in this audit session."
 
+#: apps/invoices/services/sod_service.py:57
+#, python-format
+msgid ""
+"Segregation of Duties: the user who uploaded an invoice cannot %(action)s "
+"it. A different user must perform this step."
+msgstr ""
+
+#: apps/invoices/services/sod_service.py:62
+msgid ""
+"Segregation of Duties: the reviewer of an invoice cannot also approve it. A "
+"different user must approve."
+msgstr ""
+
+#: apps/invoices/services/sod_service.py:65
+#, python-format
+msgid "Segregation of Duties violated for action: %(action)s"
+msgstr ""
+
 #: apps/invoices/views.py:137 templates/reports/document_audit_report.html:1134
 #: templates/reports/invoice_audit_report.html:436
-#: templates/reports/invoice_audit_report_pdf.html:421
+#: templates/reports/invoice_audit_report_pdf.html:436
 msgid "Vendor Name"
 msgstr "Vendor Name"
 
@@ -1672,7 +1740,7 @@ msgstr "Subtotal"
 msgid "VAT Amount"
 msgstr "VAT Amount"
 
-#: apps/invoices/views.py:144 templates/dashboard/index.html:255
+#: apps/invoices/views.py:144 templates/dashboard/index.html:343
 #: templates/documents/purchase_orders.html:89
 #: templates/invoices/partials/_qr_code_display.html:93
 #: templates/reports/document_audit_report.html:543
@@ -1734,9 +1802,9 @@ msgstr "No files uploaded. Use 'files' or 'file' field."
 msgid "Unsupported file type: %(ext)s"
 msgstr "Unsupported file type: %(ext)s"
 
-#: apps/invoices/views.py:633 apps/invoices/views.py:777
-#: apps/invoices/views.py:815 apps/invoices/views.py:842
-#: apps/invoices/views.py:968
+#: apps/invoices/views.py:633 apps/invoices/views.py:797
+#: apps/invoices/views.py:835 apps/invoices/views.py:862
+#: apps/invoices/views.py:1011
 msgid "Invoice not found."
 msgstr "Invoice not found."
 
@@ -1744,24 +1812,24 @@ msgstr "Invoice not found."
 msgid "action must be 'approve' or 'reject'"
 msgstr "action must be 'approve' or 'reject'"
 
-#: apps/invoices/views.py:720
+#: apps/invoices/views.py:740
 msgid "reason is required for rejection."
 msgstr "reason is required for rejection."
 
-#: apps/invoices/views.py:781
+#: apps/invoices/views.py:801
 msgid "Cannot escalate an approved or rejected invoice."
 msgstr "Cannot escalate an approved or rejected invoice."
 
-#: apps/invoices/views.py:846
+#: apps/invoices/views.py:883
 msgid "corrections must be an object."
 msgstr "corrections must be an object."
 
 # --- Reports: API error messages ---
-#: apps/invoices/views.py:933
+#: apps/invoices/views.py:976
 msgid "Batch not found."
 msgstr "Batch not found."
 
-#: apps/invoices/views.py:971
+#: apps/invoices/views.py:1014
 msgid "Invoice file is unavailable."
 msgstr "Invoice file is unavailable."
 
@@ -1789,7 +1857,8 @@ msgstr "Danger"
 #: apps/notifications/models.py:24
 #: apps/reports/services/findings_service.py:229
 #: templates/audit/detail.html:270 templates/audit/inbox.html:29
-#: templates/dashboard/index.html:352 templates/documents/_typed_detail.html:66
+#: templates/audit/risk_matrix.html:50 templates/dashboard/index.html:470
+#: templates/documents/_typed_detail.html:66
 #: templates/documents/_typed_list.html:88
 #: templates/documents/_typed_list.html:128
 #: templates/invoices/batch_detail.html:92 templates/invoices/detail.html:870
@@ -1814,7 +1883,7 @@ msgid "Critical"
 msgstr "Critical"
 
 #: apps/notifications/models.py:27 navigation/vendor_menu.py:47
-#: templates/audit/inbox.html:10 templates/dashboard/index.html:325
+#: templates/audit/inbox.html:10 templates/dashboard/index.html:429
 msgid "Audit"
 msgstr "Audit"
 
@@ -1822,9 +1891,9 @@ msgstr "Audit"
 msgid "Fraud"
 msgstr "Fraud"
 
-#: apps/notifications/models.py:29 templates/base.html:440
+#: apps/notifications/models.py:29 templates/base.html:449
 #: templates/compliance/index.html:4 templates/compliance/index.html:38
-#: templates/compliance/index.html:44 templates/layouts/dashboard_base.html:421
+#: templates/compliance/index.html:44 templates/layouts/dashboard_base.html:437
 #: templates/phase2/audits.html:394
 #: templates/reports/document_audit_report.html:852
 #: templates/reports/document_audit_report.html:1468
@@ -1835,8 +1904,8 @@ msgstr "Fraud"
 msgid "Compliance"
 msgstr "Compliance"
 
-#: apps/notifications/models.py:30 templates/dashboard/index.html:231
-#: templates/dashboard/index.html:324 templates/documents/_typed_list.html:77
+#: apps/notifications/models.py:30 templates/dashboard/index.html:319
+#: templates/dashboard/index.html:428 templates/documents/_typed_list.html:77
 #: templates/documents/upload.html:88 templates/documents/upload.html:197
 #: templates/documents/upload.html:243 templates/invoices/upload.html:147
 #: templates/invoices/upload.html:198 templates/partials/i18n_strings.html:131
@@ -2303,12 +2372,12 @@ msgid "Request a valid seller TRN; required for input VAT recovery."
 msgstr "Request a valid seller TRN; required for input VAT recovery."
 
 #: apps/reports/services/findings_service.py:230
-#: templates/audit/detail.html:271 templates/audit/tools.html:88
-#: templates/auditing/history.html:101
+#: templates/audit/detail.html:271 templates/audit/risk_matrix.html:51
+#: templates/audit/tools.html:88 templates/auditing/history.html:101
 #: templates/auditing/partials/anomalies_list.html:28
 #: templates/auditing/partials/summary_cards.html:53
 #: templates/auditing/result.html:143 templates/auditing/result.html:157
-#: templates/auditing/upload.html:777 templates/dashboard/index.html:352
+#: templates/auditing/upload.html:780 templates/dashboard/index.html:470
 #: templates/documents/_typed_detail.html:68
 #: templates/documents/_typed_list.html:89
 #: templates/documents/_typed_list.html:129
@@ -2332,11 +2401,12 @@ msgid "High"
 msgstr "High"
 
 #: apps/reports/services/findings_service.py:231
-#: templates/audit/detail.html:272 templates/auditing/history.html:103
+#: templates/audit/detail.html:272 templates/audit/risk_matrix.html:52
+#: templates/auditing/history.html:103
 #: templates/auditing/partials/anomalies_list.html:30
 #: templates/auditing/partials/summary_cards.html:58
 #: templates/auditing/result.html:145 templates/auditing/result.html:159
-#: templates/auditing/upload.html:779 templates/dashboard/index.html:352
+#: templates/auditing/upload.html:782 templates/dashboard/index.html:470
 #: templates/documents/_typed_detail.html:70
 #: templates/documents/_typed_list.html:90
 #: templates/documents/_typed_list.html:130
@@ -2359,12 +2429,12 @@ msgid "Medium"
 msgstr "Medium"
 
 #: apps/reports/services/findings_service.py:232
-#: templates/audit/detail.html:273 templates/audit/tools.html:86
-#: templates/auditing/history.html:105
+#: templates/audit/detail.html:273 templates/audit/risk_matrix.html:53
+#: templates/audit/tools.html:86 templates/auditing/history.html:105
 #: templates/auditing/partials/anomalies_list.html:32
 #: templates/auditing/partials/summary_cards.html:63
 #: templates/auditing/result.html:147 templates/auditing/result.html:161
-#: templates/auditing/upload.html:781 templates/dashboard/index.html:352
+#: templates/auditing/upload.html:784 templates/dashboard/index.html:470
 #: templates/documents/_typed_detail.html:72
 #: templates/documents/_typed_list.html:91
 #: templates/documents/_typed_list.html:131
@@ -2387,7 +2457,7 @@ msgid "Low"
 msgstr "Low"
 
 #: apps/reports/services/findings_service.py:246
-#: templates/auditing/upload.html:658 templates/cms_admin/leads.html:45
+#: templates/auditing/upload.html:661 templates/cms_admin/leads.html:45
 #: templates/cms_admin/leads.html:407 templates/cms_admin/media.html:50
 #: templates/cms_admin/media.html:225 templates/documents/upload.html:129
 #: templates/platform_admin/leads.html:55
@@ -2409,7 +2479,7 @@ msgstr ""
 #: templates/documents/purchase_orders.html:32
 #: templates/documents/sales_receipts.html:32
 #: templates/documents/upload.html:86 templates/documents/vat_returns.html:32
-#: templates/layouts/dashboard_base.html:409
+#: templates/layouts/dashboard_base.html:425
 #: templates/platform_admin/media.html:79
 #: templates/reports/executive_report.html:126
 msgid "Documents"
@@ -2520,35 +2590,27 @@ msgstr ""
 "Run targeted training on the controls that drove most failures across "
 "%(count)s %(type)s."
 
-#: apps/reports/views.py:277
+#: apps/reports/views.py:327
 msgid "A rule violation was detected and requires detailed review."
 msgstr "A rule violation was detected and requires detailed review."
 
 # --- Reports: API error messages ---
-#: apps/reports/views.py:878 apps/reports/views.py:931
-#: apps/reports/views.py:1099
+#: apps/reports/views.py:928 apps/reports/views.py:987
+#: apps/reports/views.py:1155 apps/reports/views.py:1206
 msgid "Report not found."
 msgstr "Report not found."
 
-#: apps/reports/views.py:903
-msgid ""
-"PDF service is not configured on this server. Redeploy after installing the "
-"PDF library."
-msgstr ""
-"PDF service is not configured on this server. Redeploy after installing the "
-"PDF library."
-
-#: apps/reports/views.py:912
+#: apps/reports/views.py:968
 msgid ""
 "Failed to generate PDF for this report. Check the server log and try again."
 msgstr ""
 "Failed to generate PDF for this report. Check the server log and try again."
 
-#: apps/reports/views.py:937
+#: apps/reports/views.py:993
 msgid "openpyxl not available on server."
 msgstr "openpyxl not available on server."
 
-#: apps/reports/views.py:1121
+#: apps/reports/views.py:1177
 #, python-format
 msgid ""
 "Attached report: %(title)s\n"
@@ -2559,14 +2621,46 @@ msgstr ""
 "\n"
 "Generated at %(dt)s"
 
-#: apps/reports/views.py:1127
+#: apps/reports/views.py:1183
 #, python-format
 msgid "Report sent to %(recipient)s"
 msgstr "Report sent to %(recipient)s"
 
-#: apps/reports/views.py:1130
+#: apps/reports/views.py:1186
 msgid "Failed to send email. Check SMTP settings."
 msgstr "Failed to send email. Check SMTP settings."
+
+#: apps/reports/views.py:1217
+msgid ""
+"Async rendering backend unavailable. Download directly via /pdf/ instead."
+msgstr ""
+
+#: apps/reports/views.py:1332
+#, fuzzy
+#| msgid "Invalid code"
+msgid "Invalid period dates"
+msgstr "Invalid code"
+
+#: apps/reports/views.py:1411
+#, fuzzy
+#| msgid "Invalid code"
+msgid "Invalid as_of date"
+msgstr "Invalid code"
+
+#: core/audit/sod.py:48
+#, python-format
+msgid ""
+"Segregation of Duties: the user who created this record cannot also "
+"%(stage)s it."
+msgstr ""
+
+#: core/audit/sod.py:53
+msgid "Segregation of Duties: the reviewer cannot also approve."
+msgstr ""
+
+#: core/audit/sod.py:55
+msgid "Segregation of Duties violated."
+msgstr ""
 
 # --- Dashboard context ---
 #: core/auth/redirect_service.py:46 core/dashboard_context.py:52
@@ -2584,9 +2678,9 @@ msgstr "Organization Dashboard"
 #: templates/analytics/index.html:33 templates/audit/inbox.html:8
 #: templates/audit/index.html:14 templates/audit/integrity.html:34
 #: templates/audit/rule_builder.html:49 templates/audit/tools.html:29
-#: templates/banking/dashboard.html:50 templates/base.html:366
-#: templates/compliance/index.html:36 templates/dashboard/index.html:4
-#: templates/documents/_typed_detail.html:18
+#: templates/banking/dashboard.html:50 templates/base.html:372
+#: templates/billing/_shell.html:122 templates/compliance/index.html:36
+#: templates/dashboard/index.html:4 templates/documents/_typed_detail.html:18
 #: templates/documents/_typed_list.html:42
 #: templates/documents/bank_statements.html:30
 #: templates/documents/expense_reports.html:30
@@ -2597,10 +2691,11 @@ msgstr "Organization Dashboard"
 #: templates/documents/upload.html:84 templates/documents/vat_returns.html:30
 #: templates/invoices/detail.html:7 templates/invoices/list.html:26
 #: templates/invoices/subreport.html:28 templates/invoices/upload.html:75
+#: templates/landing/pricing.html:137
 #: templates/layouts/base_vendor_dashboard.html:15
 #: templates/layouts/dashboard_base.html:9
-#: templates/layouts/dashboard_base.html:393
-#: templates/layouts/dashboard_base.html:455
+#: templates/layouts/dashboard_base.html:409
+#: templates/layouts/dashboard_base.html:494
 #: templates/layouts/partials/platform_topbar.html:34
 #: templates/layouts/partials/vendor_topbar.html:35
 #: templates/ledger/dashboard.html:40 templates/reports/index.html:96
@@ -2625,6 +2720,13 @@ msgstr "Platform Dashboard"
 msgid "Overview"
 msgstr "Overview"
 
+#: core/security/upload_guard.py:65
+#, python-format
+msgid ""
+"Uploaded file %(filename)s has an unsupported extension %(ext)s for %(kind)s "
+"uploads. Allowed: %(allowed)s."
+msgstr ""
+
 #: core/utils/password_complexity.py:37
 #, python-format
 msgid ""
@@ -2641,7 +2743,7 @@ msgstr "Use at least %(n)d of: digit, lowercase, uppercase, special character."
 
 # --- Navigation: Platform Admin ---
 #: navigation/platform_menu.py:11 navigation/vendor_menu.py:11
-#: templates/base.html:359 templates/layouts/dashboard_base.html:390
+#: templates/base.html:365 templates/layouts/dashboard_base.html:406
 msgid "Main"
 msgstr "Main"
 
@@ -2680,7 +2782,9 @@ msgstr "About Us"
 #: navigation/platform_menu.py:51 templates/cms_admin/base_cms.html:69
 #: templates/cms_admin/dashboard.html:271 templates/cms_admin/seo.html:212
 #: templates/cms_admin/services_editor.html:13
-#: templates/platform_admin/cms/services.html:5
+#: templates/landing/index.html:1361 templates/landing/index.html:1820
+#: templates/landing/page.html:650 templates/landing/page.html:671
+#: templates/landing/page.html:825 templates/platform_admin/cms/services.html:5
 #: templates/platform_admin/seo.html:194
 msgid "Services"
 msgstr "Services"
@@ -2764,7 +2868,7 @@ msgstr "Activity Logs"
 msgid "Organization Overview"
 msgstr "Organization Overview"
 
-#: navigation/vendor_menu.py:23 templates/auditing/upload.html:404
+#: navigation/vendor_menu.py:23 templates/auditing/upload.html:407
 #: templates/phase2/activity.html:17 templates/phase2/base_phase2.html:52
 #: templates/vendor_dashboard/files.html:3
 #: templates/vendor_dashboard/files.html:4
@@ -2810,8 +2914,8 @@ msgid "Audit Results"
 msgstr "Audit Results"
 
 #: navigation/vendor_menu.py:63 templates/audit/tools.html:31
-#: templates/base.html:405 templates/invoices/subreport.html:30
-#: templates/layouts/dashboard_base.html:405 templates/phase2/activity.html:34
+#: templates/base.html:411 templates/invoices/subreport.html:30
+#: templates/layouts/dashboard_base.html:421 templates/phase2/activity.html:34
 #: templates/phase2/base_phase2.html:64 templates/phase2/reports.html:4
 #: templates/phase2/reports.html:5 templates/reports/index.html:4
 #: templates/reports/index.html:98 templates/reports/index.html:106
@@ -2849,8 +2953,8 @@ msgstr "Storage Usage"
 msgid "Billing"
 msgstr "Billing"
 
-#: navigation/vendor_menu.py:99 templates/layouts/dashboard_base.html:461
-#: templates/layouts/dashboard_base.html:468
+#: navigation/vendor_menu.py:99 templates/layouts/dashboard_base.html:500
+#: templates/layouts/dashboard_base.html:507
 #: templates/platform_admin/settings.html:123 templates/settings/index.html:140
 #: templates/vendor_dashboard/notifications.html:3
 #: templates/vendor_dashboard/notifications.html:4
@@ -2914,7 +3018,7 @@ msgstr "Sent"
 
 #: templates/alerts/index.html:72 templates/audit/index.html:52
 #: templates/auditing/history.html:89 templates/auditing/result.html:73
-#: templates/auditing/upload.html:767 templates/cms_admin/faq.html:342
+#: templates/auditing/upload.html:770 templates/cms_admin/faq.html:342
 #: templates/cms_admin/faq.html:360 templates/cms_admin/faq.html:378
 #: templates/cms_admin/jobs.html:552 templates/cms_admin/jobs.html:566
 #: templates/cms_admin/jobs.html:582 templates/cms_admin/jobs.html:601
@@ -3017,6 +3121,7 @@ msgid "Add channel"
 msgstr "Add Page"
 
 #: templates/alerts/index.html:150 templates/alerts/index.html:189
+#: templates/billing/subscription.html:101 templates/dashboard/index.html:70
 #: templates/documents/purchase_orders.html:73
 #: templates/platform_admin/cms/faq.html:68
 #: templates/platform_admin/cms/pricing.html:142
@@ -3043,8 +3148,10 @@ msgstr "Active"
 #: templates/cms_admin/services_editor.html:165
 #: templates/cms_admin/services_editor.html:189
 #: templates/components/_delete_modal.html:37
-#: templates/invoices/detail.html:651 templates/invoices/detail.html:731
-#: templates/invoices/detail.html:789 templates/partials/i18n_strings.html:93
+#: templates/components/_modal.html:53 templates/invoices/detail.html:651
+#: templates/invoices/detail.html:731 templates/invoices/detail.html:789
+#: templates/invoices/override_request.html:131
+#: templates/partials/i18n_strings.html:93
 #: templates/partials/i18n_strings.html:123 templates/phase2/audits.html:172
 #: templates/phase2/audits.html:272 templates/phase2/files.html:315
 #: templates/phase2/reports.html:325
@@ -3092,11 +3199,11 @@ msgstr ""
 #: templates/alerts/index.html:173 templates/alerts/index.html:210
 #: templates/audit/index.html:67 templates/audit/integrity.html:85
 #: templates/auditing/history.html:34 templates/banking/dashboard.html:100
-#: templates/cms_admin/jobs.html:85 templates/cms_admin/jobs.html:178
-#: templates/cms_admin/jobs.html:374 templates/cms_admin/leads.html:88
-#: templates/cms_admin/leads.html:216 templates/cms_admin/pages.html:62
-#: templates/cms_admin/pages.html:149 templates/dashboard/index.html:199
-#: templates/documents/_typed_list.html:108
+#: templates/billing/subscription.html:98 templates/cms_admin/jobs.html:85
+#: templates/cms_admin/jobs.html:178 templates/cms_admin/jobs.html:374
+#: templates/cms_admin/leads.html:88 templates/cms_admin/leads.html:216
+#: templates/cms_admin/pages.html:62 templates/cms_admin/pages.html:149
+#: templates/dashboard/index.html:287 templates/documents/_typed_list.html:108
 #: templates/documents/bank_statements.html:88
 #: templates/documents/detail/purchase_order_detail.html:264
 #: templates/documents/expense_reports.html:88
@@ -3161,9 +3268,9 @@ msgstr ""
 msgid "Recent alert events"
 msgstr "Recent Operations"
 
-#: templates/alerts/index.html:208 templates/invoices/invoice_pdf.html:145
-#: templates/streaming/ops.html:147 templates/working_papers/detail.html:161
-#: templates/zatca/dashboard.html:203
+#: templates/alerts/index.html:208 templates/billing/usage.html:55
+#: templates/invoices/invoice_pdf.html:175 templates/streaming/ops.html:147
+#: templates/working_papers/detail.html:161 templates/zatca/dashboard.html:203
 msgid "When"
 msgstr ""
 
@@ -3173,9 +3280,11 @@ msgstr ""
 
 #: templates/alerts/index.html:211 templates/audit/rule_builder.html:139
 #: templates/audit/rule_builder.html:205 templates/compliance/index.html:164
-#: templates/invoices/invoice_pdf.html:128
+#: templates/components/_fraud_breakdown.html:35
+#: templates/invoices/invoice_pdf.html:135
 #: templates/reports/document_audit_report.html:630
 #: templates/reports/executive_report.html:530
+#: templates/reports/invoice_audit_report_pdf.html:354
 #: templates/reports/invoice_audit_report_v2.html:597
 #: templates/reports/partials/_findings_register.html:91
 #: templates/streaming/ops.html:149
@@ -3196,20 +3305,32 @@ msgstr ""
 msgid "No alerts dispatched yet."
 msgstr "No reports generated yet"
 
-#: templates/alerts/index.html:340
+#: templates/alerts/index.html:324 templates/audit/detail.html:305
+#: templates/partials/i18n_strings.html:74
+#: templates/platform_admin/cms/homepage.html:414
+#: templates/platform_admin/jobs.html:361
+#: templates/platform_admin/jobs.html:364 templates/platform_admin/seo.html:209
+#: templates/platform_admin/storage.html:270
+#: templates/platform_admin/storage.html:273
+#: templates/vendor_dashboard/settings.html:243
+#: templates/vendor_dashboard/settings.html:245
+msgid "Save failed"
+msgstr "Save failed"
+
+#: templates/alerts/index.html:341
 #, fuzzy
 #| msgid "Not matched"
 msgid "Test dispatched"
 msgstr "Not matched"
 
-#: templates/alerts/index.html:341
+#: templates/alerts/index.html:344
 #, fuzzy
 #| msgid "Request failed"
 msgid "Test failed"
 msgstr "Request failed"
 
 #: templates/analytics/index.html:4 templates/analytics/index.html:35
-#: templates/analytics/index.html:41 templates/layouts/dashboard_base.html:425
+#: templates/analytics/index.html:41 templates/layouts/dashboard_base.html:441
 msgid "Analytics"
 msgstr "Analytics"
 
@@ -3228,7 +3349,7 @@ msgid "Last 30 days"
 msgstr "Last 30 days"
 
 #: templates/analytics/index.html:53 templates/compliance/index.html:69
-#: templates/dashboard/index.html:116
+#: templates/dashboard/index.html:191
 #: templates/reports/invoice_audit_report_pdf.html:224
 #: templates/reports/invoice_audit_report_v2.html:173
 #: templates/reports/report_pdf.html:200
@@ -3236,7 +3357,7 @@ msgid "Total Invoices"
 msgstr "Total Invoices"
 
 #: templates/analytics/index.html:55 templates/analytics/index.html:61
-#: templates/dashboard/index.html:118 templates/dashboard/index.html:126
+#: templates/dashboard/index.html:193 templates/dashboard/index.html:201
 msgid "All time"
 msgstr "All time"
 
@@ -3244,7 +3365,7 @@ msgstr "All time"
 msgid "Total POs"
 msgstr "Total POs"
 
-#: templates/analytics/index.html:65 templates/dashboard/index.html:132
+#: templates/analytics/index.html:65 templates/dashboard/index.html:207
 #: templates/vendors/detail.html:59
 msgid "Total Invoiced"
 msgstr "Total Invoiced"
@@ -3259,7 +3380,7 @@ msgstr "Avg Invoice"
 msgid "Monthly Volume (last 12 months)"
 msgstr "Monthly Volume (last 12 months)"
 
-#: templates/analytics/index.html:83 templates/dashboard/index.html:278
+#: templates/analytics/index.html:83 templates/dashboard/index.html:367
 #: templates/reports/invoice_audit_report_v2.html:369
 msgid "Risk Distribution"
 msgstr "Risk Distribution"
@@ -3291,13 +3412,14 @@ msgstr "Document Type"
 msgid "Top Vendors by Volume"
 msgstr "Top Vendors by Volume"
 
-#: templates/analytics/index.html:115 templates/audit/tools.html:199
-#: templates/audit/tools.html:348 templates/compliance/index.html:196
-#: templates/dashboard/index.html:251
+#: templates/analytics/index.html:115 templates/audit/risk_matrix.html:102
+#: templates/audit/tools.html:199 templates/audit/tools.html:348
+#: templates/compliance/index.html:196 templates/dashboard/index.html:339
 #: templates/documents/detail/purchase_order_detail.html:239
 #: templates/documents/purchase_orders.html:93
 #: templates/invoices/batch_detail.html:106 templates/invoices/detail.html:87
 #: templates/invoices/invoice_pdf.html:77 templates/invoices/list.html:94
+#: templates/invoices/override_request.html:37
 #: templates/invoices/session_detail.html:154
 #: templates/invoices/subreport.html:59 templates/invoices/subreport.html:89
 #: templates/invoices/subreport.html:117 templates/invoices/subreport.html:149
@@ -3422,13 +3544,14 @@ msgstr "Tags"
 msgid "Timeline"
 msgstr "Timeline"
 
-#: templates/audit/detail.html:275 templates/reports/index.html:239
-#: templates/reports/index.html:247 templates/reports/index.html:255
-#: templates/reports/index.html:263 templates/reports/index.html:287
-#: templates/reports/index.html:295 templates/reports/index.html:303
-#: templates/reports/index.html:311 templates/reports/index.html:319
-#: templates/reports/index.html:327 templates/reports/index.html:335
-#: templates/reports/index.html:343 templates/reports/index.html:351
+#: templates/audit/detail.html:275 templates/audit/risk_matrix.html:115
+#: templates/reports/index.html:239 templates/reports/index.html:247
+#: templates/reports/index.html:255 templates/reports/index.html:263
+#: templates/reports/index.html:287 templates/reports/index.html:295
+#: templates/reports/index.html:303 templates/reports/index.html:311
+#: templates/reports/index.html:319 templates/reports/index.html:327
+#: templates/reports/index.html:335 templates/reports/index.html:343
+#: templates/reports/index.html:351
 #: templates/reports/partials/_high_risk_invoices_table.html:149
 #: templates/reports/report_pdf.html:360
 msgid "Open"
@@ -3517,17 +3640,6 @@ msgstr "Status update failed"
 msgid "Notes saved"
 msgstr "Notes saved"
 
-#: templates/audit/detail.html:305 templates/partials/i18n_strings.html:74
-#: templates/platform_admin/cms/homepage.html:414
-#: templates/platform_admin/jobs.html:361
-#: templates/platform_admin/jobs.html:364 templates/platform_admin/seo.html:209
-#: templates/platform_admin/storage.html:270
-#: templates/platform_admin/storage.html:273
-#: templates/vendor_dashboard/settings.html:243
-#: templates/vendor_dashboard/settings.html:245
-msgid "Save failed"
-msgstr "Save failed"
-
 #: templates/audit/detail.html:306
 msgid "Case assigned"
 msgstr "Case assigned"
@@ -3537,6 +3649,7 @@ msgid "Assignment failed"
 msgstr "Assignment failed"
 
 #: templates/audit/inbox.html:4 templates/audit/inbox.html:18
+#: templates/audit/risk_matrix.html:43
 #, fuzzy
 #| msgid "Approve Invoice"
 msgid "Approval Inbox"
@@ -3570,8 +3683,10 @@ msgstr "Total Spend"
 msgid "Type"
 msgstr "Type"
 
-#: templates/audit/inbox.html:43 templates/invoices/invoice_pdf.html:108
-#: templates/transactions.html:28 templates/working_papers/list.html:67
+#: templates/audit/inbox.html:43 templates/audit/risk_matrix.html:101
+#: templates/invoices/invoice_pdf.html:108
+#: templates/invoices/override_request.html:33 templates/transactions.html:28
+#: templates/working_papers/list.html:67
 msgid "Reference"
 msgstr "Reference"
 
@@ -3581,8 +3696,9 @@ msgstr "Reference"
 msgid "Party"
 msgstr "Partial"
 
-#: templates/audit/inbox.html:45 templates/audit/tools.html:200
-#: templates/audit/tools.html:349 templates/compliance/index.html:196
+#: templates/audit/inbox.html:45 templates/audit/risk_matrix.html:103
+#: templates/audit/tools.html:200 templates/audit/tools.html:349
+#: templates/compliance/index.html:196
 #: templates/documents/bank_statements.html:87
 #: templates/documents/detail/expense_report_detail.html:252
 #: templates/documents/expense_reports.html:87
@@ -3592,6 +3708,7 @@ msgstr "Partial"
 #: templates/documents/vat_returns.html:87
 #: templates/invoices/batch_detail.html:107
 #: templates/invoices/invoice_pdf.html:108 templates/invoices/list.html:96
+#: templates/invoices/override_request.html:41
 #: templates/invoices/session_detail.html:155
 #: templates/reports/invoice_audit_report_pdf.html:302
 #: templates/reports/invoice_audit_report_v2.html:517
@@ -3629,15 +3746,16 @@ msgid "Created"
 msgstr "Created"
 
 #: templates/audit/inbox.html:49 templates/audit/rule_builder.html:197
-#: templates/auditing/history.html:37 templates/cms_admin/dashboard.html:141
-#: templates/dashboard/index.html:201 templates/documents/_typed_list.html:109
+#: templates/auditing/history.html:37 templates/billing/usage.html:56
+#: templates/cms_admin/dashboard.html:141 templates/dashboard/index.html:289
+#: templates/documents/_typed_list.html:109
 #: templates/documents/bank_statements.html:89
 #: templates/documents/expense_reports.html:89
 #: templates/documents/fixed_assets.html:89 templates/documents/payroll.html:89
 #: templates/documents/purchase_orders.html:125
 #: templates/documents/sales_receipts.html:89
 #: templates/documents/vat_returns.html:89
-#: templates/invoices/invoice_pdf.html:145 templates/invoices/list.html:99
+#: templates/invoices/invoice_pdf.html:175 templates/invoices/list.html:99
 #: templates/phase2/activity.html:164
 #: templates/platform_admin/activity_logs.html:103
 #: templates/reports/index.html:490
@@ -3646,7 +3764,7 @@ msgstr "Created"
 msgid "Action"
 msgstr "Action"
 
-#: templates/audit/inbox.html:76 templates/dashboard/index.html:326
+#: templates/audit/inbox.html:76 templates/dashboard/index.html:430
 #: templates/invoices/session_detail.html:58
 #: templates/reports/invoice_audit_report_pdf.html:319
 #: templates/reports/invoice_audit_report_v2.html:386
@@ -3660,8 +3778,8 @@ msgid "Inbox is empty — nothing pending review."
 msgstr ""
 
 #: templates/audit/index.html:4 templates/audit/index.html:16
-#: templates/audit/index.html:22 templates/base.html:426
-#: templates/layouts/dashboard_base.html:417
+#: templates/audit/index.html:22 templates/base.html:433
+#: templates/layouts/dashboard_base.html:433
 #: templates/reports/report_pdf.html:352
 msgid "Audit Cases"
 msgstr "Audit Cases"
@@ -3683,7 +3801,7 @@ msgid "All audit runs"
 msgstr "All audit runs"
 
 #: templates/audit/index.html:40 templates/auditing/history.html:81
-#: templates/auditing/result.html:65 templates/auditing/upload.html:763
+#: templates/auditing/result.html:65 templates/auditing/upload.html:766
 #: templates/invoices/batches.html:66 templates/partials/i18n_strings.html:45
 #: templates/phase2/audits.html:20
 #: templates/reports/partials/_progress_bar.html:111
@@ -3715,7 +3833,7 @@ msgstr "Need investigation"
 # --- Auditing partials ---
 #: templates/audit/index.html:64 templates/auditing/history.html:33
 #: templates/auditing/partials/summary_cards.html:7
-#: templates/auditing/upload.html:589
+#: templates/auditing/upload.html:592
 msgid "Document Type"
 msgstr "Document Type"
 
@@ -3725,7 +3843,7 @@ msgstr "Document Type"
 msgid "Document ID"
 msgstr "Document ID"
 
-#: templates/audit/index.html:66
+#: templates/audit/index.html:66 templates/billing/subscription.html:137
 #: templates/reports/partials/_progress_bar.html:91
 msgid "Started"
 msgstr "Started"
@@ -3746,10 +3864,10 @@ msgstr ""
 "Audit runs are created automatically when you upload documents. They run in "
 "the background."
 
-#: templates/audit/index.html:90 templates/dashboard/index.html:167
+#: templates/audit/index.html:90 templates/dashboard/index.html:253
 #: templates/documents/upload.html:4 templates/documents/upload.html:95
 #: templates/invoices/upload.html:4 templates/invoices/upload.html:77
-#: templates/layouts/dashboard_base.html:397 templates/reports/index.html:501
+#: templates/layouts/dashboard_base.html:413 templates/reports/index.html:501
 #: templates/reports/invoice_audit_report.html:61
 msgid "Upload Documents"
 msgstr "Upload Documents"
@@ -3866,6 +3984,78 @@ msgid ""
 "Verification is read-only and runs in O(n) over the chain."
 msgstr ""
 
+#: templates/audit/risk_matrix.html:4 templates/audit/risk_matrix.html:39
+#, fuzzy
+#| msgid "Risk Factors"
+msgid "Risk Matrix"
+msgstr "Risk Factors"
+
+#: templates/audit/risk_matrix.html:40
+msgid "Likelihood × Impact heat map (ISO 31000 / COSO ERM)."
+msgstr ""
+
+#: templates/audit/risk_matrix.html:49
+#, fuzzy
+#| msgid "Total Cases"
+msgid "Total assessed"
+msgstr "Total Cases"
+
+#: templates/audit/risk_matrix.html:50
+msgid "Top-right corner"
+msgstr ""
+
+#: templates/audit/risk_matrix.html:51
+msgid "Upper-right band"
+msgstr ""
+
+#: templates/audit/risk_matrix.html:52
+#, fuzzy
+#| msgid "Contract"
+msgid "Central"
+msgstr "Contract"
+
+#: templates/audit/risk_matrix.html:53
+msgid "Lower-left"
+msgstr ""
+
+#: templates/audit/risk_matrix.html:58
+msgid "Heat map"
+msgstr ""
+
+#: templates/audit/risk_matrix.html:60
+msgid "Risk heat map"
+msgstr ""
+
+#: templates/audit/risk_matrix.html:73
+#, fuzzy
+#| msgid "Keywords"
+msgid "records"
+msgstr "Keywords"
+
+#: templates/audit/risk_matrix.html:85
+msgid ""
+"Likelihood is derived from each record's risk score (0-100). Impact is "
+"scaled against performance materiality."
+msgstr ""
+
+#: templates/audit/risk_matrix.html:94
+#, python-format
+msgid "Records at %(li)s × %(ip)s"
+msgstr ""
+
+#: templates/audit/risk_matrix.html:104
+#: templates/invoices/override_request.html:45
+#: templates/invoices/subreport.html:118
+#: templates/vendor_dashboard/audits.html:92
+msgid "Risk score"
+msgstr "Risk score"
+
+#: templates/audit/risk_matrix.html:119
+#, fuzzy
+#| msgid "No audit records for this invoice."
+msgid "No records in this cell"
+msgstr "No audit records for this invoice."
+
 #: templates/audit/rule_builder.html:4 templates/audit/rule_builder.html:51
 #: templates/audit/rule_builder.html:59 templates/reports/index.html:309
 msgid "Custom Rule Builder"
@@ -3971,7 +4161,6 @@ msgstr "Raw data"
 #: templates/phase2/activity.html:165
 #: templates/reports/document_audit_report.html:631
 #: templates/reports/document_audit_report.html:1327
-#: templates/reports/invoice_audit_report_pdf.html:350
 #: templates/reports/partials/_failed_rules_table.html:15
 #: templates/reports/report_pdf.html:309
 #: templates/storage_management/provider_form.html:69
@@ -4151,6 +4340,7 @@ msgid "Going concern doubt"
 msgstr "Going Concern Assessment"
 
 #: templates/audit/tools.html:113 templates/audit/tools.html:122
+#: templates/billing/subscription.html:146
 #: templates/documents/_typed_detail.html:99
 #: templates/documents/detail/sales_receipt_detail.html:243
 msgid "No"
@@ -4161,6 +4351,7 @@ msgid "Some"
 msgstr ""
 
 #: templates/audit/tools.html:115 templates/audit/tools.html:123
+#: templates/billing/subscription.html:146
 #: templates/documents/_typed_detail.html:99
 #: templates/documents/detail/sales_receipt_detail.html:243
 msgid "Yes"
@@ -4211,7 +4402,7 @@ msgstr "Compliance Violation"
 msgid "Component"
 msgstr "Compose"
 
-#: templates/audit/tools.html:172
+#: templates/audit/tools.html:172 templates/components/_fraud_breakdown.html:34
 #: templates/reports/invoice_audit_report.html:156
 #: templates/reports/invoice_audit_report_pdf.html:279
 msgid "Weight"
@@ -4375,7 +4566,7 @@ msgstr "Affected invoices:"
 
 #: templates/audit/tools.html:349 templates/auditing/history.html:32
 #: templates/cms_admin/media.html:134 templates/compliance/index.html:196
-#: templates/dashboard/index.html:198
+#: templates/dashboard/index.html:286
 #: templates/documents/bank_statements.html:86
 #: templates/documents/detail/bank_statement_detail.html:253
 #: templates/documents/detail/expense_report_detail.html:252
@@ -4418,7 +4609,7 @@ msgstr "New Document Audit"
 msgid "File Name"
 msgstr "File Name"
 
-#: templates/auditing/history.html:142 templates/auditing/upload.html:790
+#: templates/auditing/history.html:142 templates/auditing/upload.html:793
 #: templates/cms_admin/leads.html:115 templates/partials/i18n_strings.html:126
 #: templates/phase2/audits.html:164 templates/phase2/reports.html:151
 msgid "View"
@@ -4429,7 +4620,8 @@ msgstr "View"
 msgid "Page %(current)s of %(total)s · %(count)s documents"
 msgstr "Page %(current)s of %(total)s · %(count)s documents"
 
-#: templates/auditing/history.html:163
+#: templates/auditing/history.html:163 templates/billing/usage.html:93
+#: templates/billing/usage.html:95
 #: templates/documents/detail/bank_statement_detail.html:113
 #: templates/documents/detail/expense_report_detail.html:113
 #: templates/documents/detail/fixed_asset_detail.html:113
@@ -4442,7 +4634,8 @@ msgstr "Page %(current)s of %(total)s · %(count)s documents"
 msgid "Previous"
 msgstr "Previous"
 
-#: templates/auditing/history.html:169
+#: templates/auditing/history.html:169 templates/billing/usage.html:103
+#: templates/billing/usage.html:105
 #: templates/documents/detail/bank_statement_detail.html:115
 #: templates/documents/detail/expense_report_detail.html:115
 #: templates/documents/detail/fixed_asset_detail.html:115
@@ -4456,7 +4649,7 @@ msgid "Next"
 msgstr "Next"
 
 # --- Auditing partials ---
-#: templates/auditing/history.html:184 templates/dashboard/index.html:229
+#: templates/auditing/history.html:184 templates/dashboard/index.html:317
 #: templates/partials/i18n_strings.html:116
 msgid "No documents yet"
 msgstr "No documents yet"
@@ -4465,7 +4658,7 @@ msgstr "No documents yet"
 msgid "Upload your first financial document to start automated auditing"
 msgstr "Upload your first financial document to start automated auditing"
 
-#: templates/auditing/history.html:190 templates/dashboard/index.html:335
+#: templates/auditing/history.html:190 templates/dashboard/index.html:439
 msgid "Upload first document"
 msgstr "Upload first document"
 
@@ -4493,20 +4686,20 @@ msgid "Language"
 msgstr "Language"
 
 #: templates/auditing/partials/summary_cards.html:20
-#: templates/auditing/result.html:55 templates/auditing/upload.html:673
-#: templates/partials/language_switcher.html:10
+#: templates/auditing/result.html:55 templates/auditing/upload.html:676
+#: templates/partials/language_switcher_select.html:70
 #: templates/platform_admin/cms/homepage.html:60
 msgid "Arabic"
 msgstr "Arabic"
 
 #: templates/auditing/partials/summary_cards.html:21
 #: templates/auditing/result.html:55
-#: templates/partials/language_switcher.html:16
+#: templates/partials/language_switcher_select.html:76
 msgid "English"
 msgstr "English"
 
 #: templates/auditing/partials/summary_cards.html:22
-#: templates/auditing/result.html:55 templates/auditing/upload.html:675
+#: templates/auditing/result.html:55 templates/auditing/upload.html:678
 msgid "Bilingual"
 msgstr "Bilingual"
 
@@ -4520,7 +4713,7 @@ msgid "Confidence Score"
 msgstr "Confidence Score"
 
 #: templates/auditing/partials/summary_cards.html:50
-#: templates/dashboard/index.html:200 templates/documents/_typed_detail.html:63
+#: templates/dashboard/index.html:288 templates/documents/_typed_detail.html:63
 #: templates/invoices/detail.html:391 templates/invoices/invoice_pdf.html:53
 #: templates/phase2/audit_result.html:109
 #: templates/reports/document_audit_report.html:383
@@ -4596,7 +4789,7 @@ msgstr "Financial Audit Report"
 msgid "Back to History"
 msgstr "Back to History"
 
-#: templates/auditing/result.html:30 templates/dashboard/index.html:55
+#: templates/auditing/result.html:30 templates/dashboard/index.html:123
 msgid "New Document"
 msgstr "New Document"
 
@@ -4692,7 +4885,7 @@ msgid "No anomalies or violations were detected in this document."
 msgstr "No anomalies or violations were detected in this document."
 
 #: templates/auditing/upload.html:3 templates/auditing/upload.html:4
-#: templates/auditing/upload.html:452
+#: templates/auditing/upload.html:455
 msgid "Unified Financial Document Auditor"
 msgstr "Unified Financial Document Auditor"
 
@@ -4706,7 +4899,7 @@ msgid ""
 msgstr ""
 "The upload is taking too long. Please check your connection and try again."
 
-#: templates/auditing/upload.html:159 templates/auditing/upload.html:325
+#: templates/auditing/upload.html:159 templates/auditing/upload.html:328
 #: templates/platform_admin/media.html:55
 msgid "Uploading"
 msgstr "Uploading"
@@ -4737,76 +4930,76 @@ msgstr "Allowed formats: PDF, images, Excel, CSV, JSON, ZIP"
 msgid "File exceeds maximum size (50 MB):"
 msgstr "File exceeds maximum size (50 MB):"
 
-#: templates/auditing/upload.html:190 templates/auditing/upload.html:544
+#: templates/auditing/upload.html:190 templates/auditing/upload.html:547
 #: templates/invoices/batches.html:42 templates/partials/i18n_strings.html:138
 #: templates/phase2/folders.html:188 templates/vendor_dashboard/files.html:50
 #: templates/vendor_dashboard/storage.html:85
 msgid "files"
 msgstr "files"
 
-#: templates/auditing/upload.html:247
+#: templates/auditing/upload.html:250
 msgid "Please choose one or more files first."
 msgstr "Please choose one or more files first."
 
-#: templates/auditing/upload.html:308
+#: templates/auditing/upload.html:311
 msgid ""
 "The server could not complete the upload right now. Please try again shortly."
 msgstr ""
 "The server could not complete the upload right now. Please try again shortly."
 
-#: templates/auditing/upload.html:309
+#: templates/auditing/upload.html:312
 msgid "Upload failed. Please review the form and try again."
 msgstr "Upload failed. Please review the form and try again."
 
-#: templates/auditing/upload.html:314
+#: templates/auditing/upload.html:317
 msgid "Upload failed. Please check your connection and try again."
 msgstr "Upload failed. Please check your connection and try again."
 
-#: templates/auditing/upload.html:318 templates/partials/i18n_strings.html:102
+#: templates/auditing/upload.html:321 templates/partials/i18n_strings.html:102
 msgid "Upload was interrupted. Please try again."
 msgstr "Upload was interrupted. Please try again."
 
-#: templates/auditing/upload.html:326 templates/partials/i18n_strings.html:101
+#: templates/auditing/upload.html:329 templates/partials/i18n_strings.html:101
 msgid "Upload complete — analyzing..."
 msgstr "Upload complete — analyzing..."
 
-#: templates/auditing/upload.html:327 templates/auditing/upload.html:735
+#: templates/auditing/upload.html:330 templates/auditing/upload.html:738
 #: templates/vendor_dashboard/dashboard.html:108
 #: templates/vendor_dashboard/upload.html:134
 msgid "Start Audit"
 msgstr "Start Audit"
 
-#: templates/auditing/upload.html:336
+#: templates/auditing/upload.html:339
 msgid "The files are now on the server and audit analysis is running."
 msgstr "The files are now on the server and audit analysis is running."
 
-#: templates/auditing/upload.html:341
+#: templates/auditing/upload.html:344
 msgid "Preparing files for secure upload..."
 msgstr "Preparing files for secure upload..."
 
-#: templates/auditing/upload.html:378
+#: templates/auditing/upload.html:381
 msgid "Selected files"
 msgstr "Selected files"
 
-#: templates/auditing/upload.html:383
+#: templates/auditing/upload.html:386
 #: templates/reports/partials/_progress_bar.html:48
 msgid "Progress"
 msgstr "Progress"
 
-#: templates/auditing/upload.html:398
+#: templates/auditing/upload.html:401
 msgid "Sending files securely"
 msgstr "Sending files securely"
 
-#: templates/auditing/upload.html:398
+#: templates/auditing/upload.html:401
 msgid "Waiting for audit result"
 msgstr "Waiting for audit result"
 
-#: templates/auditing/upload.html:405 templates/cms_admin/faq.html:71
+#: templates/auditing/upload.html:408 templates/cms_admin/faq.html:71
 #: templates/partials/i18n_strings.html:140
 msgid "items"
 msgstr "items"
 
-#: templates/auditing/upload.html:453
+#: templates/auditing/upload.html:456
 msgid ""
 "Smart financial auditor — comprehensive analysis for all financial document "
 "types"
@@ -4814,7 +5007,7 @@ msgstr ""
 "Smart financial auditor — comprehensive analysis for all financial document "
 "types"
 
-#: templates/auditing/upload.html:455
+#: templates/auditing/upload.html:458
 msgid ""
 "Upload any financial document — invoices, purchase orders, bank statements, "
 "payroll sheets, tax returns, and more — for full AI analysis, data "
@@ -4824,98 +5017,98 @@ msgstr ""
 "payroll sheets, tax returns, and more — for full AI analysis, data "
 "extraction, anomaly detection, and ZATCA compliance checks."
 
-#: templates/auditing/upload.html:469 templates/phase2/dashboard.html:207
+#: templates/auditing/upload.html:472 templates/phase2/dashboard.html:207
 #: templates/phase2/files.html:55 templates/phase2/files.html:87
 #: templates/phase2/files.html:218
 msgid "Upload File"
 msgstr "Upload File"
 
-#: templates/auditing/upload.html:474
+#: templates/auditing/upload.html:477
 msgid "Text Extraction"
 msgstr "Text Extraction"
 
-#: templates/auditing/upload.html:479
+#: templates/auditing/upload.html:482
 msgid "AI Analysis"
 msgstr "AI Analysis"
 
-#: templates/auditing/upload.html:484
+#: templates/auditing/upload.html:487
 msgid "Results Report"
 msgstr "Results Report"
 
-#: templates/auditing/upload.html:536
+#: templates/auditing/upload.html:539
 msgid "Drag one or more files here, or click to choose"
 msgstr "Drag one or more files here, or click to choose"
 
-#: templates/auditing/upload.html:537
+#: templates/auditing/upload.html:540
 msgid "PDF, images, Excel, CSV, JSON, ZIP — up to 50 MB per file"
 msgstr "PDF, images, Excel, CSV, JSON, ZIP — up to 50 MB per file"
 
-#: templates/auditing/upload.html:547
+#: templates/auditing/upload.html:550
 msgid "✓ Files selected — click 'Start Audit' below"
 msgstr ""
 
-#: templates/auditing/upload.html:560 templates/documents/upload.html:238
+#: templates/auditing/upload.html:563 templates/documents/upload.html:238
 #: templates/invoices/upload.html:193
 msgid "Add more files"
 msgstr ""
 
-#: templates/auditing/upload.html:566 templates/invoices/list.html:82
+#: templates/auditing/upload.html:569 templates/invoices/list.html:82
 #: templates/phase2/activity.html:70 templates/phase2/files.html:260
 #: templates/settings/index.html:254
 msgid "Clear"
 msgstr "Clear"
 
-#: templates/auditing/upload.html:589
+#: templates/auditing/upload.html:592
 msgid "Optional — auto detection"
 msgstr "Optional — auto detection"
 
-#: templates/auditing/upload.html:595 templates/auditing/upload.html:672
+#: templates/auditing/upload.html:598 templates/auditing/upload.html:675
 msgid "Auto Detect"
 msgstr "Auto Detect"
 
-#: templates/auditing/upload.html:630
+#: templates/auditing/upload.html:633
 msgid "Expenses"
 msgstr "Expenses"
 
-#: templates/auditing/upload.html:637
+#: templates/auditing/upload.html:640
 msgid "Tax Return"
 msgstr "Tax Return"
 
-#: templates/auditing/upload.html:667
+#: templates/auditing/upload.html:670
 msgid "Document Language"
 msgstr "Document Language"
 
-#: templates/auditing/upload.html:677
+#: templates/auditing/upload.html:680
 msgid "Affects OCR extraction accuracy from images"
 msgstr "Affects OCR extraction accuracy from images"
 
-#: templates/auditing/upload.html:680
+#: templates/auditing/upload.html:683
 msgid "Supported Formats"
 msgstr "Supported Formats"
 
-#: templates/auditing/upload.html:689
+#: templates/auditing/upload.html:692
 msgid "Maximum 50 MB per file"
 msgstr "Maximum 50 MB per file"
 
-#: templates/auditing/upload.html:698
+#: templates/auditing/upload.html:701
 msgid ""
 "Analysis is performed fully on the server. Your data is secure and protected."
 msgstr ""
 "Analysis is performed fully on the server. Your data is secure and protected."
 
-#: templates/auditing/upload.html:715
+#: templates/auditing/upload.html:718
 msgid "Uploading selected files"
 msgstr "Uploading selected files"
 
-#: templates/auditing/upload.html:715
+#: templates/auditing/upload.html:718
 msgid "Running server analysis"
 msgstr "Running server analysis"
 
-#: templates/auditing/upload.html:746
+#: templates/auditing/upload.html:749
 msgid "View All"
 msgstr "View All"
 
-#: templates/auditing/upload.html:749
+#: templates/auditing/upload.html:752
 msgid "Latest Uploaded Documents"
 msgstr "Latest Uploaded Documents"
 
@@ -4975,9 +5168,9 @@ msgstr ""
 "Your account will be linked to your organization shortly. You will receive "
 "an email once activation is complete so you can access the full dashboard."
 
-#: templates/auth/google_pending.html:64 templates/auth/login.html:465
-#: templates/auth/password_reset_form.html:15 templates/auth/portal.html:483
-#: templates/auth/portal.html:569
+#: templates/auth/google_pending.html:64 templates/auth/login.html:472
+#: templates/auth/password_reset_form.html:15 templates/auth/portal.html:489
+#: templates/auth/portal.html:575
 msgid "Email Address"
 msgstr "Email Address"
 
@@ -4990,9 +5183,9 @@ msgstr "Email Address"
 #: templates/documents/detail/purchase_order_detail.html:6
 #: templates/documents/detail/sales_receipt_detail.html:6
 #: templates/documents/detail/vat_return_detail.html:6
-#: templates/landing/index.html:1157 templates/landing/index.html:1181
-#: templates/landing/index.html:1530 templates/landing/page.html:406
-#: templates/landing/page.html:426 templates/platform_admin/seo.html:192
+#: templates/landing/index.html:1334 templates/landing/index.html:1359
+#: templates/landing/page.html:649 templates/landing/page.html:670
+#: templates/landing/pricing.html:132 templates/platform_admin/seo.html:192
 msgid "Home"
 msgstr "Home"
 
@@ -5001,77 +5194,77 @@ msgstr "Home"
 msgid "Logout"
 msgstr "Logout"
 
-#: templates/auth/login.html:9 templates/auth/login.html:435
-#: templates/auth/login.html:510 templates/auth/portal.html:9
-#: templates/auth/portal.html:457 templates/auth/portal.html:526
-#: templates/landing/index.html:1166 templates/landing/index.html:1187
-#: templates/landing/page.html:415 templates/landing/page.html:432
+#: templates/auth/login.html:9 templates/auth/login.html:442
+#: templates/auth/login.html:517 templates/auth/portal.html:9
+#: templates/auth/portal.html:463 templates/auth/portal.html:532
+#: templates/landing/index.html:1344 templates/landing/index.html:1371
+#: templates/landing/page.html:659 templates/landing/page.html:677
 msgid "Sign In"
 msgstr "Sign In"
 
-#: templates/auth/login.html:417 templates/auth/otp_verify.html:392
-#: templates/auth/password_reset_base.html:429 templates/auth/portal.html:439
-#: templates/landing/page.html:484
+#: templates/auth/login.html:424 templates/auth/otp_verify.html:392
+#: templates/auth/password_reset_base.html:429 templates/auth/portal.html:445
+#: templates/landing/page.html:814
 msgid "Back to Home"
 msgstr "Back to Home"
 
-#: templates/auth/login.html:436
+#: templates/auth/login.html:443
 msgid "Welcome back! Please enter your credentials to access the dashboard."
 msgstr "Welcome back! Please enter your credentials to access the dashboard."
 
-#: templates/auth/login.html:478 templates/auth/portal.html:496
-#: templates/auth/portal.html:581
+#: templates/auth/login.html:485 templates/auth/portal.html:502
+#: templates/auth/portal.html:587
 msgid "Password"
 msgstr "Password"
 
-#: templates/auth/login.html:479 templates/auth/portal.html:497
+#: templates/auth/login.html:486 templates/auth/portal.html:503
 msgid "Forgot password?"
 msgstr "Forgot password?"
 
-#: templates/auth/login.html:503 templates/auth/portal.html:521
+#: templates/auth/login.html:510 templates/auth/portal.html:527
 msgid "Remember me on this device"
 msgstr "Remember me on this device"
 
-#: templates/auth/login.html:510 templates/auth/portal.html:526
+#: templates/auth/login.html:517 templates/auth/portal.html:532
 msgid "Signing in..."
 msgstr "Signing in..."
 
-#: templates/auth/login.html:515 templates/auth/portal.html:539
+#: templates/auth/login.html:522 templates/auth/portal.html:545
 msgid "Don't have an account?"
 msgstr "Don't have an account?"
 
-#: templates/auth/login.html:516 templates/auth/portal.html:540
+#: templates/auth/login.html:523 templates/auth/portal.html:546
 msgid "Start your free trial now"
 msgstr "Start your free trial now"
 
-#: templates/auth/login.html:524
+#: templates/auth/login.html:531
 msgid "All data encrypted with AES-256 and SOC 2 standards"
 msgstr "All data encrypted with AES-256 and SOC 2 standards"
 
-#: templates/auth/login.html:530 templates/auth/portal.html:642
+#: templates/auth/login.html:537 templates/auth/portal.html:648
 msgid "Two-Factor Verification"
 msgstr "Two-Factor Verification"
 
-#: templates/auth/login.html:531 templates/auth/portal.html:643
+#: templates/auth/login.html:538 templates/auth/portal.html:649
 msgid "Enter the 6-digit code from your authenticator app."
 msgstr "Enter the 6-digit code from your authenticator app."
 
-#: templates/auth/login.html:554 templates/auth/otp_verify.html:458
-#: templates/auth/portal.html:660
+#: templates/auth/login.html:561 templates/auth/otp_verify.html:458
+#: templates/auth/portal.html:666
 msgid "Verifying..."
 msgstr "Verifying..."
 
-#: templates/auth/login.html:554 templates/auth/portal.html:660
+#: templates/auth/login.html:561 templates/auth/portal.html:666
 msgid "Verify"
 msgstr "Verify"
 
-#: templates/auth/login.html:560 templates/auth/password_reset_base.html:431
+#: templates/auth/login.html:567 templates/auth/password_reset_base.html:431
 #: templates/auth/password_reset_done.html:36
-#: templates/auth/password_reset_form.html:50 templates/auth/portal.html:666
+#: templates/auth/password_reset_form.html:50 templates/auth/portal.html:672
 msgid "Back to login"
 msgstr "Back to login"
 
-#: templates/auth/login.html:575 templates/auth/portal.html:685
+#: templates/auth/login.html:582 templates/auth/portal.html:691
 msgid ""
 "Financial auditing <span class=\"highlight\">powered by AI</span> to take "
 "your business further."
@@ -5079,56 +5272,42 @@ msgstr ""
 "Financial auditing <span class=\"highlight\">powered by AI</span> to take "
 "your business further."
 
-#: templates/auth/login.html:581 templates/auth/portal.html:691
-#: templates/landing/index.html:1220 templates/landing/page.html:468
+#: templates/auth/login.html:588 templates/auth/portal.html:697
+#: templates/landing/index.html:1400 templates/landing/page.html:802
 msgid "Automation rate"
 msgstr "Automation rate"
 
-#: templates/auth/login.html:585 templates/auth/portal.html:695
-#: templates/landing/index.html:1224 templates/landing/page.html:472
+#: templates/auth/login.html:592 templates/auth/portal.html:701
+#: templates/landing/index.html:1404 templates/landing/page.html:806
 msgid "Extraction accuracy"
 msgstr "Extraction accuracy"
 
-#: templates/auth/login.html:589 templates/auth/portal.html:699
-#: templates/landing/index.html:1216
-msgid "Invoices processed"
-msgstr "Invoices processed"
-
-#: templates/auth/login.html:593 templates/auth/portal.html:703
-#: templates/landing/page.html:476
-msgid "Trusted organizations"
-msgstr "Trusted organizations"
-
-#: templates/auth/login.html:601 templates/auth/portal.html:709
-msgid "Join 1,200+ organizations in the Gulf"
-msgstr "Join 1,200+ organizations in the Gulf"
-
-#: templates/auth/login.html:630
+#: templates/auth/login.html:622
 msgid "Please fill in all fields"
 msgstr "Please fill in all fields"
 
-#: templates/auth/login.html:651
+#: templates/auth/login.html:643
 msgid "Please enter the two-factor authentication code"
 msgstr "Please enter the two-factor authentication code"
 
-#: templates/auth/login.html:661
+#: templates/auth/login.html:653
 msgid "Invalid login credentials"
 msgstr "Invalid login credentials"
 
-#: templates/auth/login.html:663 templates/documents/upload.html:416
+#: templates/auth/login.html:655 templates/documents/upload.html:416
 #: templates/invoices/upload.html:337
 msgid "Server connection error"
 msgstr "Server connection error"
 
-#: templates/auth/login.html:670 templates/auth/portal.html:788
+#: templates/auth/login.html:662 templates/auth/portal.html:781
 msgid "Please enter a 6-digit code"
 msgstr "Please enter a 6-digit code"
 
-#: templates/auth/login.html:689 templates/auth/portal.html:804
+#: templates/auth/login.html:681 templates/auth/portal.html:797
 msgid "Invalid code"
 msgstr "Invalid code"
 
-#: templates/auth/login.html:691 templates/auth/portal.html:806
+#: templates/auth/login.html:683 templates/auth/portal.html:799
 msgid "MFA verification failed"
 msgstr "MFA verification failed"
 
@@ -5282,8 +5461,8 @@ msgstr "Unable to verify the code right now."
 msgid "Verification completed successfully."
 msgstr "Verification completed successfully."
 
-#: templates/auth/otp_verify.html:641 templates/auth/portal.html:780
-#: templates/auth/portal.html:845
+#: templates/auth/otp_verify.html:641 templates/auth/portal.html:773
+#: templates/auth/portal.html:838
 msgid "A server connection error occurred."
 msgstr "A server connection error occurred."
 
@@ -5556,82 +5735,82 @@ msgstr "Send recovery link"
 msgid "Remembered your password?"
 msgstr "Remembered your password?"
 
-#: templates/auth/portal.html:9 templates/auth/portal.html:458
-#: templates/auth/portal.html:622
+#: templates/auth/portal.html:9 templates/auth/portal.html:464
+#: templates/auth/portal.html:628
 msgid "Create Account"
 msgstr "Create Account"
 
-#: templates/auth/portal.html:463
+#: templates/auth/portal.html:469
 msgid "Welcome back"
 msgstr "Welcome back"
 
-#: templates/auth/portal.html:464
+#: templates/auth/portal.html:470
 msgid "Sign in to access your dashboard."
 msgstr "Sign in to access your dashboard."
 
-#: templates/auth/portal.html:506 templates/auth/portal.html:589
+#: templates/auth/portal.html:512 templates/auth/portal.html:595
 msgid "Show or hide password"
 msgstr "Show or hide password"
 
-#: templates/auth/portal.html:531 templates/auth/portal.html:627
+#: templates/auth/portal.html:537 templates/auth/portal.html:633
 msgid "Or continue with"
 msgstr "Or continue with"
 
-#: templates/auth/portal.html:534 templates/auth/portal.html:630
+#: templates/auth/portal.html:540 templates/auth/portal.html:636
 msgid "Continue with Google"
 msgstr "Continue with Google"
 
-#: templates/auth/portal.html:546
+#: templates/auth/portal.html:552
 msgid "Create Your Account"
 msgstr "Create Your Account"
 
-#: templates/auth/portal.html:547
+#: templates/auth/portal.html:553
 msgid "Start your free trial — no credit card required."
 msgstr "Start your free trial — no credit card required."
 
-#: templates/auth/portal.html:557 templates/settings/index.html:172
+#: templates/auth/portal.html:563 templates/settings/index.html:172
 #: templates/settings/index.html:371
 msgid "Full Name"
 msgstr "Full Name"
 
-#: templates/auth/portal.html:563 templates/settings/index.html:372
+#: templates/auth/portal.html:569 templates/settings/index.html:372
 msgid "Mohammed Ahmed"
 msgstr "Mohammed Ahmed"
 
-#: templates/auth/portal.html:603 templates/vendor_dashboard/settings.html:120
+#: templates/auth/portal.html:609 templates/vendor_dashboard/settings.html:120
 msgid "Confirm Password"
 msgstr "Confirm Password"
 
-#: templates/auth/portal.html:622
+#: templates/auth/portal.html:628
 msgid "Creating account..."
 msgstr "Creating account..."
 
-#: templates/auth/portal.html:635
+#: templates/auth/portal.html:641
 msgid "Already have an account?"
 msgstr "Already have an account?"
 
-#: templates/auth/portal.html:636
+#: templates/auth/portal.html:642
 msgid "Sign in"
 msgstr "Sign in"
 
-#: templates/auth/portal.html:672 templates/landing/page.html:495
+#: templates/auth/portal.html:678
 #, python-format
 msgid "© 2026 %(product)s. A product by %(company)s."
 msgstr "© 2026 %(product)s. A product by %(company)s."
 
-#: templates/auth/portal.html:749
+#: templates/auth/portal.html:742
 msgid "Please enter your email address and password."
 msgstr "Please enter your email address and password."
 
-#: templates/auth/portal.html:775
+#: templates/auth/portal.html:768
 msgid "Unable to sign in. Please try again."
 msgstr "Unable to sign in. Please try again."
 
-#: templates/auth/portal.html:815
+#: templates/auth/portal.html:808
 msgid "Please complete all required fields."
 msgstr "Please complete all required fields."
 
-#: templates/auth/portal.html:840
+#: templates/auth/portal.html:833
 msgid "Unable to create the account right now."
 msgstr "Unable to create the account right now."
 
@@ -5719,9 +5898,12 @@ msgstr ""
 msgid "Reconciliation queue"
 msgstr "Balance Reconciliation"
 
-#: templates/banking/dashboard.html:152 templates/phase2/audits.html:96
+#: templates/banking/dashboard.html:152
+#: templates/components/_fraud_breakdown.html:33
+#: templates/invoices/invoice_pdf.html:136 templates/phase2/audits.html:96
 #: templates/reports/document_audit_report.html:384
 #: templates/reports/document_audit_report.html:454
+#: templates/reports/invoice_audit_report_pdf.html:355
 msgid "Score"
 msgstr "Score"
 
@@ -5792,11 +5974,11 @@ msgstr "Balance Reconciliation"
 msgid "new suggestions"
 msgstr "questions"
 
-#: templates/base.html:308
+#: templates/base.html:314
 msgid "Dismiss notification"
 msgstr "Dismiss notification"
 
-#: templates/base.html:378 templates/base.html:463
+#: templates/base.html:384 templates/base.html:473
 #: templates/documents/_typed_list.html:155
 #: templates/documents/bank_statements.html:115
 #: templates/documents/expense_reports.html:115
@@ -5808,43 +5990,47 @@ msgstr "Dismiss notification"
 msgid "Upload Document"
 msgstr "Upload Document"
 
-#: templates/base.html:393 templates/invoices/batches.html:3
+#: templates/base.html:399 templates/invoices/batches.html:3
 msgid "Batches"
 msgstr "Batches"
 
-#: templates/base.html:398 templates/layouts/dashboard_base.html:414
+#: templates/base.html:404 templates/layouts/dashboard_base.html:430
 msgid "Analysis"
 msgstr "Analysis"
 
-#: templates/base.html:412 templates/layouts/dashboard_base.html:429
+#: templates/base.html:418 templates/layouts/dashboard_base.html:445
 #: templates/vendors/detail.html:10 templates/vendors/index.html:4
 #: templates/vendors/index.html:30 templates/vendors/index.html:36
 msgid "Vendors"
 msgstr "Vendors"
 
-#: templates/base.html:419
+#: templates/base.html:425
 msgid "Anomaly Detection"
 msgstr "Anomaly Detection"
 
-#: templates/base.html:433
-msgid "AI Auditor"
-msgstr "AI Auditor"
+#: templates/base.html:437
+#, fuzzy, python-format
+#| msgid "%(count)s blocking"
+msgid "%(counter)s pending"
+msgid_plural "%(counter)s pending"
+msgstr[0] "%(count)s blocking"
+msgstr[1] "%(count)s blocking"
 
-#: templates/base.html:448 templates/transactions.html:4
+#: templates/base.html:458 templates/transactions.html:4
 #: templates/transactions.html:10 templates/transactions.html:16
 msgid "Transactions"
 msgstr "Transactions"
 
-#: templates/base.html:455
+#: templates/base.html:465
 msgid "Financial Documents"
 msgstr "Financial Documents"
 
-#: templates/base.html:507 templates/cms_admin/pricing.html:90
+#: templates/base.html:518 templates/cms_admin/pricing.html:90
 msgid "Users"
 msgstr "Users"
 
-#: templates/base.html:514 templates/cms_admin/base_cms.html:97
-#: templates/layouts/dashboard_base.html:437
+#: templates/base.html:526 templates/cms_admin/base_cms.html:97
+#: templates/layouts/dashboard_base.html:476
 #: templates/platform_admin/dashboard.html:118
 #: templates/platform_admin/settings.html:4 templates/settings/index.html:4
 #: templates/settings/index.html:111 templates/settings/index.html:119
@@ -5853,37 +6039,459 @@ msgstr "Users"
 msgid "Settings"
 msgstr "Settings"
 
-#: templates/base.html:523
+#: templates/base.html:535
 msgid "Light mode"
 msgstr "Light mode"
 
-#: templates/base.html:523
+#: templates/base.html:535
 msgid "Dark mode"
 msgstr "Dark mode"
 
-#: templates/base.html:528
+#: templates/base.html:540
 msgid "Collapse sidebar"
 msgstr "Collapse sidebar"
 
-#: templates/base.html:571
+#: templates/base.html:583
 msgid "New Invoice"
 msgstr "New Invoice"
 
-#: templates/base.html:655
+#: templates/base.html:667
 msgid "Operation completed successfully"
 msgstr "Operation completed successfully"
 
-#: templates/base.html:656
+#: templates/base.html:668
 msgid "Unable to complete the operation"
 msgstr "Unable to complete the operation"
 
-#: templates/base.html:657
+#: templates/base.html:669
 msgid "Notice"
 msgstr "Notice"
 
-#: templates/base.html:658
+#: templates/base.html:670
 msgid "Attention required"
 msgstr "Attention required"
+
+#: templates/billing/_shell.html:118
+#, fuzzy
+#| msgid "Plan"
+msgid "Plans"
+msgstr "Plan"
+
+#: templates/billing/_shell.html:119 templates/billing/usage.html:60
+#: templates/vendor_dashboard/billing.html:4
+msgid "Subscription"
+msgstr "Subscription"
+
+#: templates/billing/_shell.html:120
+#, fuzzy
+#| msgid "Message"
+msgid "Usage"
+msgstr "Message"
+
+#: templates/billing/_shell.html:121 templates/billing/bulk_upload.html:4
+#: templates/billing/bulk_upload.html:77
+#, fuzzy
+#| msgid "File upload"
+msgid "Bulk upload"
+msgstr "File upload"
+
+#: templates/billing/_shell.html:123 templates/billing/plans.html:215
+#, fuzzy
+#| msgid "Sign Out"
+msgid "Sign out"
+msgstr "Sign Out"
+
+#: templates/billing/bulk_upload.html:78
+msgid ""
+"Upload a CSV, Excel, JSONL, or ZIP. We check it against your subscription "
+"quota before processing."
+msgstr ""
+
+#: templates/billing/bulk_upload.html:89
+#, fuzzy
+#| msgid "Drag and drop files here"
+msgid "Drag and drop your file here"
+msgstr "Drag and drop files here"
+
+#: templates/billing/bulk_upload.html:90
+msgid "CSV · XLSX · JSONL · JSON · ZIP   (up to 50 MB)"
+msgstr ""
+
+#: templates/billing/bulk_upload.html:91
+#, fuzzy
+#| msgid "Choose Files"
+msgid "Choose a file"
+msgstr "Choose Files"
+
+#: templates/billing/bulk_upload.html:96 templates/billing/bulk_upload.html:177
+#: templates/billing/bulk_upload.html:183
+#, fuzzy
+#| msgid "Upload and Process Documents"
+msgid "Upload and check quota"
+msgstr "Upload and Process Documents"
+
+#: templates/billing/bulk_upload.html:98 templates/billing/plans.html:214
+#: templates/billing/subscription.html:5 templates/billing/subscription.html:78
+#: templates/layouts/dashboard_base.html:459
+#, fuzzy
+#| msgid "Subscription"
+msgid "My subscription"
+msgstr "Subscription"
+
+#: templates/billing/bulk_upload.html:106
+msgid "Not enough quota for this upload"
+msgstr ""
+
+#: templates/billing/bulk_upload.html:109
+msgid "Items in file"
+msgstr ""
+
+#: templates/billing/bulk_upload.html:110
+#, fuzzy
+#| msgid "No rule data available."
+msgid "Quota available"
+msgstr "No rule data available."
+
+#: templates/billing/bulk_upload.html:111
+msgid "Would be blocked"
+msgstr ""
+
+#: templates/billing/bulk_upload.html:114
+#: templates/billing/subscription.html:151
+#, fuzzy
+#| msgid "Upgrade Plan"
+msgid "Upgrade plan"
+msgstr "Upgrade Plan"
+
+#: templates/billing/bulk_upload.html:115
+msgid "Process the available count only"
+msgstr ""
+
+#: templates/billing/bulk_upload.html:118
+msgid ""
+"Selecting the partial option submits the same file with accept_partial=true "
+"so only the items that fit your remaining quota are processed."
+msgstr ""
+
+#: templates/billing/bulk_upload.html:164
+#, fuzzy
+#| msgid "Uploading"
+msgid "Uploading…"
+msgstr "Uploading"
+
+#: templates/billing/bulk_upload.html:175
+#: templates/partials/i18n_strings.html:85
+#: templates/vendor_dashboard/upload.html:206
+msgid "Network error"
+msgstr "Network error"
+
+#: templates/billing/bulk_upload.html:203 templates/phase2/files.html:427
+#: templates/phase2/files.html:428
+msgid "Upload failed."
+msgstr "Upload failed."
+
+#: templates/billing/bulk_upload.html:208
+#, fuzzy
+#| msgid "Folder created."
+msgid "Job created. "
+msgstr "Folder created."
+
+#: templates/billing/bulk_upload.html:210
+msgid "Processing only the items that fit your remaining quota."
+msgstr ""
+
+#: templates/billing/bulk_upload.html:211
+#, fuzzy
+#| msgid "Processing"
+msgid "Processing now."
+msgstr "Processing"
+
+#: templates/billing/plans.html:9 templates/billing/plans.html:221
+msgid "Choose Your Plan"
+msgstr ""
+
+#: templates/billing/plans.html:95 templates/landing/pricing.html:69
+#, fuzzy
+#| msgid "Most Popular"
+msgid "Most popular"
+msgstr "Most Popular"
+
+#: templates/billing/plans.html:222
+msgid ""
+"Pick a plan to start auditing invoices. You can upgrade or change later."
+msgstr ""
+
+#: templates/billing/plans.html:237 templates/landing/pricing.html:160
+#, fuzzy
+#| msgid "Active only"
+msgid "First time only"
+msgstr "Active only"
+
+#: templates/billing/plans.html:244 templates/landing/pricing.html:165
+#: templates/vendor_dashboard/billing.html:37
+msgid "Free"
+msgstr "Free"
+
+#: templates/billing/plans.html:247 templates/landing/pricing.html:168
+#, fuzzy
+#| msgid "Month"
+msgid "month"
+msgstr "Month"
+
+#: templates/billing/plans.html:251 templates/landing/pricing.html:172
+#, python-format
+msgid "%(count)s invoices · %(days)s days"
+msgstr ""
+
+#: templates/billing/plans.html:256 templates/landing/pricing.html:176
+#, fuzzy, python-format
+#| msgid "%(count)s blocking"
+msgid "%(count)s invoice audits"
+msgstr "%(count)s blocking"
+
+#: templates/billing/plans.html:258 templates/landing/pricing.html:178
+msgid "Bulk upload (CSV / Excel / ZIP)"
+msgstr ""
+
+#: templates/billing/plans.html:260 templates/landing/pricing.html:180
+#, fuzzy
+#| msgid "ZATCA/VAT compliance check"
+msgid "Fraud + ZATCA compliance checks"
+msgstr "ZATCA/VAT compliance check"
+
+#: templates/billing/plans.html:263
+msgid "30-day trial — once per organization"
+msgstr ""
+
+#: templates/billing/plans.html:266 templates/landing/pricing.html:182
+#, fuzzy
+#| msgid "Failed to load reports"
+msgid "Email + dashboard reports"
+msgstr "Failed to load reports"
+
+#: templates/billing/plans.html:272
+msgid "Free trial already used for this organization."
+msgstr ""
+
+#: templates/billing/plans.html:273
+#, fuzzy
+#| msgid "TOTP service unavailable"
+msgid "Trial unavailable"
+msgstr "TOTP service unavailable"
+
+#: templates/billing/plans.html:276
+#, fuzzy
+#| msgid "User has no organization."
+msgid "Already used for this organization."
+msgstr "User has no organization."
+
+#: templates/billing/plans.html:283 templates/landing/pricing.html:139
+#: templates/landing/pricing.html:192
+#, fuzzy
+#| msgid "Start Free Trial"
+msgid "Start free trial"
+msgstr "Start Free Trial"
+
+#: templates/billing/plans.html:284 templates/landing/pricing.html:187
+#, fuzzy
+#| msgid "Choose Files"
+msgid "Choose this plan"
+msgstr "Choose Files"
+
+#: templates/billing/plans.html:285 templates/landing/pricing.html:188
+#, fuzzy
+#| msgid "Subscription"
+msgid "Subscribe"
+msgstr "Subscription"
+
+#: templates/billing/plans.html:294
+#, fuzzy
+#| msgid "Already have an account?"
+msgid "Already have a plan?"
+msgstr "Already have an account?"
+
+#: templates/billing/plans.html:295
+#, fuzzy
+#| msgid "Cancel subscription"
+msgid "View my subscription →"
+msgstr "Cancel subscription"
+
+#: templates/billing/subscription.html:79
+msgid "Your current plan, usage, and remaining quota."
+msgstr ""
+
+#: templates/billing/subscription.html:84
+msgid "You don't have an active subscription yet."
+msgstr ""
+
+#: templates/billing/subscription.html:86 templates/dashboard/index.html:101
+#, fuzzy
+#| msgid "Choose Files"
+msgid "Choose a plan"
+msgstr "Choose Files"
+
+#: templates/billing/subscription.html:92
+#: templates/platform_admin/organizations.html:65
+#: templates/vendor_dashboard/billing.html:137
+msgid "Plan"
+msgstr "Plan"
+
+#: templates/billing/subscription.html:102
+#, fuzzy
+#| msgid "Trial"
+msgid "Trialing"
+msgstr "Trial"
+
+#: templates/billing/subscription.html:103
+#, fuzzy
+#| msgid "Pending"
+msgid "Pending payment"
+msgstr "Pending"
+
+#: templates/billing/subscription.html:104
+#: templates/vendor_dashboard/billing.html:44
+msgid "Expired"
+msgstr "Expired"
+
+#: templates/billing/subscription.html:105
+#, fuzzy
+#| msgid "Payment Date"
+msgid "Payment failed"
+msgstr "Payment Date"
+
+#: templates/billing/subscription.html:111
+#: templates/vendor_dashboard/dashboard.html:199
+msgid "Used"
+msgstr "Used"
+
+#: templates/billing/subscription.html:115
+#, fuzzy
+#| msgid "Remaining Codes:"
+msgid "Remaining"
+msgstr "Remaining Codes:"
+
+#: templates/billing/subscription.html:122
+#, fuzzy
+#| msgid "In progress"
+msgid "Usage progress"
+msgstr "In progress"
+
+#: templates/billing/subscription.html:124
+#, python-format
+msgid "%(pct)s%% used"
+msgstr ""
+
+#: templates/billing/subscription.html:131
+#, python-format
+msgid "Reserved (in flight): %(r)s"
+msgstr ""
+
+#: templates/billing/subscription.html:132
+#, python-format
+msgid "%(u)s of %(l)s invoices audited"
+msgstr ""
+
+#: templates/billing/subscription.html:141
+msgid "Ends"
+msgstr ""
+
+#: templates/billing/subscription.html:145
+#, fuzzy
+#| msgid "Auto-extract enabled"
+msgid "Auto-renew"
+msgstr "Auto-extract enabled"
+
+#: templates/billing/subscription.html:152 templates/zatca/dashboard.html:149
+msgid "Renew"
+msgstr ""
+
+#: templates/billing/subscription.html:153
+msgid "View usage history"
+msgstr ""
+
+#: templates/billing/subscription.html:159 templates/dashboard/index.html:93
+msgid "Your subscription has expired."
+msgstr ""
+
+#: templates/billing/subscription.html:160
+msgid "Please renew your plan to continue auditing invoices."
+msgstr ""
+
+#: templates/billing/subscription.html:164
+#, fuzzy
+#| msgid "Payment Date"
+msgid "Payment failed."
+msgstr "Payment Date"
+
+#: templates/billing/subscription.html:165
+msgid "Please try again — or choose a different plan."
+msgstr ""
+
+#: templates/billing/subscription.html:170
+msgid "Upgrade to continue auditing invoices this period."
+msgstr ""
+
+#: templates/billing/usage.html:4 templates/billing/usage.html:47
+#: templates/layouts/dashboard_base.html:467
+#, fuzzy
+#| msgid "Uploaded Batch History"
+msgid "Usage history"
+msgstr "Uploaded Batch History"
+
+#: templates/billing/usage.html:48
+msgid ""
+"Every reserve, consume, release, and refund event for this organization."
+msgstr ""
+
+#: templates/billing/usage.html:58
+#: templates/documents/detail/purchase_order_detail.html:258
+#: templates/documents/detail/sales_receipt_detail.html:253
+#: templates/documents/purchase_orders.html:81
+#: templates/invoices/detail.html:270
+msgid "Quantity"
+msgstr "Quantity"
+
+#: templates/billing/usage.html:59
+#: templates/components/_fraud_breakdown.html:36
+#: templates/invoices/override_request.html:79
+#, fuzzy
+#| msgid "Reason:"
+msgid "Reason"
+msgstr "Reason:"
+
+#: templates/billing/usage.html:68
+#, fuzzy
+#| msgid "Reset"
+msgid "Reserve"
+msgstr "Reset"
+
+#: templates/billing/usage.html:69
+msgid "Consume"
+msgstr ""
+
+#: templates/billing/usage.html:70
+msgid "Release"
+msgstr ""
+
+#: templates/billing/usage.html:71
+msgid "Refund"
+msgstr ""
+
+#: templates/billing/usage.html:83
+#, fuzzy
+#| msgid "No sign-in recorded yet."
+msgid "No usage events recorded yet."
+msgstr "No sign-in recorded yet."
+
+#: templates/billing/usage.html:91 templates/partials/_pagination.html:15
+msgid "Pagination"
+msgstr "Pagination"
+
+#: templates/billing/usage.html:99
+#, fuzzy, python-format
+#| msgid "Page %(current)s of %(total)s · %(count)s documents"
+msgid "Page %(current)s of %(total)s"
+msgstr "Page %(current)s of %(total)s · %(count)s documents"
 
 #: templates/cms_admin/about.html:4
 msgid "About Page Editor"
@@ -6063,8 +6671,9 @@ msgstr "Failed to save"
 
 #: templates/cms_admin/base_cms.html:61 templates/cms_admin/dashboard.html:270
 #: templates/cms_admin/homepage.html:351 templates/cms_admin/seo.html:211
-#: templates/landing/index.html:1160 templates/landing/index.html:1184
-#: templates/landing/page.html:408 templates/landing/page.html:428
+#: templates/landing/index.html:1337 templates/landing/index.html:1363
+#: templates/landing/page.html:652 templates/landing/page.html:673
+#: templates/landing/pricing.html:134
 msgid "About"
 msgstr "About"
 
@@ -6134,8 +6743,9 @@ msgid "Item"
 msgstr "Item"
 
 #: templates/cms_admin/dashboard.html:143
-#: templates/invoices/invoice_pdf.html:145
-#: templates/layouts/dashboard_base.html:520 templates/phase2/activity.html:167
+#: templates/invoices/invoice_pdf.html:175
+#: templates/layouts/dashboard_base.html:561
+#: templates/layouts/dashboard_base.html:571 templates/phase2/activity.html:167
 #: templates/platform_admin/activity_logs.html:105
 #: templates/settings/index.html:438 templates/working_papers/detail.html:159
 msgid "User"
@@ -6570,7 +7180,7 @@ msgstr "Applicant"
 
 #: templates/cms_admin/jobs.html:176 templates/cms_admin/jobs.html:357
 #: templates/cms_admin/leads.html:85 templates/cms_admin/leads.html:168
-#: templates/platform_admin/leads.html:174
+#: templates/landing/page.html:755 templates/platform_admin/leads.html:174
 #: templates/platform_admin/organizations.html:64
 #: templates/platform_admin/settings.html:120 templates/settings/index.html:176
 #: templates/settings/index.html:375
@@ -6673,7 +7283,7 @@ msgid "Application Details"
 msgstr "Application Details"
 
 #: templates/cms_admin/jobs.html:361 templates/cms_admin/leads.html:172
-#: templates/platform_admin/leads.html:182
+#: templates/landing/page.html:745 templates/platform_admin/leads.html:182
 #: templates/vendor_dashboard/settings.html:69
 msgid "Phone"
 msgstr "Phone"
@@ -6690,8 +7300,8 @@ msgstr "Internal Notes"
 msgid "Add internal notes..."
 msgstr "Add internal notes..."
 
-#: templates/cms_admin/jobs.html:387 templates/landing/index.html:1557
-#: templates/layouts/dashboard_base.html:536
+#: templates/cms_admin/jobs.html:387 templates/components/_modal.html:45
+#: templates/landing/index.html:1840 templates/layouts/dashboard_base.html:589
 msgid "Close"
 msgstr "Close"
 
@@ -7373,8 +7983,8 @@ msgid "Icon (Lucide name)"
 msgstr "Icon (Lucide name)"
 
 #: templates/cms_admin/services_editor.html:144
-#: templates/cms_admin/settings.html:138 templates/landing/index.html:1158
-#: templates/landing/index.html:1182 templates/landing/index.html:1531
+#: templates/cms_admin/settings.html:138 templates/landing/index.html:1335
+#: templates/landing/index.html:1360
 msgid "Features"
 msgstr "Features"
 
@@ -7681,13 +8291,41 @@ msgstr "ZATCA QR Code"
 msgid "Mandatory Tax-Invoice Fields"
 msgstr ""
 
-#: templates/compliance/index.html:192 templates/dashboard/index.html:107
+#: templates/compliance/index.html:192 templates/dashboard/index.html:181
 msgid "Invoices missing valid QR"
 msgstr "Invoices missing valid QR"
 
 #: templates/compliance/index.html:213
 msgid "All invoices have valid QR codes."
 msgstr "All invoices have valid QR codes."
+
+#: templates/components/_breadcrumb.html:16
+msgid "Breadcrumb"
+msgstr ""
+
+#: templates/components/_command_palette.html:21
+#, fuzzy
+#| msgid "Search by invoice number, vendor..."
+msgid "Search pages, invoices, vendors…"
+msgstr "Search by invoice number, vendor..."
+
+#: templates/components/_command_palette.html:41
+#, fuzzy
+#| msgid "Results"
+msgid "No results"
+msgstr "Results"
+
+#: templates/components/_command_palette.html:45
+msgid "Navigate with ↑↓ — Enter to open"
+msgstr ""
+
+#: templates/components/_command_palette.html:46
+msgid "Press Cmd+K to open anywhere"
+msgstr ""
+
+#: templates/components/_data_table.html:25
+msgid "Data table"
+msgstr ""
 
 #: templates/components/_delete_modal.html:21
 #: templates/storage_management/providers.html:184
@@ -7705,20 +8343,182 @@ msgstr "This action cannot be undone. The item will be marked as deleted."
 msgid "Delete Permanently"
 msgstr "Delete Permanently"
 
-#: templates/dashboard/index.html:35
+#: templates/components/_form_field.html:26
+#, fuzzy
+#| msgid "Required"
+msgid "(required)"
+msgstr "Required"
+
+#: templates/components/_fraud_breakdown.html:16
+#, fuzzy
+#| msgid "Fraud signal analysis"
+msgid "Fraud signal breakdown"
+msgstr "Fraud signal analysis"
+
+#: templates/components/_fraud_breakdown.html:17
+msgid ""
+"Weighted aggregation of duplicate / Benford / vendor / behavioral / "
+"structural signals."
+msgstr ""
+
+#: templates/components/_fraud_breakdown.html:20
+#, python-format
+msgid "Score %(score)s / 100"
+msgstr ""
+
+#: templates/components/_fraud_breakdown.html:32
+#, fuzzy
+#| msgid "Sign In"
+msgid "Signal"
+msgstr "Sign In"
+
+#: templates/components/_fraud_breakdown.html:43
+#: templates/components/_fraud_breakdown.html:74
+#: templates/documents/detail/sales_receipt_detail.html:243
+#: templates/invoices/session_detail.html:62
+#: templates/reports/document_audit_report.html:598
+#: templates/reports/invoice_audit_report_v2.html:464
+msgid "Duplicate"
+msgstr "Duplicate"
+
+#: templates/components/_fraud_breakdown.html:44
+#: templates/components/_fraud_breakdown.html:75
+#, fuzzy
+#| msgid "Benford's Law"
+msgid "Benford-law"
+msgstr "Benford's Law"
+
+#: templates/components/_fraud_breakdown.html:45
+#: templates/components/_fraud_breakdown.html:76
+#, fuzzy
+#| msgid "Vendors"
+msgid "Vendor risk"
+msgstr "Vendors"
+
+#: templates/components/_fraud_breakdown.html:46
+#: templates/components/_fraud_breakdown.html:77
+msgid "Behavioral"
+msgstr ""
+
+#: templates/components/_fraud_breakdown.html:47
+#: templates/components/_fraud_breakdown.html:78
+#, fuzzy
+#| msgid "Structured data"
+msgid "Structural"
+msgstr "Structured data"
+
+#: templates/components/_fraud_breakdown.html:62
+#: templates/components/_fraud_breakdown.html:64
+msgid "Top contributors"
+msgstr ""
+
+#: templates/components/_fraud_breakdown.html:85
+msgid "No signals were available for ranking."
+msgstr ""
+
+#: templates/components/_skip_link.html:7
+#, fuzzy
+#| msgid "Main Content"
+msgid "Skip to main content"
+msgstr "Main Content"
+
+#: templates/components/_stat_card.html:29
+msgid "Trend"
+msgstr ""
+
+#: templates/dashboard/index.html:36
+#, python-format
+msgid "Coverage: %(country)s"
+msgstr ""
+
+#: templates/dashboard/index.html:38
 msgid "Coverage: GCC"
 msgstr "Coverage: GCC"
 
-#: templates/dashboard/index.html:41
+#: templates/dashboard/index.html:47
+#, fuzzy
+#| msgid "You are not associated with an organization yet."
+msgid "You're not associated with an organization yet."
+msgstr "You are not associated with an organization yet."
+
+#: templates/dashboard/index.html:49
+#, fuzzy
+#| msgid ""
+#| "Your account is not linked to an organization. Contact your platform "
+#| "administrator to fix this."
+msgid ""
+"Until your account is added to an organization, the dashboard has no data to "
+"show."
+msgstr ""
+"Your account is not linked to an organization. Contact your platform "
+"administrator to fix this."
+
+#: templates/dashboard/index.html:52
+#, fuzzy
+#| msgid "Amount"
+msgid "Account settings"
+msgstr "Amount"
+
+#: templates/dashboard/index.html:66
+#, fuzzy
+#| msgid "Current Plan"
+msgid "Current plan"
+msgstr "Current Plan"
+
+#: templates/dashboard/index.html:69 templates/vendor_dashboard/billing.html:44
+msgid "Trial"
+msgstr "Trial"
+
+#: templates/dashboard/index.html:76
+#, fuzzy
+#| msgid "Audited"
+msgid "audited"
+msgstr "Audited"
+
+#: templates/dashboard/index.html:77
+#, fuzzy
+#| msgid "Remaining Codes:"
+msgid "remaining"
+msgstr "Remaining Codes:"
+
+#: templates/dashboard/index.html:85
+#, fuzzy
+#| msgid "Manager"
+msgid "Manage"
+msgstr "Manager"
+
+#: templates/dashboard/index.html:86
+#, fuzzy
+#| msgid "Upgrade Plan"
+msgid "Upgrade"
+msgstr "Upgrade Plan"
+
+#: templates/dashboard/index.html:94
+#, fuzzy
+#| msgid "Cancel subscription"
+msgid "No active subscription."
+msgstr "Cancel subscription"
+
+#: templates/dashboard/index.html:97
+msgid "Renew your plan to continue auditing invoices."
+msgstr ""
+
+#: templates/dashboard/index.html:98
+#, fuzzy
+#| msgid "Manage your subscription plan and invoices"
+msgid "Please choose a subscription plan to start auditing invoices."
+msgstr "Manage your subscription plan and invoices"
+
+#: templates/dashboard/index.html:108
 msgid "Main Dashboard"
 msgstr "Main Dashboard"
 
-#: templates/dashboard/index.html:42
+#: templates/dashboard/index.html:109
 #, python-format
 msgid "%(product)s — Unified AI-powered financial document auditor"
 msgstr "%(product)s — Unified AI-powered financial document auditor"
 
-#: templates/dashboard/index.html:49
+#: templates/dashboard/index.html:117
 #: templates/documents/bank_statements.html:51
 #: templates/documents/expense_reports.html:51
 #: templates/documents/fixed_assets.html:51 templates/documents/payroll.html:51
@@ -7730,63 +8530,63 @@ msgstr "%(product)s — Unified AI-powered financial document auditor"
 msgid "Export"
 msgstr "Export"
 
-#: templates/dashboard/index.html:71 templates/landing/index.html:1358
+#: templates/dashboard/index.html:139
 msgid "Process Automation"
 msgstr "Process Automation"
 
-#: templates/dashboard/index.html:73
+#: templates/dashboard/index.html:141
 msgid "Invoices auto-extracted without errors"
 msgstr "Invoices auto-extracted without errors"
 
-#: templates/dashboard/index.html:77 templates/documents/upload.html:202
+#: templates/dashboard/index.html:145 templates/documents/upload.html:202
 #: templates/invoices/upload.html:152
 msgid "OCR"
 msgstr "OCR"
 
-#: templates/dashboard/index.html:81
+#: templates/dashboard/index.html:149
 msgid "Data Accuracy"
 msgstr "Data Accuracy"
 
-#: templates/dashboard/index.html:83
+#: templates/dashboard/index.html:151
 msgid "Average OCR confidence"
 msgstr "Average OCR confidence"
 
-#: templates/dashboard/index.html:88
+#: templates/dashboard/index.html:159
 #: templates/reports/invoice_audit_report.html:370
 #: templates/reports/invoice_audit_report.html:386
 #: templates/reports/invoice_audit_report_pdf.html:321
-#: templates/reports/invoice_audit_report_pdf.html:388
+#: templates/reports/invoice_audit_report_pdf.html:403
 #: templates/reports/invoice_audit_report_v2.html:378
 #: templates/reports/invoice_audit_report_v2.html:417
 #: templates/reports/invoice_audit_report_v2.html:689
 msgid "Safe"
 msgstr "Safe"
 
-#: templates/dashboard/index.html:95
+#: templates/dashboard/index.html:166
 msgid "Fraud / High-Risk"
 msgstr "Fraud / High-Risk"
 
-#: templates/dashboard/index.html:97
+#: templates/dashboard/index.html:168
 msgid "high-risk invoices"
 msgstr "high-risk invoices"
 
-#: templates/dashboard/index.html:105
+#: templates/dashboard/index.html:179
 msgid "Compliance Alerts"
 msgstr "Compliance Alerts"
 
-#: templates/dashboard/index.html:140
+#: templates/dashboard/index.html:224
 msgid "Pending Review"
 msgstr "Pending Review"
 
-#: templates/dashboard/index.html:142
+#: templates/dashboard/index.html:226
 msgid "Awaiting human approval"
 msgstr "Awaiting human approval"
 
-#: templates/dashboard/index.html:150
+#: templates/dashboard/index.html:234
 msgid "Start auditing your financial documents now"
 msgstr "Start auditing your financial documents now"
 
-#: templates/dashboard/index.html:151
+#: templates/dashboard/index.html:235
 msgid ""
 "Upload invoices, bank statements, or VAT records and our system will analyze "
 "them in seconds."
@@ -7794,135 +8594,147 @@ msgstr ""
 "Upload invoices, bank statements, or VAT records and our system will analyze "
 "them in seconds."
 
-#: templates/dashboard/index.html:155
+#: templates/dashboard/index.html:239
 msgid "Start Upload"
 msgstr "Start Upload"
 
-#: templates/dashboard/index.html:165 templates/documents/upload.html:166
+#: templates/dashboard/index.html:251 templates/documents/upload.html:166
 #: templates/invoices/upload.html:108
 msgid "Drag files here or click to select"
 msgstr "Drag files here or click to select"
 
-#: templates/dashboard/index.html:166 templates/documents/upload.html:167
+#: templates/dashboard/index.html:252 templates/documents/upload.html:167
 #: templates/invoices/upload.html:109
 msgid "Supports PDF, Excel, CSV, JSON, and images — up to 50MB per file"
 msgstr "Supports PDF, Excel, CSV, JSON, and images — up to 50MB per file"
 
-#: templates/dashboard/index.html:181
+#: templates/dashboard/index.html:268
 msgid "Recent Operations"
 msgstr "Recent Operations"
 
-#: templates/dashboard/index.html:182
+#: templates/dashboard/index.html:269
 msgid "Last 10 analyzed documents"
 msgstr "Last 10 analyzed documents"
 
-#: templates/dashboard/index.html:187 templates/documents/_typed_list.html:93
+#: templates/dashboard/index.html:275 templates/documents/_typed_list.html:93
 #: templates/working_papers/list.html:54
 msgid "Filter"
 msgstr "Filter"
 
-#: templates/dashboard/index.html:189 templates/phase2/dashboard.html:143
+#: templates/dashboard/index.html:277 templates/phase2/dashboard.html:143
 #: templates/platform_admin/dashboard.html:133 templates/reports/index.html:480
 #: templates/vendor_dashboard/dashboard.html:135
 #: templates/vendor_dashboard/storage.html:102
 msgid "View all"
 msgstr "View all"
 
-#: templates/dashboard/index.html:230
+#: templates/dashboard/index.html:318
 msgid "Upload your first invoice or document and our AI will analyze it."
 msgstr "Upload your first invoice or document and our AI will analyze it."
 
-#: templates/dashboard/index.html:243
+#: templates/dashboard/index.html:331
 #, fuzzy
 #| msgid "Total Vendors"
 msgid "Top Risky Vendors"
 msgstr "Total Vendors"
 
-#: templates/dashboard/index.html:245
+#: templates/dashboard/index.html:333
 msgid "Open Approval Inbox →"
 msgstr ""
 
-#: templates/dashboard/index.html:253 templates/reports/index.html:136
+#: templates/dashboard/index.html:341 templates/reports/index.html:136
 #, fuzzy
 #| msgid "High Risk"
 msgid "High-Risk"
 msgstr "High Risk"
 
-#: templates/dashboard/index.html:267 templates/vendors/detail.html:4
+#: templates/dashboard/index.html:355 templates/vendors/detail.html:4
 #, fuzzy
 #| msgid "Vendor"
 msgid "Vendor 360"
 msgstr "Vendor"
 
-#: templates/dashboard/index.html:284
+#: templates/dashboard/index.html:374
+#, fuzzy
+#| msgid "No documents to audit yet"
+msgid "No documents to score yet"
+msgstr "No documents to audit yet"
+
+#: templates/dashboard/index.html:380
 msgid "Invoices Trend (last 6 months)"
 msgstr ""
 
-#: templates/dashboard/index.html:299
+#: templates/dashboard/index.html:387
+#, fuzzy
+#| msgid "Upload invoices or purchase orders to populate this feed."
+msgid "Upload invoices to see the monthly trend"
+msgstr "Upload invoices or purchase orders to populate this feed."
+
+#: templates/dashboard/index.html:403
 msgid "Your dashboard is empty — try sample data"
 msgstr ""
 
-#: templates/dashboard/index.html:300
+#: templates/dashboard/index.html:404
 msgid ""
 "Load a curated set of demo invoices, POs, GRNs, payments, and contracts to "
 "see how the platform looks in action."
 msgstr ""
 
-#: templates/dashboard/index.html:304 templates/documents/index.html:156
+#: templates/dashboard/index.html:408 templates/documents/index.html:156
 #, fuzzy
 #| msgid "Failed to load video data"
 msgid "Load demo data"
 msgstr "Failed to load video data"
 
-#: templates/dashboard/index.html:315
+#: templates/dashboard/index.html:419
 msgid "Quick start"
 msgstr ""
 
-#: templates/dashboard/index.html:318
+#: templates/dashboard/index.html:422
 #, fuzzy
 #| msgid "Welcome back"
 msgid "Welcome to Tadgeeg"
 msgstr "Welcome back"
 
-#: templates/dashboard/index.html:321
+#: templates/dashboard/index.html:425
 msgid ""
 "Tadgeeg automates financial-document audits with 236 rules across 21 "
 "document types. Here's how to get started:"
 msgstr ""
 
-#: templates/dashboard/index.html:324
+#: templates/dashboard/index.html:428
 msgid ""
 "— pick a document type at /documents/upload/ and drop your PDF / Excel / CSV."
 msgstr ""
 
-#: templates/dashboard/index.html:325
+#: templates/dashboard/index.html:429
 msgid "— our AI extracts the data and runs validation rules instantly."
 msgstr ""
 
-#: templates/dashboard/index.html:326
+#: templates/dashboard/index.html:430
 msgid ""
 "— open the detail page to see risk score, failed rules, and linked documents."
 msgstr ""
 
-#: templates/dashboard/index.html:327
+#: templates/dashboard/index.html:431
 msgid "Decide"
 msgstr ""
 
-#: templates/dashboard/index.html:327
+#: templates/dashboard/index.html:431
 msgid "— approve, hold, or reject; the audit trail captures everything."
 msgstr ""
 
-#: templates/dashboard/index.html:331
+#: templates/dashboard/index.html:435
 msgid "Skip"
 msgstr ""
 
-#: templates/dashboard/index.html:377
+#: templates/dashboard/index.html:499
 #, fuzzy
 #| msgid "Amount"
 msgid "Amount (SAR)"
 msgstr "Amount"
 
-#: templates/dashboard/index.html:387 templates/streaming/ops.html:127
+#: templates/dashboard/index.html:509 templates/streaming/ops.html:127
 #: templates/zatca/dashboard.html:180
 #, fuzzy
 #| msgid "Country"
@@ -8179,7 +8991,7 @@ msgstr "Showing"
 #: templates/documents/detail/purchase_order_detail.html:126
 #: templates/documents/detail/sales_receipt_detail.html:126
 #: templates/documents/detail/vat_return_detail.html:118
-#: templates/invoices/invoice_pdf.html:138
+#: templates/invoices/invoice_pdf.html:157
 msgid "AI Summary"
 msgstr "AI Summary"
 
@@ -8543,13 +9355,6 @@ msgstr "Delivery Date"
 msgid "Item Name"
 msgstr "Item Name"
 
-#: templates/documents/detail/purchase_order_detail.html:258
-#: templates/documents/detail/sales_receipt_detail.html:253
-#: templates/documents/purchase_orders.html:81
-#: templates/invoices/detail.html:270
-msgid "Quantity"
-msgstr "Quantity"
-
 #: templates/documents/detail/purchase_order_detail.html:259
 msgid "Unit"
 msgstr "Unit"
@@ -8607,13 +9412,6 @@ msgstr "Valid"
 #: templates/invoices/partials/_qr_code_display.html:32
 msgid "Invalid"
 msgstr "Invalid"
-
-#: templates/documents/detail/sales_receipt_detail.html:243
-#: templates/invoices/session_detail.html:62
-#: templates/reports/document_audit_report.html:598
-#: templates/reports/invoice_audit_report_v2.html:464
-msgid "Duplicate"
-msgstr "Duplicate"
 
 #: templates/documents/detail/vat_return_detail.html:3
 #: templates/documents/detail/vat_return_detail.html:35
@@ -9476,7 +10274,7 @@ msgstr "Invoice Line Items"
 msgid "Details of items or services extracted from the document."
 msgstr "Details of items or services extracted from the document."
 
-#: templates/invoices/detail.html:345 templates/invoices/invoice_pdf.html:143
+#: templates/invoices/detail.html:345 templates/invoices/invoice_pdf.html:173
 #: templates/reports/document_audit_report.html:1535
 msgid "Audit Trail"
 msgstr "Audit Trail"
@@ -9720,21 +10518,41 @@ msgstr "Matched"
 
 # --- Report partials ---
 #: templates/invoices/invoice_pdf.html:126
+#: templates/reports/invoice_audit_report_pdf.html:345
 #, fuzzy
 #| msgid "Most Failed Audit Rules"
 msgid "Failed Audit Rules"
 msgstr "Most Failed Audit Rules"
 
 #: templates/invoices/invoice_pdf.html:128
+msgid ""
+"Rule code, rule text, severity, and score. Score = severity weight (critical "
+"25 · high 15 · medium 8 · low 3)."
+msgstr ""
+
+#: templates/invoices/invoice_pdf.html:133
 #: templates/reports/executive_report.html:529
 #: templates/reports/invoice_audit_report.html:281
-#: templates/reports/invoice_audit_report_pdf.html:349
+#: templates/reports/invoice_audit_report_pdf.html:352
 #: templates/reports/partials/_failed_rules_table.html:14
 #: templates/reports/report_pdf.html:308
 msgid "Rule Code"
 msgstr "Rule Code"
 
-#: templates/invoices/invoice_pdf.html:159
+#: templates/invoices/invoice_pdf.html:134
+#: templates/reports/invoice_audit_report_pdf.html:353
+#, fuzzy
+#| msgid "Alt Text"
+msgid "Rule Text"
+msgstr "Alt Text"
+
+#: templates/invoices/invoice_pdf.html:162
+#, fuzzy
+#| msgid "Recommendations"
+msgid "AI Recommendations"
+msgstr "Recommendations"
+
+#: templates/invoices/invoice_pdf.html:189
 #, fuzzy
 #| msgid "AI-Powered Financial Auditing Platform"
 msgid "Generated by Tadgeeg Financial Audit Platform"
@@ -9823,6 +10641,65 @@ msgstr "Error"
 #| msgid "Network error"
 msgid "Network error."
 msgstr "Network error"
+
+#: templates/invoices/override_request.html:4
+#: templates/invoices/override_request.html:16
+#, fuzzy
+#| msgid "Demo request"
+msgid "Override request"
+msgstr "Demo request"
+
+#: templates/invoices/override_request.html:18
+#, python-format
+msgid ""
+"\n"
+"          This approval exceeds the SAR %(threshold)s threshold and needs a "
+"second admin\n"
+"          to countersign within %(window_hours)s hours.\n"
+"        "
+msgstr ""
+
+#: templates/invoices/override_request.html:63
+#, fuzzy
+#| msgid "Pending review"
+msgid "Pending request"
+msgstr "Pending review"
+
+#: templates/invoices/override_request.html:67
+#, fuzzy
+#| msgid "Requester"
+msgid "Requested by"
+msgstr "Requester"
+
+#: templates/invoices/override_request.html:71
+#, fuzzy
+#| msgid "Requester"
+msgid "Requested at"
+msgstr "Requester"
+
+#: templates/invoices/override_request.html:75
+#, fuzzy
+#| msgid "Expired"
+msgid "Expires"
+msgstr "Expired"
+
+#: templates/invoices/override_request.html:89
+#, fuzzy
+#| msgid "Country"
+msgid "Countersign"
+msgstr "Country"
+
+#: templates/invoices/override_request.html:117
+#, fuzzy
+#| msgid "Requester"
+msgid "Request override"
+msgstr "Requester"
+
+#: templates/invoices/override_request.html:134
+#, fuzzy
+#| msgid "Send for Senior Review"
+msgid "Submit for countersignature"
+msgstr "Send for Senior Review"
 
 #: templates/invoices/partials/_qr_code_display.html:16
 msgid "ZATCA QR Code"
@@ -10004,11 +10881,6 @@ msgstr "avg risk"
 msgid "Total spend"
 msgstr "Total spend"
 
-#: templates/invoices/subreport.html:118
-#: templates/vendor_dashboard/audits.html:92
-msgid "Risk score"
-msgstr "Risk score"
-
 #: templates/invoices/subreport.html:139
 #, fuzzy
 #| msgid "total"
@@ -10079,57 +10951,187 @@ msgstr "Validating ZATCA Phase 2 compliance..."
 msgid "Running fraud + duplicate detection rules..."
 msgstr "Running fraud + duplicate detection rules..."
 
-#: templates/landing/index.html:1152
+#: templates/landing/index.html:1329
 msgid "Financial Auditing"
 msgstr "Financial Auditing"
 
-#: templates/landing/index.html:1167 templates/landing/index.html:1188
-#: templates/landing/index.html:1204 templates/landing/page.html:416
-#: templates/landing/page.html:433 templates/landing/page.html:481
+#: templates/landing/index.html:1345 templates/landing/index.html:1372
+#: templates/landing/index.html:1388 templates/landing/page.html:660
+#: templates/landing/page.html:678 templates/landing/page.html:811
 msgid "Start Free Trial"
 msgstr "Start Free Trial"
 
-#: templates/landing/index.html:1197
+#: templates/landing/index.html:1367 templates/landing/index.html:1822
+#: templates/landing/page.html:827
+#, fuzzy
+#| msgid "Trusted organizations"
+msgid "Terms & Conditions"
+msgstr "Trusted organizations"
+
+#: templates/landing/index.html:1368 templates/landing/index.html:1823
+#: templates/landing/page.html:828
+#, fuzzy
+#| msgid "Privacy"
+msgid "Privacy Policy"
+msgstr "Privacy"
+
+#: templates/landing/index.html:1369 templates/landing/index.html:1824
+#: templates/landing/page.html:829
+#, fuzzy
+#| msgid "Save Policy"
+msgid "Refund Policy"
+msgstr "Save Policy"
+
+#: templates/landing/index.html:1381
 msgid "The Future of Financial Auditing"
 msgstr "The Future of Financial Auditing"
 
-#: templates/landing/index.html:1198
+#: templates/landing/index.html:1382
 msgid "In the Cloud, Here Today."
 msgstr "In the Cloud, Here Today."
 
-#: templates/landing/index.html:1205 templates/landing/index.html:1209
-msgid "Request Demo"
-msgstr "Request Demo"
-
-#: templates/landing/index.html:1359
-msgid "Reduce human errors and accelerate audit time."
-msgstr "Reduce human errors and accelerate audit time."
-
-#: templates/landing/index.html:1372
-msgid "Smart Technical Reports"
-msgstr "Smart Technical Reports"
-
-#: templates/landing/index.html:1373 templates/landing/index.html:1429
-msgid ""
-"Generate comprehensive reports compliant with international standards in one "
-"click."
+#: templates/landing/index.html:1389 templates/landing/index.html:1393
+msgid "Demo"
 msgstr ""
-"Generate comprehensive reports compliant with international standards in one "
-"click."
 
-#: templates/landing/index.html:1383
-msgid "High Data Security"
+#: templates/landing/index.html:1528
+#, fuzzy
+#| msgid "Platform Status"
+msgid "Tadgeeg Platform Features"
+msgstr "Platform Status"
+
+#: templates/landing/index.html:1529
+msgid ""
+"AI-powered platform for financial auditing, risk detection, and compliance"
+msgstr ""
+
+#: templates/landing/index.html:1544
+msgid "Automatic Invoice Reading"
+msgstr ""
+
+#: templates/landing/index.html:1545
+msgid ""
+"Scans invoices and extracts core data with high accuracy from PDFs, images, "
+"and structured files."
+msgstr ""
+
+#: templates/landing/index.html:1558
+#, fuzzy
+#| msgid "Balance Reconciliation"
+msgid "Matching & Reconciliation"
+msgstr "Balance Reconciliation"
+
+#: templates/landing/index.html:1559
+msgid ""
+"Matches invoices with bank statements, receipts, purchase orders, and "
+"payment vouchers to reduce errors."
+msgstr ""
+
+#: templates/landing/index.html:1570
+#, fuzzy
+#| msgid "Overall regulatory compliance"
+msgid "Regulatory Compliance"
+msgstr "Overall regulatory compliance"
+
+#: templates/landing/index.html:1571
+msgid ""
+"Reviews financial operations against VAT, ZATCA, and local and international "
+"regulations."
+msgstr ""
+
+#: templates/landing/index.html:1584 templates/landing/index.html:1700
+#: templates/phase2/audit_result.html:460 templates/phase2/audits.html:31
+#: templates/phase2/audits.html:240 templates/vendor_dashboard/reports.html:23
+msgid "Fraud Detection"
+msgstr "Fraud Detection"
+
+#: templates/landing/index.html:1585
+#, fuzzy
+#| msgid ""
+#| "Over 10 specialized algorithms to instantly detect fraud indicators and "
+#| "suspicious transactions."
+msgid "Uses AI to detect duplicates, anomalies, and suspicious transactions."
+msgstr ""
+"Over 10 specialized algorithms to instantly detect fraud indicators and "
+"suspicious transactions."
+
+#: templates/landing/index.html:1599
+#, fuzzy
+#| msgid "Extracted Data"
+msgid "Centralized Data"
+msgstr "Extracted Data"
+
+#: templates/landing/index.html:1600
+msgid ""
+"Consolidates financial data from multiple sources into a single secure "
+"platform."
+msgstr ""
+
+#: templates/landing/index.html:1614
+#, fuzzy
+#| msgid "Process Automation"
+msgid "Workflow Automation"
+msgstr "Process Automation"
+
+#: templates/landing/index.html:1615
+msgid ""
+"Reduces manual work by automating audit steps, reviews, alerts, and report "
+"generation."
+msgstr ""
+
+#: templates/landing/index.html:1627
+#, fuzzy
+#| msgid "Financial Controls"
+msgid "Faster Financial Close"
+msgstr "Financial Controls"
+
+#: templates/landing/index.html:1628
+msgid ""
+"Helps finance teams complete month-end and year-end close faster and more "
+"accurately."
+msgstr ""
+
+#: templates/landing/index.html:1642
+#, fuzzy
+#| msgid "Smart Reports"
+msgid "Smart Insights & Reports"
+msgstr "Smart Reports"
+
+#: templates/landing/index.html:1643
+msgid ""
+"Produces comprehensive financial and audit reports with actionable "
+"indicators for management and reviewers."
+msgstr ""
+
+#: templates/landing/index.html:1655
+#, fuzzy
+#| msgid "High Data Security"
+msgid "Data Security"
 msgstr "High Data Security"
 
-#: templates/landing/index.html:1384
-msgid "Advanced cloud encryption and protection for company and client data."
-msgstr "Advanced cloud encryption and protection for company and client data."
+#: templates/landing/index.html:1656
+msgid ""
+"Protects financial data with encryption, role-based access, audit trails, "
+"and secure storage."
+msgstr ""
 
-#: templates/landing/index.html:1393
+#: templates/landing/index.html:1666
+#, fuzzy
+#| msgid "Integrations"
+msgid "ERP Integration"
+msgstr "Integrations"
+
+#: templates/landing/index.html:1667
+msgid ""
+"Integrates with ERP systems like SAP, Oracle, and Odoo, plus accounting "
+"software, via API."
+msgstr ""
+
+#: templates/landing/index.html:1677
 msgid "Why auditors choose Tadgeeg"
 msgstr "Why auditors choose Tadgeeg"
 
-#: templates/landing/index.html:1394
+#: templates/landing/index.html:1678
 msgid ""
 "We provide all the tools you need to ensure the highest standards of quality "
 "and security in financial operations."
@@ -10137,24 +11139,18 @@ msgstr ""
 "We provide all the tools you need to ensure the highest standards of quality "
 "and security in financial operations."
 
-#: templates/landing/index.html:1404
+#: templates/landing/index.html:1688
 #, python-format
 msgid "95%% Automation"
 msgstr "95%% Automation"
 
-#: templates/landing/index.html:1405
+#: templates/landing/index.html:1689
 msgid ""
 "Fully automated workflow for review and audit, minimizing human intervention."
 msgstr ""
 "Fully automated workflow for review and audit, minimizing human intervention."
 
-#: templates/landing/index.html:1416 templates/phase2/audit_result.html:460
-#: templates/phase2/audits.html:31 templates/phase2/audits.html:240
-#: templates/vendor_dashboard/reports.html:23
-msgid "Fraud Detection"
-msgstr "Fraud Detection"
-
-#: templates/landing/index.html:1417
+#: templates/landing/index.html:1701
 msgid ""
 "Over 10 specialized algorithms to instantly detect fraud indicators and "
 "suspicious transactions."
@@ -10162,15 +11158,23 @@ msgstr ""
 "Over 10 specialized algorithms to instantly detect fraud indicators and "
 "suspicious transactions."
 
-#: templates/landing/index.html:1428
+#: templates/landing/index.html:1712
 msgid "Smart Reports"
 msgstr "Smart Reports"
 
-#: templates/landing/index.html:1441
+#: templates/landing/index.html:1713
+msgid ""
+"Generate comprehensive reports compliant with international standards in one "
+"click."
+msgstr ""
+"Generate comprehensive reports compliant with international standards in one "
+"click."
+
+#: templates/landing/index.html:1725
 msgid "We cover the GCC region"
 msgstr "We cover the GCC region"
 
-#: templates/landing/index.html:1442
+#: templates/landing/index.html:1726
 msgid ""
 "Our solutions are compliant with all tax authorities in the region to ensure "
 "your business runs smoothly across borders."
@@ -10178,31 +11182,31 @@ msgstr ""
 "Our solutions are compliant with all tax authorities in the region to ensure "
 "your business runs smoothly across borders."
 
-#: templates/landing/index.html:1450
+#: templates/landing/index.html:1734
 msgid "UAE"
 msgstr "UAE"
 
-#: templates/landing/index.html:1473
+#: templates/landing/index.html:1757
 msgid "Compliance Certifications"
 msgstr "Compliance Certifications"
 
-#: templates/landing/index.html:1481
+#: templates/landing/index.html:1765
 msgid "Information security management"
 msgstr "Information security management"
 
-#: templates/landing/index.html:1490
+#: templates/landing/index.html:1774
 msgid "Audited security and privacy controls"
 msgstr "Audited security and privacy controls"
 
-#: templates/landing/index.html:1499
+#: templates/landing/index.html:1783
 msgid "Saudi e-invoicing compliant"
 msgstr "Saudi e-invoicing compliant"
 
-#: templates/landing/index.html:1513
+#: templates/landing/index.html:1797
 msgid "Ready to transform your financial audit process?"
 msgstr "Ready to transform your financial audit process?"
 
-#: templates/landing/index.html:1514
+#: templates/landing/index.html:1798
 msgid ""
 "Join the companies using Tadgeeg to accelerate financial review and raise "
 "compliance quality."
@@ -10210,17 +11214,59 @@ msgstr ""
 "Join the companies using Tadgeeg to accelerate financial review and raise "
 "compliance quality."
 
-#: templates/landing/index.html:1516
+#: templates/landing/index.html:1800
 msgid "Start your 14-day free trial"
 msgstr "Start your 14-day free trial"
 
-#: templates/landing/index.html:1518
+#: templates/landing/index.html:1802
 msgid "No credit card required. Cancel anytime."
 msgstr "No credit card required. Cancel anytime."
 
-#: templates/landing/index.html:1564
+#: templates/landing/index.html:1847
 msgid "Your browser does not support the video tag."
 msgstr ""
+
+#: templates/landing/page.html:675
+msgid "Privacy"
+msgstr "Privacy"
+
+#: templates/landing/page.html:699
+#, fuzzy
+#| msgid "Last Updated"
+msgid "Last updated"
+msgstr "Last Updated"
+
+#: templates/landing/page.html:765
+msgid "Website"
+msgstr ""
+
+#: templates/landing/page.html:775
+msgid "WhatsApp"
+msgstr ""
+
+#: templates/landing/page.html:824
+msgid "Legal"
+msgstr ""
+
+#: templates/landing/pricing.html:153
+msgid "Pricing is being prepared. Please check back shortly."
+msgstr ""
+
+#: templates/landing/pricing.html:186
+#, fuzzy
+#| msgid "Start Free Trial"
+msgid "Start trial"
+msgstr "Start Free Trial"
+
+#: templates/landing/pricing.html:200
+msgid "Already subscribed?"
+msgstr ""
+
+#: templates/landing/pricing.html:201
+#, fuzzy
+#| msgid "Manage your subscription plan and invoices"
+msgid "Manage your subscription →"
+msgstr "Manage your subscription plan and invoices"
 
 #: templates/layouts/base_platform_admin.html:15
 #: templates/layouts/partials/platform_topbar.html:32
@@ -10241,79 +11287,90 @@ msgstr "Collapse"
 msgid "You do not have permission to access platform management."
 msgstr "You do not have permission to access platform management."
 
-#: templates/layouts/dashboard_base.html:441
+#: templates/layouts/dashboard_base.html:456
+#: templates/vendor_dashboard/billing.html:3
+#: templates/vendor_dashboard/billing.html:12
+msgid "Billing & Subscription"
+msgstr "Billing & Subscription"
+
+#: templates/layouts/dashboard_base.html:463
+msgid "Plans & upgrade"
+msgstr ""
+
+#: templates/layouts/dashboard_base.html:480
 msgid "Sign Out"
 msgstr "Sign Out"
 
-#: templates/layouts/dashboard_base.html:469
+#: templates/layouts/dashboard_base.html:508
 msgid "Mark all read"
 msgstr "Mark all read"
 
-#: templates/layouts/dashboard_base.html:493
+#: templates/layouts/dashboard_base.html:532
 msgid "No notifications yet"
 msgstr "No notifications yet"
 
-#: templates/layouts/dashboard_base.html:494
+#: templates/layouts/dashboard_base.html:533
 msgid "You'll see audit alerts and uploads here."
 msgstr "You'll see audit alerts and uploads here."
 
-#: templates/layouts/dashboard_base.html:498
+#: templates/layouts/dashboard_base.html:537
 #: templates/partials/i18n_strings.html:129 templates/phase2/activity.html:77
 #: templates/phase2/audits.html:41 templates/phase2/reports.html:36
 #: templates/settings/index.html:429 templates/zatca/dashboard.html:70
 msgid "Refresh"
 msgstr "Refresh"
 
-#: templates/layouts/dashboard_base.html:512
+#: templates/layouts/dashboard_base.html:551
 msgid "Switch language"
 msgstr "Switch language"
 
-#: templates/layouts/dashboard_base.html:520 templates/users/index.html:432
+#: templates/layouts/dashboard_base.html:561
+#: templates/layouts/dashboard_base.html:571 templates/users/index.html:432
 #: templates/users/index.html:459
 msgid "System Admin"
 msgstr "System Admin"
 
-#: templates/layouts/dashboard_base.html:536
+#: templates/layouts/dashboard_base.html:589
 msgid "AI Assistant"
 msgstr "AI Assistant"
 
-#: templates/layouts/dashboard_base.html:542
+#: templates/layouts/dashboard_base.html:595
 msgid "Tadgeeg AI"
 msgstr "Tadgeeg AI"
 
-#: templates/layouts/dashboard_base.html:543
+#: templates/layouts/dashboard_base.html:596
 msgid "Ask about your invoices, audits, or compliance"
 msgstr "Ask about your invoices, audits, or compliance"
 
-#: templates/layouts/dashboard_base.html:545
+#: templates/layouts/dashboard_base.html:598
 #: templates/storage_management/file_monitor.html:78
 #: templates/storage_management/providers.html:147
 msgid "Reset"
 msgstr "Reset"
 
-#: templates/layouts/dashboard_base.html:561
+#: templates/layouts/dashboard_base.html:614
 msgid "Ask anything…"
 msgstr "Ask anything…"
 
-#: templates/layouts/dashboard_base.html:606
+#: templates/layouts/dashboard_base.html:659
 msgid "مرحباً! أسألني عن فواتيرك أو نتائج التدقيق."
 msgstr "مرحباً! أسألني عن فواتيرك أو نتائج التدقيق."
 
-#: templates/layouts/dashboard_base.html:637
+#: templates/layouts/dashboard_base.html:690
 msgid "تم مسح المحادثة. كيف أساعدك؟"
 msgstr "تم مسح المحادثة. كيف أساعدك؟"
 
-#: templates/layouts/dashboard_base.html:668
+#: templates/layouts/dashboard_base.html:721
 #: templates/partials/i18n_strings.html:83
 msgid "Something went wrong."
 msgstr "Something went wrong."
 
-#: templates/layouts/dashboard_base.html:671
+#: templates/layouts/dashboard_base.html:724
 #: templates/partials/i18n_strings.html:87
 msgid "Connection error."
 msgstr "Connection error."
 
-#: templates/layouts/dashboard_base.html:812
+#: templates/layouts/dashboard_base.html:872
 msgid "Just now"
 msgstr "Just now"
 
@@ -10432,10 +11489,6 @@ msgid ""
 "voiding generates a compensating entry rather than editing the original."
 msgstr ""
 
-#: templates/partials/_pagination.html:15
-msgid "Pagination"
-msgstr "Pagination"
-
 #: templates/partials/_pagination.html:18
 #, python-format
 msgid "Showing %(start)s–%(end)s of %(total)s"
@@ -10491,11 +11544,6 @@ msgstr "Failed to load data"
 #: templates/partials/i18n_strings.html:82
 msgid "An error occurred. Please try again."
 msgstr "An error occurred. Please try again."
-
-#: templates/partials/i18n_strings.html:85
-#: templates/vendor_dashboard/upload.html:206
-msgid "Network error"
-msgstr "Network error"
 
 #: templates/partials/i18n_strings.html:88 templates/settings/index.html:645
 #: templates/settings/index.html:688 templates/settings/index.html:741
@@ -11138,10 +12186,6 @@ msgstr "Failed to load files"
 #: templates/phase2/files.html:399
 msgid "Please select a file to upload."
 msgstr "Please select a file to upload."
-
-#: templates/phase2/files.html:427 templates/phase2/files.html:428
-msgid "Upload failed."
-msgstr "Upload failed."
 
 #: templates/phase2/files.html:437
 msgid "File archived."
@@ -12141,11 +13185,6 @@ msgstr "Suspended"
 msgid "No matching organizations"
 msgstr "No matching organizations"
 
-#: templates/platform_admin/organizations.html:65
-#: templates/vendor_dashboard/billing.html:137
-msgid "Plan"
-msgstr "Plan"
-
 #: templates/platform_admin/organizations.html:67
 msgid "Registration Date"
 msgstr "Registration Date"
@@ -12923,7 +13962,7 @@ msgstr "× %(v0)s"
 
 #: templates/reports/executive_report.html:348 templates/reports/index.html:374
 #: templates/reports/invoice_audit_report.html:354
-#: templates/reports/invoice_audit_report_pdf.html:382
+#: templates/reports/invoice_audit_report_pdf.html:397
 #: templates/vendor_dashboard/reports.html:24
 msgid "Risk Analysis"
 msgstr "Risk Analysis"
@@ -13030,7 +14069,7 @@ msgid "Anomaly Pattern Analysis — AI Interpretation"
 msgstr "Anomaly Pattern Analysis — AI Interpretation"
 
 #: templates/reports/executive_report.html:698
-#: templates/reports/invoice_audit_report_pdf.html:447
+#: templates/reports/invoice_audit_report_pdf.html:462
 #: templates/reports/partials/_recommendations.html:4
 msgid "Recommendations & Actions"
 msgstr "Recommendations & Actions"
@@ -13168,7 +14207,7 @@ msgstr ""
 
 #: templates/reports/index.html:245 templates/reports/index.html:458
 #: templates/reports/invoice_audit_report.html:400
-#: templates/reports/invoice_audit_report_pdf.html:397
+#: templates/reports/invoice_audit_report_pdf.html:412
 msgid "Duplicate Invoices"
 msgstr "Duplicate Invoices"
 
@@ -13663,17 +14702,17 @@ msgid "Avg Risk:"
 msgstr "Avg Risk:"
 
 #: templates/reports/invoice_audit_report.html:396
-#: templates/reports/invoice_audit_report_pdf.html:394
+#: templates/reports/invoice_audit_report_pdf.html:409
 msgid "Duplicate & Anomaly Detection"
 msgstr "Duplicate & Anomaly Detection"
 
 #: templates/reports/invoice_audit_report.html:404
-#: templates/reports/invoice_audit_report_pdf.html:398
+#: templates/reports/invoice_audit_report_pdf.html:413
 msgid "Dominant Vendor"
 msgstr "Dominant Vendor"
 
 #: templates/reports/invoice_audit_report.html:408
-#: templates/reports/invoice_audit_report_pdf.html:399
+#: templates/reports/invoice_audit_report_pdf.html:414
 msgid "Vendor Dependency"
 msgstr "Vendor Dependency"
 
@@ -13682,31 +14721,31 @@ msgid "No anomaly patterns available."
 msgstr "No anomaly patterns available."
 
 #: templates/reports/invoice_audit_report.html:437
-#: templates/reports/invoice_audit_report_pdf.html:422
+#: templates/reports/invoice_audit_report_pdf.html:437
 #: templates/reports/report_pdf.html:280
 msgid "Invoice Count"
 msgstr "Invoice Count"
 
 #: templates/reports/invoice_audit_report.html:438
-#: templates/reports/invoice_audit_report_pdf.html:423
+#: templates/reports/invoice_audit_report_pdf.html:438
 #: templates/reports/invoice_audit_report_v2.html:654
 #: templates/reports/report_pdf.html:281
 msgid "Total Spend"
 msgstr "Total Spend"
 
 #: templates/reports/invoice_audit_report.html:440
-#: templates/reports/invoice_audit_report_pdf.html:425
+#: templates/reports/invoice_audit_report_pdf.html:440
 #: templates/reports/report_pdf.html:283
 msgid "Spend Share"
 msgstr "Spend Share"
 
 #: templates/reports/invoice_audit_report.html:441
-#: templates/reports/invoice_audit_report_pdf.html:426
+#: templates/reports/invoice_audit_report_pdf.html:441
 msgid "Flagged Invoices"
 msgstr "Flagged Invoices"
 
 #: templates/reports/invoice_audit_report.html:459
-#: templates/reports/invoice_audit_report_pdf.html:440
+#: templates/reports/invoice_audit_report_pdf.html:455
 msgid "No vendor data available."
 msgstr "No vendor data available."
 
@@ -13797,56 +14836,49 @@ msgstr "No violation details."
 msgid "No high-risk invoices."
 msgstr "No high-risk invoices."
 
-# --- Report partials ---
-#: templates/reports/invoice_audit_report_pdf.html:345
-#: templates/reports/partials/_failed_rules_table.html:4
-#: templates/reports/report_pdf.html:304
-msgid "Most Failed Audit Rules"
-msgstr "Most Failed Audit Rules"
+#: templates/reports/invoice_audit_report_pdf.html:347
+msgid ""
+"Rule code, rule text, severity, and weighted score. Score = severity weight "
+"× failure count."
+msgstr ""
 
-#: templates/reports/invoice_audit_report_pdf.html:351
-#: templates/reports/partials/_failed_rules_table.html:16
-#: templates/reports/report_pdf.html:310
-msgid "Failure Count"
-msgstr "Failure Count"
-
-#: templates/reports/invoice_audit_report_pdf.html:352
+#: templates/reports/invoice_audit_report_pdf.html:356
 #: templates/reports/invoice_audit_report_v2.html:262
 #: templates/reports/partials/_findings_register.html:97
 msgid "Affected Invoices"
 msgstr "Affected Invoices"
 
-#: templates/reports/invoice_audit_report_pdf.html:367
+#: templates/reports/invoice_audit_report_pdf.html:382
 msgid "No invoice numbers available."
 msgstr "No invoice numbers available."
 
-#: templates/reports/invoice_audit_report_pdf.html:370
+#: templates/reports/invoice_audit_report_pdf.html:385
 #, python-format
 msgid "+ %(extra)s more"
 msgstr "+ %(extra)s more"
 
-#: templates/reports/invoice_audit_report_pdf.html:375
+#: templates/reports/invoice_audit_report_pdf.html:390
 msgid "No failed-rule data available."
 msgstr "No failed-rule data available."
 
-#: templates/reports/invoice_audit_report_pdf.html:385
+#: templates/reports/invoice_audit_report_pdf.html:400
 #: templates/reports/report_pdf.html:230 templates/reports/report_pdf.html:452
 msgid "Average Risk Score"
 msgstr "Average Risk Score"
 
-#: templates/reports/invoice_audit_report_pdf.html:424
+#: templates/reports/invoice_audit_report_pdf.html:439
 #: templates/reports/report_pdf.html:282
 msgid "Average"
 msgstr "Average"
 
-#: templates/reports/invoice_audit_report_pdf.html:452
+#: templates/reports/invoice_audit_report_pdf.html:467
 #: templates/reports/invoice_audit_report_v2.html:782
 #: templates/reports/partials/_recommendations.html:10
 #: templates/reports/report_pdf.html:183
 msgid "Immediate Actions"
 msgstr "Immediate Actions"
 
-#: templates/reports/invoice_audit_report_pdf.html:462
+#: templates/reports/invoice_audit_report_pdf.html:477
 #: templates/reports/invoice_audit_report_v2.html:801
 #: templates/reports/partials/_recommendations.html:21
 msgid "Future Improvements"
@@ -14052,6 +15084,17 @@ msgstr "AI Summaries (sample)"
 #: templates/reports/partials/_ai_insights.html:84
 msgid "No AI summaries available."
 msgstr "No AI summaries available."
+
+# --- Report partials ---
+#: templates/reports/partials/_failed_rules_table.html:4
+#: templates/reports/report_pdf.html:304
+msgid "Most Failed Audit Rules"
+msgstr "Most Failed Audit Rules"
+
+#: templates/reports/partials/_failed_rules_table.html:16
+#: templates/reports/report_pdf.html:310
+msgid "Failure Count"
+msgstr "Failure Count"
 
 #: templates/reports/partials/_failed_rules_table.html:17
 msgid "Affected Invoice Numbers"
@@ -14389,6 +15432,12 @@ msgstr "Download Report"
 #: templates/reports/partials/_report_header.html:45
 msgid "Share"
 msgstr "Share"
+
+#: templates/reports/partials/_progress_bar.html:313
+#, fuzzy
+#| msgid "URL copied to clipboard"
+msgid "Link copied to clipboard"
+msgstr "URL copied to clipboard"
 
 #: templates/reports/partials/_recommendations.html:15
 msgid "No immediate actions."
@@ -15855,15 +16904,6 @@ msgstr "Upload a file to get started"
 msgid "Failed to load audits"
 msgstr "Failed to load audits"
 
-#: templates/vendor_dashboard/billing.html:3
-#: templates/vendor_dashboard/billing.html:12
-msgid "Billing & Subscription"
-msgstr "Billing & Subscription"
-
-#: templates/vendor_dashboard/billing.html:4
-msgid "Subscription"
-msgstr "Subscription"
-
 #: templates/vendor_dashboard/billing.html:13
 msgid "Manage your subscription plan and invoices"
 msgstr "Manage your subscription plan and invoices"
@@ -15871,18 +16911,6 @@ msgstr "Manage your subscription plan and invoices"
 #: templates/vendor_dashboard/billing.html:35
 msgid "Current Plan"
 msgstr "Current Plan"
-
-#: templates/vendor_dashboard/billing.html:37
-msgid "Free"
-msgstr "Free"
-
-#: templates/vendor_dashboard/billing.html:44
-msgid "Trial"
-msgstr "Trial"
-
-#: templates/vendor_dashboard/billing.html:44
-msgid "Expired"
-msgstr "Expired"
 
 #: templates/vendor_dashboard/billing.html:49
 msgid "Year"
@@ -15998,10 +17026,6 @@ msgstr "Manage Team"
 #: templates/vendor_dashboard/dashboard.html:151
 msgid "No activity yet"
 msgstr "No activity yet"
-
-#: templates/vendor_dashboard/dashboard.html:199
-msgid "Used"
-msgstr "Used"
 
 #: templates/vendor_dashboard/files.html:13
 msgid "Browse and manage all your uploaded files"
@@ -16834,10 +17858,6 @@ msgstr "Services"
 msgid "Cert valid until"
 msgstr ""
 
-#: templates/zatca/dashboard.html:149
-msgid "Renew"
-msgstr ""
-
 #: templates/zatca/dashboard.html:154
 #, fuzzy
 #| msgid "No services. Click \"Add Service\" to start."
@@ -16898,14 +17918,87 @@ msgstr ""
 msgid "Onboard"
 msgstr "Dashboard"
 
+#~ msgid "Flexible plans for auditing and compliance teams"
+#~ msgstr "Flexible plans for auditing and compliance teams"
+
+#~ msgid ""
+#~ "Start quickly with a plan sized for your team, with a clear path to "
+#~ "expand as document volume and workflows grow."
+#~ msgstr ""
+#~ "Start quickly with a plan sized for your team, with a clear path to "
+#~ "expand as document volume and workflows grow."
+
+#~ msgid "Starter plan for small and mid-sized audit teams."
+#~ msgstr "Starter plan for small and mid-sized audit teams."
+
+#~ msgid ""
+#~ "Enterprise plan with stronger tenant isolation and broader review "
+#~ "workflows."
+#~ msgstr ""
+#~ "Enterprise plan with stronger tenant isolation and broader review "
+#~ "workflows."
+
+#~ msgid ""
+#~ "Gradual activation of advanced features such as executive reporting and "
+#~ "integrations."
+#~ msgstr ""
+#~ "Gradual activation of advanced features such as executive reporting and "
+#~ "integrations."
+
+#~ msgid "Privacy and data protection"
+#~ msgstr "Privacy and data protection"
+
+#~ msgid ""
+#~ "We handle financial data with a high standard of care, including clear "
+#~ "tenant isolation and audit trails for sensitive actions."
+#~ msgstr ""
+#~ "We handle financial data with a high standard of care, including clear "
+#~ "tenant isolation and audit trails for sensitive actions."
+
+#~ msgid "Organization-level data isolation."
+#~ msgstr "Organization-level data isolation."
+
+#~ msgid "Audit logs for sensitive operations."
+#~ msgstr "Audit logs for sensitive operations."
+
+#~ msgid "Access controls based on organizational roles."
+#~ msgstr "Access controls based on organizational roles."
+
+#~ msgid ""
+#~ "PDF service is not configured on this server. Redeploy after installing "
+#~ "the PDF library."
+#~ msgstr ""
+#~ "PDF service is not configured on this server. Redeploy after installing "
+#~ "the PDF library."
+
+#~ msgid "Invoices processed"
+#~ msgstr "Invoices processed"
+
+#~ msgid "Join 1,200+ organizations in the Gulf"
+#~ msgstr "Join 1,200+ organizations in the Gulf"
+
+#~ msgid "AI Auditor"
+#~ msgstr "AI Auditor"
+
+#~ msgid "Request Demo"
+#~ msgstr "Request Demo"
+
+#~ msgid "Reduce human errors and accelerate audit time."
+#~ msgstr "Reduce human errors and accelerate audit time."
+
+#~ msgid "Smart Technical Reports"
+#~ msgstr "Smart Technical Reports"
+
+#~ msgid ""
+#~ "Advanced cloud encryption and protection for company and client data."
+#~ msgstr ""
+#~ "Advanced cloud encryption and protection for company and client data."
+
 #~ msgid "PDF generation failed. Use the /html/ endpoint to view this report."
 #~ msgstr "PDF generation failed. Use the /html/ endpoint to view this report."
 
 #~ msgid "✓ Files selected"
 #~ msgstr "✓ Files selected"
-
-#~ msgid "Manager"
-#~ msgstr "Manager"
 
 #~ msgid "Invoice No."
 #~ msgstr "Invoice No."

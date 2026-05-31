@@ -745,8 +745,8 @@ def about(request):
 
 def contact(request):
     contact_info = {
-        "rep_name": "سامي سعود",
-        "rep_role": _("Business Lead"),
+        "rep_name": _("Sami bin Saud Al-Shrar"),
+        "rep_role": _("Owner"),
         "phone_display": "+966 54 054 1719",
         "phone_link": "tel:+966540541719",
         "email": "contact@tadgeeg.com",

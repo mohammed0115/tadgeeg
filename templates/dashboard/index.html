@@ -442,8 +442,7 @@ Shows the org's current plan, usage, and remaining quota. The
   </div>
 </div>
 
-{# Chart data — serialized via json_script to neutralise any XSS risk
-   in user-controlled values (e.g. vendor names). NEVER use |safe here. #}
+{# Chart data — serialized via json_script to neutralise XSS risk in user-controlled values (e.g. vendor names). NEVER use |safe here. #}
 {{ chart_series|default_if_none:""|json_script:"dashboard-chart-data" }}
 {{ risk_breakdown|default_if_none:""|json_script:"dashboard-risk-data" }}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"

@@ -28,6 +28,8 @@ project_root_has_contents() {
 clean_untracked() {
   git clean -fd \
     -e ".secret.env" \
+    -e ".env" \
+    -e "deployment/docker/env/*.env" \
     -e "venv/" \
     -e ".venv/" >>"$LOG_FILE" 2>&1
 }

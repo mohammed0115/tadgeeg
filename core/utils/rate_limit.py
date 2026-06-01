@@ -6,11 +6,13 @@ Configurable via settings.RATE_LIMITS dict.
 
 Atomicity contract
 ------------------
-The previous implementation used `cache.get(...)` then `cache.set/incr(...)`
-in two separate round trips. Under burst traffic, multiple workers could
-read the same `current` and let through more requests than the configured
-ceiling. This version uses a single Redis Lua script (`INCR` + `EXPIRE`
-on first hit) which is atomic on the redis side.
+Uses Django's portable cache API: `add(key, 0, window)` seeds the counter
+with its TTL only on the first hit of a window, then `incr(key)` bumps it
+on every request (preserving the TTL). This is backend-agnostic — it works
+with the native RedisCache or LocMemCache — and avoids depending on the
+optional `django_redis` package, which is not installed. On Redis the
+`incr` is atomic server-side; the tiny add↔incr race only ever over-counts
+by a request or two under burst, which is acceptable for a ceiling.
 
 Failure mode
 ------------
@@ -57,16 +59,6 @@ DEFAULT_LIMITS = {
 UPLOAD_PATHS = {"/api/v1/invoices/upload/", "/api/v1/documents/upload/typed/", "/api/v1/documents/upload/"}
 AI_PATHS     = {"/api/v1/analytics/", "/api/v1/reports/generate/"}
 LOGIN_PATHS  = {"/api/v1/auth/token/", "/api/v1/auth/login/", "/api/v1/auth/mfa/"}
-
-# Atomic INCR + EXPIRE-on-first-hit. Returns the new counter value.
-_LUA_INCR = """
-local current = redis.call('INCR', KEYS[1])
-if current == 1 then
-    redis.call('EXPIRE', KEYS[1], ARGV[1])
-end
-return current
-"""
-
 
 def _get_limit_key(path: str) -> str:
     if any(path.startswith(p) for p in LOGIN_PATHS):
@@ -118,17 +110,27 @@ class OrgRateLimitMiddleware:
     # ── Atomic counter via Redis Lua ─────────────────────────────────────────
 
     def _atomic_incr(self, cache_key: str, window: int) -> int | None:
-        """Return the new counter value, or None when redis is unavailable."""
+        """Return the new counter value, or None when the cache is unavailable.
+
+        Backend-agnostic: `add` seeds the key with its TTL only on the first
+        hit of the window, then `incr` bumps it (preserving the TTL). Works
+        with the native RedisCache or LocMemCache — no django_redis needed.
+        """
+        from django.core.cache import cache
         try:
-            from django_redis import get_redis_connection
-            redis = get_redis_connection("default")
+            # Seed the window counter on its first request (no-op if present).
+            cache.add(cache_key, 0, window)
+            return int(cache.incr(cache_key))
+        except ValueError:
+            # Key expired between `add` and `incr` — reseed and count this hit.
+            try:
+                cache.add(cache_key, 0, window)
+                return int(cache.incr(cache_key))
+            except Exception as exc:
+                logger.error("Rate limiter incr failed (key=%s): %s", cache_key, exc)
+                return None
         except Exception as exc:
-            logger.error("Rate limiter could not reach redis backend: %s", exc)
-            return None
-        try:
-            return int(redis.eval(_LUA_INCR, 1, cache_key, window))
-        except Exception as exc:
-            logger.error("Rate limiter Lua eval failed (key=%s): %s", cache_key, exc)
+            logger.error("Rate limiter cache backend unavailable (key=%s): %s", cache_key, exc)
             return None
 
     # ── Main entry ────────────────────────────────────────────────────────────

@@ -196,3 +196,78 @@ class ApprovalInboxContextProcessorTests(TestCase):
         ctx = self._ctx(self.user)
         self.assertIn("approval_inbox_count", ctx)
         self.assertGreaterEqual(ctx["approval_inbox_count"], 0)
+
+
+# ─── Public contact page — company identity + bilingual support ──────────────
+class ContactPageIdentityTests(TestCase):
+    """The public /contact/ page must present the operating company (bilingual),
+    never an individual representative's personal name."""
+
+    def _get(self, lang):
+        from django.urls import reverse
+        from django.utils import translation
+        with translation.override(lang):
+            return self.client.get(
+                reverse("frontend:contact"),
+                HTTP_ACCEPT_LANGUAGE=lang,
+            )
+
+    def test_english_shows_company_name(self):
+        resp = self._get("en")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Get Solution Company")
+
+    def test_arabic_shows_company_name(self):
+        resp = self._get("ar")
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "شركة احصل الحل")
+
+    def test_no_personal_name_in_either_language(self):
+        for lang in ("en", "ar"):
+            resp = self._get(lang)
+            self.assertEqual(resp.status_code, 200)
+            self.assertNotContains(resp, "سامي سعود")
+
+    def test_contact_channels_present(self):
+        resp = self._get("en")
+        self.assertContains(resp, "+966 54 054 1719")          # phone
+        self.assertContains(resp, "https://wa.me/966540541719")  # WhatsApp
+        self.assertContains(resp, "contact@tadgeeg.com")        # email
+
+
+# ─── Public legal / static pages — no raw Python tuple/dict leakage ──────────
+class LegalPageRenderingTests(TestCase):
+    """Regression for the bug where ``{% for x in section.items %}`` fell through
+    to the dict ``.items()`` method and rendered raw ``('heading', ...)`` tuples.
+
+    The bullet field is named ``bullets`` (never ``items``) so template variable
+    resolution can never hit the dict method."""
+
+    # url-name → it should render through the shared legal/marketing template
+    PAGES = ["terms", "privacy", "refund_policy", "services", "pricing", "contact"]
+
+    # Substrings that only appear when a Python repr leaks into the HTML.
+    FORBIDDEN = ["('heading'", "('body'", "dict_items", "OrderedDict"]
+
+    def _check(self, name, lang):
+        from django.urls import reverse
+        from django.utils import translation
+        with translation.override(lang):
+            resp = self.client.get(
+                reverse(f"frontend:{name}"),
+                HTTP_ACCEPT_LANGUAGE=lang,
+            )
+        self.assertEqual(resp.status_code, 200, f"{name} ({lang}) not 200")
+        for bad in self.FORBIDDEN:
+            self.assertNotContains(
+                resp, bad,
+                msg_prefix=f"{name} ({lang}) leaked raw Python repr {bad!r}",
+            )
+
+    def test_pages_render_cleanly_english(self):
+        for name in self.PAGES:
+            self._check(name, "en")
+
+    def test_pages_render_cleanly_arabic(self):
+        for name in self.PAGES:
+            self._check(name, "ar")

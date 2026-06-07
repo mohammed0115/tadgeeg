@@ -705,9 +705,9 @@
         <div class="legal-section" style="animation-delay: {{ forloop.counter0 }}0ms">
           {% if section.heading %}<h2 class="legal-section-heading">{{ section.heading }}</h2>{% endif %}
           {% if section.body %}<div class="legal-section-body">{{ section.body }}</div>{% endif %}
-          {% if section.items %}
+          {% if section.bullets %}
           <ul class="legal-list">
-            {% for item in section.items %}<li>{{ item }}</li>{% endfor %}
+            {% for bullet in section.bullets %}<li>{{ bullet }}</li>{% endfor %}
           </ul>
           {% endif %}
         </div>
@@ -729,7 +729,7 @@
       {% if contact_info %}
       <div class="contact-card">
         <div class="contact-rep">
-          <div class="contact-avatar" aria-hidden="true">{{ contact_info.rep_name|slice:":1" }}</div>
+          <div class="contact-avatar" aria-hidden="true">{% if contact_info.rep_avatar %}{{ contact_info.rep_avatar }}{% else %}{{ contact_info.rep_name|slice:":1" }}{% endif %}</div>
           <div>
             <div class="contact-rep-name">{{ contact_info.rep_name }}</div>
             <div class="contact-rep-role">{{ contact_info.rep_role }}</div>

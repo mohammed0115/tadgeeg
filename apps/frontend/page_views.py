@@ -671,8 +671,11 @@ def _render_legal_page(request, *, page_key, title, eyebrow, description, sectio
     services) through the shared ``landing/page.html`` template.
 
     ``sections`` is a list of dicts shaped like
-    ``{"heading": str, "body": str, "items": [str, ...]}`` (``body`` and
-    ``items`` are both optional). The template renders each section as a titled
+    ``{"heading": str, "body": str, "bullets": [str, ...]}`` (``body`` and
+    ``bullets`` are both optional). ``bullets`` is deliberately **not** named
+    ``items`` — Django template lookup of ``section.items`` falls through to the
+    dict's ``.items()`` method when the key is absent, rendering raw
+    ``('heading', ...)`` tuples. The template renders each section as a titled
     prose block with an optional bullet list, while still honouring the existing
     ``page_bullets`` / ``contact_info`` paths used by the other marketing pages.
     """
@@ -744,9 +747,17 @@ def about(request):
 
 
 def contact(request):
+    ar = _is_arabic(request)
     contact_info = {
-        "rep_name": _("Sami bin Saud Al-Shrar"),
-        "rep_role": _("Owner"),
+        # Company identity (bilingual, selected at render time) — the public
+        # contact page presents the operating company, not an individual, for
+        # payment-gateway review and public trust.
+        "rep_name": "شركة احصل الحل" if ar else "Get Solution Company",
+        "rep_role": (
+            "المالك والمشغّل الرسمي لمنصة تدقيق" if ar
+            else "Official owner and operator of Tadgeeg AI"
+        ),
+        "rep_avatar": "ت" if ar else "GS",
         "phone_display": "+966 54 054 1719",
         "phone_link": "tel:+966540541719",
         "email": "contact@tadgeeg.com",
@@ -797,7 +808,7 @@ def services(request):
                     "نقوم بقراءة الفواتير تلقائياً واستخراج بياناتها، ثم تطبيق عشرات "
                     "قواعد التدقيق عليها للكشف عن المشكلات قبل اعتماد الدفع."
                 ),
-                "items": [
+                "bullets": [
                     "كشف الفواتير المكرّرة والمدفوعة مسبقاً.",
                     "التحقق من صحة احتساب ضريبة القيمة المضافة (15%) والإجماليات.",
                     "رصد مؤشرات الاحتيال والتلاعب في المبالغ والتواريخ.",
@@ -810,7 +821,7 @@ def services(request):
                     "مطابقة أوامر الشراء مع الفواتير وإشعارات الاستلام لضمان أن ما تم "
                     "التعاقد عليه هو ما تم استلامه وفوترته فعلياً."
                 ),
-                "items": [
+                "bullets": [
                     "مطابقة ثلاثية بين أمر الشراء والفاتورة وإشعار الاستلام.",
                     "كشف الفروقات في الكميات والأسعار والشروط.",
                     "متابعة تجاوزات الموازنة وحدود الصلاحيات.",
@@ -822,7 +833,7 @@ def services(request):
                     "تحليل تقارير المصروفات للتأكد من توافقها مع سياسات المنشأة "
                     "والكشف عن الأنماط غير الاعتيادية."
                 ),
-                "items": [
+                "bullets": [
                     "التحقق من الالتزام بسياسات المصروفات وحدود الفئات.",
                     "كشف المصروفات المكرّرة أو المبالغ فيها.",
                     "تحليل الشذوذ الإحصائي لرصد المعاملات المشبوهة.",
@@ -834,7 +845,7 @@ def services(request):
                     "فحص كشوف الحسابات البنكية ومطابقتها مع السجلات المحاسبية "
                     "للكشف عن الفروقات والمعاملات غير المبرّرة."
                 ),
-                "items": [
+                "bullets": [
                     "مطابقة الحركات البنكية مع القيود المحاسبية.",
                     "كشف المعاملات غير المبرّرة أو المتكررة.",
                     "تطبيق تحليل بنفورد (Benford) للكشف عن التلاعب في الأرقام.",
@@ -846,7 +857,7 @@ def services(request):
                     "محرّك ذكاء اصطناعي يقرأ المستندات بلغات متعددة، ويستخرج البيانات، "
                     "ويولّد ملخصات ذكية وتوصيات عملية لفرق المالية."
                 ),
-                "items": [
+                "bullets": [
                     "استخراج آلي للبيانات من ملفات PDF والصور والملفات الإلكترونية.",
                     "ملخصات وتنبيهات ذكية حول المخاطر والملاحظات.",
                     "دعم اللغتين العربية والإنجليزية في القراءة والتحليل.",
@@ -858,7 +869,7 @@ def services(request):
                     "تقارير جاهزة للإدارة العليا والمراجعين تغطّي المخاطر والامتثال "
                     "والحوكمة، قابلة للتصدير ومتوافقة مع المعايير المهنية."
                 ),
-                "items": [
+                "bullets": [
                     "تقارير المخاطر وتقييم المنشآت والموردين.",
                     "تقارير الامتثال الضريبي ومتطلبات ZATCA.",
                     "تقارير الحوكمة وأوراق العمل وفق معايير التدقيق الدولية.",
@@ -881,7 +892,7 @@ def services(request):
                     "We read invoices automatically, extract their data, and apply "
                     "dozens of audit rules to catch issues before payment approval."
                 ),
-                "items": [
+                "bullets": [
                     "Detect duplicate and previously paid invoices.",
                     "Validate VAT (15%) calculations and totals.",
                     "Flag fraud and tampering indicators in amounts and dates.",
@@ -894,7 +905,7 @@ def services(request):
                     "Match purchase orders against invoices and goods-receipt notes "
                     "to ensure what was contracted is what was received and billed."
                 ),
-                "items": [
+                "bullets": [
                     "Three-way match between PO, invoice, and receipt note.",
                     "Detect variances in quantities, prices, and terms.",
                     "Track budget overruns and approval limits.",
@@ -906,7 +917,7 @@ def services(request):
                     "Analyse expense reports for policy compliance and surface "
                     "unusual patterns."
                 ),
-                "items": [
+                "bullets": [
                     "Verify compliance with expense policies and category limits.",
                     "Detect duplicate or inflated expenses.",
                     "Statistical anomaly analysis for suspicious transactions.",
@@ -918,7 +929,7 @@ def services(request):
                     "Review bank statements and reconcile them against accounting "
                     "records to surface variances and unexplained transactions."
                 ),
-                "items": [
+                "bullets": [
                     "Reconcile bank movements with accounting entries.",
                     "Detect unexplained or repeated transactions.",
                     "Apply Benford analysis to detect number manipulation.",
@@ -930,7 +941,7 @@ def services(request):
                     "An AI engine that reads documents in multiple languages, "
                     "extracts data, and produces smart summaries and recommendations."
                 ),
-                "items": [
+                "bullets": [
                     "Automatic data extraction from PDFs, images, and digital files.",
                     "Smart summaries and alerts about risks and findings.",
                     "Arabic and English support in reading and analysis.",
@@ -942,7 +953,7 @@ def services(request):
                     "Ready-made reports for leadership and auditors covering risk, "
                     "compliance, and governance, exportable and standards-aligned."
                 ),
-                "items": [
+                "bullets": [
                     "Risk reports and entity/vendor assessments.",
                     "Tax compliance and ZATCA reporting.",
                     "Governance reports and working papers aligned to ISA standards.",
@@ -977,7 +988,7 @@ def privacy(request):
             {
                 "heading": "البيانات التي نجمعها",
                 "body": "نجمع الحد اللازم من البيانات لتقديم الخدمة، وتشمل:",
-                "items": [
+                "bullets": [
                     "بيانات الحساب: الاسم، البريد الإلكتروني، رقم الجوال، وكلمة المرور (مشفّرة).",
                     "بيانات المنشأة: اسم المنشأة، السجل التجاري، الرقم الضريبي، وبيانات الاتصال.",
                     "بيانات المستندات: الفواتير، أوامر الشراء، كشوف الحسابات البنكية، تقارير المصروفات وما يرتبط بها من بيانات مالية ترفعها بنفسك.",
@@ -987,7 +998,7 @@ def privacy(request):
             {
                 "heading": "كيفية استخدام البيانات",
                 "body": "نستخدم بياناتك للأغراض التالية فقط:",
-                "items": [
+                "bullets": [
                     "تشغيل خدمات التدقيق المالي الذكي وتحليل المستندات وإصدار التقارير.",
                     "إدارة حسابك واشتراكك وتقديم الدعم الفني.",
                     "تحسين دقة المنصة وأمنها وأدائها.",
@@ -997,7 +1008,7 @@ def privacy(request):
             {
                 "heading": "حماية البيانات",
                 "body": "نطبّق ضوابط تقنية وتنظيمية صارمة لحماية بياناتك:",
-                "items": [
+                "bullets": [
                     "تشفير البيانات أثناء النقل عبر بروتوكول SSL/TLS.",
                     "نسخ احتياطية دورية لضمان استمرارية الخدمة واستعادة البيانات.",
                     "صلاحيات وصول قائمة على الأدوار (RBAC) وعزل بيانات كل منشأة عن غيرها.",
@@ -1010,7 +1021,7 @@ def privacy(request):
                     "لا نبيع بياناتك ولا نشاركها مع أي طرف ثالث لأغراض تسويقية. "
                     "تقتصر المشاركة على الحالات التالية:"
                 ),
-                "items": [
+                "bullets": [
                     "بموافقتك الصريحة كعميل.",
                     "عند وجود أمر قضائي أو التزام نظامي يفرض ذلك.",
                     "مع مزوّدي الخدمات التقنية اللازمين لتشغيل المنصة (مثل الاستضافة وبوابات الدفع)، وفق اتفاقيات سرية ومعالجة بيانات.",
@@ -1019,7 +1030,7 @@ def privacy(request):
             {
                 "heading": "حقوق العميل",
                 "body": "تملك في أي وقت الحق في:",
-                "items": [
+                "bullets": [
                     "الوصول إلى بياناتك وتصحيحها أو تحديثها.",
                     "تصدير بياناتك ومستنداتك بصيغ قابلة للقراءة.",
                     "حذف ملفاتك المرفوعة أو حذف حسابك بالكامل.",
@@ -1055,7 +1066,7 @@ def privacy(request):
             {
                 "heading": "Data we collect",
                 "body": "We collect only the data needed to provide the service:",
-                "items": [
+                "bullets": [
                     "Account data: name, email, mobile number, and password (encrypted).",
                     "Organization data: company name, commercial registration, VAT number, and contact details.",
                     "Document data: invoices, purchase orders, bank statements, expense reports, and related financial data you upload.",
@@ -1065,7 +1076,7 @@ def privacy(request):
             {
                 "heading": "How we use data",
                 "body": "We use your data only for the following purposes:",
-                "items": [
+                "bullets": [
                     "Operating intelligent audit services, analysing documents, and generating reports.",
                     "Managing your account and subscription and providing support.",
                     "Improving platform accuracy, security, and performance.",
@@ -1075,7 +1086,7 @@ def privacy(request):
             {
                 "heading": "Data protection",
                 "body": "We apply strict technical and organizational controls:",
-                "items": [
+                "bullets": [
                     "Encryption in transit via SSL/TLS.",
                     "Regular backups for service continuity and recovery.",
                     "Role-based access control (RBAC) and isolation of each organization's data.",
@@ -1088,7 +1099,7 @@ def privacy(request):
                     "We do not sell your data or share it with third parties for "
                     "marketing. Sharing is limited to:"
                 ),
-                "items": [
+                "bullets": [
                     "With your explicit consent as the customer.",
                     "When required by a court order or legal obligation.",
                     "With technical service providers necessary to operate the platform (e.g. hosting, payment gateways) under confidentiality and data-processing agreements.",
@@ -1097,7 +1108,7 @@ def privacy(request):
             {
                 "heading": "Customer rights",
                 "body": "At any time you have the right to:",
-                "items": [
+                "bullets": [
                     "Access, correct, or update your data.",
                     "Export your data and documents in readable formats.",
                     "Delete your uploaded files or your entire account.",
@@ -1167,7 +1178,7 @@ def terms(request):
             },
             {
                 "heading": "مسؤوليات المستخدم",
-                "items": [
+                "bullets": [
                     "ضمان صحة واكتمال البيانات والمستندات التي يرفعها على المنصة.",
                     "المحافظة على سرية بيانات الدخول وكلمة المرور وعدم مشاركتها.",
                     "إقرار المستخدم بملكيته أو تفويضه باستخدام المستندات التي يرفعها.",
@@ -1176,7 +1187,7 @@ def terms(request):
             },
             {
                 "heading": "مسؤوليات المنصة",
-                "items": [
+                "bullets": [
                     "بذل العناية اللازمة لتوفير الخدمة وأمن البيانات واستمراريتها.",
                     "تطبيق ضوابط حماية وتشفير وعزل لبيانات كل منشأة.",
                     "توفير الدعم الفني ومعالجة الأعطال خلال مدة معقولة.",
@@ -1184,7 +1195,7 @@ def terms(request):
             },
             {
                 "heading": "الاشتراكات والفوترة",
-                "items": [
+                "bullets": [
                     "الدفع يكون مقدّماً عن مدة الاشتراك المختارة (شهرية أو سنوية).",
                     "يتجدّد الاشتراك تلقائياً ما لم يقم المستخدم بإيقاف التجديد قبل نهاية المدة.",
                     "يمكن إيقاف التجديد التلقائي في أي وقت مع بقاء الاشتراك فعّالاً حتى نهاية المدة المدفوعة.",
@@ -1255,7 +1266,7 @@ def terms(request):
             },
             {
                 "heading": "User responsibilities",
-                "items": [
+                "bullets": [
                     "Ensure the accuracy and completeness of data and documents uploaded.",
                     "Keep login credentials and passwords confidential and not share them.",
                     "Confirm ownership of, or authorisation to use, uploaded documents.",
@@ -1264,7 +1275,7 @@ def terms(request):
             },
             {
                 "heading": "Platform responsibilities",
-                "items": [
+                "bullets": [
                     "Exercise due care to provide the service and secure data and continuity.",
                     "Apply protection, encryption, and isolation for each organization's data.",
                     "Provide technical support and address faults within a reasonable time.",
@@ -1272,7 +1283,7 @@ def terms(request):
             },
             {
                 "heading": "Subscriptions and billing",
-                "items": [
+                "bullets": [
                     "Payment is made in advance for the chosen subscription period (monthly or annual).",
                     "Subscriptions renew automatically unless the user cancels renewal before the period ends.",
                     "Auto-renewal can be cancelled anytime; the subscription stays active until the end of the paid period.",
@@ -1369,7 +1380,7 @@ def refund_policy(request):
                 "body": (
                     "نظراً لطبيعة الخدمة الرقمية، لا يُستحق الاسترداد في الحالات التالية:"
                 ),
-                "items": [
+                "bullets": [
                     "بعد البدء الفعلي في استخدام الخدمة أو معالجة المستندات على المنصة.",
                     "عن المدة المنقضية من الاشتراك التي تم استخدام الخدمة خلالها.",
                     "في حال إيقاف التجديد التلقائي، إذ يبقى الاشتراك فعّالاً حتى نهاية المدة المدفوعة دون استرداد للمدة المتبقية.",
@@ -1379,7 +1390,7 @@ def refund_policy(request):
             {
                 "heading": "الحالات الاستثنائية للاسترداد",
                 "body": "يجوز النظر في طلب الاسترداد في الحالات الاستثنائية التالية:",
-                "items": [
+                "bullets": [
                     "تعذُّر تشغيل الخدمة بشكل كامل لأسباب فنية من جانب المنصة.",
                     "وجود خطأ تقني جسيم يمنع الاستفادة من الخدمة ولم تتم معالجته خلال مدة معقولة.",
                     "حدوث خصم مالي بالخطأ أو تكرار غير مقصود لعملية الدفع.",
@@ -1441,7 +1452,7 @@ def refund_policy(request):
                     "Given the digital nature of the service, refunds are not due in "
                     "the following cases:"
                 ),
-                "items": [
+                "bullets": [
                     "After actual use of the service or processing of documents on the platform.",
                     "For the elapsed portion of a subscription during which the service was used.",
                     "When auto-renewal is cancelled — the subscription stays active until the end of the paid period with no refund for the remaining time.",
@@ -1451,7 +1462,7 @@ def refund_policy(request):
             {
                 "heading": "Exceptional refund cases",
                 "body": "A refund may be considered in the following exceptional cases:",
-                "items": [
+                "bullets": [
                     "The service could not operate fully due to technical issues on the platform's side.",
                     "A material technical defect prevents use of the service and was not resolved within a reasonable time.",
                     "An incorrect charge or unintended duplicate payment occurred.",

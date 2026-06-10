@@ -24,6 +24,7 @@ process_zip(zip_file, org, user, batch, request, audit_session)
 """
 from __future__ import annotations
 
+import functools
 import io
 import json
 import logging
@@ -239,10 +240,16 @@ def process_single_file(
             mime_type=getattr(file_obj, "content_type", "") or "",
             extracted_data={"file_hash": file_hash},
         )
-        record_invoice_event(
+        # Deferred to on_commit: the InvoiceAuditEvent hash-chain takes a
+        # SELECT … FOR UPDATE on the org's chain head. Recording it inline would
+        # hold that row lock for the whole ~17s upload (AI calls included) and
+        # deadlock concurrent uploads to the same org (MySQL 1213). Firing after
+        # commit holds the lock for milliseconds in its own short transaction.
+        transaction.on_commit(functools.partial(
+            record_invoice_event,
             invoice, user, InvoiceAuditEvent.EventType.UPLOADED,
             f"Uploaded: {filename}", request=request,
-        )
+        ))
 
         file_path = invoice.file.path
 
@@ -265,11 +272,12 @@ def process_single_file(
         # ── Step 4: OCR confidence (extraction done inside parser) ────────────
         raw_text = ingestion.raw_text
         ocr_confidence = float(ingestion.metadata.get("ocr_confidence", 0.0))
-        record_invoice_event(
+        transaction.on_commit(functools.partial(
+            record_invoice_event,
             invoice, user, InvoiceAuditEvent.EventType.PROCESSED,
             f"Parser: {ingestion.extraction_method} | OCR confidence: {ocr_confidence:.0f}%",
             request=request,
-        )
+        ))
 
         # ── Step 5: AI extraction (GPT-4o) ────────────────────────────────────
         if ext == ".pdf":
@@ -484,11 +492,12 @@ def process_single_file(
             created_by=user,
         )
 
-        record_invoice_event(
+        transaction.on_commit(functools.partial(
+            record_invoice_event,
             invoice, user, InvoiceAuditEvent.EventType.VALIDATED,
             f"Validation: {val_result['validation_score']:.0f}% | Failed: {val_result['failed_rule_codes']}",
             request=request,
-        )
+        ))
 
         # ── Step 9: Risk score merge ──────────────────────────────────────────
         vendor_hist = get_vendor_history(org, invoice.vendor_name)

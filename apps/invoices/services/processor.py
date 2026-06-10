@@ -283,8 +283,14 @@ def process_single_file(
 
         try:
             from core.services.ai_budget import org_context
-            with org_context(org.id if org else None):
-                ai_data = extract_invoice_with_ai(img_for_ai, raw_text)
+            # Savepoint: the budget guard writes to the DB-backed cache, so a DB
+            # failure here must not poison the outer transaction — otherwise the
+            # next query (invoice.save() below) raises the generic
+            # "can't execute queries until the end of the 'atomic' block" and
+            # masks the real error.
+            with transaction.atomic():
+                with org_context(org.id if org else None):
+                    ai_data = extract_invoice_with_ai(img_for_ai, raw_text)
         except Exception as exc:
             logger.warning("OpenAI extraction failed for %s: %s", filename, exc)
             from core.services.invoice_ai_service import _fallback_extraction
@@ -396,14 +402,17 @@ def process_single_file(
         from django.conf import settings as _settings
         if not getattr(_settings, "USE_NEW_RULE_ENGINE", True):
             try:
-                run_audit(
-                    analysis.to_dict(),
-                    organization_id=org.id,
-                    invoice_id=invoice.id,
-                    persist=True,
-                    invoice=invoice,
-                    created_by=user,
-                )
+                # Savepoint: legacy audit persists findings; isolate its failure
+                # so it can't abort the outer invoice-creation transaction.
+                with transaction.atomic():
+                    run_audit(
+                        analysis.to_dict(),
+                        organization_id=org.id,
+                        invoice_id=invoice.id,
+                        persist=True,
+                        invoice=invoice,
+                        created_by=user,
+                    )
             except Exception as exc:
                 logger.warning("Legacy audit engine failed for %s: %s", filename, exc)
 
@@ -484,10 +493,13 @@ def process_single_file(
         # ── Step 9: Risk score merge ──────────────────────────────────────────
         vendor_hist = get_vendor_history(org, invoice.vendor_name)
         try:
-            ai_risk = analyze_invoice_risk(
-                {k: v for k, v in invoice.extracted_data.items() if not k.startswith("_")},
-                vendor_hist,
-            )
+            # Savepoint: isolate AI-risk failures so they don't abort the
+            # validation transaction and mask the real error on invoice.save().
+            with transaction.atomic():
+                ai_risk = analyze_invoice_risk(
+                    {k: v for k, v in invoice.extracted_data.items() if not k.startswith("_")},
+                    vendor_hist,
+                )
         except Exception as exc:
             logger.warning("AI risk analysis failed for %s: %s", filename, exc)
             ai_risk = {}

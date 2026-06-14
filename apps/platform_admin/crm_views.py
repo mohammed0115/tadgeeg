@@ -27,7 +27,12 @@ from apps.platform_admin.models import (
     CustomerNote,
     SupportTicket,
 )
-from apps.platform_admin.permissions import can_view_crm, is_readonly_crm_user
+from apps.authentication.models import Organization
+from apps.platform_admin.permissions import (
+    can_view_crm,
+    can_view_financial_crm_data,
+    is_readonly_crm_user,
+)
 from core.dashboard_context import build_platform_context
 
 
@@ -89,11 +94,18 @@ def crm_dashboard(request):
 # ── customers (Organization) ──────────────────────────────────────────────────
 @crm_read_required()
 def customers_list(request):
-    qs = selectors.list_customers(
+    can_financial = can_view_financial_crm_data(request.user)
+    qs = selectors.list_crm_customers(
         q=request.GET.get("q"),
         status=request.GET.get("status"),
+        country=request.GET.get("country"),
+        subscription=request.GET.get("subscription"),
     )
     paginator, page_obj = selectors.paginate(qs, request.GET.get("page"))
+    # Enrich only the current page's rows (≤ page size) with batched queries.
+    selectors.enrich_customer_rows(
+        page_obj.object_list, include_financial=can_financial
+    )
     ctx = _crm_context(
         request,
         active_key="crm_customers",
@@ -101,25 +113,40 @@ def customers_list(request):
         page_obj=page_obj,
         paginator=paginator,
         querystring=_querystring_without_page(request),
-        filters={"q": request.GET.get("q", ""), "status": request.GET.get("status", "")},
+        country_choices=Organization.Country.choices,
+        can_view_financial=can_financial,
+        filters={
+            "q": request.GET.get("q", ""),
+            "status": request.GET.get("status", ""),
+            "country": request.GET.get("country", ""),
+            "subscription": request.GET.get("subscription", ""),
+        },
     )
     return render(request, "platform_admin/crm/customers_list.html", ctx)
 
 
 @crm_read_required()
 def customer_detail(request, org_id):
-    customer = selectors.get_customer(org_id)
-    if customer is None:
+    can_financial = can_view_financial_crm_data(request.user)
+    profile = selectors.get_crm_customer_profile(
+        org_id, include_financial=can_financial
+    )
+    if profile is None:
         raise Http404("Customer not found.")
     ctx = _crm_context(
         request,
         active_key="crm_customers",
         crm_title="Customer Detail",
-        customer=customer,
-        tickets=selectors.get_customer_tickets(customer),
-        notes=selectors.get_customer_notes(customer),
-        activities=selectors.get_customer_activities(customer),
-        audits=selectors.get_customer_audits(customer),
+        customer=profile["organization"],
+        primary_contact=profile["primary_contact"],
+        users=profile["users"],
+        subscription=profile["subscription"],
+        payments=profile["payments"],
+        tickets=profile["tickets"],
+        notes=profile["notes"],
+        activities=profile["activities"],
+        audits=profile["audits"],
+        can_view_financial=can_financial,
     )
     return render(request, "platform_admin/crm/customer_detail.html", ctx)
 

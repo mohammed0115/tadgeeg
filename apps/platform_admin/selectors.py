@@ -17,10 +17,14 @@ from __future__ import annotations
 import uuid
 
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Count, Max, Q
 from django.utils.dateparse import parse_date
 
-from apps.authentication.models import AuditLog, Organization
+from apps.authentication.models import AuditLog, Organization, User
+from apps.billing.choices import USABLE_STATUSES
+from apps.billing.models import OrganizationSubscription
+from apps.payments.choices import PaymentStatus
+from apps.payments.models import PaymentTransaction
 from apps.platform_admin.models import (
     CustomerActivity,
     CustomerNote,
@@ -225,3 +229,200 @@ def get_ticket_audits(ticket, limit: int = 50):
     return AuditLog.objects.filter(
         resource_type="support_ticket", resource_id=str(ticket.id)
     ).select_related("user")[:limit]
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# CRM-1D — richer Customer Directory + Customer Profile (read-only)
+# ══════════════════════════════════════════════════════════════════════════════
+
+PAYMENT_SAFE_FIELDS = (
+    "id",
+    "provider",
+    "purpose",
+    "status",
+    "amount",
+    "currency",
+    "paid_at",
+    "created_at",
+    "failed_reason",
+)
+
+
+# ── Directory ─────────────────────────────────────────────────────────────────
+def list_crm_customers(*, q=None, status=None, country=None, subscription=None):
+    """
+    Customer directory queryset (read-only).
+
+    Filters (all optional, validated): free-text ``q`` over Arabic/English name,
+    VAT, CR, and *linked user email*; account ``status`` (active/inactive);
+    ``country`` (validated against Organization.Country); ``subscription``
+    (active|none) by usable subscription presence.
+    """
+    qs = Organization.objects.all()
+    if q:
+        qs = qs.filter(
+            Q(name__icontains=q)
+            | Q(name_ar__icontains=q)
+            | Q(vat_number__icontains=q)
+            | Q(cr_number__icontains=q)
+            | Q(users__email__icontains=q)
+        ).distinct()
+    if status == "active":
+        qs = qs.filter(is_active=True)
+    elif status == "inactive":
+        qs = qs.filter(is_active=False)
+    country = _valid_choice(country, Organization.Country)
+    if country:
+        qs = qs.filter(country=country)
+    if subscription == "active":
+        qs = qs.filter(subscriptions__status__in=USABLE_STATUSES).distinct()
+    elif subscription == "none":
+        qs = qs.exclude(subscriptions__status__in=USABLE_STATUSES).distinct()
+    return qs.order_by("-created_at")
+
+
+def enrich_customer_rows(organizations, *, include_financial=False):
+    """
+    Attach read-only display attributes to a page of Organization rows using a
+    handful of batched queries (no per-row N+1, no join fan-out).
+
+    Sets on each org: ``crm_users_count``, ``crm_last_login``,
+    ``crm_primary_email``, ``crm_open_tickets``. When ``include_financial`` is
+    True also sets ``crm_plan_name`` and ``crm_sub_status`` (gated by the caller's
+    financial permission).
+    """
+    orgs = list(organizations)
+    if not orgs:
+        return orgs
+    ids = [o.id for o in orgs]
+
+    user_rows = (
+        User.objects.filter(organization_id__in=ids)
+        .values("organization_id")
+        .annotate(count=Count("id"), last_login=Max("last_login"))
+    )
+    users_by_org = {r["organization_id"]: r for r in user_rows}
+
+    # Primary contact: prefer an org admin, else the earliest-created user.
+    primary = {}
+    for u in User.objects.filter(organization_id__in=ids, role="admin").order_by("created_at"):
+        primary.setdefault(u.organization_id, u.email)
+    for u in User.objects.filter(organization_id__in=ids).order_by("created_at"):
+        primary.setdefault(u.organization_id, u.email)
+
+    ticket_rows = (
+        SupportTicket.objects.filter(
+            organization_id__in=ids, status__in=UNRESOLVED_TICKET_STATUSES
+        )
+        .values("organization_id")
+        .annotate(count=Count("id"))
+    )
+    open_tickets = {r["organization_id"]: r["count"] for r in ticket_rows}
+
+    subs = {}
+    if include_financial:
+        for s in OrganizationSubscription.objects.filter(
+            organization_id__in=ids, status__in=USABLE_STATUSES
+        ).select_related("plan"):
+            subs.setdefault(s.organization_id, s)
+
+    for o in orgs:
+        urow = users_by_org.get(o.id, {})
+        o.crm_users_count = urow.get("count", 0)
+        o.crm_last_login = urow.get("last_login")
+        o.crm_primary_email = primary.get(o.id)
+        o.crm_open_tickets = open_tickets.get(o.id, 0)
+        sub = subs.get(o.id)
+        o.crm_plan_name = (sub.plan.name_en if sub else None) if include_financial else None
+        o.crm_sub_status = (sub.get_status_display() if sub else None) if include_financial else None
+    return orgs
+
+
+# ── Profile pieces ────────────────────────────────────────────────────────────
+def get_customer_users(organization):
+    return organization.users.all().order_by("-is_staff", "full_name", "email")
+
+
+def get_customer_primary_contact(organization):
+    return (
+        organization.users.filter(role="admin").order_by("created_at").first()
+        or organization.users.order_by("created_at").first()
+    )
+
+
+def get_customer_subscription_summary(organization):
+    """Most relevant subscription (usable first, else most recent). May be None."""
+    usable = (
+        OrganizationSubscription.objects.filter(
+            organization=organization, status__in=USABLE_STATUSES
+        )
+        .select_related("plan")
+        .order_by("-created_at")
+        .first()
+    )
+    if usable:
+        return usable
+    return (
+        OrganizationSubscription.objects.filter(organization=organization)
+        .select_related("plan")
+        .order_by("-created_at")
+        .first()
+    )
+
+
+def get_customer_payment_summary(organization, limit: int = 10) -> dict:
+    """Latest payment transactions (safe fields only) + counts. Never raw payloads."""
+    base = PaymentTransaction.objects.filter(organization=organization)
+    return {
+        "transactions": list(
+            base.only(*PAYMENT_SAFE_FIELDS).order_by("-created_at")[:limit]
+        ),
+        "total_count": base.count(),
+        "paid_count": base.filter(status=PaymentStatus.PAID).count(),
+    }
+
+
+def get_customer_ticket_summary(organization, limit: int = 25) -> dict:
+    base = SupportTicket.objects.filter(organization=organization).select_related(
+        "assigned_to", "created_by"
+    )
+    return {
+        "tickets": list(base.order_by("-created_at")[:limit]),
+        "open_count": base.filter(status__in=UNRESOLVED_TICKET_STATUSES).count(),
+        "total_count": base.count(),
+    }
+
+
+def get_customer_activity_timeline(organization, limit: int = 50):
+    return get_customer_activities(organization, limit=limit)
+
+
+def get_customer_audit_timeline(organization, limit: int = 50):
+    return get_customer_audits(organization, limit=limit)
+
+
+def get_crm_customer_profile(organization_id, *, include_financial: bool = True):
+    """
+    Bundle the full read-only profile. Financial sections (subscription/payments)
+    are omitted when ``include_financial`` is False (e.g. Support Agent role).
+    Returns None when the organization does not exist.
+    """
+    organization = get_customer(organization_id)
+    if organization is None:
+        return None
+    profile = {
+        "organization": organization,
+        "primary_contact": get_customer_primary_contact(organization),
+        "users": get_customer_users(organization),
+        "tickets": get_customer_ticket_summary(organization),
+        "notes": get_customer_notes(organization),
+        "activities": get_customer_activity_timeline(organization),
+        "audits": get_customer_audit_timeline(organization),
+        "subscription": None,
+        "payments": None,
+        "include_financial": include_financial,
+    }
+    if include_financial:
+        profile["subscription"] = get_customer_subscription_summary(organization)
+        profile["payments"] = get_customer_payment_summary(organization)
+    return profile

@@ -28,8 +28,8 @@ def _activity_types(organization):
 
 def test_create_support_ticket_writes_ticket_audit_and_activity(organization, support_user):
     ticket = create_support_ticket(
+        actor=support_user,
         organization=organization,
-        created_by=support_user,
         title="Upload error",
         description="Fails at validation.",
         category=SupportTicket.Category.UPLOAD_ISSUE,
@@ -38,11 +38,11 @@ def test_create_support_ticket_writes_ticket_audit_and_activity(organization, su
     assert SupportTicket.objects.filter(id=ticket.id).exists()
     assert ticket.priority == SupportTicket.Priority.HIGH
 
-    # AuditLog written with the CRM verb in details.
+    # AuditLog written with the CRM verb in details (CRM-1E contract).
     audit = AuditLog.objects.filter(
         organization=organization, resource_id=str(ticket.id)
     ).latest("timestamp")
-    assert audit.details["action_type"] == "ticket_created"
+    assert audit.details["action_type"] == "support_ticket_created"
 
     # Exactly one domain timeline entry (the audit helper's own row is suppressed).
     types = _activity_types(organization)
@@ -52,13 +52,13 @@ def test_create_support_ticket_writes_ticket_audit_and_activity(organization, su
 
 def test_add_ticket_message_writes_message_and_activity(organization, support_user):
     ticket = create_support_ticket(
+        actor=support_user,
         organization=organization,
-        created_by=support_user,
         title="T",
         description="d",
     )
     msg = add_ticket_message(
-        ticket=ticket, sender=support_user, message="On it", internal_only=True
+        actor=support_user, ticket=ticket, message="On it", internal_only=True
     )
     assert TicketMessage.objects.filter(id=msg.id).exists()
     assert msg.internal_only is True

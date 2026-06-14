@@ -426,3 +426,19 @@ def get_crm_customer_profile(organization_id, *, include_financial: bool = True)
         profile["subscription"] = get_customer_subscription_summary(organization)
         profile["payments"] = get_customer_payment_summary(organization)
     return profile
+
+
+# ── CRM-1E — assignable staff (read-only) ─────────────────────────────────────
+def get_assignable_crm_staff():
+    """
+    Platform CRM staff a ticket can be assigned to: staff users who belong to a
+    CRM group, plus superusers. Read-only queryset used by the assign/create forms.
+    """
+    from apps.platform_admin.permissions import ALL_CRM_GROUPS
+
+    return (
+        User.objects.filter(is_staff=True)
+        .filter(Q(groups__name__in=ALL_CRM_GROUPS) | Q(is_superuser=True))
+        .distinct()
+        .order_by("full_name", "email")
+    )

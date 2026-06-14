@@ -95,7 +95,7 @@ def test_list_notes_filter_by_category(organization, support_user):
 
 def test_list_activities_filter_by_type(organization, owner_user):
     create_support_ticket(
-        organization=organization, created_by=owner_user,
+        actor=owner_user, organization=organization,
         title="t", description="d",
     )
     filtered = list(
@@ -119,18 +119,18 @@ def test_paginate_returns_page(organization, support_user):
 
 def test_get_ticket_messages_and_audits(organization, owner_user):
     ticket = create_support_ticket(
-        organization=organization, created_by=owner_user, title="t", description="d",
+        actor=owner_user, organization=organization, title="t", description="d",
     )
     # create_support_ticket wrote an AuditLog scoped to this ticket
     audits = list(selectors.get_ticket_audits(ticket))
-    assert any(a.details.get("action_type") == "ticket_created" for a in audits)
+    assert any(a.details.get("action_type") == "support_ticket_created" for a in audits)
     # messages selector returns empty for a fresh ticket
     assert list(selectors.get_ticket_messages(ticket)) == []
 
 
 def test_recent_crm_audits_are_scoped(organization, owner_user):
     create_support_ticket(
-        organization=organization, created_by=owner_user, title="t", description="d",
+        actor=owner_user, organization=organization, title="t", description="d",
     )
     audits = list(selectors.get_recent_crm_audits())
     assert audits, "CRM audit entries should be returned"

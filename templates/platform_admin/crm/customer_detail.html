@@ -17,7 +17,11 @@
       {% if customer.name_ar %}<p class="text-sm text-slate-500">{{ customer.name_ar }}</p>{% endif %}
     </div>
     <div class="flex items-center gap-2">
-      <span class="badge badge-slate">{% trans "Read-only" %}</span>
+      {% if can_manage %}
+      <a href="{% url 'platform_admin:crm:ticket_create' %}?organization={{ customer.id }}" class="btn-primary py-1.5 text-xs">
+        <i data-lucide="plus" class="h-4 w-4"></i> {% trans "Create Ticket" %}
+      </a>
+      {% endif %}
       {% if customer.is_active %}<span class="badge badge-green">{% trans "Active" %}</span>
       {% else %}<span class="badge badge-slate">{% trans "Inactive" %}</span>{% endif %}
     </div>

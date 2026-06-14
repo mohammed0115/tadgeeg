@@ -1,0 +1,43 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+{% block page_title %}{% trans "Activity Timeline" %}{% endblock %}
+
+{% block content %}
+{% include "platform_admin/crm/_nav.html" %}
+
+<form method="get" class="platform-card mb-4 flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
+  <div>
+    <label class="mb-1 block text-xs font-medium text-slate-500">{% trans "Activity Type" %}</label>
+    <select name="activity_type" class="select">
+      <option value="">{% trans "All" %}</option>
+      {% for val, label in activity_type_choices %}<option value="{{ val }}" {% if filters.activity_type == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="btn-primary">{% trans "Filter" %}</button>
+</form>
+
+<div class="platform-card p-4">
+  {% for a in page_obj %}
+    <div class="flex items-start gap-3 border-t border-slate-100 py-3 first:border-t-0 dark:border-slate-800">
+      <span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-platform-500"></span>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center justify-between gap-2">
+          <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">{{ a.get_activity_type_display }}</p>
+          <span class="shrink-0 text-xs text-slate-400">{{ a.created_at|date:"Y-m-d H:i" }}</span>
+        </div>
+        {% if a.description %}<p class="text-sm text-slate-600 dark:text-slate-300">{{ a.description }}</p>{% endif %}
+        <p class="mt-0.5 text-xs text-slate-400">
+          <a href="{% url 'platform_admin:crm:customer_detail' a.organization.id %}" class="hover:underline">{{ a.organization.name }}</a>
+          · {{ a.actor.email|default:"system" }}
+        </p>
+      </div>
+    </div>
+  {% empty %}
+    <p class="py-12 text-center text-slate-400">{% trans "No activity recorded yet." %}</p>
+  {% endfor %}
+</div>
+
+{% include "partials/_pagination.html" %}
+{% endblock %}
+
+{% block extra_js %}<script>window.lucide?.createIcons();</script>{% endblock %}

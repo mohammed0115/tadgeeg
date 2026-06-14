@@ -1,0 +1,63 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+{% block page_title %}{% trans "Customers" %}{% endblock %}
+
+{% block content %}
+{% include "platform_admin/crm/_nav.html" %}
+
+{# Filter form — GET only, read-only #}
+<form method="get" class="platform-card mb-4 flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
+  <div class="flex-1">
+    <label class="mb-1 block text-xs font-medium text-slate-500">{% trans "Search" %}</label>
+    <input type="search" name="q" value="{{ filters.q }}" class="input" placeholder="{% trans 'Name, VAT or CR number' %}">
+  </div>
+  <div>
+    <label class="mb-1 block text-xs font-medium text-slate-500">{% trans "Status" %}</label>
+    <select name="status" class="select">
+      <option value="">{% trans "All" %}</option>
+      <option value="active" {% if filters.status == 'active' %}selected{% endif %}>{% trans "Active" %}</option>
+      <option value="inactive" {% if filters.status == 'inactive' %}selected{% endif %}>{% trans "Inactive" %}</option>
+    </select>
+  </div>
+  <button type="submit" class="btn-primary">{% trans "Filter" %}</button>
+</form>
+
+<div class="platform-card overflow-hidden">
+  <table class="platform-table w-full text-sm">
+    <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500 dark:bg-slate-800/50">
+      <tr>
+        <th class="px-4 py-3">{% trans "Customer" %}</th>
+        <th class="px-4 py-3">{% trans "Country" %}</th>
+        <th class="px-4 py-3">{% trans "Status" %}</th>
+        <th class="px-4 py-3">{% trans "Registered" %}</th>
+        <th class="px-4 py-3"></th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+      {% for c in page_obj %}
+      <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+        <td class="px-4 py-3">
+          <p class="font-semibold text-slate-800 dark:text-slate-100">{{ c.name }}</p>
+          {% if c.name_ar %}<p class="text-xs text-slate-500">{{ c.name_ar }}</p>{% endif %}
+        </td>
+        <td class="px-4 py-3 text-slate-600 dark:text-slate-300">{{ c.get_country_display }}</td>
+        <td class="px-4 py-3">
+          {% if c.is_active %}<span class="badge badge-green">{% trans "Active" %}</span>
+          {% else %}<span class="badge badge-slate">{% trans "Inactive" %}</span>{% endif %}
+        </td>
+        <td class="px-4 py-3 text-slate-500">{{ c.created_at|date:"Y-m-d" }}</td>
+        <td class="px-4 py-3 text-right">
+          <a href="{% url 'platform_admin:crm:customer_detail' c.id %}" class="btn-ghost py-1.5 text-xs">{% trans "Open" %}</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" class="px-4 py-12 text-center text-slate-400">{% trans "No customers match your filters." %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% include "partials/_pagination.html" %}
+{% endblock %}
+
+{% block extra_js %}<script>window.lucide?.createIcons();</script>{% endblock %}

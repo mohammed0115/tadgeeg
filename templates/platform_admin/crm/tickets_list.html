@@ -1,0 +1,72 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+{% block page_title %}{% trans "Support Tickets" %}{% endblock %}
+
+{% block content %}
+{% include "platform_admin/crm/_nav.html" %}
+
+<form method="get" class="platform-card mb-4 grid grid-cols-1 gap-3 p-4 sm:grid-cols-2 lg:grid-cols-6 lg:items-end">
+  <div class="lg:col-span-2">
+    <label class="mb-1 block text-xs font-medium text-slate-500">{% trans "Search" %}</label>
+    <input type="search" name="q" value="{{ filters.q }}" class="input" placeholder="{% trans 'Title, description or customer' %}">
+  </div>
+  <div>
+    <label class="mb-1 block text-xs font-medium text-slate-500">{% trans "Status" %}</label>
+    <select name="status" class="select w-full">
+      <option value="">{% trans "All" %}</option>
+      {% for val, label in status_choices %}<option value="{{ val }}" {% if filters.status == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="mb-1 block text-xs font-medium text-slate-500">{% trans "Priority" %}</label>
+    <select name="priority" class="select w-full">
+      <option value="">{% trans "All" %}</option>
+      {% for val, label in priority_choices %}<option value="{{ val }}" {% if filters.priority == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="mb-1 block text-xs font-medium text-slate-500">{% trans "From" %}</label>
+    <input type="date" name="date_from" value="{{ filters.date_from }}" class="input">
+  </div>
+  <div class="flex items-end gap-2">
+    <div class="flex-1">
+      <label class="mb-1 block text-xs font-medium text-slate-500">{% trans "To" %}</label>
+      <input type="date" name="date_to" value="{{ filters.date_to }}" class="input">
+    </div>
+    <button type="submit" class="btn-primary">{% trans "Filter" %}</button>
+  </div>
+</form>
+
+<div class="platform-card overflow-hidden">
+  <table class="platform-table w-full text-sm">
+    <thead class="bg-slate-50 text-left text-xs uppercase text-slate-500 dark:bg-slate-800/50">
+      <tr>
+        <th class="px-4 py-3">{% trans "Title" %}</th>
+        <th class="px-4 py-3">{% trans "Customer" %}</th>
+        <th class="px-4 py-3">{% trans "Priority" %}</th>
+        <th class="px-4 py-3">{% trans "Status" %}</th>
+        <th class="px-4 py-3">{% trans "Assigned" %}</th>
+        <th class="px-4 py-3">{% trans "Created" %}</th>
+      </tr>
+    </thead>
+    <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+      {% for t in page_obj %}
+      <tr class="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40" onclick="window.location='{% url 'platform_admin:crm:ticket_detail' t.id %}'">
+        <td class="px-4 py-3 font-semibold text-slate-800 dark:text-slate-100">{{ t.title }}</td>
+        <td class="px-4 py-3 text-slate-600 dark:text-slate-300">{{ t.organization.name }}</td>
+        <td class="px-4 py-3">{% include "platform_admin/crm/_badges.html" with ticket_priority=t.priority priority_label=t.get_priority_display %}</td>
+        <td class="px-4 py-3">{% include "platform_admin/crm/_badges.html" with ticket_status=t.status status_label=t.get_status_display %}</td>
+        <td class="px-4 py-3 text-slate-500">{{ t.assigned_to.email|default:"—" }}</td>
+        <td class="px-4 py-3 text-slate-500">{{ t.created_at|date:"Y-m-d" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="px-4 py-12 text-center text-slate-400">{% trans "No tickets match your filters." %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% include "partials/_pagination.html" %}
+{% endblock %}
+
+{% block extra_js %}<script>window.lucide?.createIcons();</script>{% endblock %}

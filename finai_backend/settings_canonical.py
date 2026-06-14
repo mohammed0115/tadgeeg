@@ -150,6 +150,10 @@ LOCAL_APPS = [
     "apps.ledger",
     "apps.procurement",
     "apps.platform_management",
+    # CRM-1B: register platform_admin so it can host the Platform CRM models
+    # (SupportTicket, TicketMessage, CustomerNote, CustomerActivity). It was
+    # previously imported as a library by platform_management but not installed.
+    "apps.platform_admin",
     "apps.vendor_dashboard",
     "apps.payments",
     "apps.billing",

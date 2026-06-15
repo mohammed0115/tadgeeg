@@ -242,6 +242,7 @@ PAYMENT_SAFE_FIELDS = (
     "status",
     "amount",
     "currency",
+    "provider_reference",   # bank/transfer reference for manual payments (safe)
     "paid_at",
     "created_at",
     "failed_reason",
@@ -441,6 +442,25 @@ def get_subscription_for_customer(subscription_id, organization):
         .select_related("plan")
         .first()
     )
+
+
+# ── CRM-1F-3B-2B — manual payment lookups (read-only) ─────────────────────────
+def get_payment_for_customer(payment_id, organization):
+    """
+    Return the payment with ``payment_id`` ONLY if it belongs to
+    ``organization`` (tenant-scoped — prevents IDOR / cross-tenant disclosure).
+    None otherwise.
+    """
+    return PaymentTransaction.objects.filter(
+        id=_safe_uuid(payment_id), organization=organization
+    ).first()
+
+
+def get_purchasable_plans():
+    """Active, purchasable plans for the manual-payment add form (read-only)."""
+    from apps.billing.services.plan_service import list_purchasable_plans
+
+    return list_purchasable_plans()
 
 
 # ── CRM-1E — assignable staff (read-only) ─────────────────────────────────────

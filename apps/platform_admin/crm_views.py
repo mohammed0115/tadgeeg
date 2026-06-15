@@ -199,6 +199,10 @@ def customer_detail(request, org_id):
         can_view_financial=can_financial,
         can_manage=can_manage_tickets(request.user),
         can_manage_financial=can_manage_financial_crm_data(request.user),
+        manual_payment_plans=(
+            selectors.get_purchasable_plans()
+            if can_manage_financial_crm_data(request.user) else None
+        ),
     )
     return render(request, "platform_admin/crm/customer_detail.html", ctx)
 
@@ -267,6 +271,65 @@ def customer_reactivate(request, org_id):
     return _customer_active_op(
         request, org_id, op=crm_operations.reactivate_customer,
         success_msg="Customer reactivated.",
+    )
+
+
+# ── manual payment operations (CRM-1F-3B-2B) — POST-only, thin views ──────────
+@crm_financial_required(methods=("POST",))
+def manual_payment_add(request, org_id):
+    customer = selectors.get_customer(org_id)
+    if customer is None:
+        raise Http404("Customer not found.")
+    form = crm_forms.ManualPaymentAddForm(request.POST)
+    if form.is_valid():
+        cd = form.cleaned_data
+        try:
+            crm_operations.crm_add_manual_payment(
+                actor=request.user, organization=customer, plan=cd["plan"],
+                amount=cd["amount"], currency=cd["currency"],
+                reference=cd["reference"], reason=cd["reason"], request=request,
+            )
+            messages.success(request, "Manual payment created (pending).")
+        except ValidationError as exc:
+            messages.error(request, "; ".join(exc.messages))
+    else:
+        messages.error(request, "Could not add manual payment: check the form fields.")
+    return redirect("platform_admin:crm:customer_detail", org_id=customer.id)
+
+
+def _manual_payment_action(request, org_id, payment_id, *, op, success_msg):
+    customer = selectors.get_customer(org_id)
+    if customer is None:
+        raise Http404("Customer not found.")
+    payment = selectors.get_payment_for_customer(payment_id, customer)
+    if payment is None:
+        raise Http404("Payment not found.")  # also covers cross-tenant ids
+    form = crm_forms.FinancialReasonForm(request.POST)
+    if form.is_valid():
+        try:
+            op(actor=request.user, organization=customer, payment=payment,
+               reason=form.cleaned_data["reason"], request=request)
+            messages.success(request, success_msg)
+        except ValidationError as exc:
+            messages.error(request, "; ".join(exc.messages))
+    else:
+        messages.error(request, "A reason is required.")
+    return redirect("platform_admin:crm:customer_detail", org_id=customer.id)
+
+
+@crm_financial_required(methods=("POST",))
+def manual_payment_confirm(request, org_id, payment_id):
+    return _manual_payment_action(
+        request, org_id, payment_id, op=crm_operations.crm_confirm_manual_payment,
+        success_msg="Manual payment confirmed.",
+    )
+
+
+@crm_financial_required(methods=("POST",))
+def manual_payment_reject(request, org_id, payment_id):
+    return _manual_payment_action(
+        request, org_id, payment_id, op=crm_operations.crm_reject_manual_payment,
+        success_msg="Manual payment rejected.",
     )
 
 

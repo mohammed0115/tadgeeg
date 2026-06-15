@@ -28,6 +28,10 @@ urlpatterns = [
     # Customer suspend / reactivate (CRM-1F-2B) — POST-only
     path("customers/<uuid:org_id>/suspend/", views.customer_suspend, name="customer_suspend"),
     path("customers/<uuid:org_id>/reactivate/", views.customer_reactivate, name="customer_reactivate"),
+    # Manual payment (CRM-1F-3B-2B) — POST-only
+    path("customers/<uuid:org_id>/payments/manual/add/", views.manual_payment_add, name="manual_payment_add"),
+    path("customers/<uuid:org_id>/payments/<uuid:payment_id>/confirm/", views.manual_payment_confirm, name="manual_payment_confirm"),
+    path("customers/<uuid:org_id>/payments/<uuid:payment_id>/reject/", views.manual_payment_reject, name="manual_payment_reject"),
     # Tickets — read
     path("tickets/", views.tickets_list, name="tickets"),
     # Tickets — write (CRM-1E). 'new/' must precede '<uuid>/'.

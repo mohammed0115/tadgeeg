@@ -5,6 +5,10 @@ class PaymentProvider(models.TextChoices):
     MOYASAR = "moyasar", "Moyasar"
     TAP     = "tap",     "Tap Payments"
     TELR    = "telr",    "Telr"
+    # Offline / bank-transfer payment recorded and confirmed by staff. It has
+    # NO gateway — get_payment_gateway() must reject it. Used only via
+    # PaymentService.create_manual_payment().
+    MANUAL  = "manual",  "Manual (offline / bank transfer)"
 
 
 class PaymentPurpose(models.TextChoices):

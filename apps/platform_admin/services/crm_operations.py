@@ -25,6 +25,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from apps.authentication.models import Organization
 from apps.platform_admin import permissions as perms
 from apps.platform_admin.models import (
     CustomerActivity,
@@ -409,3 +410,79 @@ def crm_extend_subscription(
             record_activity=False,
         )
     return updated
+
+
+# ── CRM-1F-2B — suspend / reactivate customer (Organization.is_active) ────────
+# Literal activity types (no enum member) — documented technical debt, same as
+# ticket_assigned / subscription_extended.
+ACTIVITY_CUSTOMER_SUSPENDED = "customer_suspended"
+ACTIVITY_CUSTOMER_REACTIVATED = "customer_reactivated"
+
+
+def _set_customer_active(*, actor, organization, target_active, reason, request):
+    """
+    Flip Organization.is_active to ``target_active`` (the suspend/reactivate
+    lever). Writes ONLY ``is_active`` — never subscription/quota/payment. Audited.
+    """
+    _require_financial_manager(actor)
+    reason = (reason or "").strip()
+    if not reason:
+        raise ValidationError("A reason is required.")
+
+    with transaction.atomic():
+        org = Organization.objects.select_for_update().get(pk=organization.pk)
+        if org.is_active == target_active:
+            raise ValidationError(
+                "Customer is already active." if target_active
+                else "Customer is already suspended."
+            )
+        org.is_active = target_active
+        org.save(update_fields=["is_active", "updated_at"])
+
+        if target_active:
+            action_type = "customer_reactivated"
+            activity_type = ACTIVITY_CUSTOMER_REACTIVATED
+            description = "Customer reactivated"
+            old_value, new_value = {"is_active": False}, {"is_active": True}
+        else:
+            action_type = "customer_suspended"
+            activity_type = ACTIVITY_CUSTOMER_SUSPENDED
+            description = "Customer suspended"
+            old_value, new_value = {"is_active": True}, {"is_active": False}
+
+        record_customer_activity(
+            organization=org,
+            actor=actor,
+            activity_type=activity_type,
+            description=description,
+            metadata={"reason": reason},
+        )
+        log_crm_action(
+            actor=actor,
+            organization=org,
+            action_type=action_type,
+            resource_type="Organization",
+            resource_id=org.id,
+            reason=reason,
+            old_value=old_value,
+            new_value=new_value,
+            ip_address=_client_ip(request),
+            record_activity=False,
+        )
+    return org
+
+
+def suspend_customer(*, actor, organization, reason, request=None):
+    """Suspend a customer: Organization.is_active → False. Rejects double-suspend."""
+    return _set_customer_active(
+        actor=actor, organization=organization, target_active=False,
+        reason=reason, request=request,
+    )
+
+
+def reactivate_customer(*, actor, organization, reason, request=None):
+    """Reactivate a customer: Organization.is_active → True. Rejects double-reactivate."""
+    return _set_customer_active(
+        actor=actor, organization=organization, target_active=True,
+        reason=reason, request=request,
+    )

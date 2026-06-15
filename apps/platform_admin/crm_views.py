@@ -236,6 +236,40 @@ def subscription_extend(request, org_id, subscription_id):
     return redirect("platform_admin:crm:customer_detail", org_id=customer.id)
 
 
+def _customer_active_op(request, org_id, *, op, success_msg):
+    """Shared POST handler for suspend/reactivate (reason-only form)."""
+    customer = selectors.get_customer(org_id)
+    if customer is None:
+        raise Http404("Customer not found.")
+    form = crm_forms.FinancialReasonForm(request.POST)
+    if form.is_valid():
+        try:
+            op(actor=request.user, organization=customer,
+               reason=form.cleaned_data["reason"], request=request)
+            messages.success(request, success_msg)
+        except ValidationError as exc:
+            messages.error(request, "; ".join(exc.messages))
+    else:
+        messages.error(request, "A reason is required.")
+    return redirect("platform_admin:crm:customer_detail", org_id=customer.id)
+
+
+@crm_financial_required(methods=("POST",))
+def customer_suspend(request, org_id):
+    return _customer_active_op(
+        request, org_id, op=crm_operations.suspend_customer,
+        success_msg="Customer suspended.",
+    )
+
+
+@crm_financial_required(methods=("POST",))
+def customer_reactivate(request, org_id):
+    return _customer_active_op(
+        request, org_id, op=crm_operations.reactivate_customer,
+        success_msg="Customer reactivated.",
+    )
+
+
 # ── tickets ───────────────────────────────────────────────────────────────────
 @crm_read_required()
 def tickets_list(request):

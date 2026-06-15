@@ -246,8 +246,10 @@ def test_finance_officer_can_see_financial_data(client, finance_user, organizati
 # The base layout has a framework language-switcher (POST to /i18n/setlang/) and
 # logout — those are not CRM mutations. The guarantee we assert: no POST form
 # targets a CRM route, and the CRM filter form is GET.
-def test_no_crm_post_forms_in_profile(client, owner_user, organization):
-    client.force_login(owner_user)
+def test_no_crm_post_forms_in_profile(client, readonly_user, organization):
+    # A read-only auditor must never see a CRM mutation form. (Financial managers
+    # legitimately DO see suspend/extend POST forms — see the financial op tests.)
+    client.force_login(readonly_user)
     body = client.get(
         reverse("platform_admin:crm:customer_detail", args=[organization.id])
     ).content.decode()

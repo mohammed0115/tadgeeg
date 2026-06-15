@@ -104,3 +104,16 @@ class ExtendSubscriptionForm(forms.Form):
         if not text:
             raise forms.ValidationError("A reason is required.")
         return text
+
+
+class FinancialReasonForm(forms.Form):
+    """Reason-only form for suspend/reactivate. No other field is accepted —
+    subscription/plan/quota/payment can never be touched through it."""
+
+    reason = forms.CharField(widget=forms.Textarea, max_length=500, required=True)
+
+    def clean_reason(self):
+        text = self.cleaned_data["reason"].strip()
+        if not text:
+            raise forms.ValidationError("A reason is required.")
+        return text

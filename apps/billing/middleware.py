@@ -131,6 +131,24 @@ class SubscriptionRequiredMiddleware:
             # parts of the system surface that.
             return None
 
+        # CRM-1F-2B: a suspended customer (Organization.is_active=False) is
+        # blocked from app-internal pages regardless of subscription state.
+        # Staff/superuser and whitelisted paths were already excluded by
+        # _needs_subscription_check, so this only affects normal org users.
+        # Message is intentionally generic for now (no dedicated page yet).
+        if not org.is_active:
+            message = _("Your account has been suspended. Please contact support.")
+            if request.path.startswith("/api/"):
+                return JsonResponse(
+                    {
+                        "detail": str(message),
+                        "code": "account_suspended",
+                        "redirect": "/billing/plans/",
+                    },
+                    status=403,
+                )
+            return redirect("/billing/plans/")
+
         sub = self.svc.get_active_subscription(org)
         if sub is not None:
             return None  # all good

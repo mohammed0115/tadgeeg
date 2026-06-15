@@ -280,8 +280,9 @@ def test_extend_form_hidden_for_support(client, support_user, organization):
 def test_no_other_financial_action_routes_rendered(client, finance_user, organization):
     _subscription(organization)
     body = _profile(client, finance_user, organization).lower()
-    # Only extend exists in CRM-1F-1B — no suspend/reactivate/change-plan/manual-payment.
-    for forbidden in ("/suspend/", "/reactivate/", "/change-plan/", "/manual-payment/"):
+    # extend (1F-1B) + suspend/reactivate (1F-2B) exist; change-plan / manual
+    # payment do not yet.
+    for forbidden in ("/change-plan/", "/manual-payment/", "/adjust-quota/"):
         assert forbidden not in body
 
 

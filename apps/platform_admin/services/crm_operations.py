@@ -486,3 +486,247 @@ def reactivate_customer(*, actor, organization, reason, request=None):
         actor=actor, organization=organization, target_active=True,
         reason=reason, request=request,
     )
+
+
+# ── CRM-1F-3B-2A — manual payment wrappers ────────────────────────────────────
+# Activity types are literals (no enum member) — documented technical debt, same
+# approach as ticket_assigned / subscription_extended / customer_suspended.
+ACTIVITY_MANUAL_PAYMENT_ADDED = "manual_payment_added"
+ACTIVITY_MANUAL_PAYMENT_CONFIRMED = "manual_payment_confirmed"
+ACTIVITY_MANUAL_PAYMENT_REJECTED = "manual_payment_rejected"
+
+
+def _manual_payment_safe(payment, *, plan=None) -> dict:
+    """Safe, JSON-serialisable snapshot for audit/activity. NEVER includes
+    raw_request/raw_response/raw_webhook/provider_payment_id/checkout_url/
+    idempotency_key or any secret."""
+    return {
+        "payment_id": str(payment.id),
+        "provider": payment.provider,
+        "status": payment.status,
+        "amount": str(payment.amount),
+        "currency": payment.currency,
+        "reference": payment.provider_reference,
+        "subscription_id": str(payment.reference_id) if payment.reference_id else None,
+        "plan_id": str(plan.id) if plan is not None else None,
+    }
+
+
+def crm_add_manual_payment(
+    *, actor, organization, plan, amount, currency, reference, reason, request=None,
+):
+    """
+    Create a PENDING manual payment for a new pending subscription — via the
+    official billing + payment services only (no direct PaymentTransaction or
+    OrganizationSubscription writes). Does NOT activate / mark_paid.
+    """
+    _require_financial_manager(actor)
+    reason = (reason or "").strip()
+    if not reason:
+        raise ValidationError("A reason is required.")
+    reference = (reference or "").strip()
+    if not reference:
+        raise ValidationError("A payment reference is required.")
+
+    from apps.billing.choices import USABLE_STATUSES
+    from apps.billing.models import OrganizationSubscription
+    from apps.billing.services.subscription_service import (
+        SubscriptionError,
+        SubscriptionService,
+    )
+    from apps.payments.choices import PaymentProvider, PaymentPurpose, PaymentStatus
+    from apps.payments.models import PaymentTransaction
+    from apps.payments.services.payment_service import (
+        PaymentService,
+        PaymentValidationError,
+    )
+
+    # Defense in depth (the payment service also guards): no usable subscription,
+    # and no existing pending manual payment for this customer.
+    if OrganizationSubscription.objects.filter(
+        organization=organization, status__in=USABLE_STATUSES
+    ).exists():
+        raise ValidationError("Organization already has a usable subscription.")
+    if PaymentTransaction.objects.filter(
+        organization=organization,
+        provider=PaymentProvider.MANUAL.value,
+        status=PaymentStatus.PENDING,
+        purpose=PaymentPurpose.SUBSCRIPTION.value,
+    ).exists():
+        raise ValidationError("A pending manual payment already exists for this customer.")
+
+    try:
+        with transaction.atomic():
+            subscription = SubscriptionService().create_pending_paid_subscription(
+                organization, plan
+            )
+            payment = PaymentService().create_manual_payment(
+                organization=organization,
+                user=actor,
+                subscription=subscription,
+                amount=amount,
+                currency=currency,
+                reference=reference,
+                reason=reason,
+                request=request,
+            )
+            safe = _manual_payment_safe(payment, plan=plan)
+            record_customer_activity(
+                organization=organization,
+                actor=actor,
+                activity_type=ACTIVITY_MANUAL_PAYMENT_ADDED,
+                description=f"Manual payment added (reference={reference})",
+                metadata=safe,
+            )
+            log_crm_action(
+                actor=actor,
+                organization=organization,
+                action_type="manual_payment_added",
+                resource_type="PaymentTransaction",
+                resource_id=payment.id,
+                reason=reason,
+                new_value=safe,
+                ip_address=_client_ip(request),
+                record_activity=False,
+            )
+    except (SubscriptionError, PaymentValidationError) as exc:
+        raise ValidationError(str(exc))
+    return payment
+
+
+def crm_confirm_manual_payment(
+    *, actor, organization, payment, reason, request=None,
+):
+    """
+    Confirm a pending manual payment via ``PaymentService.mark_paid`` — which
+    runs the existing payment_paid → subscription-activation signal chain. Never
+    writes payment.status directly, never calls a gateway/webhook.
+    """
+    _require_financial_manager(actor)
+    reason = (reason or "").strip()
+    if not reason:
+        raise ValidationError("A reason is required.")
+
+    from apps.billing.choices import USABLE_STATUSES, SubscriptionStatus
+    from apps.billing.models import OrganizationSubscription
+    from apps.payments.choices import PaymentProvider, PaymentPurpose, PaymentStatus
+    from apps.payments.services.payment_service import PaymentService
+
+    if payment.organization_id != organization.id:
+        raise ValidationError("Payment does not belong to this organization.")
+    if payment.provider != PaymentProvider.MANUAL.value:
+        raise ValidationError("Only manual payments can be confirmed here.")
+    if payment.status != PaymentStatus.PENDING:
+        raise ValidationError("Only a pending manual payment can be confirmed.")
+    if (
+        payment.purpose != PaymentPurpose.SUBSCRIPTION.value
+        or payment.reference_type != "organization_subscription"
+    ):
+        raise ValidationError("Payment is not linked to a subscription.")
+
+    old = _manual_payment_safe(payment)
+    with transaction.atomic():
+        # Confirm-time double-active guard. Between add and confirm the org may
+        # have gained a usable subscription (e.g. a hosted payment). Confirming
+        # now would mark_paid → activate this pending subscription and hit the
+        # one-usable-per-org constraint, leaving the payment PAID with no active
+        # subscription. Re-check under a row lock BEFORE mark_paid.
+        try:
+            sub = (
+                OrganizationSubscription.objects
+                .select_for_update()
+                .get(pk=payment.reference_id, organization_id=organization.id)
+            )
+        except (OrganizationSubscription.DoesNotExist, ValueError):
+            raise ValidationError("Linked subscription not found for this organization.")
+        if sub.status != SubscriptionStatus.PENDING_PAYMENT:
+            raise ValidationError(
+                "The linked subscription is no longer pending payment."
+            )
+        if (
+            OrganizationSubscription.objects
+            .filter(organization_id=organization.id, status__in=USABLE_STATUSES)
+            .exclude(pk=sub.pk)
+            .exists()
+        ):
+            raise ValidationError(
+                "Organization now has a usable subscription; confirming would "
+                "create a second active subscription."
+            )
+
+        ok = PaymentService().mark_paid(payment, payload={"source": "crm_manual_confirm"})
+        if not ok:  # already paid (defensive — status check above usually catches it)
+            raise ValidationError("Payment was already confirmed.")
+        payment.refresh_from_db()
+        new = _manual_payment_safe(payment)
+        record_customer_activity(
+            organization=organization,
+            actor=actor,
+            activity_type=ACTIVITY_MANUAL_PAYMENT_CONFIRMED,
+            description="Manual payment confirmed",
+            metadata=new,
+        )
+        log_crm_action(
+            actor=actor,
+            organization=organization,
+            action_type="manual_payment_confirmed",
+            resource_type="PaymentTransaction",
+            resource_id=payment.id,
+            reason=reason,
+            old_value=old,
+            new_value=new,
+            ip_address=_client_ip(request),
+            record_activity=False,
+        )
+    return payment
+
+
+def crm_reject_manual_payment(
+    *, actor, organization, payment, reason, request=None,
+):
+    """
+    Reject a pending manual payment via ``PaymentService.mark_canceled``. Does
+    NOT activate the subscription. Paid payments cannot be rejected.
+    """
+    _require_financial_manager(actor)
+    reason = (reason or "").strip()
+    if not reason:
+        raise ValidationError("A reason is required.")
+
+    from apps.payments.choices import PaymentProvider, PaymentStatus
+    from apps.payments.services.payment_service import PaymentService
+
+    if payment.organization_id != organization.id:
+        raise ValidationError("Payment does not belong to this organization.")
+    if payment.provider != PaymentProvider.MANUAL.value:
+        raise ValidationError("Only manual payments can be rejected here.")
+    if payment.status != PaymentStatus.PENDING:
+        raise ValidationError("Only a pending manual payment can be rejected.")
+
+    old = _manual_payment_safe(payment)
+    with transaction.atomic():
+        ok = PaymentService().mark_canceled(payment, payload={"source": "crm_manual_reject"})
+        if not ok:
+            raise ValidationError("Payment is no longer pending.")
+        payment.refresh_from_db()
+        new = _manual_payment_safe(payment)
+        record_customer_activity(
+            organization=organization,
+            actor=actor,
+            activity_type=ACTIVITY_MANUAL_PAYMENT_REJECTED,
+            description="Manual payment rejected",
+            metadata=new,
+        )
+        log_crm_action(
+            actor=actor,
+            organization=organization,
+            action_type="manual_payment_rejected",
+            resource_type="PaymentTransaction",
+            resource_id=payment.id,
+            reason=reason,
+            old_value=old,
+            new_value=new,
+            ip_address=_client_ip(request),
+            record_activity=False,
+        )
+    return payment

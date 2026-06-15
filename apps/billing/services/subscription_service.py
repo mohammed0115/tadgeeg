@@ -11,10 +11,11 @@ import logging
 from datetime import timedelta
 from typing import Optional
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
-from apps.billing.choices import PlanCode, SubscriptionStatus
+from apps.billing.choices import PlanCode, SubscriptionStatus, USABLE_STATUSES
 from apps.billing.models import OrganizationSubscription, Plan
 
 
@@ -31,6 +32,10 @@ class FreeTrialAlreadyUsed(SubscriptionError):
 
 class AlreadySubscribed(SubscriptionError):
     """The organisation already has an active/trialing subscription."""
+
+
+class SubscriptionNotExtendable(SubscriptionError):
+    """The subscription's current status (or missing end date) forbids extension."""
 
 
 class SubscriptionService:
@@ -216,3 +221,69 @@ class SubscriptionService:
         if count:
             logger.info("Expired %d subscriptions whose ends_at < %s", count, now)
         return count
+
+    # ---- operations ----
+
+    @transaction.atomic
+    def extend_subscription(
+        self,
+        subscription: OrganizationSubscription,
+        *,
+        days: int,
+        reason: Optional[str] = None,
+        actor=None,
+    ) -> OrganizationSubscription:
+        """Push a usable subscription's ``ends_at`` forward by ``days``.
+
+        Official billing operation (NOT a CRM wrapper). It ONLY moves
+        ``ends_at`` forward — it does not touch plan, quota counters,
+        ``invoice_limit``, ``starts_at``, ``status`` or ``payment_transaction``,
+        emits no payment signals, and creates no PaymentTransaction.
+
+        Rules:
+          * ``days`` must be a positive ``int`` (bools rejected).
+          * Only usable subscriptions (TRIALING/ACTIVE) can be extended;
+            EXPIRED/CANCELED/PAYMENT_FAILED/PENDING_PAYMENT are refused.
+          * A usable subscription with no ``ends_at`` is a data anomaly and is
+            refused rather than silently anchored to "now" (safest choice).
+
+        ``reason``/``actor`` are accepted for traceability and are logged here,
+        but the formal AuditLog + CustomerActivity are written by the CRM
+        wrapper (CRM-1F-1B), not by this billing service.
+
+        Returns the locked, updated subscription. Raises ``ValidationError``
+        for a bad ``days`` value and ``SubscriptionNotExtendable`` for an
+        invalid status / missing end date.
+        """
+        if isinstance(days, bool) or not isinstance(days, int):
+            raise ValidationError("days must be a positive integer.")
+        if days <= 0:
+            raise ValidationError("days must be a positive integer.")
+
+        locked = (
+            OrganizationSubscription.objects
+            .select_for_update()
+            .get(pk=subscription.pk)
+        )
+
+        if locked.status not in USABLE_STATUSES:
+            raise SubscriptionNotExtendable(
+                f"Cannot extend subscription in status {locked.status!r}; "
+                f"only {sorted(USABLE_STATUSES)} are extendable."
+            )
+        if locked.ends_at is None:
+            raise SubscriptionNotExtendable(
+                "Cannot extend a usable subscription that has no end date."
+            )
+
+        locked.ends_at = locked.ends_at + timedelta(days=days)
+        locked.save(update_fields=["ends_at", "updated_at"])
+
+        logger.info(
+            "Extended subscription %s by %d days (new ends_at=%s, reason=%r, actor=%s)",
+            locked.pk, days, locked.ends_at, reason, getattr(actor, "pk", None),
+        )
+
+        # Keep the caller's reference consistent with the persisted row.
+        subscription.refresh_from_db()
+        return locked

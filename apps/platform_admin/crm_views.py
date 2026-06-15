@@ -31,6 +31,7 @@ from apps.platform_admin.models import (
 from apps.authentication.models import Organization
 from apps.platform_admin import forms as crm_forms
 from apps.platform_admin.permissions import (
+    can_manage_financial_crm_data,
     can_manage_tickets,
     can_view_crm,
     can_view_financial_crm_data,
@@ -73,6 +74,29 @@ def crm_manage_required(*, methods=("GET", "HEAD", "POST")):
         def _wrapped(request, *args, **kwargs):
             if not can_manage_tickets(getattr(request, "user", None)):
                 raise PermissionDenied("Ticket management permission is required.")
+            if request.method not in methods:
+                return HttpResponseNotAllowed(list(methods))
+            return view_func(request, *args, **kwargs)
+
+        return _wrapped
+
+    return decorator
+
+
+def crm_financial_required(*, methods=("GET", "HEAD", "POST")):
+    """
+    Gate for financial-write views: requires ``can_manage_financial_crm_data``
+    (Owner/Finance). Support/Readonly/Admin* and non-CRM users get 403.
+    POST-only handlers pass ``methods=("POST",)`` so GET (mutation-via-GET) → 405.
+    (*Admin: excluded by the current helper; not changed here.)
+    """
+
+    def decorator(view_func):
+        @wraps(view_func)
+        @login_required
+        def _wrapped(request, *args, **kwargs):
+            if not can_manage_financial_crm_data(getattr(request, "user", None)):
+                raise PermissionDenied("Financial management permission is required.")
             if request.method not in methods:
                 return HttpResponseNotAllowed(list(methods))
             return view_func(request, *args, **kwargs)
@@ -174,8 +198,42 @@ def customer_detail(request, org_id):
         audits=profile["audits"],
         can_view_financial=can_financial,
         can_manage=can_manage_tickets(request.user),
+        can_manage_financial=can_manage_financial_crm_data(request.user),
     )
     return render(request, "platform_admin/crm/customer_detail.html", ctx)
+
+
+# ── subscription financial operations (CRM-1F-1B) ─────────────────────────────
+@crm_financial_required(methods=("POST",))
+def subscription_extend(request, org_id, subscription_id):
+    """POST-only. Extend a customer's subscription via the CRM wrapper."""
+    customer = selectors.get_customer(org_id)
+    if customer is None:
+        raise Http404("Customer not found.")
+    subscription = selectors.get_subscription_for_customer(subscription_id, customer)
+    if subscription is None:
+        raise Http404("Subscription not found.")  # also covers cross-tenant ids
+
+    form = crm_forms.ExtendSubscriptionForm(request.POST)
+    if form.is_valid():
+        try:
+            crm_operations.crm_extend_subscription(
+                actor=request.user,
+                organization=customer,
+                subscription=subscription,
+                days=form.cleaned_data["days"],
+                reason=form.cleaned_data["reason"],
+                request=request,
+            )
+            messages.success(request, "Subscription extended.")
+        except ValidationError as exc:
+            messages.error(request, "; ".join(exc.messages))
+    else:
+        messages.error(
+            request,
+            "Could not extend: a positive number of days and a reason are required.",
+        )
+    return redirect("platform_admin:crm:customer_detail", org_id=customer.id)
 
 
 # ── tickets ───────────────────────────────────────────────────────────────────

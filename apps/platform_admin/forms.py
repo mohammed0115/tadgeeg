@@ -86,3 +86,21 @@ class TicketAssignForm(forms.Form):
         if not text:
             raise forms.ValidationError("A reason is required.")
         return text
+
+
+# Operational safety cap: extend by at most ~2 years in one action. A larger
+# change should be a deliberate, repeated action — not a single huge jump.
+MAX_EXTEND_DAYS = 730
+
+
+class ExtendSubscriptionForm(forms.Form):
+    """Whitelisted: only days + reason. Plan/status/quota cannot be touched."""
+
+    days = forms.IntegerField(min_value=1, max_value=MAX_EXTEND_DAYS)
+    reason = forms.CharField(widget=forms.Textarea, max_length=500, required=True)
+
+    def clean_reason(self):
+        text = self.cleaned_data["reason"].strip()
+        if not text:
+            raise forms.ValidationError("A reason is required.")
+        return text

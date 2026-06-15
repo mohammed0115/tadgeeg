@@ -428,6 +428,21 @@ def get_crm_customer_profile(organization_id, *, include_financial: bool = True)
     return profile
 
 
+# ── CRM-1F — subscription lookup scoped to a customer (read-only) ─────────────
+def get_subscription_for_customer(subscription_id, organization):
+    """
+    Return the subscription with ``subscription_id`` ONLY if it belongs to
+    ``organization`` (tenant-scoped — prevents IDOR). None otherwise.
+    """
+    return (
+        OrganizationSubscription.objects.filter(
+            id=_safe_uuid(subscription_id), organization=organization
+        )
+        .select_related("plan")
+        .first()
+    )
+
+
 # ── CRM-1E — assignable staff (read-only) ─────────────────────────────────────
 def get_assignable_crm_staff():
     """

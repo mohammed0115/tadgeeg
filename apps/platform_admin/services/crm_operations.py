@@ -321,3 +321,91 @@ def add_customer_note(
             record_activity=False,
         )
     return customer_note
+
+
+# ── CRM-1F-1B — financial operation: extend subscription ──────────────────────
+# CustomerActivity has no "subscription_extended" enum member; adding one would
+# force a migration (out of scope). We record the literal value (documented
+# technical debt, same approach as ticket_assigned in CRM-1E).
+ACTIVITY_SUBSCRIPTION_EXTENDED = "subscription_extended"
+
+
+def _require_financial_manager(actor):
+    if not perms.can_manage_financial_crm_data(actor):
+        raise PermissionDenied("Financial management permission is required.")
+
+
+def crm_extend_subscription(
+    *,
+    actor,
+    organization,
+    subscription,
+    days,
+    reason,
+    request=None,
+):
+    """
+    CRM wrapper around the official ``billing.extend_subscription`` service.
+
+    The wrapper owns: permission gate (``can_manage_financial_crm_data``),
+    tenant-ownership check, reason requirement, and the AuditLog +
+    CustomerActivity trail. The actual ``ends_at`` change is delegated to the
+    billing service (atomic + row-locked) — this wrapper NEVER writes
+    ``subscription.ends_at`` (or plan/status/quota/payment) directly, creates no
+    PaymentTransaction, and emits no signals.
+
+    Raises ``PermissionDenied`` (unauthorized) or ``ValidationError``
+    (missing reason / bad days / cross-tenant). Returns the updated subscription.
+    """
+    from apps.billing.services.subscription_service import SubscriptionService
+
+    _require_financial_manager(actor)
+
+    reason = (reason or "").strip()
+    if not reason:
+        raise ValidationError("A reason is required to extend a subscription.")
+    if isinstance(days, bool) or not isinstance(days, int):
+        raise ValidationError("days must be a positive integer.")
+    if days <= 0:
+        raise ValidationError("days must be a positive integer.")
+    if subscription.organization_id != organization.id:
+        raise ValidationError("Subscription does not belong to this organization.")
+
+    old_ends_at = subscription.ends_at
+
+    # Outer atomic so the billing extend + audit + activity commit together. The
+    # billing service is itself atomic + select_for_update; nesting here keeps the
+    # row lock held through the audit writes without breaking it.
+    with transaction.atomic():
+        updated = SubscriptionService().extend_subscription(
+            subscription, days=days, reason=reason, actor=actor
+        )
+        new_ends_at = updated.ends_at
+        old_iso = old_ends_at.isoformat() if old_ends_at else None
+        new_iso = new_ends_at.isoformat() if new_ends_at else None
+
+        record_customer_activity(
+            organization=organization,
+            actor=actor,
+            activity_type=ACTIVITY_SUBSCRIPTION_EXTENDED,
+            description=f"Subscription extended by {days} day(s)",
+            metadata={
+                "subscription_id": str(subscription.id),
+                "days": days,
+                "old_ends_at": old_iso,
+                "new_ends_at": new_iso,
+            },
+        )
+        log_crm_action(
+            actor=actor,
+            organization=organization,
+            action_type="subscription_extended",
+            resource_type="OrganizationSubscription",
+            resource_id=subscription.id,
+            reason=reason,
+            old_value={"ends_at": old_iso},
+            new_value={"ends_at": new_iso, "days": days},
+            ip_address=_client_ip(request),
+            record_activity=False,
+        )
+    return updated

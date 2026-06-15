@@ -19,6 +19,12 @@ urlpatterns = [
     path("", views.crm_dashboard, name="dashboard"),
     path("customers/", views.customers_list, name="customers"),
     path("customers/<uuid:org_id>/", views.customer_detail, name="customer_detail"),
+    # Financial operations (CRM-1F-1B) — POST-only
+    path(
+        "customers/<uuid:org_id>/subscription/<uuid:subscription_id>/extend/",
+        views.subscription_extend,
+        name="subscription_extend",
+    ),
     # Tickets — read
     path("tickets/", views.tickets_list, name="tickets"),
     # Tickets — write (CRM-1E). 'new/' must precede '<uuid>/'.

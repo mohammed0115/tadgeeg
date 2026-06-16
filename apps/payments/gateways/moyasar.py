@@ -1,12 +1,13 @@
 """Moyasar adapter.
 
-Moyasar uses a hosted payment-source flow. We create a `Payment` via the
-REST API with ``source[type]=creditcard`` and the customer is redirected
-to ``source.transaction_url`` to complete 3DS. Status is confirmed via
-webhook (HMAC-signed if a webhook secret is configured) or via a
-``GET /payments/<id>`` retrieve.
+Hosted-invoice flow: we create an Invoice via ``POST /v1/invoices`` and the
+customer pays on Moyasar's hosted page (``url``) — card data is entered on
+Moyasar's side and NEVER touches our backend (no ``source``/PAN/CVV). Status
+is confirmed via webhook (HMAC-signed if a webhook secret is configured) or
+via a ``GET /invoices/<id>`` retrieve. The invoice id is stored as the
+transaction's ``provider_payment_id``.
 
-Docs: https://docs.moyasar.com/api-reference/payments
+Docs: https://docs.moyasar.com/api-reference/invoices
 Money handling: Moyasar takes the smallest currency unit (halalas for SAR),
 so 12.50 SAR is sent as 1250.
 """
@@ -79,21 +80,35 @@ class MoyasarGateway(BasePaymentGateway):
     # ------------------------------------------------------------ create
 
     def create_payment(self, transaction) -> GatewayResponse:
+        # Hosted invoice flow: POST /invoices returns a Moyasar-hosted payment
+        # page (``url``) where the customer enters card details on Moyasar's
+        # side. We never collect or forward PAN/CVV — there is deliberately NO
+        # ``source`` object (that is the /payments API, which requires card
+        # data and 400s without it). ``url`` becomes our ``checkout_url``.
         callback = transaction.success_url or self.callback_url
         body = {
             "amount":      self._to_smallest_unit(transaction.amount),
             "currency":    transaction.currency or "SAR",
             "description": f"{transaction.purpose}:{transaction.id}",
-            "callback_url": callback,
             "metadata": {
                 "transaction_id":  str(transaction.id),
                 "organization_id": str(transaction.organization_id),
                 "purpose":         transaction.purpose,
             },
         }
+        # callback_url = where Moyasar sends the customer back after payment.
+        if callback:
+            body["callback_url"] = callback
+        # success_url / back_url are optional Invoices fields — set them only
+        # when the caller provided distinct redirect targets.
+        if transaction.success_url:
+            body["success_url"] = transaction.success_url
+        back_url = getattr(transaction, "cancel_url", "") or ""
+        if back_url:
+            body["back_url"] = back_url
         try:
             r = http_post(
-                f"{self.base_url}/payments",
+                f"{self.base_url}/invoices",
                 json=body, auth=self._auth(), timeout=_TIMEOUT,
             )
         except requests.RequestException as exc:
@@ -101,7 +116,7 @@ class MoyasarGateway(BasePaymentGateway):
 
         if r.status_code >= 400:
             raise GatewayError(
-                f"Moyasar create_payment HTTP {r.status_code}: {r.text[:300]}"
+                f"Moyasar create_invoice HTTP {r.status_code}: {r.text[:300]}"
             )
         data = r.json()
         return self._gateway_response(data)
@@ -109,16 +124,18 @@ class MoyasarGateway(BasePaymentGateway):
     # ---------------------------------------------------------- retrieve
 
     def retrieve_payment(self, provider_payment_id: str) -> GatewayResponse:
+        # provider_payment_id holds the Moyasar invoice id (hosted flow), so we
+        # reconcile status against /invoices/<id>, not /payments/<id>.
         try:
             r = http_get(
-                f"{self.base_url}/payments/{provider_payment_id}",
+                f"{self.base_url}/invoices/{provider_payment_id}",
                 auth=self._auth(), timeout=_TIMEOUT,
             )
         except requests.RequestException as exc:
             raise GatewayError(f"Moyasar retrieve failed: {exc}") from exc
         if r.status_code >= 400:
             raise GatewayError(
-                f"Moyasar retrieve_payment HTTP {r.status_code}: {r.text[:300]}"
+                f"Moyasar retrieve_invoice HTTP {r.status_code}: {r.text[:300]}"
             )
         return self._gateway_response(r.json())
 
@@ -151,9 +168,14 @@ class MoyasarGateway(BasePaymentGateway):
             raise WebhookVerificationError(f"Invalid webhook body: {exc}") from exc
         data = payload.get("data") or payload
         provider_status = (data.get("status") or "").lower()
+        # Hosted-invoice flow: we store the INVOICE id as provider_payment_id.
+        # A webhook may arrive as the invoice object (``id`` == invoice id) or
+        # as a payment object that references its invoice via ``invoice_id`` —
+        # match on invoice_id first so both shapes resolve to our transaction.
+        provider_payment_id = str(data.get("invoice_id") or data.get("id") or "")
         return WebhookEvent(
             provider=self.PROVIDER,
-            provider_payment_id=str(data.get("id") or ""),
+            provider_payment_id=provider_payment_id,
             status=self.map_provider_status(provider_status),
             amount=self._from_smallest_unit(data.get("amount")),
             currency=data.get("currency"),

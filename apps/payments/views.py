@@ -79,9 +79,14 @@ class CreatePaymentView(APIView):
             )
         except PaymentValidationError as exc:
             return Response({"detail": str(exc)}, status=drf_status.HTTP_400_BAD_REQUEST)
-        except GatewayError as exc:
+        except GatewayError:
+            # Technical detail (incl. raw provider response) is kept in logs and
+            # the PaymentLog 'failed' row — never surfaced to the end user.
             logger.exception("Gateway error creating payment")
-            return Response({"detail": str(exc)}, status=drf_status.HTTP_502_BAD_GATEWAY)
+            return Response(
+                {"detail": "تعذر إنشاء عملية الدفع، يرجى المحاولة لاحقًا."},
+                status=drf_status.HTTP_502_BAD_GATEWAY,
+            )
 
         out = CreatePaymentResponseSerializer({
             "transaction_id": txn.id,

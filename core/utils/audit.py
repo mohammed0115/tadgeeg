@@ -16,6 +16,8 @@ Both callers now import from here.
 
 import logging
 
+from django.db import transaction
+
 from core.utils.coerce import get_client_ip
 
 logger = logging.getLogger("finai")
@@ -25,16 +27,23 @@ def log_action(request, action: str, resource_type: str = "", resource_id: str =
     """Log an auditable action to the AuditLog model."""
     try:
         from apps.authentication.models import AuditLog
-        AuditLog.objects.create(
-            user=request.user if request.user.is_authenticated else None,
-            organization=getattr(request.user, "organization", None),
-            action=action,
-            resource_type=resource_type,
-            resource_id=resource_id,
-            ip_address=get_client_ip(request),
-            user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
-            details=details or {},
-        )
+        # Savepoint: this is a best-effort write that may run inside a caller's
+        # transaction.atomic() block. Without it, a DB failure here (e.g. a
+        # deadlock) would abort the whole transaction and the next query would
+        # raise the generic "can't execute queries until the end of the 'atomic'
+        # block", masking the real error. The savepoint rolls back only this
+        # insert so the outer transaction stays usable.
+        with transaction.atomic():
+            AuditLog.objects.create(
+                user=request.user if request.user.is_authenticated else None,
+                organization=getattr(request.user, "organization", None),
+                action=action,
+                resource_type=resource_type,
+                resource_id=resource_id,
+                ip_address=get_client_ip(request),
+                user_agent=request.META.get("HTTP_USER_AGENT", "")[:500],
+                details=details or {},
+            )
     except Exception as e:
         logger.warning("Failed to log audit action %s: %s", action, e)
 
@@ -70,15 +79,21 @@ def record_invoice_event(
 
         ip = get_client_ip(request) if request else None
 
-        InvoiceAuditEvent.objects.create(
-            invoice=invoice,
-            user=user,
-            event_type=event_type,
-            description=description,
-            before_data=before or {},
-            after_data=after or {},
-            ip_address=ip,
-        )
+        # Savepoint: the invoice trail is best-effort and the InvoiceAuditEvent
+        # hash-chain pre_save can deadlock under concurrent uploads (MySQL 1213).
+        # Isolating the insert in a savepoint means such a failure rolls back
+        # only this event — the outer upload transaction stays usable and the
+        # upload succeeds instead of dying with a masked TransactionManagementError.
+        with transaction.atomic():
+            InvoiceAuditEvent.objects.create(
+                invoice=invoice,
+                user=user,
+                event_type=event_type,
+                description=description,
+                before_data=before or {},
+                after_data=after or {},
+                ip_address=ip,
+            )
     except Exception as exc:
         logger.warning(
             "Failed to record invoice audit event %s for invoice %s: %s",

@@ -1,0 +1,117 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+{% block page_title %}{{ ticket.title }}{% endblock %}
+
+{% block content %}
+{% include "platform_admin/crm/_nav.html" %}
+
+<a href="{% url 'platform_admin:crm:tickets' %}" class="mb-4 inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800">
+  <i data-lucide="arrow-left" class="h-4 w-4"></i> {% trans "Back to tickets" %}
+</a>
+
+{# ── Flash messages ──────────────────────────────────────────────────────── #}
+{% if messages %}
+  <div class="mb-4 space-y-2">
+    {% for m in messages %}
+      <div class="rounded-xl px-4 py-2 text-sm {% if m.tags == 'error' %}bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-200{% else %}bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200{% endif %}">{{ m }}</div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<section class="platform-card p-5">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div class="min-w-0">
+      <h2 class="text-lg font-bold text-slate-900 dark:text-white">{{ ticket.title }}</h2>
+      <a href="{% url 'platform_admin:crm:customer_detail' ticket.organization.id %}" class="text-sm text-platform-600 hover:underline">{{ ticket.organization.name }}</a>
+    </div>
+    <div class="flex flex-wrap gap-2">
+      {% include "platform_admin/crm/_badges.html" with ticket_priority=ticket.priority priority_label=ticket.get_priority_display %}
+      {% include "platform_admin/crm/_badges.html" with ticket_status=ticket.status status_label=ticket.get_status_display %}
+    </div>
+  </div>
+  <dl class="mt-4 grid grid-cols-2 gap-4 text-sm lg:grid-cols-4">
+    <div><dt class="text-xs text-slate-500">{% trans "Category" %}</dt><dd class="font-semibold text-slate-800 dark:text-slate-100">{{ ticket.get_category_display }}</dd></div>
+    <div><dt class="text-xs text-slate-500">{% trans "Assigned to" %}</dt><dd class="font-semibold text-slate-800 dark:text-slate-100">{{ ticket.assigned_to.email|default:"—" }}</dd></div>
+    <div><dt class="text-xs text-slate-500">{% trans "Created" %}</dt><dd class="font-semibold text-slate-800 dark:text-slate-100">{{ ticket.created_at|date:"Y-m-d H:i" }}</dd></div>
+    <div><dt class="text-xs text-slate-500">{% trans "Resolved" %}</dt><dd class="font-semibold text-slate-800 dark:text-slate-100">{{ ticket.resolved_at|date:"Y-m-d H:i"|default:"—" }}</dd></div>
+  </dl>
+  <div class="mt-4">
+    <dt class="text-xs text-slate-500">{% trans "Description" %}</dt>
+    <p class="mt-1 whitespace-pre-line text-sm text-slate-700 dark:text-slate-200">{{ ticket.description }}</p>
+  </div>
+</section>
+
+{# ── Manager actions: status + assign (CRM-1E, can_manage only) ──────────── #}
+{% if can_manage %}
+<div class="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+  <section class="platform-card p-4">
+    <h3 class="mb-3 text-sm font-bold text-slate-900 dark:text-white">{% trans "Change Status" %}</h3>
+    <form method="post" action="{% url 'platform_admin:crm:ticket_status' ticket.id %}" class="space-y-3">
+      {% csrf_token %}
+      <select name="status" class="select w-full" required>
+        {% for value, label in status_choices %}<option value="{{ value }}" {% if value == ticket.status %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+      <textarea name="reason" rows="2" class="input" placeholder="{% trans 'Reason (required)' %}" required></textarea>
+      <button type="submit" class="btn-primary">{% trans "Update status" %}</button>
+    </form>
+  </section>
+
+  <section class="platform-card p-4">
+    <h3 class="mb-3 text-sm font-bold text-slate-900 dark:text-white">{% trans "Assign" %}</h3>
+    <form method="post" action="{% url 'platform_admin:crm:ticket_assign' ticket.id %}" class="space-y-3">
+      {% csrf_token %}
+      <select name="assigned_to" class="select w-full">
+        <option value="">{% trans "Unassigned" %}</option>
+        {% for u in assignable_staff %}<option value="{{ u.id }}" {% if u.id == ticket.assigned_to_id %}selected{% endif %}>{{ u.full_name|default:u.email }} ({{ u.email }})</option>{% endfor %}
+      </select>
+      <textarea name="reason" rows="2" class="input" placeholder="{% trans 'Reason (required)' %}" required></textarea>
+      <button type="submit" class="btn-primary">{% trans "Update assignment" %}</button>
+    </form>
+  </section>
+</div>
+{% endif %}
+
+{# ── Conversation ────────────────────────────────────────────────────────── #}
+<section class="platform-card mt-6 p-4">
+  <h3 class="mb-3 text-sm font-bold text-slate-900 dark:text-white">{% trans "Conversation" %}</h3>
+  {% for m in ticket_messages %}
+    <div class="border-t border-slate-100 py-3 first:border-t-0 dark:border-slate-800">
+      <div class="flex items-center justify-between gap-2">
+        <span class="text-sm font-semibold text-slate-800 dark:text-slate-100">{{ m.sender.email|default:"—" }}</span>
+        <div class="flex items-center gap-2">
+          {% if m.internal_only %}<span class="badge badge-amber">{% trans "Internal" %}</span>{% endif %}
+          <span class="text-xs text-slate-400">{{ m.created_at|date:"Y-m-d H:i" }}</span>
+        </div>
+      </div>
+      <p class="mt-1 whitespace-pre-line text-sm text-slate-700 dark:text-slate-200">{{ m.message }}</p>
+    </div>
+  {% empty %}<p class="py-6 text-center text-sm text-slate-400">{% trans "No messages on this ticket." %}</p>{% endfor %}
+
+  {# Reply form (can_manage only) #}
+  {% if can_manage %}
+  <form method="post" action="{% url 'platform_admin:crm:ticket_message' ticket.id %}" class="mt-4 space-y-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+    {% csrf_token %}
+    <textarea name="message" rows="3" class="input" placeholder="{% trans 'Write a reply…' %}" required></textarea>
+    <div class="flex items-center justify-between gap-3">
+      <label class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+        <input type="checkbox" name="internal_only" class="rounded border-slate-300"> {% trans "Internal only (not visible to customer)" %}
+      </label>
+      <button type="submit" class="btn-primary">{% trans "Add message" %}</button>
+    </div>
+  </form>
+  {% endif %}
+</section>
+
+{# ── Audit trail ─────────────────────────────────────────────────────────── #}
+<section class="platform-card mt-6 p-4">
+  <h3 class="mb-3 text-sm font-bold text-slate-900 dark:text-white">{% trans "Audit Trail" %}</h3>
+  {% for log in audits %}
+    <div class="flex items-center justify-between gap-3 border-t border-slate-100 py-2 first:border-t-0 dark:border-slate-800">
+      <span class="truncate text-sm text-slate-700 dark:text-slate-200">{{ log.details.action_type|default:log.get_action_display }}{% if log.details.reason %} — {{ log.details.reason }}{% endif %}</span>
+      <span class="shrink-0 text-xs text-slate-400">{{ log.user.email|default:"—" }} · {{ log.timestamp|date:"Y-m-d H:i" }}</span>
+    </div>
+  {% empty %}<p class="py-6 text-center text-sm text-slate-400">{% trans "No audit entries." %}</p>{% endfor %}
+</section>
+{% endblock %}
+
+{% block extra_js %}<script>window.lucide?.createIcons();</script>{% endblock %}

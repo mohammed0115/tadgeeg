@@ -65,10 +65,31 @@ START_TIME=$(date +%s)
 # ── 1. Git pull ────────────────────────────────────────────────────────────────
 log "1/4  Pulling latest code from origin/$BRANCH ..."
 cd "$PROJECT_ROOT"
+
+# Safety net: preserve env files across the git reset. They are gitignored
+# today, but git reset --hard would still wipe them if a future commit ever
+# accidentally tracks them. Snapshot to a temp dir and restore byte-for-byte
+# after the reset so secrets survive every redeploy.
+ENV_BACKUP_DIR="$(mktemp -d -t finai-env-backup-XXXXXX)"
+trap 'rm -rf "$ENV_BACKUP_DIR"' EXIT
+shopt -s nullglob
+for env_file in "$SCRIPT_DIR"/env/*.env; do
+  cp -p "$env_file" "$ENV_BACKUP_DIR/$(basename "$env_file")"
+  ok "Backed up $(basename "$env_file")"
+done
+shopt -u nullglob
+
 git fetch origin "$BRANCH"
 git reset --hard "origin/$BRANCH"
 COMMIT=$(git log -1 --format="%h — %s (%ar)")
 ok "HEAD: $COMMIT"
+
+# Restore env files in case the reset removed or modified them.
+for backup in "$ENV_BACKUP_DIR"/*.env; do
+  [ -e "$backup" ] || continue
+  cp -p "$backup" "$SCRIPT_DIR/env/$(basename "$backup")"
+  ok "Restored $(basename "$backup")"
+done
 
 # ── 2. Ensure env files and nginx config exist ────────────────────────────────
 log "2/4  Preparing runtime directories and config ..."

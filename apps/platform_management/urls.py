@@ -1,6 +1,6 @@
 """URL entrypoints for the internal Get Solution platform console."""
 
-from django.urls import path
+from django.urls import include, path
 
 from . import views
 
@@ -8,6 +8,8 @@ app_name = "platform_admin"
 
 urlpatterns = [
     path("", views.dashboard, name="dashboard"),
+    # CRM-1C: read-only Platform CRM shell → namespace platform_admin:crm
+    path("crm/", include("apps.platform_admin.crm_urls")),
     path("organizations/", views.organizations, name="organizations"),
     path("cms/", views.cms_pages, name="cms_pages"),
     path("homepage/", views.homepage_editor, name="homepage"),

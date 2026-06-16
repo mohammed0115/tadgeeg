@@ -1,0 +1,71 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+{% block page_title %}{% trans "New Ticket" %}{% endblock %}
+
+{% block content %}
+{% include "platform_admin/crm/_nav.html" %}
+
+<a href="{% url 'platform_admin:crm:tickets' %}" class="mb-4 inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800">
+  <i data-lucide="arrow-left" class="h-4 w-4"></i> {% trans "Back to tickets" %}
+</a>
+
+<section class="platform-card mx-auto max-w-2xl p-5">
+  <h2 class="mb-4 text-lg font-bold text-slate-900 dark:text-white">{% trans "Create Support Ticket" %}</h2>
+
+  {% if form.non_field_errors %}
+    <div class="mb-4 rounded-xl bg-red-50 px-4 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-200">
+      {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+    </div>
+  {% endif %}
+
+  <form method="post" action="{% url 'platform_admin:crm:ticket_create' %}" class="space-y-4">
+    {% csrf_token %}
+
+    <div>
+      <label class="mb-1 block text-xs font-medium text-slate-500">{% trans "Customer" %}</label>
+      {{ form.organization }}
+      {% if form.organization.errors %}<p class="mt-1 text-xs text-red-600">{{ form.organization.errors|striptags }}</p>{% endif %}
+    </div>
+
+    <div>
+      <label class="mb-1 block text-xs font-medium text-slate-500">{% trans "Title" %}</label>
+      <input type="text" name="title" value="{{ form.title.value|default:'' }}" class="input" required>
+      {% if form.title.errors %}<p class="mt-1 text-xs text-red-600">{{ form.title.errors|striptags }}</p>{% endif %}
+    </div>
+
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div>
+        <label class="mb-1 block text-xs font-medium text-slate-500">{% trans "Category" %}</label>
+        <select name="category" class="select w-full">
+          {% for value, label in form.fields.category.choices %}<option value="{{ value }}" {% if form.category.value == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="mb-1 block text-xs font-medium text-slate-500">{% trans "Priority" %}</label>
+        <select name="priority" class="select w-full">
+          {% for value, label in form.fields.priority.choices %}<option value="{{ value }}" {% if form.priority.value == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div>
+      <label class="mb-1 block text-xs font-medium text-slate-500">{% trans "Assign to (optional)" %}</label>
+      {{ form.assigned_to }}
+      <p class="mt-1 text-xs text-slate-400">{% trans "Only platform CRM staff can be assigned." %}</p>
+    </div>
+
+    <div>
+      <label class="mb-1 block text-xs font-medium text-slate-500">{% trans "Description" %}</label>
+      <textarea name="description" rows="5" class="input" required>{{ form.description.value|default:'' }}</textarea>
+      {% if form.description.errors %}<p class="mt-1 text-xs text-red-600">{{ form.description.errors|striptags }}</p>{% endif %}
+    </div>
+
+    <div class="flex items-center justify-end gap-2 pt-2">
+      <a href="{% url 'platform_admin:crm:tickets' %}" class="btn-ghost">{% trans "Cancel" %}</a>
+      <button type="submit" class="btn-primary">{% trans "Create ticket" %}</button>
+    </div>
+  </form>
+</section>
+{% endblock %}
+
+{% block extra_js %}<script>window.lucide?.createIcons();</script>{% endblock %}

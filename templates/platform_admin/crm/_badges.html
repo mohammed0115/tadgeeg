@@ -1,0 +1,19 @@
+{% load i18n %}
+{% comment %}
+Status / priority badge helpers, included with `with` to set `value`/`label`.
+Usage:
+  {% include "platform_admin/crm/_badges.html" with ticket_status=t.status status_label=t.get_status_display %}
+  {% include "platform_admin/crm/_badges.html" with ticket_priority=t.priority priority_label=t.get_priority_display %}
+{% endcomment %}
+{% if ticket_status is not None %}
+  {% if ticket_status == 'open' %}<span class="badge badge-indigo">{{ status_label }}</span>
+  {% elif ticket_status == 'pending_customer' or ticket_status == 'pending_internal' %}<span class="badge badge-amber">{{ status_label }}</span>
+  {% elif ticket_status == 'resolved' %}<span class="badge badge-green">{{ status_label }}</span>
+  {% else %}<span class="badge badge-slate">{{ status_label }}</span>{% endif %}
+{% endif %}
+{% if ticket_priority is not None %}
+  {% if ticket_priority == 'urgent' %}<span class="badge badge-red">{{ priority_label }}</span>
+  {% elif ticket_priority == 'high' %}<span class="badge badge-amber">{{ priority_label }}</span>
+  {% elif ticket_priority == 'medium' %}<span class="badge badge-indigo">{{ priority_label }}</span>
+  {% else %}<span class="badge badge-slate">{{ priority_label }}</span>{% endif %}
+{% endif %}

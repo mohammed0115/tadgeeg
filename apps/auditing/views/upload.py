@@ -6,6 +6,7 @@ import os
 import zipfile
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views import View
 
@@ -42,8 +43,27 @@ class AuditDocumentUploadView(LoginRequiredMixin, View):
         })
 
     def post(self, request):
+        is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
         form = AuditDocumentUploadForm(request.POST, request.FILES)
         if not form.is_valid():
+            # Surface the real validation error (bad extension, oversized,
+            # empty/missing file, …) to AJAX clients as JSON instead of a
+            # 200 HTML page the widget can only show as a generic failure.
+            if is_ajax:
+                flat_errors = [
+                    f"{field}: {err}" if field != "__all__" else str(err)
+                    for field, errs in form.errors.items()
+                    for err in errs
+                ]
+                return JsonResponse(
+                    {
+                        "success": False,
+                        "error": flat_errors[0] if flat_errors else "Invalid upload.",
+                        "errors": flat_errors,
+                    },
+                    status=400,
+                )
             recent = DocumentSelector.get_user_documents(request.user)[:5]
             return render(request, self.template_name, {"form": form, "recent": recent})
 
@@ -72,6 +92,10 @@ class AuditDocumentUploadView(LoginRequiredMixin, View):
                         processing_errors.append(
                             f"No processable files found inside {f.name}"
                         )
+                    else:
+                        for zr in zip_results:
+                            if not zr.success and zr.error:
+                                processing_errors.append(f"{f.name}: {zr.error}")
                 else:
                     f.seek(0)
                     result = router.route(
@@ -82,6 +106,14 @@ class AuditDocumentUploadView(LoginRequiredMixin, View):
                         organization=getattr(request.user, "organization", None),
                     )
                     results.append(result)
+
+                    # Surface the real backend error instead of swallowing it.
+                    # Without this, a routed failure (no organisation, invalid
+                    # type, parser/OCR crash, processing exception, …) left
+                    # processing_errors empty and the user only saw the generic
+                    # "upload failed" message.
+                    if not result.success and result.error:
+                        processing_errors.append(f"{f.name}: {result.error}")
             except Exception as exc:
                 logger.exception("Upload processing error for %s: %s", f.name, exc)
                 processing_errors.append(f"Failed to process {f.name}: {str(exc)[:200]}")
@@ -91,13 +123,32 @@ class AuditDocumentUploadView(LoginRequiredMixin, View):
         if successful:
             return redirect(successful[0].result_url)
 
-        # All failed — return with clear error message
+        # All failed — surface the real cause. Fall back to any failed result's
+        # error if no processing_errors were collected (defensive).
         recent = DocumentSelector.get_user_documents(request.user)[:5]
-        error_msg = (
-            processing_errors[0]
-            if processing_errors
-            else "Upload failed. Please check your files and try again."
-        )
+        if processing_errors:
+            error_msg = processing_errors[0]
+        else:
+            failed_errors = [r.error for r in results if not r.success and r.error]
+            error_msg = (
+                failed_errors[0]
+                if failed_errors
+                else "Upload failed. Please check your files and try again."
+            )
+
+        # AJAX clients (the upload widgets) expect JSON so they can display the
+        # actual error. Return HTTP 400 instead of a 200 HTML page so fetch()
+        # treats it as a failure and reads payload.error.
+        if is_ajax:
+            return JsonResponse(
+                {
+                    "success": False,
+                    "error": error_msg,
+                    "errors": processing_errors,
+                },
+                status=400,
+            )
+
         return render(request, self.template_name, {
             "form": form,
             "recent": recent,

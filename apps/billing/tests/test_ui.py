@@ -211,12 +211,16 @@ class UsagePageTests(TestCase):
 
     def test_usage_page_pagination_when_many_rows(self):
         self._seed_ledger(60)
-        r = self.client.get(reverse("billing:usage") + "?page=1")
+        # Force English so the assertion isn't locale-dependent — matches the
+        # established pattern used by test_usage_empty_state in this class.
+        r = self.client.get(
+            reverse("billing:usage") + "?page=1", HTTP_ACCEPT_LANGUAGE="en"
+        )
         self.assertEqual(r.status_code, 200)
         html = r.content.decode("utf-8")
         # PAGE_SIZE=25 → 3 pages for 60 rows.
         self.assertIn("Page 1 of 3", html)
-        # Page 2 link rendered.
+        # Page 2 link rendered (language-independent).
         self.assertIn("?page=2", html)
 
     def test_usage_empty_state(self):

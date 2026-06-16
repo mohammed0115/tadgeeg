@@ -15,6 +15,8 @@ from django.utils import timezone
 
 from apps.payments.choices import (
     PAID_STATUSES,
+    PaymentProvider,
+    PaymentPurpose,
     PaymentStatus,
     TERMINAL_STATUSES,
 )
@@ -170,6 +172,139 @@ class PaymentService:
             message="Gateway create_payment succeeded",
             payload=response.as_dict(),
         )
+        return txn
+
+    # ------------------------------------------------ manual (offline) payment
+
+    def create_manual_payment(
+        self,
+        *,
+        organization,
+        user,
+        subscription,
+        amount,
+        currency: str,
+        reference: str,
+        reason: Optional[str] = None,
+        request=None,
+    ) -> PaymentTransaction:
+        """Create a PENDING manual (offline/bank-transfer) payment for a
+        subscription — with NO gateway call, NO signal, and NO activation.
+
+        Confirmation is a separate later step (``mark_paid``), which runs the
+        existing payment_paid → subscription-activation signal chain. This
+        method only records the intended payment in PENDING state.
+
+        Guards (raise ``PaymentValidationError``):
+          * subscription must belong to ``organization``;
+          * subscription.status must be PENDING_PAYMENT (not active/trialing/
+            expired/canceled/payment_failed);
+          * the org must have NO other usable (active/trialing) subscription —
+            prevents a double-active subscription on later confirm;
+          * ``amount`` must equal the plan price; ``currency`` must match the
+            plan currency; ``reference`` is required.
+
+        Idempotent per subscription via ``idempotency_key=manual-sub-<id>``:
+        a second attempt is rejected (one manual payment per subscription).
+        """
+        from apps.billing.choices import USABLE_STATUSES, SubscriptionStatus
+        from apps.billing.models import OrganizationSubscription
+
+        # ownership
+        if subscription.organization_id != getattr(organization, "id", None):
+            raise PaymentValidationError(
+                "Subscription does not belong to this organization."
+            )
+        # only a pending-payment subscription
+        if subscription.status != SubscriptionStatus.PENDING_PAYMENT:
+            raise PaymentValidationError(
+                f"Manual payment is only allowed for a pending_payment "
+                f"subscription (got {subscription.status!r})."
+            )
+        # double-active guard: no OTHER usable subscription
+        if (
+            OrganizationSubscription.objects
+            .filter(
+                organization_id=subscription.organization_id,
+                status__in=USABLE_STATUSES,
+            )
+            .exclude(pk=subscription.pk)
+            .exists()
+        ):
+            raise PaymentValidationError(
+                "Organization already has a usable subscription; a manual "
+                "payment would create a second active subscription."
+            )
+        # reference required
+        reference = (reference or "").strip()
+        if not reference:
+            raise PaymentValidationError(
+                "A payment reference is required for manual payments."
+            )
+        # amount must equal the authoritative plan price
+        plan = subscription.plan
+        amount = _coerce_amount(amount).quantize(Decimal("0.01"))
+        authoritative = Decimal(plan.price).quantize(Decimal("0.01"))
+        if amount != authoritative:
+            raise PaymentValidationError(
+                f"Manual amount {amount} does not match the plan price "
+                f"{authoritative}."
+            )
+        # currency must match the plan currency
+        currency = (currency or "").upper()
+        plan_currency = (plan.currency or "SAR").upper()
+        if currency != plan_currency:
+            raise PaymentValidationError(
+                f"Currency {currency!r} does not match the plan currency "
+                f"{plan_currency!r}."
+            )
+
+        # idempotency: one manual payment per subscription
+        idem = f"manual-sub-{subscription.id}"
+        if PaymentTransaction.objects.filter(
+            idempotency_key=idem,
+            organization_id=subscription.organization_id,
+        ).exists():
+            raise PaymentValidationError(
+                "A manual payment already exists for this subscription."
+            )
+
+        request_ip = None
+        if request is not None:
+            from core.utils.coerce import get_client_ip
+            request_ip = get_client_ip(request)
+
+        with db_transaction.atomic():
+            txn = PaymentTransaction.objects.create(
+                organization=subscription.organization,
+                user=user,
+                provider=PaymentProvider.MANUAL.value,
+                purpose=PaymentPurpose.SUBSCRIPTION.value,
+                reference_type="organization_subscription",
+                reference_id=str(subscription.id),
+                amount=authoritative,
+                currency=plan_currency,
+                status=PaymentStatus.PENDING,
+                provider_reference=reference,   # the bank/transfer reference
+                idempotency_key=idem,
+                request_ip=request_ip,
+                # raw_request / raw_response / raw_webhook / checkout_url /
+                # provider_payment_id are intentionally left at their empty
+                # defaults — there is no gateway and no secrets to store.
+            )
+            PaymentLog.objects.create(
+                transaction=txn,
+                event_type="manual_created",
+                status_before="",
+                status_after=txn.status,
+                message=f"Manual payment created (reference={reference})",
+                payload={
+                    "source": "crm_manual",
+                    "reference": reference,
+                    "reason": (reason or "").strip() or None,
+                    "user_id": str(getattr(user, "id", "") or "") or None,
+                },
+            )
         return txn
 
     # ------------------------------------------------ state transitions

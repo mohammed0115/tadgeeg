@@ -407,9 +407,19 @@
             return;
           }
 
-          // Non-redirected response means the form re-rendered with errors.
+          // Non-redirected response means the upload failed. The backend
+          // returns JSON (HTTP 400) with the real cause — surface it instead
+          // of the generic message so the user knows what actually went wrong.
+          let payload = null;
+          try {
+            payload = await response.json();
+          } catch (e) {
+            payload = null;
+          }
           this.resultType = 'error';
-          this.result = '{% trans "Upload failed. Please check your files and try again." %}';
+          this.result = (payload && payload.error)
+            ? payload.error
+            : '{% trans "Upload failed. Please check your files and try again." %}';
         } catch (e) {
           clearInterval(progressInterval);
           this.resultType = 'error';

@@ -24,6 +24,7 @@ process_zip(zip_file, org, user, batch, request, audit_session)
 """
 from __future__ import annotations
 
+import functools
 import io
 import json
 import logging
@@ -239,10 +240,16 @@ def process_single_file(
             mime_type=getattr(file_obj, "content_type", "") or "",
             extracted_data={"file_hash": file_hash},
         )
-        record_invoice_event(
+        # Deferred to on_commit: the InvoiceAuditEvent hash-chain takes a
+        # SELECT … FOR UPDATE on the org's chain head. Recording it inline would
+        # hold that row lock for the whole ~17s upload (AI calls included) and
+        # deadlock concurrent uploads to the same org (MySQL 1213). Firing after
+        # commit holds the lock for milliseconds in its own short transaction.
+        transaction.on_commit(functools.partial(
+            record_invoice_event,
             invoice, user, InvoiceAuditEvent.EventType.UPLOADED,
             f"Uploaded: {filename}", request=request,
-        )
+        ))
 
         file_path = invoice.file.path
 
@@ -265,11 +272,12 @@ def process_single_file(
         # ── Step 4: OCR confidence (extraction done inside parser) ────────────
         raw_text = ingestion.raw_text
         ocr_confidence = float(ingestion.metadata.get("ocr_confidence", 0.0))
-        record_invoice_event(
+        transaction.on_commit(functools.partial(
+            record_invoice_event,
             invoice, user, InvoiceAuditEvent.EventType.PROCESSED,
             f"Parser: {ingestion.extraction_method} | OCR confidence: {ocr_confidence:.0f}%",
             request=request,
-        )
+        ))
 
         # ── Step 5: AI extraction (GPT-4o) ────────────────────────────────────
         if ext == ".pdf":
@@ -283,8 +291,14 @@ def process_single_file(
 
         try:
             from core.services.ai_budget import org_context
-            with org_context(org.id if org else None):
-                ai_data = extract_invoice_with_ai(img_for_ai, raw_text)
+            # Savepoint: the budget guard writes to the DB-backed cache, so a DB
+            # failure here must not poison the outer transaction — otherwise the
+            # next query (invoice.save() below) raises the generic
+            # "can't execute queries until the end of the 'atomic' block" and
+            # masks the real error.
+            with transaction.atomic():
+                with org_context(org.id if org else None):
+                    ai_data = extract_invoice_with_ai(img_for_ai, raw_text)
         except Exception as exc:
             logger.warning("OpenAI extraction failed for %s: %s", filename, exc)
             from core.services.invoice_ai_service import _fallback_extraction
@@ -396,14 +410,17 @@ def process_single_file(
         from django.conf import settings as _settings
         if not getattr(_settings, "USE_NEW_RULE_ENGINE", True):
             try:
-                run_audit(
-                    analysis.to_dict(),
-                    organization_id=org.id,
-                    invoice_id=invoice.id,
-                    persist=True,
-                    invoice=invoice,
-                    created_by=user,
-                )
+                # Savepoint: legacy audit persists findings; isolate its failure
+                # so it can't abort the outer invoice-creation transaction.
+                with transaction.atomic():
+                    run_audit(
+                        analysis.to_dict(),
+                        organization_id=org.id,
+                        invoice_id=invoice.id,
+                        persist=True,
+                        invoice=invoice,
+                        created_by=user,
+                    )
             except Exception as exc:
                 logger.warning("Legacy audit engine failed for %s: %s", filename, exc)
 
@@ -475,19 +492,23 @@ def process_single_file(
             created_by=user,
         )
 
-        record_invoice_event(
+        transaction.on_commit(functools.partial(
+            record_invoice_event,
             invoice, user, InvoiceAuditEvent.EventType.VALIDATED,
             f"Validation: {val_result['validation_score']:.0f}% | Failed: {val_result['failed_rule_codes']}",
             request=request,
-        )
+        ))
 
         # ── Step 9: Risk score merge ──────────────────────────────────────────
         vendor_hist = get_vendor_history(org, invoice.vendor_name)
         try:
-            ai_risk = analyze_invoice_risk(
-                {k: v for k, v in invoice.extracted_data.items() if not k.startswith("_")},
-                vendor_hist,
-            )
+            # Savepoint: isolate AI-risk failures so they don't abort the
+            # validation transaction and mask the real error on invoice.save().
+            with transaction.atomic():
+                ai_risk = analyze_invoice_risk(
+                    {k: v for k, v in invoice.extracted_data.items() if not k.startswith("_")},
+                    vendor_hist,
+                )
         except Exception as exc:
             logger.warning("AI risk analysis failed for %s: %s", filename, exc)
             ai_risk = {}

@@ -5,7 +5,7 @@
 <html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>{% block title %}{% trans "Dashboard" %}{% endblock %} | {{ product_name }}</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -84,7 +84,10 @@
     .logo-text { display: flex; flex-direction: column; line-height: 1; }
     .logo-text .ar { font-family: 'Cairo', sans-serif; font-size: 22px; font-weight: 800; color: var(--primary); }
     .logo-text .en { font-family: 'Cairo', sans-serif; font-size: 16px; font-weight: 700; color: var(--primary); margin-top: 2px; }
-    .sidebar-nav { flex: 1; padding: 20px 14px; overflow-y: auto; }
+    .sidebar-nav { flex: 1; padding: 20px 14px; overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+    /* Mobile-only close (X) button inside the drawer header. */
+    .sidebar-close { display: none; margin-inline-start: auto; width: 44px; height: 44px; border: none; background: transparent; color: var(--text-muted); align-items: center; justify-content: center; border-radius: 10px; cursor: pointer; }
+    .sidebar-close:hover { background: var(--bg-soft); color: var(--primary); }
     .nav-group { margin-bottom: 24px; }
     .nav-group-title { font-size: 11px; font-weight: 700; color: var(--text-light); letter-spacing: 0.5px; margin-bottom: 8px; padding: 0 12px; text-transform: uppercase; }
     /* `text-align: start` follows the document direction — right in RTL, left in LTR. */
@@ -170,7 +173,7 @@
     .user-role { font-size: 10px; color: var(--text-muted); }
     .user-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; }
 
-    .menu-toggle { display: none; width: 40px; height: 40px; border-radius: 10px; align-items: center; justify-content: center; color: var(--primary); background: var(--bg-soft); }
+    .menu-toggle { display: none; width: 44px; height: 44px; border-radius: 10px; align-items: center; justify-content: center; color: var(--primary); background: var(--bg-soft); }
 
     /* === Page === */
     .page { flex: 1; padding: 32px; max-width: 100%; overflow-x: hidden; animation: fadeIn 0.5s ease both; }
@@ -288,11 +291,19 @@
         inset-inline-end: -260px;
         transition: inset-inline-end 0.3s ease;
         box-shadow: 0 0 30px rgba(0,0,0,0.1);
+        /* iOS safe areas: notch / status bar, home indicator, landscape insets */
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
       }
       .sidebar.open { inset-inline-end: 0; }
       .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 49; }
       .sidebar-overlay.open { display: block; }
+      .sidebar-close { display: flex; }
       .menu-toggle { display: flex; }
+      /* ≥44px touch targets for every drawer row */
+      .nav-item { min-height: 44px; }
       .topbar { padding: 0 20px; }
       .page { padding: 20px; }
       .user-info { display: none; }
@@ -399,6 +410,9 @@
             <span class="en">{{ product_name }}</span>
           </div>
         </a>
+        <button type="button" class="sidebar-close" onclick="closeSidebar()" aria-label="{% trans 'Close menu' %}">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
       </div>
 
       <nav class="sidebar-nav">
@@ -486,7 +500,7 @@
     <main class="main">
       <header class="topbar">
         <div class="topbar-left">
-          <button class="menu-toggle" onclick="toggleSidebar()">
+          <button class="menu-toggle" onclick="toggleSidebar()" aria-label="{% trans 'Open menu' %}">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
           </button>
           {% block breadcrumb %}
@@ -732,10 +746,50 @@ cookie + session so subsequent pages render in the new language.
   </div>
 
   <script>
-    function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('open');
-      document.getElementById('overlay').classList.toggle('open');
+    function _isMobileViewport() {
+      return window.matchMedia('(max-width: 1024px)').matches;
     }
+    function _applySidebar(open) {
+      const sb = document.getElementById('sidebar');
+      const ov = document.getElementById('overlay');
+      if (!sb) return;
+      sb.classList.toggle('open', open);
+      if (ov) ov.classList.toggle('open', open);
+      // Lock background scroll only while the drawer is open on mobile (prevents
+      // iOS scroll-bleed behind the panel). Desktop is unaffected.
+      document.body.style.overflow = (open && _isMobileViewport()) ? 'hidden' : '';
+    }
+    function toggleSidebar() {
+      const sb = document.getElementById('sidebar');
+      _applySidebar(!(sb && sb.classList.contains('open')));
+    }
+    function closeSidebar() { _applySidebar(false); }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const sb = document.getElementById('sidebar');
+      if (!sb) return;
+      // Close the drawer when a navigation link is tapped (mobile only).
+      sb.addEventListener('click', (e) => {
+        if (_isMobileViewport() && e.target.closest('a')) closeSidebar();
+      });
+      // Swipe-to-close: dominant horizontal swipe toward the drawer's edge.
+      // RTL drawer sits on the right (swipe right → close); LTR on the left.
+      const isRtl = document.documentElement.dir === 'rtl';
+      let sx = 0, sy = 0, tracking = false;
+      sb.addEventListener('touchstart', (e) => {
+        if (!_isMobileViewport() || !sb.classList.contains('open')) { tracking = false; return; }
+        const t = e.changedTouches[0]; sx = t.clientX; sy = t.clientY; tracking = true;
+      }, { passive: true });
+      sb.addEventListener('touchend', (e) => {
+        if (!tracking) return; tracking = false;
+        const t = e.changedTouches[0];
+        const dx = t.clientX - sx, dy = t.clientY - sy;
+        if (Math.abs(dx) < 60 || Math.abs(dx) <= Math.abs(dy)) return;
+        if (isRtl ? dx > 0 : dx < 0) closeSidebar();
+      }, { passive: true });
+      // Reset state when crossing into desktop so the body lock never sticks.
+      window.addEventListener('resize', () => { if (!_isMobileViewport()) closeSidebar(); });
+    });
 
     // Auto-render Lucide icons (used by some pages via data-lucide="icon-name")
     document.addEventListener('DOMContentLoaded', () => {

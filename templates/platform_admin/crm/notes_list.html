@@ -1,0 +1,44 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+{% block page_title %}{% trans "Customer Notes" %}{% endblock %}
+
+{% block content %}
+{% include "platform_admin/crm/_nav.html" %}
+
+<form method="get" class="platform-card mb-4 flex flex-col gap-3 p-4 sm:flex-row sm:items-end">
+  <div class="flex-1">
+    <label class="mb-1 block text-xs font-medium text-slate-500">{% trans "Search" %}</label>
+    <input type="search" name="q" value="{{ filters.q }}" class="input" placeholder="{% trans 'Note text or customer' %}">
+  </div>
+  <div>
+    <label class="mb-1 block text-xs font-medium text-slate-500">{% trans "Category" %}</label>
+    <select name="category" class="select">
+      <option value="">{% trans "All" %}</option>
+      {% for val, label in category_choices %}<option value="{{ val }}" {% if filters.category == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="btn-primary">{% trans "Filter" %}</button>
+</form>
+
+<div class="space-y-3">
+  {% for n in page_obj %}
+    <div class="platform-card p-4">
+      <div class="flex items-center justify-between gap-2">
+        <a href="{% url 'platform_admin:crm:customer_detail' n.organization.id %}" class="text-sm font-semibold text-platform-600 hover:underline">{{ n.organization.name }}</a>
+        <div class="flex items-center gap-2">
+          <span class="badge badge-slate">{{ n.get_category_display }}</span>
+          <span class="text-xs text-slate-400">{{ n.created_at|date:"Y-m-d" }}</span>
+        </div>
+      </div>
+      <p class="mt-2 text-sm text-slate-700 dark:text-slate-200">{{ n.note }}</p>
+      <p class="mt-1 text-xs text-slate-400">{{ n.author.email|default:"—" }}</p>
+    </div>
+  {% empty %}
+    <div class="platform-card p-12 text-center text-slate-400">{% trans "No notes match your filters." %}</div>
+  {% endfor %}
+</div>
+
+{% include "partials/_pagination.html" %}
+{% endblock %}
+
+{% block extra_js %}<script>window.lucide?.createIcons();</script>{% endblock %}

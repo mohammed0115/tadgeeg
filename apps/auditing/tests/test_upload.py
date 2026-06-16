@@ -202,6 +202,147 @@ class AuditDocumentUploadViewTests(TestCase):
                 pass
 
 
+class AuditDocumentUploadErrorSurfacingTests(TestCase):
+    """The real backend error must reach the user instead of the generic
+    "upload failed" message — regression for the swallowed-error bug."""
+
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            email="surfacing@example.com",
+            password="Str0ngP@ssw0rd!",
+            full_name="Surfacing Tester",
+        )
+        self.upload_url = reverse("auditor:upload")
+
+    def _pdf(self):
+        return SimpleUploadedFile(
+            "invoice.pdf", _make_pdf_bytes(), content_type="application/pdf",
+        )
+
+    @patch("apps.auditing.views.upload.DocumentUploadRouter")
+    def test_ajax_failure_returns_400_json_with_real_error(self, mock_router_cls):
+        """AJAX upload where the router fails must return HTTP 400 JSON that
+        contains the actual backend error string."""
+        self.client.force_login(self.user)
+        mock_router_cls.AUTO_DETECT_TYPE = "auto"
+        router = mock_router_cls.return_value
+        router.route.return_value = MagicMock(
+            success=False,
+            error="User has no organization",
+            result_url="/auditor/upload/",
+        )
+
+        response = self.client.post(
+            self.upload_url,
+            {"file": self._pdf(), "selected_doc_type": "invoice", "doc_language": "auto"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response["Content-Type"], "application/json")
+        payload = response.json()
+        self.assertFalse(payload["success"])
+        self.assertIn("User has no organization", payload["error"])
+
+    @patch("apps.auditing.views.upload.DocumentUploadRouter")
+    def test_ajax_failure_is_json_not_generic_html(self, mock_router_cls):
+        """AJAX failure must NOT come back as a 200 HTML page (which the JS
+        could only show as the generic message)."""
+        self.client.force_login(self.user)
+        mock_router_cls.AUTO_DETECT_TYPE = "auto"
+        router = mock_router_cls.return_value
+        router.route.return_value = MagicMock(
+            success=False, error="PDF parser fatal error", result_url="/auditor/upload/",
+        )
+
+        response = self.client.post(
+            self.upload_url,
+            {"file": self._pdf(), "selected_doc_type": "invoice", "doc_language": "auto"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertNotEqual(response.status_code, 200)
+        self.assertNotIn("text/html", response["Content-Type"])
+        # The template must not have been rendered for the AJAX failure path.
+        self.assertEqual(response.templates, [])
+
+    @patch("apps.auditing.views.upload.DocumentUploadRouter")
+    def test_frontend_can_read_backend_error(self, mock_router_cls):
+        """The JSON payload exposes a non-empty `error` the frontend can show."""
+        self.client.force_login(self.user)
+        mock_router_cls.AUTO_DETECT_TYPE = "auto"
+        router = mock_router_cls.return_value
+        router.route.return_value = MagicMock(
+            success=False, error="OCR fallback failure", result_url="/auditor/upload/",
+        )
+
+        response = self.client.post(
+            self.upload_url,
+            {"file": self._pdf(), "selected_doc_type": "invoice", "doc_language": "auto"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        payload = response.json()
+        self.assertTrue(payload["error"])
+        # Error is prefixed with the filename so multi-file uploads are clear.
+        self.assertEqual(payload["error"], "invoice.pdf: OCR fallback failure")
+
+    @patch("apps.auditing.views.upload.DocumentUploadRouter")
+    def test_successful_ajax_upload_still_redirects(self, mock_router_cls):
+        """A successful upload must still redirect to the result/invoice page."""
+        self.client.force_login(self.user)
+        mock_router_cls.AUTO_DETECT_TYPE = "auto"
+        router = mock_router_cls.return_value
+        router.route.return_value = MagicMock(
+            success=True, error=None, result_url="/invoices/abc-123/",
+        )
+
+        response = self.client.post(
+            self.upload_url,
+            {"file": self._pdf(), "selected_doc_type": "invoice", "doc_language": "auto"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+
+        self.assertIn(response.status_code, [301, 302])
+        self.assertIn("/invoices/abc-123/", response["Location"])
+
+    def test_ajax_invalid_extension_returns_400_json(self):
+        """AJAX form-validation failures (bad extension) must also return JSON
+        400 with the real validation error, not a 200 HTML page."""
+        self.client.force_login(self.user)
+        bad = SimpleUploadedFile("doc.docx", b"x", content_type="application/msword")
+        response = self.client.post(
+            self.upload_url,
+            {"file": bad, "selected_doc_type": "invoice", "doc_language": "auto"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response["Content-Type"], "application/json")
+        payload = response.json()
+        self.assertFalse(payload["success"])
+        self.assertIn(".docx", payload["error"])
+
+    @patch("apps.auditing.views.upload.DocumentUploadRouter")
+    def test_non_ajax_failure_still_renders_form_with_error(self, mock_router_cls):
+        """Normal (non-AJAX) form submissions keep the HTML render fallback."""
+        self.client.force_login(self.user)
+        mock_router_cls.AUTO_DETECT_TYPE = "auto"
+        router = mock_router_cls.return_value
+        router.route.return_value = MagicMock(
+            success=False, error="User has no organization", result_url="/auditor/upload/",
+        )
+
+        response = self.client.post(
+            self.upload_url,
+            {"file": self._pdf(), "selected_doc_type": "invoice", "doc_language": "auto"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, "auditing/upload.html")
+        self.assertIn("User has no organization", response.context.get("error"))
+
+
 class AuditDocumentHistoryViewTests(TestCase):
     """Tests for AuditDocumentHistoryView."""
 

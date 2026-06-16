@@ -5,7 +5,7 @@
 <html lang="{{ LANGUAGE_CODE }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}" x-data="shell()" x-init="init()" :class="dark ? 'dark' : ''">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{% block title %}{{ product_name }}{% endblock %} — {{ product_tagline }}</title>
 <meta name="application-name" content="{{ product_name }}">
 <meta name="description" content="{{ product_description }}">
@@ -100,6 +100,27 @@ window.tailwind.refresh?.();
   .app-sidebar {
     background: #0f1729;
     border-left: 1px solid rgba(255,255,255,0.06);
+  }
+
+  /* ── Native mobile-drawer polish ── */
+  /* Momentum scroll + no scroll-chaining to the page behind the drawer.
+     Harmless on desktop, so applied unconditionally. */
+  .app-sidebar > nav {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  /* Mobile-only (drawer mode). Desktop (lg ≥1024px) keeps the 256/72px rail
+     exactly as before — none of this applies there. */
+  @media (max-width: 1023px) {
+    .app-sidebar {
+      /* iOS safe areas: notch / status bar, home indicator, landscape insets */
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-right: env(safe-area-inset-right);
+      padding-left: env(safe-area-inset-left);
+    }
+    /* ≥44px touch target for every tappable row in the drawer */
+    .app-sidebar .nav-item { min-height: 44px; }
   }
 
   /* Sidebar link states */
@@ -340,6 +361,8 @@ window.tailwind.refresh?.();
   <!-- ════════════ SIDEBAR ════════════ -->
   <aside class="app-sidebar fixed inset-y-0 right-0 z-30 flex w-[18.5rem] max-w-[86vw] flex-shrink-0 flex-col overflow-hidden transition-all duration-300 lg:relative lg:inset-auto lg:max-w-none lg:w-auto"
          :class="mobileNavOpen || isDesktop ? 'translate-x-0' : (isRtl ? 'translate-x-full lg:translate-x-0' : '-translate-x-full lg:translate-x-0')"
+         @touchstart.passive="onDrawerTouchStart($event)"
+         @touchend.passive="onDrawerTouchEnd($event)"
          :style="sidebarStyle()">
 
     <!-- Brand -->
@@ -351,8 +374,9 @@ window.tailwind.refresh?.();
       </div>
       <button type="button"
               @click="closeMobileNav()"
-              class="mr-auto inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 hover:text-white lg:hidden">
-        <i data-lucide="x" class="h-4 w-4"></i>
+              aria-label="{% trans 'Close menu' %}"
+              class="mr-auto inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10 hover:text-white lg:hidden">
+        <i data-lucide="x" class="h-5 w-5"></i>
       </button>
     </div>
 
@@ -565,8 +589,9 @@ window.tailwind.refresh?.();
       <div class="min-w-0 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
         <button type="button"
                 @click="openMobileNav()"
-                class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
-          <i data-lucide="menu" class="h-4.5 w-4.5"></i>
+                aria-label="{% trans 'Open menu' %}"
+                class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:hidden dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+          <i data-lucide="menu" class="h-5 w-5"></i>
         </button>
         <div class="min-w-0 flex items-center gap-2 overflow-hidden">
           <span class="truncate font-semibold text-slate-800 dark:text-white text-base">{% block page_title %}{% endblock %}</span>
@@ -654,6 +679,28 @@ function shell() {
     closeMobileNav() {
       this.mobileNavOpen = false;
       document.body.classList.remove('overflow-hidden');
+      this.$nextTick(() => lucide.createIcons());
+    },
+    // ── Swipe-to-close (mobile drawer). Passive listeners, never preventDefault,
+    //    so vertical scrolling inside the drawer is unaffected. ──
+    onDrawerTouchStart(e) {
+      if (this.isDesktop || !this.mobileNavOpen) { this._swipeTracking = false; return; }
+      const t = e.changedTouches[0];
+      this._swipeStartX = t.clientX;
+      this._swipeStartY = t.clientY;
+      this._swipeTracking = true;
+    },
+    onDrawerTouchEnd(e) {
+      if (!this._swipeTracking) return;
+      this._swipeTracking = false;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - this._swipeStartX;
+      const dy = t.clientY - this._swipeStartY;
+      // Only a dominant horizontal swipe past the threshold counts.
+      if (Math.abs(dx) < 60 || Math.abs(dx) <= Math.abs(dy)) return;
+      // Drawer is anchored on the right in RTL (close = swipe right, dx>0),
+      // on the left in LTR (close = swipe left, dx<0).
+      if (this.isRtl ? dx > 0 : dx < 0) this.closeMobileNav();
     },
     toggleSidebar() {
       this.desktopSidebarOpen = !this.desktopSidebarOpen;

@@ -44,7 +44,7 @@ pyasn1==0.6.3
 pyasn1_modules==0.4.2
 pydantic==2.12.5
 pydantic_core==2.41.5
-PyJWT==2.12.1
+PyJWT==2.13.0
 PyMuPDF==1.27.2
 pypng==0.20220715.0
 pytesseract==0.3.13

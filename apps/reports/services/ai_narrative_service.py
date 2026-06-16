@@ -129,14 +129,24 @@ def build_ai_narrative(
     type_label: str,
     type_singular: str,
     language: str = "ar",
+    organization=None,
 ) -> dict | None:
     """Return an LLM-synthesized narrative, or None to signal "fall back".
 
     Never raises. Caches successful results for 7 days keyed by the findings
     payload + language, so re-renders of the same report are free.
+
+    When ``organization`` is supplied, the AI cost guard runs first: a denied
+    org (suspended / unsubscribed / over daily token budget) returns None and
+    the caller keeps its deterministic narrative — no OpenAI spend.
     """
     if not findings_register or not findings_register.get("findings"):
         return None  # nothing to synthesize — caller's deterministic path is fine
+    if organization is not None:
+        from apps.billing.ai_access import ai_access_allowed
+        if not ai_access_allowed(organization, projected_tokens=_MAX_TOKENS):
+            logger.info("ai_narrative_service: AI access denied for org — falling back")
+            return None
     api_key = _api_key()
     if not api_key:
         logger.info("ai_narrative_service: OPENAI_API_KEY not set — skipping synthesis")

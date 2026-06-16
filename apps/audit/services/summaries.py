@@ -6,6 +6,7 @@ from django.conf import settings
 from django.db.models import Count, Q
 
 from apps.audit.models import AuditFinding
+from apps.billing.ai_access import ai_access_allowed
 from core.services.ai_service import generate_audit_narrative
 
 
@@ -59,7 +60,8 @@ class AuditSessionSummaryService:
         summary = cls._deterministic_summary(snapshot, language=language)
         source = "deterministic"
 
-        if use_ai and getattr(settings, "OPENAI_API_KEY", ""):
+        org = getattr(session, "organization", None)
+        if use_ai and getattr(settings, "OPENAI_API_KEY", "") and ai_access_allowed(org):
             try:
                 narrative = generate_audit_narrative(
                     {

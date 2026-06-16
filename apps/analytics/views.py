@@ -18,6 +18,7 @@ from core.services.ai_service import (
     forecast_cash_flow,
 )
 from apps.authentication.permissions import IsSeniorAuditorOrAbove
+from apps.billing.ai_access import ai_access_response_or_none
 from apps.transactions.models import Transaction
 from apps.transactions.serializers import TransactionSerializer
 from apps.audit.models import AuditCase
@@ -117,6 +118,12 @@ class AnomalyDetectionView(APIView):
             "top_vendors": [v for v in top_vendors if v],
         }
 
+        # AI cost guard (defense-in-depth, not just middleware): block before
+        # any OpenAI spend when the org is suspended / unsubscribed / over budget.
+        blocked = ai_access_response_or_none(org)
+        if blocked is not None:
+            return blocked
+
         # Run AI detection
         result = detect_anomalies_ai(tx_list, historical_context)
 
@@ -213,6 +220,9 @@ class FraudScoringView(APIView):
             "industry": request.user.organization.industry,
         }
 
+        blocked = ai_access_response_or_none(getattr(request.user, "organization", None))
+        if blocked is not None:
+            return blocked
         result = score_fraud_risk(tx_dict, org_context)
 
         # Update transaction risk score
@@ -428,6 +438,9 @@ class CashFlowForecastView(APIView):
         if len(historical) < 3:
             return Response({"error": "Insufficient historical data (need at least 3 months)."}, status=400)
 
+        blocked = ai_access_response_or_none(org)
+        if blocked is not None:
+            return blocked
         return Response(forecast_cash_flow(historical, periods, currency))
 
 
@@ -499,6 +512,9 @@ class FinancialKPIsView(APIView):
         }
 
         # Generate AI insights
+        blocked = ai_access_response_or_none(org)
+        if blocked is not None:
+            return blocked
         org_dict = {"name": org.name, "country": org.country, "industry": org.industry}
         insights = generate_financial_insights(kpis, org_dict)
         kpis["ai_insights"] = insights

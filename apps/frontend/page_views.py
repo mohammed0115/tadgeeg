@@ -4165,6 +4165,7 @@ def invoice_audit_report(request):
         type_label=str(_DOC_TYPE_LABELS.get(selected_type, "Documents")),
         type_singular=str(_DOC_TYPE_SINGULAR.get(selected_type, "Document")),
         language=(get_language() or "ar")[:2],
+        organization=org,
     )
     if ai_narrative is not None:
         narrative_payload = ai_narrative

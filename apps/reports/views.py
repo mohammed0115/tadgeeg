@@ -14,6 +14,7 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter
 from django.db.models import Sum, Count, Avg, Q, Max, Min
 from django.db.models.functions import TruncMonth
 from core.services.ai_service import generate_audit_narrative
+from apps.billing.ai_access import ai_access_response_or_none
 from apps.authentication.permissions import IsSeniorAuditorOrAbove
 from apps.transactions.models import Transaction
 from apps.audit.models import AuditCase
@@ -689,6 +690,9 @@ class GenerateAuditReportView(APIView):
         )
 
         # ── AI Narrative ───────────────────────────────────────────────────────
+        blocked = ai_access_response_or_none(org)
+        if blocked is not None:
+            return blocked
         audit_data = _json_safe(audit_data)
         narrative = generate_audit_narrative(audit_data, language=language)
 
@@ -742,6 +746,9 @@ class InvoiceAuditReportView(APIView):
         data = _json_safe(_collect_invoice_data(org, date_from, date_to))
 
         # AI narrative for invoice audit specifically
+        blocked = ai_access_response_or_none(org)
+        if blocked is not None:
+            return blocked
         narrative = generate_audit_narrative(
             {
                 "organization": {"name": org.name, "country": org.country, "currency": org.currency},

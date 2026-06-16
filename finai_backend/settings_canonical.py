@@ -201,6 +201,12 @@ MIDDLEWARE = [
 
 SUBSCRIPTION_REQUIRED = os.environ.get("SUBSCRIPTION_REQUIRED", "true").lower() != "false"
 
+# PAY-HARDEN-1: independent master switch for the AI cost-access guard
+# (apps.billing.ai_access). Kept separate from SUBSCRIPTION_REQUIRED so that
+# relaxing the subscription wall during a migration window does NOT silently
+# disable AI-spend protection. Disable ONLY for deliberate emergency debugging.
+AI_ACCESS_GUARD_ENABLED = os.environ.get("AI_ACCESS_GUARD_ENABLED", "true").lower() != "false"
+
 # Quota gate around run_audit_compat — every audit reserves/consumes/releases
 # from the organization's subscription. Set to False ONLY for emergency
 # debugging; with the gate off, the audit pipeline runs without billing.

@@ -154,11 +154,17 @@ def run_nightly_anomaly_scan():
     from apps.authentication.models import Organization
     from apps.transactions.models import Transaction
     from core.services.ai_service import detect_anomalies_ai
+    from apps.billing.ai_access import ai_access_allowed
 
     yesterday = timezone.now().date() - datetime.timedelta(days=1)
     total_anomalies = 0
 
     for org in Organization.objects.filter(is_active=True):
+        # AI cost guard: this task bypasses HTTP middleware, so gate per-org
+        # before any OpenAI spend (skip unsubscribed/expired/over-budget orgs).
+        if not ai_access_allowed(org):
+            logger.info("run_nightly_anomaly_scan: skipping org %s (AI access denied)", org.id)
+            continue
         try:
             txs = list(
                 Transaction.objects.filter(

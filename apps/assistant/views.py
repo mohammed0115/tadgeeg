@@ -435,15 +435,14 @@ class AssistantChatView(APIView):
             }, status=200)
 
         from core.services import ai_budget
-        org_id = getattr(getattr(request.user, "organization", None), "id", None)
-        try:
-            ai_budget.guard(org_id, projected_tokens=1500)
-        except ai_budget.BudgetExceeded as exc:
-            return Response({
-                "answer": "تجاوزت الحد اليومي لاستخدام الذكاء الاصطناعي. حاول غداً.",
-                "budget_exceeded": True,
-                "used": exc.used, "cap": exc.cap,
-            }, status=429)
+        from apps.billing.ai_access import ai_access_response_or_none
+        org = getattr(request.user, "organization", None)
+        org_id = getattr(org, "id", None)
+        # Unified AI cost guard: subscription validity + suspension + daily token
+        # budget, all before any OpenAI spend (not just the old budget-only check).
+        blocked = ai_access_response_or_none(org, projected_tokens=1500)
+        if blocked is not None:
+            return blocked
 
         # Build the message list: system → recent history → fresh-context user turn.
         # Re-injecting the JSON context every turn means the model always sees

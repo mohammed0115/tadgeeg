@@ -172,6 +172,10 @@ class DocumentReportService:
         summary. Returns an empty dict on any failure so the report still renders.
         """
         try:
+            from apps.billing.ai_access import ai_access_allowed
+            if not ai_access_allowed(getattr(self, "org", None)):
+                logger.info("AI narrative skipped for %s (AI access denied)", document_type)
+                return {}
             from core.services.ai_service import generate_audit_narrative
 
             audit_input = {

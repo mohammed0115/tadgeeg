@@ -180,6 +180,15 @@ class CustomerActivity(models.Model):
         CRM_AUDIT_LOGGED = "crm_audit_logged", "CRM Audit Logged"
         CUSTOMER_VIEWED = "customer_viewed", "Customer Viewed"
         GENERAL = "general", "General"
+        # CRM-1F financial operations. Values are unchanged from the literals
+        # previously recorded by crm_operations.py — this only makes them
+        # canonical enum members (no stored-value or behavior change).
+        SUBSCRIPTION_EXTENDED = "subscription_extended", "Subscription Extended"
+        CUSTOMER_SUSPENDED = "customer_suspended", "Customer Suspended"
+        CUSTOMER_REACTIVATED = "customer_reactivated", "Customer Reactivated"
+        MANUAL_PAYMENT_ADDED = "manual_payment_added", "Manual Payment Added"
+        MANUAL_PAYMENT_CONFIRMED = "manual_payment_confirmed", "Manual Payment Confirmed"
+        MANUAL_PAYMENT_REJECTED = "manual_payment_rejected", "Manual Payment Rejected"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(

@@ -325,10 +325,8 @@ def add_customer_note(
 
 
 # ── CRM-1F-1B — financial operation: extend subscription ──────────────────────
-# CustomerActivity has no "subscription_extended" enum member; adding one would
-# force a migration (out of scope). We record the literal value (documented
-# technical debt, same approach as ticket_assigned in CRM-1E).
-ACTIVITY_SUBSCRIPTION_EXTENDED = "subscription_extended"
+# Financial activity types are canonical ``CustomerActivity.ActivityType`` enum
+# members (CRM-1F-TD-A); values are unchanged from the former literals.
 
 
 def _require_financial_manager(actor):
@@ -388,7 +386,7 @@ def crm_extend_subscription(
         record_customer_activity(
             organization=organization,
             actor=actor,
-            activity_type=ACTIVITY_SUBSCRIPTION_EXTENDED,
+            activity_type=CustomerActivity.ActivityType.SUBSCRIPTION_EXTENDED,
             description=f"Subscription extended by {days} day(s)",
             metadata={
                 "subscription_id": str(subscription.id),
@@ -413,10 +411,6 @@ def crm_extend_subscription(
 
 
 # ── CRM-1F-2B — suspend / reactivate customer (Organization.is_active) ────────
-# Literal activity types (no enum member) — documented technical debt, same as
-# ticket_assigned / subscription_extended.
-ACTIVITY_CUSTOMER_SUSPENDED = "customer_suspended"
-ACTIVITY_CUSTOMER_REACTIVATED = "customer_reactivated"
 
 
 def _set_customer_active(*, actor, organization, target_active, reason, request):
@@ -441,12 +435,12 @@ def _set_customer_active(*, actor, organization, target_active, reason, request)
 
         if target_active:
             action_type = "customer_reactivated"
-            activity_type = ACTIVITY_CUSTOMER_REACTIVATED
+            activity_type = CustomerActivity.ActivityType.CUSTOMER_REACTIVATED
             description = "Customer reactivated"
             old_value, new_value = {"is_active": False}, {"is_active": True}
         else:
             action_type = "customer_suspended"
-            activity_type = ACTIVITY_CUSTOMER_SUSPENDED
+            activity_type = CustomerActivity.ActivityType.CUSTOMER_SUSPENDED
             description = "Customer suspended"
             old_value, new_value = {"is_active": True}, {"is_active": False}
 
@@ -489,11 +483,6 @@ def reactivate_customer(*, actor, organization, reason, request=None):
 
 
 # ── CRM-1F-3B-2A — manual payment wrappers ────────────────────────────────────
-# Activity types are literals (no enum member) — documented technical debt, same
-# approach as ticket_assigned / subscription_extended / customer_suspended.
-ACTIVITY_MANUAL_PAYMENT_ADDED = "manual_payment_added"
-ACTIVITY_MANUAL_PAYMENT_CONFIRMED = "manual_payment_confirmed"
-ACTIVITY_MANUAL_PAYMENT_REJECTED = "manual_payment_rejected"
 
 
 def _manual_payment_safe(payment, *, plan=None) -> dict:
@@ -574,7 +563,7 @@ def crm_add_manual_payment(
             record_customer_activity(
                 organization=organization,
                 actor=actor,
-                activity_type=ACTIVITY_MANUAL_PAYMENT_ADDED,
+                activity_type=CustomerActivity.ActivityType.MANUAL_PAYMENT_ADDED,
                 description=f"Manual payment added (reference={reference})",
                 metadata=safe,
             )
@@ -662,7 +651,7 @@ def crm_confirm_manual_payment(
         record_customer_activity(
             organization=organization,
             actor=actor,
-            activity_type=ACTIVITY_MANUAL_PAYMENT_CONFIRMED,
+            activity_type=CustomerActivity.ActivityType.MANUAL_PAYMENT_CONFIRMED,
             description="Manual payment confirmed",
             metadata=new,
         )
@@ -713,7 +702,7 @@ def crm_reject_manual_payment(
         record_customer_activity(
             organization=organization,
             actor=actor,
-            activity_type=ACTIVITY_MANUAL_PAYMENT_REJECTED,
+            activity_type=CustomerActivity.ActivityType.MANUAL_PAYMENT_REJECTED,
             description="Manual payment rejected",
             metadata=new,
         )

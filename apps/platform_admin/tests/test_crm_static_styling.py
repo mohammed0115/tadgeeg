@@ -14,6 +14,27 @@ def test_fallback_css_is_collectable():
     assert finders.find("platform_admin/fallback.css") is not None
 
 
+def test_admin_console_css_is_collectable():
+    assert finders.find("platform_admin/css/admin_console.css") is not None
+
+
+def test_crm_dashboard_links_admin_console_css(owner_user):
+    client = Client()
+    client.force_login(owner_user)
+    html = client.get(reverse("platform_admin:crm:dashboard")).content.decode("utf-8")
+    assert "platform_admin/css/admin_console" in html
+
+
+def test_crm_dashboard_has_layout_shell_and_cards(owner_user):
+    client = Client()
+    client.force_login(owner_user)
+    html = client.get(reverse("platform_admin:crm:dashboard")).content.decode("utf-8")
+    # Shell wrapper + card grid + dashboard cards present (styled, not default).
+    assert 'class="platform-shell"' in html
+    assert "platform-card" in html
+    assert "grid" in html
+
+
 def test_crm_dashboard_links_static_fallback_css(owner_user):
     client = Client()
     client.force_login(owner_user)

@@ -185,10 +185,14 @@
     <div class="row">
       {% if payment_banner == "success" %}
         <a class="btn btn-primary" href="/dashboard/">{% trans "Start auditing" %}</a>
-        <button class="btn btn-outline" disabled title="{% trans 'Receipt will be available soon' %}">{% trans "View invoice / receipt" %}</button>
       {% endif %}
-      <a class="btn btn-outline" href="/billing/plans/">{% trans "Upgrade plan" %}</a>
-      <a class="btn btn-outline" href="/billing/plans/">{% trans "Renew" %}</a>
+      {% if show_upgrade %}
+        <a class="btn btn-outline" href="/billing/plans/">{% trans "Upgrade plan" %}</a>
+      {% endif %}
+      {% if show_renew %}
+        <a class="btn btn-outline" href="/billing/plans/">{% trans "Renew" %}</a>
+      {% endif %}
+      <a class="btn btn-outline" href="/billing/payments/">{% trans "View payment history" %}</a>
       <a class="btn btn-outline" href="/billing/usage/">{% trans "View usage history" %}</a>
     </div>
   </div>

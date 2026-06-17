@@ -226,7 +226,7 @@ class UsagePageTests(TestCase):
     def test_usage_empty_state(self):
         r = self.client.get(reverse("billing:usage"), HTTP_ACCEPT_LANGUAGE="en")
         html = r.content.decode("utf-8")
-        self.assertIn("No usage events", html)
+        self.assertIn("No usage recorded yet", html)
 
     def test_usage_json_endpoint(self):
         self._seed_ledger(2)

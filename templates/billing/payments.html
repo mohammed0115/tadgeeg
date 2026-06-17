@@ -1,0 +1,104 @@
+{% extends "billing/_shell.html" %}
+{% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+
+{% block title %}{% trans "Payment history" %} — Tadgeeg{% endblock %}
+
+{% block extra_styles %}
+  .table-wrap { overflow-x: auto; border-radius: 14px; border: 1px solid var(--border); background: white; box-shadow: var(--shadow-sm); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  thead { background: var(--bg); }
+  thead th {
+    text-align: start; padding: 12px 14px;
+    font-weight: 700; color: var(--text-muted);
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td { padding: 12px 14px; border-bottom: 1px solid var(--border-soft); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: var(--bg); }
+  .mono { font-family: 'Courier New', monospace; font-size: 12px; color: var(--text-muted); }
+
+  .pay-pill {
+    display: inline-block; font-size: 11px; font-weight: 800;
+    padding: 3px 10px; border-radius: 100px; letter-spacing: 0.3px;
+  }
+  .pay-pill.paid     { background: #DCFCE7; color: #166534; }
+  .pay-pill.failed   { background: #FEE2E2; color: #991B1B; }
+  .pay-pill.canceled { background: #F3F4F6; color: #4B5563; }
+  .pay-pill.pending,
+  .pay-pill.initiated,
+  .pay-pill.redirect_required { background: #FEF3C7; color: #92400E; }
+
+  .empty-row td { text-align: center; padding: 40px; color: var(--text-muted); }
+{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>{% trans "Payment history" %}</h1>
+  <p>{% trans "Your payment receipts for this organization." %}</p>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>{% trans "Date" %}</th>
+        <th>{% trans "Plan" %}</th>
+        <th>{% trans "Amount" %}</th>
+        <th>{% trans "Provider" %}</th>
+        <th>{% trans "Status" %}</th>
+        <th>{% trans "Reference" %}</th>
+        <th>{% trans "Receipt" %}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+        <tr>
+          <td class="mono">{{ row.created_at|date:"Y-m-d H:i" }}</td>
+          <td>
+            {% if row.plan %}
+              {% if LANGUAGE_CODE == 'ar' %}{{ row.plan.name_ar|default:row.plan.name_en }}{% else %}{{ row.plan.name_en|default:row.plan.name_ar }}{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td><strong>{{ row.amount }}</strong> {{ row.currency }}</td>
+          <td>{{ row.provider }}</td>
+          <td>
+            <span class="pay-pill {{ row.status }}">
+              {% if row.status == 'paid' %}{% trans "Paid" %}
+              {% elif row.status == 'failed' %}{% trans "Failed" %}
+              {% elif row.status == 'canceled' %}{% trans "Canceled" %}
+              {% elif row.status == 'pending' %}{% trans "Pending" %}
+              {% elif row.status == 'initiated' %}{% trans "Initiated" %}
+              {% elif row.status == 'redirect_required' %}{% trans "Awaiting payment" %}
+              {% else %}{{ row.status }}{% endif %}
+            </span>
+          </td>
+          <td class="mono" style="word-break:break-all;">{{ row.reference|default:"—" }}</td>
+          <td>
+            {% if row.status == 'paid' %}
+              <button class="btn btn-outline" disabled title="{% trans 'Receipt will be available soon' %}" style="padding:4px 10px;font-size:12px;">{% trans "View receipt" %}</button>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr class="empty-row">
+          <td colspan="7">{% trans "No payments recorded yet." %}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+  <nav class="pagination" aria-label="{% trans 'Pagination' %}" style="display:flex;gap:8px;justify-content:center;margin-top:20px;flex-wrap:wrap;">
+    {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}">‹ {% trans "Previous" %}</a>
+    {% endif %}
+    <span>{% blocktrans with current=page_obj.number total=page_obj.paginator.num_pages %}Page {{ current }} of {{ total }}{% endblocktrans %}</span>
+    {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}">{% trans "Next" %} ›</a>
+    {% endif %}
+  </nav>
+{% endif %}
+{% endblock %}

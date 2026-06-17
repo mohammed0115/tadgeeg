@@ -32,8 +32,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.billing.choices import PlanCode, SubscriptionStatus
-from apps.billing.models import OrganizationSubscription
+from apps.billing.choices import PlanCode, SubscriptionStatus, USABLE_STATUSES
+from apps.billing.models import OrganizationSubscription, Plan
 from apps.billing.serializers import (
     PlanSerializer,
     SelectPlanSerializer,
@@ -336,6 +336,32 @@ class CurrentSubscriptionView(APIView):
         # data — only our stored status / reference / paid date).
         payment_info = self._safe_payment_info(sub, organization)
 
+        # Button visibility:
+        #  - Renew: only when expired or within the last 7 days before ends_at.
+        #    A fresh active subscription does NOT show Renew (avoids confusion).
+        #  - Upgrade: only when a higher-priced active plan exists.
+        from django.utils import timezone as _tz
+        from datetime import timedelta as _td
+        now = _tz.now()
+        show_renew = False
+        if sub is not None:
+            if sub.status == SubscriptionStatus.EXPIRED:
+                show_renew = True
+            elif (
+                sub.status in USABLE_STATUSES
+                and sub.ends_at is not None
+                and sub.ends_at <= now + _td(days=7)
+            ):
+                show_renew = True
+        show_upgrade = False
+        if sub is not None and sub.plan_id is not None:
+            show_upgrade = (
+                Plan.objects
+                .filter(is_active=True, is_free=False, is_trial=False,
+                        price__gt=sub.plan.price)
+                .exists()
+            )
+
         return render(request, "billing/subscription.html", {
             "subscription":   sub,
             "usage_pct":      usage_pct,
@@ -343,6 +369,8 @@ class CurrentSubscriptionView(APIView):
             "active_nav":     "subscription",
             "payment_banner": payment_banner,
             "payment_info":   payment_info,
+            "show_renew":     show_renew,
+            "show_upgrade":   show_upgrade,
         })
 
     @staticmethod
@@ -437,4 +465,82 @@ class UsagePageView(APIView):
         return render(request, "billing/usage.html", {
             "page_obj":   page_obj,
             "active_nav": "usage",
+        })
+
+
+class PaymentHistoryView(APIView):
+    """GET /billing/payments/?page=N
+
+    The customer's own payment receipts. Org-scoped (a customer can only see
+    their organization's payments). Renders ONLY safe fields — never
+    raw_request/raw_response/raw_webhook, secrets, or card data.
+    HTML by default; JSON when Accept asks for it.
+    """
+    permission_classes = [IsAuthenticated]
+    PAGE_SIZE = 25
+
+    def get(self, request):
+        from apps.payments.models import PaymentTransaction
+        organization = getattr(request.user, "organization", None)
+        if organization is None:
+            return Response(
+                {"detail": "User is not attached to an organization."},
+                status=drf_status.HTTP_400_BAD_REQUEST,
+            )
+
+        qs = (
+            PaymentTransaction.objects
+            .filter(organization=organization)   # org isolation
+            .order_by("-created_at")
+        )
+        try:
+            page_num = max(1, int(request.GET.get("page", 1)))
+        except (TypeError, ValueError):
+            page_num = 1
+        paginator = Paginator(qs, self.PAGE_SIZE)
+        page_obj  = paginator.get_page(page_num)
+
+        # Resolve plan names for subscription payments in one batched query.
+        sub_ids = [
+            t.reference_id for t in page_obj.object_list
+            if t.reference_type == "organization_subscription" and t.reference_id
+        ]
+        plan_by_sub = {}
+        if sub_ids:
+            for s in (OrganizationSubscription.objects
+                      .filter(pk__in=sub_ids).select_related("plan")):
+                plan_by_sub[str(s.pk)] = s.plan
+
+        def _row(t):
+            plan = plan_by_sub.get(str(t.reference_id))
+            return {
+                "created_at": t.created_at,
+                "paid_at":    t.paid_at,
+                "plan":       plan,                       # may be None
+                "amount":     t.amount,
+                "currency":   t.currency,
+                "provider":   t.provider,
+                "status":     t.status,
+                # Safe reference only — provider_reference or invoice id.
+                "reference":  t.provider_reference or t.provider_payment_id or "",
+            }
+
+        rows = [_row(t) for t in page_obj.object_list]
+
+        if not _wants_html(request):
+            return Response({
+                "results": [
+                    {**r, "plan": (r["plan"].code if r["plan"] else None)}
+                    for r in rows
+                ],
+                "page":      page_obj.number,
+                "pages":     paginator.num_pages,
+                "count":     paginator.count,
+                "page_size": self.PAGE_SIZE,
+            })
+
+        return render(request, "billing/payments.html", {
+            "rows":       rows,
+            "page_obj":   page_obj,
+            "active_nav": "payments",
         })

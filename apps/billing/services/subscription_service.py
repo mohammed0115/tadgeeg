@@ -123,6 +123,28 @@ class SubscriptionService:
 
         plan = locked.plan
         now  = timezone.now()
+
+        # One usable subscription per org — enforced at the APPLICATION level.
+        # The partial UniqueConstraint (billing_one_usable_sub_per_org) only
+        # works on Postgres/SQLite; MySQL (our deploy DB) silently ignores the
+        # condition, so it cannot be relied on. Before flipping this row to
+        # ACTIVE, supersede any OTHER usable (active/trialing) subscription for
+        # the same org — covers re-purchase (renewal: fresh period replaces the
+        # old one) and plan change (upgrade/downgrade). Idempotent: a duplicate
+        # webhook/callback returns early above, so this runs at most once.
+        superseded = (
+            OrganizationSubscription.objects
+            .select_for_update()
+            .filter(
+                organization_id=locked.organization_id,
+                status__in=tuple(USABLE_STATUSES),
+            )
+            .exclude(pk=locked.pk)
+        )
+        for old in superseded:
+            old.status = SubscriptionStatus.CANCELED
+            old.save(update_fields=["status", "updated_at"])
+
         locked.status            = SubscriptionStatus.ACTIVE
         locked.starts_at         = now
         locked.ends_at           = now + timedelta(days=plan.duration_days)

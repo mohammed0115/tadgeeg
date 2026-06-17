@@ -19,6 +19,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+  {# Base console styles (loaded before Tailwind so JIT styles take precedence). #}
+  <link rel="stylesheet" href="{% safe_static 'platform_admin/fallback.css' %}">
+
   <script>window.tailwind = window.tailwind || {};</script>
   <script src="{% safe_static 'vendor/tailwind.browser.js' %}" onerror="this.onerror=null;this.src='https://cdn.tailwindcss.com'"></script>
   <script>

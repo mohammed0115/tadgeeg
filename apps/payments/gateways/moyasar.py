@@ -60,6 +60,7 @@ class MoyasarGateway(BasePaymentGateway):
         self.publishable_key = getattr(settings, "MOYASAR_PUBLISHABLE_KEY", "") or ""
         self.base_url        = (getattr(settings, "MOYASAR_BASE_URL", "") or _DEFAULT_BASE_URL).rstrip("/")
         self.callback_url    = getattr(settings, "MOYASAR_CALLBACK_URL", "") or ""
+        self.webhook_url     = getattr(settings, "MOYASAR_WEBHOOK_URL", "") or ""
         self.webhook_secret  = getattr(settings, "MOYASAR_WEBHOOK_SECRET", "") or ""
 
     # ----------------------------------------------------------- helpers
@@ -74,6 +75,17 @@ class MoyasarGateway(BasePaymentGateway):
         """Decimal SAR → integer halalas. Two-decimal currencies only."""
         return int((Decimal(amount) * Decimal(100)).quantize(Decimal("1")))
 
+    @staticmethod
+    def _with_tx(url: str, transaction_id) -> str:
+        """Append our internal ``transaction_id=<id>`` to a redirect URL so the
+        callback resolves the transaction by OUR id — Moyasar appends its own
+        ``id`` (a payment id, not the invoice id we stored), which we must not
+        depend on for lookup."""
+        if not url:
+            return url
+        sep = "&" if "?" in url else "?"
+        return f"{url}{sep}transaction_id={transaction_id}"
+
     def map_provider_status(self, provider_status: str) -> str:
         return _STATUS_MAP.get((provider_status or "").lower(), PaymentStatus.PENDING)
 
@@ -85,7 +97,11 @@ class MoyasarGateway(BasePaymentGateway):
         # side. We never collect or forward PAN/CVV — there is deliberately NO
         # ``source`` object (that is the /payments API, which requires card
         # data and 400s without it). ``url`` becomes our ``checkout_url``.
-        callback = transaction.success_url or self.callback_url
+        # Browser LANDING (success_url): where the customer is returned after
+        # paying. Stamp OUR transaction_id so the callback resolves by our id,
+        # not Moyasar's echoed payment ``id``. Metadata also carries it as a
+        # secondary safe fallback.
+        landing = self._with_tx(transaction.success_url or self.callback_url, transaction.id)
         body = {
             "amount":      self._to_smallest_unit(transaction.amount),
             "currency":    transaction.currency or "SAR",
@@ -96,16 +112,15 @@ class MoyasarGateway(BasePaymentGateway):
                 "purpose":         transaction.purpose,
             },
         }
-        # callback_url = where Moyasar sends the customer back after payment.
-        if callback:
-            body["callback_url"] = callback
-        # success_url / back_url are optional Invoices fields — set them only
-        # when the caller provided distinct redirect targets.
-        if transaction.success_url:
-            body["success_url"] = transaction.success_url
+        if landing:
+            body["success_url"] = landing
+        # callback_url is SEPARATE from the browser landing: it is the
+        # server-to-server notification endpoint (our signed webhook). Falls
+        # back to the landing page only if no webhook URL is configured.
+        body["callback_url"] = self.webhook_url or landing
         back_url = getattr(transaction, "cancel_url", "") or ""
         if back_url:
-            body["back_url"] = back_url
+            body["back_url"] = self._with_tx(back_url, transaction.id)
         try:
             r = http_post(
                 f"{self.base_url}/invoices",

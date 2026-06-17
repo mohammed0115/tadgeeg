@@ -52,6 +52,7 @@ def _txn():
 @override_settings(
     MOYASAR_SECRET_KEY="sk_test_dummy",
     MOYASAR_CALLBACK_URL="https://test.tadgeeg.com/payments/callback/moyasar/",
+    MOYASAR_WEBHOOK_URL="https://test.tadgeeg.com/payments/webhooks/moyasar/",
 )
 class MoyasarCreateInvoiceTests(TestCase):
     @mock.patch("apps.payments.gateways.moyasar.http_post")
@@ -83,6 +84,30 @@ class MoyasarCreateInvoiceTests(TestCase):
         self.assertIn("description", body)
         self.assertEqual(body["metadata"]["transaction_id"],
                          "11111111-1111-1111-1111-111111111111")
+
+    @mock.patch("apps.payments.gateways.moyasar.http_post")
+    def test_success_url_carries_internal_transaction_id(self, mock_post):
+        mock_post.return_value = _Resp(201, {"id": "inv_abc", "status": "initiated",
+                                             "url": "https://moyasar.test/x"})
+        txn = _txn()
+        MoyasarGateway().create_payment(txn)
+        body = mock_post.call_args.kwargs["json"]
+        # Browser landing carries OUR id so the callback never depends on
+        # Moyasar's echoed payment id.
+        self.assertIn(f"transaction_id={txn.id}", body["success_url"])
+
+    @mock.patch("apps.payments.gateways.moyasar.http_post")
+    def test_callback_url_is_webhook_and_separate_from_success_url(self, mock_post):
+        mock_post.return_value = _Resp(201, {"id": "inv_abc", "status": "initiated",
+                                             "url": "https://moyasar.test/x"})
+        MoyasarGateway().create_payment(_txn())
+        body = mock_post.call_args.kwargs["json"]
+        # callback_url (server notification) is the webhook endpoint, distinct
+        # from success_url (browser landing carrying our transaction_id).
+        self.assertEqual(body["callback_url"],
+                         "https://test.tadgeeg.com/payments/webhooks/moyasar/")
+        self.assertIn("transaction_id=", body["success_url"])
+        self.assertNotEqual(body["callback_url"], body["success_url"])
 
     @mock.patch("apps.payments.gateways.moyasar.http_post")
     def test_response_maps_invoice_id_url_and_status(self, mock_post):

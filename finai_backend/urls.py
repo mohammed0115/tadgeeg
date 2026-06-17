@@ -19,8 +19,16 @@ from apps.invoices.views import (
 )
 from apps.compliance.views import ComplianceDashboardView
 from apps.authentication.views import UserListView
+from apps.payments import views as payments_views
 
 urlpatterns = [
+    # Public, no-/api/v1 payment redirect + webhook URLs. Payment providers
+    # (Moyasar) redirect the customer to the callback and POST webhooks to
+    # these short paths (configured in MOYASAR_CALLBACK_URL / dashboard); the
+    # full payments API stays mounted under /api/v1/payments/ below.
+    path("payments/callback/<str:provider>/", payments_views.PaymentCallbackView.as_view(), name="payments-callback-public"),
+    path("payments/webhooks/moyasar/", payments_views.webhook_moyasar, name="payments-webhook-moyasar-public"),
+
     # Internationalization (language switching)
     path("i18n/", include("django.conf.urls.i18n")),
 

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import logging
 
-from django.shortcuts import get_object_or_404
+from django.core.exceptions import ValidationError
+from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status as drf_status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -12,6 +13,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 
 from apps.authentication.permissions import IsAdminUser
+from apps.payments.choices import PaymentStatus
 from apps.payments.gateways.base import GatewayError
 from apps.payments.models import PaymentTransaction
 from apps.payments.serializers import (
@@ -200,28 +202,75 @@ def webhook_telr(request):
 
 
 class PaymentCallbackView(APIView):
-    """GET /payments/callback/<provider>/?transaction_id=<uuid>
+    """GET /payments/callback/<provider>/?tx=<our-uuid>
 
-    A user-facing landing page after the gateway redirects them back.
-    Critically: this NEVER marks a transaction paid by itself — it
-    triggers a sync (which queries the provider) and renders a thin
-    'verifying' page. The webhook remains the source of truth."""
+    A user-facing landing page after the gateway redirects them back. We
+    resolve the transaction by OUR ``tx`` id (stamped into the redirect URL at
+    invoice creation), NOT by the provider's echoed ``id`` (which may be a
+    payment id rather than the invoice id we stored). Critically: this NEVER
+    marks a transaction paid from ``?status=paid`` — it triggers a server-side
+    sync (queries the provider via our stored provider_payment_id) and the
+    webhook remains the source of truth."""
     permission_classes = [AllowAny]  # callback is hit from external redirect
     authentication_classes = []
 
+    # Where the user lands after we verify (existing billing pages; no new UI).
+    _PAID_REDIRECT     = "/billing/subscription/?payment=success"
+    _FAILED_REDIRECT   = "/billing/plans/?payment=failed"
+    _UNKNOWN_REDIRECT  = "/billing/plans/?payment=unknown"
+
+    def _resolve_txn(self, request, provider):
+        """Resolve the transaction, preferring OUR own id.
+
+        Lookup order:
+          1. ``tx`` / ``transaction_id`` — our internal PaymentTransaction id,
+             which we stamp into the redirect URL ourselves. Authoritative.
+          2. Fallback only: the provider's ``id`` query param — matched against
+             ``provider_payment_id`` then ``provider_reference``. We do NOT
+             assume ``id`` equals the invoice id we stored (Moyasar may echo a
+             payment id), so this is a best-effort fallback, never the primary.
+
+        Returns None on missing/unknown/invalid — never raises, so a bad
+        redirect query can't 500 or activate the wrong subscription."""
+        qs = PaymentTransaction.objects.filter(provider=provider)
+        our_id = request.GET.get("transaction_id") or request.GET.get("tx")
+        if our_id:
+            try:
+                return qs.get(pk=our_id)
+            except (PaymentTransaction.DoesNotExist, ValidationError, ValueError):
+                pass  # fall through to the provider-id fallback
+        provider_id = request.GET.get("id")
+        if provider_id:
+            logger.info("Callback provider id=%s (fallback lookup only)", provider_id)
+            return (
+                qs.filter(provider_payment_id=provider_id).first()
+                or qs.filter(provider_reference=provider_id).first()
+            )
+        return None
+
     def get(self, request, provider):
-        transaction_id = request.GET.get("transaction_id") or request.GET.get("id")
-        if not transaction_id:
-            return Response({"detail": "Missing transaction_id"}, status=400)
-        try:
-            txn = PaymentTransaction.objects.get(pk=transaction_id, provider=provider)
-        except PaymentTransaction.DoesNotExist:
-            return Response({"detail": "Transaction not found"}, status=404)
-        # Best-effort sync — failures are non-fatal here.
+        # We deliberately do NOT trust ?status=paid from the redirect query.
+        txn = self._resolve_txn(request, provider)
+        if txn is None:
+            return redirect(self._UNKNOWN_REDIRECT)
+
+        # Server-side verification: sync_status queries the provider
+        # (GET /invoices/<id>) and drives mark_paid only if the provider
+        # confirms paid. Idempotent. Failures here are non-fatal.
         try:
             PaymentService().sync_status(txn)
         except Exception as exc:  # noqa: BLE001
             logger.warning("Callback sync failed for %s: %s", txn.id, exc)
+        txn.refresh_from_db()
+
+        if txn.status == PaymentStatus.PAID:
+            return redirect(self._PAID_REDIRECT)
+        if txn.status in (
+            PaymentStatus.FAILED, PaymentStatus.CANCELED, PaymentStatus.EXPIRED,
+        ):
+            return redirect(self._FAILED_REDIRECT)
+        # Still pending/redirect_required → thin 'verifying' landing; the
+        # webhook remains the source of truth and will finalise it.
         return Response({
             "transaction_id": str(txn.id),
             "status":         txn.status,

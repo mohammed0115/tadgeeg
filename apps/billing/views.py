@@ -286,7 +286,11 @@ class CurrentSubscriptionView(APIView):
                 status=drf_status.HTTP_400_BAD_REQUEST,
             )
         from apps.billing.services.quota_service import QuotaService
-        sub = QuotaService().get_active_subscription(organization)
+        active_sub = QuotaService().get_active_subscription(organization)
+        # Truth source for "is the subscription usable right now" — used to
+        # gate the success banner so ?payment=success can never fake a success.
+        is_active = active_sub is not None
+        sub = active_sub
         if sub is None:
             # Show the most recent row (likely expired/payment_failed)
             # so the UI can render renew/retry buttons rather than a
@@ -312,12 +316,59 @@ class CurrentSubscriptionView(APIView):
                 (sub.used_invoices + sub.reserved_invoices) * 100 / sub.invoice_limit
             ))
             remaining = sub.remaining_invoices
+
+        # Post-payment banner. We NEVER trust ?payment=success on its own —
+        # "success" only renders when the subscription is genuinely active.
+        payment_param = (request.GET.get("payment") or "").lower()
+        if payment_param == "success" and is_active:
+            payment_banner = "success"
+        elif payment_param == "failed":
+            payment_banner = "failed"
+        elif payment_param in ("pending", "verifying") or (
+            payment_param == "success" and not is_active
+        ):
+            # Paid-but-not-yet-active → honest "verifying", not a false success.
+            payment_banner = "pending"
+        else:
+            payment_banner = ""
+
+        # Safe, non-sensitive payment summary (no raw provider JSON, no card
+        # data — only our stored status / reference / paid date).
+        payment_info = self._safe_payment_info(sub, organization)
+
         return render(request, "billing/subscription.html", {
-            "subscription": sub,
-            "usage_pct":    usage_pct,
-            "remaining":    remaining,
-            "active_nav":   "subscription",
+            "subscription":   sub,
+            "usage_pct":      usage_pct,
+            "remaining":      remaining,
+            "active_nav":     "subscription",
+            "payment_banner": payment_banner,
+            "payment_info":   payment_info,
         })
+
+    @staticmethod
+    def _safe_payment_info(sub, organization):
+        """Return only safe fields of the latest subscription payment for
+        display: status, a reference (provider_reference/invoice id), and the
+        paid timestamp. Never raw_request/raw_response/raw_webhook or card data."""
+        from apps.payments.models import PaymentTransaction
+
+        txn = None
+        if sub is not None and getattr(sub, "payment_transaction_id", None):
+            txn = sub.payment_transaction
+        if txn is None:
+            txn = (
+                PaymentTransaction.objects
+                .filter(organization=organization, purpose="subscription")
+                .order_by("-created_at")
+                .first()
+            )
+        if txn is None:
+            return None
+        return {
+            "status":    txn.status,
+            "reference": txn.provider_reference or txn.provider_payment_id or "",
+            "paid_at":   txn.paid_at,
+        }
 
 
 class BulkUploadPageView(APIView):

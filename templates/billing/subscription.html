@@ -79,6 +79,20 @@
   <p>{% trans "Your current plan, usage, and remaining quota." %}</p>
 </div>
 
+{% if payment_banner == "success" %}
+  <div class="card" style="background:#ECFDF5;border-color:#A7F3D0;color:#065F46;margin-bottom:16px;">
+    <strong>{% trans "Payment successful — your subscription is now active." %}</strong>
+  </div>
+{% elif payment_banner == "failed" %}
+  <div class="card" style="background:#FEF2F2;border-color:#FECACA;color:#991B1B;margin-bottom:16px;">
+    <strong>{% trans "Payment did not complete. Your subscription was not activated." %}</strong>
+  </div>
+{% elif payment_banner == "pending" %}
+  <div class="card" style="background:#FFFBEB;border-color:#FDE68A;color:#92400E;margin-bottom:16px;">
+    <strong>{% trans "Verifying your payment. Your subscription will update automatically." %}</strong>
+  </div>
+{% endif %}
+
 {% if not subscription %}
   <div class="empty">
     <h2>{% trans "You don't have an active subscription yet." %}</h2>
@@ -145,10 +159,35 @@
         <div class="k">{% trans "Auto-renew" %}</div>
         <div class="v">{% if subscription.auto_renew %}{% trans "Yes" %}{% else %}{% trans "No" %}{% endif %}</div>
       </div>
+      {% if payment_info %}
+        <div>
+          <div class="k">{% trans "Last payment" %}</div>
+          <div class="v">
+            {% if payment_info.status == 'paid' %}{% trans "Paid" %}
+            {% elif payment_info.status == 'failed' %}{% trans "Failed" %}
+            {% elif payment_info.status == 'canceled' %}{% trans "Canceled" %}
+            {% else %}{{ payment_info.status }}{% endif %}
+          </div>
+        </div>
+        <div>
+          <div class="k">{% trans "Paid on" %}</div>
+          <div class="v">{{ payment_info.paid_at|date:"Y-m-d"|default:"—" }}</div>
+        </div>
+        {% if payment_info.reference %}
+        <div>
+          <div class="k">{% trans "Payment reference" %}</div>
+          <div class="v" style="word-break:break-all;">{{ payment_info.reference }}</div>
+        </div>
+        {% endif %}
+      {% endif %}
     </div>
 
     <div class="row">
-      <a class="btn btn-primary" href="/billing/plans/">{% trans "Upgrade plan" %}</a>
+      {% if payment_banner == "success" %}
+        <a class="btn btn-primary" href="/dashboard/">{% trans "Start auditing" %}</a>
+        <button class="btn btn-outline" disabled title="{% trans 'Receipt will be available soon' %}">{% trans "View invoice / receipt" %}</button>
+      {% endif %}
+      <a class="btn btn-outline" href="/billing/plans/">{% trans "Upgrade plan" %}</a>
       <a class="btn btn-outline" href="/billing/plans/">{% trans "Renew" %}</a>
       <a class="btn btn-outline" href="/billing/usage/">{% trans "View usage history" %}</a>
     </div>

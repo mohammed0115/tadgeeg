@@ -104,8 +104,9 @@ class PlansPageTests(TestCase):
         SubscriptionService().create_free_trial(self.org)
         r = self.client.get(reverse("billing:plans"), HTTP_ACCEPT_LANGUAGE="en")
         html = r.content.decode("utf-8")
-        # The trial button changes to a disabled outline button.
-        self.assertIn("Trial unavailable", html)
+        # The trial button changes to a disabled outline button (the plan-action
+        # matrix renders it as "Not available").
+        self.assertIn("Not available", html)
         self.assertIn('disabled', html)
 
     def test_json_request_returns_json_not_html(self):

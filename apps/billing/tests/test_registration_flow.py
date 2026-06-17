@@ -154,7 +154,10 @@ class SelectPlanFreeTrialTests(TestCase):
             data={"plan_code": "free_trial"}, format="json",
         )
         self.assertEqual(r.status_code, 409)
-        self.assertEqual(r.json()["code"], "free_trial_already_used")
+        # The plan-action matrix now blocks a second trial up front with a
+        # unified code (covers both "trial already used" and "already has an
+        # active subscription").
+        self.assertEqual(r.json()["code"], "trial_unavailable")
 
     def test_selecting_paid_plan_creates_pending_payment_subscription(self):
         """Stage 4: select-plan creates the subscription AND fires

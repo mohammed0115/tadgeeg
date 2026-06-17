@@ -233,7 +233,9 @@
       {% for plan in plans %}
         {% with code=plan.code %}
         <article class="card {% if code == 'business' %}featured{% endif %} {% if plan.is_trial %}trial{% endif %}" data-plan="{{ code }}">
-          {% if plan.is_trial %}
+          {% if plan.action == 'current' or plan.action == 'renew' %}
+            <span class="badge-first" style="background:rgba(7,55,99,0.10);color:var(--primary);">{% trans "Current plan" %}</span>
+          {% elif plan.is_trial %}
             <span class="badge-first">{% trans "First time only" %}</span>
           {% endif %}
           <h3 class="plan-name">{% if LANGUAGE_CODE == 'ar' %}{{ plan.name_ar|default:plan.name_en }}{% else %}{{ plan.name_en|default:plan.name_ar }}{% endif %}</h3>
@@ -267,22 +269,34 @@
             {% endif %}
           </ul>
 
-          {% if plan.is_trial and has_used_free_trial %}
+          {% if plan.action == 'current' %}
+            <a class="btn btn-outline" href="/billing/subscription/">{% trans "Manage subscription" %}</a>
+            <p class="footnote" style="margin-top:10px;font-size:12px;">{% trans "Your current plan." %}</p>
+          {% elif plan.action == 'renew' %}
+            <button type="button" class="btn btn-primary" data-code="{{ code }}"
+                    onclick="selectPlan(this.dataset.code, this)">{% trans "Renew" %}</button>
+          {% elif plan.action == 'upgrade' %}
+            <button type="button" class="btn btn-primary" data-code="{{ code }}"
+                    onclick="selectPlan(this.dataset.code, this)">{% trans "Upgrade" %}</button>
+          {% elif plan.action == 'downgrade_unavailable' %}
             <button class="btn btn-outline" aria-disabled="true" disabled
-                    title="{% trans 'Free trial already used for this organization.' %}">
-              {% trans "Trial unavailable" %}
+                    title="{% trans 'Downgrades are available at renewal. Contact support.' %}">
+              {% trans "Downgrade unavailable" %}
             </button>
-            <p class="footnote" style="margin-top:10px;font-size:12px;">
-              {% trans "Already used for this organization." %}
-            </p>
-          {% else %}
+          {% elif plan.action == 'trial_unavailable' %}
+            <button class="btn btn-outline" aria-disabled="true" disabled
+                    title="{% trans 'Not available while you have an active subscription, or trial already used.' %}">
+              {% trans "Not available" %}
+            </button>
+          {% elif plan.action == 'subscribe_trial' %}
+            <button type="button" class="btn btn-outline" data-code="{{ code }}"
+                    onclick="selectPlan(this.dataset.code, this)">{% trans "Start free trial" %}</button>
+          {% else %}{# subscribe #}
             <button type="button"
                     class="btn {% if code == 'business' %}btn-primary{% else %}btn-outline{% endif %}"
                     data-code="{{ code }}"
                     onclick="selectPlan(this.dataset.code, this)">
-              {% if plan.is_trial %}{% trans "Start free trial" %}
-              {% elif code == 'business' %}{% trans "Choose this plan" %}
-              {% else %}{% trans "Subscribe" %}{% endif %}
+              {% if code == 'business' %}{% trans "Choose this plan" %}{% else %}{% trans "Subscribe" %}{% endif %}
             </button>
           {% endif %}
         </article>

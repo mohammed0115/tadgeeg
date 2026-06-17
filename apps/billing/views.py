@@ -57,6 +57,50 @@ from apps.billing.services.subscription_service import (
 # user double-clicks the button.
 _PENDING_REUSE_WINDOW = timedelta(minutes=15)
 
+# A same-plan re-purchase is only allowed as a RENEWAL within this many days of
+# the current period ending (or once expired). Mirrors the subscription page's
+# Renew-button visibility.
+_RENEWAL_WINDOW_DAYS = 7
+
+
+def _is_renewal_window(sub, now) -> bool:
+    """True if ``sub`` is close enough to expiry (or expired) that buying the
+    same plan again counts as a renewal rather than a duplicate purchase."""
+    if sub is None:
+        return False
+    if sub.status == SubscriptionStatus.EXPIRED:
+        return True
+    return sub.ends_at is not None and sub.ends_at <= now + timedelta(days=_RENEWAL_WINDOW_DAYS)
+
+
+def plan_action(plan, active_sub, *, used_trial, now):
+    """The action a given plan offers relative to the org's current state.
+
+    Plan rank is by ``price`` (Plan has no explicit rank field; free/trial
+    plans are excluded from up/down comparison). Returns one of:
+      subscribe | subscribe_trial | trial_unavailable | current |
+      renew | upgrade | downgrade_unavailable
+    Shared by the plans page (button rendering) AND SelectPlanView (backend
+    enforcement) so UI and server can never disagree.
+    """
+    if getattr(plan, "is_trial", False):
+        # A free trial cannot be started while any usable subscription exists,
+        # nor if this org has already used its trial.
+        if active_sub is not None or used_trial:
+            return "trial_unavailable"
+        return "subscribe_trial"
+    if active_sub is None:
+        return "subscribe"
+    current = active_sub.plan
+    if plan.pk == current.pk or plan.code == current.code:
+        return "renew" if _is_renewal_window(active_sub, now) else "current"
+    if plan.price > current.price:
+        return "upgrade"
+    if plan.price < current.price:
+        return "downgrade_unavailable"
+    # Equal price, different plan — treat as a lateral change (allowed).
+    return "upgrade"
+
 
 def _client_ip(request):
     fwd = request.META.get("HTTP_X_FORWARDED_FOR", "")
@@ -137,12 +181,29 @@ class PlansView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
+        from apps.billing.services.quota_service import QuotaService
+        organization = getattr(request.user, "organization", None)
         plans = list_purchasable_plans()
-        used_trial = self._has_used_free_trial(request.user.organization)
+        used_trial = self._has_used_free_trial(organization) if organization else False
+        active_sub = (
+            QuotaService().get_active_subscription(organization) if organization else None
+        )
+        now = timezone.now()
+        # Annotate each plan with the action it offers for THIS org so the
+        # template (and JSON) render the correct button instead of a blanket
+        # "Subscribe".
+        for plan in plans:
+            plan.action = plan_action(plan, active_sub, used_trial=used_trial, now=now)
+        current_code = active_sub.plan.code if active_sub else ""
+
         if not _wants_html(request):
+            data = PlanSerializer(plans, many=True).data
+            for item, plan in zip(data, plans):
+                item["action"] = plan.action
             return Response({
-                "plans": PlanSerializer(plans, many=True).data,
+                "plans": data,
                 "has_used_free_trial": used_trial,
+                "current_plan_code": current_code,
             })
 
         # Surface a friendly message when the user has been bounced here
@@ -156,6 +217,7 @@ class PlansView(APIView):
         return render(request, "billing/plans.html", {
             "plans": plans,
             "has_used_free_trial": used_trial,
+            "current_plan_code": current_code,
             "expired_message": expired_message,
             "active_nav": "plans",
         })
@@ -194,6 +256,33 @@ class SelectPlanView(APIView):
             plan = get_active_plan(plan_code)
         except PlanNotFound as exc:
             return Response({"detail": str(exc)}, status=drf_status.HTTP_404_NOT_FOUND)
+
+        # Backend enforcement of the plan action matrix — never trust the UI.
+        from apps.billing.services.quota_service import QuotaService
+        active_sub = QuotaService().get_active_subscription(organization)
+        used_trial = OrganizationSubscription.objects.filter(
+            organization=organization, plan__is_trial=True,
+        ).exists()
+        action = plan_action(plan, active_sub, used_trial=used_trial, now=timezone.now())
+        if action == "current":
+            return Response(
+                {"detail": _("You are already subscribed to this plan."),
+                 "code": "already_subscribed"},
+                status=drf_status.HTTP_409_CONFLICT,
+            )
+        if action == "downgrade_unavailable":
+            return Response(
+                {"detail": _("Downgrade is not available during the active billing "
+                             "period. Please contact support."),
+                 "code": "downgrade_unavailable"},
+                status=drf_status.HTTP_409_CONFLICT,
+            )
+        if action == "trial_unavailable":
+            return Response(
+                {"detail": _("A free trial is not available for this organization."),
+                 "code": "trial_unavailable"},
+                status=drf_status.HTTP_409_CONFLICT,
+            )
 
         svc = SubscriptionService()
         if plan_code == PlanCode.FREE_TRIAL.value:

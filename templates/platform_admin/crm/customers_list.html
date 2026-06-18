@@ -87,7 +87,13 @@
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="9" class="px-4 py-12 text-center text-slate-400">{% trans "No customers match your filters." %}</td></tr>
+      <tr><td colspan="9" class="px-4 py-12 text-center text-slate-400">
+        {% if filters.q or filters.status or filters.country or filters.subscription %}
+          {% trans "No customers match your filters." %}
+        {% else %}
+          {% trans "No customers yet. Registered companies will appear here automatically after signup." %}
+        {% endif %}
+      </td></tr>
       {% endfor %}
     </tbody>
   </table>

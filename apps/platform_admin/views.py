@@ -1,6 +1,6 @@
 """Platform admin console template views."""
 
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 
 from core.dashboard_context import build_platform_context
 from core.permissions import platform_admin_required
@@ -17,11 +17,15 @@ def dashboard(request):
 
 @platform_admin_required
 def organizations(request):
-    return render(
-        request,
-        "platform_admin/organizations.html",
-        build_platform_context(request, active_key="organizations"),
-    )
+    """Customer records live in ONE canonical place: the server-rendered CRM
+    customer directory (apps.authentication.Organization). The old page filled
+    its table client-side via /api/v1/auth/organizations/, so it could show an
+    empty "0 organizations" table whenever JS or the API failed — even though
+    data existed. We now redirect to the CRM directory so the org/customer list
+    is always server-rendered from real data and there is a single source of
+    truth. Permissions: this view requires a platform user; the CRM directory
+    then enforces CRM-read (so non-CRM staff still get 403 there)."""
+    return redirect("platform_admin:crm:customers")
 
 
 @platform_admin_required

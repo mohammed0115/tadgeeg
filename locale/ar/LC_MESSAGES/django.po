@@ -17269,3 +17269,119 @@ msgstr "الأنشطة"
 
 msgid "Quick actions"
 msgstr "إجراءات سريعة"
+
+# PLATFORM-ADMIN-SHELL-RESET-C2 — remaining CRM labels and enum display strings
+
+msgid "need attention"
+msgstr "تحتاج إلى إجراء"
+
+msgid "high priority"
+msgstr "ذات أولوية عالية"
+
+msgid "Payments needing attention"
+msgstr "مدفوعات تحتاج إلى إجراء"
+
+msgid "Recent tickets"
+msgstr "أحدث التذاكر"
+
+msgid "Recent activity"
+msgstr "النشاط الأخير"
+
+msgid "Browse customer companies and open Customer 360."
+msgstr "تصفّح شركات العملاء وافتح ملف العميل الشامل."
+
+msgid "Review, assign, and resolve customer tickets."
+msgstr "راجِع تذاكر العملاء وأسنِدها وأغلِقها."
+
+msgid "Internal notes recorded against customers."
+msgstr "ملاحظات داخلية مسجّلة على العملاء."
+
+msgid "Customer activity and operations timeline."
+msgstr "الجدول الزمني لنشاط العملاء والعمليات."
+
+msgid "Customer directory"
+msgstr "دليل العملاء"
+
+msgid "Create support ticket"
+msgstr "إنشاء تذكرة دعم"
+
+msgid "Review tickets"
+msgstr "مراجعة التذاكر"
+
+msgid "active"
+msgstr "نشط"
+
+msgid "Manage customers, subscriptions, payments, tickets, and activity."
+msgstr "إدارة العملاء والاشتراكات والمدفوعات والتذاكر والنشاط."
+
+msgid "No activity yet."
+msgstr "لا يوجد نشاط بعد."
+
+msgid "No customers yet."
+msgstr "لا يوجد عملاء بعد."
+
+msgid "No payments awaiting action."
+msgstr "لا توجد مدفوعات تنتظر إجراءً."
+
+msgid "No tickets yet."
+msgstr "لا توجد تذاكر بعد."
+
+msgid "Open customer directory"
+msgstr "فتح دليل العملاء"
+
+msgid "Customers will appear here after registration or manual creation."
+msgstr "سيظهر العملاء هنا بعد التسجيل أو الإنشاء اليدوي."
+
+msgid "Ticket created"
+msgstr "تم إنشاء التذكرة"
+
+msgid "Ticket assigned"
+msgstr "تم إسناد التذكرة"
+
+msgid "Ticket message added"
+msgstr "تمت إضافة رسالة إلى التذكرة"
+
+msgid "Ticket status changed"
+msgstr "تم تغيير حالة التذكرة"
+
+msgid "CRM role checked"
+msgstr "تم التحقق من صلاحية CRM"
+
+msgid "CRM audit logged"
+msgstr "تم تسجيل تدقيق CRM"
+
+msgid "Customer viewed"
+msgstr "تم عرض العميل"
+
+msgid "General activity"
+msgstr "نشاط عام"
+
+msgid "Subscription extended"
+msgstr "تم تمديد الاشتراك"
+
+msgid "Customer suspended"
+msgstr "تم تعليق العميل"
+
+msgid "Customer reactivated"
+msgstr "تمت إعادة تفعيل العميل"
+
+msgid "Manual payment added"
+msgstr "تمت إضافة دفعة يدوية"
+
+msgid "Manual payment confirmed"
+msgstr "تم تأكيد الدفعة اليدوية"
+
+msgid "Manual payment rejected"
+msgstr "تم رفض الدفعة اليدوية"
+
+msgid "Initiated"
+msgstr "قيد البدء"
+
+msgid "Redirect required"
+msgstr "يتطلب إعادة توجيه"
+
+msgid "Refunded"
+msgstr "مُسترَدّ"
+
+msgid "Partially refunded"
+msgstr "مُسترَدّ جزئيًا"

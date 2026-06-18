@@ -1,5 +1,5 @@
 {% extends "layouts/base_platform_admin.html" %}
-{% load i18n %}
+{% load i18n crm_labels %}
 {% block page_title %}{% trans "Customer Operations" %}{% endblock %}
 
 {% block content %}
@@ -103,7 +103,7 @@
             <p class="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{{ p.organization.name }}</p>
             <p class="truncate text-xs text-slate-500">{{ p.amount }} {{ p.currency }} · {{ p.provider }} · {{ p.created_at|date:"Y-m-d" }}</p>
           </div>
-          <span class="badge badge-amber">{{ p.get_status_display }}</span>
+          <span class="badge badge-amber">{{ p.status|payment_status_label }}</span>
         </a>
       {% empty %}
         <p class="py-6 text-center text-sm text-slate-400">{% trans "No payments awaiting action." %}</p>
@@ -141,7 +141,7 @@
       <div class="flex items-start gap-3 rounded-xl px-2 py-2">
         <span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-platform-500"></span>
         <div class="min-w-0">
-          <p class="text-sm text-slate-700 dark:text-slate-200">{{ a.get_activity_type_display }}</p>
+          <p class="text-sm text-slate-700 dark:text-slate-200">{{ a.activity_type|activity_label }}</p>
           <p class="truncate text-xs text-slate-500">{{ a.organization.name }} · {{ a.created_at|date:"Y-m-d H:i" }}</p>
         </div>
       </div>

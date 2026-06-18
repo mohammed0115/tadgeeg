@@ -183,13 +183,31 @@
 .platform-shell .nav-card-icon svg { width: 1.1rem; height: 1.1rem; }
 
 /* ── shell layout (deterministic, RTL-safe): static sidebar on desktop,
- *    drawer on mobile, shrinkable content, viewport-bounded body. ───────── */
+ *    drawer on mobile, shrinkable content, viewport-bounded body. ─────────
+ *
+ * The structural fix (not just hiding overflow):
+ *   - the layout row is a flex container we own (.platform-layout);
+ *   - desktop sidebar is STATIC and a fixed 19rem column (flex:0 0 19rem),
+ *     so it lives in-flow and never overlaps/pushes content off-screen;
+ *   - the content column can shrink to fit (.platform-main: flex 1 1 auto,
+ *     min-width:0, max-inline-size:100%) — the real cause of flexbox overflow
+ *     is a flex child that refuses to shrink below its content width;
+ *   - the mobile drawer is fixed and translated off-canvas; overflow-x:clip
+ *     on the body keeps that off-screen box from creating a page scrollbar.
+ * These rules target our own classes, so they hold even if Tailwind's JIT
+ * utilities (flex/min-w-0/lg:static) are absent. */
 body.platform-shell { max-width: 100vw; overflow-x: clip; }
+.platform-shell .platform-layout { width: 100%; max-inline-size: 100%; }
+.platform-shell .platform-main {
+  min-width: 0; flex: 1 1 auto; max-inline-size: 100%;
+}
 .platform-shell .flex-1 { min-width: 0; }
 .platform-shell .truncate { min-width: 0; }
 @media (min-width: 1024px) {
+  .platform-shell .platform-layout { display: flex; }
   .platform-shell .app-drawer {
     position: static; inset: auto; transform: none; max-width: none;
+    flex: 0 0 auto; align-self: stretch;
   }
 }
 @media (max-width: 1023px) {
@@ -197,6 +215,9 @@ body.platform-shell { max-width: 100vw; overflow-x: clip; }
     position: fixed; inset-block: 0; inset-inline-end: 0; z-index: 40; max-width: 88vw;
   }
 }
+/* Inner content grids must be able to shrink: a track that won't drop below
+ * its content width is the other classic overflow source. */
+.platform-shell .platform-main [class*="grid-cols-"] { min-width: 0; }
 
 /* ── language switcher → compact segmented control ──────────────────────── */
 .platform-shell form[action="/i18n/setlang/"] {

@@ -1,5 +1,5 @@
 {% extends "layouts/base_platform_admin.html" %}
-{% load i18n %}
+{% load i18n crm_labels %}
 {% block page_title %}{{ customer.name }}{% endblock %}
 
 {% block content %}
@@ -295,7 +295,7 @@
       <div class="flex items-start gap-3 border-t border-slate-100 py-3 first:border-t-0 dark:border-slate-800">
         <span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-platform-500"></span>
         <div class="min-w-0">
-          <p class="text-sm text-slate-700 dark:text-slate-200">{{ a.get_activity_type_display }}{% if a.description %} — {{ a.description }}{% endif %}</p>
+          <p class="text-sm text-slate-700 dark:text-slate-200">{{ a.activity_type|activity_label }}{% if a.description %} — {{ a.description }}{% endif %}</p>
           <p class="text-xs text-slate-400">{{ a.actor.email|default:"system" }} · {{ a.created_at|date:"Y-m-d H:i" }}</p>
         </div>
       </div>

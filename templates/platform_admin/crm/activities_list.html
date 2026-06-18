@@ -1,5 +1,5 @@
 {% extends "layouts/base_platform_admin.html" %}
-{% load i18n %}
+{% load i18n crm_labels %}
 {% block page_title %}{% trans "Activity Timeline" %}{% endblock %}
 
 {% block content %}
@@ -22,7 +22,7 @@
       <span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-platform-500"></span>
       <div class="min-w-0 flex-1">
         <div class="flex items-center justify-between gap-2">
-          <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">{{ a.get_activity_type_display }}</p>
+          <p class="text-sm font-semibold text-slate-800 dark:text-slate-100">{{ a.activity_type|activity_label }}</p>
           <span class="shrink-0 text-xs text-slate-400">{{ a.created_at|date:"Y-m-d H:i" }}</span>
         </div>
         {% if a.description %}<p class="text-sm text-slate-600 dark:text-slate-300">{{ a.description }}</p>{% endif %}

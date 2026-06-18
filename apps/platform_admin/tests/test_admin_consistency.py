@@ -33,6 +33,16 @@ def test_overview_org_count_is_server_rendered_not_zero(superuser):
     assert ">3<" in html
 
 
+def test_overview_has_no_leaked_developer_comment(superuser, organization):
+    # A multi-line {# #} comment is NOT stripped by Django and leaked into the
+    # rendered card. The org number card must contain the number only.
+    for lang in ("en", "ar"):
+        html = _get(superuser, _OVERVIEW, lang=lang).content.decode("utf-8")
+        for leak in ["Server-rendered", "canonical source", "Alpine only",
+                     "never blank it", "refines it"]:
+            assert leak not in html, f"Leaked developer text in overview ({lang}): {leak}"
+
+
 def test_overview_and_crm_show_same_org_count(superuser):
     Organization.objects.all().delete()
     _make_orgs(3)

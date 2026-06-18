@@ -182,6 +182,43 @@
 }
 .platform-shell .nav-card-icon svg { width: 1.1rem; height: 1.1rem; }
 
+/* ── shell layout hardening (deterministic, RTL-safe, no horizontal scroll) ─
+ * The sidebar markup is fixed+translate driven; if those utilities are not
+ * applied the fixed drawer overlaps the content and pushes it off-screen
+ * (clipped brand text, page-level horizontal scrollbar). We make the layout
+ * deterministic here, independent of utility classes:
+ *   - sidebar is STATIC (in flow) on desktop, a fixed drawer on mobile;
+ *   - the content column can shrink (min-width:0) — the real fix for the
+ *     flexbox overflow, not just hiding it;
+ *   - the body never exceeds the viewport width. */
+body.platform-shell { max-width: 100vw; overflow-x: clip; }
+.platform-shell .flex-1 { min-width: 0; }
+.platform-shell .truncate { min-width: 0; }
+@media (min-width: 1024px) {
+  .platform-shell .app-drawer {
+    position: static; inset: auto; transform: none; max-width: none;
+  }
+}
+@media (max-width: 1023px) {
+  .platform-shell .app-drawer {
+    position: fixed; inset-block: 0; inset-inline-end: 0; z-index: 40; max-width: 88vw;
+  }
+}
+
+/* ── language switcher → compact segmented control ──────────────────────── */
+.platform-shell form[action="/i18n/setlang/"] {
+  display: inline-flex; align-items: center; gap: 0.2rem;
+  background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 0.2rem;
+}
+.platform-shell form[action="/i18n/setlang/"] button {
+  border: 0; background: transparent; color: #475569;
+  font-size: 0.75rem; font-weight: 600; cursor: pointer;
+  padding: 0.3rem 0.7rem; border-radius: 0.55rem; line-height: 1.2;
+}
+.platform-shell form[action="/i18n/setlang/"] button:hover { background: #e2e8f0; color: #0f172a; }
+/* Active segment (hook on the markup's active utility class). */
+.platform-shell form[action="/i18n/setlang/"] button.bg-slate-950 { background: #0f172a; color: #fff; }
+
 /* ── console polish ─────────────────────────────────────────────────────── */
 .platform-shell .platform-card { padding: 1.25rem; }
 .platform-shell .platform-card h2 { color: var(--pa-text); }

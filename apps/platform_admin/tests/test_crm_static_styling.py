@@ -18,6 +18,18 @@ def test_admin_console_css_is_collectable():
     assert finders.find("platform_admin/css/admin_console.css") is not None
 
 
+def test_admin_console_css_has_overflow_and_rtl_shell_hardening():
+    # The fix for the horizontal scrollbar / clipped content must be in the
+    # shipped stylesheet: content shrinkability + viewport-bounded body +
+    # deterministic (in-flow) sidebar on desktop.
+    path = finders.find("platform_admin/css/admin_console.css")
+    css = open(path, encoding="utf-8").read()
+    assert "overflow-x: clip" in css
+    assert "min-width: 0" in css
+    assert "position: static" in css        # sidebar in flow on desktop
+    assert 'form[action="/i18n/setlang/"]' in css   # styled language switcher
+
+
 def test_crm_dashboard_links_admin_console_css(owner_user):
     client = Client()
     client.force_login(owner_user)

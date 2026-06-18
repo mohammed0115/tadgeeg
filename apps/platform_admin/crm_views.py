@@ -21,6 +21,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.http import Http404, HttpResponseNotAllowed
 from django.shortcuts import redirect, render
+from django.utils.translation import gettext_lazy as _
 
 from apps.platform_admin import selectors
 from apps.platform_admin.models import (
@@ -132,7 +133,7 @@ def crm_dashboard(request):
     ctx = _crm_context(
         request,
         active_key="crm_dashboard",
-        crm_title="CRM Dashboard",
+        crm_title=_("Customer Operations"),
         summary=selectors.get_dashboard_summary(),
         payments_needing_attention=selectors.get_payments_needing_attention(),
         recent_tickets=selectors.get_recent_tickets(),

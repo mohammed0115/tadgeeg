@@ -8,11 +8,15 @@ from core.permissions import platform_admin_required
 
 @platform_admin_required
 def dashboard(request):
-    return render(
-        request,
-        "platform_admin/dashboard.html",
-        build_platform_context(request, active_key="dashboard"),
-    )
+    # Server-render the shared customer metrics from the SAME source the CRM
+    # dashboard uses (apps.platform_admin.selectors.get_dashboard_summary →
+    # canonical Organization / subscription / payment models), so the overview
+    # can never show "Organizations = 0" while CRM shows the real count. The
+    # Alpine layer may still enhance other (content) stats client-side.
+    from apps.platform_admin import selectors
+    ctx = build_platform_context(request, active_key="dashboard")
+    ctx["summary"] = selectors.get_dashboard_summary()
+    return render(request, "platform_admin/dashboard.html", ctx)
 
 
 @platform_admin_required

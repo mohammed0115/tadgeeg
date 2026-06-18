@@ -17237,3 +17237,35 @@ msgstr "إضافة"
 
 #~ msgid "Request Demo"
 #~ msgstr "اطلب عرضاً توضيحياً"
+
+# PLATFORM-ADMIN-CONSISTENCY-A — unified admin/CRM Arabic strings
+
+msgid "Get Solution Platform Admin"
+msgstr "لوحة إدارة Get Solution"
+
+msgid "Managing Tadgeeg operations"
+msgstr "إدارة عمليات Tadgeeg"
+
+msgid "Customer Operations"
+msgstr "عمليات العملاء"
+
+msgid "Active subscriptions"
+msgstr "الاشتراكات النشطة"
+
+msgid "Pending payments"
+msgstr "المدفوعات المعلّقة"
+
+msgid "Open tickets"
+msgstr "التذاكر المفتوحة"
+
+msgid "Read-only"
+msgstr "للقراءة فقط"
+
+msgid "Support Tickets"
+msgstr "تذاكر الدعم"
+
+msgid "Activities"
+msgstr "الأنشطة"
+
+msgid "Quick actions"
+msgstr "إجراءات سريعة"

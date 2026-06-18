@@ -34,7 +34,12 @@
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
       <!-- Form -->
-      <div class="xl:col-span-2 card p-6 space-y-5">
+      <div class="xl:col-span-2 space-y-5">
+        <nav class="form-section-nav" aria-label="{% trans 'Sections' %}">
+          <a href="#video-settings">{% trans 'Video Settings' %}</a>
+          <a href="#video-preview">{% trans 'Preview' %}</a>
+        </nav>
+        <div id="video-settings" class="card p-6 space-y-5 form-section">
         <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-700/30">
           <i data-lucide="play-circle" class="w-5 h-5 text-violet-500"></i>
           {% trans 'Video Settings' %}
@@ -87,17 +92,19 @@
             <span>{% trans 'Show intro video on the site' %}</span>
           </label>
         </div>
+        </div><!-- /#video-settings card -->
 
-        <div class="flex justify-end pt-2">
+        <div class="admin-action-footer">
           <button @click="save()" :disabled="saving" class="btn-primary">
             <i data-lucide="save" class="w-4 h-4"></i>
             <span x-text="saving ? 'Saving...' : 'Save Video'"></span>
           </button>
+          <a href="/platform-admin/" class="btn-ghost">{% trans 'Cancel' %}</a>
         </div>
-      </div>
+      </div><!-- /form column -->
 
       <!-- Preview -->
-      <div class="space-y-4">
+      <div id="video-preview" class="space-y-4">
         <div class="card p-5 space-y-4">
           <h4 class="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-2">
             <i data-lucide="eye" class="w-4 h-4 text-indigo-500"></i>

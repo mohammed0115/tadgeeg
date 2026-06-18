@@ -19,6 +19,12 @@
     </a>
   </div>
 
+  <!-- Section navigation (jump links for this long form) -->
+  <nav class="form-section-nav" aria-label="{% trans 'Sections' %}">
+    <a href="#about-content">{% trans 'About Content' %}</a>
+    <a href="#about-team">{% trans 'Team Members' %}</a>
+  </nav>
+
   <!-- Loading -->
   <template x-if="loading">
     <div class="animate-pulse space-y-4">
@@ -34,7 +40,7 @@
     <div class="space-y-6">
 
       <!-- About Content -->
-      <div class="card p-6 space-y-5">
+      <div id="about-content" class="card p-6 space-y-5 form-section">
         <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2 pb-2 border-b border-slate-100 dark:border-slate-700/30">
           <i data-lucide="info" class="w-5 h-5 text-blue-500"></i>
           {% trans 'About Content' %}
@@ -94,7 +100,7 @@
       </div>
 
       <!-- Team Members -->
-      <div class="card p-6 space-y-4">
+      <div id="about-team" class="card p-6 space-y-4 form-section">
         <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700/30">
           <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
             <i data-lucide="users" class="w-5 h-5 text-violet-500"></i>
@@ -132,6 +138,15 @@
             <span x-text="saving ? "{% trans 'Saving...' %}" : "{% trans 'Save Team' %}""></span>
           </button>
         </div>
+      </div>
+
+      <!-- Sticky action footer: Save is always reachable below this long form -->
+      <div class="admin-action-footer">
+        <button @click="saveAbout()" :disabled="saving" class="btn-primary">
+          <i data-lucide="save" class="w-4 h-4"></i>
+          <span x-text="saving ? '{% trans 'Saving...' %}' : '{% trans 'Save changes' %}'"></span>
+        </button>
+        <a href="/platform-admin/" class="btn-ghost">{% trans 'Cancel' %}</a>
       </div>
 
     </div>

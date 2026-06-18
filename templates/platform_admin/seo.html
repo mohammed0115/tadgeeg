@@ -43,7 +43,11 @@
 
       <!-- Form -->
       <div class="xl:col-span-2 space-y-5">
-        <div class="card p-6 space-y-5">
+        <nav class="form-section-nav" aria-label="{% trans 'Sections' %}">
+          <a href="#seo-meta">{% trans "Meta Tags" %}</a>
+          <a href="#seo-og">{% trans "Open Graph / Social" %}</a>
+        </nav>
+        <div id="seo-meta" class="card p-6 space-y-5 form-section">
           <h3 class="font-bold text-slate-800 dark:text-white flex items-center gap-2">
             <i data-lucide="search" class="w-4 h-4 text-indigo-500"></i>
             {% trans "Meta Tags" %}
@@ -87,7 +91,7 @@
           </div>
         </div>
 
-        <div class="card p-6 space-y-5">
+        <div id="seo-og" class="card p-6 space-y-5 form-section">
           <h3 class="font-bold text-slate-800 dark:text-white flex items-center gap-2">
             <i data-lucide="share-2" class="w-4 h-4 text-violet-500"></i>
             {% trans "Open Graph / Social" %}
@@ -120,7 +124,7 @@
           </div>
         </div>
 
-        <div class="flex justify-end">
+        <div class="admin-action-footer">
           <button @click="save()" :disabled="saving" class="btn-primary">
             <i data-lucide="save" class="w-4 h-4"></i>
             <span x-text="saving ? i18nSaving : i18nSaveSeo"></span>

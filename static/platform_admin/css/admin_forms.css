@@ -1,0 +1,130 @@
+/* Platform Admin forms + layout design system. Scoped under .platform-shell.
+ * Covers page header, forms, buttons, tables, and RTL via logical properties. */
+
+/* ── base utilities ─────────────────────────────────────────────────────── */
+.platform-shell .space-y-5 > * + * { margin-top: 1.25rem; }
+.platform-shell .space-y-6 > * + * { margin-top: 1.5rem; }
+.platform-shell .p-6 { padding: 1.5rem; }
+.platform-shell .px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+.platform-shell .py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+.platform-shell .mt-4 { margin-top: 1rem; }
+.platform-shell .mb-2 { margin-bottom: 0.5rem; }
+.platform-shell .mb-6 { margin-bottom: 1.5rem; }
+.platform-shell .w-3\.5 { width: 0.875rem; }
+.platform-shell .h-3\.5 { height: 0.875rem; }
+.platform-shell .gap-4 { gap: 1rem; }
+.platform-shell .fade-in { animation: pa-fade 0.2s ease both; }
+@keyframes pa-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* ── page header ────────────────────────────────────────────────────────── */
+.platform-shell .admin-page-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem;
+}
+.platform-shell .admin-page-head h1 { font-size: 1.5rem; font-weight: 800; }
+.platform-shell .admin-page-head p { font-size: 0.875rem; color: #64748b; }
+
+/* ── form card + sections ───────────────────────────────────────────────── */
+.platform-shell .card,
+.platform-shell .admin-form-card {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+.platform-shell .form-section { scroll-margin-top: 1rem; }
+.platform-shell .form-section-title {
+  font-size: 0.95rem; font-weight: 700; color: #0f172a;
+  margin-bottom: 0.25rem;
+}
+.platform-shell .form-help { font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; }
+.platform-shell .form-error { font-size: 0.75rem; color: #b91c1c; margin-top: 0.25rem; }
+
+/* In-page section navigation (jump links / tabs) for long forms. */
+.platform-shell .form-section-nav {
+  display: flex; gap: 0.5rem; flex-wrap: wrap;
+  margin-bottom: 1rem; padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+.platform-shell .form-section-nav a,
+.platform-shell .form-section-nav button {
+  font-size: 0.8125rem; font-weight: 600; color: #475569;
+  background: #f1f5f9; border: 1px solid transparent;
+  border-radius: 0.625rem; padding: 0.375rem 0.75rem; text-decoration: none;
+  cursor: pointer;
+}
+.platform-shell .form-section-nav a:hover { background: #e2e8f0; color: #0f172a; }
+.platform-shell .form-section-nav .active { background: rgba(79, 70, 229, 0.12); color: #4338ca; }
+
+/* ── inputs (logical padding for RTL) ───────────────────────────────────── */
+.platform-shell .input,
+.platform-shell input[type="text"],
+.platform-shell input[type="email"],
+.platform-shell input[type="url"],
+.platform-shell input[type="number"],
+.platform-shell input[type="password"],
+.platform-shell select,
+.platform-shell textarea {
+  display: block; width: 100%;
+  border: 1px solid #e2e8f0; background: #f8fafc;
+  border-radius: 0.75rem;
+  padding-block: 0.55rem; padding-inline: 0.875rem;
+  font-size: 0.875rem; color: #1e293b; font-family: inherit;
+}
+.platform-shell textarea { min-height: 6rem; resize: vertical; }
+.platform-shell label { font-size: 0.8125rem; font-weight: 600; color: #334155; }
+
+/* Responsive 2-col grid for desktop, single col on mobile. */
+.platform-shell .form-grid-2 { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+@media (min-width: 768px) {
+  .platform-shell .form-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ── buttons (unified; no clipping) ─────────────────────────────────────── */
+.platform-shell .btn,
+.platform-shell .btn-primary,
+.platform-shell .btn-secondary,
+.platform-shell .btn-ghost,
+.platform-shell .btn-danger,
+.platform-shell .btn-red,
+.platform-shell .btn-green {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: 0.5rem; white-space: nowrap;
+  border-radius: 0.75rem;
+  padding-block: 0.5rem; padding-inline: 1rem;
+  font-size: 0.875rem; font-weight: 600; font-family: inherit;
+  line-height: 1.25rem; cursor: pointer; border: 1px solid transparent;
+  text-decoration: none; max-width: 100%;
+}
+.platform-shell .btn-primary { background: #4f46e5; color: #fff; }
+.platform-shell .btn-secondary { background: #fff; color: #0f172a; border-color: #e2e8f0; }
+.platform-shell .btn-ghost { background: #f1f5f9; color: #334155; }
+.platform-shell .btn-danger,
+.platform-shell .btn-red { background: #dc2626; color: #fff; }
+.platform-shell .btn-green { background: #059669; color: #fff; }
+.platform-shell .btn[disabled], .platform-shell .btn-primary[disabled] { opacity: 0.6; cursor: not-allowed; }
+.platform-shell .btn svg, .platform-shell [class^="btn-"] svg,
+.platform-shell [class*=" btn-"] svg { width: 1rem; height: 1rem; flex-shrink: 0; }
+
+/* Action group / sticky save footer (so Save is never lost below a long form). */
+.platform-shell .btn-row,
+.platform-shell .admin-action-footer {
+  display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;
+}
+.platform-shell .admin-action-footer {
+  position: sticky; bottom: 0; z-index: 10;
+  margin-top: 1.25rem; padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(4px);
+  border: 1px solid #e5e7eb; border-radius: 0.875rem;
+  box-shadow: 0 -2px 8px rgba(15, 23, 42, 0.06);
+}
+
+/* ── tables: scroll contained inside wrapper, never the page ────────────── */
+.platform-shell .table-scroll,
+.platform-shell .overflow-x-auto { overflow-x: auto; max-width: 100%; }
+.platform-shell table { width: 100%; border-collapse: collapse; }
+
+/* ── overflow / RTL safety ──────────────────────────────────────────────── */
+.platform-shell { overflow-x: clip; }
+.platform-shell .admin-page-head,
+.platform-shell .card,
+.platform-shell .admin-form-card { max-width: 100%; }
+html[dir="rtl"] .platform-shell .form-section-nav { flex-direction: row; }

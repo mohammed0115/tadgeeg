@@ -166,6 +166,22 @@
   .platform-shell .app-drawer { min-width: 100%; }
 }
 
+/* ── navigation cards (dashboard section shortcuts) ─────────────────────── */
+.platform-shell .nav-card {
+  display: flex; flex-direction: column; gap: 0.35rem;
+  text-decoration: none; transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.platform-shell .nav-card:hover {
+  box-shadow: 0 8px 20px -10px rgba(15, 23, 42, 0.25);
+  transform: translateY(-1px);
+}
+.platform-shell .nav-card-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2.25rem; height: 2.25rem; border-radius: 0.75rem;
+  background: rgba(79, 70, 229, 0.1); color: #4f46e5; margin-bottom: 0.25rem;
+}
+.platform-shell .nav-card-icon svg { width: 1.1rem; height: 1.1rem; }
+
 /* ── console polish ─────────────────────────────────────────────────────── */
 .platform-shell .platform-card { padding: 1.25rem; }
 .platform-shell .platform-card h2 { color: var(--pa-text); }

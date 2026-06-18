@@ -42,6 +42,17 @@ def test_dashboard_empty_state_when_no_customers(owner_user):
     assert "No customers yet." in html
 
 
+def test_dashboard_has_section_navigation_cards(owner_user, organization):
+    html = _get(owner_user, _DASH).content.decode("utf-8")
+    # Professional section-navigation cards with icon + title + CTA.
+    assert "nav-card" in html
+    assert "Support Tickets" in html
+    assert "Activities" in html
+    # CTA links resolve to the real CRM sections (not default blue links).
+    assert reverse("platform_admin:crm:notes") in html
+    assert reverse("platform_admin:crm:activities") in html
+
+
 def test_pending_payment_appears_in_attention_queue(owner_user, organization):
     from apps.payments.choices import PaymentStatus
     from apps.payments.models import PaymentTransaction

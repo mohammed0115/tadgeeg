@@ -50,6 +50,13 @@ UNRESOLVED_TICKET_STATUSES = (
 )
 HIGH_PRIORITIES = (SupportTicket.Priority.HIGH, SupportTicket.Priority.URGENT)
 
+# Payments not yet resolved — surfaced in the dashboard "needs attention" queue.
+PENDING_PAYMENT_STATUSES = (
+    PaymentStatus.PENDING,
+    PaymentStatus.INITIATED,
+    PaymentStatus.REDIRECT_REQUIRED,
+)
+
 
 # ── small input guards ────────────────────────────────────────────────────────
 def _safe_uuid(value):
@@ -76,6 +83,14 @@ def get_dashboard_summary() -> dict:
     return {
         "customers_total": Organization.objects.count(),
         "customers_active": Organization.objects.filter(is_active=True).count(),
+        # Operations KPIs (real model data only).
+        "customers_suspended": Organization.objects.filter(is_active=False).count(),
+        "active_subscriptions": OrganizationSubscription.objects.filter(
+            status__in=USABLE_STATUSES
+        ).count(),
+        "pending_payments": PaymentTransaction.objects.filter(
+            status__in=PENDING_PAYMENT_STATUSES
+        ).count(),
         "tickets_total": tickets.count(),
         "tickets_open": tickets.filter(status=SupportTicket.Status.OPEN).count(),
         "tickets_unresolved": tickets.filter(
@@ -87,6 +102,17 @@ def get_dashboard_summary() -> dict:
         "notes_total": CustomerNote.objects.count(),
         "activities_total": CustomerActivity.objects.count(),
     }
+
+
+def get_payments_needing_attention(limit: int = RECENT_LIMIT):
+    """Work queue: pending / awaiting payments across all orgs (newest first).
+    Safe fields only — used to drive the dashboard 'needs attention' queue."""
+    return (
+        PaymentTransaction.objects
+        .filter(status__in=PENDING_PAYMENT_STATUSES)
+        .select_related("organization")
+        .order_by("-created_at")[:limit]
+    )
 
 
 def get_recent_tickets(limit: int = RECENT_LIMIT):

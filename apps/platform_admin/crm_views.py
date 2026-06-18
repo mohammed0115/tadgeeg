@@ -134,6 +134,7 @@ def crm_dashboard(request):
         active_key="crm_dashboard",
         crm_title="CRM Dashboard",
         summary=selectors.get_dashboard_summary(),
+        payments_needing_attention=selectors.get_payments_needing_attention(),
         recent_tickets=selectors.get_recent_tickets(),
         recent_activities=selectors.get_recent_activities(),
         recent_audits=selectors.get_recent_crm_audits(),

@@ -25,7 +25,9 @@ def test_crm_dashboard_links_admin_console_css(owner_user):
     assert "platform_admin/css/admin_console" in html
 
 
-def test_crm_dashboard_has_layout_shell_and_cards(owner_user):
+def test_crm_dashboard_has_layout_shell_and_cards(owner_user, organization):
+    # With at least one customer the dashboard renders the full console
+    # (KPI grid + cards), not the empty state.
     client = Client()
     client.force_login(owner_user)
     html = client.get(reverse("platform_admin:crm:dashboard")).content.decode("utf-8")

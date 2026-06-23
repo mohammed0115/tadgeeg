@@ -17,8 +17,14 @@ from drf_spectacular.utils import extend_schema
 from apps.authentication.permissions import IsSeniorAuditorOrAbove
 
 from .engagement_models import AuditEngagement
-from .serializers import AccountMappingSerializer, TrialBalanceImportSerializer
+from .general_ledger_models import GeneralLedgerImport
+from .serializers import (
+    AccountMappingSerializer,
+    GeneralLedgerImportSerializer,
+    TrialBalanceImportSerializer,
+)
 from .services import account_mapping as mapping_service
+from .services import general_ledger_import as gl_service
 from .services import trial_balance_import as tb_service
 from .trial_balance_models import AccountMapping, TrialBalanceImport
 
@@ -155,3 +161,95 @@ class GenerateAccountMappingsView(APIView):
                             status=status.HTTP_404_NOT_FOUND)
         summary = mapping_service.generate_mappings_from_import(imp, created_by=request.user)
         return Response(summary, status=status.HTTP_201_CREATED)
+
+
+# ── TADGEEG-FIN-AUDIT-2A — General Ledger import (same safe pattern) ───────────
+class GeneralLedgerImportListCreateView(APIView):
+    """GET: list GL imports in the user's org. POST: upload a GL file."""
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_permissions(self):
+        if self.request.method == "POST":
+            return [IsAuthenticated(), IsSeniorAuditorOrAbove()]
+        return [IsAuthenticated()]
+
+    @extend_schema(tags=["Audit · General Ledger"], summary="List general ledger imports")
+    def get(self, request):
+        org = _user_org(request)
+        if not org:
+            return Response({"error": "No organization."}, status=400)
+        qs = GeneralLedgerImport.objects.filter(organization=org).select_related("engagement")
+        if eng_id := request.query_params.get("engagement"):
+            qs = qs.filter(engagement_id=eng_id)
+        return Response(GeneralLedgerImportSerializer(qs, many=True).data)
+
+    @extend_schema(tags=["Audit · General Ledger"], summary="Upload a general ledger file")
+    def post(self, request):
+        engagement = _scoped_engagement(request, request.data.get("engagement"))
+        if engagement is None:
+            return Response({"error": "engagement not found in your organization."},
+                            status=status.HTTP_404_NOT_FOUND)
+
+        upload = request.FILES.get("uploaded_file")
+        if not upload:
+            return Response({"error": "uploaded_file is required."}, status=400)
+
+        ext = upload.name.rsplit(".", 1)[-1].lower() if "." in upload.name else ""
+        source_format = _EXT_TO_FORMAT.get(ext)
+        if not source_format:
+            return Response(
+                {"error": f"unsupported file type '.{ext}'. Use csv, xlsx, or xls."},
+                status=400,
+            )
+
+        # Optional link to a TB import — must belong to the same engagement/org.
+        tb_import = None
+        if tb_id := request.data.get("related_trial_balance_import"):
+            tb_import = TrialBalanceImport.objects.filter(
+                pk=tb_id, organization=engagement.organization, engagement=engagement,
+            ).first()
+            if tb_import is None:
+                return Response(
+                    {"error": "related_trial_balance_import not found in this engagement."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        imp = GeneralLedgerImport.objects.create(
+            engagement=engagement,
+            organization=engagement.organization,
+            related_trial_balance_import=tb_import,
+            uploaded_file=upload,
+            original_filename=upload.name[:255],
+            source_format=source_format,
+            period_start=request.data.get("period_start") or None,
+            period_end=request.data.get("period_end") or None,
+            fiscal_year=request.data.get("fiscal_year") or None,
+            currency=(request.data.get("currency") or "")[:8],
+            created_by=request.user,
+        )
+        try:
+            gl_service.parse_and_validate(imp)
+        except gl_service.GeneralLedgerImportError as exc:
+            imp.refresh_from_db()
+            return Response(
+                {"error": str(exc), "import": GeneralLedgerImportSerializer(imp).data},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        imp.refresh_from_db()
+        return Response(GeneralLedgerImportSerializer(imp).data,
+                        status=status.HTTP_201_CREATED)
+
+
+class GeneralLedgerImportDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Audit · General Ledger"], summary="General ledger import detail")
+    def get(self, request, pk):
+        org = _user_org(request)
+        imp = (GeneralLedgerImport.objects
+               .filter(pk=pk, organization=org)
+               .select_related("engagement")
+               .first())
+        if imp is None:
+            return Response({"error": "not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(GeneralLedgerImportSerializer(imp).data)

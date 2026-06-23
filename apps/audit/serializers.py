@@ -6,6 +6,8 @@ from .models import (
     AuditSession,
     CaseComment,
     CustomRuleDefinition,
+    GeneralLedgerImport,
+    GeneralLedgerRow,
     TrialBalanceImport,
     TrialBalanceRow,
 )
@@ -148,3 +150,42 @@ class AccountMappingSerializer(serializers.ModelSerializer):
             "id", "organization", "mapping_source", "confidence",
             "created_by", "updated_by", "created_at", "updated_at",
         ]
+
+
+# ── TADGEEG-FIN-AUDIT-2A — General Ledger import staging ──────────────────────
+class GeneralLedgerRowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GeneralLedgerRow
+        fields = [
+            "id", "row_number", "journal_number", "line_number",
+            "transaction_date", "posting_date", "account_code", "account_name",
+            "mapped_account", "debit", "credit", "signed_amount", "currency",
+            "description", "document_number", "reference", "counterparty",
+            "cost_center", "department", "entered_by", "source_system",
+            "is_valid", "validation_errors",
+        ]
+        read_only_fields = fields
+
+
+class GeneralLedgerImportSerializer(serializers.ModelSerializer):
+    """Detail/summary view of one staged GL import."""
+    invalid_rows_sample = serializers.SerializerMethodField()
+
+    class Meta:
+        model = GeneralLedgerImport
+        fields = [
+            "id", "engagement", "organization", "related_trial_balance_import",
+            "original_filename", "source_format", "file_sha256",
+            "period_start", "period_end", "fiscal_year", "currency", "status",
+            "row_count", "valid_row_count", "invalid_row_count", "journal_count",
+            "balanced_journal_count", "unbalanced_journal_count",
+            "total_debit", "total_credit", "difference", "is_balanced",
+            "column_mapping", "validation_summary", "errors", "warnings",
+            "created_by", "created_at", "updated_at", "validated_at",
+            "archived_at", "invalid_rows_sample",
+        ]
+        read_only_fields = fields
+
+    def get_invalid_rows_sample(self, obj):
+        rows = obj.rows.filter(is_valid=False)[:20]
+        return GeneralLedgerRowSerializer(rows, many=True).data

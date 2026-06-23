@@ -20,6 +20,14 @@ from apps.audit.trial_balance_models import (  # noqa: F401
     TrialBalanceRow,
 )
 
+# General Ledger import staging (TADGEEG-FIN-AUDIT-2A) — re-exported for app
+# discovery. Client-evidence staging linked to the engagement; never posted to
+# apps.ledger.
+from apps.audit.general_ledger_models import (  # noqa: F401
+    GeneralLedgerImport,
+    GeneralLedgerRow,
+)
+
 
 class AuditSession(SoftDeleteModel):
     """Tracks the lifecycle and aggregate progress of a related audit upload."""

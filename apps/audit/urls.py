@@ -9,6 +9,9 @@ urlpatterns = [
     path("trial-balance/imports/<uuid:pk>/", tb.TrialBalanceImportDetailView.as_view(), name="tb-import-detail"),
     path("trial-balance/account-mappings/", tb.AccountMappingListView.as_view(), name="tb-account-mapping-list"),
     path("trial-balance/account-mappings/generate/", tb.GenerateAccountMappingsView.as_view(), name="tb-account-mapping-generate"),
+    # TADGEEG-FIN-AUDIT-2A — General Ledger import staging.
+    path("general-ledger/imports/", tb.GeneralLedgerImportListCreateView.as_view(), name="gl-import-list"),
+    path("general-ledger/imports/<uuid:pk>/", tb.GeneralLedgerImportDetailView.as_view(), name="gl-import-detail"),
     path("dashboard/overview/", views.AuditDashboardOverviewView.as_view(), name="dashboard-overview"),
     path("big-four/", views.BigFourComplianceView.as_view(), name="big-four-compliance"),
     # Phase 2.2 — visual rule builder. The DSL-driven endpoints sit under

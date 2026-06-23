@@ -1,6 +1,13 @@
 from django.contrib import admin
 
-from .models import AccountMapping, AuditCase, TrialBalanceImport, TrialBalanceRow
+from .models import (
+    AccountMapping,
+    AuditCase,
+    GeneralLedgerImport,
+    GeneralLedgerRow,
+    TrialBalanceImport,
+    TrialBalanceRow,
+)
 
 
 class TenantAwareModelAdmin(admin.ModelAdmin):
@@ -64,3 +71,36 @@ class AccountMappingAdmin(TenantAwareModelAdmin):
     search_fields = ["account_code", "account_name"]
     readonly_fields = ["mapping_source", "confidence", "created_by", "updated_by",
                        "created_at", "updated_at"]
+
+
+# ── General Ledger import staging (read-focused: imported audit evidence). ────
+@admin.register(GeneralLedgerImport)
+class GeneralLedgerImportAdmin(TenantAwareModelAdmin):
+    list_display = ["id", "engagement", "status", "fiscal_year", "row_count",
+                    "valid_row_count", "invalid_row_count", "journal_count",
+                    "unbalanced_journal_count", "is_balanced", "created_at"]
+    list_filter = ["status", "is_balanced", "source_format", "fiscal_year"]
+    search_fields = ["id", "original_filename", "engagement__engagement_code"]
+    date_hierarchy = "created_at"
+    readonly_fields = [f.name for f in GeneralLedgerImport._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(GeneralLedgerRow)
+class GeneralLedgerRowAdmin(TenantAwareModelAdmin):
+    list_display = ["import_batch", "row_number", "journal_number", "account_code",
+                    "account_name", "debit", "credit", "is_valid"]
+    list_filter = ["is_valid"]
+    search_fields = ["account_code", "account_name", "journal_number"]
+    readonly_fields = [f.name for f in GeneralLedgerRow._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

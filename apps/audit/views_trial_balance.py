@@ -17,14 +17,16 @@ from drf_spectacular.utils import extend_schema
 from apps.authentication.permissions import IsSeniorAuditorOrAbove
 
 from .engagement_models import AuditEngagement
-from .general_ledger_models import GeneralLedgerImport
+from .general_ledger_models import GeneralLedgerImport, GeneralLedgerRiskFinding
 from .serializers import (
     AccountMappingSerializer,
     GeneralLedgerImportSerializer,
+    GeneralLedgerRiskFindingSerializer,
     TrialBalanceImportSerializer,
 )
 from .services import account_mapping as mapping_service
 from .services import general_ledger_import as gl_service
+from .services import general_ledger_risk_analysis as gl_risk_service
 from .services import trial_balance_import as tb_service
 from .trial_balance_models import AccountMapping, TrialBalanceImport
 
@@ -253,3 +255,52 @@ class GeneralLedgerImportDetailView(APIView):
         if imp is None:
             return Response({"error": "not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(GeneralLedgerImportSerializer(imp).data)
+
+
+# ── TADGEEG-FIN-AUDIT-2B — GL risk analysis & candidate findings ──────────────
+class GeneralLedgerAnalyzeRisksView(APIView):
+    """POST: run deterministic risk analysis for one GL import (org-scoped)."""
+    permission_classes = [IsAuthenticated, IsSeniorAuditorOrAbove]
+
+    @extend_schema(tags=["Audit · General Ledger"], summary="Analyze GL risks")
+    def post(self, request, pk):
+        org = _user_org(request)
+        imp = (GeneralLedgerImport.objects
+               .filter(pk=pk, organization=org)
+               .select_related("engagement")
+               .first())
+        if imp is None:
+            return Response({"error": "GL import not found in your organization."},
+                            status=status.HTTP_404_NOT_FOUND)
+        summary = gl_risk_service.analyze_import(imp, created_by=request.user)
+        return Response(summary, status=status.HTTP_201_CREATED)
+
+
+class GeneralLedgerRiskFindingListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Audit · General Ledger"], summary="List GL risk findings")
+    def get(self, request):
+        org = _user_org(request)
+        if not org:
+            return Response({"error": "No organization."}, status=400)
+        qs = GeneralLedgerRiskFinding.objects.filter(organization=org)
+        if imp_id := request.query_params.get("import"):
+            qs = qs.filter(general_ledger_import_id=imp_id)
+        if eng_id := request.query_params.get("engagement"):
+            qs = qs.filter(engagement_id=eng_id)
+        if sev := request.query_params.get("severity"):
+            qs = qs.filter(severity=sev)
+        return Response(GeneralLedgerRiskFindingSerializer(qs, many=True).data)
+
+
+class GeneralLedgerRiskFindingDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Audit · General Ledger"], summary="GL risk finding detail")
+    def get(self, request, pk):
+        org = _user_org(request)
+        f = GeneralLedgerRiskFinding.objects.filter(pk=pk, organization=org).first()
+        if f is None:
+            return Response({"error": "not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(GeneralLedgerRiskFindingSerializer(f).data)

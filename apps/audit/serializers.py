@@ -7,6 +7,7 @@ from .models import (
     CaseComment,
     CustomRuleDefinition,
     GeneralLedgerImport,
+    GeneralLedgerRiskFinding,
     GeneralLedgerRow,
     TrialBalanceImport,
     TrialBalanceRow,
@@ -189,3 +190,18 @@ class GeneralLedgerImportSerializer(serializers.ModelSerializer):
     def get_invalid_rows_sample(self, obj):
         rows = obj.rows.filter(is_valid=False)[:20]
         return GeneralLedgerRowSerializer(rows, many=True).data
+
+
+# ── TADGEEG-FIN-AUDIT-2B — General Ledger risk findings (candidates) ──────────
+class GeneralLedgerRiskFindingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GeneralLedgerRiskFinding
+        fields = [
+            "id", "engagement", "organization", "general_ledger_import", "row",
+            "journal_number", "risk_code", "risk_title", "risk_description",
+            "risk_category", "severity", "score", "amount_impact",
+            "account_code", "account_name", "mapped_category",
+            "evidence_snapshot", "fingerprint", "status", "reviewed_by",
+            "reviewed_at", "reviewer_note", "created_at", "updated_at",
+        ]
+        read_only_fields = fields

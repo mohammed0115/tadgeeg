@@ -4,6 +4,7 @@ from .models import (
     AccountMapping,
     AuditCase,
     GeneralLedgerImport,
+    GeneralLedgerRiskFinding,
     GeneralLedgerRow,
     TrialBalanceImport,
     TrialBalanceRow,
@@ -104,3 +105,18 @@ class GeneralLedgerRowAdmin(TenantAwareModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+@admin.register(GeneralLedgerRiskFinding)
+class GeneralLedgerRiskFindingAdmin(TenantAwareModelAdmin):
+    # Candidate findings are auditor-reviewed; status/reviewer notes may be
+    # curated, but the machine-derived fields stay read-only. Never posts to ledger.
+    list_display = ["risk_code", "risk_category", "severity", "score",
+                    "account_code", "amount_impact", "status", "engagement", "created_at"]
+    list_filter = ["risk_category", "severity", "status"]
+    search_fields = ["risk_code", "account_code", "account_name", "journal_number"]
+    readonly_fields = ["engagement", "organization", "general_ledger_import", "row",
+                       "journal_number", "risk_code", "risk_title", "risk_description",
+                       "risk_category", "severity", "score", "amount_impact",
+                       "account_code", "account_name", "mapped_category",
+                       "evidence_snapshot", "fingerprint", "created_at", "updated_at"]

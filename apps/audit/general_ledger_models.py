@@ -202,3 +202,108 @@ class GeneralLedgerRow(models.Model):
 
     def __str__(self) -> str:
         return f"GL row {self.row_number}: {self.account_code} ({self.import_batch_id})"
+
+
+class GeneralLedgerRiskFinding(models.Model):
+    """A **candidate** risk finding produced by deterministic GL analysis.
+
+    These are *not* audit conclusions: they are machine-suggested items for an
+    auditor to review (accept / dismiss / request evidence / escalate). They are
+    derived only from staged ``GeneralLedgerRow`` data, never posted to the
+    ledger, and never use materiality or AI in this phase (raw amount thresholds
+    only — temporary until materiality integration).
+    """
+
+    class Category(models.TextChoices):
+        MANUAL_ENTRY             = "manual_entry",             "Manual entry"
+        PERIOD_END               = "period_end",              "Period-end posting"
+        UNUSUAL_TIMING           = "unusual_timing",          "Unusual timing (weekend)"
+        ROUND_AMOUNT             = "round_amount",            "Round amount"
+        THRESHOLD_AVOIDANCE      = "threshold_avoidance",     "Threshold avoidance"
+        SENSITIVE_ACCOUNT        = "sensitive_account",       "Sensitive account"
+        RARE_ACCOUNT_COMBINATION = "rare_account_combination","Rare account combination"
+        MISSING_DESCRIPTION      = "missing_description",     "Missing description"
+        UNBALANCED_JOURNAL       = "unbalanced_journal",      "Unbalanced journal"
+        DUPLICATE_ENTRY          = "duplicate_entry",         "Duplicate entry"
+        UNMAPPED_ACCOUNT         = "unmapped_account",        "Unmapped account"
+        OTHER                    = "other",                   "Other"
+
+    class Severity(models.TextChoices):
+        LOW      = "low",      "Low"
+        MEDIUM   = "medium",   "Medium"
+        HIGH     = "high",     "High"
+        CRITICAL = "critical", "Critical"
+
+    class Status(models.TextChoices):
+        CANDIDATE     = "candidate",     "Candidate"
+        ACCEPTED      = "accepted",      "Accepted"
+        DISMISSED     = "dismissed",     "Dismissed"
+        NEEDS_EVIDENCE = "needs_evidence","Needs evidence"
+        ESCALATED     = "escalated",     "Escalated"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    engagement = models.ForeignKey(
+        AuditEngagement, on_delete=models.CASCADE, related_name="gl_risk_findings")
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="gl_risk_findings")
+    general_ledger_import = models.ForeignKey(
+        GeneralLedgerImport, on_delete=models.CASCADE, related_name="risk_findings")
+    row = models.ForeignKey(
+        GeneralLedgerRow, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="risk_findings")
+
+    journal_number = models.CharField(max_length=64, blank=True, db_index=True)
+    risk_code   = models.CharField(max_length=64, db_index=True)
+    risk_title  = models.CharField(max_length=255)
+    risk_description = models.TextField(blank=True)
+    risk_category = models.CharField(max_length=32, choices=Category.choices, db_index=True)
+    severity = models.CharField(max_length=12, choices=Severity.choices, db_index=True)
+    score = models.PositiveSmallIntegerField(default=0)  # 0–100
+    amount_impact = models.DecimalField(max_digits=20, decimal_places=4, default=Decimal("0"))
+
+    account_code = models.CharField(max_length=64, blank=True, db_index=True)
+    account_name = models.CharField(max_length=255, blank=True)
+    mapped_category = models.CharField(max_length=32, blank=True)
+    evidence_snapshot = models.JSONField(default=dict, blank=True)
+
+    # Deterministic fingerprint — supports idempotent re-runs (not unique so one
+    # row may raise several rules, but stable across re-analysis).
+    fingerprint = models.CharField(max_length=64, blank=True, db_index=True)
+
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.CANDIDATE, db_index=True)
+    reviewed_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="reviewed_gl_risk_findings")
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewer_note = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "audit_gl_risk_findings"
+        ordering = ("-score", "-created_at")
+        indexes = [
+            models.Index(fields=["engagement", "status"]),
+            models.Index(fields=["organization", "severity"]),
+            models.Index(fields=["general_ledger_import", "risk_code"]),
+            models.Index(fields=["account_code"]),
+            models.Index(fields=["fingerprint"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.risk_code} [{self.severity}] {self.account_code} ({self.general_ledger_import_id})"
+
+    def clean(self):
+        if self.engagement_id and self.organization_id:
+            if self.engagement.organization_id != self.organization_id:
+                raise ValidationError(
+                    "GeneralLedgerRiskFinding.organization must match engagement.organization."
+                )
+        if self.general_ledger_import_id and self.engagement_id:
+            if self.general_ledger_import.engagement_id != self.engagement_id:
+                raise ValidationError(
+                    "general_ledger_import must belong to the same engagement."
+                )

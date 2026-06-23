@@ -12,6 +12,10 @@ urlpatterns = [
     # TADGEEG-FIN-AUDIT-2A — General Ledger import staging.
     path("general-ledger/imports/", tb.GeneralLedgerImportListCreateView.as_view(), name="gl-import-list"),
     path("general-ledger/imports/<uuid:pk>/", tb.GeneralLedgerImportDetailView.as_view(), name="gl-import-detail"),
+    # TADGEEG-FIN-AUDIT-2B — GL risk analysis & candidate findings.
+    path("general-ledger/imports/<uuid:pk>/analyze-risks/", tb.GeneralLedgerAnalyzeRisksView.as_view(), name="gl-analyze-risks"),
+    path("general-ledger/risk-findings/", tb.GeneralLedgerRiskFindingListView.as_view(), name="gl-risk-finding-list"),
+    path("general-ledger/risk-findings/<uuid:pk>/", tb.GeneralLedgerRiskFindingDetailView.as_view(), name="gl-risk-finding-detail"),
     path("dashboard/overview/", views.AuditDashboardOverviewView.as_view(), name="dashboard-overview"),
     path("big-four/", views.BigFourComplianceView.as_view(), name="big-four-compliance"),
     # Phase 2.2 — visual rule builder. The DSL-driven endpoints sit under

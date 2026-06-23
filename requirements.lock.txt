@@ -32,7 +32,7 @@ joblib==1.5.3
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
 kombu==5.6.2
-msgpack==1.1.2
+msgpack==1.2.1
 numpy==2.4.3
 openai==2.26.0
 packaging==26.0

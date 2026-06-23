@@ -39,11 +39,43 @@ from django.db.models import Count, Sum, Avg
 
 logger = logging.getLogger("finai.audit.isa700")
 
+# ── TADGEEG-FIN-AUDIT-5B — safe-wording policy ────────────────────────────────
+# This service produces an AUDIT-READINESS / OPINION-PREPARATION DRAFT, not a
+# formal audit opinion. Automated output must never say "in our opinion",
+# "present fairly", or "opinion issued"; any direction is "subject to auditor
+# review" and carries this disclaimer.
+SAFE_DISCLAIMER_EN = (
+    "This output is an audit readiness and opinion preparation aid. It does not "
+    "constitute a formal audit opinion. The final audit opinion must be prepared "
+    "and approved by a licensed auditor based on professional judgment and "
+    "sufficient appropriate audit evidence."
+)
+SAFE_DISCLAIMER_AR = (
+    "هذا المُخرَج أداة مساعدة لجاهزية التدقيق وتحضير الرأي، ولا يُعدّ رأي تدقيق "
+    "رسميًا. يجب أن يُعِدّ الرأي النهائي ويعتمده مدقّق مرخّص بناءً على الحكم المهني "
+    "وأدلة تدقيق كافية ومناسبة."
+)
+# opinion_type code → safe DRAFT DIRECTION label (always subject to auditor review).
+_DIRECTION_LABEL_EN = {
+    "unqualified": "Likely unmodified direction — subject to auditor review",
+    "qualified":   "Possible modified (except-for) direction — subject to auditor review",
+    "adverse":     "Possible modified (adverse) direction — subject to auditor review",
+    "disclaimer":  "Insufficient basis to suggest a direction — subject to auditor review",
+}
+_DIRECTION_LABEL_AR = {
+    "unqualified": "اتجاه مبدئي: غير معدّل على الأرجح — رهن مراجعة المدقّق",
+    "qualified":   "اتجاه مبدئي: احتمال تعديل (باستثناء) — رهن مراجعة المدقّق",
+    "adverse":     "اتجاه مبدئي: احتمال تعديل (سلبي) — رهن مراجعة المدقّق",
+    "disclaimer":  "أساس غير كافٍ لاقتراح اتجاه — رهن مراجعة المدقّق",
+}
+
 
 class ISA700OpinionService:
     """
-    Generates ISA 700 compliant independent auditor's report with full audit evidence,
-    risk assessments, and compliance statements.
+    Builds an ISA 700-structured **audit-readiness / opinion-preparation draft**
+    (evidence, risk assessment, compliance statement, suggested direction). It is
+    NOT a formal audit opinion and is not issued automatically — the final
+    opinion must be prepared and approved by a licensed auditor.
     """
 
     # Risk thresholds for opinion determination
@@ -71,20 +103,19 @@ Tax and Customs Authority (ZATCA) requirements and International Standards on Au
 """
 
     AUDITOR_RESPONSIBILITY_AR = """
-مسؤولية المدقق:
-مسؤوليتنا هي إبداء رأي على البيانات المالية بناءً على عملية التدقيق التي أجريناها. لقد أجرينا
-تدقيقنا وفقاً للمعايير الدولية للتدقيق (ISA)، التي تتطلب منا الالتزام بمتطلبات الأخلاقيات، وتخطيط
-وتنفيذ عملية التدقيق للحصول على تأكيد معقول بشأن ما إذا كانت البيانات المالية خالية من الأخطاء
-الجوهرية.
+مسؤولية المدقّق:
+إبداء الرأي على البيانات المالية مسؤولية مدقّق مرخّص بناءً على حكمه المهني وأدلة تدقيق كافية
+ومناسبة. يقدّم تحليل Tadgeeg الآلي إجراءات منظَّمة وفق المعايير الدولية للتدقيق (ISA) كأداة مساعدة
+لجاهزية التدقيق وتحضير الرأي فقط؛ ولا يُعدّ هذا المُخرَج رأي تدقيق رسميًا ولا يحلّ محل المدقّق.
 """
 
     AUDITOR_RESPONSIBILITY_EN = """
 Auditor's Responsibility:
-Our responsibility is to express an audit opinion on the financial statements based on the audit
-procedures we have performed. We conducted our audit in accordance with International Standards on
-Auditing (ISA), which require that we comply with ethical requirements and plan and perform the
-audit to obtain reasonable assurance about whether the financial statements are free from material
-misstatement.
+Expressing an opinion on the financial statements is the responsibility of a licensed auditor, based
+on professional judgment and sufficient appropriate audit evidence. Tadgeeg automated analysis
+provides structured procedures aligned with International Standards on Auditing (ISA) as an audit
+readiness and opinion preparation aid only; this output is not a formal audit opinion and does not
+replace the auditor.
 """
 
     def __init__(self, organization, user=None):
@@ -198,29 +229,29 @@ misstatement.
                 opinion_type, critical_failures, duplicate_count, high_risk_invoices
             ),
 
-            # ── 12. AUDITOR SIGNATURE BLOCK (ISA 700 A163) ────────────────────────
+            # ── 12. PREPARATION BLOCK — draft prepared for licensed-auditor review ──
             "auditor_signature_block": {
-                "text_ar": f"تم إعداد هذا التقرير بواسطة: نظام التدقيق المالي الآلي (Tadgeeg) بتاريخ {self._format_date_ar(self.now.date())}",
-                "text_en": f"Report prepared by: Tadgeeg Automated Audit System on {self._format_date_en(self.now.date())}",
+                "text_ar": f"مسوّدة جاهزية أعدّها تحليل Tadgeeg الآلي بتاريخ {self._format_date_ar(self.now.date())} لمراجعة مدقّق مرخّص. ليست رأي تدقيق رسميًا.",
+                "text_en": f"Audit-readiness draft prepared by Tadgeeg automated analysis on {self._format_date_en(self.now.date())} for licensed-auditor review. Not a formal audit opinion.",
                 "date": self.now.isoformat(),
                 "system_version": "2.0",
-                "isa_standard": "ISA 700 / ISA 705 / ISA 701 Compliant",
+                "isa_standard": "Structured per ISA 700 / 705 / 701 — preparation aid only",
+                "requires_licensed_auditor_review": True,
             },
 
-            # ── 13. METADATA ────────────────────────────────────────────────────────
+            # ── 13. SAFE-WORDING DISCLAIMER (TADGEEG-FIN-AUDIT-5B) ───────────────────
+            "is_formal_opinion": False,
+            "subject_to_auditor_review": True,
+            "disclaimer_en": SAFE_DISCLAIMER_EN,
+            "disclaimer_ar": SAFE_DISCLAIMER_AR,
+            "suggested_opinion_direction": opinion_type,
+
+            # ── 14. METADATA ────────────────────────────────────────────────────────
+            # ``opinion_type`` stays an internal CODE for compatibility; the
+            # human-facing labels are DRAFT DIRECTIONS (subject to auditor review).
             "opinion_type": opinion_type,
-            "opinion_type_ar": {
-                "unqualified": "معتمد بدون تحفظ (Unqualified)",
-                "qualified": "معتمد بتحفظ (Qualified)",
-                "adverse": "رأي سلبي (Adverse)",
-                "disclaimer": "امتناع عن الرأي (Disclaimer)",
-            }.get(opinion_type, "Unknown"),
-            "opinion_type_en": {
-                "unqualified": "Unqualified Opinion",
-                "qualified": "Qualified Opinion",
-                "adverse": "Adverse Opinion",
-                "disclaimer": "Disclaimer of Opinion",
-            }.get(opinion_type, "Unknown"),
+            "opinion_type_ar": _DIRECTION_LABEL_AR.get(opinion_type, "رهن مراجعة المدقّق"),
+            "opinion_type_en": _DIRECTION_LABEL_EN.get(opinion_type, "Subject to auditor review"),
             "compliance_score": compliance_score,
             "audit_date": self.now.isoformat(),
             "audit_period_invoices": total_invoices,
@@ -435,77 +466,96 @@ misstatement.
     def _build_opinion_paragraph(
         self, opinion_type: str, basis_phrase: str, compliance_score: float
     ) -> Dict:
-        """Build formal opinion paragraph per ISA 700 A118."""
-        
+        """Build a SAFE draft-direction paragraph (NOT a formal opinion).
+
+        Wording is hardened (TADGEEG-FIN-AUDIT-5B): no "in our opinion" /
+        "present fairly" / "opinion issued". Every direction is suggested and
+        "subject to auditor review", with a disclaimer attached.
+        """
         if opinion_type == "unqualified":
-            opinion_ar = (
-                f"في رأينا، تُظهر البيانات المالية والفواتير المدققة، من جميع النواحي الجوهرية، "
-                f"امتثالاً عادلاً لمتطلبات إطار إعداد التقارير المالية المطبقة بنسبة امتثال بلغت {compliance_score:.1f}٪، "
-                f"وخلو من الأخطاء الجوهرية."
-            )
             opinion_en = (
-                f"In our opinion, the financial statements and audited invoices present fairly, "
-                f"in all material respects, compliance with the applicable financial reporting framework "
-                f"at a {compliance_score:.1f}% compliance rate and are free from material misstatement."
+                f"Audit readiness — suggested draft direction: LIKELY UNMODIFIED, subject to "
+                f"auditor review. Automated testing indicated a {compliance_score:.1f}% compliance "
+                f"rate with no critical exceptions flagged. This is not a formal audit opinion; a "
+                f"licensed auditor must evaluate the evidence and prepare the final opinion."
+            )
+            opinion_ar = (
+                f"جاهزية التدقيق — اتجاه مبدئي مقترح: غير معدّل على الأرجح، رهن مراجعة المدقّق. "
+                f"أظهر الاختبار الآلي نسبة امتثال {compliance_score:.1f}٪ دون استثناءات حرجة. "
+                f"هذا ليس رأي تدقيق رسميًا؛ يجب أن يقيّم مدقّق مرخّص الأدلة ويُعِدّ الرأي النهائي."
             )
         elif opinion_type == "qualified":
-            opinion_ar = (
-                f"في رأينا، باستثناء المسائل الموضحة في الأساس المتعلق برأينا، تُظهر البيانات المالية امتثالاً "
-                f"عادلاً لمتطلبات إطار إعداد التقارير المالية بنسبة {compliance_score:.1f}٪."
-            )
             opinion_en = (
-                f"In our opinion, except for the matters described in the Basis for Our Opinion, "
-                f"the financial statements present fairly, in all material respects, compliance with "
-                f"the applicable financial reporting framework at a {compliance_score:.1f}% rate."
+                f"Audit readiness — suggested draft direction: POSSIBLE MODIFICATION for except-for "
+                f"matters, subject to auditor review. Automated testing indicated a {compliance_score:.1f}% "
+                f"compliance rate with non-pervasive matters to evaluate. This is not a formal audit "
+                f"opinion; a licensed auditor must prepare the final opinion."
+            )
+            opinion_ar = (
+                f"جاهزية التدقيق — اتجاه مبدئي مقترح: احتمال تعديل بشأن مسائل (باستثناء)، رهن مراجعة "
+                f"المدقّق. أظهر الاختبار الآلي نسبة امتثال {compliance_score:.1f}٪ مع مسائل غير منتشرة "
+                f"تحتاج تقييمًا. هذا ليس رأي تدقيق رسميًا؛ يجب أن يُعِدّ مدقّق مرخّص الرأي النهائي."
             )
         elif opinion_type == "adverse":
-            opinion_ar = (
-                f"في رأينا، نتيجة لأهمية المسائل الموضحة في الأساس المتعلق برأينا، "
-                f"لا تعكس البيانات المالية و الفواتير المدققة امتثالاً عادلاً لمتطلبات إطار إعداد التقارير المالية "
-                f"(نسبة امتثال {compliance_score:.1f}٪)، وتحتوي على تحريفات جوهرية."
-            )
             opinion_en = (
-                f"In our opinion, due to the significance of the matters described in the Basis for Our Opinion, "
-                f"the financial statements and audited invoices do not present fairly in all material respects "
-                f"compliance with the applicable financial reporting framework (compliance rate: {compliance_score:.1f}%) "
-                f"and contain material misstatement."
+                f"Audit readiness — suggested draft direction: POSSIBLE ADVERSE MODIFICATION due to "
+                f"pervasive matters, subject to auditor review. Automated testing indicated a "
+                f"{compliance_score:.1f}% compliance rate with potentially pervasive matters. This is not "
+                f"a formal audit opinion; a licensed auditor must prepare the final opinion."
             )
-        else:  # disclaimer
             opinion_ar = (
-                "بسبب عدم كفاية بيانات الفواتير والمعلومات المتاحة، فإننا غير قادرين على إبداء رأي بشأن "
-                "امتثال البيانات المالية لمتطلبات إطار إعداد التقارير المالية."
+                f"جاهزية التدقيق — اتجاه مبدئي مقترح: احتمال تعديل سلبي بسبب مسائل منتشرة، رهن مراجعة "
+                f"المدقّق. أظهر الاختبار الآلي نسبة امتثال {compliance_score:.1f}٪ مع مسائل قد تكون "
+                f"منتشرة. هذا ليس رأي تدقيق رسميًا؛ يجب أن يُعِدّ مدقّق مرخّص الرأي النهائي."
             )
+        else:  # disclaimer / insufficient basis
             opinion_en = (
-                "Due to insufficient invoice data and information available, we are unable to express "
-                "an opinion on the financial statements' compliance with the applicable financial reporting framework."
+                "Audit readiness — insufficient basis to suggest a direction, subject to auditor "
+                "review. Available data and evidence were not sufficient for automated evaluation. "
+                "This is not a formal audit opinion; a licensed auditor must prepare the final opinion."
+            )
+            opinion_ar = (
+                "جاهزية التدقيق — أساس غير كافٍ لاقتراح اتجاه، رهن مراجعة المدقّق. لم تكن البيانات "
+                "والأدلة المتاحة كافية للتقييم الآلي. هذا ليس رأي تدقيق رسميًا؛ يجب أن يُعِدّ مدقّق "
+                "مرخّص الرأي النهائي."
             )
 
         return {
             "opinion_type": opinion_type,
+            # Draft DIRECTION labels — never a formal opinion label.
+            "opinion_type_en": _DIRECTION_LABEL_EN.get(opinion_type, "Subject to auditor review"),
+            "opinion_type_ar": _DIRECTION_LABEL_AR.get(opinion_type, "رهن مراجعة المدقّق"),
+            "suggested_opinion_direction": opinion_type,
+            "subject_to_auditor_review": True,
+            "is_formal_opinion": False,
             "opinion_ar": opinion_ar,
             "opinion_en": opinion_en,
             "basis_phrase": basis_phrase,
+            "disclaimer_en": SAFE_DISCLAIMER_EN,
+            "disclaimer_ar": SAFE_DISCLAIMER_AR,
         }
 
     def _build_basis_for_opinion(
         self, opinion_type: str, summary: Dict, validations: Dict, invoices: List
     ) -> Dict:
-        """Build basis for opinion section per ISA 700 A67."""
+        """Build the basis for the SUGGESTED DIRECTION (preparation aid, not an opinion)."""
         score = summary.get("compliance_score", 0.0)
         critical = summary.get("critical_failures", 0)
         duplicates = summary.get("duplicate_count", 0)
         high_risk = summary.get("high_risk_count", 0)
 
         basis_ar = (
-            f"أساس رأينا: خلال عملية التدقيق التي أجريناها وفقاً للمعايير الدولية للتدقيق، مارسنا الاجتهاد المهني "
-            f"وحافظنا على الشك المهني. حققنا نسبة امتثال بلغت {score:.1f}٪ من خلال اختبار {len(invoices)} فاتورة "
-            f"وتطبيق 34 معيار تدقيق. تم تحديد {critical} فشل حرج و{duplicates} تكرار و{high_risk} فاتورة عالية المخاطر."
+            f"أساس الاتجاه المقترح (رهن مراجعة المدقّق): طبّق تحليل Tadgeeg الآلي إجراءات منظَّمة وفق "
+            f"المعايير الدولية للتدقيق، وبلغت نسبة الامتثال {score:.1f}٪ عبر اختبار {len(invoices)} فاتورة "
+            f"وتطبيق 34 معيار تدقيق. تم تحديد {critical} استثناءً حرجًا و{duplicates} تكرارًا و{high_risk} "
+            f"فاتورة عالية المخاطر. يجب أن يقيّم مدقّق مرخّص هذه النتائج ويُعِدّ الرأي النهائي."
         )
         basis_en = (
-            f"Basis for Our Opinion: During the audit we conducted in accordance with International Standards on Auditing, "
-            f"we exercised professional judgment and maintained professional skepticism. We achieved a {score:.1f}% "
-            f"compliance rate by testing {len(invoices)} invoices and applying 34 audit criteria. We identified {critical} "
-            f"critical failures, {duplicates} duplicates, and {high_risk} high-risk invoices."
+            f"Basis for the suggested direction (subject to auditor review): Tadgeeg automated analysis "
+            f"applied structured procedures aligned with International Standards on Auditing, indicating a "
+            f"{score:.1f}% compliance rate across {len(invoices)} invoices and 34 audit criteria. It flagged "
+            f"{critical} critical exceptions, {duplicates} duplicates, and {high_risk} high-risk invoices. "
+            f"A licensed auditor must evaluate these results and prepare the final opinion."
         )
 
         return {

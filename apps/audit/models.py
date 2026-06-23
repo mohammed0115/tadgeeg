@@ -11,6 +11,14 @@ from core.mixins import SoftDeleteModel
 # discovers them and they're importable as ``apps.audit.models.AuditEngagement``.
 from apps.audit.engagement_models import AuditEngagement  # noqa: F401
 
+# Trial Balance import staging (TADGEEG-FIN-AUDIT-1A) — re-exported for the same
+# app-discovery reason. These are client-evidence staging tables linked to the
+# engagement; they are NEVER posted to apps.ledger.
+from apps.audit.trial_balance_models import (  # noqa: F401
+    TrialBalanceImport,
+    TrialBalanceRow,
+)
+
 
 class AuditSession(SoftDeleteModel):
     """Tracks the lifecycle and aggregate progress of a related audit upload."""

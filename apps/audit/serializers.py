@@ -2,6 +2,8 @@ from rest_framework import serializers
 from .models import (
     AccountMapping,
     AuditCase,
+    AuditDifferenceItem,
+    AuditDifferenceSummary,
     AuditFinding,
     AuditSession,
     CaseComment,
@@ -237,5 +239,39 @@ class GeneralLedgerRiskFindingSerializer(serializers.ModelSerializer):
             "materiality_assessed_at", "materiality_snapshot",
             # TADGEEG-FIN-AUDIT-3B — review trail summary.
             "latest_review", "reviews_count",
+        ]
+        read_only_fields = fields
+
+
+# ── TADGEEG-FIN-AUDIT-4A — Summary of Audit Differences ───────────────────────
+class AuditDifferenceItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AuditDifferenceItem
+        fields = [
+            "id", "summary", "engagement", "organization", "source_type",
+            "gl_finding", "account_code", "account_name", "mapped_category",
+            "finding_risk_code", "finding_title", "amount_impact",
+            "debit_impact", "credit_impact", "materiality_status",
+            "materiality_adjusted_severity", "is_above_trivial",
+            "is_above_performance_materiality", "is_above_overall_materiality",
+            "management_response_status", "auditor_conclusion",
+            "evidence_snapshot", "created_at",
+        ]
+        read_only_fields = fields
+
+
+class AuditDifferenceSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AuditDifferenceSummary
+        fields = [
+            "id", "engagement", "organization", "source_scope", "status",
+            "total_accepted_findings", "total_gross_misstatement",
+            "total_debit_impact", "total_credit_impact", "total_absolute_impact",
+            "overall_materiality", "performance_materiality", "trivial_threshold",
+            "materiality_basis", "exceeds_performance_materiality",
+            "exceeds_overall_materiality", "conclusion_status",
+            "summary_by_category", "summary_by_account", "calculation_snapshot",
+            "calculated_by", "calculated_at", "reviewed_by", "reviewed_at",
+            "reviewer_note", "created_at", "updated_at",
         ]
         read_only_fields = fields

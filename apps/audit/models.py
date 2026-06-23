@@ -30,6 +30,13 @@ from apps.audit.general_ledger_models import (  # noqa: F401
     GeneralLedgerRow,
 )
 
+# Summary of Audit Differences (TADGEEG-FIN-AUDIT-4A) — engagement-level
+# accumulation of accepted GL findings. Never posts to apps.ledger.
+from apps.audit.audit_difference_models import (  # noqa: F401
+    AuditDifferenceItem,
+    AuditDifferenceSummary,
+)
+
 
 class AuditSession(SoftDeleteModel):
     """Tracks the lifecycle and aggregate progress of a related audit upload."""

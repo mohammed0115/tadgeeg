@@ -3,6 +3,8 @@ from django.contrib import admin
 from .models import (
     AccountMapping,
     AuditCase,
+    AuditDifferenceItem,
+    AuditDifferenceSummary,
     GeneralLedgerImport,
     GeneralLedgerRiskFinding,
     GeneralLedgerRiskFindingReview,
@@ -140,4 +142,38 @@ class GeneralLedgerRiskFindingReviewAdmin(TenantAwareModelAdmin):
         return False
 
     def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(AuditDifferenceSummary)
+class AuditDifferenceSummaryAdmin(TenantAwareModelAdmin):
+    # Auditor working schedule — recalculated by the service, read-only here.
+    list_display = ["id", "engagement", "status", "conclusion_status",
+                    "total_accepted_findings", "total_absolute_impact",
+                    "exceeds_performance_materiality", "exceeds_overall_materiality",
+                    "calculated_at"]
+    list_filter = ["status", "conclusion_status", "source_scope"]
+    search_fields = ["id", "engagement__engagement_code"]
+    date_hierarchy = "created_at"
+    readonly_fields = [f.name for f in AuditDifferenceSummary._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(AuditDifferenceItem)
+class AuditDifferenceItemAdmin(TenantAwareModelAdmin):
+    list_display = ["summary", "account_code", "account_name", "finding_risk_code",
+                    "amount_impact", "materiality_status", "is_above_overall_materiality"]
+    list_filter = ["materiality_status", "management_response_status"]
+    search_fields = ["account_code", "account_name", "finding_risk_code"]
+    readonly_fields = [f.name for f in AuditDifferenceItem._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
         return False

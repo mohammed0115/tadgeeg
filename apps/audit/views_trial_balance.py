@@ -16,16 +16,20 @@ from drf_spectacular.utils import extend_schema
 
 from apps.authentication.permissions import IsSeniorAuditorOrAbove
 
+from .audit_difference_models import AuditDifferenceSummary
 from .engagement_models import AuditEngagement
 from .general_ledger_models import GeneralLedgerImport, GeneralLedgerRiskFinding
 from .serializers import (
     AccountMappingSerializer,
+    AuditDifferenceItemSerializer,
+    AuditDifferenceSummarySerializer,
     GeneralLedgerImportSerializer,
     GeneralLedgerRiskFindingReviewSerializer,
     GeneralLedgerRiskFindingSerializer,
     TrialBalanceImportSerializer,
 )
 from .services import account_mapping as mapping_service
+from .services import audit_difference_summary as sad_service
 from .services import general_ledger_import as gl_service
 from .services import general_ledger_risk_analysis as gl_risk_service
 from .services import gl_finding_materiality as gl_materiality_service
@@ -369,3 +373,60 @@ class GeneralLedgerRiskFindingReviewView(APIView):
             "finding": GeneralLedgerRiskFindingSerializer(finding).data,
             "review": GeneralLedgerRiskFindingReviewSerializer(review).data,
         }, status=status.HTTP_200_OK)
+
+
+# ── TADGEEG-FIN-AUDIT-4A — Summary of Audit Differences (SAD) ─────────────────
+class EngagementSADRecalculateView(APIView):
+    """POST: rebuild the engagement's SAD from accepted GL findings (auditor+)."""
+    permission_classes = [IsAuthenticated, IsSeniorAuditorOrAbove]
+
+    @extend_schema(tags=["Audit · SAD"], summary="Recalculate engagement SAD")
+    def post(self, request, pk):
+        engagement = _scoped_engagement(request, pk)
+        if engagement is None:
+            return Response({"error": "engagement not found in your organization."},
+                            status=status.HTTP_404_NOT_FOUND)
+        summary = sad_service.recalculate_for_engagement(engagement, actor=request.user)
+        return Response(AuditDifferenceSummarySerializer(summary).data,
+                        status=status.HTTP_200_OK)
+
+
+class EngagementSADView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Audit · SAD"], summary="Get the engagement's current SAD")
+    def get(self, request, pk):
+        engagement = _scoped_engagement(request, pk)
+        if engagement is None:
+            return Response({"error": "engagement not found in your organization."},
+                            status=status.HTTP_404_NOT_FOUND)
+        summary = (AuditDifferenceSummary.objects
+                   .filter(engagement=engagement).order_by("-created_at").first())
+        if summary is None:
+            return Response({"error": "no SAD calculated yet."},
+                            status=status.HTTP_404_NOT_FOUND)
+        return Response(AuditDifferenceSummarySerializer(summary).data)
+
+
+class SADDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Audit · SAD"], summary="SAD detail")
+    def get(self, request, pk):
+        org = _user_org(request)
+        summary = AuditDifferenceSummary.objects.filter(pk=pk, organization=org).first()
+        if summary is None:
+            return Response({"error": "not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(AuditDifferenceSummarySerializer(summary).data)
+
+
+class SADItemsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Audit · SAD"], summary="SAD line items")
+    def get(self, request, pk):
+        org = _user_org(request)
+        summary = AuditDifferenceSummary.objects.filter(pk=pk, organization=org).first()
+        if summary is None:
+            return Response({"error": "not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(AuditDifferenceItemSerializer(summary.items.all(), many=True).data)

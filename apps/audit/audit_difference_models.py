@@ -173,3 +173,136 @@ class AuditDifferenceItem(models.Model):
 
     def __str__(self) -> str:
         return f"SAD item {self.account_code} {self.amount_impact} (summary={self.summary_id})"
+
+
+class AuditDifferenceItemResponse(models.Model):
+    """Append-only trail of management-response transitions on a SAD item.
+
+    One row per status change (who/what/when/why). Never posts to the ledger.
+    """
+
+    class Reason(models.TextChoices):
+        MANAGEMENT_AGREED                = "management_agreed",                "Management agreed"
+        MANAGEMENT_DISAGREED             = "management_disagreed",             "Management disagreed"
+        ADJUSTMENT_TO_BE_POSTED_BY_CLIENT = "adjustment_to_be_posted_by_client","Adjustment to be posted by client"
+        CLIENT_REFUSED_ADJUSTMENT        = "client_refused_adjustment",        "Client refused adjustment"
+        IMMATERIAL_UNADJUSTED            = "immaterial_unadjusted",            "Immaterial — left unadjusted"
+        PENDING_MANAGEMENT_REPLY         = "pending_management_reply",         "Pending management reply"
+        OTHER                            = "other",                           "Other"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    item = models.ForeignKey(
+        AuditDifferenceItem, on_delete=models.CASCADE, related_name="responses")
+    summary = models.ForeignKey(
+        AuditDifferenceSummary, on_delete=models.CASCADE, related_name="item_responses")
+    engagement = models.ForeignKey(
+        AuditEngagement, on_delete=models.CASCADE, related_name="difference_item_responses")
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="difference_item_responses")
+
+    from_status = models.CharField(max_length=16)
+    to_status   = models.CharField(max_length=16)
+    actor = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="difference_item_responses")
+    response_note = models.TextField(blank=True)
+    response_reason = models.CharField(
+        max_length=40, choices=Reason.choices, default=Reason.OTHER)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "audit_difference_item_responses"
+        ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=["item", "-created_at"]),
+            models.Index(fields=["engagement", "to_status"]),
+            models.Index(fields=["organization", "-created_at"]),
+            models.Index(fields=["actor"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.item_id}: {self.from_status} → {self.to_status}"
+
+    def clean(self):
+        if self.engagement_id and self.organization_id:
+            if self.engagement.organization_id != self.organization_id:
+                raise ValidationError(
+                    "AuditDifferenceItemResponse.organization must match engagement.organization."
+                )
+
+
+class ProposedAuditAdjustment(models.Model):
+    """A proposed audit adjustment for a SAD item — DOCUMENTATION ONLY.
+
+    This never creates or modifies ``ledger.JournalEntry``; it records what the
+    auditor proposes and how management/client responded. Posting (if any) is
+    done by the client in their own system and only *referenced* here.
+    """
+
+    class Type(models.TextChoices):
+        RECLASSIFICATION = "reclassification", "Reclassification"
+        ACCRUAL          = "accrual",          "Accrual"
+        CORRECTION       = "correction",       "Correction"
+        REVERSAL         = "reversal",         "Reversal"
+        DISCLOSURE_ONLY  = "disclosure_only",  "Disclosure only"
+        OTHER            = "other",            "Other"
+
+    class Status(models.TextChoices):
+        DRAFT                 = "draft",                 "Draft"
+        PROPOSED              = "proposed",              "Proposed"
+        ACCEPTED_BY_MANAGEMENT = "accepted_by_management","Accepted by management"
+        REJECTED_BY_MANAGEMENT = "rejected_by_management","Rejected by management"
+        POSTED_BY_CLIENT      = "posted_by_client",      "Posted by client"
+        NOT_POSTED            = "not_posted",            "Not posted"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    item = models.ForeignKey(
+        AuditDifferenceItem, on_delete=models.CASCADE, related_name="proposed_adjustments")
+    summary = models.ForeignKey(
+        AuditDifferenceSummary, on_delete=models.CASCADE, related_name="proposed_adjustments")
+    engagement = models.ForeignKey(
+        AuditEngagement, on_delete=models.CASCADE, related_name="proposed_adjustments")
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="proposed_adjustments")
+
+    adjustment_type = models.CharField(max_length=20, choices=Type.choices)
+    description = models.TextField(blank=True)
+    debit_account_code  = models.CharField(max_length=64, blank=True)
+    debit_account_name  = models.CharField(max_length=255, blank=True)
+    credit_account_code = models.CharField(max_length=64, blank=True)
+    credit_account_name = models.CharField(max_length=255, blank=True)
+    amount = models.DecimalField(**_AMOUNT)
+    currency = models.CharField(max_length=8, blank=True)
+
+    management_accepted = models.BooleanField(null=True, blank=True)
+    client_posted_reference = models.CharField(max_length=128, blank=True)
+    status = models.CharField(
+        max_length=24, choices=Status.choices, default=Status.DRAFT, db_index=True)
+
+    proposed_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="proposed_audit_adjustments")
+    proposed_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "audit_proposed_adjustments"
+        ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=["item", "-created_at"]),
+            models.Index(fields=["engagement", "status"]),
+            models.Index(fields=["organization", "status"]),
+            models.Index(fields=["summary"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"Proposed adj {self.amount} ({self.adjustment_type}) item={self.item_id}"
+
+    def clean(self):
+        if self.engagement_id and self.organization_id:
+            if self.engagement.organization_id != self.organization_id:
+                raise ValidationError(
+                    "ProposedAuditAdjustment.organization must match engagement.organization."
+                )

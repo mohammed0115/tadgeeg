@@ -34,7 +34,9 @@ from apps.audit.general_ledger_models import (  # noqa: F401
 # accumulation of accepted GL findings. Never posts to apps.ledger.
 from apps.audit.audit_difference_models import (  # noqa: F401
     AuditDifferenceItem,
+    AuditDifferenceItemResponse,
     AuditDifferenceSummary,
+    ProposedAuditAdjustment,
 )
 
 

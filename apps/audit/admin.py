@@ -4,8 +4,10 @@ from .models import (
     AccountMapping,
     AuditCase,
     AuditDifferenceItem,
+    AuditDifferenceItemResponse,
     AuditDifferenceSummary,
     GeneralLedgerImport,
+    ProposedAuditAdjustment,
     GeneralLedgerRiskFinding,
     GeneralLedgerRiskFindingReview,
     GeneralLedgerRow,
@@ -177,3 +179,36 @@ class AuditDifferenceItemAdmin(TenantAwareModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+@admin.register(AuditDifferenceItemResponse)
+class AuditDifferenceItemResponseAdmin(TenantAwareModelAdmin):
+    # Append-only management-response trail — strictly read-only in admin.
+    list_display = ["item", "from_status", "to_status", "response_reason",
+                    "actor", "created_at"]
+    list_filter = ["to_status", "response_reason"]
+    search_fields = ["item__id", "response_note"]
+    date_hierarchy = "created_at"
+    readonly_fields = [f.name for f in AuditDifferenceItemResponse._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(ProposedAuditAdjustment)
+class ProposedAuditAdjustmentAdmin(TenantAwareModelAdmin):
+    # Documentation object only — never posts to the ledger.
+    list_display = ["id", "item", "adjustment_type", "amount", "currency",
+                    "status", "management_accepted", "proposed_at"]
+    list_filter = ["adjustment_type", "status"]
+    search_fields = ["item__id", "description", "debit_account_code",
+                     "credit_account_code", "client_posted_reference"]
+    date_hierarchy = "created_at"
+    readonly_fields = ["item", "summary", "engagement", "organization",
+                       "proposed_by", "proposed_at", "created_at", "updated_at"]

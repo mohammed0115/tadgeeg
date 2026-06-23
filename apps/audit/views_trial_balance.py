@@ -16,24 +16,28 @@ from drf_spectacular.utils import extend_schema
 
 from apps.authentication.permissions import IsSeniorAuditorOrAbove
 
-from .audit_difference_models import AuditDifferenceSummary
+from .audit_difference_models import AuditDifferenceItem, AuditDifferenceSummary
 from .engagement_models import AuditEngagement
 from .general_ledger_models import GeneralLedgerImport, GeneralLedgerRiskFinding
 from .serializers import (
     AccountMappingSerializer,
+    AuditDifferenceItemResponseSerializer,
     AuditDifferenceItemSerializer,
     AuditDifferenceSummarySerializer,
     GeneralLedgerImportSerializer,
     GeneralLedgerRiskFindingReviewSerializer,
     GeneralLedgerRiskFindingSerializer,
+    ProposedAuditAdjustmentSerializer,
     TrialBalanceImportSerializer,
 )
 from .services import account_mapping as mapping_service
+from .services import audit_difference_response as sad_response_service
 from .services import audit_difference_summary as sad_service
 from .services import general_ledger_import as gl_service
 from .services import general_ledger_risk_analysis as gl_risk_service
 from .services import gl_finding_materiality as gl_materiality_service
 from .services import gl_finding_review as gl_review_service
+from .services import proposed_audit_adjustment as adjustment_service
 from .services import trial_balance_import as tb_service
 from .trial_balance_models import AccountMapping, TrialBalanceImport
 
@@ -430,3 +434,96 @@ class SADItemsView(APIView):
         if summary is None:
             return Response({"error": "not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(AuditDifferenceItemSerializer(summary.items.all(), many=True).data)
+
+
+# ── TADGEEG-FIN-AUDIT-4B — Management response + proposed adjustments ─────────
+def _scoped_sad_item(request, pk):
+    org = _user_org(request)
+    if not org:
+        return None
+    return (AuditDifferenceItem.objects
+            .filter(pk=pk, organization=org)
+            .select_related("summary", "engagement").first())
+
+
+class SADItemManagementResponseView(APIView):
+    """POST: record a management-response transition on a SAD item (auditor+)."""
+    permission_classes = [IsAuthenticated, IsSeniorAuditorOrAbove]
+
+    @extend_schema(tags=["Audit · SAD"], summary="Record SAD item management response")
+    def post(self, request, pk):
+        item = _scoped_sad_item(request, pk)
+        if item is None:
+            return Response({"error": "SAD item not found in your organization."},
+                            status=status.HTTP_404_NOT_FOUND)
+        try:
+            response = sad_response_service.record_response(
+                item, actor=request.user,
+                to_status=request.data.get("status", ""),
+                response_note=request.data.get("response_note", ""),
+                response_reason=request.data.get("response_reason", ""),
+            )
+        except sad_response_service.ManagementResponseError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        item.refresh_from_db()
+        return Response({
+            "item": AuditDifferenceItemSerializer(item).data,
+            "response": AuditDifferenceItemResponseSerializer(response).data,
+        }, status=status.HTTP_200_OK)
+
+
+class SADItemResponsesView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Audit · SAD"], summary="List SAD item management responses")
+    def get(self, request, pk):
+        item = _scoped_sad_item(request, pk)
+        if item is None:
+            return Response({"error": "not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            AuditDifferenceItemResponseSerializer(item.responses.all(), many=True).data)
+
+
+class SADItemProposedAdjustmentView(APIView):
+    """POST: create/update a proposed audit adjustment (documentation only)."""
+    permission_classes = [IsAuthenticated, IsSeniorAuditorOrAbove]
+
+    @extend_schema(tags=["Audit · SAD"], summary="Capture a proposed audit adjustment")
+    def post(self, request, pk):
+        item = _scoped_sad_item(request, pk)
+        if item is None:
+            return Response({"error": "SAD item not found in your organization."},
+                            status=status.HTTP_404_NOT_FOUND)
+        d = request.data
+        try:
+            adj = adjustment_service.create_or_update_adjustment(
+                item, actor=request.user,
+                adjustment_type=d.get("adjustment_type", ""),
+                amount=d.get("amount"),
+                description=d.get("description", ""),
+                debit_account_code=d.get("debit_account_code", ""),
+                debit_account_name=d.get("debit_account_name", ""),
+                credit_account_code=d.get("credit_account_code", ""),
+                credit_account_name=d.get("credit_account_name", ""),
+                currency=d.get("currency", ""),
+                status=d.get("status"),
+                management_accepted=d.get("management_accepted"),
+                client_posted_reference=d.get("client_posted_reference", ""),
+                adjustment_id=d.get("adjustment_id"),
+            )
+        except adjustment_service.ProposedAdjustmentError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(ProposedAuditAdjustmentSerializer(adj).data,
+                        status=status.HTTP_201_CREATED)
+
+
+class SADItemProposedAdjustmentsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Audit · SAD"], summary="List proposed audit adjustments")
+    def get(self, request, pk):
+        item = _scoped_sad_item(request, pk)
+        if item is None:
+            return Response({"error": "not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(
+            ProposedAuditAdjustmentSerializer(item.proposed_adjustments.all(), many=True).data)

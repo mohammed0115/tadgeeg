@@ -3,8 +3,10 @@ from .models import (
     AccountMapping,
     AuditCase,
     AuditDifferenceItem,
+    AuditDifferenceItemResponse,
     AuditDifferenceSummary,
     AuditFinding,
+    ProposedAuditAdjustment,
     AuditSession,
     CaseComment,
     CustomRuleDefinition,
@@ -273,5 +275,32 @@ class AuditDifferenceSummarySerializer(serializers.ModelSerializer):
             "summary_by_category", "summary_by_account", "calculation_snapshot",
             "calculated_by", "calculated_at", "reviewed_by", "reviewed_at",
             "reviewer_note", "created_at", "updated_at",
+        ]
+        read_only_fields = fields
+
+
+# ── TADGEEG-FIN-AUDIT-4B — Management response + proposed adjustments ──────────
+class AuditDifferenceItemResponseSerializer(serializers.ModelSerializer):
+    actor_email = serializers.CharField(source="actor.email", read_only=True, default="")
+
+    class Meta:
+        model = AuditDifferenceItemResponse
+        fields = [
+            "id", "item", "summary", "engagement", "organization",
+            "from_status", "to_status", "actor", "actor_email", "response_note",
+            "response_reason", "metadata", "created_at",
+        ]
+        read_only_fields = fields
+
+
+class ProposedAuditAdjustmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProposedAuditAdjustment
+        fields = [
+            "id", "item", "summary", "engagement", "organization",
+            "adjustment_type", "description", "debit_account_code",
+            "debit_account_name", "credit_account_code", "credit_account_name",
+            "amount", "currency", "management_accepted", "client_posted_reference",
+            "status", "proposed_by", "proposed_at", "created_at", "updated_at",
         ]
         read_only_fields = fields

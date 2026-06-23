@@ -6,6 +6,7 @@ from .models import (
     AuditDifferenceItemResponse,
     AuditDifferenceSummary,
     AuditFinding,
+    AuditReadinessWorkpaper,
     ProposedAuditAdjustment,
     AuditSession,
     CaseComment,
@@ -302,5 +303,25 @@ class ProposedAuditAdjustmentSerializer(serializers.ModelSerializer):
             "debit_account_name", "credit_account_code", "credit_account_name",
             "amount", "currency", "management_accepted", "client_posted_reference",
             "status", "proposed_by", "proposed_at", "created_at", "updated_at",
+        ]
+        read_only_fields = fields
+
+
+# ── TADGEEG-FIN-AUDIT-5A — Audit Readiness / Opinion Preparation Workpaper ────
+class AuditReadinessWorkpaperSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AuditReadinessWorkpaper
+        fields = [
+            "id", "engagement", "organization", "sad_summary", "status",
+            "readiness_conclusion", "suggested_opinion_direction",
+            "total_accepted_differences", "total_unadjusted_differences",
+            "total_adjusted_differences", "total_pending_management_response",
+            "total_needs_evidence", "total_absolute_impact",
+            "overall_materiality", "performance_materiality",
+            "conclusion_basis", "unadjusted_summary",
+            "management_response_summary", "proposed_adjustment_summary",
+            "legal_disclaimer", "generated_by", "generated_at",
+            "reviewed_by", "reviewed_at", "reviewer_note",
+            "created_at", "updated_at",
         ]
         read_only_fields = fields

@@ -30,6 +30,10 @@ urlpatterns = [
     path("sad/items/<uuid:pk>/responses/", tb.SADItemResponsesView.as_view(), name="sad-item-responses"),
     path("sad/items/<uuid:pk>/proposed-adjustment/", tb.SADItemProposedAdjustmentView.as_view(), name="sad-item-proposed-adjustment"),
     path("sad/items/<uuid:pk>/proposed-adjustments/", tb.SADItemProposedAdjustmentsView.as_view(), name="sad-item-proposed-adjustments"),
+    # TADGEEG-FIN-AUDIT-5A — audit readiness / opinion preparation workpaper.
+    path("engagements/<uuid:pk>/audit-readiness/generate/", tb.EngagementAuditReadinessGenerateView.as_view(), name="audit-readiness-generate"),
+    path("engagements/<uuid:pk>/audit-readiness/", tb.EngagementAuditReadinessView.as_view(), name="audit-readiness-engagement"),
+    path("audit-readiness/<uuid:pk>/", tb.AuditReadinessDetailView.as_view(), name="audit-readiness-detail"),
     path("dashboard/overview/", views.AuditDashboardOverviewView.as_view(), name="dashboard-overview"),
     path("big-four/", views.BigFourComplianceView.as_view(), name="big-four-compliance"),
     # Phase 2.2 — visual rule builder. The DSL-driven endpoints sit under

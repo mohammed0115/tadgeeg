@@ -17,6 +17,7 @@ from drf_spectacular.utils import extend_schema
 from apps.authentication.permissions import IsSeniorAuditorOrAbove
 
 from .audit_difference_models import AuditDifferenceItem, AuditDifferenceSummary
+from .audit_readiness_models import AuditReadinessWorkpaper
 from .engagement_models import AuditEngagement
 from .general_ledger_models import GeneralLedgerImport, GeneralLedgerRiskFinding
 from .serializers import (
@@ -25,6 +26,7 @@ from .serializers import (
     AuditDifferenceItemSerializer,
     AuditDifferenceSummarySerializer,
     GeneralLedgerImportSerializer,
+    AuditReadinessWorkpaperSerializer,
     GeneralLedgerRiskFindingReviewSerializer,
     GeneralLedgerRiskFindingSerializer,
     ProposedAuditAdjustmentSerializer,
@@ -33,6 +35,7 @@ from .serializers import (
 from .services import account_mapping as mapping_service
 from .services import audit_difference_response as sad_response_service
 from .services import audit_difference_summary as sad_service
+from .services import audit_readiness_workpaper as readiness_service
 from .services import general_ledger_import as gl_service
 from .services import general_ledger_risk_analysis as gl_risk_service
 from .services import gl_finding_materiality as gl_materiality_service
@@ -527,3 +530,53 @@ class SADItemProposedAdjustmentsView(APIView):
             return Response({"error": "not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(
             ProposedAuditAdjustmentSerializer(item.proposed_adjustments.all(), many=True).data)
+
+
+# ── TADGEEG-FIN-AUDIT-5A — Audit Readiness / Opinion Preparation Workpaper ────
+class EngagementAuditReadinessGenerateView(APIView):
+    """POST: build the engagement's audit-readiness workpaper (auditor+).
+
+    This is an auditor preparation aid — NOT a formal audit opinion.
+    """
+    permission_classes = [IsAuthenticated, IsSeniorAuditorOrAbove]
+
+    @extend_schema(tags=["Audit · Readiness"], summary="Generate audit-readiness workpaper")
+    def post(self, request, pk):
+        engagement = _scoped_engagement(request, pk)
+        if engagement is None:
+            return Response({"error": "engagement not found in your organization."},
+                            status=status.HTTP_404_NOT_FOUND)
+        try:
+            wp = readiness_service.generate_for_engagement(engagement, actor=request.user)
+        except readiness_service.ReadinessError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(AuditReadinessWorkpaperSerializer(wp).data, status=status.HTTP_200_OK)
+
+
+class EngagementAuditReadinessView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Audit · Readiness"], summary="Get the engagement's readiness workpaper")
+    def get(self, request, pk):
+        engagement = _scoped_engagement(request, pk)
+        if engagement is None:
+            return Response({"error": "engagement not found in your organization."},
+                            status=status.HTTP_404_NOT_FOUND)
+        wp = (AuditReadinessWorkpaper.objects
+              .filter(engagement=engagement).order_by("-created_at").first())
+        if wp is None:
+            return Response({"error": "no readiness workpaper generated yet."},
+                            status=status.HTTP_404_NOT_FOUND)
+        return Response(AuditReadinessWorkpaperSerializer(wp).data)
+
+
+class AuditReadinessDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(tags=["Audit · Readiness"], summary="Audit-readiness workpaper detail")
+    def get(self, request, pk):
+        org = _user_org(request)
+        wp = AuditReadinessWorkpaper.objects.filter(pk=pk, organization=org).first()
+        if wp is None:
+            return Response({"error": "not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(AuditReadinessWorkpaperSerializer(wp).data)

@@ -39,6 +39,12 @@ from apps.audit.audit_difference_models import (  # noqa: F401
     ProposedAuditAdjustment,
 )
 
+# Audit Readiness / Opinion Preparation Workpaper (TADGEEG-FIN-AUDIT-5A) —
+# an auditor aid built from the SAD; NOT a formal opinion, never posts to ledger.
+from apps.audit.audit_readiness_models import (  # noqa: F401
+    AuditReadinessWorkpaper,
+)
+
 
 class AuditSession(SoftDeleteModel):
     """Tracks the lifecycle and aggregate progress of a related audit upload."""

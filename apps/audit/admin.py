@@ -6,6 +6,7 @@ from .models import (
     AuditDifferenceItem,
     AuditDifferenceItemResponse,
     AuditDifferenceSummary,
+    AuditReadinessWorkpaper,
     GeneralLedgerImport,
     ProposedAuditAdjustment,
     GeneralLedgerRiskFinding,
@@ -212,3 +213,21 @@ class ProposedAuditAdjustmentAdmin(TenantAwareModelAdmin):
     date_hierarchy = "created_at"
     readonly_fields = ["item", "summary", "engagement", "organization",
                        "proposed_by", "proposed_at", "created_at", "updated_at"]
+
+
+@admin.register(AuditReadinessWorkpaper)
+class AuditReadinessWorkpaperAdmin(TenantAwareModelAdmin):
+    # Auditor preparation aid — read-only; NOT a formal opinion. No issue action.
+    list_display = ["id", "engagement", "status", "readiness_conclusion",
+                    "suggested_opinion_direction", "total_accepted_differences",
+                    "total_unadjusted_differences", "generated_at"]
+    list_filter = ["status", "readiness_conclusion", "suggested_opinion_direction"]
+    search_fields = ["id", "engagement__engagement_code"]
+    date_hierarchy = "created_at"
+    readonly_fields = [f.name for f in AuditReadinessWorkpaper._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

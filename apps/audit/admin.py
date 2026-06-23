@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AuditCase, TrialBalanceImport, TrialBalanceRow
+from .models import AccountMapping, AuditCase, TrialBalanceImport, TrialBalanceRow
 
 
 class TenantAwareModelAdmin(admin.ModelAdmin):
@@ -52,3 +52,15 @@ class TrialBalanceRowAdmin(TenantAwareModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+@admin.register(AccountMapping)
+class AccountMappingAdmin(TenantAwareModelAdmin):
+    # Mapping is a classification layer (not immutable evidence): the category
+    # and notes may be curated by the auditor. It never writes to the ledger.
+    list_display = ["account_code", "account_name", "mapped_category",
+                    "mapping_source", "confidence", "engagement", "updated_at"]
+    list_filter = ["mapped_category", "mapping_source"]
+    search_fields = ["account_code", "account_name"]
+    readonly_fields = ["mapping_source", "confidence", "created_by", "updated_by",
+                       "created_at", "updated_at"]

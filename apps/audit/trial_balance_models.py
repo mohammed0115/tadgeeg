@@ -184,3 +184,107 @@ class TrialBalanceRow(models.Model):
 
     def __str__(self) -> str:
         return f"TB row {self.row_number}: {self.account_code} ({self.import_batch_id})"
+
+
+class AccountMapping(models.Model):
+    """Maps a client trial-balance account code → a canonical audit category,
+    and (optionally) to an existing ``ledger.Account`` for classification only.
+
+    This is a **bridge / classification layer**. It NEVER posts to the ledger
+    and NEVER mutates ledger accounts — ``mapped_ledger_account`` is a read-only
+    reference used to align the client's chart with the platform's canonical
+    chart for reporting. One mapping per (engagement, account_code).
+    """
+
+    class Category(models.TextChoices):
+        CASH_AND_BANK        = "cash_and_bank",        "Cash & bank"
+        ACCOUNTS_RECEIVABLE  = "accounts_receivable",  "Accounts receivable"
+        INVENTORY            = "inventory",            "Inventory"
+        FIXED_ASSETS         = "fixed_assets",         "Fixed assets"
+        OTHER_ASSETS         = "other_assets",         "Other assets"
+        ACCOUNTS_PAYABLE     = "accounts_payable",     "Accounts payable"
+        VAT_TAX              = "vat_tax",              "VAT / tax"
+        LOANS                = "loans",                "Loans"
+        OTHER_LIABILITIES    = "other_liabilities",    "Other liabilities"
+        EQUITY               = "equity",               "Equity"
+        REVENUE              = "revenue",              "Revenue"
+        COST_OF_SALES        = "cost_of_sales",        "Cost of sales"
+        PAYROLL_EXPENSE      = "payroll_expense",      "Payroll expense"
+        OPERATING_EXPENSE    = "operating_expense",    "Operating expense"
+        FINANCE_COST         = "finance_cost",         "Finance cost"
+        OTHER_INCOME_EXPENSE = "other_income_expense", "Other income / expense"
+        UNKNOWN              = "unknown",              "Unknown"
+
+    class Source(models.TextChoices):
+        MANUAL     = "manual",     "Manual"
+        RULE_BASED = "rule_based", "Rule-based"
+        IMPORTED   = "imported",   "Imported"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    engagement = models.ForeignKey(
+        AuditEngagement, on_delete=models.CASCADE,
+        related_name="account_mappings",
+    )
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE,
+        related_name="account_mappings",
+    )
+
+    account_code = models.CharField(max_length=64, db_index=True)
+    account_name = models.CharField(max_length=255, blank=True)
+    mapped_category = models.CharField(
+        max_length=32, choices=Category.choices, default=Category.UNKNOWN,
+        db_index=True,
+    )
+    # Optional reference to the platform chart of accounts — classification
+    # only. on_delete=SET_NULL so removing a ledger account never cascades into
+    # audit evidence.
+    mapped_ledger_account = models.ForeignKey(
+        "ledger.Account", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="audit_account_mappings",
+    )
+    mapping_source = models.CharField(
+        max_length=12, choices=Source.choices, default=Source.RULE_BASED,
+    )
+    confidence = models.DecimalField(
+        max_digits=4, decimal_places=3, null=True, blank=True,
+        help_text="0.000–1.000 for rule-based suggestions; null for manual.",
+    )
+    notes = models.TextField(blank=True)
+
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="created_account_mappings",
+    )
+    updated_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="updated_account_mappings",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "audit_account_mappings"
+        ordering = ("engagement", "account_code")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["engagement", "account_code"],
+                name="uniq_account_mapping_per_engagement",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=["engagement", "account_code"]),
+            models.Index(fields=["organization", "mapped_category"]),
+            models.Index(fields=["mapped_category"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.account_code} → {self.mapped_category} (eng={self.engagement_id})"
+
+    def clean(self):
+        if self.engagement_id and self.organization_id:
+            if self.engagement.organization_id != self.organization_id:
+                raise ValidationError(
+                    "AccountMapping.organization must match engagement.organization."
+                )

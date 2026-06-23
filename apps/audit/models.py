@@ -15,6 +15,7 @@ from apps.audit.engagement_models import AuditEngagement  # noqa: F401
 # app-discovery reason. These are client-evidence staging tables linked to the
 # engagement; they are NEVER posted to apps.ledger.
 from apps.audit.trial_balance_models import (  # noqa: F401
+    AccountMapping,
     TrialBalanceImport,
     TrialBalanceRow,
 )

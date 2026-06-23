@@ -1,8 +1,14 @@
 from django.urls import path
 from . import views
 from . import views_rule_builder as rb
+from . import views_trial_balance as tb
 
 urlpatterns = [
+    # TADGEEG-FIN-AUDIT-1B — Trial Balance upload/list/detail + account mapping.
+    path("trial-balance/imports/", tb.TrialBalanceImportListCreateView.as_view(), name="tb-import-list"),
+    path("trial-balance/imports/<uuid:pk>/", tb.TrialBalanceImportDetailView.as_view(), name="tb-import-detail"),
+    path("trial-balance/account-mappings/", tb.AccountMappingListView.as_view(), name="tb-account-mapping-list"),
+    path("trial-balance/account-mappings/generate/", tb.GenerateAccountMappingsView.as_view(), name="tb-account-mapping-generate"),
     path("dashboard/overview/", views.AuditDashboardOverviewView.as_view(), name="dashboard-overview"),
     path("big-four/", views.BigFourComplianceView.as_view(), name="big-four-compliance"),
     # Phase 2.2 — visual rule builder. The DSL-driven endpoints sit under

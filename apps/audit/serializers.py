@@ -1,5 +1,14 @@
 from rest_framework import serializers
-from .models import AuditCase, AuditFinding, AuditSession, CaseComment, CustomRuleDefinition
+from .models import (
+    AccountMapping,
+    AuditCase,
+    AuditFinding,
+    AuditSession,
+    CaseComment,
+    CustomRuleDefinition,
+    TrialBalanceImport,
+    TrialBalanceRow,
+)
 
 class CaseCommentSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(source="author.full_name", read_only=True)
@@ -89,3 +98,53 @@ class CustomRuleDefinitionSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "version", "created_by", "created_at", "updated_at"]
 
+
+
+# ── TADGEEG-FIN-AUDIT-1B — Trial Balance upload + Account Mapping ──────────────
+class TrialBalanceRowSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TrialBalanceRow
+        fields = [
+            "id", "row_number", "account_code", "account_name", "account_type",
+            "opening_debit", "opening_credit", "period_debit", "period_credit",
+            "closing_debit", "closing_credit", "net_movement", "closing_balance",
+            "currency", "is_valid", "validation_errors",
+        ]
+        read_only_fields = fields
+
+
+class TrialBalanceImportSerializer(serializers.ModelSerializer):
+    """Detail/summary view of one staged import."""
+    invalid_rows_sample = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TrialBalanceImport
+        fields = [
+            "id", "engagement", "organization", "original_filename",
+            "source_format", "file_sha256", "period_start", "period_end",
+            "fiscal_year", "currency", "status", "row_count", "valid_row_count",
+            "invalid_row_count", "total_debit", "total_credit", "difference",
+            "is_balanced", "column_mapping", "validation_summary", "errors",
+            "warnings", "created_by", "created_at", "updated_at", "validated_at",
+            "archived_at", "invalid_rows_sample",
+        ]
+        read_only_fields = fields
+
+    def get_invalid_rows_sample(self, obj):
+        rows = obj.rows.filter(is_valid=False)[:20]
+        return TrialBalanceRowSerializer(rows, many=True).data
+
+
+class AccountMappingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AccountMapping
+        fields = [
+            "id", "engagement", "organization", "account_code", "account_name",
+            "mapped_category", "mapped_ledger_account", "mapping_source",
+            "confidence", "notes", "created_by", "updated_by",
+            "created_at", "updated_at",
+        ]
+        read_only_fields = [
+            "id", "organization", "mapping_source", "confidence",
+            "created_by", "updated_by", "created_at", "updated_at",
+        ]

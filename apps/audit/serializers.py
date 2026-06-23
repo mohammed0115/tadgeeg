@@ -203,5 +203,12 @@ class GeneralLedgerRiskFindingSerializer(serializers.ModelSerializer):
             "account_code", "account_name", "mapped_category",
             "evidence_snapshot", "fingerprint", "status", "reviewed_by",
             "reviewed_at", "reviewer_note", "created_at", "updated_at",
+            # TADGEEG-FIN-AUDIT-3A — materiality overlay (separate from original).
+            "materiality_status", "materiality_basis", "materiality_overall",
+            "materiality_performance", "materiality_trivial_threshold",
+            "amount_to_overall_materiality_ratio",
+            "amount_to_performance_materiality_ratio",
+            "materiality_adjusted_score", "materiality_adjusted_severity",
+            "materiality_assessed_at", "materiality_snapshot",
         ]
         read_only_fields = fields

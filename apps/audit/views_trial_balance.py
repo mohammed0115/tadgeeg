@@ -27,6 +27,7 @@ from .serializers import (
 from .services import account_mapping as mapping_service
 from .services import general_ledger_import as gl_service
 from .services import general_ledger_risk_analysis as gl_risk_service
+from .services import gl_finding_materiality as gl_materiality_service
 from .services import trial_balance_import as tb_service
 from .trial_balance_models import AccountMapping, TrialBalanceImport
 
@@ -291,6 +292,8 @@ class GeneralLedgerRiskFindingListView(APIView):
             qs = qs.filter(engagement_id=eng_id)
         if sev := request.query_params.get("severity"):
             qs = qs.filter(severity=sev)
+        if mstatus := request.query_params.get("materiality_status"):
+            qs = qs.filter(materiality_status=mstatus)
         return Response(GeneralLedgerRiskFindingSerializer(qs, many=True).data)
 
 
@@ -304,3 +307,33 @@ class GeneralLedgerRiskFindingDetailView(APIView):
         if f is None:
             return Response({"error": "not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(GeneralLedgerRiskFindingSerializer(f).data)
+
+
+# ── TADGEEG-FIN-AUDIT-3A — apply materiality to a GL import's findings ────────
+class GeneralLedgerApplyMaterialityView(APIView):
+    """POST: classify a GL import's candidate findings against materiality.
+
+    Body (all optional): ``benchmark_amount`` + ``benchmark_key`` to compute and
+    persist an engagement materiality profile via the existing service; or a
+    ``materiality`` dict override; otherwise the engagement's stored materiality
+    is used (findings are marked ``not_assessed`` if none is available).
+    """
+    permission_classes = [IsAuthenticated, IsSeniorAuditorOrAbove]
+
+    @extend_schema(tags=["Audit · General Ledger"], summary="Apply materiality to GL findings")
+    def post(self, request, pk):
+        org = _user_org(request)
+        imp = (GeneralLedgerImport.objects
+               .filter(pk=pk, organization=org)
+               .select_related("engagement")
+               .first())
+        if imp is None:
+            return Response({"error": "GL import not found in your organization."},
+                            status=status.HTTP_404_NOT_FOUND)
+        summary = gl_materiality_service.apply_materiality_to_import(
+            imp,
+            materiality=request.data.get("materiality"),
+            benchmark_amount=request.data.get("benchmark_amount"),
+            benchmark_key=request.data.get("benchmark_key", "profit_before_tax"),
+        )
+        return Response(summary, status=status.HTTP_200_OK)

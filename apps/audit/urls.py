@@ -14,6 +14,8 @@ urlpatterns = [
     path("general-ledger/imports/<uuid:pk>/", tb.GeneralLedgerImportDetailView.as_view(), name="gl-import-detail"),
     # TADGEEG-FIN-AUDIT-2B — GL risk analysis & candidate findings.
     path("general-ledger/imports/<uuid:pk>/analyze-risks/", tb.GeneralLedgerAnalyzeRisksView.as_view(), name="gl-analyze-risks"),
+    # TADGEEG-FIN-AUDIT-3A — materiality classification for GL findings.
+    path("general-ledger/imports/<uuid:pk>/apply-materiality/", tb.GeneralLedgerApplyMaterialityView.as_view(), name="gl-apply-materiality"),
     path("general-ledger/risk-findings/", tb.GeneralLedgerRiskFindingListView.as_view(), name="gl-risk-finding-list"),
     path("general-ledger/risk-findings/<uuid:pk>/", tb.GeneralLedgerRiskFindingDetailView.as_view(), name="gl-risk-finding-detail"),
     path("dashboard/overview/", views.AuditDashboardOverviewView.as_view(), name="dashboard-overview"),

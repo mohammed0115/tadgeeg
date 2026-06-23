@@ -241,6 +241,14 @@ class GeneralLedgerRiskFinding(models.Model):
         NEEDS_EVIDENCE = "needs_evidence","Needs evidence"
         ESCALATED     = "escalated",     "Escalated"
 
+    class MaterialityStatus(models.TextChoices):
+        NOT_ASSESSED               = "not_assessed",               "Not assessed"
+        TRIVIAL                    = "trivial",                    "Trivial (≤ trivial threshold)"
+        BELOW_PERFORMANCE          = "below_performance_materiality", "Below performance materiality"
+        ABOVE_PERFORMANCE          = "above_performance_materiality", "Above performance materiality"
+        ABOVE_OVERALL              = "above_overall_materiality",   "Above overall materiality"
+        UNKNOWN_AMOUNT             = "unknown_amount",             "Unknown amount"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     engagement = models.ForeignKey(
@@ -281,6 +289,26 @@ class GeneralLedgerRiskFinding(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # ── Materiality assessment (TADGEEG-FIN-AUDIT-3A) ───────────────────
+    # The original deterministic `score`/`severity` above are PRESERVED; these
+    # *_adjusted fields are a separate materiality-aware overlay.
+    materiality_status = models.CharField(
+        max_length=32, choices=MaterialityStatus.choices,
+        default=MaterialityStatus.NOT_ASSESSED, db_index=True)
+    materiality_basis = models.CharField(max_length=64, blank=True)
+    materiality_overall     = models.DecimalField(max_digits=20, decimal_places=4, null=True, blank=True)
+    materiality_performance = models.DecimalField(max_digits=20, decimal_places=4, null=True, blank=True)
+    materiality_trivial_threshold = models.DecimalField(max_digits=20, decimal_places=4, null=True, blank=True)
+    amount_to_overall_materiality_ratio = models.DecimalField(
+        max_digits=14, decimal_places=4, null=True, blank=True)
+    amount_to_performance_materiality_ratio = models.DecimalField(
+        max_digits=14, decimal_places=4, null=True, blank=True)
+    materiality_adjusted_score = models.PositiveSmallIntegerField(null=True, blank=True)
+    materiality_adjusted_severity = models.CharField(
+        max_length=12, choices=Severity.choices, blank=True)
+    materiality_assessed_at = models.DateTimeField(null=True, blank=True)
+    materiality_snapshot = models.JSONField(default=dict, blank=True)
 
     class Meta:
         db_table = "audit_gl_risk_findings"

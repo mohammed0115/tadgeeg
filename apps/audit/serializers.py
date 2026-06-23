@@ -8,6 +8,7 @@ from .models import (
     CustomRuleDefinition,
     GeneralLedgerImport,
     GeneralLedgerRiskFinding,
+    GeneralLedgerRiskFindingReview,
     GeneralLedgerRow,
     TrialBalanceImport,
     TrialBalanceRow,
@@ -192,8 +193,32 @@ class GeneralLedgerImportSerializer(serializers.ModelSerializer):
         return GeneralLedgerRowSerializer(rows, many=True).data
 
 
+# ── TADGEEG-FIN-AUDIT-3B — GL risk-finding review trail ───────────────────────
+class GeneralLedgerRiskFindingReviewSerializer(serializers.ModelSerializer):
+    reviewer_email = serializers.CharField(source="reviewer.email", read_only=True, default="")
+
+    class Meta:
+        model = GeneralLedgerRiskFindingReview
+        fields = [
+            "id", "finding", "engagement", "organization", "from_status",
+            "to_status", "reviewer", "reviewer_email", "reviewer_note",
+            "review_reason", "metadata", "created_at",
+        ]
+        read_only_fields = fields
+
+
 # ── TADGEEG-FIN-AUDIT-2B — General Ledger risk findings (candidates) ──────────
 class GeneralLedgerRiskFindingSerializer(serializers.ModelSerializer):
+    latest_review = serializers.SerializerMethodField()
+    reviews_count = serializers.SerializerMethodField()
+
+    def get_latest_review(self, obj):
+        r = obj.reviews.first()  # ordered -created_at
+        return GeneralLedgerRiskFindingReviewSerializer(r).data if r else None
+
+    def get_reviews_count(self, obj):
+        return obj.reviews.count()
+
     class Meta:
         model = GeneralLedgerRiskFinding
         fields = [
@@ -210,5 +235,7 @@ class GeneralLedgerRiskFindingSerializer(serializers.ModelSerializer):
             "amount_to_performance_materiality_ratio",
             "materiality_adjusted_score", "materiality_adjusted_severity",
             "materiality_assessed_at", "materiality_snapshot",
+            # TADGEEG-FIN-AUDIT-3B — review trail summary.
+            "latest_review", "reviews_count",
         ]
         read_only_fields = fields

@@ -335,3 +335,61 @@ class GeneralLedgerRiskFinding(models.Model):
                 raise ValidationError(
                     "general_ledger_import must belong to the same engagement."
                 )
+
+
+class GeneralLedgerRiskFindingReview(models.Model):
+    """Immutable audit-trail row for one status transition of a GL risk finding.
+
+    One row is written per review action (status change), capturing who changed
+    what, when, and why. Never posts to the ledger.
+    """
+
+    class Reason(models.TextChoices):
+        EVIDENCE_SUFFICIENT             = "evidence_sufficient",             "Evidence sufficient"
+        FALSE_POSITIVE                  = "false_positive",                  "False positive"
+        IMMATERIAL                      = "immaterial",                      "Immaterial"
+        NEEDS_SUPPORTING_DOCUMENT       = "needs_supporting_document",       "Needs supporting document"
+        MANAGEMENT_EXPLANATION_REQUIRED = "management_explanation_required", "Management explanation required"
+        ESCALATION_REQUIRED             = "escalation_required",             "Escalation required"
+        OTHER                           = "other",                          "Other"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    finding = models.ForeignKey(
+        GeneralLedgerRiskFinding, on_delete=models.CASCADE, related_name="reviews")
+    engagement = models.ForeignKey(
+        AuditEngagement, on_delete=models.CASCADE, related_name="gl_risk_finding_reviews")
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="gl_risk_finding_reviews")
+
+    from_status = models.CharField(max_length=16)
+    to_status   = models.CharField(max_length=16)
+    reviewer = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="gl_risk_finding_reviews")
+    reviewer_note = models.TextField(blank=True)
+    review_reason = models.CharField(
+        max_length=40, choices=Reason.choices, default=Reason.OTHER)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "audit_gl_risk_finding_reviews"
+        ordering = ("-created_at",)
+        indexes = [
+            models.Index(fields=["finding", "-created_at"]),
+            models.Index(fields=["engagement", "to_status"]),
+            models.Index(fields=["organization", "-created_at"]),
+            models.Index(fields=["reviewer"]),
+            models.Index(fields=["to_status"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.finding_id}: {self.from_status} → {self.to_status}"
+
+    def clean(self):
+        if self.engagement_id and self.organization_id:
+            if self.engagement.organization_id != self.organization_id:
+                raise ValidationError(
+                    "GeneralLedgerRiskFindingReview.organization must match "
+                    "engagement.organization."
+                )

@@ -21,6 +21,7 @@ from .general_ledger_models import GeneralLedgerImport, GeneralLedgerRiskFinding
 from .serializers import (
     AccountMappingSerializer,
     GeneralLedgerImportSerializer,
+    GeneralLedgerRiskFindingReviewSerializer,
     GeneralLedgerRiskFindingSerializer,
     TrialBalanceImportSerializer,
 )
@@ -28,6 +29,7 @@ from .services import account_mapping as mapping_service
 from .services import general_ledger_import as gl_service
 from .services import general_ledger_risk_analysis as gl_risk_service
 from .services import gl_finding_materiality as gl_materiality_service
+from .services import gl_finding_review as gl_review_service
 from .services import trial_balance_import as tb_service
 from .trial_balance_models import AccountMapping, TrialBalanceImport
 
@@ -337,3 +339,33 @@ class GeneralLedgerApplyMaterialityView(APIView):
             benchmark_key=request.data.get("benchmark_key", "profit_before_tax"),
         )
         return Response(summary, status=status.HTTP_200_OK)
+
+
+# ── TADGEEG-FIN-AUDIT-3B — GL finding review workflow ─────────────────────────
+class GeneralLedgerRiskFindingReviewView(APIView):
+    """POST: transition a GL candidate finding's status with an audit trail."""
+    permission_classes = [IsAuthenticated, IsSeniorAuditorOrAbove]
+
+    @extend_schema(tags=["Audit · General Ledger"], summary="Review a GL risk finding")
+    def post(self, request, pk):
+        org = _user_org(request)
+        finding = (GeneralLedgerRiskFinding.objects
+                   .filter(pk=pk, organization=org)
+                   .select_related("engagement").first())
+        if finding is None:
+            return Response({"error": "finding not found in your organization."},
+                            status=status.HTTP_404_NOT_FOUND)
+        try:
+            review = gl_review_service.review_finding(
+                finding, actor=request.user,
+                to_status=request.data.get("status", ""),
+                reviewer_note=request.data.get("reviewer_note", ""),
+                review_reason=request.data.get("review_reason", ""),
+            )
+        except gl_review_service.GLFindingReviewError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        finding.refresh_from_db()
+        return Response({
+            "finding": GeneralLedgerRiskFindingSerializer(finding).data,
+            "review": GeneralLedgerRiskFindingReviewSerializer(review).data,
+        }, status=status.HTTP_200_OK)

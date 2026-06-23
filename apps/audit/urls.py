@@ -18,6 +18,8 @@ urlpatterns = [
     path("general-ledger/imports/<uuid:pk>/apply-materiality/", tb.GeneralLedgerApplyMaterialityView.as_view(), name="gl-apply-materiality"),
     path("general-ledger/risk-findings/", tb.GeneralLedgerRiskFindingListView.as_view(), name="gl-risk-finding-list"),
     path("general-ledger/risk-findings/<uuid:pk>/", tb.GeneralLedgerRiskFindingDetailView.as_view(), name="gl-risk-finding-detail"),
+    # TADGEEG-FIN-AUDIT-3B — review workflow.
+    path("general-ledger/risk-findings/<uuid:pk>/review/", tb.GeneralLedgerRiskFindingReviewView.as_view(), name="gl-risk-finding-review"),
     path("dashboard/overview/", views.AuditDashboardOverviewView.as_view(), name="dashboard-overview"),
     path("big-four/", views.BigFourComplianceView.as_view(), name="big-four-compliance"),
     # Phase 2.2 — visual rule builder. The DSL-driven endpoints sit under

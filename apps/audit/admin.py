@@ -5,6 +5,7 @@ from .models import (
     AuditCase,
     GeneralLedgerImport,
     GeneralLedgerRiskFinding,
+    GeneralLedgerRiskFindingReview,
     GeneralLedgerRow,
     TrialBalanceImport,
     TrialBalanceRow,
@@ -120,3 +121,23 @@ class GeneralLedgerRiskFindingAdmin(TenantAwareModelAdmin):
                        "risk_category", "severity", "score", "amount_impact",
                        "account_code", "account_name", "mapped_category",
                        "evidence_snapshot", "fingerprint", "created_at", "updated_at"]
+
+
+@admin.register(GeneralLedgerRiskFindingReview)
+class GeneralLedgerRiskFindingReviewAdmin(TenantAwareModelAdmin):
+    # Immutable audit trail — strictly read-only in admin.
+    list_display = ["finding", "from_status", "to_status", "review_reason",
+                    "reviewer", "created_at"]
+    list_filter = ["to_status", "review_reason"]
+    search_fields = ["finding__id", "reviewer_note"]
+    date_hierarchy = "created_at"
+    readonly_fields = [f.name for f in GeneralLedgerRiskFindingReview._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

@@ -28,8 +28,7 @@ def org():
     """Create test organization."""
     return Organization.objects.create(
         name="Test Org",
-        slug="test-org",
-        country_code="SA"
+        country="SA",
     )
 
 
@@ -160,9 +159,13 @@ class TestOpinionParagraph:
             90.5
         )
 
-        assert "رأينا" in opinion["opinion_ar"]
-        assert "امتثالاً عادلاً" in opinion["opinion_ar"]
+        # 5B/5C: safe audit-readiness wording — NOT a formal opinion.
+        assert "رهن مراجعة المدقّق" in opinion["opinion_ar"]
+        assert "في رأينا" not in opinion["opinion_ar"]
+        assert "تعرض بعدالة" not in opinion["opinion_ar"]
         assert "90.5" in opinion["opinion_ar"]
+        assert opinion["is_formal_opinion"] is False
+        assert opinion["subject_to_auditor_review"] is True
 
     def test_qualified_opinion_paragraph_english(self, isa700_service):
         """Qualified opinion paragraph in English."""
@@ -172,9 +175,12 @@ class TestOpinionParagraph:
             75.0
         )
 
-        assert "except for" in opinion["opinion_en"]
+        # 5B/5C: safe draft-direction wording — NOT a formal opinion.
+        assert "subject to auditor review" in opinion["opinion_en"].lower()
         assert "75.0" in opinion["opinion_en"]
-        assert "Basis for Our Opinion" in opinion["opinion_en"]
+        assert "not a formal audit opinion" in opinion["opinion_en"].lower()
+        assert "in our opinion" not in opinion["opinion_en"].lower()
+        assert "present fairly" not in opinion["opinion_en"].lower()
 
     def test_adverse_opinion_paragraph(self, isa700_service):
         """Adverse opinion paragraph."""
@@ -195,8 +201,12 @@ class TestOpinionParagraph:
             0.0
         )
 
-        assert "Disclaimer" in opinion["opinion_type_en"] or "disclaimer" in opinion["opinion_type"]
-        assert "unable to express" in opinion["opinion_en"]
+        assert "disclaimer" in opinion["opinion_type"]
+        # 5B/5C: safe wording — insufficient basis, subject to auditor review.
+        assert "subject to auditor review" in opinion["opinion_en"].lower()
+        assert "insufficient basis" in opinion["opinion_en"].lower()
+        assert opinion["is_formal_opinion"] is False
+        assert opinion["disclaimer_en"]
 
 
 class TestRiskAssessment:
@@ -438,13 +448,20 @@ class TestComprehensiveOpinionGeneration:
             summary, {}, [], [], {}, {}
         )
 
-        # Check for Arabic content
-        assert "رأينا" in opinion_report["management_responsibility"]["ar"]
+        # Check for Arabic content (management responsibility — no "in our opinion").
         assert "المسؤولية" in opinion_report["management_responsibility"]["ar"]
+        assert "في رأينا" not in opinion_report["management_responsibility"]["ar"]
 
-        # Check for English content
-        assert "our responsibility" in opinion_report["auditor_responsibility"]["en"].lower()
-        assert "audit" in opinion_report["auditor_responsibility"]["en"].lower()
+        # English: opinion is the licensed auditor's responsibility, not the system's.
+        auditor_en = opinion_report["auditor_responsibility"]["en"].lower()
+        assert "licensed auditor" in auditor_en
+        assert "not a formal audit opinion" in auditor_en
+        assert "our responsibility is to express" not in auditor_en
+
+        # 5B/5C: top-level safe-wording guarantees on the generated report.
+        assert opinion_report["is_formal_opinion"] is False
+        assert opinion_report["subject_to_auditor_review"] is True
+        assert opinion_report["disclaimer_en"]
 
 
 class TestEdgeCases:

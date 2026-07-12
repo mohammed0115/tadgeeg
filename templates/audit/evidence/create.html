@@ -1,0 +1,101 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Request Evidence" %}{% endblock %}
+{% block nav_evidence %}active{% endblock %}
+
+{% block extra_styles %}
+  .ev-wrap { max-width: 760px; margin: 0 auto; }
+  .ev-title { font-size:22px; font-weight:800; color:var(--primary,#002244); margin-bottom:4px; }
+  .ev-sub { color:var(--text-muted,#64748b); font-size:13px; margin-bottom:18px; }
+  .card { background:#fff; border:1px solid var(--border,#e2e8f0); border-radius:12px; padding:22px; }
+  .fld { margin-bottom:16px; }
+  .fld label { display:block; font-weight:700; font-size:12px; color:#334155; margin-bottom:6px; }
+  .fld input, .fld select, .fld textarea { width:100%; border:1px solid var(--border,#cbd5e1); border-radius:9px; padding:9px 11px; font-size:13px; background:#fff; }
+  .fld textarea { min-height:80px; resize:vertical; }
+  .err { background:#fee2e2; color:#991b1b; border:1px solid #fecaca; border-radius:9px; padding:10px 14px; margin-bottom:16px; font-size:13px; }
+  .row2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .actions { display:flex; gap:10px; margin-top:8px; }
+  .btn-primary { background:var(--primary,#002244); color:#fff; border:none; border-radius:10px; padding:10px 18px; font-weight:700; font-size:13px; cursor:pointer; }
+  .btn-link { color:#475569; text-decoration:none; padding:10px 8px; font-size:13px; }
+  .hint { color:#64748b; font-size:11px; margin-top:4px; }
+{% endblock %}
+
+{% block content %}
+<div class="ev-wrap">
+  <div class="ev-title">{% trans "Request Evidence" %} · طلب دليل</div>
+  <div class="ev-sub">{% trans "Ask for supporting evidence against a GL finding or a SAD item. This does not change the finding — the auditor reviews it separately." %}</div>
+
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+
+  <form method="post" class="card">
+    {% csrf_token %}
+    <div class="fld">
+      <label>{% trans "Engagement" %} <span style="color:#b91c1c">*</span></label>
+      <select name="engagement" required>
+        <option value="">{% trans "Select engagement…" %}</option>
+        {% for e in engagements %}
+          <option value="{{ e.id }}">{{ e.engagement_code }} — {{ e.title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="row2">
+      <div class="fld">
+        <label>{% trans "GL Finding (needs evidence / escalated)" %}</label>
+        <select name="gl_finding">
+          <option value="">—</option>
+          {% for f in findings %}
+            <option value="{{ f.id }}">{{ f.risk_code }} · {{ f.account_code }} · {{ f.get_status_display }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="fld">
+        <label>{% trans "SAD Item" %}</label>
+        <select name="sad_item">
+          <option value="">—</option>
+          {% for s in sad_items %}
+            <option value="{{ s.id }}">{{ s.account_code }} · {{ s.finding_title|default:s.id }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="hint">{% trans "Choose at least one: a GL finding or a SAD item." %}</div>
+
+    <div class="fld" style="margin-top:16px;">
+      <label>{% trans "Title" %} <span style="color:#b91c1c">*</span></label>
+      <input type="text" name="title" required maxlength="255" placeholder="{% trans 'e.g. Provide supplier invoice for JV-1043' %}">
+    </div>
+
+    <div class="fld">
+      <label>{% trans "Description" %}</label>
+      <textarea name="description" placeholder="{% trans 'What evidence is needed and why.' %}"></textarea>
+    </div>
+
+    <div class="row2">
+      <div class="fld">
+        <label>{% trans "Reason" %}</label>
+        <select name="request_reason">
+          {% for value, label in reason_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="fld">
+        <label>{% trans "Priority" %}</label>
+        <select name="priority">
+          {% for value, label in priority_choices %}<option value="{{ value }}" {% if value == 'medium' %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="fld">
+      <label>{% trans "Due date" %}</label>
+      <input type="date" name="due_date">
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="btn-primary">{% trans "Create request" %}</button>
+      <a class="btn-link" href="{% url 'frontend:evidence_list' %}">{% trans "Cancel" %}</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

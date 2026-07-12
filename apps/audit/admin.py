@@ -6,6 +6,9 @@ from .models import (
     AuditDifferenceItem,
     AuditDifferenceItemResponse,
     AuditDifferenceSummary,
+    AuditEvidenceAttachment,
+    AuditEvidenceRequest,
+    AuditEvidenceRequestEvent,
     AuditReadinessWorkpaper,
     GeneralLedgerImport,
     ProposedAuditAdjustment,
@@ -230,4 +233,46 @@ class AuditReadinessWorkpaperAdmin(TenantAwareModelAdmin):
         return False
 
     def has_change_permission(self, request, obj=None):
+        return False
+
+
+# ── TADGEEG-FIN-AUDIT-6A — Evidence Request workflow ─────────────────────────
+@admin.register(AuditEvidenceRequest)
+class AuditEvidenceRequestAdmin(TenantAwareModelAdmin):
+    list_display = ("id", "title", "status", "priority", "engagement",
+                    "gl_finding", "sad_item", "requested_by", "created_at")
+    list_filter = ("status", "priority", "request_reason")
+    search_fields = ("id", "title", "description")
+    # Transitions go through the service — keep admin read-only for safety.
+    readonly_fields = [f.name for f in AuditEvidenceRequest._meta.fields]
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(AuditEvidenceAttachment)
+class AuditEvidenceAttachmentAdmin(TenantAwareModelAdmin):
+    list_display = ("id", "evidence_request", "original_filename", "size_bytes",
+                    "uploaded_by", "uploaded_at", "is_active")
+    readonly_fields = [f.name for f in AuditEvidenceAttachment._meta.fields]
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(AuditEvidenceRequestEvent)
+class AuditEvidenceRequestEventAdmin(TenantAwareModelAdmin):
+    """Append-only audit trail — no add/change/delete in admin."""
+    list_display = ("id", "evidence_request", "event_type", "from_status",
+                    "to_status", "actor", "created_at")
+    list_filter = ("event_type",)
+    readonly_fields = [f.name for f in AuditEvidenceRequestEvent._meta.fields]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
         return False

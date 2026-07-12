@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import views_evidence as ev
 from . import views_rule_builder as rb
 from . import views_trial_balance as tb
 
@@ -37,6 +38,13 @@ urlpatterns = [
     # TADGEEG-FIN-AUDIT-5D — audit readiness export (JSON / HTML / PDF).
     path("engagements/<uuid:pk>/audit-readiness/export/", tb.EngagementAuditReadinessExportView.as_view(), name="audit-readiness-export-engagement"),
     path("audit-readiness/<uuid:pk>/export/", tb.AuditReadinessExportView.as_view(), name="audit-readiness-export-detail"),
+    # TADGEEG-FIN-AUDIT-6A — evidence request workflow.
+    path("evidence-requests/", ev.EvidenceRequestListCreateView.as_view(), name="evidence-request-list"),
+    path("evidence-requests/<uuid:pk>/", ev.EvidenceRequestDetailView.as_view(), name="evidence-request-detail"),
+    path("evidence-requests/<uuid:pk>/submit/", ev.EvidenceRequestSubmitView.as_view(), name="evidence-request-submit"),
+    path("evidence-requests/<uuid:pk>/review/", ev.EvidenceRequestReviewView.as_view(), name="evidence-request-review"),
+    path("evidence-requests/<uuid:pk>/attachments/", ev.EvidenceRequestAttachmentsView.as_view(), name="evidence-request-attachments"),
+    path("evidence-requests/<uuid:pk>/events/", ev.EvidenceRequestEventsView.as_view(), name="evidence-request-events"),
     path("dashboard/overview/", views.AuditDashboardOverviewView.as_view(), name="dashboard-overview"),
     path("big-four/", views.BigFourComplianceView.as_view(), name="big-four-compliance"),
     # Phase 2.2 — visual rule builder. The DSL-driven endpoints sit under

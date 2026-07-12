@@ -5,6 +5,7 @@ from django.urls import path, reverse_lazy
 
 from apps.authentication.forms import ExistingEmailPasswordResetForm
 from . import views
+from . import evidence_views
 
 app_name = 'frontend'
 
@@ -103,6 +104,11 @@ urlpatterns = [
 
     # Audit tools (ISA 320 materiality, ISA 530 sampling)
     path('audit/tools/', views.audit_tools, name='audit_tools'),
+
+    # TADGEEG-FIN-AUDIT-6A — Evidence Request workflow pages
+    path('audit/evidence/', evidence_views.evidence_list, name='evidence_list'),
+    path('audit/evidence/new/', evidence_views.evidence_create, name='evidence_create'),
+    path('audit/evidence/<uuid:pk>/', evidence_views.evidence_detail, name='evidence_detail'),
 
     # Hash-chain integrity (tamper-evident audit trail)
     path('audit/integrity/', views.audit_integrity, name='audit_integrity'),

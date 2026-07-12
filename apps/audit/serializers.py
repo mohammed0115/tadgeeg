@@ -5,6 +5,9 @@ from .models import (
     AuditDifferenceItem,
     AuditDifferenceItemResponse,
     AuditDifferenceSummary,
+    AuditEvidenceAttachment,
+    AuditEvidenceRequest,
+    AuditEvidenceRequestEvent,
     AuditFinding,
     AuditReadinessWorkpaper,
     ProposedAuditAdjustment,
@@ -323,5 +326,83 @@ class AuditReadinessWorkpaperSerializer(serializers.ModelSerializer):
             "legal_disclaimer", "generated_by", "generated_at",
             "reviewed_by", "reviewed_at", "reviewer_note",
             "created_at", "updated_at",
+        ]
+        read_only_fields = fields
+
+
+# ── TADGEEG-FIN-AUDIT-6A — Evidence Request workflow ─────────────────────────
+class AuditEvidenceAttachmentSerializer(serializers.ModelSerializer):
+    uploaded_by_name = serializers.CharField(
+        source="uploaded_by.full_name", read_only=True, default="")
+
+    class Meta:
+        model = AuditEvidenceAttachment
+        fields = [
+            "id", "evidence_request", "engagement", "organization",
+            "uploaded_by", "uploaded_by_name", "document", "uploaded_file",
+            "original_filename", "file_sha256", "content_type", "size_bytes",
+            "description", "is_active", "uploaded_at",
+        ]
+        read_only_fields = fields
+
+
+class AuditEvidenceRequestEventSerializer(serializers.ModelSerializer):
+    actor_name = serializers.CharField(
+        source="actor.full_name", read_only=True, default="")
+    event_type_display = serializers.CharField(
+        source="get_event_type_display", read_only=True)
+
+    class Meta:
+        model = AuditEvidenceRequestEvent
+        fields = [
+            "id", "evidence_request", "engagement", "organization", "actor",
+            "actor_name", "event_type", "event_type_display", "from_status",
+            "to_status", "note", "metadata", "created_at",
+        ]
+        read_only_fields = fields
+
+
+class AuditEvidenceRequestSerializer(serializers.ModelSerializer):
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    priority_display = serializers.CharField(source="get_priority_display", read_only=True)
+    request_reason_display = serializers.CharField(
+        source="get_request_reason_display", read_only=True)
+    requested_by_name = serializers.CharField(
+        source="requested_by.full_name", read_only=True, default="")
+    assigned_to_name = serializers.CharField(
+        source="assigned_to.full_name", read_only=True, default="")
+    attachments = AuditEvidenceAttachmentSerializer(many=True, read_only=True)
+    events = AuditEvidenceRequestEventSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = AuditEvidenceRequest
+        fields = [
+            "id", "engagement", "organization", "gl_finding", "sad_item",
+            "requested_by", "requested_by_name", "assigned_to", "assigned_to_name",
+            "title", "description", "request_reason", "request_reason_display",
+            "status", "status_display", "priority", "priority_display",
+            "due_date", "requested_at", "submitted_at", "reviewed_by",
+            "reviewed_at", "reviewer_note", "created_at", "updated_at",
+            "attachments", "events",
+        ]
+        read_only_fields = fields
+
+
+class AuditEvidenceRequestListSerializer(serializers.ModelSerializer):
+    """Lean list serializer (no nested attachments/events)."""
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    priority_display = serializers.CharField(source="get_priority_display", read_only=True)
+    requested_by_name = serializers.CharField(
+        source="requested_by.full_name", read_only=True, default="")
+    assigned_to_name = serializers.CharField(
+        source="assigned_to.full_name", read_only=True, default="")
+
+    class Meta:
+        model = AuditEvidenceRequest
+        fields = [
+            "id", "engagement", "gl_finding", "sad_item", "title",
+            "request_reason", "status", "status_display", "priority",
+            "priority_display", "due_date", "requested_by_name",
+            "assigned_to_name", "requested_at", "created_at",
         ]
         read_only_fields = fields

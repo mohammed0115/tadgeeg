@@ -1,0 +1,99 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Evidence Requests" %}{% endblock %}
+{% block nav_evidence %}active{% endblock %}
+
+{% block extra_styles %}
+  .ev-wrap { max-width: 1200px; margin: 0 auto; }
+  .ev-head { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:18px; }
+  .ev-title { font-size:22px; font-weight:800; color:var(--primary,#002244); }
+  .ev-sub { color:var(--text-muted,#64748b); font-size:13px; }
+  .ev-btn { display:inline-block; background:var(--primary,#002244); color:#fff; border-radius:10px; padding:9px 16px; font-weight:700; font-size:13px; text-decoration:none; }
+  .ev-table { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--border,#e2e8f0); border-radius:12px; overflow:hidden; font-size:13px; }
+  .ev-table th, .ev-table td { padding:10px 12px; border-bottom:1px solid var(--border,#e2e8f0); text-align:start; }
+  .ev-table th { background:#f8fafc; color:#475569; font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+  .ev-table tr:last-child td { border-bottom:none; }
+  .badge { display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:700; }
+  .badge.open{background:#e0e7ff;color:#3730a3;}
+  .badge.submitted{background:#dbeafe;color:#1e40af;}
+  .badge.under_review{background:#fef9c3;color:#854d0e;}
+  .badge.accepted{background:#dcfce7;color:#166534;}
+  .badge.rejected{background:#fee2e2;color:#991b1b;}
+  .badge.more_evidence_required{background:#ffedd5;color:#9a3412;}
+  .badge.cancelled{background:#e2e8f0;color:#475569;}
+  .prio{font-size:11px;font-weight:700;text-transform:capitalize;}
+  .prio.high,.prio.critical{color:#b91c1c;}
+  .prio.medium{color:#b45309;}
+  .prio.low{color:#0369a1;}
+  .filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .filter-bar a{font-size:12px;padding:5px 12px;border-radius:999px;border:1px solid var(--border,#e2e8f0);color:#475569;text-decoration:none;}
+  .filter-bar a.active{background:var(--primary,#002244);color:#fff;border-color:var(--primary,#002244);}
+  .kpi{display:inline-flex;align-items:center;gap:6px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:10px;padding:8px 14px;font-weight:700;font-size:13px;}
+{% endblock %}
+
+{% block content %}
+<div class="ev-wrap">
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Evidence Requests" %} · طلبات الأدلة</div>
+      <div class="ev-sub">{% trans "Request, track, and review supporting evidence for audit findings." %}</div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <span class="kpi">{% trans "Open" %}: {{ open_count }}</span>
+      {% if can_manage %}
+        <a class="ev-btn" href="{% url 'frontend:evidence_create' %}">+ {% trans "Request Evidence" %} · طلب دليل</a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <a href="{% url 'frontend:evidence_list' %}" class="{% if not active_status %}active{% endif %}">{% trans "All" %}</a>
+    {% for value, label in status_choices %}
+      <a href="?status={{ value }}" class="{% if active_status == value %}active{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </div>
+
+  {% if evidence_requests %}
+  <table class="ev-table">
+    <thead>
+      <tr>
+        <th>{% trans "Title" %}</th>
+        <th>{% trans "Linked to" %}</th>
+        <th>{% trans "Status" %}</th>
+        <th>{% trans "Priority" %}</th>
+        <th>{% trans "Due" %}</th>
+        <th>{% trans "Requested by" %}</th>
+        <th>{% trans "Assigned to" %}</th>
+        <th>{% trans "Created" %}</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in evidence_requests %}
+      <tr>
+        <td>{{ r.title }}</td>
+        <td>
+          {% if r.gl_finding_id %}<span title="GL finding">GL: {{ r.gl_finding.risk_code|default:r.gl_finding_id }}</span>
+          {% elif r.sad_item_id %}<span title="SAD item">SAD: {{ r.sad_item.account_code|default:r.sad_item_id }}</span>
+          {% else %}—{% endif %}
+        </td>
+        <td><span class="badge {{ r.status }}">{{ r.get_status_display }}</span></td>
+        <td><span class="prio {{ r.priority }}">{{ r.get_priority_display }}</span></td>
+        <td>{{ r.due_date|default:"—" }}</td>
+        <td>{{ r.requested_by.full_name|default:"—" }}</td>
+        <td>{{ r.assigned_to.full_name|default:"—" }}</td>
+        <td>{{ r.created_at|date:"Y-m-d" }}</td>
+        <td><a href="{% url 'frontend:evidence_detail' r.id %}">{% trans "View" %} →</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div style="background:#fff;border:1px dashed var(--border,#e2e8f0);border-radius:12px;padding:40px;text-align:center;color:#64748b;">
+    {% trans "No evidence requests yet." %}
+    {% if can_manage %}<div style="margin-top:12px;"><a class="ev-btn" href="{% url 'frontend:evidence_create' %}">+ {% trans "Request Evidence" %}</a></div>{% endif %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Evidence Request" %}{% endblock %}
+{% block nav_evidence %}active{% endblock %}
+
+{% block extra_styles %}
+  .ev-wrap { max-width: 1000px; margin: 0 auto; }
+  .ev-title { font-size:20px; font-weight:800; color:var(--primary,#002244); }
+  .ev-sub { color:var(--text-muted,#64748b); font-size:12px; }
+  .grid { display:grid; grid-template-columns:2fr 1fr; gap:18px; align-items:start; }
+  @media (max-width: 860px){ .grid{grid-template-columns:1fr;} }
+  .card { background:#fff; border:1px solid var(--border,#e2e8f0); border-radius:12px; padding:18px; margin-bottom:16px; }
+  .card h3 { font-size:14px; font-weight:800; color:#1e293b; margin-bottom:12px; }
+  .kv { display:grid; grid-template-columns:150px 1fr; gap:6px 12px; font-size:13px; }
+  .kv dt { color:#64748b; font-weight:600; }
+  .kv dd { color:#1e293b; }
+  .badge { display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:700; }
+  .badge.open{background:#e0e7ff;color:#3730a3;} .badge.submitted{background:#dbeafe;color:#1e40af;}
+  .badge.under_review{background:#fef9c3;color:#854d0e;} .badge.accepted{background:#dcfce7;color:#166534;}
+  .badge.rejected{background:#fee2e2;color:#991b1b;} .badge.more_evidence_required{background:#ffedd5;color:#9a3412;}
+  .badge.cancelled{background:#e2e8f0;color:#475569;}
+  .att { border:1px solid var(--border,#e2e8f0); border-radius:9px; padding:10px 12px; margin-bottom:8px; font-size:12px; }
+  .att .fn { font-weight:700; color:#1e293b; }
+  .att .meta { color:#64748b; }
+  .timeline { list-style:none; padding:0; margin:0; }
+  .timeline li { position:relative; padding:0 0 14px 18px; border-inline-start:2px solid var(--border,#e2e8f0); }
+  .timeline li:last-child { border-inline-start-color:transparent; }
+  .timeline .dot { position:absolute; inset-inline-start:-6px; top:2px; width:10px; height:10px; border-radius:50%; background:var(--primary,#002244); }
+  .timeline .et { font-weight:700; font-size:12px; color:#1e293b; }
+  .timeline .tm { font-size:11px; color:#94a3b8; }
+  .timeline .nt { font-size:12px; color:#475569; }
+  .actions form { display:inline; }
+  .act-btn { border:none; border-radius:9px; padding:8px 13px; font-weight:700; font-size:12px; cursor:pointer; margin:0 4px 8px 0; }
+  .act-upload{background:#0369a1;color:#fff;} .act-submit{background:#1e40af;color:#fff;}
+  .act-review{background:#854d0e;color:#fff;} .act-accept{background:#166534;color:#fff;}
+  .act-reject{background:#991b1b;color:#fff;} .act-more{background:#9a3412;color:#fff;} .act-cancel{background:#475569;color:#fff;}
+  .err { background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:13px; }
+  .ok { background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:13px; }
+  .up input, .up textarea { width:100%; border:1px solid var(--border,#cbd5e1); border-radius:8px; padding:8px; font-size:12px; margin-bottom:8px; }
+  .note-in { width:100%; border:1px solid var(--border,#cbd5e1); border-radius:8px; padding:8px; font-size:12px; margin-bottom:8px; }
+{% endblock %}
+
+{% block content %}
+<div class="ev-wrap">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+    <div>
+      <div class="ev-title">{{ req.title }}</div>
+      <div class="ev-sub">{% trans "Evidence Request" %} · طلب دليل · {{ req.id }}</div>
+    </div>
+    <a href="{% url 'frontend:evidence_list' %}" style="font-size:13px;color:#475569;text-decoration:none;">← {% trans "All requests" %}</a>
+  </div>
+
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="ok">{{ notice }}</div>{% endif %}
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h3>{% trans "Details" %}</h3>
+        <dl class="kv">
+          <dt>{% trans "Status" %} · حالة الطلب</dt><dd><span class="badge {{ req.status }}">{{ req.get_status_display }}</span></dd>
+          <dt>{% trans "Priority" %}</dt><dd>{{ req.get_priority_display }}</dd>
+          <dt>{% trans "Reason" %}</dt><dd>{{ req.get_request_reason_display }}</dd>
+          <dt>{% trans "Due date" %}</dt><dd>{{ req.due_date|default:"—" }}</dd>
+          <dt>{% trans "Description" %}</dt><dd>{{ req.description|default:"—"|linebreaksbr }}</dd>
+          <dt>{% trans "Linked GL finding" %}</dt><dd>{% if req.gl_finding_id %}{{ req.gl_finding.risk_code }} · {{ req.gl_finding.account_code }} · {{ req.gl_finding.get_status_display }}{% else %}—{% endif %}</dd>
+          <dt>{% trans "Linked SAD item" %}</dt><dd>{% if req.sad_item_id %}{{ req.sad_item.account_code }} · {{ req.sad_item.finding_title }}{% else %}—{% endif %}</dd>
+          <dt>{% trans "Requested by" %}</dt><dd>{{ req.requested_by.full_name|default:"—" }} · {{ req.requested_at|date:"Y-m-d H:i" }}</dd>
+          <dt>{% trans "Assigned to" %}</dt><dd>{{ req.assigned_to.full_name|default:"—" }}</dd>
+          {% if req.reviewed_by_id %}
+          <dt>{% trans "Reviewer note" %} · ملاحظة المراجع</dt><dd>{{ req.reviewer_note|default:"—" }}</dd>
+          <dt>{% trans "Reviewed by" %}</dt><dd>{{ req.reviewed_by.full_name|default:"—" }} · {{ req.reviewed_at|date:"Y-m-d H:i" }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+
+      <div class="card">
+        <h3>{% trans "Attachments" %}</h3>
+        {% for a in attachments %}
+          <div class="att">
+            <div class="fn">{{ a.original_filename|default:"(file)" }}</div>
+            <div class="meta">
+              {% trans "Uploaded by" %} {{ a.uploaded_by.full_name|default:"—" }} · {{ a.uploaded_at|date:"Y-m-d H:i" }}
+              {% if a.size_bytes %} · {{ a.size_bytes }} {% trans "bytes" %}{% endif %}
+              {% if a.file_sha256 %} · sha256:{{ a.file_sha256|slice:":12" }}…{% endif %}
+            </div>
+            {% if a.description %}<div class="meta">{{ a.description }}</div>{% endif %}
+          </div>
+        {% empty %}
+          <div style="color:#94a3b8;font-size:12px;">{% trans "No attachments yet." %}</div>
+        {% endfor %}
+
+        {% if can_manage and flags.can_upload %}
+        <form method="post" enctype="multipart/form-data" class="up" style="margin-top:12px;">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="upload">
+          <input type="file" name="file" required>
+          <textarea name="description" placeholder="{% trans 'Description (optional)' %}"></textarea>
+          <button type="submit" class="act-btn act-upload">{% trans "Upload evidence" %} · رفع دليل</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <div>
+      {% if can_manage %}
+      <div class="card actions">
+        <h3>{% trans "Actions" %}</h3>
+        {% if flags.can_submit %}
+        <form method="post"><input type="hidden" name="action" value="submit">{% csrf_token %}<button class="act-btn act-submit">{% trans "Submit for review" %}</button></form>
+        {% endif %}
+        {% if flags.can_under_review %}
+        <form method="post"><input type="hidden" name="action" value="under_review">{% csrf_token %}<button class="act-btn act-review">{% trans "Mark under review" %} · تحت المراجعة</button></form>
+        {% endif %}
+        {% if flags.can_accept %}
+        <form method="post"><input type="hidden" name="action" value="accept">{% csrf_token %}<button class="act-btn act-accept">{% trans "Accept evidence" %} · مقبول</button></form>
+        {% endif %}
+        {% if flags.can_reject or flags.can_more_evidence %}
+        <form method="post" style="margin-top:6px;">
+          {% csrf_token %}
+          <textarea class="note-in" name="note" placeholder="{% trans 'Reviewer note (required to reject / request more)' %}"></textarea>
+          {% if flags.can_reject %}<button class="act-btn act-reject" name="action" value="reject">{% trans "Reject" %} · مرفوض</button>{% endif %}
+          {% if flags.can_more_evidence %}<button class="act-btn act-more" name="action" value="more_evidence">{% trans "Request more" %} · مطلوب دليل إضافي</button>{% endif %}
+        </form>
+        {% endif %}
+        {% if flags.can_cancel %}
+        <form method="post"><input type="hidden" name="action" value="cancel">{% csrf_token %}<button class="act-btn act-cancel">{% trans "Cancel request" %} · ملغى</button></form>
+        {% endif %}
+        <p style="font-size:11px;color:#94a3b8;margin-top:10px;">{% trans "Accepting evidence does not close the finding — review it separately." %}</p>
+      </div>
+      {% endif %}
+
+      <div class="card">
+        <h3>{% trans "History" %}</h3>
+        <ul class="timeline">
+          {% for e in events %}
+          <li>
+            <span class="dot"></span>
+            <div class="et">{{ e.get_event_type_display }}{% if e.from_status %} <span class="tm">({{ e.from_status }} → {{ e.to_status }})</span>{% endif %}</div>
+            <div class="tm">{{ e.actor.full_name|default:"system" }} · {{ e.created_at|date:"Y-m-d H:i" }}</div>
+            {% if e.note %}<div class="nt">{{ e.note }}</div>{% endif %}
+          </li>
+          {% empty %}
+          <li><span class="dot"></span><div class="et">{% trans "No events." %}</div></li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

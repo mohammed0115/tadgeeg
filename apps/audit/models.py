@@ -45,6 +45,15 @@ from apps.audit.audit_readiness_models import (  # noqa: F401
     AuditReadinessWorkpaper,
 )
 
+# Evidence Request workflow (TADGEEG-FIN-AUDIT-6A) — request/track/review
+# supporting evidence for a GL finding or SAD item. Accepting evidence never
+# auto-resolves the finding; never posts to apps.ledger.
+from apps.audit.evidence_models import (  # noqa: F401
+    AuditEvidenceAttachment,
+    AuditEvidenceRequest,
+    AuditEvidenceRequestEvent,
+)
+
 
 class AuditSession(SoftDeleteModel):
     """Tracks the lifecycle and aggregate progress of a related audit upload."""

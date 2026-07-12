@@ -7,9 +7,11 @@ the existing ``parse_and_validate`` service; nothing is written to the ledger.
 """
 from __future__ import annotations
 
+from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.renderers import BaseRenderer, JSONRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema
@@ -35,6 +37,7 @@ from .serializers import (
 from .services import account_mapping as mapping_service
 from .services import audit_difference_response as sad_response_service
 from .services import audit_difference_summary as sad_service
+from .services import audit_readiness_export as readiness_export_service
 from .services import audit_readiness_workpaper as readiness_service
 from .services import general_ledger_import as gl_service
 from .services import general_ledger_risk_analysis as gl_risk_service
@@ -580,3 +583,87 @@ class AuditReadinessDetailView(APIView):
         if wp is None:
             return Response({"error": "not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(AuditReadinessWorkpaperSerializer(wp).data)
+
+
+# ── TADGEEG-FIN-AUDIT-5D — Audit Readiness export (JSON / HTML / PDF) ──────────
+class _PassthroughHTMLRenderer(BaseRenderer):
+    """Lets DRF accept ``?format=html`` (the view returns a plain HttpResponse,
+    so this renderer's ``render`` is never actually invoked)."""
+    media_type = "text/html"
+    format = "html"
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return data
+
+
+class _PassthroughPDFRenderer(BaseRenderer):
+    """Lets DRF accept ``?format=pdf`` (view returns HttpResponse directly)."""
+    media_type = "application/pdf"
+    format = "pdf"
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return data
+
+
+_EXPORT_RENDERERS = [JSONRenderer, _PassthroughHTMLRenderer, _PassthroughPDFRenderer]
+
+
+def _export_readiness(request, workpaper):
+    """Serve a readiness workpaper as JSON (default), HTML, or PDF.
+
+    Read-only, org-scoped, and never emits a formal opinion — every format
+    carries the disclaimer and a "subject to auditor review" direction.
+    """
+    fmt = (request.query_params.get("format") or "json").lower()
+
+    if fmt == "html":
+        html = readiness_export_service.render_html(workpaper)
+        return HttpResponse(html, content_type="text/html; charset=utf-8")
+
+    if fmt == "pdf":
+        try:
+            pdf = readiness_export_service.render_pdf(workpaper)
+        except readiness_export_service.ReadinessExportError as exc:
+            return Response({"error": str(exc)}, status=status.HTTP_501_NOT_IMPLEMENTED)
+        resp = HttpResponse(pdf, content_type="application/pdf")
+        resp["Content-Disposition"] = (
+            f'attachment; filename="audit-readiness-{workpaper.id}.pdf"')
+        return resp
+
+    # Default: JSON payload.
+    return Response(readiness_export_service.build_export_payload(workpaper))
+
+
+class EngagementAuditReadinessExportView(APIView):
+    """GET the latest readiness workpaper for an engagement as JSON/HTML/PDF."""
+    permission_classes = [IsAuthenticated, IsSeniorAuditorOrAbove]
+    renderer_classes = _EXPORT_RENDERERS
+
+    @extend_schema(tags=["Audit · Readiness"],
+                   summary="Export the engagement's readiness workpaper")
+    def get(self, request, pk):
+        engagement = _scoped_engagement(request, pk)
+        if engagement is None:
+            return Response({"error": "engagement not found in your organization."},
+                            status=status.HTTP_404_NOT_FOUND)
+        wp = (AuditReadinessWorkpaper.objects
+              .filter(engagement=engagement).order_by("-created_at").first())
+        if wp is None:
+            return Response({"error": "no readiness workpaper generated yet."},
+                            status=status.HTTP_404_NOT_FOUND)
+        return _export_readiness(request, wp)
+
+
+class AuditReadinessExportView(APIView):
+    """GET a specific readiness workpaper (org-scoped) as JSON/HTML/PDF."""
+    permission_classes = [IsAuthenticated, IsSeniorAuditorOrAbove]
+    renderer_classes = _EXPORT_RENDERERS
+
+    @extend_schema(tags=["Audit · Readiness"],
+                   summary="Export an audit-readiness workpaper")
+    def get(self, request, pk):
+        org = _user_org(request)
+        wp = AuditReadinessWorkpaper.objects.filter(pk=pk, organization=org).first()
+        if wp is None:
+            return Response({"error": "not found."}, status=status.HTTP_404_NOT_FOUND)
+        return _export_readiness(request, wp)

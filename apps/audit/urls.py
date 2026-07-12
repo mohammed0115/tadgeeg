@@ -34,6 +34,9 @@ urlpatterns = [
     path("engagements/<uuid:pk>/audit-readiness/generate/", tb.EngagementAuditReadinessGenerateView.as_view(), name="audit-readiness-generate"),
     path("engagements/<uuid:pk>/audit-readiness/", tb.EngagementAuditReadinessView.as_view(), name="audit-readiness-engagement"),
     path("audit-readiness/<uuid:pk>/", tb.AuditReadinessDetailView.as_view(), name="audit-readiness-detail"),
+    # TADGEEG-FIN-AUDIT-5D — audit readiness export (JSON / HTML / PDF).
+    path("engagements/<uuid:pk>/audit-readiness/export/", tb.EngagementAuditReadinessExportView.as_view(), name="audit-readiness-export-engagement"),
+    path("audit-readiness/<uuid:pk>/export/", tb.AuditReadinessExportView.as_view(), name="audit-readiness-export-detail"),
     path("dashboard/overview/", views.AuditDashboardOverviewView.as_view(), name="dashboard-overview"),
     path("big-four/", views.BigFourComplianceView.as_view(), name="big-four-compliance"),
     # Phase 2.2 — visual rule builder. The DSL-driven endpoints sit under

@@ -69,6 +69,61 @@ _DIRECTION_LABEL_AR = {
     "disclaimer":  "أساس غير كافٍ لاقتراح اتجاه — رهن مراجعة المدقّق",
 }
 
+# ── TADGEEG-FIN-AUDIT-5D — readiness workpaper → ISA-700 draft direction ───────
+# Maps an AuditReadinessWorkpaper.OpinionDirection value to the ISA-700 internal
+# ``opinion_type`` CODE, so the hardened draft paragraph can be sourced from the
+# 5A workpaper. This never issues a formal opinion — it only reuses the safe,
+# "subject to auditor review" prose builders with the workpaper as the source.
+_WORKPAPER_DIRECTION_TO_OPINION_CODE = {
+    "likely_unmodified_subject_to_auditor_review": "unqualified",
+    "possible_modified_opinion_subject_to_auditor_review": "qualified",
+    "insufficient_basis_subject_to_auditor_review": "disclaimer",
+    "no_direction": "disclaimer",
+}
+
+
+def build_readiness_draft_from_workpaper(workpaper) -> Dict:
+    """Build a SAFE ISA-700 draft-direction payload sourced from a 5A workpaper.
+
+    The AuditReadinessWorkpaper (TADGEEG-FIN-AUDIT-5A) is the preferred source of
+    the suggested direction. This helper maps its ``suggested_opinion_direction``
+    onto the hardened ISA-700 prose builder and returns a payload that is
+    explicitly NOT a formal opinion:
+
+      * ``is_formal_opinion``          = False
+      * ``subject_to_auditor_review``  = True
+      * ``source_workpaper_id``        = the workpaper's id
+      * ``disclaimer_en`` / ``disclaimer_ar`` attached
+
+    It reads the workpaper only; it does not modify it, call AI, or write to the
+    ledger.
+    """
+    direction = getattr(workpaper, "suggested_opinion_direction", "no_direction")
+    opinion_code = _WORKPAPER_DIRECTION_TO_OPINION_CODE.get(direction, "disclaimer")
+
+    # Compliance-style score is not the workpaper's currency; derive a neutral
+    # 0.0 so the prose never over-states certainty. The paragraph text remains a
+    # suggested direction subject to auditor review regardless of the number.
+    svc = ISA700OpinionService(getattr(workpaper, "organization", None), None)
+    paragraph = svc._build_opinion_paragraph(opinion_code, "readiness_workpaper", 0.0)
+
+    return {
+        "source": "audit_readiness_workpaper",
+        "source_workpaper_id": str(getattr(workpaper, "id", "")) or None,
+        "readiness_conclusion": getattr(workpaper, "readiness_conclusion", None),
+        "workpaper_direction": direction,
+        # Compatibility: internal opinion_type CODE (never a formal opinion label).
+        "opinion_type": opinion_code,
+        "suggested_opinion_direction": opinion_code,
+        "opinion_type_en": _DIRECTION_LABEL_EN.get(opinion_code, "Subject to auditor review"),
+        "opinion_type_ar": _DIRECTION_LABEL_AR.get(opinion_code, "رهن مراجعة المدقّق"),
+        "opinion_paragraph": paragraph,
+        "is_formal_opinion": False,
+        "subject_to_auditor_review": True,
+        "disclaimer_en": SAFE_DISCLAIMER_EN,
+        "disclaimer_ar": SAFE_DISCLAIMER_AR,
+    }
+
 
 class ISA700OpinionService:
     """

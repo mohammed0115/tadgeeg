@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+{# TADGEEG-FIN-AUDIT-5D — Audit Readiness Report (Opinion Preparation Draft). #}
+{# NOT a formal audit opinion. Every render carries the disclaimer banner and  #}
+{# the "subject to auditor review" direction label. Rendered from the safe     #}
+{# export payload (context var `r`); no formal-opinion wording is used.        #}
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>{{ r.report_title_en }}</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans Arabic', 'DejaVu Sans', 'Arial', sans-serif;
+    font-size: 11pt; color: #1e293b; background: #fff; line-height: 1.6;
+  }
+  @page { size: A4; margin: 18mm 15mm; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 12px; }
+  h1 { font-size: 18pt; color: #0f172a; margin-bottom: 2px; }
+  h2 { font-size: 13pt; color: #1e3a8a; margin: 18px 0 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; }
+  .sub { color: #475569; font-size: 10pt; }
+  .rtl { direction: rtl; text-align: right; }
+  /* Disclaimer banner — always at the very top. */
+  .disclaimer {
+    border: 2px solid #b45309; background: #fffbeb; color: #7c2d12;
+    border-radius: 8px; padding: 12px 14px; margin: 12px 0 18px; font-size: 10pt;
+  }
+  .disclaimer strong { display: block; margin-bottom: 4px; color: #92400e; font-size: 11pt; }
+  .notice { color: #92400e; font-weight: 700; }
+  .direction-banner {
+    background: #eff6ff; border: 1px solid #93c5fd; border-radius: 8px;
+    padding: 10px 14px; margin: 8px 0 16px; color: #1e3a8a; font-weight: 600;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 10pt; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #e2e8f0; }
+  th { color: #475569; font-weight: 600; width: 45%; }
+  .meta { color: #64748b; font-size: 9pt; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 8px; }
+  .draft-para { background: #f8fafc; border-left: 4px solid #2563eb; padding: 10px 12px; margin: 8px 0; font-size: 10pt; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  {# ── Disclaimer banner (top of every export) ── #}
+  <div class="disclaimer">
+    <strong>{{ r.final_opinion_notice_en }} · {{ r.final_opinion_notice_ar }}</strong>
+    {{ r.disclaimer }}
+    <div class="rtl" style="margin-top:6px;">{{ r.disclaimer_ar }}</div>
+  </div>
+
+  <h1>{{ r.report_title_en }}</h1>
+  <div class="sub rtl">{{ r.report_title_ar }}</div>
+
+  <div class="direction-banner">
+    {{ r.suggested_direction.banner_en }} — {{ r.suggested_direction.label }}
+    <div class="rtl">{{ r.suggested_direction.banner_ar }}</div>
+  </div>
+
+  <h2>Engagement</h2>
+  <table>
+    <tr><th>Engagement code</th><td>{{ r.engagement.engagement_code }}</td></tr>
+    <tr><th>Title</th><td>{{ r.engagement.title }}</td></tr>
+    <tr><th>Period</th><td>{{ r.engagement.period_start }} → {{ r.engagement.period_end }}</td></tr>
+    <tr><th>Workpaper status</th><td>{{ r.workpaper.status_display }}</td></tr>
+    <tr><th>Generated at</th><td>{{ r.workpaper.generated_at|default:"—" }}</td></tr>
+  </table>
+
+  <h2>SAD Conclusion</h2>
+  <table>
+    <tr><th>SAD conclusion</th><td>{{ r.sad_summary.conclusion_status_display }}</td></tr>
+    <tr><th>Total absolute impact</th><td>{{ r.sad_summary.total_absolute_impact }}</td></tr>
+    <tr><th>Exceeds performance materiality</th><td>{{ r.sad_summary.exceeds_performance_materiality }}</td></tr>
+    <tr><th>Exceeds overall materiality</th><td>{{ r.sad_summary.exceeds_overall_materiality }}</td></tr>
+    <tr><th>Readiness conclusion</th><td>{{ r.readiness_conclusion_display }}</td></tr>
+  </table>
+
+  <h2>Suggested Direction — Subject to Auditor Review</h2>
+  <p class="notice">{{ r.suggested_direction.label }}</p>
+  {% if r.isa700_draft %}
+  <div class="draft-para">
+    {{ r.isa700_draft.opinion_paragraph.opinion_en }}
+    <div class="rtl" style="margin-top:6px;">{{ r.isa700_draft.opinion_paragraph.opinion_ar }}</div>
+  </div>
+  {% endif %}
+
+  <h2>Difference &amp; Response Summary</h2>
+  <table>
+    <tr><th>Accepted differences</th><td>{{ r.difference_counts.accepted }}</td></tr>
+    <tr><th>Adjusted</th><td>{{ r.difference_counts.adjusted }}</td></tr>
+    <tr><th>Unadjusted</th><td>{{ r.difference_counts.unadjusted }}</td></tr>
+    <tr><th>Pending management response</th><td>{{ r.difference_counts.pending_management_response }}</td></tr>
+    <tr><th>Open evidence requests (needs evidence)</th><td>{{ r.open_evidence_requests }}</td></tr>
+    <tr><th>Proposed adjustments</th><td>{{ r.proposed_adjustment_summary.count|default:0 }}</td></tr>
+  </table>
+
+  <h2>Materiality Snapshot</h2>
+  <table>
+    <tr><th>Overall materiality</th><td>{{ r.materiality.overall|default:"—" }}</td></tr>
+    <tr><th>Performance materiality</th><td>{{ r.materiality.performance|default:"—" }}</td></tr>
+  </table>
+
+  <div class="meta">
+    Report type: {{ r.report_type }} · is_formal_opinion: {{ r.is_formal_opinion }} ·
+    subject_to_auditor_review: {{ r.subject_to_auditor_review }} ·
+    workpaper {{ r.workpaper.id }}
+  </div>
+</div>
+</body>
+</html>

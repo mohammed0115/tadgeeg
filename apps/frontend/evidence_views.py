@@ -21,6 +21,7 @@ from apps.audit.audit_difference_models import AuditDifferenceItem
 from apps.audit.engagement_models import AuditEngagement
 from apps.audit.evidence_models import AuditEvidenceRequest
 from apps.audit.general_ledger_models import GeneralLedgerRiskFinding
+from apps.audit.services import evidence_lifecycle as lc_service
 from apps.audit.services import evidence_request as ev_service
 from apps.frontend.page_views import _ctx
 
@@ -165,8 +166,27 @@ def evidence_detail(request, pk):
                 ev_service.review_evidence_request(
                     request=obj, actor=request.user, action=action, note=note)
                 notice = "Request updated."
+            elif action in ("archive", "restore", "freeze", "verify"):
+                # TADGEEG-FIN-AUDIT-6C — attachment lifecycle / integrity.
+                att = lc_service.scoped_attachment(
+                    request.user, request.POST.get("attachment_id"))
+                if att is None:
+                    error = "Attachment not found."
+                elif action == "verify":
+                    result = lc_service.verify_attachment(att, actor=request.user)
+                    notice = ("Integrity verified — SHA-256 matches."
+                              if result["ok"] else
+                              f"INTEGRITY FAILED: {result['error'] or 'SHA-256 mismatch'}")
+                else:
+                    fn = {"archive": lc_service.archive_attachment,
+                          "restore": lc_service.restore_attachment,
+                          "freeze": lc_service.freeze_attachment}[action]
+                    fn(attachment=att, actor=request.user, note=note)
+                    notice = f"Attachment {action}d."
             else:
                 error = "Unknown action."
+        except lc_service.EvidenceLifecycleError as exc:
+            error = str(exc)
         except ev_service.EvidenceRequestError as exc:
             error = str(exc)
         except Exception as exc:
@@ -175,7 +195,9 @@ def evidence_detail(request, pk):
 
     attachments = list(obj.attachments.filter(is_active=True)
                        .select_related("uploaded_by"))
-    events = list(obj.events.select_related("actor").all())
+    # 6C: full version history — archived/expired versions stay visible.
+    versions = list(lc_service.version_history(obj))
+    events = list(obj.events.select_related("actor", "attachment").all())
 
     # Which review actions are valid from the current status (drives the buttons).
     allowed = ev_service.ALLOWED_TRANSITIONS.get(obj.status, set())
@@ -193,6 +215,7 @@ def evidence_detail(request, pk):
         request, "audit",
         req=obj,
         attachments=attachments,
+        versions=versions,
         events=events,
         can_manage=_is_auditor(request.user),
         flags=action_flags,

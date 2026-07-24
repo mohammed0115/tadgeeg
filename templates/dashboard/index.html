@@ -140,6 +140,14 @@ Shows the org's current plan, usage, and remaining quota. The
     <div><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;">{% trans "Rejected" %}</div><div style="font-size:20px;font-weight:900;color:#991b1b;">{{ evidence_counts.rejected|default:0 }}</div></div>
     <div><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;">{% trans "More needed" %}</div><div style="font-size:20px;font-weight:900;color:#9a3412;">{{ evidence_counts.more_evidence_required|default:0 }}</div></div>
     <div><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;">{% trans "Overdue" %}</div><div style="font-size:20px;font-weight:900;color:#b91c1c;">{{ evidence_counts.overdue|default:0 }}</div></div>
+    {# TADGEEG-FIN-AUDIT-6C — review throughput cards. #}
+    {% if evidence_summary %}
+    <div><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;">{% trans "Pending reviews" %}</div><div style="font-size:20px;font-weight:900;color:#854d0e;">{{ evidence_summary.pending_reviews|default:0 }}</div></div>
+    <div><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;">{% trans "Avg review time" %}</div><div style="font-size:16px;font-weight:900;color:#334155;">{{ evidence_summary.avg_review_display|default:"—" }}</div></div>
+    {% endif %}
+  </div>
+  <div style="margin-top:10px;">
+    <a href="{% url 'frontend:evidence_queue' %}" style="font-size:12px;color:#1e40af;font-weight:700;text-decoration:none;">{% trans "Open evidence queue" %} →</a>
   </div>
 </div>
 {% endif %}

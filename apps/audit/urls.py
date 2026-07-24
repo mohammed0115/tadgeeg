@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import views_evidence as ev
+from . import views_evidence_lifecycle as evl
 from . import views_rule_builder as rb
 from . import views_trial_balance as tb
 
@@ -48,6 +49,14 @@ urlpatterns = [
     # TADGEEG-FIN-AUDIT-6B — assignment + client management explanation.
     path("evidence-requests/<uuid:pk>/assign/", ev.EvidenceRequestAssignView.as_view(), name="evidence-request-assign"),
     path("evidence-requests/<uuid:pk>/management-explanation/", ev.EvidenceRequestManagementExplanationView.as_view(), name="evidence-request-management-explanation"),
+    # TADGEEG-FIN-AUDIT-6C — evidence delivery & lifecycle.
+    path("evidence-attachments/<uuid:pk>/download/", evl.EvidenceAttachmentDownloadView.as_view(), name="evidence-attachment-download"),
+    path("evidence-attachments/<uuid:pk>/verify/", evl.EvidenceAttachmentVerifyView.as_view(), name="evidence-attachment-verify"),
+    path("evidence-attachments/<uuid:pk>/<str:action>/", evl.EvidenceAttachmentLifecycleView.as_view(), name="evidence-attachment-lifecycle"),
+    path("evidence-requests/<uuid:pk>/versions/", evl.EvidenceRequestVersionsView.as_view(), name="evidence-request-versions"),
+    path("evidence-queue/", evl.EvidenceQueueView.as_view(), name="evidence-queue"),
+    path("evidence-requests/bulk-assign/", evl.EvidenceBulkAssignView.as_view(), name="evidence-bulk-assign"),
+    path("evidence-dashboard/summary/", evl.EvidenceDashboardSummaryView.as_view(), name="evidence-dashboard-summary"),
     path("dashboard/overview/", views.AuditDashboardOverviewView.as_view(), name="dashboard-overview"),
     path("big-four/", views.BigFourComplianceView.as_view(), name="big-four-compliance"),
     # Phase 2.2 — visual rule builder. The DSL-driven endpoints sit under

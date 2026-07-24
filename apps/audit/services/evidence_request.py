@@ -14,7 +14,7 @@ import hashlib
 import os
 
 from django.db import IntegrityError, transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Max, Q
 from django.utils import timezone
 
 from apps.audit.evidence_models import (
@@ -252,7 +252,8 @@ def validate_evidence_file(uploaded_file, filename=""):
 
 def add_attachment(*, request, actor, uploaded_file=None, document=None,
                    description="", original_filename="", content_type="",
-                   validate=True, notify_auditor=False) -> AuditEvidenceAttachment:
+                   validate=True, notify_auditor=False,
+                   notes="") -> AuditEvidenceAttachment:
     """Attach a file/Document to a request. Not allowed on final requests.
 
     ``validate`` (6B) applies the evidence upload allowlist; ``notify_auditor``
@@ -273,17 +274,26 @@ def add_attachment(*, request, actor, uploaded_file=None, document=None,
         content_type = content_type or getattr(uploaded_file, "content_type", "") or ""
 
     with transaction.atomic():
+        # 6C: every upload is a NEW immutable version; nothing is overwritten.
+        version = (AuditEvidenceAttachment.objects
+                   .filter(evidence_request=request)
+                   .aggregate(mx=Max("version"))["mx"] or 0) + 1
         att = AuditEvidenceAttachment.objects.create(
             evidence_request=request, engagement=request.engagement,
             organization=request.organization, uploaded_by=_actor_pk(actor),
             document=document, uploaded_file=uploaded_file,
             original_filename=original_filename or "",
             file_sha256=sha256, content_type=content_type or "", size_bytes=size,
-            description=description or "")
+            description=description or "", notes=notes or "", version=version)
         _record_event(request, event_type=_ET.ATTACHMENT_ADDED, actor=actor,
                       note=description or "",
                       metadata={"attachment_id": str(att.id),
-                                "filename": att.original_filename})
+                                "filename": att.original_filename,
+                                "version": version})
+        if version > 1:
+            _record_event(request, event_type=_ET.VERSION_CREATED, actor=actor,
+                          note=notes or "",
+                          metadata={"attachment_id": str(att.id), "version": version})
     if notify_auditor:
         ev_notify.notify_evidence_uploaded(request, actor=actor, count=1)
     return att

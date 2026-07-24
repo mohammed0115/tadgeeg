@@ -197,7 +197,23 @@ class AuditEvidenceRequest(models.Model):
 
 
 class AuditEvidenceAttachment(models.Model):
-    """A file (or Document reference) attached as evidence to a request."""
+    """A file (or Document reference) attached as evidence to a request.
+
+    TADGEEG-FIN-AUDIT-6C adds lifecycle + versioning. Attachments are NEVER
+    overwritten and NEVER hard-deleted: each upload is a new immutable version,
+    and retirement is expressed via :attr:`lifecycle_state`.
+    """
+
+    class Lifecycle(models.TextChoices):
+        ACTIVE   = "active",   "Active"
+        ARCHIVED = "archived", "Archived"
+        FROZEN   = "frozen",   "Frozen"
+        EXPIRED  = "expired",  "Expired"
+
+    # States in which the attachment may no longer be modified at all.
+    IMMUTABLE_STATES = frozenset({Lifecycle.FROZEN})
+    # States that count as "live" evidence for review purposes.
+    LIVE_STATES = frozenset({Lifecycle.ACTIVE, Lifecycle.FROZEN})
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     evidence_request = models.ForeignKey(
@@ -224,7 +240,32 @@ class AuditEvidenceAttachment(models.Model):
     content_type = models.CharField(max_length=128, blank=True)
     size_bytes = models.PositiveBigIntegerField(default=0)
     description = models.TextField(blank=True)
+    # ``is_active`` predates 6C and is kept as a MIRROR of lifecycle_state so
+    # existing queries (``attachments.filter(is_active=True)``) keep working.
+    # ``lifecycle_state`` is authoritative.
     is_active = models.BooleanField(default=True)
+
+    # ── TADGEEG-FIN-AUDIT-6C — lifecycle, versioning, retention, integrity ────
+    lifecycle_state = models.CharField(
+        max_length=12, choices=Lifecycle.choices, default=Lifecycle.ACTIVE,
+        db_index=True)
+    lifecycle_changed_at = models.DateTimeField(null=True, blank=True)
+    lifecycle_changed_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="evidence_lifecycle_changes")
+    retention_until = models.DateField(null=True, blank=True)
+
+    # Version chain. Each upload is a new row; ``replaces`` points at the
+    # version it supersedes. Old versions stay immutable and readable.
+    version = models.PositiveIntegerField(default=1)
+    replaces = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="superseded_by")
+    notes = models.TextField(blank=True)
+
+    # Integrity verification bookkeeping (SHA-256 re-check on download).
+    last_verified_at = models.DateTimeField(null=True, blank=True)
+    last_verification_ok = models.BooleanField(null=True, blank=True)
 
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
@@ -234,10 +275,37 @@ class AuditEvidenceAttachment(models.Model):
         indexes = [
             models.Index(fields=["evidence_request", "-uploaded_at"]),
             models.Index(fields=["organization", "is_active"]),
+            models.Index(fields=["organization", "lifecycle_state"]),
+            models.Index(fields=["evidence_request", "version"]),
         ]
 
     def __str__(self) -> str:
-        return f"AuditEvidenceAttachment {self.id} ({self.original_filename})"
+        return f"AuditEvidenceAttachment {self.id} v{self.version} ({self.original_filename})"
+
+    @property
+    def is_frozen(self) -> bool:
+        return self.lifecycle_state == self.Lifecycle.FROZEN
+
+    @property
+    def is_archived(self) -> bool:
+        return self.lifecycle_state == self.Lifecycle.ARCHIVED
+
+    @property
+    def is_expired(self) -> bool:
+        """Retention window elapsed. Computed — nothing is ever auto-purged."""
+        if self.lifecycle_state == self.Lifecycle.EXPIRED:
+            return True
+        if not self.retention_until:
+            return False
+        from django.utils import timezone as _tz
+        return self.retention_until < _tz.now().date()
+
+    @property
+    def integrity_badge(self) -> str:
+        """UI badge: verified · failed · unverified."""
+        if self.last_verification_ok is None:
+            return "unverified"
+        return "verified" if self.last_verification_ok else "failed"
 
     def clean(self):
         if self.evidence_request_id:
@@ -263,10 +331,25 @@ class AuditEvidenceRequestEvent(models.Model):
         NOTE_ADDED             = "note_added",             "Note added"
         # TADGEEG-FIN-AUDIT-6B — auditor/client assignment changes.
         ASSIGNED               = "assigned",               "Assigned"
+        # TADGEEG-FIN-AUDIT-6C — delivery & lifecycle.
+        DOWNLOADED             = "downloaded",             "Evidence downloaded"
+        VERSION_CREATED        = "version_created",        "New version created"
+        VERIFIED               = "verified",               "Integrity verified"
+        VERIFICATION_FAILED    = "verification_failed",    "Integrity verification FAILED"
+        ARCHIVED               = "archived",               "Attachment archived"
+        RESTORED               = "restored",               "Attachment restored"
+        FROZEN                 = "frozen",                 "Attachment frozen"
+        EXPIRED                = "expired",                "Attachment expired"
+        ESCALATED              = "escalated",              "SLA escalation"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     evidence_request = models.ForeignKey(
         AuditEvidenceRequest, on_delete=models.CASCADE, related_name="events")
+    # 6C: attachment-scoped events (download/verify/archive/…) live in this SAME
+    # append-only trail rather than a second event model.
+    attachment = models.ForeignKey(
+        AuditEvidenceAttachment, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="events")
     engagement = models.ForeignKey(
         AuditEngagement, on_delete=models.CASCADE, related_name="evidence_request_events")
     organization = models.ForeignKey(

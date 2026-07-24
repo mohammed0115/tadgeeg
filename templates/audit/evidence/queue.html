@@ -1,0 +1,170 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Evidence Queue" %}{% endblock %}
+{% block nav_evidence %}active{% endblock %}
+
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}
+  .buckets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .buckets a{font-size:12px;padding:6px 12px;border-radius:999px;border:1px solid var(--border,#e2e8f0);color:#475569;text-decoration:none;background:#fff;}
+  .buckets a.active{background:var(--primary,#002244);color:#fff;border-color:var(--primary,#002244);}
+  .buckets a .n{font-weight:800;margin-inline-start:5px;}
+  .bulkbar{background:#eff6ff;border:1px solid #93c5fd;border-radius:10px;padding:12px;margin-bottom:14px;display:flex;gap:10px;align-items:end;flex-wrap:wrap;}
+  .bulkbar label{display:block;font-size:10px;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:4px;}
+  .bulkbar select{border:1px solid #93c5fd;border-radius:8px;padding:7px 10px;font-size:12px;background:#fff;}
+  .bulkbar button{background:#1e40af;color:#fff;border:none;border-radius:8px;padding:8px 15px;font-weight:700;font-size:12px;cursor:pointer;}
+{% endblock %}
+
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs">
+    <a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> /
+    <a href="{% url 'frontend:evidence_list' %}">{% trans "Evidence" %}</a> /
+    {% trans "Queue" %}
+  </div>
+
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Evidence Queue" %} · قائمة مراجعة الأدلة</div>
+      <div class="ev-sub">{% trans "Review, prioritise and assign outstanding evidence requests." %}</div>
+    </div>
+    <a class="ev-btn" style="background:var(--primary,#002244);color:#fff;border-radius:10px;padding:9px 16px;font-weight:700;font-size:13px;text-decoration:none;"
+       href="{% url 'frontend:evidence_list' %}">{% trans "All requests" %} →</a>
+  </div>
+
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="ok">{{ notice }}</div>{% endif %}
+
+  {# ── Dashboard cards ── #}
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">{% trans "Waiting review" %}</div><div class="val">{{ summary.waiting|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Pending reviews" %}</div><div class="val">{{ summary.pending_reviews|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Accepted" %}</div><div class="val">{{ summary.accepted|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Rejected" %}</div><div class="val">{{ summary.rejected|default:0 }}</div></div>
+    <div class="kpi alert"><div class="lbl">{% trans "Overdue" %}</div><div class="val">{{ summary.overdue|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Avg review time" %}</div><div class="val" style="font-size:17px;">{{ summary.avg_review_display|default:"—" }}</div></div>
+  </div>
+
+  {# ── Bucket tabs ── #}
+  <div class="buckets">
+    {% for value, label in buckets %}
+      <a href="?bucket={{ value }}" class="{% if active_bucket == value %}active{% endif %}">
+        {{ label }}
+        {% if value == 'waiting_review' %}<span class="n">{{ counts.waiting_review|default:0 }}</span>
+        {% elif value == 'overdue' %}<span class="n">{{ counts.overdue|default:0 }}</span>
+        {% elif value == 'due_today' %}<span class="n">{{ counts.due_today|default:0 }}</span>
+        {% elif value == 'accepted_today' %}<span class="n">{{ counts.accepted_today|default:0 }}</span>
+        {% elif value == 'rejected' %}<span class="n">{{ counts.rejected|default:0 }}</span>
+        {% elif value == 'more_evidence' %}<span class="n">{{ counts.more_evidence|default:0 }}</span>
+        {% elif value == 'high_priority' %}<span class="n">{{ counts.high_priority|default:0 }}</span>
+        {% endif %}
+      </a>
+    {% endfor %}
+  </div>
+
+  {# ── Filters / search / sorting ── #}
+  <form method="get" class="filters">
+    <input type="hidden" name="bucket" value="{{ active_bucket }}">
+    <div>
+      <label>{% trans "Status" %}</label>
+      <select name="status">
+        <option value="">{% trans "All" %}</option>
+        {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if active_status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>{% trans "Priority" %}</label>
+      <select name="priority">
+        <option value="">{% trans "All" %}</option>
+        {% for value, label in priority_choices %}
+          <option value="{{ value }}" {% if active_priority == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>{% trans "Sort" %}</label>
+      <select name="sort">
+        <option value="-created" {% if active_sort == '-created' %}selected{% endif %}>{% trans "Newest" %}</option>
+        <option value="created" {% if active_sort == 'created' %}selected{% endif %}>{% trans "Oldest" %}</option>
+        <option value="due_date" {% if active_sort == 'due_date' %}selected{% endif %}>{% trans "Due date" %}</option>
+        <option value="priority" {% if active_sort == 'priority' %}selected{% endif %}>{% trans "Priority" %}</option>
+        <option value="updated" {% if active_sort == 'updated' %}selected{% endif %}>{% trans "Recently updated" %}</option>
+      </select>
+    </div>
+    <div>
+      <label>{% trans "Search" %}</label>
+      <input type="search" name="q" value="{{ search }}" placeholder="{% trans 'Title, number, finding, SAD item' %}">
+    </div>
+    <button type="submit">{% trans "Apply" %}</button>
+    <a class="clear" href="{% url 'frontend:evidence_queue' %}">{% trans "Reset" %}</a>
+  </form>
+
+  {% if requests %}
+  {# ── Bulk assignment ── #}
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="bulk_assign">
+    <div class="bulkbar">
+      <div>
+        <label>{% trans "Assign selected to reviewer" %}</label>
+        <select name="reviewer">
+          <option value="">{% trans "— unassign —" %}</option>
+          {% for u in reviewers %}<option value="{{ u.id }}">{{ u.full_name|default:u.email }}</option>{% endfor %}
+        </select>
+      </div>
+      <button type="submit">{% trans "Assign selected" %}</button>
+      <span style="font-size:11px;color:#1e40af;">{% trans "Applied in a single transaction; final requests are skipped." %}</span>
+    </div>
+
+    <div class="table-scroll">
+      <table class="ev-table">
+        <thead>
+          <tr>
+            <th style="width:28px;"><input type="checkbox" id="check-all"></th>
+            <th>{% trans "Request #" %}</th>
+            <th>{% trans "Title" %}</th>
+            <th>{% trans "Status" %}</th>
+            <th>{% trans "Priority" %}</th>
+            <th>{% trans "Due" %}</th>
+            <th>{% trans "SLA" %}</th>
+            <th>{% trans "Reviewer" %}</th>
+            <th>{% trans "Client" %}</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in requests %}
+          <tr>
+            <td><input type="checkbox" name="request_ids" value="{{ r.id }}" class="row-check"></td>
+            <td>{{ r.request_number|default:"—" }}</td>
+            <td>{{ r.title }}</td>
+            <td><span class="badge {{ r.status }}">{{ r.get_status_display }}</span></td>
+            <td><span class="prio {{ r.priority }}">{{ r.get_priority_display }}</span></td>
+            <td>{{ r.due_date|default:"—" }}</td>
+            <td><span class="sla {{ r.sla_state }}">{% if r.is_overdue %}{% trans "Overdue" %}{% elif r.sla_state == 'completed' %}{% trans "Completed" %}{% elif r.sla_state == 'waiting' %}{% trans "Waiting" %}{% elif r.days_remaining != None %}{{ r.days_remaining }} {% trans "d" %}{% else %}—{% endif %}</span></td>
+            <td>{{ r.assigned_to.full_name|default:"—" }}</td>
+            <td>{{ r.assigned_client_user.full_name|default:"—" }}</td>
+            <td><a href="{% url 'frontend:evidence_detail' r.id %}">{% trans "Review" %} →</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </form>
+  {% else %}
+  <div class="empty">{% trans "Nothing in this queue." %}</div>
+  {% endif %}
+</div>
+
+<script>
+(function () {
+  var all = document.getElementById('check-all');
+  if (!all) return;
+  all.addEventListener('change', function () {
+    document.querySelectorAll('.row-check').forEach(function (c) { c.checked = all.checked; });
+  });
+})();
+</script>
+{% endblock %}

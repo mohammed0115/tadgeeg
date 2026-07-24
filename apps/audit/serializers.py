@@ -334,6 +334,11 @@ class AuditReadinessWorkpaperSerializer(serializers.ModelSerializer):
 class AuditEvidenceAttachmentSerializer(serializers.ModelSerializer):
     uploaded_by_name = serializers.CharField(
         source="uploaded_by.full_name", read_only=True, default="")
+    # TADGEEG-FIN-AUDIT-6C — lifecycle / versioning / integrity.
+    lifecycle_state_display = serializers.CharField(
+        source="get_lifecycle_state_display", read_only=True)
+    integrity_badge = serializers.CharField(read_only=True)
+    is_expired = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = AuditEvidenceAttachment
@@ -342,6 +347,10 @@ class AuditEvidenceAttachmentSerializer(serializers.ModelSerializer):
             "uploaded_by", "uploaded_by_name", "document", "uploaded_file",
             "original_filename", "file_sha256", "content_type", "size_bytes",
             "description", "is_active", "uploaded_at",
+            "lifecycle_state", "lifecycle_state_display", "lifecycle_changed_at",
+            "retention_until", "version", "replaces", "notes",
+            "last_verified_at", "last_verification_ok", "integrity_badge",
+            "is_expired",
         ]
         read_only_fields = fields
 

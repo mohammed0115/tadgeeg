@@ -102,3 +102,66 @@ def notify_review_outcome(request, *, to_status, note=""):
         source_id=str(request.id),
         organization=request.organization,
     )
+
+
+# ── TADGEEG-FIN-AUDIT-6C — lifecycle notifications ───────────────────────────
+def notify_assignment_changed(request, *, actor=None):
+    """Tell the newly assigned auditor that a request is now theirs."""
+    reviewer = request.assigned_to
+    if not reviewer or not reviewer.pk:
+        return None
+    if actor is not None and reviewer.pk == getattr(actor, "pk", None):
+        return None  # don't notify someone about their own action
+    return notify(
+        reviewer,
+        title=f"Evidence assigned to you: {_label(request)}",
+        message=request.title,
+        severity=Notification.Severity.INFO,
+        category=Notification.Category.AUDIT,
+        link=_link(request),
+        source_type=_SOURCE_TYPE,
+        source_id=str(request.id),
+        organization=request.organization,
+    )
+
+
+def notify_due_tomorrow(request):
+    """Remind the client (and reviewer) that evidence is due tomorrow."""
+    sent = None
+    for user, link in ((request.assigned_client_user, _client_link(request)),
+                       (request.assigned_to, _link(request))):
+        if not user or not user.pk:
+            continue
+        sent = notify(
+            user,
+            title=f"Evidence due tomorrow: {_label(request)}",
+            message=request.title,
+            severity=Notification.Severity.WARNING,
+            category=Notification.Category.AUDIT,
+            link=link,
+            source_type=_SOURCE_TYPE,
+            source_id=str(request.id),
+            organization=request.organization,
+        ) or sent
+    return sent
+
+
+def notify_overdue(request):
+    """Escalation notice: the request passed its due date."""
+    sent = None
+    for user, link in ((request.assigned_client_user, _client_link(request)),
+                       (request.assigned_to, _link(request))):
+        if not user or not user.pk:
+            continue
+        sent = notify(
+            user,
+            title=f"Evidence OVERDUE: {_label(request)}",
+            message=request.title,
+            severity=Notification.Severity.DANGER,
+            category=Notification.Category.AUDIT,
+            link=link,
+            source_type=_SOURCE_TYPE,
+            source_id=str(request.id),
+            organization=request.organization,
+        ) or sent
+    return sent

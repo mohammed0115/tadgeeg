@@ -8,6 +8,7 @@ from . import views
 from . import evidence_views
 from . import client_portal_views
 from . import audit_host_views
+from . import evidence_queue_views
 
 app_name = 'frontend'
 
@@ -110,6 +111,8 @@ urlpatterns = [
     # TADGEEG-FIN-AUDIT-6A — Evidence Request workflow pages
     path('audit/evidence/', evidence_views.evidence_list, name='evidence_list'),
     path('audit/evidence/new/', evidence_views.evidence_create, name='evidence_create'),
+    # TADGEEG-FIN-AUDIT-6C — auditor evidence queue
+    path('audit/evidence/queue/', evidence_queue_views.evidence_queue, name='evidence_queue'),
     path('audit/evidence/<uuid:pk>/', evidence_views.evidence_detail, name='evidence_detail'),
 
     # TADGEEG-FIN-AUDIT-6B — Client Evidence Portal (client-side pages)

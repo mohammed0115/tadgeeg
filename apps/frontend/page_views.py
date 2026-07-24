@@ -1934,13 +1934,15 @@ def dashboard(request):
     # _build_dashboard_payload so that function's documented query budget is
     # unchanged; status_counts() is a single aggregate query.
     evidence_counts = _dashboard_evidence_counts(org)
+    # 6C: review-throughput cards (waiting / pending / avg review time).
+    evidence_summary = _dashboard_evidence_summary(org)
 
     cache_key = f"dashboard:v2:{org.id}:{now.strftime('%Y-%m-%d-%H')}"
     cached = cache.get(cache_key)
     if cached is not None:
         return render(request, "dashboard/index.html", _ctx(
             request, "dashboard", **cached, no_organization=False,
-            evidence_counts=evidence_counts,
+            evidence_counts=evidence_counts, evidence_summary=evidence_summary,
         ))
 
     payload = _build_dashboard_payload(org, now)
@@ -1949,7 +1951,7 @@ def dashboard(request):
     cache.set(cache_key, payload, 60)
     return render(request, "dashboard/index.html", _ctx(
         request, "dashboard", **payload, no_organization=False,
-        evidence_counts=evidence_counts,
+        evidence_counts=evidence_counts, evidence_summary=evidence_summary,
     ))
 
 
@@ -1961,6 +1963,18 @@ def _dashboard_evidence_counts(org) -> dict:
     try:
         from apps.audit.services import evidence_request as ev_service
         return ev_service.status_counts(organization=org)
+    except Exception:  # pragma: no cover - defensive
+        return {}
+
+
+def _dashboard_evidence_summary(org) -> dict:
+    """Evidence review-throughput cards for the dashboard (6C).
+
+    Never raises: a widget must not be able to break the dashboard.
+    """
+    try:
+        from apps.audit.services import evidence_lifecycle as lc_service
+        return lc_service.dashboard_summary(organization=org)
     except Exception:  # pragma: no cover - defensive
         return {}
 

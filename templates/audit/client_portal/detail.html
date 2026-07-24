@@ -1,0 +1,197 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Evidence Request" %}{% endblock %}
+{% block nav_client_evidence %}active{% endblock %}
+
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}
+  .grid { display:grid; grid-template-columns:2fr 1fr; gap:18px; align-items:start; }
+  @media (max-width: 900px){ .grid{grid-template-columns:1fr;} }
+  .drop { border:2px dashed #93c5fd; background:#f8fbff; border-radius:12px; padding:26px; text-align:center; color:#1e40af; cursor:pointer; transition:background .15s,border-color .15s; }
+  .drop.dragover { background:#e0f2fe; border-color:#0369a1; }
+  .drop .hint { font-size:11px; color:#64748b; margin-top:6px; }
+  .filelist { margin-top:10px; font-size:12px; text-align:start; }
+  .filelist div { padding:4px 0; border-bottom:1px solid #e2e8f0; }
+  .bar { height:8px; background:#e2e8f0; border-radius:999px; overflow:hidden; margin-top:10px; display:none; }
+  .bar > i { display:block; height:100%; width:0; background:#0369a1; transition:width .2s; }
+  .btn { border:none; border-radius:9px; padding:9px 15px; font-weight:700; font-size:12px; cursor:pointer; margin-top:10px; }
+  .btn-up{background:#0369a1;color:#fff;} .btn-sub{background:#1e40af;color:#fff;} .btn-exp{background:#475569;color:#fff;}
+  textarea { width:100%; border:1px solid var(--border,#cbd5e1); border-radius:8px; padding:9px; font-size:12px; min-height:80px; }
+{% endblock %}
+
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs">
+    <a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> /
+    <a href="{% url 'frontend:client_evidence_list' %}">{% trans "Client Evidence Portal" %}</a> /
+    {{ req.request_number|default:req.id }}
+  </div>
+
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{{ req.title }}</div>
+      <div class="ev-sub">{{ req.request_number|default:req.id }} · <span class="badge {{ req.status }}">{{ req.get_status_display }}</span>
+        <span class="sla {{ req.sla_state }}">{% if req.is_overdue %}{% trans "Overdue" %}{% elif req.sla_state == 'completed' %}{% trans "Completed" %}{% elif req.sla_state == 'waiting' %}{% trans "Waiting" %}{% elif req.days_remaining != None %}{{ req.days_remaining }} {% trans "days left" %}{% else %}—{% endif %}</span>
+      </div>
+    </div>
+  </div>
+
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="ok">{{ notice }}</div>{% endif %}
+
+  <div class="grid">
+    <div>
+      <div class="card">
+        <h3>{% trans "Request information" %}</h3>
+        <dl class="kv">
+          <dt>{% trans "Description" %}</dt><dd>{{ req.description|default:"—"|linebreaksbr }}</dd>
+          <dt>{% trans "Reason" %}</dt><dd>{{ req.get_request_reason_display }}</dd>
+          <dt>{% trans "Requested by" %}</dt><dd>{{ req.requested_by.full_name|default:"—" }} · {{ req.requested_at|date:"Y-m-d H:i" }}</dd>
+          <dt>{% trans "Assigned auditor" %}</dt><dd>{{ req.assigned_to.full_name|default:"—" }}</dd>
+          <dt>{% trans "Due date" %}</dt><dd>{{ req.due_date|default:"—" }}</dd>
+          <dt>{% trans "Priority" %}</dt><dd><span class="prio {{ req.priority }}">{{ req.get_priority_display }}</span></dd>
+          <dt>{% trans "Status" %} · حالة الطلب</dt><dd><span class="badge {{ req.status }}">{{ req.get_status_display }}</span></dd>
+          <dt>{% trans "Finding" %}</dt><dd>{% if req.gl_finding_id %}{{ req.gl_finding.risk_code }} · {{ req.gl_finding.account_code }}{% else %}—{% endif %}</dd>
+          <dt>{% trans "SAD item" %}</dt><dd>{% if req.sad_item_id %}{{ req.sad_item.account_code }}{% else %}—{% endif %}</dd>
+          {% if req.reviewer_note %}
+          <dt>{% trans "Reviewer note" %} · ملاحظة المراجع</dt><dd>{{ req.reviewer_note }}</dd>
+          {% endif %}
+        </dl>
+      </div>
+
+      {# ── Upload area: multi-file, drag & drop, progress ── #}
+      {% if can_upload %}
+      <div class="card">
+        <h3>{% trans "Upload evidence" %} · رفع دليل</h3>
+        <form method="post" enctype="multipart/form-data" id="upload-form">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="upload">
+          <div class="drop" id="dropzone">
+            <div><strong>{% trans "Drag & drop files here" %}</strong></div>
+            <div class="hint">{% trans "or click to choose. Allowed:" %} {{ allowed_extensions|join:", " }}</div>
+            <input type="file" id="file-input" name="files" multiple style="display:none"
+                   accept=".pdf,.docx,.xlsx,.png,.jpg,.jpeg,.zip">
+            <div class="filelist" id="filelist"></div>
+          </div>
+          <div class="bar" id="bar"><i></i></div>
+          <textarea name="description" placeholder="{% trans 'Description (optional)' %}" style="margin-top:10px;"></textarea>
+          <button type="submit" class="btn btn-up">{% trans "Upload" %}</button>
+        </form>
+      </div>
+      {% endif %}
+
+      <div class="card">
+        <h3>{% trans "Attachments" %}</h3>
+        {% for a in attachments %}
+        <div class="att">
+          <div class="fn">{{ a.original_filename|default:"(file)" }}</div>
+          <div class="meta">
+            {% trans "Uploaded by" %} {{ a.uploaded_by.full_name|default:"—" }} · {{ a.uploaded_at|date:"Y-m-d H:i" }}
+            {% if a.size_bytes %} · {{ a.size_bytes }} {% trans "bytes" %}{% endif %}
+            {% if a.file_sha256 %} · sha256:{{ a.file_sha256|slice:":16" }}…{% endif %}
+          </div>
+          {% if a.description %}<div class="meta">{{ a.description }}</div>{% endif %}
+        </div>
+        {% empty %}
+        <div style="color:#94a3b8;font-size:12px;">{% trans "No attachments yet." %}</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div>
+      {% if can_upload %}
+      <div class="card">
+        <h3>{% trans "Management explanation" %}</h3>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="explain">
+          <textarea name="management_explanation" placeholder="{% trans 'Explain the transaction or provide context for the auditor.' %}">{{ req.management_explanation }}</textarea>
+          <button type="submit" class="btn btn-exp">{% trans "Save explanation" %}</button>
+        </form>
+      </div>
+      {% elif req.management_explanation %}
+      <div class="card">
+        <h3>{% trans "Management explanation" %}</h3>
+        <div style="font-size:12px;color:#475569;">{{ req.management_explanation|linebreaksbr }}</div>
+      </div>
+      {% endif %}
+
+      {% if can_submit %}
+      <div class="card">
+        <h3>{% trans "Submit" %}</h3>
+        <p style="font-size:12px;color:#64748b;">{% trans "Send your evidence to the audit team for review." %}</p>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="submit">
+          <button type="submit" class="btn btn-sub">{% trans "Submit for review" %}</button>
+        </form>
+      </div>
+      {% endif %}
+
+      <div class="card">
+        <h3>{% trans "History" %}</h3>
+        <ul class="timeline">
+          {% for e in events %}
+          <li>
+            <span class="dot"></span>
+            <div class="et">{{ e.get_event_type_display }}{% if e.from_status %} <span class="tm">({{ e.from_status }} → {{ e.to_status }})</span>{% endif %}</div>
+            <div class="tm">{{ e.actor.full_name|default:"system" }} · {{ e.created_at|date:"Y-m-d H:i" }}</div>
+            {% if e.note %}<div class="nt">{{ e.note }}</div>{% endif %}
+          </li>
+          {% empty %}
+          <li><span class="dot"></span><div class="et">{% trans "No events." %}</div></li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Drag & drop + file list + upload progress (vanilla, no dependencies).
+(function () {
+  var zone = document.getElementById('dropzone');
+  if (!zone) return;
+  var input = document.getElementById('file-input');
+  var list = document.getElementById('filelist');
+  var form = document.getElementById('upload-form');
+  var bar = document.getElementById('bar');
+
+  function render() {
+    list.innerHTML = '';
+    for (var i = 0; i < input.files.length; i++) {
+      var d = document.createElement('div');
+      d.textContent = input.files[i].name + ' (' + input.files[i].size + ' bytes)';
+      list.appendChild(d);
+    }
+  }
+  zone.addEventListener('click', function () { input.click(); });
+  input.addEventListener('change', render);
+  ['dragenter', 'dragover'].forEach(function (ev) {
+    zone.addEventListener(ev, function (e) { e.preventDefault(); zone.classList.add('dragover'); });
+  });
+  ['dragleave', 'drop'].forEach(function (ev) {
+    zone.addEventListener(ev, function (e) { e.preventDefault(); zone.classList.remove('dragover'); });
+  });
+  zone.addEventListener('drop', function (e) {
+    if (e.dataTransfer && e.dataTransfer.files.length) { input.files = e.dataTransfer.files; render(); }
+  });
+  // Progress bar via XHR; falls back to a normal POST if XHR is unavailable.
+  form.addEventListener('submit', function (e) {
+    if (!window.XMLHttpRequest || !input.files.length) return;
+    e.preventDefault();
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', window.location.href);
+    bar.style.display = 'block';
+    xhr.upload.onprogress = function (evt) {
+      if (evt.lengthComputable) {
+        bar.firstElementChild.style.width = Math.round((evt.loaded / evt.total) * 100) + '%';
+      }
+    };
+    xhr.onload = function () { window.location.reload(); };
+    xhr.onerror = function () { form.submit(); };
+    xhr.send(new FormData(form));
+  });
+})();
+</script>
+{% endblock %}

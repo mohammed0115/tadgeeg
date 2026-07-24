@@ -1,0 +1,89 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Audit Readiness — Evidence" %}{% endblock %}
+{% block nav_evidence %}active{% endblock %}
+
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}
+  .warn { background:#fffbeb;border:1px solid #fcd34d;color:#92400e;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13px; }
+{% endblock %}
+
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs">
+    <a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "Readiness" %}
+  </div>
+
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Audit Readiness — Outstanding Evidence" %}</div>
+      <div class="ev-sub">{{ workpaper.engagement }} · {% trans "Readiness conclusion" %}: {{ workpaper.get_readiness_conclusion_display }}</div>
+    </div>
+  </div>
+
+  {# Safe-wording notice carried forward from 5A/5B — never a formal opinion. #}
+  <div class="warn">
+    <strong>{% trans "Subject to auditor review" %}</strong> —
+    {% trans "This page shows outstanding evidence only. It is not a formal audit opinion; the final opinion must be prepared and approved by a licensed auditor." %}
+  </div>
+
+  {% if counts.open_gaps %}
+  <div class="warn" style="background:#fef2f2;border-color:#fecaca;color:#991b1b;">
+    {% trans "There are still open evidence requests for this engagement. Review them before concluding readiness." %}
+  </div>
+  {% endif %}
+
+  {# Required 6B display: evidence status breakdown before concluding readiness. #}
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">{% trans "Open" %}</div><div class="val">{{ counts.open|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Submitted" %}</div><div class="val">{{ counts.submitted|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Under review" %}</div><div class="val">{{ counts.under_review|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "More needed" %}</div><div class="val">{{ counts.more_evidence_required|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Accepted" %}</div><div class="val">{{ counts.accepted|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Rejected" %}</div><div class="val">{{ counts.rejected|default:0 }}</div></div>
+    <div class="kpi alert"><div class="lbl">{% trans "Overdue" %}</div><div class="val">{{ counts.overdue|default:0 }}</div></div>
+  </div>
+
+  <div class="card">
+    <h3>{% trans "Readiness workpaper" %}</h3>
+    <dl class="kv">
+      <dt>{% trans "Status" %}</dt><dd>{{ workpaper.get_status_display }}</dd>
+      <dt>{% trans "Readiness conclusion" %}</dt><dd>{{ workpaper.get_readiness_conclusion_display }}</dd>
+      <dt>{% trans "Suggested direction" %}</dt><dd>{{ workpaper.get_suggested_opinion_direction_display }}</dd>
+      <dt>{% trans "Open needs-evidence findings" %}</dt><dd>{{ workpaper.total_needs_evidence }}</dd>
+      <dt>{% trans "Generated at" %}</dt><dd>{{ workpaper.generated_at|default:"—" }}</dd>
+    </dl>
+  </div>
+
+  <div class="card">
+    <h3>{% trans "Outstanding evidence requests" %}</h3>
+    {% if outstanding %}
+    <div class="table-scroll">
+      <table class="ev-table">
+        <thead>
+          <tr>
+            <th>{% trans "Request #" %}</th><th>{% trans "Title" %}</th><th>{% trans "Status" %}</th>
+            <th>{% trans "Due" %}</th><th>{% trans "SLA" %}</th><th>{% trans "Client" %}</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in outstanding %}
+          <tr>
+            <td>{{ r.request_number|default:"—" }}</td>
+            <td>{{ r.title }}</td>
+            <td><span class="badge {{ r.status }}">{{ r.get_status_display }}</span></td>
+            <td>{{ r.due_date|default:"—" }}</td>
+            <td><span class="sla {{ r.sla_state }}">{% if r.is_overdue %}{% trans "Overdue" %}{% elif r.days_remaining != None %}{{ r.days_remaining }} {% trans "d" %}{% else %}—{% endif %}</span></td>
+            <td>{{ r.assigned_client_user.full_name|default:"—" }}</td>
+            <td><a href="{% url 'frontend:evidence_detail' r.id %}">{% trans "View" %} →</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">{% trans "No outstanding evidence requests for this engagement." %}</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

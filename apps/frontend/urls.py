@@ -6,6 +6,8 @@ from django.urls import path, reverse_lazy
 from apps.authentication.forms import ExistingEmailPasswordResetForm
 from . import views
 from . import evidence_views
+from . import client_portal_views
+from . import audit_host_views
 
 app_name = 'frontend'
 
@@ -109,6 +111,15 @@ urlpatterns = [
     path('audit/evidence/', evidence_views.evidence_list, name='evidence_list'),
     path('audit/evidence/new/', evidence_views.evidence_create, name='evidence_create'),
     path('audit/evidence/<uuid:pk>/', evidence_views.evidence_detail, name='evidence_detail'),
+
+    # TADGEEG-FIN-AUDIT-6B — Client Evidence Portal (client-side pages)
+    path('audit/client-evidence/', client_portal_views.client_evidence_list, name='client_evidence_list'),
+    path('audit/client-evidence/<uuid:pk>/', client_portal_views.client_evidence_detail, name='client_evidence_detail'),
+
+    # TADGEEG-FIN-AUDIT-6B — auditor host pages for evidence integration
+    path('audit/findings/<uuid:pk>/', audit_host_views.gl_finding_detail, name='gl_finding_detail'),
+    path('audit/sad-items/<uuid:pk>/', audit_host_views.sad_item_detail, name='sad_item_detail'),
+    path('audit/readiness/<uuid:pk>/', audit_host_views.readiness_evidence_summary, name='readiness_evidence_summary'),
 
     # Hash-chain integrity (tamper-evident audit trail)
     path('audit/integrity/', views.audit_integrity, name='audit_integrity'),

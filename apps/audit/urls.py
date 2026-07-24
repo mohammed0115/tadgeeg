@@ -45,6 +45,9 @@ urlpatterns = [
     path("evidence-requests/<uuid:pk>/review/", ev.EvidenceRequestReviewView.as_view(), name="evidence-request-review"),
     path("evidence-requests/<uuid:pk>/attachments/", ev.EvidenceRequestAttachmentsView.as_view(), name="evidence-request-attachments"),
     path("evidence-requests/<uuid:pk>/events/", ev.EvidenceRequestEventsView.as_view(), name="evidence-request-events"),
+    # TADGEEG-FIN-AUDIT-6B — assignment + client management explanation.
+    path("evidence-requests/<uuid:pk>/assign/", ev.EvidenceRequestAssignView.as_view(), name="evidence-request-assign"),
+    path("evidence-requests/<uuid:pk>/management-explanation/", ev.EvidenceRequestManagementExplanationView.as_view(), name="evidence-request-management-explanation"),
     path("dashboard/overview/", views.AuditDashboardOverviewView.as_view(), name="dashboard-overview"),
     path("big-four/", views.BigFourComplianceView.as_view(), name="big-four-compliance"),
     # Phase 2.2 — visual rule builder. The DSL-driven endpoints sit under

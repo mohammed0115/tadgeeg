@@ -371,19 +371,26 @@ class AuditEvidenceRequestSerializer(serializers.ModelSerializer):
         source="requested_by.full_name", read_only=True, default="")
     assigned_to_name = serializers.CharField(
         source="assigned_to.full_name", read_only=True, default="")
+    assigned_client_user_name = serializers.CharField(
+        source="assigned_client_user.full_name", read_only=True, default="")
+    days_remaining = serializers.IntegerField(read_only=True)
+    is_overdue = serializers.BooleanField(read_only=True)
+    sla_state = serializers.CharField(read_only=True)
     attachments = AuditEvidenceAttachmentSerializer(many=True, read_only=True)
     events = AuditEvidenceRequestEventSerializer(many=True, read_only=True)
 
     class Meta:
         model = AuditEvidenceRequest
         fields = [
-            "id", "engagement", "organization", "gl_finding", "sad_item",
-            "requested_by", "requested_by_name", "assigned_to", "assigned_to_name",
+            "id", "request_number", "engagement", "organization", "gl_finding",
+            "sad_item", "requested_by", "requested_by_name", "assigned_to",
+            "assigned_to_name", "assigned_client_user", "assigned_client_user_name",
             "title", "description", "request_reason", "request_reason_display",
             "status", "status_display", "priority", "priority_display",
             "due_date", "requested_at", "submitted_at", "reviewed_by",
-            "reviewed_at", "reviewer_note", "created_at", "updated_at",
-            "attachments", "events",
+            "reviewed_at", "reviewer_note", "management_explanation",
+            "days_remaining", "is_overdue", "sla_state",
+            "created_at", "updated_at", "attachments", "events",
         ]
         read_only_fields = fields
 
@@ -396,13 +403,19 @@ class AuditEvidenceRequestListSerializer(serializers.ModelSerializer):
         source="requested_by.full_name", read_only=True, default="")
     assigned_to_name = serializers.CharField(
         source="assigned_to.full_name", read_only=True, default="")
+    assigned_client_user_name = serializers.CharField(
+        source="assigned_client_user.full_name", read_only=True, default="")
+    days_remaining = serializers.IntegerField(read_only=True)
+    is_overdue = serializers.BooleanField(read_only=True)
+    sla_state = serializers.CharField(read_only=True)
 
     class Meta:
         model = AuditEvidenceRequest
         fields = [
-            "id", "engagement", "gl_finding", "sad_item", "title",
-            "request_reason", "status", "status_display", "priority",
+            "id", "request_number", "engagement", "gl_finding", "sad_item",
+            "title", "request_reason", "status", "status_display", "priority",
             "priority_display", "due_date", "requested_by_name",
-            "assigned_to_name", "requested_at", "created_at",
+            "assigned_to_name", "assigned_client_user_name", "requested_at",
+            "days_remaining", "is_overdue", "sla_state", "created_at",
         ]
         read_only_fields = fields

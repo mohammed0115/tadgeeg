@@ -1,0 +1,119 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Client Evidence Portal" %}{% endblock %}
+{% block nav_client_evidence %}active{% endblock %}
+
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% endblock %}
+
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "Client Evidence Portal" %}</div>
+
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Client Evidence Portal" %} · بوابة أدلة العميل</div>
+      <div class="ev-sub">{% trans "Evidence requested from you by the audit team. Upload supporting documents and submit for review." %}</div>
+    </div>
+  </div>
+
+  {# ── Status widget ── #}
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">{% trans "Open" %}</div><div class="val">{{ counts.open|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Submitted" %}</div><div class="val">{{ counts.submitted|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Under review" %}</div><div class="val">{{ counts.under_review|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Accepted" %}</div><div class="val">{{ counts.accepted|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Rejected" %}</div><div class="val">{{ counts.rejected|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "More needed" %}</div><div class="val">{{ counts.more_evidence_required|default:0 }}</div></div>
+    <div class="kpi alert"><div class="lbl">{% trans "Overdue" %}</div><div class="val">{{ counts.overdue|default:0 }}</div></div>
+  </div>
+
+  {# ── Filters + search ── #}
+  <form method="get" class="filters">
+    <div>
+      <label>{% trans "Status" %}</label>
+      <select name="status">
+        <option value="">{% trans "All" %}</option>
+        {% for value, label in status_choices %}
+          <option value="{{ value }}" {% if active_status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>{% trans "Priority" %}</label>
+      <select name="priority">
+        <option value="">{% trans "All" %}</option>
+        {% for value, label in priority_choices %}
+          <option value="{{ value }}" {% if active_priority == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>{% trans "Engagement" %}</label>
+      <select name="engagement">
+        <option value="">{% trans "All" %}</option>
+        {% for eid, elabel in engagement_choices %}
+          <option value="{{ eid }}" {% if active_engagement == eid|stringformat:"s" %}selected{% endif %}>{{ elabel }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>{% trans "Search" %}</label>
+      <input type="search" name="q" value="{{ search }}" placeholder="{% trans 'Title, number, finding, SAD item' %}">
+    </div>
+    <div>
+      <label>{% trans "Overdue only" %}</label>
+      <select name="overdue">
+        <option value="">{% trans "No" %}</option>
+        <option value="1" {% if active_overdue %}selected{% endif %}>{% trans "Yes" %}</option>
+      </select>
+    </div>
+    <button type="submit">{% trans "Apply" %}</button>
+    <a class="clear" href="{% url 'frontend:client_evidence_list' %}">{% trans "Reset" %}</a>
+  </form>
+
+  {% if evidence_requests %}
+  <div class="table-scroll">
+    <table class="ev-table">
+      <thead>
+        <tr>
+          <th>{% trans "Request #" %}</th>
+          <th>{% trans "Title" %}</th>
+          <th>{% trans "Finding" %}</th>
+          <th>{% trans "SAD Item" %}</th>
+          <th>{% trans "Priority" %}</th>
+          <th>{% trans "Due date" %}</th>
+          <th>{% trans "SLA" %}</th>
+          <th>{% trans "Status" %}</th>
+          <th>{% trans "Assigned by" %}</th>
+          <th>{% trans "Last updated" %}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in evidence_requests %}
+        <tr>
+          <td>{{ r.request_number|default:"—" }}</td>
+          <td>{{ r.title }}</td>
+          <td>{% if r.gl_finding_id %}{{ r.gl_finding.risk_code }}{% else %}—{% endif %}</td>
+          <td>{% if r.sad_item_id %}{{ r.sad_item.account_code }}{% else %}—{% endif %}</td>
+          <td><span class="prio {{ r.priority }}">{{ r.get_priority_display }}</span></td>
+          <td>{{ r.due_date|default:"—" }}</td>
+          <td><span class="sla {{ r.sla_state }}">{% if r.is_overdue %}{% trans "Overdue" %}{% elif r.sla_state == 'completed' %}{% trans "Completed" %}{% elif r.sla_state == 'waiting' %}{% trans "Waiting" %}{% elif r.days_remaining != None %}{{ r.days_remaining }} {% trans "d" %}{% else %}—{% endif %}</span></td>
+          <td><span class="badge {{ r.status }}">{{ r.get_status_display }}</span></td>
+          <td>{{ r.requested_by.full_name|default:"—" }}</td>
+          <td>{{ r.updated_at|date:"Y-m-d H:i" }}</td>
+          <td><a href="{% url 'frontend:client_evidence_detail' r.id %}">{% trans "Open" %} →</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">
+    {% trans "No evidence requests assigned to you." %}
+    <div style="margin-top:6px;font-size:12px;">{% trans "When the audit team requests evidence, it will appear here." %}</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

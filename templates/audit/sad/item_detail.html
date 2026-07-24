@@ -1,0 +1,82 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "SAD Item" %}{% endblock %}
+{% block nav_evidence %}active{% endblock %}
+
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}
+  .btn-req { display:inline-block; background:var(--primary,#002244); color:#fff; border-radius:10px; padding:9px 16px; font-weight:700; font-size:13px; text-decoration:none; }
+{% endblock %}
+
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs">
+    <a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "SAD Item" %}
+  </div>
+
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{{ item.account_code }} · {{ item.finding_title|default:item.account_name }}</div>
+      <div class="ev-sub">{% trans "Summary of Audit Differences — item" %} · {{ item.engagement }}</div>
+    </div>
+    {% if can_manage %}
+      <a class="btn-req" href="{% url 'frontend:evidence_create' %}">+ {% trans "Request Evidence" %} · طلب دليل</a>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3>{% trans "Difference details" %}</h3>
+    <dl class="kv">
+      <dt>{% trans "Account" %}</dt><dd>{{ item.account_code }} {{ item.account_name }}</dd>
+      <dt>{% trans "Amount impact" %}</dt><dd>{{ item.amount_impact }}</dd>
+      <dt>{% trans "Materiality" %}</dt><dd>{{ item.get_materiality_status_display }}</dd>
+      <dt>{% trans "Management response" %}</dt><dd>{{ item.get_management_response_status_display }}</dd>
+      <dt>{% trans "Source finding" %}</dt><dd>{{ item.finding_risk_code|default:"—" }}</dd>
+    </dl>
+    <p style="font-size:11px;color:#94a3b8;margin-top:10px;">
+      {% trans "Read-only view. Evidence activity never modifies this SAD item or its conclusion." %}
+    </p>
+  </div>
+
+  {# Required 6B panel: evidence requests, open count, latest upload. #}
+  <div class="card">
+    <h3>{% trans "Evidence requests" %} ({% trans "open" %}: {{ open_evidence_count }})</h3>
+    {% if latest_upload %}
+      <div class="att" style="margin-bottom:12px;">
+        <div class="fn">{% trans "Latest upload" %}: {{ latest_upload.original_filename|default:"(file)" }}</div>
+        <div class="meta">
+          {{ latest_upload.uploaded_by.full_name|default:"—" }} · {{ latest_upload.uploaded_at|date:"Y-m-d H:i" }}
+          {% if latest_upload.file_sha256 %} · sha256:{{ latest_upload.file_sha256|slice:":16" }}…{% endif %}
+        </div>
+      </div>
+    {% endif %}
+
+    {% if evidence_requests %}
+    <div class="table-scroll">
+      <table class="ev-table">
+        <thead>
+          <tr>
+            <th>{% trans "Request #" %}</th><th>{% trans "Title" %}</th><th>{% trans "Status" %}</th>
+            <th>{% trans "Due" %}</th><th>{% trans "Client" %}</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in evidence_requests %}
+          <tr>
+            <td>{{ r.request_number|default:"—" }}</td>
+            <td>{{ r.title }}</td>
+            <td><span class="badge {{ r.status }}">{{ r.get_status_display }}</span></td>
+            <td>{{ r.due_date|default:"—" }}</td>
+            <td>{{ r.assigned_client_user.full_name|default:"—" }}</td>
+            <td><a href="{% url 'frontend:evidence_detail' r.id %}">{% trans "View" %} →</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div class="empty">{% trans "No evidence has been requested for this SAD item yet." %}</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

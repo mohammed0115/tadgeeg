@@ -83,9 +83,19 @@ class AuditEvidenceRequest(models.Model):
     requested_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="requested_evidence")
+    # Assigned AUDITOR (reviewer side).
     assigned_to = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="assigned_evidence")
+    # TADGEEG-FIN-AUDIT-6B — assigned CLIENT user. Client-portal access is
+    # driven by this FK (not by a role), so no authentication changes are
+    # needed: a user is a "client" for a request only if assigned here.
+    assigned_client_user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="client_assigned_evidence")
+
+    # Human-readable identifier (e.g. "EVR-00042"), unique per organization.
+    request_number = models.CharField(max_length=32, blank=True, db_index=True)
 
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
@@ -106,6 +116,8 @@ class AuditEvidenceRequest(models.Model):
         related_name="reviewed_evidence")
     reviewed_at = models.DateTimeField(null=True, blank=True)
     reviewer_note = models.TextField(blank=True)
+    # TADGEEG-FIN-AUDIT-6B — client-supplied management explanation.
+    management_explanation = models.TextField(blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -118,14 +130,51 @@ class AuditEvidenceRequest(models.Model):
             models.Index(fields=["engagement", "-created_at"]),
             models.Index(fields=["gl_finding"]),
             models.Index(fields=["sad_item"]),
+            models.Index(fields=["assigned_client_user", "status"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "request_number"],
+                condition=models.Q(request_number__gt=""),
+                name="uniq_evidence_request_number_per_org"),
         ]
 
     def __str__(self) -> str:
-        return f"AuditEvidenceRequest {self.id} ({self.status})"
+        return f"AuditEvidenceRequest {self.request_number or self.id} ({self.status})"
 
     @property
     def is_final(self) -> bool:
         return self.status in self.FINAL_STATUSES
+
+    # ── TADGEEG-FIN-AUDIT-6B — SLA helpers (read-only, no stored state) ───────
+    @property
+    def days_remaining(self):
+        """Whole days until the due date (negative if past). None if no due date."""
+        if not self.due_date:
+            return None
+        from django.utils import timezone as _tz
+        return (self.due_date - _tz.now().date()).days
+
+    @property
+    def is_overdue(self) -> bool:
+        """Past its due date and still awaiting action (never for final states)."""
+        if self.is_final or not self.due_date:
+            return False
+        remaining = self.days_remaining
+        return remaining is not None and remaining < 0
+
+    @property
+    def sla_state(self) -> str:
+        """One of: completed · waiting · overdue · due_soon · on_track · none."""
+        if self.is_final:
+            return "completed"
+        if self.is_overdue:
+            return "overdue"
+        if self.status in (self.Status.SUBMITTED, self.Status.UNDER_REVIEW):
+            return "waiting"
+        if self.due_date is None:
+            return "none"
+        return "due_soon" if (self.days_remaining or 0) <= 3 else "on_track"
 
     def clean(self):
         if self.engagement_id and self.organization_id:
@@ -212,6 +261,8 @@ class AuditEvidenceRequestEvent(models.Model):
         CANCELLED              = "cancelled",              "Request cancelled"
         ATTACHMENT_ADDED       = "attachment_added",       "Attachment added"
         NOTE_ADDED             = "note_added",             "Note added"
+        # TADGEEG-FIN-AUDIT-6B — auditor/client assignment changes.
+        ASSIGNED               = "assigned",               "Assigned"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     evidence_request = models.ForeignKey(

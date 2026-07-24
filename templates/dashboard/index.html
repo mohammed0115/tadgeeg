@@ -146,8 +146,19 @@ Shows the org's current plan, usage, and remaining quota. The
     <div><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;">{% trans "Avg review time" %}</div><div style="font-size:16px;font-weight:900;color:#334155;">{{ evidence_summary.avg_review_display|default:"—" }}</div></div>
     {% endif %}
   </div>
+  {# TADGEEG-FIN-AUDIT-6D — assurance widgets. #}
+  {% if evidence_assurance %}
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+    <div><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;">{% trans "Integrity" %}</div><div style="font-size:20px;font-weight:900;color:#166534;">{{ evidence_assurance.integrity_percent|default:"—" }}{% if evidence_assurance.integrity_percent != None %}%{% endif %}</div></div>
+    <div><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;">{% trans "Coverage" %}</div><div style="font-size:20px;font-weight:900;color:#1e40af;">{{ evidence_assurance.coverage_percent|default:0 }}%</div></div>
+    <div><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;">{% trans "Expired" %}</div><div style="font-size:20px;font-weight:900;color:#b91c1c;">{{ evidence_assurance.expired|default:0 }}</div></div>
+    <div><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;">{% trans "Frozen" %}</div><div style="font-size:20px;font-weight:900;color:#1e40af;">{{ evidence_assurance.frozen|default:0 }}</div></div>
+    <div><div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;">{% trans "Verification" %}</div><div style="font-size:14px;font-weight:900;color:#334155;">{{ evidence_assurance.verification_status|default:"—" }}</div></div>
+  </div>
+  {% endif %}
   <div style="margin-top:10px;">
     <a href="{% url 'frontend:evidence_queue' %}" style="font-size:12px;color:#1e40af;font-weight:700;text-decoration:none;">{% trans "Open evidence queue" %} →</a>
+    <a href="{% url 'frontend:assurance_overview' %}" style="font-size:12px;color:#1e40af;font-weight:700;text-decoration:none;margin-inline-start:14px;">{% trans "Evidence assurance" %} →</a>
   </div>
 </div>
 {% endif %}

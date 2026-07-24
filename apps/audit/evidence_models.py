@@ -210,6 +210,22 @@ class AuditEvidenceAttachment(models.Model):
         FROZEN   = "frozen",   "Frozen"
         EXPIRED  = "expired",  "Expired"
 
+    class VerificationResult(models.TextChoices):
+        """TADGEEG-FIN-AUDIT-6D — detailed integrity-sweep outcome."""
+        PENDING       = "pending",       "Pending verification"
+        OK            = "ok",            "Verified"
+        HASH_MISMATCH = "hash_mismatch", "Hash mismatch (corrupted)"
+        MISSING_FILE  = "missing_file",  "File missing"
+        UNREADABLE    = "unreadable",    "File unreadable"
+        NO_DIGEST     = "no_digest",     "No stored digest"
+
+    # Results that represent an integrity EXCEPTION requiring auditor attention.
+    FAILED_VERIFICATION_RESULTS = frozenset({
+        VerificationResult.HASH_MISMATCH,
+        VerificationResult.MISSING_FILE,
+        VerificationResult.UNREADABLE,
+    })
+
     # States in which the attachment may no longer be modified at all.
     IMMUTABLE_STATES = frozenset({Lifecycle.FROZEN})
     # States that count as "live" evidence for review purposes.
@@ -266,6 +282,15 @@ class AuditEvidenceAttachment(models.Model):
     # Integrity verification bookkeeping (SHA-256 re-check on download).
     last_verified_at = models.DateTimeField(null=True, blank=True)
     last_verification_ok = models.BooleanField(null=True, blank=True)
+
+    # ── TADGEEG-FIN-AUDIT-6D — assurance sweep detail ────────────────────────
+    # ``verification_result`` is the detailed outcome; ``last_verification_ok``
+    # (6C) is kept as its boolean MIRROR so existing code keeps working.
+    verification_result = models.CharField(
+        max_length=20, choices=VerificationResult.choices,
+        default=VerificationResult.PENDING, db_index=True)
+    verification_duration_ms = models.PositiveIntegerField(null=True, blank=True)
+    verification_error = models.TextField(blank=True)
 
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
@@ -375,3 +400,76 @@ class AuditEvidenceRequestEvent(models.Model):
 
     def __str__(self) -> str:
         return f"AuditEvidenceRequestEvent {self.event_type} ({self.evidence_request_id})"
+
+
+class AuditEvidenceRetentionPolicy(models.Model):
+    """Engagement-level evidence retention policy (TADGEEG-FIN-AUDIT-6D).
+
+    Declares how long evidence for an engagement must be retained. Applying a
+    policy only computes ``AuditEvidenceAttachment.retention_until`` — it is
+    **metadata only**: no file is ever deleted, purged, or modified, and expiry
+    is never enforced automatically.
+    """
+
+    class Policy(models.TextChoices):
+        YEARS_7  = "years_7",  "7 years"
+        YEARS_10 = "years_10", "10 years"
+        FOREVER  = "forever",  "Retain forever"
+        CUSTOM   = "custom",   "Custom (years)"
+
+    POLICY_YEARS = {Policy.YEARS_7: 7, Policy.YEARS_10: 10}
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    engagement = models.OneToOneField(
+        AuditEngagement, on_delete=models.CASCADE, related_name="evidence_retention_policy")
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="evidence_retention_policies")
+
+    policy = models.CharField(max_length=12, choices=Policy.choices, default=Policy.YEARS_7)
+    custom_years = models.PositiveSmallIntegerField(null=True, blank=True)
+    reason = models.TextField(blank=True)
+
+    applied_at = models.DateTimeField(null=True, blank=True)
+    applied_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="applied_retention_policies")
+    attachments_marked = models.PositiveIntegerField(default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "audit_evidence_retention_policies"
+        ordering = ("-created_at",)
+        indexes = [models.Index(fields=["organization", "policy"])]
+
+    def __str__(self) -> str:
+        return f"RetentionPolicy {self.engagement_id} ({self.policy})"
+
+    @property
+    def years(self):
+        """Retention length in years, or None for 'forever'."""
+        if self.policy == self.Policy.FOREVER:
+            return None
+        if self.policy == self.Policy.CUSTOM:
+            return self.custom_years or None
+        return self.POLICY_YEARS.get(self.policy)
+
+    def expiry_for(self, uploaded_at):
+        """Calculated expiry date for evidence uploaded at ``uploaded_at``."""
+        years = self.years
+        if years is None or uploaded_at is None:
+            return None
+        base = uploaded_at.date() if hasattr(uploaded_at, "date") else uploaded_at
+        try:
+            return base.replace(year=base.year + years)
+        except ValueError:  # 29 Feb → 28 Feb
+            return base.replace(month=2, day=28, year=base.year + years)
+
+    def clean(self):
+        if self.engagement_id and self.organization_id:
+            if self.engagement.organization_id != self.organization_id:
+                raise ValidationError(
+                    "retention policy organization must match engagement.organization.")
+        if self.policy == self.Policy.CUSTOM and not self.custom_years:
+            raise ValidationError("custom policy requires custom_years.")

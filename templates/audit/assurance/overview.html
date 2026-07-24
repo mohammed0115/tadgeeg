@@ -1,0 +1,45 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Evidence Assurance" %}{% endblock %}
+{% block nav_assurance %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/assurance/_shared.html" %}{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "Evidence Assurance" %}</div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Evidence Assurance" %} · ضمان الأدلة</div>
+      <div class="ev-sub">{% trans "Integrity, coverage and retention reporting. Reporting only — no evidence is modified or deleted." %}</div>
+    </div>
+  </div>
+  {% with active_tab="overview" %}{% include "audit/assurance/_nav.html" %}{% endwith %}
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">{% trans "Integrity" %}</div><div class="val">{{ dashboard.integrity_percent|default:"—" }}{% if dashboard.integrity_percent != None %}%{% endif %}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Coverage" %}</div><div class="val">{{ dashboard.coverage_percent|default:0 }}%</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Pending reviews" %}</div><div class="val">{{ dashboard.pending_reviews|default:0 }}</div></div>
+    <div class="kpi alert"><div class="lbl">{% trans "Rejected" %}</div><div class="val">{{ dashboard.rejected|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Open requests" %}</div><div class="val">{{ dashboard.open_requests|default:0 }}</div></div>
+    <div class="kpi alert"><div class="lbl">{% trans "Expired" %}</div><div class="val">{{ dashboard.expired|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Frozen" %}</div><div class="val">{{ dashboard.frozen|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Verification" %}</div><div class="val" style="font-size:15px;">{{ dashboard.verification_status|default:"—" }}</div></div>
+  </div>
+
+  <div class="card">
+    <h3>{% trans "Integrity" %}</h3>
+    <div class="bar" style="max-width:420px;"><i style="width:{{ dashboard.integrity_percent|default:0 }}%;"></i></div>
+    <div style="font-size:12px;color:#64748b;margin-top:6px;">
+      {{ dashboard.verified|default:0 }} {% trans "verified" %} · {{ dashboard.failed|default:0 }} {% trans "failed" %} ·
+      {{ dashboard.pending_verification|default:0 }} {% trans "pending" %} ({% trans "of" %} {{ dashboard.total|default:0 }})
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>{% trans "Coverage" %}</h3>
+    <div class="bar" style="max-width:420px;"><i style="width:{{ dashboard.coverage_percent|default:0 }}%;"></i></div>
+    <div style="font-size:12px;color:#64748b;margin-top:6px;">
+      <span class="cov {{ dashboard.coverage_status }}">{{ dashboard.coverage_status }}</span>
+    </div>
+  </div>
+</div>
+{% endblock %}

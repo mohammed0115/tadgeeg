@@ -1,0 +1,63 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Integrity Report" %}{% endblock %}
+{% block nav_assurance %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/assurance/_shared.html" %}{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / <a href="{% url 'frontend:assurance_overview' %}">{% trans "Assurance" %}</a> / {% trans "Integrity" %}</div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Integrity Exception Report" %} · تقرير سلامة الأدلة</div>
+      <div class="ev-sub">{{ report.note }}</div>
+    </div>
+    <form method="post">{% csrf_token %}
+      <input type="hidden" name="action" value="sweep">
+      {% if selected_engagement %}<input type="hidden" name="engagement" value="{{ selected_engagement.id }}">{% endif %}
+      <button type="submit" class="sweepbtn">{% trans "Run integrity sweep" %}</button>
+    </form>
+  </div>
+  {% with active_tab="integrity" %}{% include "audit/assurance/_nav.html" %}{% endwith %}
+
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="ok">{{ notice }}</div>{% endif %}
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">{% trans "Total" %}</div><div class="val">{{ report.statistics.total|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Verified" %}</div><div class="val">{{ report.statistics.verified|default:0 }}</div></div>
+    <div class="kpi alert"><div class="lbl">{% trans "Failed" %}</div><div class="val">{{ report.statistics.failed|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Pending" %}</div><div class="val">{{ report.statistics.pending|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Integrity %" %}</div><div class="val">{{ report.statistics.integrity_percent|default:"—" }}</div></div>
+  </div>
+
+  {% for bucket, rows in report.exceptions.items %}
+  <div class="card">
+    <h3>{{ bucket }} <span style="color:#94a3b8;font-weight:600;">({{ rows|length }})</span></h3>
+    {% if rows %}
+    <div class="table-scroll">
+      <table class="ev-table">
+        <thead><tr>
+          <th>{% trans "Request" %}</th><th>{% trans "File" %}</th><th>{% trans "Ver" %}</th>
+          <th>{% trans "Result" %}</th><th>{% trans "Lifecycle" %}</th>
+          <th>{% trans "Last verified" %}</th><th>{% trans "Error" %}</th>
+        </tr></thead>
+        <tbody>
+          {% for a in rows %}
+          <tr>
+            <td>{{ a.request_number|default:"—" }}</td>
+            <td>{{ a.filename|default:"—" }}</td>
+            <td>v{{ a.version }}</td>
+            <td><span class="vr {{ a.verification_result }}">{{ a.verification_result }}</span></td>
+            <td><span class="lc {{ a.lifecycle_state }}">{{ a.lifecycle_state }}</span></td>
+            <td>{{ a.last_verified_at|default:"—" }}</td>
+            <td style="max-width:280px;">{{ a.verification_error|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<div style="color:#94a3b8;font-size:12px;">{% trans "None." %}</div>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

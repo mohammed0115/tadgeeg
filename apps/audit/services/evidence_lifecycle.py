@@ -73,7 +73,15 @@ def _read_and_hash(attachment) -> tuple[bytes, str]:
         raise EvidenceIntegrityError("attachment has no stored file.")
     sha = hashlib.sha256()
     chunks = []
-    fh.open("rb")
+    try:
+        fh.open("rb")
+    except FileNotFoundError as exc:
+        # 6D: the row exists but the stored bytes are gone. Report it as an
+        # integrity problem instead of crashing the caller (sweep/download).
+        raise EvidenceIntegrityError(
+            f"stored file is missing from storage: {exc}") from exc
+    except OSError as exc:
+        raise EvidenceIntegrityError(f"stored file is unreadable: {exc}") from exc
     try:
         while True:
             chunk = fh.read(_HASH_CHUNK)
@@ -81,6 +89,8 @@ def _read_and_hash(attachment) -> tuple[bytes, str]:
                 break
             sha.update(chunk)
             chunks.append(chunk)
+    except OSError as exc:
+        raise EvidenceIntegrityError(f"stored file is unreadable: {exc}") from exc
     finally:
         try:
             fh.close()

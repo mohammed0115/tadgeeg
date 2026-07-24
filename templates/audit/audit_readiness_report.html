@@ -98,6 +98,47 @@
     <tr><th>Performance materiality</th><td>{{ r.materiality.performance|default:"—" }}</td></tr>
   </table>
 
+  {# ── TADGEEG-FIN-AUDIT-6D — evidence assurance (INFORMATIONAL ONLY) ── #}
+  {% if r.evidence_assurance %}
+  <h2>Evidence Assurance <span style="font-size:9pt;color:#64748b;">(informational — does not change the readiness conclusion)</span></h2>
+  <table>
+    <tr><th>Evidence coverage</th><td>{{ r.evidence_assurance.coverage_percent }}% ({{ r.evidence_assurance.coverage_status }})</td></tr>
+    <tr><th>Integrity verified</th><td>{{ r.evidence_assurance.integrity_percent|default:"—" }}% · {{ r.evidence_assurance.integrity_summary.verification_status }}</td></tr>
+    <tr><th>Attachments verified / failed</th><td>{{ r.evidence_assurance.integrity_summary.verified }} / {{ r.evidence_assurance.integrity_summary.failed }}</td></tr>
+    <tr><th>Pending verification</th><td>{{ r.evidence_assurance.integrity_summary.pending_verification }}</td></tr>
+    <tr><th>Pending requests</th><td>{{ r.evidence_assurance.pending_requests }}</td></tr>
+    <tr><th>Open reviews</th><td>{{ r.evidence_assurance.open_reviews }}</td></tr>
+    <tr><th>Rejected evidence</th><td>{{ r.evidence_assurance.rejected_evidence }}</td></tr>
+    <tr><th>Expired evidence</th><td>{{ r.evidence_assurance.expired_evidence }}</td></tr>
+    <tr><th>Frozen evidence</th><td>{{ r.evidence_assurance.frozen_evidence }}</td></tr>
+  </table>
+  <p style="font-size:9pt;color:#64748b;">{{ r.evidence_assurance.note }}</p>
+  {% endif %}
+
+  {# ── TADGEEG-FIN-AUDIT-6D — immutable evidence index (no download URLs) ── #}
+  {% if r.evidence_index %}
+  <h2>Evidence Index</h2>
+  <table>
+    <tr>
+      <th style="width:auto;">#</th><th style="width:auto;">Request</th><th style="width:auto;">Finding</th>
+      <th style="width:auto;">SAD item</th><th style="width:auto;">File</th><th style="width:auto;">Ver</th>
+      <th style="width:auto;">SHA-256</th><th style="width:auto;">Integrity</th><th style="width:auto;">Status</th>
+      <th style="width:auto;">Reviewer</th><th style="width:auto;">Reviewed</th>
+      <th style="width:auto;">Retention</th><th style="width:auto;">Lifecycle</th>
+    </tr>
+    {% for e in r.evidence_index %}
+    <tr>
+      <td>{{ e.evidence_number }}</td><td>{{ e.request_number }}</td><td>{{ e.finding|default:"—" }}</td>
+      <td>{{ e.sad_item|default:"—" }}</td><td>{{ e.filename|default:"—" }}</td><td>v{{ e.version }}</td>
+      <td style="font-family:monospace;font-size:8pt;">{{ e.sha256|slice:":16" }}…</td>
+      <td>{{ e.integrity }}</td><td>{{ e.status }}</td><td>{{ e.reviewer|default:"—" }}</td>
+      <td>{{ e.review_date|default:"—" }}</td><td>{{ e.retention_until|default:"—" }}</td>
+      <td>{{ e.lifecycle_state }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+
   <div class="meta">
     Report type: {{ r.report_type }} · is_formal_opinion: {{ r.is_formal_opinion }} ·
     subject_to_auditor_review: {{ r.subject_to_auditor_review }} ·

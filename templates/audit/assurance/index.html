@@ -1,0 +1,52 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Evidence Index" %}{% endblock %}
+{% block nav_assurance %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/assurance/_shared.html" %}{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / <a href="{% url 'frontend:assurance_overview' %}">{% trans "Assurance" %}</a> / {% trans "Evidence Index" %}</div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Evidence Index" %} · فهرس الأدلة</div>
+      <div class="ev-sub">{% trans "Immutable reference listing included in exported reports. Contains no download links by design." %}</div>
+    </div>
+  </div>
+  {% with active_tab="index" %}{% include "audit/assurance/_nav.html" %}{% endwith %}
+
+  {% if index %}
+  <div class="table-scroll">
+    <table class="ev-table">
+      <thead><tr>
+        <th>{% trans "Evidence #" %}</th><th>{% trans "Request" %}</th><th>{% trans "Finding" %}</th>
+        <th>{% trans "SAD Item" %}</th><th>{% trans "Filename" %}</th><th>{% trans "Version" %}</th>
+        <th>{% trans "SHA256" %}</th><th>{% trans "Integrity" %}</th><th>{% trans "Status" %}</th>
+        <th>{% trans "Reviewer" %}</th><th>{% trans "Review date" %}</th>
+        <th>{% trans "Retention" %}</th><th>{% trans "Lifecycle" %}</th>
+      </tr></thead>
+      <tbody>
+        {% for e in index %}
+        <tr>
+          <td>{{ e.evidence_number }}</td>
+          <td>{{ e.request_number|default:"—" }}</td>
+          <td>{{ e.finding|default:"—" }}</td>
+          <td>{{ e.sad_item|default:"—" }}</td>
+          <td>{{ e.filename|default:"—" }}</td>
+          <td>v{{ e.version }}</td>
+          <td style="font-family:monospace;font-size:10px;">{{ e.sha256|slice:":16" }}…</td>
+          <td><span class="ig {{ e.integrity }}">{{ e.integrity }}</span></td>
+          <td><span class="badge {{ e.status }}">{{ e.status }}</span></td>
+          <td>{{ e.reviewer|default:"—" }}</td>
+          <td>{{ e.review_date|default:"—" }}</td>
+          <td>{{ e.retention_until|default:"—" }}</td>
+          <td><span class="lc {{ e.lifecycle_state }}">{{ e.lifecycle_state }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">{% trans "No evidence recorded yet." %}</div>
+  {% endif %}
+</div>
+{% endblock %}

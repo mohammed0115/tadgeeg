@@ -1,0 +1,80 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Retention Policy" %}{% endblock %}
+{% block nav_assurance %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/assurance/_shared.html" %}
+  .fld{margin-bottom:14px;} .fld label{display:block;font-size:11px;font-weight:700;color:#334155;margin-bottom:5px;}
+  .fld select,.fld input,.fld textarea{width:100%;border:1px solid var(--border,#cbd5e1);border-radius:9px;padding:9px 11px;font-size:13px;}
+  .btn-primary{background:var(--primary,#002244);color:#fff;border:none;border-radius:10px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer;}
+{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / <a href="{% url 'frontend:assurance_overview' %}">{% trans "Assurance" %}</a> / {% trans "Retention" %}</div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Evidence Retention Policy" %} · سياسة الاحتفاظ</div>
+      <div class="ev-sub">{% trans "Engagement-level retention. Metadata only — evidence is never deleted or purged automatically." %}</div>
+    </div>
+  </div>
+  {% with active_tab="retention" %}{% include "audit/assurance/_nav.html" %}{% endwith %}
+
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="ok">{{ notice }}</div>{% endif %}
+
+  <div class="card">
+    <h3>{% trans "Set policy" %}{% if selected_engagement %} — {{ selected_engagement.engagement_code }}{% endif %}</h3>
+    {% if selected_engagement %}
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="engagement" value="{{ selected_engagement.id }}">
+      <div class="fld">
+        <label>{% trans "Retention policy" %}</label>
+        <select name="policy">
+          {% for value, label in policy_choices %}
+            <option value="{{ value }}" {% if current and current.policy == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="fld">
+        <label>{% trans "Custom years (only for 'Custom')" %}</label>
+        <input type="number" name="custom_years" min="1" max="99" value="{{ current.custom_years|default_if_none:'' }}">
+      </div>
+      <div class="fld">
+        <label>{% trans "Reason" %}</label>
+        <textarea name="reason" rows="2">{{ current.reason|default:"" }}</textarea>
+      </div>
+      <label style="font-size:12px;"><input type="checkbox" name="apply" value="1"> {% trans "Apply now (stamps calculated expiry on attachment metadata)" %}</label>
+      <div style="margin-top:12px;"><button type="submit" class="btn-primary">{% trans "Save policy" %}</button></div>
+    </form>
+    {% else %}
+    <div style="color:#64748b;font-size:13px;">{% trans "Choose an engagement above to set its retention policy." %}</div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3>{% trans "Existing policies" %}</h3>
+    {% if policies %}
+    <div class="table-scroll">
+      <table class="ev-table">
+        <thead><tr>
+          <th>{% trans "Engagement" %}</th><th>{% trans "Policy" %}</th><th>{% trans "Years" %}</th>
+          <th>{% trans "Applied at" %}</th><th>{% trans "Attachments marked" %}</th><th>{% trans "Reason" %}</th>
+        </tr></thead>
+        <tbody>
+          {% for p in policies %}
+          <tr>
+            <td>{{ p.engagement.engagement_code }}</td>
+            <td>{{ p.get_policy_display }}</td>
+            <td>{{ p.years|default:"∞" }}</td>
+            <td>{{ p.applied_at|default:"—" }}</td>
+            <td>{{ p.attachments_marked }}</td>
+            <td>{{ p.reason|default:"—" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<div class="empty">{% trans "No retention policies defined yet." %}</div>{% endif %}
+  </div>
+</div>
+{% endblock %}

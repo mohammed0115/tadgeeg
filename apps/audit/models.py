@@ -52,6 +52,7 @@ from apps.audit.evidence_models import (  # noqa: F401
     AuditEvidenceAttachment,
     AuditEvidenceRequest,
     AuditEvidenceRequestEvent,
+    AuditEvidenceRetentionPolicy,
 )
 
 

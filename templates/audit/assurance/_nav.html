@@ -1,0 +1,21 @@
+{% load i18n %}
+{# Assurance sub-navigation + engagement filter (shared by all 6D pages). #}
+<div class="tabs">
+  <a href="{% url 'frontend:assurance_overview' %}{% if selected_engagement %}?engagement={{ selected_engagement.id }}{% endif %}" class="{% if active_tab == 'overview' %}active{% endif %}">{% trans "Overview" %}</a>
+  <a href="{% url 'frontend:assurance_integrity' %}{% if selected_engagement %}?engagement={{ selected_engagement.id }}{% endif %}" class="{% if active_tab == 'integrity' %}active{% endif %}">{% trans "Integrity Report" %}</a>
+  <a href="{% url 'frontend:assurance_coverage' %}{% if selected_engagement %}?engagement={{ selected_engagement.id }}{% endif %}" class="{% if active_tab == 'coverage' %}active{% endif %}">{% trans "Coverage Report" %}</a>
+  <a href="{% url 'frontend:assurance_index' %}{% if selected_engagement %}?engagement={{ selected_engagement.id }}{% endif %}" class="{% if active_tab == 'index' %}active{% endif %}">{% trans "Evidence Index" %}</a>
+  <a href="{% url 'frontend:assurance_retention' %}{% if selected_engagement %}?engagement={{ selected_engagement.id }}{% endif %}" class="{% if active_tab == 'retention' %}active{% endif %}">{% trans "Retention Policy" %}</a>
+</div>
+<form method="get" class="filters">
+  <div>
+    <label>{% trans "Engagement" %}</label>
+    <select name="engagement" onchange="this.form.submit()">
+      <option value="">{% trans "All engagements" %}</option>
+      {% for e in engagements %}
+        <option value="{{ e.id }}" {% if selected_engagement and selected_engagement.id == e.id %}selected{% endif %}>{{ e.engagement_code }} — {{ e.title }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit">{% trans "Apply" %}</button>
+</form>

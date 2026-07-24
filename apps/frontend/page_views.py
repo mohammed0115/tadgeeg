@@ -1936,6 +1936,8 @@ def dashboard(request):
     evidence_counts = _dashboard_evidence_counts(org)
     # 6C: review-throughput cards (waiting / pending / avg review time).
     evidence_summary = _dashboard_evidence_summary(org)
+    # 6D: assurance widgets (integrity % / coverage % / verification status).
+    evidence_assurance = _dashboard_evidence_assurance(org)
 
     cache_key = f"dashboard:v2:{org.id}:{now.strftime('%Y-%m-%d-%H')}"
     cached = cache.get(cache_key)
@@ -1943,6 +1945,7 @@ def dashboard(request):
         return render(request, "dashboard/index.html", _ctx(
             request, "dashboard", **cached, no_organization=False,
             evidence_counts=evidence_counts, evidence_summary=evidence_summary,
+            evidence_assurance=evidence_assurance,
         ))
 
     payload = _build_dashboard_payload(org, now)
@@ -1952,6 +1955,7 @@ def dashboard(request):
     return render(request, "dashboard/index.html", _ctx(
         request, "dashboard", **payload, no_organization=False,
         evidence_counts=evidence_counts, evidence_summary=evidence_summary,
+        evidence_assurance=evidence_assurance,
     ))
 
 
@@ -1975,6 +1979,18 @@ def _dashboard_evidence_summary(org) -> dict:
     try:
         from apps.audit.services import evidence_lifecycle as lc_service
         return lc_service.dashboard_summary(organization=org)
+    except Exception:  # pragma: no cover - defensive
+        return {}
+
+
+def _dashboard_evidence_assurance(org) -> dict:
+    """Evidence assurance widgets for the dashboard (6D).
+
+    Never raises: a widget must not be able to break the dashboard.
+    """
+    try:
+        from apps.audit.services import evidence_assurance as assurance
+        return assurance.assurance_dashboard(organization=org)
     except Exception:  # pragma: no cover - defensive
         return {}
 

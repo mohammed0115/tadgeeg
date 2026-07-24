@@ -165,3 +165,102 @@ def notify_overdue(request):
             organization=request.organization,
         ) or sent
     return sent
+
+
+# ── TADGEEG-FIN-AUDIT-6D — assurance notifications (AUDITORS ONLY) ───────────
+# These are internal quality signals; clients are never notified.
+_AUDITOR_CAPABILITY = "approve_invoices"
+
+
+def _org_auditors(organization):
+    """Users in the organization holding the auditor review capability."""
+    from apps.authentication.models import User
+    out = []
+    for user in User.objects.filter(organization=organization, is_active=True):
+        try:
+            if user.has_role_capability(_AUDITOR_CAPABILITY):
+                out.append(user)
+        except Exception:  # pragma: no cover - defensive
+            continue
+    return out
+
+
+def notify_integrity_failure(attachment, *, result="", error=""):
+    """Alert auditors that an attachment failed integrity verification."""
+    req = attachment.evidence_request
+    label = req.request_number or str(req.id) if req else str(attachment.id)
+    sent = []
+    for user in _org_auditors(attachment.organization):
+        sent.append(notify(
+            user,
+            title=f"Evidence integrity FAILED: {label}",
+            message=(f"{attachment.original_filename or attachment.id}: "
+                     f"{result} {error}").strip(),
+            severity=Notification.Severity.DANGER,
+            category=Notification.Category.SECURITY,
+            link=_link(req) if req else "",
+            source_type=_SOURCE_TYPE,
+            source_id=str(attachment.id),
+            organization=attachment.organization,
+        ))
+    return sent
+
+
+def notify_coverage_below_threshold(organization, *, coverage_percent,
+                                    threshold, engagement=None):
+    """Alert auditors that evidence coverage dropped below the threshold."""
+    scope = f" for {engagement}" if engagement is not None else ""
+    sent = []
+    for user in _org_auditors(organization):
+        sent.append(notify(
+            user,
+            title=f"Evidence coverage below {threshold}%",
+            message=f"Current evidence coverage is {coverage_percent}%{scope}.",
+            severity=Notification.Severity.WARNING,
+            category=Notification.Category.AUDIT,
+            link="/audit/assurance/coverage/",
+            source_type=_SOURCE_TYPE,
+            source_id="coverage",
+            organization=organization,
+        ))
+    return sent
+
+
+def notify_evidence_expired(organization, *, count):
+    """Alert auditors that evidence has passed its retention date."""
+    sent = []
+    for user in _org_auditors(organization):
+        sent.append(notify(
+            user,
+            title="Evidence retention expired",
+            message=(f"{count} evidence file(s) passed their retention date. "
+                     "Nothing was deleted — auditor review required."),
+            severity=Notification.Severity.WARNING,
+            category=Notification.Category.AUDIT,
+            link="/audit/assurance/retention/",
+            source_type=_SOURCE_TYPE,
+            source_id="retention",
+            organization=organization,
+        ))
+    return sent
+
+
+def notify_verification_completed(organization, *, stats):
+    """Tell auditors an integrity sweep finished, with its headline numbers."""
+    sent = []
+    for user in _org_auditors(organization):
+        sent.append(notify(
+            user,
+            title="Evidence integrity sweep completed",
+            message=(f"Checked {stats.get('checked', 0)} · "
+                     f"verified {stats.get('ok', 0)} · "
+                     f"failed {stats.get('failed', 0)}."),
+            severity=(Notification.Severity.WARNING if stats.get("failed")
+                      else Notification.Severity.SUCCESS),
+            category=Notification.Category.AUDIT,
+            link="/audit/assurance/integrity/",
+            source_type=_SOURCE_TYPE,
+            source_id="sweep",
+            organization=organization,
+        ))
+    return sent

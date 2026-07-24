@@ -2,6 +2,7 @@ from django.urls import path
 from . import views
 from . import views_evidence as ev
 from . import views_evidence_lifecycle as evl
+from . import views_evidence_assurance as eva
 from . import views_rule_builder as rb
 from . import views_trial_balance as tb
 
@@ -57,6 +58,13 @@ urlpatterns = [
     path("evidence-queue/", evl.EvidenceQueueView.as_view(), name="evidence-queue"),
     path("evidence-requests/bulk-assign/", evl.EvidenceBulkAssignView.as_view(), name="evidence-bulk-assign"),
     path("evidence-dashboard/summary/", evl.EvidenceDashboardSummaryView.as_view(), name="evidence-dashboard-summary"),
+    # TADGEEG-FIN-AUDIT-6D — evidence assurance & reporting.
+    path("evidence-assurance/sweep/", eva.EvidenceIntegritySweepView.as_view(), name="evidence-assurance-sweep"),
+    path("evidence-assurance/integrity-report/", eva.EvidenceIntegrityReportView.as_view(), name="evidence-assurance-integrity"),
+    path("evidence-assurance/coverage/", eva.EvidenceCoverageView.as_view(), name="evidence-assurance-coverage"),
+    path("evidence-assurance/index/", eva.EvidenceIndexView.as_view(), name="evidence-assurance-index"),
+    path("evidence-assurance/dashboard/", eva.EvidenceAssuranceDashboardView.as_view(), name="evidence-assurance-dashboard"),
+    path("engagements/<uuid:pk>/retention-policy/", eva.EngagementRetentionPolicyView.as_view(), name="evidence-retention-policy"),
     path("dashboard/overview/", views.AuditDashboardOverviewView.as_view(), name="dashboard-overview"),
     path("big-four/", views.BigFourComplianceView.as_view(), name="big-four-compliance"),
     # Phase 2.2 — visual rule builder. The DSL-driven endpoints sit under

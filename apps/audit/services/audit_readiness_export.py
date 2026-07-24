@@ -60,7 +60,8 @@ def _display(instance, field):
 
 
 def build_export_payload(workpaper: AuditReadinessWorkpaper, *,
-                         include_isa700_draft: bool = True) -> dict:
+                         include_isa700_draft: bool = True,
+                         include_evidence: bool = True) -> dict:
     """Build a structured, JSON-safe export payload for a readiness workpaper.
 
     Pure read: does not modify the workpaper or any source record.
@@ -162,24 +163,38 @@ def build_export_payload(workpaper: AuditReadinessWorkpaper, *,
         # Optional: hardened ISA-700 draft paragraph sourced from THIS workpaper.
         payload["isa700_draft"] = build_readiness_draft_from_workpaper(workpaper)
 
+    if include_evidence:
+        # TADGEEG-FIN-AUDIT-6D — evidence assurance + immutable evidence index.
+        # INFORMATIONAL ONLY: this never feeds the readiness conclusion, which
+        # is computed solely by the 5A service and is not touched here.
+        from apps.audit.services import evidence_assurance as assurance
+        payload["evidence_assurance"] = assurance.readiness_evidence_section(
+            organization=workpaper.organization, engagement=engagement)
+        payload["evidence_index"] = assurance.evidence_index(
+            organization=workpaper.organization, engagement=engagement)
+
     return payload
 
 
 def render_html(workpaper: AuditReadinessWorkpaper, *,
-                include_isa700_draft: bool = True) -> str:
+                include_isa700_draft: bool = True,
+                include_evidence: bool = True) -> str:
     """Render the readiness workpaper to a safe, self-contained HTML document."""
-    payload = build_export_payload(workpaper, include_isa700_draft=include_isa700_draft)
+    payload = build_export_payload(workpaper, include_isa700_draft=include_isa700_draft,
+                                   include_evidence=include_evidence)
     return render_to_string(HTML_TEMPLATE, {"r": payload})
 
 
 def render_pdf(workpaper: AuditReadinessWorkpaper, *, base_url: str = "",
-               include_isa700_draft: bool = True) -> bytes:
+               include_isa700_draft: bool = True,
+               include_evidence: bool = True) -> bytes:
     """Render the readiness workpaper to PDF via the existing WeasyPrint infra.
 
     Raises :class:`ReadinessExportError` if WeasyPrint is unavailable so callers
     can fall back to HTML/JSON.
     """
-    html_str = render_html(workpaper, include_isa700_draft=include_isa700_draft)
+    html_str = render_html(workpaper, include_isa700_draft=include_isa700_draft,
+                           include_evidence=include_evidence)
     try:
         from weasyprint import HTML as WP_HTML
     except Exception as exc:  # pragma: no cover - depends on system libs

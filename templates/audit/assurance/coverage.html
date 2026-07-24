@@ -1,0 +1,80 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Coverage Report" %}{% endblock %}
+{% block nav_assurance %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/assurance/_shared.html" %}{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / <a href="{% url 'frontend:assurance_overview' %}">{% trans "Assurance" %}</a> / {% trans "Coverage" %}</div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Evidence Coverage" %} · تغطية الأدلة</div>
+      <div class="ev-sub">{% trans "Required vs uploaded, accepted, rejected and pending evidence per finding and SAD item." %}</div>
+    </div>
+  </div>
+  {% with active_tab="coverage" %}{% include "audit/assurance/_nav.html" %}{% endwith %}
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">{% trans "Overall coverage" %}</div><div class="val">{{ coverage.summary.coverage_percent|default:0 }}%</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Required" %}</div><div class="val">{{ coverage.summary.total_required|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Accepted" %}</div><div class="val">{{ coverage.summary.total_accepted|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Findings" %}</div><div class="val">{{ coverage.summary.findings_count|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "SAD items" %}</div><div class="val">{{ coverage.summary.sad_items_count|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "No requests" %}</div><div class="val">{{ coverage.summary.items_without_requests|default:0 }}</div></div>
+  </div>
+
+  <div class="card">
+    <h3>{% trans "GL Findings" %}</h3>
+    {% if coverage.findings %}
+    <div class="table-scroll">
+      <table class="ev-table">
+        <thead><tr>
+          <th>{% trans "Finding" %}</th><th>{% trans "Account" %}</th><th>{% trans "Required" %}</th>
+          <th>{% trans "Uploaded" %}</th><th>{% trans "Accepted" %}</th><th>{% trans "Rejected" %}</th>
+          <th>{% trans "Pending" %}</th><th>{% trans "Coverage" %}</th><th>{% trans "Status" %}</th>
+        </tr></thead>
+        <tbody>
+          {% for f in coverage.findings %}
+          <tr>
+            <td><a href="{% url 'frontend:gl_finding_detail' f.id %}">{{ f.reference }}</a></td>
+            <td>{{ f.account_code|default:"—" }}</td>
+            <td>{{ f.required }}</td><td>{{ f.uploaded }}</td><td>{{ f.accepted }}</td>
+            <td>{{ f.rejected }}</td><td>{{ f.pending_review }}</td>
+            <td><div class="bar"><i style="width:{{ f.coverage_percent }}%;"></i></div>{{ f.coverage_percent }}%</td>
+            <td><span class="cov {{ f.coverage_status }}">{{ f.coverage_status }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<div class="empty">{% trans "No GL findings." %}</div>{% endif %}
+  </div>
+
+  <div class="card">
+    <h3>{% trans "SAD Items" %}</h3>
+    {% if coverage.sad_items %}
+    <div class="table-scroll">
+      <table class="ev-table">
+        <thead><tr>
+          <th>{% trans "Item" %}</th><th>{% trans "Account" %}</th><th>{% trans "Required" %}</th>
+          <th>{% trans "Uploaded" %}</th><th>{% trans "Accepted" %}</th><th>{% trans "Rejected" %}</th>
+          <th>{% trans "Pending" %}</th><th>{% trans "Coverage" %}</th><th>{% trans "Status" %}</th>
+        </tr></thead>
+        <tbody>
+          {% for i in coverage.sad_items %}
+          <tr>
+            <td><a href="{% url 'frontend:sad_item_detail' i.id %}">{{ i.reference }}</a></td>
+            <td>{{ i.account_code|default:"—" }}</td>
+            <td>{{ i.required }}</td><td>{{ i.uploaded }}</td><td>{{ i.accepted }}</td>
+            <td>{{ i.rejected }}</td><td>{{ i.pending_review }}</td>
+            <td><div class="bar"><i style="width:{{ i.coverage_percent }}%;"></i></div>{{ i.coverage_percent }}%</td>
+            <td><span class="cov {{ i.coverage_status }}">{{ i.coverage_status }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<div class="empty">{% trans "No SAD items." %}</div>{% endif %}
+  </div>
+</div>
+{% endblock %}

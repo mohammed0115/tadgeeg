@@ -55,6 +55,16 @@ from apps.audit.evidence_models import (  # noqa: F401
     AuditEvidenceRetentionPolicy,
 )
 
+# Journal Analytics foundation (TADGEEG-FIN-AUDIT-7A) — advisory, journal-level
+# analytics over staged GL rows. Never creates GeneralLedgerRiskFinding, never
+# posts to apps.ledger, and never issues an opinion.
+from apps.audit.journal_analytics_models import (  # noqa: F401
+    JournalAnalyticsResult,
+    JournalAnalyticsRule,
+    JournalAnalyticsRun,
+    JournalAnalyticsSummary,
+)
+
 
 class AuditSession(SoftDeleteModel):
     """Tracks the lifecycle and aggregate progress of a related audit upload."""

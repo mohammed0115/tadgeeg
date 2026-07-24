@@ -3,6 +3,7 @@ from . import views
 from . import views_evidence as ev
 from . import views_evidence_lifecycle as evl
 from . import views_evidence_assurance as eva
+from . import views_journal_analytics as jan
 from . import views_rule_builder as rb
 from . import views_trial_balance as tb
 
@@ -65,6 +66,13 @@ urlpatterns = [
     path("evidence-assurance/index/", eva.EvidenceIndexView.as_view(), name="evidence-assurance-index"),
     path("evidence-assurance/dashboard/", eva.EvidenceAssuranceDashboardView.as_view(), name="evidence-assurance-dashboard"),
     path("engagements/<uuid:pk>/retention-policy/", eva.EngagementRetentionPolicyView.as_view(), name="evidence-retention-policy"),
+    # TADGEEG-FIN-AUDIT-7A — journal analytics foundation (advisory only).
+    path("journal-analytics/runs/", jan.AnalyticsRunListCreateView.as_view(), name="journal-analytics-runs"),
+    path("journal-analytics/runs/<uuid:pk>/", jan.AnalyticsRunDetailView.as_view(), name="journal-analytics-run-detail"),
+    path("journal-analytics/runs/<uuid:pk>/results/", jan.AnalyticsRunResultsView.as_view(), name="journal-analytics-run-results"),
+    path("journal-analytics/runs/<uuid:pk>/report/", jan.AnalyticsRunReportView.as_view(), name="journal-analytics-run-report"),
+    path("journal-analytics/dashboard/", jan.AnalyticsDashboardView.as_view(), name="journal-analytics-dashboard"),
+    path("journal-analytics/rules/", jan.AnalyticsRuleListView.as_view(), name="journal-analytics-rules"),
     path("dashboard/overview/", views.AuditDashboardOverviewView.as_view(), name="dashboard-overview"),
     path("big-four/", views.BigFourComplianceView.as_view(), name="big-four-compliance"),
     # Phase 2.2 — visual rule builder. The DSL-driven endpoints sit under

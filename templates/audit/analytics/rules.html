@@ -1,0 +1,55 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Analytics Rules" %}{% endblock %}
+{% block nav_analytics_journal %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/analytics/_shared.html" %}
+  .toggle{border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;}
+  .toggle.on{background:#166534;color:#fff;} .toggle.off{background:#94a3b8;color:#fff;}
+{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / <a href="{% url 'frontend:analytics_dashboard' %}">{% trans "Journal Analytics" %}</a> / {% trans "Rules" %}</div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Analytics Rules" %} · قواعد التحليل</div>
+      <div class="ev-sub">{% trans "Deterministic rules. Disable a rule to exclude it from future runs." %}</div>
+    </div>
+  </div>
+  {% with active_tab="rules" %}{% include "audit/analytics/_nav.html" %}{% endwith %}
+
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="ok">{{ notice }}</div>{% endif %}
+
+  <div class="table-scroll">
+    <table class="ev-table">
+      <thead><tr>
+        <th>{% trans "Rule" %}</th><th>{% trans "Code" %}</th><th>{% trans "Category" %}</th>
+        <th>{% trans "Description" %}</th><th>{% trans "Recommendation" %}</th>
+        <th>{% trans "Status" %}</th><th></th>
+      </tr></thead>
+      <tbody>
+        {% for r in rules %}
+        <tr>
+          <td>{{ r.name }}</td>
+          <td>{{ r.rule_code }}</td>
+          <td>{{ r.get_category_display }}</td>
+          <td style="max-width:300px;">{{ r.description }}</td>
+          <td style="max-width:280px;color:#475569;">{{ r.recommendation }}</td>
+          <td>{% if r.is_enabled %}<span class="sev low">{% trans "Enabled" %}</span>{% else %}<span class="sev medium">{% trans "Disabled" %}</span>{% endif %}</td>
+          <td>
+            <form method="post" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="rule_code" value="{{ r.rule_code }}">
+              <input type="hidden" name="is_enabled" value="{% if r.is_enabled %}0{% else %}1{% endif %}">
+              <button type="submit" class="toggle {% if r.is_enabled %}off{% else %}on{% endif %}">
+                {% if r.is_enabled %}{% trans "Disable" %}{% else %}{% trans "Enable" %}{% endif %}
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}<tr><td colspan="7">{% trans "No rules registered yet." %}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

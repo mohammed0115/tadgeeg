@@ -10,6 +10,7 @@ from . import client_portal_views
 from . import audit_host_views
 from . import evidence_queue_views
 from . import evidence_assurance_views
+from . import journal_analytics_views
 
 app_name = 'frontend'
 
@@ -121,6 +122,12 @@ urlpatterns = [
     path('audit/assurance/coverage/', evidence_assurance_views.coverage_report, name='assurance_coverage'),
     path('audit/assurance/index/', evidence_assurance_views.evidence_index_page, name='assurance_index'),
     path('audit/assurance/retention/', evidence_assurance_views.retention_policy_page, name='assurance_retention'),
+
+    # TADGEEG-FIN-AUDIT-7A — Journal Analytics
+    path('audit/analytics/', journal_analytics_views.analytics_dashboard, name='analytics_dashboard'),
+    path('audit/analytics/runs/', journal_analytics_views.analytics_runs, name='analytics_runs'),
+    path('audit/analytics/runs/<uuid:pk>/', journal_analytics_views.analytics_run_detail, name='analytics_run_detail'),
+    path('audit/analytics/rules/', journal_analytics_views.analytics_rules, name='analytics_rules'),
     path('audit/evidence/<uuid:pk>/', evidence_views.evidence_detail, name='evidence_detail'),
 
     # TADGEEG-FIN-AUDIT-6B — Client Evidence Portal (client-side pages)

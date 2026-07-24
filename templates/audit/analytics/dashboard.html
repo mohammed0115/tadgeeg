@@ -1,0 +1,140 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n static asset_tags %}
+{% block title %}{% trans "Journal Analytics" %}{% endblock %}
+{% block nav_analytics_journal %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/analytics/_shared.html" %}{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "Journal Analytics" %}</div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Journal Analytics" %} · تحليلات القيود</div>
+      <div class="ev-sub">{% trans "Deterministic journal-level analytics over the staged general ledger." %}</div>
+    </div>
+    <a class="runbtn" style="text-decoration:none;display:inline-block;" href="{% url 'frontend:analytics_runs' %}">{% trans "Run analytics" %} →</a>
+  </div>
+  {% with active_tab="dashboard" %}{% include "audit/analytics/_nav.html" %}{% endwith %}
+
+  <div class="advisory">
+    <strong>{% trans "Advisory only" %}</strong> —
+    {% trans "These analytics are deterministic indicators for auditor consideration. They are not audit findings, are never auto-accepted, and do not constitute an audit opinion." %}
+  </div>
+
+  <form method="get" class="filters">
+    <div>
+      <label>{% trans "Engagement" %}</label>
+      <select name="engagement" onchange="this.form.submit()">
+        <option value="">{% trans "All engagements" %}</option>
+        {% for e in engagements %}
+          <option value="{{ e.id }}" {% if selected_engagement and selected_engagement.id == e.id %}selected{% endif %}>{{ e.engagement_code }} — {{ e.title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit">{% trans "Apply" %}</button>
+  </form>
+
+  {% if data.has_data %}
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">{% trans "Total journals" %}</div><div class="val">{{ data.total_journals|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Analyzed" %}</div><div class="val">{{ data.analyzed_journals|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Flagged" %}</div><div class="val">{{ data.flagged_journals|default:0 }}</div></div>
+    <div class="kpi alert"><div class="lbl">{% trans "High risk" %}</div><div class="val">{{ data.high_risk_journals|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Medium risk" %}</div><div class="val">{{ data.medium_risk_journals|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Low risk" %}</div><div class="val">{{ data.low_risk_journals|default:0 }}</div></div>
+  </div>
+
+  <div class="chart-grid">
+    <div class="chart-box"><h3>{% trans "Findings by severity" %}</h3><canvas id="sev-chart"></canvas></div>
+    <div class="chart-box"><h3>{% trans "Top triggered rules" %}</h3><canvas id="rule-chart"></canvas></div>
+  </div>
+
+  <div class="card">
+    <h3>{% trans "Top triggered rules" %}</h3>
+    <table class="ev-table">
+      <thead><tr><th>{% trans "Rule" %}</th><th>{% trans "Code" %}</th><th>{% trans "Count" %}</th></tr></thead>
+      <tbody>
+        {% for r in data.top_rules %}<tr><td>{{ r.name }}</td><td>{{ r.rule_code }}</td><td>{{ r.count }}</td></tr>
+        {% empty %}<tr><td colspan="3">{% trans "None." %}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="chart-grid">
+    <div class="card">
+      <h3>{% trans "Top affected accounts" %}</h3>
+      <table class="ev-table">
+        <thead><tr><th>{% trans "Account" %}</th><th>{% trans "Count" %}</th></tr></thead>
+        <tbody>{% for a in data.top_accounts %}<tr><td>{{ a.account_code }}</td><td>{{ a.count }}</td></tr>
+        {% empty %}<tr><td colspan="2">{% trans "None." %}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>{% trans "Top affected users" %}</h3>
+      <table class="ev-table">
+        <thead><tr><th>{% trans "Entered by" %}</th><th>{% trans "Count" %}</th></tr></thead>
+        <tbody>{% for u in data.top_users %}<tr><td>{{ u.entered_by }}</td><td>{{ u.count }}</td></tr>
+        {% empty %}<tr><td colspan="2">{% trans "None." %}</td></tr>{% endfor %}</tbody>
+      </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty">
+    {% trans "No completed analytics run yet." %}
+    <div style="margin-top:12px;"><a class="runbtn" style="text-decoration:none;display:inline-block;" href="{% url 'frontend:analytics_runs' %}">{% trans "Run analytics" %}</a></div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <h3>{% trans "Execution history" %}</h3>
+    <div class="table-scroll">
+      <table class="ev-table">
+        <thead><tr>
+          <th>{% trans "Run" %}</th><th>{% trans "Status" %}</th><th>{% trans "Journals" %}</th>
+          <th>{% trans "Rows" %}</th><th>{% trans "Findings" %}</th><th>{% trans "Duration" %}</th><th>{% trans "When" %}</th>
+        </tr></thead>
+        <tbody>
+          {% for h in data.execution_history %}
+          <tr>
+            <td><a href="{% url 'frontend:analytics_run_detail' h.run_id %}">{{ h.run_id|slice:":8" }}…</a></td>
+            <td><span class="st {{ h.status }}">{{ h.status }}</span></td>
+            <td>{{ h.journals_analyzed }}</td><td>{{ h.rows_analyzed }}</td>
+            <td>{{ h.findings_count }}</td><td>{{ h.execution_ms }} ms</td><td>{{ h.created_at }}</td>
+          </tr>
+          {% empty %}<tr><td colspan="7">{% trans "No runs yet." %}</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{{ charts_json|json_script:"analytics-charts" }}
+<script src="{% safe_static 'vendor/chart.umd.min.js' %}"
+        onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js'"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (typeof Chart === 'undefined') return;               // graceful degradation
+  var el = document.getElementById('analytics-charts');
+  if (!el) return;
+  var d = JSON.parse(el.textContent || '{}');
+  var sev = d.by_severity || {}, rules = d.top_rules || [];
+
+  var sevCanvas = document.getElementById('sev-chart');
+  if (sevCanvas && Object.keys(sev).length) {
+    new Chart(sevCanvas, {type: 'doughnut', data: {
+      labels: Object.keys(sev),
+      datasets: [{data: Object.values(sev),
+                  backgroundColor: ['#0ea5e9', '#f59e0b', '#f97316', '#ef4444']}]
+    }, options: {responsive: true, plugins: {legend: {position: 'bottom'}}}});
+  }
+  var ruleCanvas = document.getElementById('rule-chart');
+  if (ruleCanvas && rules.length) {
+    new Chart(ruleCanvas, {type: 'bar', data: {
+      labels: rules.map(function (r) { return r.rule_code; }),
+      datasets: [{label: 'Findings', data: rules.map(function (r) { return r.count; }),
+                  backgroundColor: '#1e40af'}]
+    }, options: {responsive: true, plugins: {legend: {display: false}},
+                 scales: {y: {beginAtZero: true}}}});
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,120 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n static asset_tags %}
+{% block title %}{% trans "Analytics Results" %}{% endblock %}
+{% block nav_analytics_journal %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/analytics/_shared.html" %}{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs">
+    <a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> /
+    <a href="{% url 'frontend:analytics_dashboard' %}">{% trans "Journal Analytics" %}</a> /
+    <a href="{% url 'frontend:analytics_runs' %}">{% trans "Runs" %}</a> / {{ run.id|slice:":8" }}
+  </div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Analytics Results" %}</div>
+      <div class="ev-sub">
+        {{ run.engagement.engagement_code }} · <span class="st {{ run.status }}">{{ run.get_status_display }}</span> ·
+        {{ run.journals_analyzed }} {% trans "journals" %} · {{ run.findings_count }} {% trans "findings" %} · {{ run.execution_ms }} ms
+      </div>
+    </div>
+    <a class="runbtn" style="text-decoration:none;display:inline-block;"
+       href="/api/v1/audit/journal-analytics/runs/{{ run.id }}/report/">{% trans "JSON report" %}</a>
+  </div>
+
+  <div class="advisory">
+    <strong>{% trans "Advisory only" %}</strong> —
+    {% trans "Deterministic indicators for auditor consideration; not audit findings and never auto-accepted." %}
+  </div>
+
+  {% if run.warnings %}<div class="err" style="background:#fffbeb;color:#92400e;border-color:#fcd34d;">
+    {% trans "Warnings" %}: {{ run.warnings|join:" · " }}</div>{% endif %}
+  {% if run.errors %}<div class="err">{% trans "Errors" %}: {{ run.errors|join:" · " }}</div>{% endif %}
+
+  {% if summary %}
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">{% trans "Flagged" %}</div><div class="val">{{ summary.flagged_journals }}</div></div>
+    <div class="kpi alert"><div class="lbl">{% trans "High risk" %}</div><div class="val">{{ summary.high_risk_journals }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Medium" %}</div><div class="val">{{ summary.medium_risk_journals }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Low" %}</div><div class="val">{{ summary.low_risk_journals }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Rules run" %}</div><div class="val">{{ run.rules_executed|length }}</div></div>
+  </div>
+  <div class="chart-box"><h3>{% trans "Findings by rule" %}</h3><canvas id="rule-chart"></canvas></div>
+  {% endif %}
+
+  <form method="get" class="filters">
+    <div>
+      <label>{% trans "Rule" %}</label>
+      <select name="rule">
+        <option value="">{% trans "All" %}</option>
+        {% for s in rules %}<option value="{{ s.code }}" {% if active_rule == s.code %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>{% trans "Severity" %}</label>
+      <select name="severity">
+        <option value="">{% trans "All" %}</option>
+        {% for value, label in severity_choices %}<option value="{{ value }}" {% if active_severity == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>{% trans "Journal" %}</label>
+      <input type="search" name="journal" value="{{ journal_filter }}" placeholder="{% trans 'Journal number' %}">
+    </div>
+    <button type="submit">{% trans "Apply" %}</button>
+    <a class="clear" href="{% url 'frontend:analytics_run_detail' run.id %}">{% trans "Reset" %}</a>
+  </form>
+
+  {% if results %}
+  <div class="table-scroll">
+    <table class="ev-table">
+      <thead><tr>
+        <th>{% trans "Rule" %}</th><th>{% trans "Journal" %}</th><th>{% trans "Account" %}</th>
+        <th>{% trans "Entered by" %}</th><th>{% trans "Severity" %}</th><th>{% trans "Score" %}</th>
+        <th>{% trans "Amount" %}</th><th>{% trans "Lines" %}</th><th>{% trans "Description" %}</th>
+        <th>{% trans "Recommendation" %}</th>
+      </tr></thead>
+      <tbody>
+        {% for r in results %}
+        <tr>
+          <td title="{{ r.rule_code }}">{{ r.rule_name }}</td>
+          <td>{{ r.journal_number }}</td>
+          <td>{{ r.account_code|default:"—" }}</td>
+          <td>{{ r.entered_by|default:"—" }}</td>
+          <td><span class="sev {{ r.severity }}">{{ r.get_severity_display }}</span></td>
+          <td>{{ r.score }}</td>
+          <td>{{ r.amount }}</td>
+          <td>{{ r.affected_rows }}</td>
+          <td style="max-width:300px;">{{ r.description }}</td>
+          <td style="max-width:240px;color:#475569;">{{ r.recommendation }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">{% trans "No results match these filters." %}</div>
+  {% endif %}
+</div>
+
+{{ charts_json|json_script:"run-charts" }}
+<script src="{% safe_static 'vendor/chart.umd.min.js' %}"
+        onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js'"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (typeof Chart === 'undefined') return;
+  var el = document.getElementById('run-charts');
+  if (!el) return;
+  var d = JSON.parse(el.textContent || '{}');
+  var byRule = d.by_rule || {};
+  var canvas = document.getElementById('rule-chart');
+  if (canvas && Object.keys(byRule).length) {
+    new Chart(canvas, {type: 'bar', data: {
+      labels: Object.keys(byRule),
+      datasets: [{label: 'Findings', data: Object.values(byRule), backgroundColor: '#0369a1'}]
+    }, options: {responsive: true, plugins: {legend: {display: false}},
+                 scales: {y: {beginAtZero: true}}}});
+  }
+});
+</script>
+{% endblock %}

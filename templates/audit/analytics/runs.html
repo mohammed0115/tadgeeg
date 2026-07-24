@@ -1,0 +1,71 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Analytics Runs" %}{% endblock %}
+{% block nav_analytics_journal %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/analytics/_shared.html" %}
+  .fld{margin-bottom:12px;} .fld label{display:block;font-size:11px;font-weight:700;color:#334155;margin-bottom:5px;}
+  .fld select{width:100%;border:1px solid var(--border,#cbd5e1);border-radius:9px;padding:9px 11px;font-size:13px;}
+{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / <a href="{% url 'frontend:analytics_dashboard' %}">{% trans "Journal Analytics" %}</a> / {% trans "Runs" %}</div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Analytics Runs & Execution History" %}</div>
+      <div class="ev-sub">{% trans "Execute the deterministic rule set over a staged general ledger import." %}</div>
+    </div>
+  </div>
+  {% with active_tab="runs" %}{% include "audit/analytics/_nav.html" %}{% endwith %}
+
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="ok">{{ notice }}</div>{% endif %}
+
+  <div class="card">
+    <h3>{% trans "New run" %}</h3>
+    <form method="post">
+      {% csrf_token %}
+      <div class="fld">
+        <label>{% trans "General ledger import" %}</label>
+        <select name="general_ledger_import" required>
+          <option value="">{% trans "Select an import…" %}</option>
+          {% for i in imports %}
+            <option value="{{ i.id }}">{{ i.engagement.engagement_code }} — {{ i.original_filename|default:i.id }} ({{ i.row_count }} {% trans "rows" %})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" class="runbtn">{% trans "Run analytics" %}</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>{% trans "Execution history" %}</h3>
+    {% if runs %}
+    <div class="table-scroll">
+      <table class="ev-table">
+        <thead><tr>
+          <th>{% trans "Run" %}</th><th>{% trans "Engagement" %}</th><th>{% trans "Status" %}</th>
+          <th>{% trans "Journals" %}</th><th>{% trans "Rows" %}</th><th>{% trans "Findings" %}</th>
+          <th>{% trans "High risk" %}</th><th>{% trans "Duration" %}</th><th>{% trans "Created" %}</th><th></th>
+        </tr></thead>
+        <tbody>
+          {% for r in runs %}
+          <tr>
+            <td>{{ r.id|slice:":8" }}…</td>
+            <td>{{ r.engagement.engagement_code }}</td>
+            <td><span class="st {{ r.status }}">{{ r.get_status_display }}</span></td>
+            <td>{{ r.journals_analyzed }}</td>
+            <td>{{ r.rows_analyzed }}</td>
+            <td>{{ r.findings_count }}</td>
+            <td>{{ r.summary.high_risk_journals|default:0 }}</td>
+            <td>{{ r.execution_ms }} ms</td>
+            <td>{{ r.created_at|date:"Y-m-d H:i" }}</td>
+            <td><a href="{% url 'frontend:analytics_run_detail' r.id %}">{% trans "View" %} →</a></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<div class="empty">{% trans "No analytics runs yet." %}</div>{% endif %}
+  </div>
+</div>
+{% endblock %}

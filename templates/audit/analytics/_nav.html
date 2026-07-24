@@ -1,0 +1,6 @@
+{% load i18n %}
+<div class="an-tabs">
+  <a href="{% url 'frontend:analytics_dashboard' %}" class="{% if active_tab == 'dashboard' %}active{% endif %}">{% trans "Dashboard" %}</a>
+  <a href="{% url 'frontend:analytics_runs' %}" class="{% if active_tab == 'runs' %}active{% endif %}">{% trans "Runs & History" %}</a>
+  <a href="{% url 'frontend:analytics_rules' %}" class="{% if active_tab == 'rules' %}active{% endif %}">{% trans "Rules" %}</a>
+</div>

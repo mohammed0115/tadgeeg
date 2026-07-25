@@ -1,0 +1,82 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Estimates" %}{% endblock %}
+{% block nav_isa %}active{% endblock %}
+{% block extra_styles %}{% include "audit/isa/_style.html" %}{% endblock %}
+{% block content %}
+<div class="isa-wrap">
+  <div class="isa-crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "ISA Assessments" %}</div>
+
+  <div class="isa-hero">
+    <span class="std">ISA 540</span>
+    <h1>{% trans "Accounting Estimate Uncertainty" %}</h1>
+    <p>{% trans "Profile a management estimate — complexity, subjectivity, uncertainty and disclosure — to score its estimation uncertainty and flag significant-risk estimates." %}</p>
+  </div>
+
+  {% with active="est" %}{% include "audit/isa/_nav.html" %}{% endwith %}
+
+  <div class="advisory"><b>{% trans "Advisory only" %}</b> — {% trans "a deterministic ISA 540 aid; not an audit conclusion or opinion." %}</div>
+  {% if error %}<div class="err" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:12px;padding:11px 15px;margin-bottom:14px;">{{ error }}</div>{% endif %}
+
+  <div class="isa-grid">
+    <form method="post" class="isa-card">
+      {% csrf_token %}
+      <h3>{% trans "Estimate profile" %}</h3>
+      <div class="sub">{% trans "Describe the estimate and score the ISA 540 A20–A24 factors." %}</div>
+      <div class="fld"><label>{% trans "Name" %}</label><input type="text" name="name" value="{{ form.name }}" placeholder="{% trans 'e.g. Inventory obsolescence provision' %}"></div>
+      <div class="fld-row">
+        <div class="fld"><label>{% trans "Category" %}</label>
+          <select name="category">{% for c in categories %}<option value="{{ c }}" {% if form.category == c %}selected{% endif %}>{{ c|cut:"_"|capfirst }}</option>{% endfor %}</select>
+        </div>
+        <div class="fld"><label>{% trans "Method" %}</label>
+          <select name="estimation_method">{% for m in methods %}<option value="{{ m }}" {% if form.estimation_method == m %}selected{% endif %}>{{ m }}</option>{% endfor %}</select>
+        </div>
+      </div>
+      <div class="fld"><label>{% trans "Management estimate (book value)" %}</label><input type="text" name="management_estimate" value="{{ form.management_estimate }}"></div>
+
+      <div class="isa-group-title" style="margin-top:8px;">{% trans "Risk factors (1 = low, 5 = high)" %}</div>
+      <div class="slider-row"><label>{% trans "Complexity" %}</label><span class="val" id="v-complexity">{{ form.complexity }}</span><input type="range" min="1" max="5" name="complexity" value="{{ form.complexity }}" oninput="document.getElementById('v-complexity').textContent=this.value"></div>
+      <div class="slider-row"><label>{% trans "Subjectivity" %}</label><span class="val" id="v-subjectivity">{{ form.subjectivity }}</span><input type="range" min="1" max="5" name="subjectivity" value="{{ form.subjectivity }}" oninput="document.getElementById('v-subjectivity').textContent=this.value"></div>
+      <div class="slider-row"><label>{% trans "Estimation uncertainty (range width)" %}</label><span class="val" id="v-eu">{{ form.estimation_uncertainty }}</span><input type="range" min="1" max="5" name="estimation_uncertainty" value="{{ form.estimation_uncertainty }}" oninput="document.getElementById('v-eu').textContent=this.value"></div>
+      <div class="slider-row"><label>{% trans "Disclosure quality" %}</label><span class="val" id="v-dq">{{ form.disclosure_quality }}</span><input type="range" min="1" max="5" name="disclosure_quality" value="{{ form.disclosure_quality }}" oninput="document.getElementById('v-dq').textContent=this.value"></div>
+
+      <div class="chk-grid" style="margin:6px 0 14px;">
+        <label class="chk {% if form.relies_on_external_data %}on{% endif %}"><input type="checkbox" name="relies_on_external_data" {% if form.relies_on_external_data %}checked{% endif %} onchange="this.closest('label').classList.toggle('on',this.checked)"><span>{% trans "Relies on external data / valuations" %}</span></label>
+        <label class="chk {% if form.prior_period_misstatement %}on{% endif %}"><input type="checkbox" name="prior_period_misstatement" {% if form.prior_period_misstatement %}checked{% endif %} onchange="this.closest('label').classList.toggle('on',this.checked)"><span>{% trans "Misstated in a prior period" %}</span></label>
+      </div>
+      <div class="fld"><label>{% trans "Notes" %}</label><textarea name="notes" rows="2">{{ form.notes }}</textarea></div>
+      <button type="submit" class="isa-btn">{% trans "Assess estimate" %}</button>
+    </form>
+
+    <div>
+      {% if result %}
+      <div class="res-hero sev-{{ result.severity }}">
+        <div class="cap">{% trans "Estimation uncertainty score" %}</div>
+        <div class="big">{{ result.uncertainty_score }}<span style="font-size:18px;opacity:.7;">/100</span></div>
+        <div class="sevlabel">{{ result.severity_label }}</div>
+      </div>
+
+      <div class="isa-card">
+        <h3>{% trans "Uncertainty" %}</h3>
+        <div class="meter">
+          <div class="top"><span>{% trans "Score" %}</span><span>{{ result.uncertainty_score }}/100</span></div>
+          <div class="bar"><i class="b-{% if result.uncertainty_score >= 75 %}very_high{% elif result.uncertainty_score >= 50 %}high{% elif result.uncertainty_score >= 25 %}moderate{% else %}low{% endif %}" style="width:{{ result.uncertainty_score }}%;"></i></div>
+        </div>
+        {% if result.drivers %}
+        <div style="margin-top:10px;"><div class="isa-group-title">{% trans "Drivers" %}</div>
+          {% for d in result.drivers %}<span class="chip warn">{{ d }}</span>{% endfor %}
+        </div>
+        {% endif %}
+        {% if result.exceeds_materiality != None %}
+        <div style="margin-top:10px;font-size:12px;">{% trans "Auditor range vs materiality" %}:
+          <span class="pill {% if result.exceeds_materiality %}off{% else %}on{% endif %}">{% if result.exceeds_materiality %}{% trans "exceeds" %}{% else %}{% trans "within" %}{% endif %}</span>
+        </div>
+        {% endif %}
+      </div>
+      {% else %}
+      <div class="isa-card"><div class="isa-empty">{% trans "Profile an estimate and run the assessment." %}</div></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

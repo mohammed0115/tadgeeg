@@ -29,8 +29,10 @@
 | **8B** | Trial Balance Analyzer (رفع + صفوف + ربط الحسابات + حسابات شاذة) | Frontend | ✅ **Done** | `audit/trial-balance/` · يستهلك `trial_balance_import` |
 | **8C** | General Ledger Review (رفع + تشغيل مخاطر 2B + مراجعة 3B) | Frontend | ✅ **Done** | `audit/general-ledger/` · `analyze_import` + `review_finding` |
 | **8D** | SAD Dashboard (ملخّص + بنود + إعادة حساب) | Frontend | ✅ **Done** | `audit/sad/` · `recalculate_for_engagement` |
-| **8E** | Planning (ISA 300) + Risk (ISA 315) + Responses (ISA 330) | Frontend | 🔄 مؤجّلة | الخدمات محرّكات حسابية تتطلّب **مدخلات مُهيكلة** (dataclasses) لا "تشغيل على بيانات الارتباط" — تحتاج تصميم نماذج إدخال |
-| **8F** | Fraud (ISA 240) + Going Concern (ISA 570) + Estimates (ISA 540) | Frontend | 🔄 مؤجّلة | نفس السبب: `assess_going_concern(GoingConcernIndicators)` · `assess_estimation_uncertainty(EstimateProfile)` · تتطلّب نماذج إدخال |
+| **8E** | Risk Assessment (ISA 315) — نموذج إدخال + محرّك | Frontend | ✅ **Done** | `audit/isa/risk/` · `risk_decomposition.assess` · IR/CR/DR + عدّادات + audit risk % · تصميم مصقول |
+| **8E‑part** | Planning (ISA 300) + Responses (ISA 330) | Frontend | 🔄 مؤجّلة | 300 يحتاج context→strategy→plan · 330 مدخلات **قائمة** `List[AssessedRisk]` (واجهة أعقد) |
+| **8F** | Going Concern (ISA 570) + Estimates (ISA 540) — نماذج إدخال + محرّكات | Frontend | ✅ **Done** | `audit/isa/going-concern/` + `audit/isa/estimates/` · تصميم مصقول |
+| **8F‑part** | Fraud (ISA 240) | Frontend | 🔄 مؤجّلة | مدخلات **قائمة** `List[FraudRiskFactor]` (واجهة أعقد) |
 | **8G** | Readiness Generate & Export UI | Frontend | ✅ **Done** | `audit/readiness-generate/` · `generate_for_engagement` + تصدير 5D (JSON/HTML/PDF) |
 | **9A** | Financial Statements Review (IAS 1) | Full (خلفية+واجهة) | ⬜ Pending | فجوة حقيقية |
 | **9B** | Management Letter (ISA 265) | Full | ⬜ Pending | فجوة حقيقية |
@@ -45,9 +47,11 @@
 |---|---|---|
 | 2026‑07‑25 | 8A | ✅ Engagement Workspace + اختبارات + توثيق الخطة والمتابعة |
 | 2026‑07‑25 | 8B/8C/8D/8G | ✅ صفحات TB · GL · SAD · الجاهزية (13 اختبارًا) — تستهلك الخدمات القائمة |
-| 2026‑07‑25 | 8E/8F | 🔄 مؤجّلة — الخدمات تتطلّب نماذج إدخال مُهيكلة (تُنفَّذ لاحقًا) |
+| 2026‑07‑25 | 8E/8F | ✅ صفحات ISA 315/570/540 بنماذج إدخال + **تصميم احترافي مصقول** (12 اختبارًا) |
+| 2026‑07‑25 | 8E/8F (part) | 🔄 المتبقّي: ISA 300 · 330 · 240 (مدخلات قائمة) مؤجّل |
 
 ---
 
 ### الخطوة التالية المقترحة
-**8E/8F** بتصميم نماذج إدخال لمحرّكات ISA 300/315/330/240/570/540، **أو** الانتقال إلى المسار (ج): **9A مراجعة القوائم المالية (IAS 1)** — أعلى قيمة تدقيقية (خلفية + واجهة).
+المتبقّي من الواجهات: **ISA 300 (تخطيط) · ISA 330 (استجابات) · ISA 240 (احتيال)** — تحتاج واجهات مدخلات قائمة (list-builders). 
+أو الانتقال إلى المسار (ج): **9A مراجعة القوائم المالية (IAS 1)** — أعلى قيمة تدقيقية (خلفية + واجهة).

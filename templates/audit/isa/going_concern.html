@@ -1,0 +1,74 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Going Concern" %}{% endblock %}
+{% block nav_isa %}active{% endblock %}
+{% block extra_styles %}{% include "audit/isa/_style.html" %}{% endblock %}
+{% block content %}
+<div class="isa-wrap">
+  <div class="isa-crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "ISA Assessments" %}</div>
+
+  <div class="isa-hero">
+    <span class="std">ISA 570</span>
+    <h1>{% trans "Going Concern Assessment" %}</h1>
+    <p>{% trans "Tick the financial, operating and other indicators present, plus any mitigating evidence, to classify going-concern doubt and the suggested reporting response." %}</p>
+  </div>
+
+  {% with active="gc" %}{% include "audit/isa/_nav.html" %}{% endwith %}
+
+  <div class="advisory"><b>{% trans "Advisory only" %}</b> — {% trans "the suggested reporting response is an auditor aid and never a formal audit opinion." %}</div>
+
+  <div class="isa-grid">
+    <form method="post" class="isa-card">
+      {% csrf_token %}
+      <h3>{% trans "Indicators (ISA 570 A3)" %}</h3>
+      <div class="sub">{% trans "Select every indicator you have identified." %}</div>
+      {% for g in groups %}
+      <div class="isa-group">
+        <div class="isa-group-title">{{ g.title }}</div>
+        <div class="chk-grid">
+          {% for f in g.fields %}
+          <label class="chk {% if g.is_mitigant %}mit {% endif %}{% if f.checked %}on{% endif %}">
+            <input type="checkbox" name="{{ f.name }}" {% if f.checked %}checked{% endif %}
+                   onchange="this.closest('label').classList.toggle('on',this.checked)">
+            <span>{{ f.label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+      <button type="submit" class="isa-btn">{% trans "Assess going concern" %}</button>
+    </form>
+
+    <div>
+      {% if result %}
+      <div class="res-hero sev-{{ result.severity }}">
+        <div class="cap">{% trans "Going-concern conclusion" %}</div>
+        <div class="sevlabel" style="font-size:20px;">{{ result.severity_label }}</div>
+        <div style="font-size:12px;opacity:.9;margin-top:6px;">{{ result.indicators_count }} {% trans "indicator(s)" %} · {{ result.mitigants|length }} {% trans "mitigant(s)" %}</div>
+      </div>
+
+      <div class="isa-card">
+        <h3>{% trans "Suggested reporting response" %}</h3>
+        <p style="font-size:13px;color:#334155;">{{ result.recommended_opinion_modification }}</p>
+        <div style="margin-top:8px;"><span class="chip">{{ result.isa570_paragraph }}</span></div>
+      </div>
+
+      {% if result.indicators_labels %}
+      <div class="isa-card">
+        <h3>{% trans "Indicators present" %}</h3>
+        {% for i in result.indicators_labels %}<span class="chip warn">{{ i }}</span>{% endfor %}
+      </div>
+      {% endif %}
+      {% if result.mitigants_labels %}
+      <div class="isa-card">
+        <h3>{% trans "Mitigants" %}</h3>
+        {% for m in result.mitigants_labels %}<span class="chip">{{ m }}</span>{% endfor %}
+      </div>
+      {% endif %}
+      {% else %}
+      <div class="isa-card"><div class="isa-empty">{% trans "Select indicators and run the assessment to see the conclusion." %}</div></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

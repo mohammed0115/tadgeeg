@@ -1,0 +1,73 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Risk Assessment" %}{% endblock %}
+{% block nav_isa %}active{% endblock %}
+{% block extra_styles %}{% include "audit/isa/_style.html" %}{% endblock %}
+{% block content %}
+<div class="isa-wrap">
+  <div class="isa-crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "ISA Assessments" %}</div>
+
+  <div class="isa-hero">
+    <span class="std">ISA 315 · ISA 200</span>
+    <h1>{% trans "Audit Risk Assessment" %}</h1>
+    <p>{% trans "Score the inherent, control and detection risk drivers to derive the audit-risk model (IR × CR × DR) and see whether your planned work meets the target audit risk." %}</p>
+  </div>
+
+  {% with active="risk" %}{% include "audit/isa/_nav.html" %}{% endwith %}
+
+  <div class="advisory"><b>{% trans "Advisory only" %}</b> — {% trans "a deterministic auditor aid to structure judgment; not an audit conclusion or opinion." %}</div>
+
+  <div class="isa-grid">
+    <form method="post" class="isa-card">
+      {% csrf_token %}
+      <h3>{% trans "Risk drivers" %}</h3>
+      <div class="sub">{% trans "Each driver is scored 0–25. Higher inherent = worse; higher control/procedure strength = better." %}</div>
+      {% for g in groups %}
+      <div class="isa-group">
+        <div class="isa-group-title">{{ g.title }} <span style="font-weight:600;text-transform:none;color:#94a3b8;">— {{ g.help }}</span></div>
+        {% for f in g.fields %}
+        <div class="slider-row">
+          <label for="{{ f.name }}">{{ f.label }}</label>
+          <span class="val" id="v-{{ f.name }}">{{ f.value }}</span>
+          <input type="range" min="0" max="25" name="{{ f.name }}" id="{{ f.name }}" value="{{ f.value }}"
+                 oninput="document.getElementById('v-{{ f.name }}').textContent=this.value">
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+      <div class="fld"><label>{% trans "Notes" %}</label><textarea name="notes" rows="2">{{ request.POST.notes }}</textarea></div>
+      <button type="submit" class="isa-btn">{% trans "Assess risk" %}</button>
+    </form>
+
+    <div>
+      {% if result %}
+      <div class="res-hero"
+           style="{% if result.on_target %}background:linear-gradient(135deg,#059669,#10b981);{% else %}background:linear-gradient(135deg,#c2410c,#f97316);{% endif %}">
+        <div class="cap">{% trans "Audit risk (IR × CR × DR)" %}</div>
+        <div class="big">{{ result.audit_risk_pct }}%</div>
+        <div class="sevlabel">{% if result.on_target %}✓ {% trans "Within target" %} ({{ result.target_audit_risk }}){% else %}▲ {% trans "Above target" %} ({{ result.target_audit_risk }}){% endif %}</div>
+      </div>
+
+      <div class="isa-card">
+        <h3>{% trans "Risk components" %}</h3>
+        <div class="meter">
+          <div class="top"><span>{% trans "Inherent risk" %}</span><span><span class="pill {{ result.inherent_bucket }}">{{ result.inherent_bucket }}</span> {{ result.inherent_risk }}</span></div>
+          <div class="bar"><i class="b-{{ result.inherent_bucket }}" style="width:{{ result.inherent_risk }}%;"></i></div>
+        </div>
+        <div class="meter">
+          <div class="top"><span>{% trans "Control risk" %}</span><span><span class="pill {{ result.control_bucket }}">{{ result.control_bucket }}</span> {{ result.control_risk }}</span></div>
+          <div class="bar"><i class="b-{{ result.control_bucket }}" style="width:{{ result.control_risk }}%;"></i></div>
+        </div>
+        <div class="meter">
+          <div class="top"><span>{% trans "Detection risk (planned)" %}</span><span><span class="pill {{ result.detection_bucket }}">{{ result.detection_bucket }}</span> {{ result.detection_risk }}</span></div>
+          <div class="bar"><i class="b-{{ result.detection_bucket }}" style="width:{{ result.detection_risk }}%;"></i></div>
+        </div>
+        <div style="margin-top:12px;">{% for p in result.isa_paras %}<span class="chip">{{ p }}</span>{% endfor %}</div>
+      </div>
+      {% else %}
+      <div class="isa-card"><div class="isa-empty">{% trans "Set the drivers and run the assessment to see the audit-risk model." %}</div></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

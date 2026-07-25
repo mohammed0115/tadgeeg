@@ -1,0 +1,6 @@
+{% load i18n %}
+<div class="isa-tabs">
+  <a href="{% url 'frontend:isa_risk' %}" class="{% if active == 'risk' %}active{% endif %}">{% trans "Risk Assessment" %} · ISA 315</a>
+  <a href="{% url 'frontend:isa_going_concern' %}" class="{% if active == 'gc' %}active{% endif %}">{% trans "Going Concern" %} · ISA 570</a>
+  <a href="{% url 'frontend:isa_estimates' %}" class="{% if active == 'est' %}active{% endif %}">{% trans "Estimates" %} · ISA 540</a>
+</div>

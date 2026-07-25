@@ -13,6 +13,7 @@ from . import evidence_assurance_views
 from . import journal_analytics_views
 from . import engagement_workspace_views
 from . import audit_modules_views
+from . import isa_assessment_views
 
 app_name = 'frontend'
 
@@ -118,6 +119,11 @@ urlpatterns = [
     path('audit/general-ledger/', audit_modules_views.general_ledger, name='general_ledger'),
     path('audit/sad/', audit_modules_views.sad_dashboard, name='sad_dashboard'),
     path('audit/readiness-generate/', audit_modules_views.readiness_generate, name='readiness_generate'),
+
+    # TADGEEG-FIN-AUDIT-8E/8F — ISA assessment engines (form-driven)
+    path('audit/isa/risk/', isa_assessment_views.risk_assessment, name='isa_risk'),
+    path('audit/isa/going-concern/', isa_assessment_views.going_concern, name='isa_going_concern'),
+    path('audit/isa/estimates/', isa_assessment_views.estimates, name='isa_estimates'),
 
     # Audit tools (ISA 320 materiality, ISA 530 sampling)
     path('audit/tools/', views.audit_tools, name='audit_tools'),

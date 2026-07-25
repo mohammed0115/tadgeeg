@@ -442,6 +442,10 @@
 
         <div class="nav-group">
           <div class="nav-group-title">{% trans "Analysis" %}</div>
+          <a href="{% url 'frontend:engagement_list' %}" class="nav-item {% block nav_engagements %}{% endblock %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 012-2h4l2 2h8a2 2 0 012 2v2"/><path d="M3 7h18v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+            {% trans "Engagements" %}
+          </a>
           <a href="{% url 'frontend:audit' %}" class="nav-item {% block nav_audit %}{% endblock %}">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
             {% trans "Audit Cases" %}

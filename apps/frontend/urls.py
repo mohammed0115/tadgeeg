@@ -11,6 +11,7 @@ from . import audit_host_views
 from . import evidence_queue_views
 from . import evidence_assurance_views
 from . import journal_analytics_views
+from . import engagement_workspace_views
 
 app_name = 'frontend'
 
@@ -106,6 +107,10 @@ urlpatterns = [
     # Reports
     path('reports/', views.reports, name='reports'),
     path('reports/invoice-audit/', views.invoice_audit_report, name='invoice_audit_report'),
+
+    # TADGEEG-FIN-AUDIT-8A — Engagement Workspace (unified hub)
+    path('audit/engagements/', engagement_workspace_views.engagement_list, name='engagement_list'),
+    path('audit/engagements/<uuid:pk>/', engagement_workspace_views.engagement_workspace, name='engagement_workspace'),
 
     # Audit tools (ISA 320 materiality, ISA 530 sampling)
     path('audit/tools/', views.audit_tools, name='audit_tools'),

@@ -1,0 +1,183 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Engagement Workspace" %}{% endblock %}
+{% block nav_engagements %}active{% endblock %}
+
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}
+  .wp-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
+  @media (max-width:900px){ .wp-grid{grid-template-columns:1fr;} }
+  .sec h3{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .sec h3 a{font-size:12px;font-weight:700;color:#1e40af;text-decoration:none;}
+  /* Lifecycle progress rail. */
+  .rail{display:flex;gap:0;flex-wrap:wrap;margin:6px 0 16px;}
+  .rail .step{flex:1;min-width:90px;text-align:center;position:relative;font-size:11px;padding-top:20px;color:#94a3b8;}
+  .rail .step::before{content:"";position:absolute;top:6px;inset-inline-start:50%;width:100%;height:3px;background:#e2e8f0;}
+  .rail .step:first-child::before{display:none;}
+  .rail .step .dot{position:absolute;top:0;inset-inline-start:calc(50% - 7px);width:14px;height:14px;border-radius:50%;background:#e2e8f0;border:2px solid #fff;box-shadow:0 0 0 1px #e2e8f0;}
+  .rail .step.done{color:#166534;} .rail .step.done .dot{background:#166534;box-shadow:0 0 0 1px #166534;}
+  .rail .step.done::before{background:#166534;}
+  .rail .step.current{color:#1e40af;font-weight:800;} .rail .step.current .dot{background:#1e40af;box-shadow:0 0 0 1px #1e40af;}
+  .kv{display:grid;grid-template-columns:150px 1fr;gap:5px 12px;font-size:13px;}
+  .kv dt{color:#64748b;font-weight:600;} .kv dd{color:#1e293b;}
+  .cov{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;}
+  .cov.complete,.cov.high{background:#dcfce7;color:#166534;} .cov.partial{background:#fef9c3;color:#854d0e;}
+  .cov.low,.cov.none{background:#fee2e2;color:#991b1b;} .cov.no_requests{background:#f1f5f9;color:#64748b;}
+  .stagebar{background:#eff6ff;border:1px solid #93c5fd;border-radius:10px;padding:10px 12px;display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-bottom:16px;}
+  .stagebar select{border:1px solid #93c5fd;border-radius:8px;padding:7px 10px;font-size:12px;}
+  .stagebar button{background:#1e40af;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:700;font-size:12px;cursor:pointer;}
+{% endblock %}
+
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs">
+    <a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> /
+    <a href="{% url 'frontend:engagement_list' %}">{% trans "Engagements" %}</a> /
+    {{ engagement.engagement_code }}
+  </div>
+
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{{ engagement.engagement_code }} — {{ engagement.title }}</div>
+      <div class="ev-sub">
+        {{ engagement.get_engagement_type_display }} ·
+        {{ engagement.period_start }} → {{ engagement.period_end }} ·
+        {% trans "Partner" %}: {{ engagement.engagement_partner.full_name|default:"—" }} ·
+        {% trans "Manager" %}: {{ engagement.engagement_manager.full_name|default:"—" }}
+      </div>
+    </div>
+  </div>
+
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="ok">{{ notice }}</div>{% endif %}
+
+  {# ── Lifecycle rail (ISA 300) ── #}
+  <div class="card">
+    <h3>{% trans "Lifecycle" %}</h3>
+    <div class="rail" data-current="{{ engagement.stage }}">
+      {% for s in overview.stage_steps %}
+      <div class="step {% if s.done %}done{% elif s.current %}current{% endif %}">
+        <span class="dot"></span>{{ s.label }}
+      </div>
+      {% endfor %}
+    </div>
+    <form method="post" class="stagebar">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="set_stage">
+      <div>
+        <label style="display:block;font-size:10px;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:4px;">{% trans "Set stage" %}</label>
+        <select name="stage">
+          {% for value, label in stage_choices %}
+            <option value="{{ value }}" {% if engagement.stage == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" {% if engagement.locked_at %}disabled{% endif %}>{% trans "Update stage" %}</button>
+      {% if engagement.locked_at %}<span style="font-size:11px;color:#991b1b;">{% trans "Archived / locked" %}</span>{% endif %}
+    </form>
+  </div>
+
+  {# ── KPI row ── #}
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">{% trans "Overall materiality" %}</div><div class="val" style="font-size:16px;">{{ overview.materiality.overall|default:"—" }}</div></div>
+    <div class="kpi alert"><div class="lbl">{% trans "Open GL findings" %}</div><div class="val">{{ overview.gl_findings.open|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Evidence coverage" %}</div><div class="val">{{ overview.assurance.coverage_percent|default:0 }}%</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Integrity" %}</div><div class="val">{{ overview.assurance.integrity_percent|default:"—" }}{% if overview.assurance.integrity_percent != None %}%{% endif %}</div></div>
+    <div class="kpi alert"><div class="lbl">{% trans "High-risk journals" %}</div><div class="val">{{ overview.analytics.high_risk_journals|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Open evidence" %}</div><div class="val">{{ overview.evidence.open_gaps|default:0 }}</div></div>
+  </div>
+
+  <div class="wp-grid">
+    {# Planning & Materiality (3A / ISA 300) #}
+    <div class="card sec" data-sec="planning">
+      <h3>{% trans "Planning & Materiality" %} <a href="{{ links.audit_tools }}">{% trans "Tools" %} →</a></h3>
+      {% if overview.materiality %}
+      <dl class="kv">
+        <dt>{% trans "Overall" %}</dt><dd>{{ overview.materiality.overall }}</dd>
+        <dt>{% trans "Performance" %}</dt><dd>{{ overview.materiality.performance }}</dd>
+        <dt>{% trans "Trivial threshold" %}</dt><dd>{{ overview.materiality.trivial }}</dd>
+        <dt>{% trans "Basis" %}</dt><dd>{{ overview.materiality.basis|default:"—" }}</dd>
+      </dl>
+      {% else %}
+      <div style="color:#94a3b8;font-size:12px;">{% trans "No materiality profile set for this engagement." %}</div>
+      {% endif %}
+    </div>
+
+    {# GL risk findings (2B / 3B) #}
+    <div class="card sec" data-sec="gl">
+      <h3>{% trans "GL Risk Findings" %}</h3>
+      {% if overview.gl_findings.total %}
+      <dl class="kv">
+        <dt>{% trans "Total" %}</dt><dd>{{ overview.gl_findings.total }}</dd>
+        <dt>{% trans "Candidate" %}</dt><dd>{{ overview.gl_findings.candidate|default:0 }}</dd>
+        <dt>{% trans "Needs evidence" %}</dt><dd>{{ overview.gl_findings.needs_evidence|default:0 }}</dd>
+        <dt>{% trans "Escalated" %}</dt><dd>{{ overview.gl_findings.escalated|default:0 }}</dd>
+        <dt>{% trans "Accepted" %}</dt><dd>{{ overview.gl_findings.accepted|default:0 }}</dd>
+        <dt>{% trans "Dismissed" %}</dt><dd>{{ overview.gl_findings.dismissed|default:0 }}</dd>
+      </dl>
+      {% else %}
+      <div style="color:#94a3b8;font-size:12px;">{% trans "No GL risk findings yet. Import a general ledger and run risk analysis." %}</div>
+      {% endif %}
+    </div>
+
+    {# Summary of Audit Differences (4A / 4B) #}
+    <div class="card sec" data-sec="sad">
+      <h3>{% trans "Summary of Audit Differences" %}</h3>
+      {% if overview.sad %}
+      <dl class="kv">
+        <dt>{% trans "Conclusion" %}</dt><dd>{{ overview.sad.conclusion_display }}</dd>
+        <dt>{% trans "Total absolute impact" %}</dt><dd>{{ overview.sad.total_absolute_impact }}</dd>
+        <dt>{% trans "Items" %}</dt><dd>{{ overview.sad.item_count }}</dd>
+        <dt>{% trans "Exceeds performance materiality" %}</dt><dd>{{ overview.sad.exceeds_performance_materiality }}</dd>
+        <dt>{% trans "Exceeds overall materiality" %}</dt><dd>{{ overview.sad.exceeds_overall_materiality }}</dd>
+      </dl>
+      {% else %}
+      <div style="color:#94a3b8;font-size:12px;">{% trans "No SAD calculated yet." %}</div>
+      {% endif %}
+    </div>
+
+    {# Evidence (6B / 6D) #}
+    <div class="card sec" data-sec="evidence">
+      <h3>{% trans "Evidence" %} <a href="{{ links.assurance_coverage }}">{% trans "Coverage" %} →</a></h3>
+      <dl class="kv">
+        <dt>{% trans "Open requests" %}</dt><dd>{{ overview.evidence.open_gaps|default:0 }}</dd>
+        <dt>{% trans "Submitted" %}</dt><dd>{{ overview.evidence.submitted|default:0 }}</dd>
+        <dt>{% trans "Accepted" %}</dt><dd>{{ overview.evidence.accepted|default:0 }}</dd>
+        <dt>{% trans "Rejected" %}</dt><dd>{{ overview.evidence.rejected|default:0 }}</dd>
+        <dt>{% trans "Coverage" %}</dt><dd><span class="cov {{ overview.assurance.coverage_status }}">{{ overview.assurance.coverage_percent|default:0 }}%</span></dd>
+      </dl>
+      <div style="margin-top:8px;"><a href="{{ links.evidence_queue }}" style="font-size:12px;color:#1e40af;font-weight:700;text-decoration:none;">{% trans "Evidence queue" %} →</a></div>
+    </div>
+
+    {# Journal analytics (7A) #}
+    <div class="card sec" data-sec="analytics">
+      <h3>{% trans "Journal Analytics" %} <a href="{{ links.analytics }}">{% trans "Dashboard" %} →</a></h3>
+      {% if overview.analytics.has_data %}
+      <dl class="kv">
+        <dt>{% trans "Total journals" %}</dt><dd>{{ overview.analytics.total_journals }}</dd>
+        <dt>{% trans "Flagged" %}</dt><dd>{{ overview.analytics.flagged_journals }}</dd>
+        <dt>{% trans "High risk" %}</dt><dd>{{ overview.analytics.high_risk_journals }}</dd>
+        <dt>{% trans "Medium risk" %}</dt><dd>{{ overview.analytics.medium_risk_journals }}</dd>
+      </dl>
+      {% else %}
+      <div style="color:#94a3b8;font-size:12px;">{% trans "No analytics run yet." %} <a href="{{ links.analytics_runs }}">{% trans "Run analytics" %} →</a></div>
+      {% endif %}
+    </div>
+
+    {# Audit readiness (5A / 5D) #}
+    <div class="card sec" data-sec="readiness">
+      <h3>{% trans "Audit Readiness" %}{% if links.readiness %} <a href="{{ links.readiness }}">{% trans "Open" %} →</a>{% endif %}</h3>
+      {% if overview.readiness %}
+      <dl class="kv">
+        <dt>{% trans "Status" %}</dt><dd>{{ overview.readiness.status_display }}</dd>
+        <dt>{% trans "Conclusion" %}</dt><dd>{{ overview.readiness.conclusion_display }}</dd>
+        <dt>{% trans "Suggested direction" %}</dt><dd>{{ overview.readiness.direction_display }}</dd>
+      </dl>
+      <p style="font-size:11px;color:#94a3b8;margin-top:6px;">{% trans "Subject to auditor review — not a formal audit opinion." %}</p>
+      {% else %}
+      <div style="color:#94a3b8;font-size:12px;">{% trans "No readiness workpaper generated yet." %}</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -446,6 +446,22 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 012-2h4l2 2h8a2 2 0 012 2v2"/><path d="M3 7h18v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
             {% trans "Engagements" %}
           </a>
+          <a href="{% url 'frontend:trial_balance' %}" class="nav-item {% block nav_trial_balance %}{% endblock %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M3 7l9-4 9 4"/><path d="M6 10v6"/><path d="M18 10v6"/><path d="M4 16h4"/><path d="M16 16h4"/></svg>
+            {% trans "Trial Balance" %}
+          </a>
+          <a href="{% url 'frontend:general_ledger' %}" class="nav-item {% block nav_general_ledger %}{% endblock %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 9h16"/><path d="M9 4v16"/></svg>
+            {% trans "General Ledger" %}
+          </a>
+          <a href="{% url 'frontend:sad_dashboard' %}" class="nav-item {% block nav_sad %}{% endblock %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H5a2 2 0 00-2 2v7h6zM15 7h4a2 2 0 012 2v11h-6zM9 3h6v17H9z"/></svg>
+            {% trans "Differences (SAD)" %}
+          </a>
+          <a href="{% url 'frontend:readiness_generate' %}" class="nav-item {% block nav_readiness_gen %}{% endblock %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2h9"/></svg>
+            {% trans "Audit Readiness" %}
+          </a>
           <a href="{% url 'frontend:audit' %}" class="nav-item {% block nav_audit %}{% endblock %}">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
             {% trans "Audit Cases" %}

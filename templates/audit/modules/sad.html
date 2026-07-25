@@ -1,0 +1,54 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Summary of Audit Differences" %}{% endblock %}
+{% block nav_sad %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/modules/_shared.html" %}{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "SAD" %}</div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Summary of Audit Differences" %} · ملخّص فروقات التدقيق</div>
+      <div class="ev-sub">{% trans "Accumulated accepted misstatements compared against materiality (ISA 450)." %}</div>
+    </div>
+    {% if engagement %}
+    <form method="post">{% csrf_token %}<input type="hidden" name="engagement" value="{{ engagement.id }}"><input type="hidden" name="action" value="recalculate"><button class="runbtn">{% trans "Recalculate" %}</button></form>
+    {% endif %}
+  </div>
+  {% include "audit/modules/_picker.html" %}
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="ok">{{ notice }}</div>{% endif %}
+
+  {% if engagement %}
+    {% if summary %}
+    <div class="kpis" data-sec="summary">
+      <div class="kpi"><div class="lbl">{% trans "Conclusion" %}</div><div class="val" style="font-size:14px;">{{ summary.get_conclusion_status_display }}</div></div>
+      <div class="kpi"><div class="lbl">{% trans "Total impact" %}</div><div class="val" style="font-size:16px;">{{ summary.total_absolute_impact }}</div></div>
+      <div class="kpi"><div class="lbl">{% trans "Items" %}</div><div class="val">{{ items|length }}</div></div>
+      <div class="kpi {% if summary.exceeds_performance_materiality %}alert{% endif %}"><div class="lbl">{% trans "Exceeds PM" %}</div><div class="val" style="font-size:15px;">{{ summary.exceeds_performance_materiality }}</div></div>
+      <div class="kpi {% if summary.exceeds_overall_materiality %}alert{% endif %}"><div class="lbl">{% trans "Exceeds OM" %}</div><div class="val" style="font-size:15px;">{{ summary.exceeds_overall_materiality }}</div></div>
+    </div>
+
+    <div class="card" data-sec="items">
+      <h3>{% trans "Difference items" %}</h3>
+      {% if items %}
+      <div class="table-scroll"><table class="ev-table">
+        <thead><tr><th>{% trans "Account" %}</th><th>{% trans "Finding" %}</th><th>{% trans "Amount impact" %}</th><th>{% trans "Materiality" %}</th><th>{% trans "Mgmt response" %}</th></tr></thead>
+        <tbody>
+          {% for it in items %}
+          <tr><td>{{ it.account_code }}</td><td>{{ it.finding_title|default:it.finding_risk_code|default:"—" }}</td>
+          <td>{{ it.amount_impact }}</td><td>{{ it.get_materiality_status_display|default:it.materiality_status|default:"—" }}</td>
+          <td>{{ it.get_management_response_status_display|default:it.management_response_status|default:"—" }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table></div>
+      {% else %}<div style="color:#94a3b8;font-size:12px;">{% trans "No difference items." %}</div>{% endif %}
+    </div>
+    {% else %}
+    <div class="empty" data-sec="empty">{% trans "No SAD calculated yet. Accept some GL findings, then recalculate." %}</div>
+    {% endif %}
+  {% else %}
+  <div class="empty">{% trans "Choose an engagement to view its Summary of Audit Differences." %}</div>
+  {% endif %}
+</div>
+{% endblock %}

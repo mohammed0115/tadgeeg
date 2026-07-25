@@ -90,7 +90,7 @@
   <div class="wp-grid">
     {# Planning & Materiality (3A / ISA 300) #}
     <div class="card sec" data-sec="planning">
-      <h3>{% trans "Planning & Materiality" %} <a href="{{ links.audit_tools }}">{% trans "Tools" %} →</a></h3>
+      <h3>{% trans "Planning & Materiality" %} <a href="{% url 'frontend:trial_balance' %}?engagement={{ engagement.id }}">{% trans "Trial balance" %} →</a></h3>
       {% if overview.materiality %}
       <dl class="kv">
         <dt>{% trans "Overall" %}</dt><dd>{{ overview.materiality.overall }}</dd>
@@ -105,7 +105,7 @@
 
     {# GL risk findings (2B / 3B) #}
     <div class="card sec" data-sec="gl">
-      <h3>{% trans "GL Risk Findings" %}</h3>
+      <h3>{% trans "GL Risk Findings" %} <a href="{% url 'frontend:general_ledger' %}?engagement={{ engagement.id }}">{% trans "Review" %} →</a></h3>
       {% if overview.gl_findings.total %}
       <dl class="kv">
         <dt>{% trans "Total" %}</dt><dd>{{ overview.gl_findings.total }}</dd>
@@ -122,7 +122,7 @@
 
     {# Summary of Audit Differences (4A / 4B) #}
     <div class="card sec" data-sec="sad">
-      <h3>{% trans "Summary of Audit Differences" %}</h3>
+      <h3>{% trans "Summary of Audit Differences" %} <a href="{% url 'frontend:sad_dashboard' %}?engagement={{ engagement.id }}">{% trans "Open" %} →</a></h3>
       {% if overview.sad %}
       <dl class="kv">
         <dt>{% trans "Conclusion" %}</dt><dd>{{ overview.sad.conclusion_display }}</dd>
@@ -166,7 +166,7 @@
 
     {# Audit readiness (5A / 5D) #}
     <div class="card sec" data-sec="readiness">
-      <h3>{% trans "Audit Readiness" %}{% if links.readiness %} <a href="{{ links.readiness }}">{% trans "Open" %} →</a>{% endif %}</h3>
+      <h3>{% trans "Audit Readiness" %} <a href="{% url 'frontend:readiness_generate' %}?engagement={{ engagement.id }}">{% trans "Generate" %} →</a>{% if links.readiness %} · <a href="{{ links.readiness }}">{% trans "Open" %} →</a>{% endif %}</h3>
       {% if overview.readiness %}
       <dl class="kv">
         <dt>{% trans "Status" %}</dt><dd>{{ overview.readiness.status_display }}</dd>

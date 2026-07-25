@@ -1,0 +1,93 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n ui_tags %}
+{% block title %}{% trans "General Ledger" %}{% endblock %}
+{% block nav_general_ledger %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/modules/_shared.html" %}
+  .fld input[type=file]{border:1px solid var(--border,#cbd5e1);border-radius:8px;padding:8px;font-size:12px;}
+{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "General Ledger" %}</div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "General Ledger Review" %} · مراجعة دفتر الأستاذ</div>
+      <div class="ev-sub">{% trans "Import a GL, run deterministic risk analysis, and review candidate findings." %}</div>
+    </div>
+  </div>
+  {% include "audit/modules/_picker.html" %}
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="ok">{{ notice }}</div>{% endif %}
+
+  {% if engagement %}
+  <div class="advisory">{% trans "Findings are machine-suggested candidates for auditor review — never audit conclusions." %}</div>
+
+  <div class="card" data-sec="upload">
+    <h3>{% trans "Import general ledger" %}</h3>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="engagement" value="{{ engagement.id }}">
+      <input type="hidden" name="action" value="upload">
+      <div class="fld"><input type="file" name="uploaded_file" accept=".csv,.xlsx,.xls" required></div>
+      <button type="submit" class="runbtn">{% trans "Upload & validate" %}</button>
+    </form>
+  </div>
+
+  <div class="card" data-sec="imports">
+    <h3>{% trans "Imports" %}</h3>
+    {% if imports %}
+    <div class="table-scroll"><table class="ev-table">
+      <thead><tr><th>{% trans "File" %}</th><th>{% trans "Status" %}</th><th>{% trans "Rows" %}</th><th>{% trans "Balanced" %}</th><th>{% trans "Created" %}</th><th></th></tr></thead>
+      <tbody>
+        {% for i in imports %}
+        <tr><td>{{ i.original_filename|default:i.id }}</td><td>{{ i.status }}</td><td>{{ i.row_count }}</td><td>{{ i.is_balanced }}</td><td>{{ i.created_at|date:"Y-m-d H:i" }}</td>
+          <td><form method="post" style="display:inline;">{% csrf_token %}<input type="hidden" name="engagement" value="{{ engagement.id }}"><input type="hidden" name="action" value="analyze"><input type="hidden" name="import" value="{{ i.id }}"><button class="runbtn" style="padding:5px 11px;">{% trans "Run risk analysis" %}</button></form></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<div class="empty">{% trans "No general ledger imported yet." %}</div>{% endif %}
+  </div>
+
+  <div class="card" data-sec="findings">
+    <h3>{% trans "Risk findings" %}</h3>
+    <div class="filter-bar">
+      <a href="?engagement={{ engagement.id }}" class="{% if not active_status %}active{% endif %}">{% trans "All" %}</a>
+      {% for value, label in status_choices %}
+        <a href="?engagement={{ engagement.id }}&status={{ value }}" class="{% if active_status == value %}active{% endif %}">{{ label }} ({{ counts|dict_get:value|default:0 }})</a>
+      {% endfor %}
+    </div>
+    {% if findings %}
+    <div class="table-scroll"><table class="ev-table">
+      <thead><tr><th>{% trans "Code" %}</th><th>{% trans "Account" %}</th><th>{% trans "Severity" %}</th><th>{% trans "Score" %}</th><th>{% trans "Amount" %}</th><th>{% trans "Status" %}</th><th>{% trans "Review" %}</th></tr></thead>
+      <tbody>
+        {% for f in findings %}
+        <tr>
+          <td title="{{ f.risk_description }}">{{ f.risk_code }}</td>
+          <td>{{ f.account_code }} {{ f.account_name }}</td>
+          <td><span class="sev {{ f.severity }}">{{ f.get_severity_display }}</span></td>
+          <td>{{ f.score }}</td>
+          <td>{{ f.amount_impact }}</td>
+          <td><span class="fstat {{ f.status }}">{{ f.get_status_display }}</span></td>
+          <td>
+            <form method="post" style="display:flex;gap:4px;align-items:center;">
+              {% csrf_token %}
+              <input type="hidden" name="engagement" value="{{ engagement.id }}">
+              <input type="hidden" name="action" value="review">
+              <input type="hidden" name="finding" value="{{ f.id }}">
+              <select name="to_status" style="font-size:11px;padding:3px;border-radius:6px;border:1px solid #cbd5e1;">
+                {% for s in review_statuses %}<option value="{{ s }}">{{ s }}</option>{% endfor %}
+              </select>
+              <button class="runbtn" style="padding:4px 9px;font-size:11px;">{% trans "Apply" %}</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<div class="empty">{% trans "No findings. Import a GL and run risk analysis." %}</div>{% endif %}
+  </div>
+  {% else %}
+  <div class="empty">{% trans "Choose an engagement to review its general ledger." %}</div>
+  {% endif %}
+</div>
+{% endblock %}

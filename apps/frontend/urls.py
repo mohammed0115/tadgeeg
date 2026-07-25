@@ -12,6 +12,7 @@ from . import evidence_queue_views
 from . import evidence_assurance_views
 from . import journal_analytics_views
 from . import engagement_workspace_views
+from . import audit_modules_views
 
 app_name = 'frontend'
 
@@ -111,6 +112,12 @@ urlpatterns = [
     # TADGEEG-FIN-AUDIT-8A — Engagement Workspace (unified hub)
     path('audit/engagements/', engagement_workspace_views.engagement_list, name='engagement_list'),
     path('audit/engagements/<uuid:pk>/', engagement_workspace_views.engagement_workspace, name='engagement_workspace'),
+
+    # TADGEEG-FIN-AUDIT-8B/8C/8D/8G — audit module pages (surface existing engines)
+    path('audit/trial-balance/', audit_modules_views.trial_balance, name='trial_balance'),
+    path('audit/general-ledger/', audit_modules_views.general_ledger, name='general_ledger'),
+    path('audit/sad/', audit_modules_views.sad_dashboard, name='sad_dashboard'),
+    path('audit/readiness-generate/', audit_modules_views.readiness_generate, name='readiness_generate'),
 
     # Audit tools (ISA 320 materiality, ISA 530 sampling)
     path('audit/tools/', views.audit_tools, name='audit_tools'),

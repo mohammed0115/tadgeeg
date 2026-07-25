@@ -25,13 +25,13 @@
 
 | المرحلة | الصفحة/الوحدة | النوع | الحالة | ملاحظات |
 |---|---|---|---|---|
-| **8A** | Engagement Workspace (قائمة + لوحة موحّدة + دورة الحياة) | Frontend | ✅ **Done** | `audit/engagements/` · 20 اختبار ناجح · تجميع 1A→7A + روابط عميقة + تغيير المرحلة |
-| **8B** | Trial Balance Analyzer | Frontend | ⬜ Pending | يستهلك `trial_balance_import` |
-| **8C** | General Ledger Review (استيراد + مخاطر 2B + مراجعة 3B) | Frontend | ⬜ Pending | يستهلك `general_ledger_*` + `gl_finding_review` |
-| **8D** | SAD Dashboard (فروقات + تسويات + استجابة) | Frontend | ⬜ Pending | يستهلك `audit_difference_summary` |
-| **8E** | Planning (ISA 300) + Risk (ISA 315) + Responses (ISA 330) | Frontend | ⬜ Pending | يستهلك `isa300_planning` · `risk_matrix` · `isa330_risk_responses` |
-| **8F** | Fraud (ISA 240) + Going Concern (ISA 570) + Estimates (ISA 540) | Frontend | ⬜ Pending | يستهلك `fraud_engine` · `going_concern` · `estimates` |
-| **8G** | Readiness Generate & Export UI | Frontend | ⬜ Pending | يستهلك `audit_readiness_*` |
+| **8A** | Engagement Workspace (قائمة + لوحة موحّدة + دورة الحياة) | Frontend | ✅ **Done** | `audit/engagements/` · 20 اختبار · تجميع 1A→7A + روابط عميقة + تغيير المرحلة |
+| **8B** | Trial Balance Analyzer (رفع + صفوف + ربط الحسابات + حسابات شاذة) | Frontend | ✅ **Done** | `audit/trial-balance/` · يستهلك `trial_balance_import` |
+| **8C** | General Ledger Review (رفع + تشغيل مخاطر 2B + مراجعة 3B) | Frontend | ✅ **Done** | `audit/general-ledger/` · `analyze_import` + `review_finding` |
+| **8D** | SAD Dashboard (ملخّص + بنود + إعادة حساب) | Frontend | ✅ **Done** | `audit/sad/` · `recalculate_for_engagement` |
+| **8E** | Planning (ISA 300) + Risk (ISA 315) + Responses (ISA 330) | Frontend | 🔄 مؤجّلة | الخدمات محرّكات حسابية تتطلّب **مدخلات مُهيكلة** (dataclasses) لا "تشغيل على بيانات الارتباط" — تحتاج تصميم نماذج إدخال |
+| **8F** | Fraud (ISA 240) + Going Concern (ISA 570) + Estimates (ISA 540) | Frontend | 🔄 مؤجّلة | نفس السبب: `assess_going_concern(GoingConcernIndicators)` · `assess_estimation_uncertainty(EstimateProfile)` · تتطلّب نماذج إدخال |
+| **8G** | Readiness Generate & Export UI | Frontend | ✅ **Done** | `audit/readiness-generate/` · `generate_for_engagement` + تصدير 5D (JSON/HTML/PDF) |
 | **9A** | Financial Statements Review (IAS 1) | Full (خلفية+واجهة) | ⬜ Pending | فجوة حقيقية |
 | **9B** | Management Letter (ISA 265) | Full | ⬜ Pending | فجوة حقيقية |
 | **9C** | External Confirmations (ISA 505) | Full | ⬜ Pending | فجوة حقيقية |
@@ -43,9 +43,11 @@
 
 | التاريخ | المرحلة | الحدث |
 |---|---|---|
-| 2026‑07‑25 | 8A | ✅ تنفيذ Engagement Workspace + اختبارات + توثيق الخطة والمتابعة |
+| 2026‑07‑25 | 8A | ✅ Engagement Workspace + اختبارات + توثيق الخطة والمتابعة |
+| 2026‑07‑25 | 8B/8C/8D/8G | ✅ صفحات TB · GL · SAD · الجاهزية (13 اختبارًا) — تستهلك الخدمات القائمة |
+| 2026‑07‑25 | 8E/8F | 🔄 مؤجّلة — الخدمات تتطلّب نماذج إدخال مُهيكلة (تُنفَّذ لاحقًا) |
 
 ---
 
 ### الخطوة التالية المقترحة
-**8B — Trial Balance Analyzer** (واجهة تستهلك `trial_balance_import`): رفع الميزان، ربط الحسابات بالتصنيفات، كشف الحسابات الشاذة، ومقارنة السنة الحالية بالسابقة.
+**8E/8F** بتصميم نماذج إدخال لمحرّكات ISA 300/315/330/240/570/540، **أو** الانتقال إلى المسار (ج): **9A مراجعة القوائم المالية (IAS 1)** — أعلى قيمة تدقيقية (خلفية + واجهة).

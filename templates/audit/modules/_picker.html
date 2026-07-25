@@ -1,0 +1,12 @@
+{% load i18n %}
+<form method="get" class="filters">
+  <div>
+    <label>{% trans "Engagement" %}</label>
+    <select name="engagement" onchange="this.form.submit()">
+      <option value="">{% trans "Select engagement…" %}</option>
+      {% for e in engagements %}
+        <option value="{{ e.id }}" {% if engagement and engagement.id == e.id %}selected{% endif %}>{{ e.engagement_code }} — {{ e.title }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</form>

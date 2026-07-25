@@ -34,7 +34,7 @@
 | **8F** | Going Concern (ISA 570) + Estimates (ISA 540) — نماذج إدخال + محرّكات | Frontend | ✅ **Done** | `audit/isa/going-concern/` + `audit/isa/estimates/` · تصميم مصقول |
 | **8F‑part** | Fraud (ISA 240) | Frontend | 🔄 مؤجّلة | مدخلات **قائمة** `List[FraudRiskFactor]` (واجهة أعقد) |
 | **8G** | Readiness Generate & Export UI | Frontend | ✅ **Done** | `audit/readiness-generate/` · `generate_for_engagement` + تصدير 5D (JSON/HTML/PDF) |
-| **9A** | Financial Statements Review (IAS 1) | Full (خلفية+واجهة) | ⬜ Pending | فجوة حقيقية |
+| **9A** | Financial Statements Review (IAS 1) | Full (خلفية+واجهة) | ✅ **Done** | `audit/financial-statements/` · اشتقاق BS/IS من TB+mappings · نسب · مقارنة سنوية · كشف أخطاء التصنيف · 23 اختبارًا · بلا migration |
 | **9B** | Management Letter (ISA 265) | Full | ⬜ Pending | فجوة حقيقية |
 | **9C** | External Confirmations (ISA 505) | Full | ⬜ Pending | فجوة حقيقية |
 | **9D** | Inventory (ISA 501) + Fixed Assets + Payroll | Full | ⬜ Pending | فجوة حقيقية |
@@ -49,9 +49,11 @@
 | 2026‑07‑25 | 8B/8C/8D/8G | ✅ صفحات TB · GL · SAD · الجاهزية (13 اختبارًا) — تستهلك الخدمات القائمة |
 | 2026‑07‑25 | 8E/8F | ✅ صفحات ISA 315/570/540 بنماذج إدخال + **تصميم احترافي مصقول** (12 اختبارًا) |
 | 2026‑07‑25 | 8E/8F (part) | 🔄 المتبقّي: ISA 300 · 330 · 240 (مدخلات قائمة) مؤجّل |
+| 2026‑07‑25 | 9A | ✅ مراجعة القوائم المالية (IAS 1) — خدمة + API + واجهة مصقولة (23 اختبارًا) |
 
 ---
 
 ### الخطوة التالية المقترحة
-المتبقّي من الواجهات: **ISA 300 (تخطيط) · ISA 330 (استجابات) · ISA 240 (احتيال)** — تحتاج واجهات مدخلات قائمة (list-builders). 
-أو الانتقال إلى المسار (ج): **9A مراجعة القوائم المالية (IAS 1)** — أعلى قيمة تدقيقية (خلفية + واجهة).
+- **9C** التأكيدات الخارجية (ISA 505) أو **9B** خطاب الإدارة (ISA 265) — الفجوات الحقيقية المتبقّية.
+- ثم **9D** المخزون/الأصول/الرواتب.
+- والمؤجّل: واجهات **ISA 300/330/240** (list-builders).

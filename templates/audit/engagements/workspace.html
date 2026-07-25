@@ -122,7 +122,7 @@
 
     {# Summary of Audit Differences (4A / 4B) #}
     <div class="card sec" data-sec="sad">
-      <h3>{% trans "Summary of Audit Differences" %} <a href="{% url 'frontend:sad_dashboard' %}?engagement={{ engagement.id }}">{% trans "Open" %} →</a></h3>
+      <h3>{% trans "Summary of Audit Differences" %} <a href="{% url 'frontend:sad_dashboard' %}?engagement={{ engagement.id }}">{% trans "Open" %} →</a> · <a href="{% url 'frontend:financial_statements' %}?engagement={{ engagement.id }}">{% trans "Statements" %} →</a></h3>
       {% if overview.sad %}
       <dl class="kv">
         <dt>{% trans "Conclusion" %}</dt><dd>{{ overview.sad.conclusion_display }}</dd>

@@ -1,0 +1,134 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Financial Statements" %}{% endblock %}
+{% block nav_financial_statements %}active{% endblock %}
+{% block extra_styles %}{% include "audit/isa/_style.html" %}
+  .stmt{width:100%;border-collapse:collapse;font-size:13px;}
+  .stmt td{padding:7px 10px;border-bottom:1px solid #eef2f7;}
+  .stmt td.amt{text-align:end;font-variant-numeric:tabular-nums;font-weight:600;color:#1e293b;}
+  .stmt tr.total td{border-top:2px solid #cbd5e1;font-weight:800;color:#0f2b4a;background:#f8fbff;}
+  .stmt tr.head td{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#64748b;}
+  .ratio-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
+  .ratio{background:#fff;border:1px solid #e8edf3;border-radius:12px;padding:14px;}
+  .ratio .k{font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.04em;}
+  .ratio .v{font-size:24px;font-weight:900;color:#14508a;margin-top:4px;font-family:'Cairo',sans-serif;}
+  .flagbox{border-radius:11px;padding:11px 14px;margin-bottom:8px;font-size:12.5px;border:1px solid;}
+  .flagbox.high{background:#fef2f2;border-color:#fecaca;color:#991b1b;}
+  .flagbox.medium{background:#fffbeb;border-color:#fde68a;color:#92400e;}
+  .delta.up{color:#166534;} .delta.down{color:#991b1b;}
+  .picker{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:12px;margin-bottom:16px;display:flex;gap:10px;align-items:end;}
+  .picker select{border:1px solid #cfd8e3;border-radius:10px;padding:9px 12px;font-size:13px;min-width:260px;}
+{% endblock %}
+{% block content %}
+<div class="isa-wrap">
+  <div class="isa-crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "Financial Statements" %}</div>
+
+  <div class="isa-hero" style="background:linear-gradient(135deg,#0f2b4a 0%,#3730a3 55%,#14508a 100%);">
+    <span class="std">IAS 1</span>
+    <h1>{% trans "Financial Statements Review" %}</h1>
+    <p>{% trans "Balance sheet and income statement derived from the trial balance and account mappings, with key ratios, a year-over-year comparison and classification-anomaly flags." %}</p>
+  </div>
+
+  <form method="get" class="picker">
+    <div>
+      <label style="display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px;">{% trans "Engagement" %}</label>
+      <select name="engagement" onchange="this.form.submit()">
+        <option value="">{% trans "Select engagement…" %}</option>
+        {% for e in engagements %}
+          <option value="{{ e.id }}" {% if engagement and engagement.id == e.id %}selected{% endif %}>{{ e.engagement_code }} — {{ e.title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+
+  <div class="advisory"><b>{% trans "Advisory only" %}</b> — {% trans "derived deterministically from the trial balance; not a formal opinion." %}</div>
+  {% if error %}<div class="flagbox high">{{ error }}</div>{% endif %}
+
+  {% if data %}
+  {# ── Classification anomalies ── #}
+  {% if data.anomalies %}
+  <div class="isa-card" data-sec="anomalies">
+    <h3>{% trans "Classification & integrity flags" %} ({{ data.anomalies|length }})</h3>
+    {% for a in data.anomalies %}
+    <div class="flagbox {{ a.severity }}">{{ a.message }}{% if a.accounts %} <span style="opacity:.8;">({{ a.accounts|join:", " }})</span>{% endif %}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Key ratios ── #}
+  <div class="isa-card" data-sec="ratios">
+    <h3>{% trans "Key ratios" %}</h3>
+    <div class="ratio-grid">
+      <div class="ratio"><div class="k">{% trans "Current ratio" %}</div><div class="v">{{ data.statements.ratios.current_ratio|default:"—" }}</div></div>
+      <div class="ratio"><div class="k">{% trans "Debt to equity" %}</div><div class="v">{{ data.statements.ratios.debt_to_equity|default:"—" }}</div></div>
+      <div class="ratio"><div class="k">{% trans "Gross margin" %}</div><div class="v">{% if data.statements.ratios.gross_margin_pct != None %}{{ data.statements.ratios.gross_margin_pct }}{% else %}—{% endif %}</div></div>
+      <div class="ratio"><div class="k">{% trans "Net margin" %}</div><div class="v">{% if data.statements.ratios.net_margin_pct != None %}{{ data.statements.ratios.net_margin_pct }}{% else %}—{% endif %}</div></div>
+      <div class="ratio"><div class="k">{% trans "Return on equity" %}</div><div class="v">{% if data.statements.ratios.return_on_equity_pct != None %}{{ data.statements.ratios.return_on_equity_pct }}{% else %}—{% endif %}</div></div>
+    </div>
+  </div>
+
+  <div class="isa-grid">
+    {# ── Balance sheet ── #}
+    <div class="isa-card" data-sec="balance-sheet">
+      <h3>{% trans "Balance Sheet" %}</h3>
+      <table class="stmt">
+        <tr class="head"><td>{% trans "Assets" %}</td><td></td></tr>
+        {% for l in data.statements.balance_sheet.assets %}<tr><td>{{ l.label }}</td><td class="amt">{{ l.amount }}</td></tr>{% endfor %}
+        <tr class="total"><td>{% trans "Total assets" %}</td><td class="amt">{{ data.statements.balance_sheet.total_assets }}</td></tr>
+        <tr class="head"><td>{% trans "Liabilities" %}</td><td></td></tr>
+        {% for l in data.statements.balance_sheet.liabilities %}<tr><td>{{ l.label }}</td><td class="amt">{{ l.amount }}</td></tr>{% endfor %}
+        <tr class="total"><td>{% trans "Total liabilities" %}</td><td class="amt">{{ data.statements.balance_sheet.total_liabilities }}</td></tr>
+        <tr class="head"><td>{% trans "Equity" %}</td><td></td></tr>
+        {% for l in data.statements.balance_sheet.equity %}<tr><td>{{ l.label }}</td><td class="amt">{{ l.amount }}</td></tr>{% endfor %}
+        <tr><td>{% trans "Profit for the period" %}</td><td class="amt">{{ data.statements.income_statement.net_profit }}</td></tr>
+        <tr class="total"><td>{% trans "Total equity (incl. profit)" %}</td><td class="amt">{{ data.statements.balance_sheet.equity_incl_profit }}</td></tr>
+        <tr class="total"><td>{% trans "Liabilities + equity" %}</td><td class="amt">{{ data.statements.balance_sheet.liabilities_plus_equity }}</td></tr>
+      </table>
+    </div>
+
+    {# ── Income statement ── #}
+    <div class="isa-card" data-sec="income-statement">
+      <h3>{% trans "Income Statement" %}</h3>
+      <table class="stmt">
+        <tr class="head"><td>{% trans "Revenue" %}</td><td></td></tr>
+        {% for l in data.statements.income_statement.revenue %}<tr><td>{{ l.label }}</td><td class="amt">{{ l.amount }}</td></tr>{% endfor %}
+        <tr><td>{% trans "Cost of sales" %}</td><td class="amt">{{ data.statements.income_statement.cost_of_sales }}</td></tr>
+        <tr class="total"><td>{% trans "Gross profit" %}</td><td class="amt">{{ data.statements.income_statement.gross_profit }}</td></tr>
+        <tr class="head"><td>{% trans "Expenses" %}</td><td></td></tr>
+        {% for l in data.statements.income_statement.expenses %}<tr><td>{{ l.label }}</td><td class="amt">{{ l.amount }}</td></tr>{% endfor %}
+        <tr><td>{% trans "Other income / expense" %}</td><td class="amt">{{ data.statements.income_statement.other_income }}</td></tr>
+        <tr class="total"><td>{% trans "Net profit" %}</td><td class="amt">{{ data.statements.income_statement.net_profit }}</td></tr>
+      </table>
+    </div>
+  </div>
+
+  {# ── Year over year ── #}
+  {% if data.year_over_year %}
+  <div class="isa-card" data-sec="yoy">
+    <h3>{% trans "Year-over-year" %} <span style="font-size:12px;font-weight:600;color:#94a3b8;">— {% trans "vs" %} {{ data.year_over_year.prior_filename }}</span></h3>
+    <div class="table-scroll" style="overflow-x:auto;">
+    <table class="stmt">
+      <tr class="head"><td>{% trans "Line" %}</td><td class="amt">{% trans "Current" %}</td><td class="amt">{% trans "Prior" %}</td><td class="amt">{% trans "Δ" %}</td><td class="amt">{% trans "Δ%" %}</td></tr>
+      {% for r in data.year_over_year.rows %}
+      <tr>
+        <td>{{ r.label }}</td>
+        <td class="amt">{{ r.current }}</td>
+        <td class="amt">{{ r.prior }}</td>
+        <td class="amt delta {% if r.delta >= 0 %}up{% else %}down{% endif %}">{{ r.delta }}</td>
+        <td class="amt">{% if r.delta_pct != None %}{{ r.delta_pct }}{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </table>
+    </div>
+  </div>
+  {% else %}
+  <div class="isa-card"><div class="isa-empty">{% trans "Import a prior-period trial balance to enable the year-over-year comparison." %}</div></div>
+  {% endif %}
+
+  {% elif engagement %}
+  <div class="isa-card"><div class="isa-empty">{% trans "No trial balance imported for this engagement yet." %}</div></div>
+  {% else %}
+  <div class="isa-card"><div class="isa-empty">{% trans "Choose an engagement to review its financial statements." %}</div></div>
+  {% endif %}
+</div>
+{% endblock %}

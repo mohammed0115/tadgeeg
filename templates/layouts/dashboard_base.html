@@ -458,6 +458,10 @@
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11H5a2 2 0 00-2 2v7h6zM15 7h4a2 2 0 012 2v11h-6zM9 3h6v17H9z"/></svg>
             {% trans "Differences (SAD)" %}
           </a>
+          <a href="{% url 'frontend:financial_statements' %}" class="nav-item {% block nav_financial_statements %}{% endblock %}">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h8"/></svg>
+            {% trans "Financial Statements" %}
+          </a>
           <a href="{% url 'frontend:readiness_generate' %}" class="nav-item {% block nav_readiness_gen %}{% endblock %}">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 01-2 2H6a2 2 0 01-2-2V5a2 2 0 012-2h9"/></svg>
             {% trans "Audit Readiness" %}

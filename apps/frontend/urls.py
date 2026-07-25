@@ -14,6 +14,7 @@ from . import journal_analytics_views
 from . import engagement_workspace_views
 from . import audit_modules_views
 from . import isa_assessment_views
+from . import financial_statements_views
 
 app_name = 'frontend'
 
@@ -124,6 +125,9 @@ urlpatterns = [
     path('audit/isa/risk/', isa_assessment_views.risk_assessment, name='isa_risk'),
     path('audit/isa/going-concern/', isa_assessment_views.going_concern, name='isa_going_concern'),
     path('audit/isa/estimates/', isa_assessment_views.estimates, name='isa_estimates'),
+
+    # TADGEEG-FIN-AUDIT-9A — Financial Statements review (IAS 1)
+    path('audit/financial-statements/', financial_statements_views.financial_statements, name='financial_statements'),
 
     # Audit tools (ISA 320 materiality, ISA 530 sampling)
     path('audit/tools/', views.audit_tools, name='audit_tools'),

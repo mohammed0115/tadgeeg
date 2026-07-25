@@ -65,6 +65,13 @@ from apps.audit.journal_analytics_models import (  # noqa: F401
     JournalAnalyticsSummary,
 )
 
+# External Confirmations (TADGEEG-FIN-AUDIT-9C · ISA 505) — auditor requests an
+# external party to confirm a balance; reconciled against the books. Never
+# posts to apps.ledger; a discrepancy is flagged, not auto-resolved.
+from apps.audit.confirmation_models import (  # noqa: F401
+    AuditConfirmationRequest,
+)
+
 
 class AuditSession(SoftDeleteModel):
     """Tracks the lifecycle and aggregate progress of a related audit upload."""

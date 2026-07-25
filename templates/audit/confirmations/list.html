@@ -1,0 +1,102 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "External Confirmations" %}{% endblock %}
+{% block nav_confirmations %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/modules/_shared.html" %}
+  .cstat{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:700;}
+  .cstat.draft{background:#e2e8f0;color:#475569;} .cstat.sent{background:#dbeafe;color:#1e40af;}
+  .cstat.responded{background:#fef9c3;color:#854d0e;} .cstat.matched{background:#dcfce7;color:#166534;}
+  .cstat.discrepancy{background:#fee2e2;color:#991b1b;} .cstat.no_reply{background:#ffedd5;color:#9a3412;}
+  .cstat.cancelled{background:#f1f5f9;color:#64748b;}
+  .fld input,.fld select{width:100%;border:1px solid var(--border,#cbd5e1);border-radius:8px;padding:8px;font-size:12px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;} @media(max-width:640px){.row3{grid-template-columns:1fr;}}
+  .link{font-size:11px;color:#0369a1;word-break:break-all;}
+{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "Confirmations" %}</div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "External Confirmations" %} · التأكيدات الخارجية</div>
+      <div class="ev-sub">{% trans "Request an external party to confirm a balance (ISA 505) and reconcile the reply against the books." %}</div>
+    </div>
+  </div>
+  {% include "audit/modules/_picker.html" %}
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="ok">{{ notice }}</div>{% endif %}
+
+  {% if engagement %}
+  <div class="advisory">{% trans "A discrepancy is flagged for the auditor — never auto-posted. No ledger entry is made." %}</div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">{% trans "Outstanding" %}</div><div class="val">{{ counts.outstanding|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Sent" %}</div><div class="val">{{ counts.sent|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Responded" %}</div><div class="val">{{ counts.responded|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Matched" %}</div><div class="val">{{ counts.matched|default:0 }}</div></div>
+    <div class="kpi alert"><div class="lbl">{% trans "Discrepancy" %}</div><div class="val">{{ counts.discrepancy|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "No reply" %}</div><div class="val">{{ counts.no_reply|default:0 }}</div></div>
+  </div>
+
+  <div class="card" data-sec="create">
+    <h3>{% trans "New confirmation request" %}</h3>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="engagement" value="{{ engagement.id }}">
+      <input type="hidden" name="action" value="create">
+      <div class="row3">
+        <div class="fld"><label>{% trans "Type" %}</label><select name="confirmation_type">{% for v,l in type_choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+        <div class="fld"><label>{% trans "Party name" %}</label><input type="text" name="party_name" required></div>
+        <div class="fld"><label>{% trans "Party email (optional)" %}</label><input type="email" name="party_email"></div>
+      </div>
+      <div class="row3">
+        <div class="fld"><label>{% trans "Recorded amount" %}</label><input type="text" name="recorded_amount" value="0" required></div>
+        <div class="fld"><label>{% trans "Currency" %}</label><input type="text" name="currency" value="SAR"></div>
+        <div class="fld"><label>{% trans "Tolerance" %}</label><input type="text" name="tolerance" value="0"></div>
+      </div>
+      <button type="submit" class="runbtn">{% trans "Create request" %}</button>
+    </form>
+  </div>
+
+  <div class="card" data-sec="register">
+    <h3>{% trans "Confirmation register" %}</h3>
+    {% if requests %}
+    <div class="table-scroll"><table class="ev-table">
+      <thead><tr>
+        <th>{% trans "Ref #" %}</th><th>{% trans "Type" %}</th><th>{% trans "Party" %}</th>
+        <th>{% trans "Recorded" %}</th><th>{% trans "Confirmed" %}</th><th>{% trans "Difference" %}</th>
+        <th>{% trans "Status" %}</th><th>{% trans "Actions" %}</th>
+      </tr></thead>
+      <tbody>
+        {% for r in requests %}
+        <tr>
+          <td>{{ r.request_number }}</td>
+          <td>{{ r.get_confirmation_type_display }}</td>
+          <td>{{ r.party_name }}{% if r.party_reference %} <span style="color:#94a3b8;">({{ r.party_reference }})</span>{% endif %}</td>
+          <td>{{ r.recorded_amount }} {{ r.currency }}</td>
+          <td>{% if r.confirmed_amount != None %}{{ r.confirmed_amount }}{% else %}—{% endif %}</td>
+          <td>{% if r.difference != None %}<strong{% if not r.is_within_tolerance %} style="color:#991b1b;"{% endif %}>{{ r.difference }}</strong>{% else %}—{% endif %}</td>
+          <td><span class="cstat {{ r.status }}">{{ r.get_status_display }}</span></td>
+          <td style="white-space:nowrap;">
+            {% if r.status == 'draft' %}
+              <form method="post" style="display:inline;">{% csrf_token %}<input type="hidden" name="engagement" value="{{ engagement.id }}"><input type="hidden" name="action" value="send"><input type="hidden" name="confirmation" value="{{ r.id }}"><button class="runbtn" style="padding:4px 9px;font-size:11px;">{% trans "Send" %}</button></form>
+            {% elif r.status == 'sent' %}
+              <form method="post" style="display:inline-flex;gap:3px;align-items:center;">{% csrf_token %}<input type="hidden" name="engagement" value="{{ engagement.id }}"><input type="hidden" name="action" value="record"><input type="hidden" name="confirmation" value="{{ r.id }}"><input type="text" name="confirmed_amount" placeholder="{% trans 'amount' %}" style="width:80px;font-size:11px;padding:3px;border:1px solid #cbd5e1;border-radius:6px;"><button class="runbtn" style="padding:4px 8px;font-size:11px;">{% trans "Record" %}</button></form>
+              <form method="post" style="display:inline;">{% csrf_token %}<input type="hidden" name="engagement" value="{{ engagement.id }}"><input type="hidden" name="action" value="no_reply"><input type="hidden" name="confirmation" value="{{ r.id }}"><button class="runbtn" style="padding:4px 8px;font-size:11px;background:#9a3412;">{% trans "No reply" %}</button></form>
+            {% elif r.status == 'responded' %}
+              <form method="post" style="display:inline;">{% csrf_token %}<input type="hidden" name="engagement" value="{{ engagement.id }}"><input type="hidden" name="action" value="reconcile"><input type="hidden" name="confirmation" value="{{ r.id }}"><button class="runbtn" style="padding:4px 9px;font-size:11px;background:#166534;">{% trans "Reconcile" %}</button></form>
+            {% endif %}
+            {% if r.status == 'sent' %}
+              <div class="link">{% trans "Link" %}: {{ request.scheme }}://{{ request.get_host }}{% url 'frontend:confirmation_respond' r.response_token %}</div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table></div>
+    {% else %}<div class="empty">{% trans "No confirmation requests yet." %}</div>{% endif %}
+  </div>
+  {% else %}
+  <div class="empty">{% trans "Choose an engagement to manage its external confirmations." %}</div>
+  {% endif %}
+</div>
+{% endblock %}

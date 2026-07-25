@@ -7,6 +7,7 @@ from .models import (
     AuditDifferenceSummary,
     AuditEvidenceAttachment,
     AuditEvidenceRequest,
+    AuditConfirmationRequest,
     AuditEvidenceRequestEvent,
     AuditFinding,
     AuditReadinessWorkpaper,
@@ -428,3 +429,34 @@ class AuditEvidenceRequestListSerializer(serializers.ModelSerializer):
             "days_remaining", "is_overdue", "sla_state", "created_at",
         ]
         read_only_fields = fields
+
+
+# ── TADGEEG-FIN-AUDIT-9C — External Confirmations (ISA 505) ──────────────────
+class AuditConfirmationRequestSerializer(serializers.ModelSerializer):
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    confirmation_type_display = serializers.CharField(
+        source="get_confirmation_type_display", read_only=True)
+    requested_by_name = serializers.CharField(
+        source="requested_by.full_name", read_only=True, default="")
+    difference = serializers.SerializerMethodField()
+    is_within_tolerance = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AuditConfirmationRequest
+        fields = [
+            "id", "request_number", "engagement", "organization",
+            "confirmation_type", "confirmation_type_display",
+            "party_name", "party_reference", "party_email",
+            "recorded_amount", "confirmed_amount", "currency", "tolerance",
+            "status", "status_display", "difference", "is_within_tolerance",
+            "response_note", "requested_by", "requested_by_name",
+            "sent_at", "responded_at", "reviewed_at", "created_at", "updated_at",
+        ]
+        read_only_fields = fields
+
+    def get_difference(self, obj):
+        d = obj.difference
+        return str(d) if d is not None else None
+
+    def get_is_within_tolerance(self, obj):
+        return obj.is_within_tolerance

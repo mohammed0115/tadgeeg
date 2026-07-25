@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+{# TADGEEG-FIN-AUDIT-9C — PUBLIC external-confirmation response page.        #}
+{# Standalone (external party is not logged in); token-gated; no app chrome. #}
+{% load i18n %}
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>{% trans "Balance Confirmation" %}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Segoe UI','Noto Sans Arabic',Arial,sans-serif;background:#eef2f7;color:#1e293b;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .box{background:#fff;max-width:520px;width:100%;border-radius:18px;overflow:hidden;
+    box-shadow:0 20px 50px -20px rgba(15,43,74,.4);}
+  .head{background:linear-gradient(135deg,#0f2b4a,#14508a);color:#fff;padding:26px 28px;}
+  .head .std{font-size:11px;font-weight:800;letter-spacing:.08em;opacity:.85;text-transform:uppercase;}
+  .head h1{font-size:21px;font-weight:800;margin-top:6px;}
+  .body{padding:26px 28px;}
+  .kv{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #eef2f7;font-size:14px;}
+  .kv dt{color:#64748b;} .kv dd{font-weight:700;}
+  .amount{font-size:30px;font-weight:900;color:#0f2b4a;text-align:center;margin:14px 0;font-variant-numeric:tabular-nums;}
+  .opts{display:flex;gap:10px;margin:16px 0;}
+  .opt{flex:1;border:1px solid #cfd8e3;border-radius:12px;padding:14px;text-align:center;cursor:pointer;font-weight:700;font-size:13px;color:#334155;transition:all .12s;}
+  .opt.sel{border-color:#14508a;background:#eaf2fb;color:#0f2b4a;}
+  input[type=text],textarea{width:100%;border:1px solid #cfd8e3;border-radius:10px;padding:10px 12px;font-size:14px;margin-top:8px;}
+  .diffbox{display:none;}
+  button{width:100%;background:linear-gradient(135deg,#14508a,#0d7a6f);color:#fff;border:none;border-radius:12px;
+    padding:13px;font-size:15px;font-weight:800;cursor:pointer;margin-top:16px;}
+  .msg{padding:14px;border-radius:12px;font-size:14px;margin-top:6px;}
+  .msg.ok{background:#e9f7ee;color:#166534;} .msg.err{background:#fee2e2;color:#991b1b;}
+  .foot{font-size:11px;color:#94a3b8;text-align:center;padding:14px;}
+</style>
+</head>
+<body>
+<div class="box">
+  {% if not_found %}
+  <div class="head"><h1>{% trans "Link not found" %}</h1></div>
+  <div class="body"><p>{% trans "This confirmation link is invalid or has expired." %}</p></div>
+  {% else %}
+  <div class="head">
+    <div class="std">ISA 505 · {% trans "External Confirmation" %}</div>
+    <h1>{% trans "Balance Confirmation Request" %}</h1>
+  </div>
+  <div class="body">
+    {% if done %}
+      <div class="msg ok">✓ {% trans "Thank you — your response has been recorded." %}</div>
+    {% elif already %}
+      <div class="msg ok">{% trans "This confirmation has already been responded to. No further action is needed." %}</div>
+    {% else %}
+      <p style="font-size:14px;color:#475569;">{% blocktrans with party=req.party_name %}Dear {{ party }}, our auditor requests that you confirm the balance recorded in our books as at the reporting date.{% endblocktrans %}</p>
+      <div class="amount">{{ req.recorded_amount }} {{ req.currency }}</div>
+      <dl>
+        <div class="kv"><dt>{% trans "Reference" %}</dt><dd>{{ req.request_number }}</dd></div>
+        <div class="kv"><dt>{% trans "Type" %}</dt><dd>{{ req.get_confirmation_type_display }}</dd></div>
+      </dl>
+      {% if error %}<div class="msg err">{{ error }}</div>{% endif %}
+      <form method="post">
+        {% csrf_token %}
+        <div class="opts">
+          <label class="opt sel" id="opt-agree"><input type="radio" name="agree" value="1" checked style="display:none" onchange="toggle(false)">✓ {% trans "I agree with this balance" %}</label>
+          <label class="opt" id="opt-diff"><input type="radio" name="agree" value="0" style="display:none" onchange="toggle(true)">✗ {% trans "The balance differs" %}</label>
+        </div>
+        <div class="diffbox" id="diffbox">
+          <input type="text" name="confirmed_amount" placeholder="{% trans 'Enter the balance per your records' %}">
+        </div>
+        <textarea name="note" rows="2" placeholder="{% trans 'Comment (optional)' %}"></textarea>
+        <button type="submit">{% trans "Submit confirmation" %}</button>
+      </form>
+    {% endif %}
+  </div>
+  {% endif %}
+  <div class="foot">{% trans "Secure balance confirmation · powered by Tadgeeg" %}</div>
+</div>
+<script>
+function toggle(diff){
+  document.getElementById('diffbox').style.display = diff ? 'block' : 'none';
+  document.getElementById('opt-agree').classList.toggle('sel', !diff);
+  document.getElementById('opt-diff').classList.toggle('sel', diff);
+}
+</script>
+</body>
+</html>

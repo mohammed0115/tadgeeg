@@ -16,6 +16,7 @@ from . import audit_modules_views
 from . import isa_assessment_views
 from . import financial_statements_views
 from . import confirmation_views
+from . import management_letter_views
 
 app_name = 'frontend'
 
@@ -134,6 +135,9 @@ urlpatterns = [
     path('audit/confirmations/', confirmation_views.confirmations, name='confirmations'),
     # PUBLIC token-gated response page (no login; not subscription gated).
     path('confirm/<uuid:token>/', confirmation_views.confirmation_respond, name='confirmation_respond'),
+
+    # TADGEEG-FIN-AUDIT-9B — Management Letter (ISA 265)
+    path('audit/management-letter/', management_letter_views.management_letter, name='management_letter'),
 
     # Audit tools (ISA 320 materiality, ISA 530 sampling)
     path('audit/tools/', views.audit_tools, name='audit_tools'),

@@ -8,6 +8,7 @@ from .models import (
     AuditEvidenceAttachment,
     AuditEvidenceRequest,
     AuditConfirmationRequest,
+    AuditControlDeficiency,
     AuditEvidenceRequestEvent,
     AuditFinding,
     AuditReadinessWorkpaper,
@@ -460,3 +461,25 @@ class AuditConfirmationRequestSerializer(serializers.ModelSerializer):
 
     def get_is_within_tolerance(self, obj):
         return obj.is_within_tolerance
+
+
+# ── TADGEEG-FIN-AUDIT-9B — Control Deficiencies (ISA 265) ────────────────────
+class AuditControlDeficiencySerializer(serializers.ModelSerializer):
+    classification_display = serializers.CharField(
+        source="get_classification_display", read_only=True)
+    area_display = serializers.CharField(source="get_area_display", read_only=True)
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    identified_by_name = serializers.CharField(
+        source="identified_by.full_name", read_only=True, default="")
+
+    class Meta:
+        model = AuditControlDeficiency
+        fields = [
+            "id", "reference", "engagement", "organization", "title", "area",
+            "area_display", "classification", "classification_display",
+            "description", "potential_effect", "recommendation",
+            "management_response", "management_action_owner", "target_date",
+            "status", "status_display", "gl_finding", "identified_by",
+            "identified_by_name", "created_at", "updated_at",
+        ]
+        read_only_fields = fields

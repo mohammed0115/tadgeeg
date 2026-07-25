@@ -72,6 +72,13 @@ from apps.audit.confirmation_models import (  # noqa: F401
     AuditConfirmationRequest,
 )
 
+# Control Deficiencies & Management Letter (TADGEEG-FIN-AUDIT-9B · ISA 265) —
+# records internal-control deficiencies and drives the management letter.
+# Never posts to apps.ledger and never modifies the audit opinion.
+from apps.audit.control_deficiency_models import (  # noqa: F401
+    AuditControlDeficiency,
+)
+
 
 class AuditSession(SoftDeleteModel):
     """Tracks the lifecycle and aggregate progress of a related audit upload."""

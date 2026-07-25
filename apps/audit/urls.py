@@ -6,6 +6,7 @@ from . import views_evidence_assurance as eva
 from . import views_journal_analytics as jan
 from . import views_financial_statements as vfs
 from . import views_confirmations as vcf
+from . import views_management_letter as vml
 from . import views_rule_builder as rb
 from . import views_trial_balance as tb
 
@@ -81,6 +82,10 @@ urlpatterns = [
     path("confirmations/", vcf.ConfirmationListCreateView.as_view(), name="confirmation-list"),
     path("confirmations/<uuid:pk>/", vcf.ConfirmationDetailView.as_view(), name="confirmation-detail"),
     path("confirmations/<uuid:pk>/<str:action>/", vcf.ConfirmationActionView.as_view(), name="confirmation-action"),
+    # TADGEEG-FIN-AUDIT-9B — control deficiencies + management letter (ISA 265).
+    path("control-deficiencies/", vml.DeficiencyListCreateView.as_view(), name="deficiency-list"),
+    path("control-deficiencies/<uuid:pk>/", vml.DeficiencyDetailView.as_view(), name="deficiency-detail"),
+    path("engagements/<uuid:pk>/management-letter/", vml.EngagementManagementLetterView.as_view(), name="management-letter"),
     path("dashboard/overview/", views.AuditDashboardOverviewView.as_view(), name="dashboard-overview"),
     path("big-four/", views.BigFourComplianceView.as_view(), name="big-four-compliance"),
     # Phase 2.2 — visual rule builder. The DSL-driven endpoints sit under

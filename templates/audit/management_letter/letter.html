@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+{# TADGEEG-FIN-AUDIT-9B — Management Letter document (ISA 265). Standalone. #}
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Management Letter — {{ L.engagement.engagement_code }}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'Noto Sans Arabic','DejaVu Sans',Arial,sans-serif;font-size:11pt;color:#1e293b;line-height:1.6;}
+  @page{size:A4;margin:18mm 16mm;}
+  .wrap{max-width:900px;margin:0 auto;padding:14px;}
+  h1{font-size:19pt;color:#0f2b4a;margin-bottom:2px;}
+  h2{font-size:13pt;color:#14508a;margin:18px 0 8px;border-bottom:1px solid #e2e8f0;padding-bottom:4px;}
+  .sub{color:#475569;font-size:10pt;}
+  .disc{border:2px solid #b45309;background:#fffbeb;color:#7c2d12;border-radius:8px;padding:12px 14px;margin:12px 0 18px;font-size:10pt;}
+  .def{border:1px solid #e2e8f0;border-radius:10px;padding:14px 16px;margin-bottom:12px;}
+  .def .ref{font-size:10pt;color:#64748b;font-weight:700;}
+  .def h3{font-size:12pt;color:#0f2b4a;margin:2px 0 6px;}
+  .def dl{display:grid;grid-template-columns:150px 1fr;gap:4px 12px;font-size:10pt;margin-top:6px;}
+  .def dt{color:#64748b;font-weight:600;} .def dd{color:#1e293b;}
+  .cls{display:inline-block;font-size:9pt;font-weight:700;padding:2px 9px;border-radius:999px;}
+  .cls.material_weakness{background:#fee2e2;color:#991b1b;}
+  .cls.significant_deficiency{background:#ffedd5;color:#9a3412;}
+  .cls.other_deficiency{background:#e0f2fe;color:#075985;}
+  .meta{color:#64748b;font-size:9pt;margin-top:20px;border-top:1px solid #e2e8f0;padding-top:8px;}
+  .empty{color:#94a3b8;font-size:10pt;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Management Letter</h1>
+  <div class="sub">{{ L.engagement.engagement_code }} — {{ L.engagement.title }} · {{ L.engagement.period_start }} → {{ L.engagement.period_end }}</div>
+
+  <div class="disc"><strong>ISA 265 — Communication of deficiencies in internal control.</strong><br>{{ L.disclaimer }}</div>
+
+  <h2>Material weaknesses ({{ L.groups.material_weakness|length }})</h2>
+  {% if L.groups.material_weakness %}
+    {% for d in L.groups.material_weakness %}
+    <div class="def">
+      <div class="ref">{{ d.reference }} · {{ d.area_display }}</div>
+      <h3>{{ d.title }} <span class="cls {{ d.classification }}">{{ d.classification_display }}</span></h3>
+      {% if d.description %}<div>{{ d.description|linebreaksbr }}</div>{% endif %}
+      <dl>
+        {% if d.potential_effect %}<dt>Potential effect</dt><dd>{{ d.potential_effect }}</dd>{% endif %}
+        {% if d.recommendation %}<dt>Recommendation</dt><dd>{{ d.recommendation }}</dd>{% endif %}
+        {% if d.management_response %}<dt>Management response</dt><dd>{{ d.management_response }}</dd>{% endif %}
+        {% if d.management_action_owner %}<dt>Action owner</dt><dd>{{ d.management_action_owner }}</dd>{% endif %}
+        {% if d.target_date %}<dt>Target date</dt><dd>{{ d.target_date }}</dd>{% endif %}
+        <dt>Status</dt><dd>{{ d.status_display }}</dd>
+      </dl>
+    </div>
+    {% endfor %}
+  {% else %}<div class="empty">None identified.</div>{% endif %}
+  <h2>Significant deficiencies ({{ L.groups.significant_deficiency|length }})</h2>
+  {% if L.groups.significant_deficiency %}
+    {% for d in L.groups.significant_deficiency %}
+    <div class="def">
+      <div class="ref">{{ d.reference }} · {{ d.area_display }}</div>
+      <h3>{{ d.title }} <span class="cls {{ d.classification }}">{{ d.classification_display }}</span></h3>
+      {% if d.description %}<div>{{ d.description|linebreaksbr }}</div>{% endif %}
+      <dl>
+        {% if d.potential_effect %}<dt>Potential effect</dt><dd>{{ d.potential_effect }}</dd>{% endif %}
+        {% if d.recommendation %}<dt>Recommendation</dt><dd>{{ d.recommendation }}</dd>{% endif %}
+        {% if d.management_response %}<dt>Management response</dt><dd>{{ d.management_response }}</dd>{% endif %}
+        {% if d.management_action_owner %}<dt>Action owner</dt><dd>{{ d.management_action_owner }}</dd>{% endif %}
+        {% if d.target_date %}<dt>Target date</dt><dd>{{ d.target_date }}</dd>{% endif %}
+        <dt>Status</dt><dd>{{ d.status_display }}</dd>
+      </dl>
+    </div>
+    {% endfor %}
+  {% else %}<div class="empty">None identified.</div>{% endif %}
+  <h2>Other deficiencies ({{ L.groups.other_deficiency|length }})</h2>
+  {% if L.groups.other_deficiency %}
+    {% for d in L.groups.other_deficiency %}
+    <div class="def">
+      <div class="ref">{{ d.reference }} · {{ d.area_display }}</div>
+      <h3>{{ d.title }} <span class="cls {{ d.classification }}">{{ d.classification_display }}</span></h3>
+      {% if d.description %}<div>{{ d.description|linebreaksbr }}</div>{% endif %}
+      <dl>
+        {% if d.potential_effect %}<dt>Potential effect</dt><dd>{{ d.potential_effect }}</dd>{% endif %}
+        {% if d.recommendation %}<dt>Recommendation</dt><dd>{{ d.recommendation }}</dd>{% endif %}
+        {% if d.management_response %}<dt>Management response</dt><dd>{{ d.management_response }}</dd>{% endif %}
+        {% if d.management_action_owner %}<dt>Action owner</dt><dd>{{ d.management_action_owner }}</dd>{% endif %}
+        {% if d.target_date %}<dt>Target date</dt><dd>{{ d.target_date }}</dd>{% endif %}
+        <dt>Status</dt><dd>{{ d.status_display }}</dd>
+      </dl>
+    </div>
+    {% endfor %}
+  {% else %}<div class="empty">None identified.</div>{% endif %}
+
+  <div class="meta">Generated {{ L.generated_at }} · advisory — not an audit opinion · {{ L.counts.total }} deficiency(ies)</div>
+</div>
+</body>
+</html>

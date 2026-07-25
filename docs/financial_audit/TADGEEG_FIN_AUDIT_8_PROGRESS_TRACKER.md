@@ -35,7 +35,7 @@
 | **8F‑part** | Fraud (ISA 240) | Frontend | 🔄 مؤجّلة | مدخلات **قائمة** `List[FraudRiskFactor]` (واجهة أعقد) |
 | **8G** | Readiness Generate & Export UI | Frontend | ✅ **Done** | `audit/readiness-generate/` · `generate_for_engagement` + تصدير 5D (JSON/HTML/PDF) |
 | **9A** | Financial Statements Review (IAS 1) | Full (خلفية+واجهة) | ✅ **Done** | `audit/financial-statements/` · اشتقاق BS/IS من TB+mappings · نسب · مقارنة سنوية · كشف أخطاء التصنيف · 23 اختبارًا · بلا migration |
-| **9B** | Management Letter (ISA 265) | Full | ⬜ Pending | فجوة حقيقية |
+| **9B** | Management Letter (ISA 265) | Full | ✅ **Done** | `audit/management-letter/` · سجلّ أوجه ضعف + استجابة الإدارة + توليد الخطاب (JSON/HTML) · 19 اختبارًا · migration 0029 |
 | **9C** | External Confirmations (ISA 505) | Full | ✅ **Done** | `audit/confirmations/` + صفحة رد عامة `/confirm/<token>/` · إرسال/تسجيل/مطابقة/فرق · 24 اختبارًا · migration 0028 |
 | **9D** | Inventory (ISA 501) + Fixed Assets + Payroll | Full | ⬜ Pending | فجوة حقيقية |
 
@@ -51,10 +51,11 @@
 | 2026‑07‑25 | 8E/8F (part) | 🔄 المتبقّي: ISA 300 · 330 · 240 (مدخلات قائمة) مؤجّل |
 | 2026‑07‑25 | 9A | ✅ مراجعة القوائم المالية (IAS 1) — خدمة + API + واجهة مصقولة (23 اختبارًا) |
 | 2026‑07‑25 | 9C | ✅ التأكيدات الخارجية (ISA 505) — نموذج + خدمة + API + واجهة مدقّق + **صفحة رد عامة برمز آمن** (24 اختبارًا) |
+| 2026‑07‑25 | 9B | ✅ خطاب الإدارة (ISA 265) — سجلّ أوجه ضعف الرقابة + توليد الخطاب (JSON/HTML) (19 اختبارًا) |
 
 ---
 
 ### الخطوة التالية المقترحة
-- **9B** خطاب الإدارة (ISA 265) — تجميع أوجه ضعف الرقابة + توليد الخطاب.
-- ثم **9D** المخزون/الأصول/الرواتب.
-- والمؤجّل: واجهات **ISA 300/330/240** (list-builders).
+- **9D** المخزون (ISA 501) / الأصول الثابتة / الرواتب — آخر فجوة كبرى.
+- المؤجّل: واجهات **ISA 300/330/240** (list-builders).
+- تحسينات: PDF لخطاب الإدارة · ربط ردود التأكيدات بأدلة 6A · إرسال بريد.

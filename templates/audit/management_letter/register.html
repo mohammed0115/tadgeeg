@@ -1,0 +1,111 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Management Letter" %}{% endblock %}
+{% block nav_management_letter %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/modules/_shared.html" %}
+  .cls{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:700;}
+  .cls.material_weakness{background:#fee2e2;color:#991b1b;} .cls.significant_deficiency{background:#ffedd5;color:#9a3412;}
+  .cls.other_deficiency{background:#e0f2fe;color:#075985;}
+  .dstat{font-size:10px;font-weight:700;color:#475569;}
+  .fld input,.fld select,.fld textarea{width:100%;border:1px solid var(--border,#cbd5e1);border-radius:8px;padding:8px;font-size:12px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;} @media(max-width:640px){.row2{grid-template-columns:1fr;}}
+  details.def{border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:8px;}
+  details.def summary{cursor:pointer;font-weight:700;color:#0f2b4a;font-size:13px;list-style:none;}
+  details.def summary::-webkit-details-marker{display:none;}
+{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "Management Letter" %}</div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Management Letter" %} · خطاب الإدارة</div>
+      <div class="ev-sub">{% trans "Record internal-control deficiencies (ISA 265), capture management responses, and generate the letter." %}</div>
+    </div>
+    {% if engagement %}
+    <div style="display:flex;gap:8px;">
+      <a class="runbtn" style="text-decoration:none;display:inline-block;background:#166534;" href="/api/v1/audit/engagements/{{ engagement.id }}/management-letter/?format=html">{% trans "Export HTML" %}</a>
+      <a class="runbtn" style="text-decoration:none;display:inline-block;background:#0369a1;" href="/api/v1/audit/engagements/{{ engagement.id }}/management-letter/?format=json">{% trans "JSON" %}</a>
+    </div>
+    {% endif %}
+  </div>
+  {% include "audit/modules/_picker.html" %}
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="ok">{{ notice }}</div>{% endif %}
+
+  {% if engagement %}
+  <div class="advisory">{% trans "This communicates deficiencies to those charged with governance (ISA 265). It is not an audit opinion." %}</div>
+
+  <div class="kpis">
+    <div class="kpi alert"><div class="lbl">{% trans "Material weakness" %}</div><div class="val">{{ counts.material_weakness|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Significant" %}</div><div class="val">{{ counts.significant_deficiency|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Other" %}</div><div class="val">{{ counts.other_deficiency|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Total" %}</div><div class="val">{{ counts.total|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Remediated" %}</div><div class="val">{{ counts.status_remediated|default:0 }}</div></div>
+  </div>
+
+  <div class="card" data-sec="create">
+    <h3>{% trans "Record a deficiency" %}</h3>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="engagement" value="{{ engagement.id }}">
+      <input type="hidden" name="action" value="create">
+      <div class="row2">
+        <div class="fld"><label>{% trans "Title" %}</label><input type="text" name="title" required></div>
+        <div class="fld"><label>{% trans "Area" %}</label><select name="area">{% for v,l in area_choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="row2">
+        <div class="fld"><label>{% trans "Classification" %}</label><select name="classification">{% for v,l in classification_choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="fld"><label>{% trans "Description" %}</label><textarea name="description" rows="2"></textarea></div>
+      <div class="row2">
+        <div class="fld"><label>{% trans "Potential effect" %}</label><textarea name="potential_effect" rows="2"></textarea></div>
+        <div class="fld"><label>{% trans "Recommendation" %}</label><textarea name="recommendation" rows="2"></textarea></div>
+      </div>
+      <button type="submit" class="runbtn">{% trans "Add deficiency" %}</button>
+    </form>
+  </div>
+
+  <div class="card" data-sec="register">
+    <h3>{% trans "Deficiency register" %}</h3>
+    {% if deficiencies %}
+    {% for d in deficiencies %}
+    <details class="def">
+      <summary>{{ d.reference }} — {{ d.title }} <span class="cls {{ d.classification }}">{{ d.get_classification_display }}</span> <span class="dstat">· {{ d.get_area_display }} · {{ d.get_status_display }}</span></summary>
+      <div style="margin-top:8px;font-size:12px;color:#334155;">
+        {% if d.description %}<p><strong>{% trans "Description" %}:</strong> {{ d.description }}</p>{% endif %}
+        {% if d.potential_effect %}<p><strong>{% trans "Potential effect" %}:</strong> {{ d.potential_effect }}</p>{% endif %}
+        {% if d.recommendation %}<p><strong>{% trans "Recommendation" %}:</strong> {{ d.recommendation }}</p>{% endif %}
+        {% if d.management_response %}<p><strong>{% trans "Management response" %}:</strong> {{ d.management_response }} {% if d.management_action_owner %}({{ d.management_action_owner }}{% if d.target_date %}, {{ d.target_date }}{% endif %}){% endif %}</p>{% endif %}
+      </div>
+      <div style="margin-top:10px;display:flex;gap:16px;flex-wrap:wrap;">
+        <form method="post" style="flex:1;min-width:260px;">
+          {% csrf_token %}
+          <input type="hidden" name="engagement" value="{{ engagement.id }}">
+          <input type="hidden" name="action" value="respond">
+          <input type="hidden" name="deficiency" value="{{ d.id }}">
+          <div class="fld"><label>{% trans "Management response" %}</label><textarea name="management_response" rows="2">{{ d.management_response }}</textarea></div>
+          <div class="row2">
+            <div class="fld"><label>{% trans "Owner" %}</label><input type="text" name="owner" value="{{ d.management_action_owner }}"></div>
+            <div class="fld"><label>{% trans "Target date" %}</label><input type="date" name="target_date" value="{{ d.target_date|date:'Y-m-d' }}"></div>
+          </div>
+          <button type="submit" class="runbtn" style="padding:5px 12px;font-size:11px;">{% trans "Save response" %}</button>
+        </form>
+        <form method="post" style="align-self:end;">
+          {% csrf_token %}
+          <input type="hidden" name="engagement" value="{{ engagement.id }}">
+          <input type="hidden" name="action" value="status">
+          <input type="hidden" name="deficiency" value="{{ d.id }}">
+          <div class="fld"><label>{% trans "Status" %}</label>
+            <select name="status" onchange="this.form.submit()">{% for v,l in status_choices %}<option value="{{ v }}" {% if d.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select>
+          </div>
+        </form>
+      </div>
+    </details>
+    {% endfor %}
+    {% else %}<div class="empty">{% trans "No deficiencies recorded yet." %}</div>{% endif %}
+  </div>
+  {% else %}
+  <div class="empty">{% trans "Choose an engagement to build its management letter." %}</div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -12,8 +12,15 @@ dataclass), runs the engine on submit, and shows a polished result. Advisory
 only: results are auditor aids, never a formal audit opinion, and nothing is
 persisted or written to the ledger.
 
-ISA 300 planning and ISA 330/240 (list-driven inputs) are intentionally deferred
-— see the progress tracker.
+Phase 8H adds the three list-driven ISA assessments:
+
+  * ISA 300 Planning  → ``isa300_planning.build_audit_strategy`` / ``build_audit_plan``
+  * ISA 330 Responses → ``isa330_risk_responses.map_responses`` (AssessedRisk list)
+  * ISA 240 Fraud     → ``isa240_fraud_response.assess_fraud_responses`` (factor list)
+
+The list-builder pages accept parallel-array rows (``name[]``) so several risks /
+factors can be entered and mapped in one deterministic pass. Still stateless: no
+model, no migration, no ledger writes.
 """
 from __future__ import annotations
 
@@ -186,3 +193,150 @@ def estimates(request):
         categories=["provision", "fair_value", "depreciation", "ecl", "other"],
         methods=["point", "range", "discounted_cash_flow", "model_based"],
         scale=[1, 2, 3, 4, 5]))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ISA 300 — Planning (overall strategy + detailed plan)
+# ─────────────────────────────────────────────────────────────────────────────
+_INDUSTRIES = ["retail", "manufacturing", "services", "banking", "insurance",
+               "construction", "non_profit", "technology", "other"]
+
+
+@login_required(login_url="/login/")
+def planning(request):
+    """ISA 300 — build an overall audit strategy and a detailed plan."""
+    denied = _guard(request)
+    if denied:
+        return denied
+    from apps.audit.services import isa300_planning as pl
+
+    form = {"organization_name": "", "reporting_period": "", "industry": "retail",
+            "revenue_base": "0", "is_listed": False, "is_first_year": False,
+            "prior_year_modification": False, "has_internal_audit": False,
+            "has_subsidiaries": False, "risk_areas": ""}
+    strategy = plan = error = None
+    if request.method == "POST":
+        form.update({
+            "organization_name": request.POST.get("organization_name", ""),
+            "reporting_period": request.POST.get("reporting_period", ""),
+            "industry": request.POST.get("industry", "retail"),
+            "revenue_base": request.POST.get("revenue_base", "0"),
+            "is_listed": request.POST.get("is_listed") == "on",
+            "is_first_year": request.POST.get("is_first_year") == "on",
+            "prior_year_modification": request.POST.get("prior_year_modification") == "on",
+            "has_internal_audit": request.POST.get("has_internal_audit") == "on",
+            "has_subsidiaries": request.POST.get("has_subsidiaries") == "on",
+            "risk_areas": request.POST.get("risk_areas", ""),
+        })
+        risk_areas = tuple(line.strip() for line in form["risk_areas"].splitlines()
+                           if line.strip())
+        try:
+            ctx = pl.EngagementContext(
+                organization_name=form["organization_name"] or "the entity",
+                reporting_period=form["reporting_period"] or "the period",
+                industry=form["industry"], revenue_base=_dec(form["revenue_base"]),
+                is_listed=form["is_listed"], is_first_year=form["is_first_year"],
+                prior_year_modification=form["prior_year_modification"],
+                has_internal_audit=form["has_internal_audit"],
+                has_subsidiaries=form["has_subsidiaries"],
+                risk_areas_known_in_advance=risk_areas)
+            strat = pl.build_audit_strategy(ctx)
+            strategy = strat.to_dict()
+            plan = pl.build_audit_plan(strat).to_dict()
+        except Exception as exc:
+            error = str(exc)
+
+    return render(request, "audit/isa/planning.html", _ctx(
+        request, "audit", form=form, strategy=strategy, plan=plan, error=error,
+        industries=_INDUSTRIES))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ISA 330 — Responses to Assessed Risks (AssessedRisk list-builder)
+# ─────────────────────────────────────────────────────────────────────────────
+_ASSERTIONS = ["existence", "completeness", "accuracy", "cutoff",
+               "classification", "valuation", "rights_obligations", "presentation"]
+_IR_LEVELS = ["low", "medium", "high", "significant"]
+_CR_LEVELS = ["low", "medium", "high"]
+
+
+def _parse_rows(request, *names):
+    """Zip parallel POST arrays (name[]) into per-row dicts."""
+    columns = {n: request.POST.getlist(f"{n}[]") for n in names}
+    length = max((len(v) for v in columns.values()), default=0)
+    rows = []
+    for i in range(length):
+        rows.append({n: (columns[n][i] if i < len(columns[n]) else "") for n in names})
+    return rows
+
+
+@login_required(login_url="/login/")
+def responses(request):
+    """ISA 330 — map assessed risks to responsive procedures."""
+    denied = _guard(request)
+    if denied:
+        return denied
+    from apps.audit.services import isa330_risk_responses as rr
+
+    rows, mappings, error = [], None, None
+    if request.method == "POST":
+        raw = _parse_rows(request, "risk_name", "assertion", "inherent_risk",
+                          "control_risk", "is_significant", "is_fraud")
+        rows = [r for r in raw if r["risk_name"].strip()]
+        if not rows:
+            error = "Add at least one assessed risk."
+        else:
+            try:
+                risks = [rr.AssessedRisk(
+                    name=r["risk_name"].strip(),
+                    assertion=r["assertion"] or "existence",
+                    inherent_risk=r["inherent_risk"] or "medium",
+                    control_risk=r["control_risk"] or "medium",
+                    is_significant_risk=(r["is_significant"] == "yes"),
+                    is_fraud_risk=(r["is_fraud"] == "yes")) for r in rows]
+                mappings = [m.to_dict() for m in rr.map_responses(risks)]
+            except Exception as exc:
+                error = str(exc)
+
+    return render(request, "audit/isa/responses.html", _ctx(
+        request, "audit", rows=rows, mappings=mappings, error=error,
+        assertions=_ASSERTIONS, ir_levels=_IR_LEVELS, cr_levels=_CR_LEVELS))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ISA 240 — Fraud response plan (FraudRiskFactor list-builder)
+# ─────────────────────────────────────────────────────────────────────────────
+_SEVERITIES = ["low", "medium", "high"]
+_SIGNALS = ["", "duplicate", "benford", "vendor_risk", "behavioral", "structural"]
+
+
+@login_required(login_url="/login/")
+def fraud(request):
+    """ISA 240 — build the fraud response plan from identified factors."""
+    denied = _guard(request)
+    if denied:
+        return denied
+    from apps.audit.services import isa240_fraud_response as fr
+
+    rows, result, error = [], None, None
+    if request.method == "POST":
+        raw = _parse_rows(request, "factor_name", "description", "severity",
+                          "assertions", "detected_by")
+        rows = [r for r in raw if r["factor_name"].strip()]
+        try:
+            factors = [fr.FraudRiskFactor(
+                name=r["factor_name"].strip(), description=r["description"].strip(),
+                severity=r["severity"] or "medium",
+                affected_assertions=tuple(
+                    a.strip() for a in r["assertions"].split(",") if a.strip()),
+                detected_by=r["detected_by"]) for r in rows]
+            result = fr.assess_fraud_responses(factors).to_dict()
+            result["overall_label"] = result["overall_severity"].replace("_", " ").title()
+            for p in result["procedures"] + result["mgmt_override"]:
+                p["label"] = p["name"].replace("_", " ").capitalize()
+        except Exception as exc:
+            error = str(exc)
+
+    return render(request, "audit/isa/fraud.html", _ctx(
+        request, "audit", rows=rows, result=result, error=error,
+        severities=_SEVERITIES, signals=_SIGNALS))

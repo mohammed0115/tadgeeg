@@ -128,6 +128,10 @@ urlpatterns = [
     path('audit/isa/risk/', isa_assessment_views.risk_assessment, name='isa_risk'),
     path('audit/isa/going-concern/', isa_assessment_views.going_concern, name='isa_going_concern'),
     path('audit/isa/estimates/', isa_assessment_views.estimates, name='isa_estimates'),
+    # TADGEEG-FIN-AUDIT-8H — ISA 300 planning + 330 responses + 240 fraud (list-builders)
+    path('audit/isa/planning/', isa_assessment_views.planning, name='isa_planning'),
+    path('audit/isa/responses/', isa_assessment_views.responses, name='isa_responses'),
+    path('audit/isa/fraud/', isa_assessment_views.fraud, name='isa_fraud'),
 
     # TADGEEG-FIN-AUDIT-9A — Financial Statements review (IAS 1)
     path('audit/financial-statements/', financial_statements_views.financial_statements, name='financial_statements'),

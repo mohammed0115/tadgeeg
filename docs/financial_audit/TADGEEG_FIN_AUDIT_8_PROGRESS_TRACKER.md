@@ -30,9 +30,8 @@
 | **8C** | General Ledger Review (رفع + تشغيل مخاطر 2B + مراجعة 3B) | Frontend | ✅ **Done** | `audit/general-ledger/` · `analyze_import` + `review_finding` |
 | **8D** | SAD Dashboard (ملخّص + بنود + إعادة حساب) | Frontend | ✅ **Done** | `audit/sad/` · `recalculate_for_engagement` |
 | **8E** | Risk Assessment (ISA 315) — نموذج إدخال + محرّك | Frontend | ✅ **Done** | `audit/isa/risk/` · `risk_decomposition.assess` · IR/CR/DR + عدّادات + audit risk % · تصميم مصقول |
-| **8E‑part** | Planning (ISA 300) + Responses (ISA 330) | Frontend | 🔄 مؤجّلة | 300 يحتاج context→strategy→plan · 330 مدخلات **قائمة** `List[AssessedRisk]` (واجهة أعقد) |
 | **8F** | Going Concern (ISA 570) + Estimates (ISA 540) — نماذج إدخال + محرّكات | Frontend | ✅ **Done** | `audit/isa/going-concern/` + `audit/isa/estimates/` · تصميم مصقول |
-| **8F‑part** | Fraud (ISA 240) | Frontend | 🔄 مؤجّلة | مدخلات **قائمة** `List[FraudRiskFactor]` (واجهة أعقد) |
+| **8H** | Planning (ISA 300) + Responses (ISA 330) + Fraud (ISA 240) — **list-builders** | Frontend | ✅ **Done** | `audit/isa/planning/` + `audit/isa/responses/` + `audit/isa/fraud/` · بناء قوائم بصفوف `name[]` · تصعيد المخاطر + إجراءات §32 · 11 اختبارًا · بلا model/migration |
 | **8G** | Readiness Generate & Export UI | Frontend | ✅ **Done** | `audit/readiness-generate/` · `generate_for_engagement` + تصدير 5D (JSON/HTML/PDF) |
 | **9A** | Financial Statements Review (IAS 1) | Full (خلفية+واجهة) | ✅ **Done** | `audit/financial-statements/` · اشتقاق BS/IS من TB+mappings · نسب · مقارنة سنوية · كشف أخطاء التصنيف · 23 اختبارًا · بلا migration |
 | **9B** | Management Letter (ISA 265) | Full | ✅ **Done** | `audit/management-letter/` · سجلّ أوجه ضعف + استجابة الإدارة + توليد الخطاب (JSON/HTML) · 19 اختبارًا · migration 0029 |
@@ -53,9 +52,10 @@
 | 2026‑07‑25 | 9C | ✅ التأكيدات الخارجية (ISA 505) — نموذج + خدمة + API + واجهة مدقّق + **صفحة رد عامة برمز آمن** (24 اختبارًا) |
 | 2026‑07‑25 | 9B | ✅ خطاب الإدارة (ISA 265) — سجلّ أوجه ضعف الرقابة + توليد الخطاب (JSON/HTML) (19 اختبارًا) |
 | 2026‑07‑27 | 9D | ✅ الاختبارات الأساسية (ISA 501/الأصول/الرواتب) — سجلّ موحّد + إعادة احتساب حتمية + كشف الفروقات + تبويبات + API + واجهة مصقولة (24 اختبارًا · migration 0030) |
+| 2026‑07‑27 | 8H | ✅ ISA 300 (تخطيط) + ISA 330 (استجابات) + ISA 240 (احتيال) — **list-builders** بصفوف `name[]` · تصعيد المخاطر + إجراءات §32 · بلا model/migration (11 اختبارًا) — **اكتمل مسار ISA بالكامل** |
 
 ---
 
 ### الخطوة التالية المقترحة
-- المؤجّل: واجهات **ISA 300/330/240** (list-builders) — آخر ما تبقّى من الواجهات.
-- تحسينات: استيراد CSV لكشوف الجرد/سجل الأصول إلى سجلّ الاختبارات · ربط الفروقات بأدلة 6A · PDF لخطاب الإدارة · إرسال بريد.
+- **اكتملت كل واجهات خارطة الطريق** (8A–8H · 9A–9D). لا صفحات مؤجّلة متبقّية.
+- تحسينات اختيارية فقط: استيراد CSV لكشوف الجرد/سجل الأصول · ربط الفروقات/ردود التأكيدات بأدلة 6A · PDF لخطاب الإدارة والخطة · إرسال بريد · حفظ الاستراتيجية/الخطة على صف الارتباط.

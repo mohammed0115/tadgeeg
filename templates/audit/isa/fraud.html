@@ -1,0 +1,107 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Fraud" %}{% endblock %}
+{% block nav_isa %}active{% endblock %}
+{% block extra_styles %}{% include "audit/isa/_style.html" %}{% endblock %}
+{% block content %}
+<div class="isa-wrap">
+  <div class="isa-crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "ISA Assessments" %}</div>
+
+  <div class="isa-hero">
+    <span class="std">ISA 240</span>
+    <h1>{% trans "Fraud Response Plan" %}</h1>
+    <p>{% trans "List the identified fraud risk factors; the engine builds the responsive procedures and always includes the ISA 240 §32 management-override procedures — even when no specific factor is entered." %}</p>
+  </div>
+
+  {% with active="fraud" %}{% include "audit/isa/_nav.html" %}{% endwith %}
+
+  <div class="advisory"><b>{% trans "Advisory only" %}</b> — {% trans "a deterministic ISA 240 response aid; not an audit conclusion or opinion." %}</div>
+  {% if error %}<div class="err" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:12px;padding:11px 15px;margin-bottom:14px;">{{ error }}</div>{% endif %}
+
+  <form method="post" class="isa-card">
+    {% csrf_token %}
+    <h3>{% trans "Identified fraud risk factors" %}</h3>
+    <div class="sub">{% trans "Optional — the §32 management-override procedures are always produced. Link a factor to a detection signal to pull its catalogue procedures." %}</div>
+
+    <div id="rows">
+      {% for r in rows %}
+      <div class="lb-row">
+        <button type="button" class="rm" onclick="this.closest('.lb-row').remove()">{% trans "Remove" %}</button>
+        <div class="lb-grid">
+          <div class="fld"><label>{% trans "Factor name" %}</label><input type="text" name="factor_name[]" value="{{ r.factor_name }}"></div>
+          <div class="fld"><label>{% trans "Severity" %}</label><select name="severity[]">{% for s in severities %}<option value="{{ s }}" {% if r.severity == s %}selected{% endif %}>{{ s|capfirst }}</option>{% endfor %}</select></div>
+        </div>
+        <div class="fld"><label>{% trans "Description" %}</label><input type="text" name="description[]" value="{{ r.description }}"></div>
+        <div class="lb-grid">
+          <div class="fld"><label>{% trans "Affected assertions (comma-separated)" %}</label><input type="text" name="assertions[]" value="{{ r.assertions }}" placeholder="existence, cutoff"></div>
+          <div class="fld"><label>{% trans "Detected by (signal)" %}</label><select name="detected_by[]">{% for s in signals %}<option value="{{ s }}" {% if r.detected_by == s %}selected{% endif %}>{% if s %}{{ s|cut:"_"|capfirst }}{% else %}—{% endif %}</option>{% endfor %}</select></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <button type="button" class="lb-add" onclick="addRow()">+ {% trans "Add factor" %}</button><br>
+    <button type="submit" class="isa-btn">{% trans "Build response plan" %}</button>
+  </form>
+
+  {% if result %}
+  <div class="res-hero sev-{{ result.overall_severity }}">
+    <div class="cap">{% trans "Overall fraud severity" %}</div>
+    <div class="sevlabel" style="font-size:22px;">{{ result.overall_label }}</div>
+  </div>
+
+  {% if result.procedures %}
+  <div class="isa-card">
+    <h3>{% trans "Factor-specific procedures" %} <span class="tag">{{ result.procedures|length }}</span></h3>
+    <div style="overflow-x:auto;">
+    <table class="isa-tbl">
+      <thead><tr><th>{% trans "Procedure" %}</th><th>{% trans "Description" %}</th><th>{% trans "Ref" %}</th></tr></thead>
+      <tbody>
+      {% for p in result.procedures %}
+      <tr><td><b>{{ p.label }}</b> {% if p.is_required %}<span class="tag req">{% trans "required" %}</span>{% else %}<span class="tag opt">{% trans "consider" %}</span>{% endif %}</td><td>{{ p.description }}</td><td class="para">{{ p.isa240_para }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="isa-card">
+    <h3>{% trans "Management-override procedures" %} · ISA 240 §32</h3>
+    <div class="sub">{% trans "Mandatory regardless of specific factors — management override is a presumed risk." %}</div>
+    <div style="overflow-x:auto;">
+    <table class="isa-tbl">
+      <thead><tr><th>{% trans "Procedure" %}</th><th>{% trans "Description" %}</th><th>{% trans "Ref" %}</th></tr></thead>
+      <tbody>
+      {% for p in result.mgmt_override %}
+      <tr><td><b>{{ p.label }}</b></td><td>{{ p.description }}</td><td class="para">{{ p.isa240_para }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<template id="rowTpl">
+  <div class="lb-row">
+    <button type="button" class="rm" onclick="this.closest('.lb-row').remove()">{% trans "Remove" %}</button>
+    <div class="lb-grid">
+      <div class="fld"><label>{% trans "Factor name" %}</label><input type="text" name="factor_name[]"></div>
+      <div class="fld"><label>{% trans "Severity" %}</label><select name="severity[]">{% for s in severities %}<option value="{{ s }}" {% if s == 'medium' %}selected{% endif %}>{{ s|capfirst }}</option>{% endfor %}</select></div>
+    </div>
+    <div class="fld"><label>{% trans "Description" %}</label><input type="text" name="description[]"></div>
+    <div class="lb-grid">
+      <div class="fld"><label>{% trans "Affected assertions (comma-separated)" %}</label><input type="text" name="assertions[]" placeholder="existence, cutoff"></div>
+      <div class="fld"><label>{% trans "Detected by (signal)" %}</label><select name="detected_by[]">{% for s in signals %}<option value="{{ s }}">{% if s %}{{ s|cut:"_"|capfirst }}{% else %}—{% endif %}</option>{% endfor %}</select></div>
+    </div>
+  </div>
+</template>
+<script>
+  function addRow(){
+    var t=document.getElementById('rowTpl');
+    document.getElementById('rows').appendChild(t.content.cloneNode(true));
+  }
+  if(!document.querySelector('#rows .lb-row')){addRow();}
+</script>
+{% endblock %}

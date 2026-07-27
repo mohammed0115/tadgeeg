@@ -1,0 +1,102 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Responses" %}{% endblock %}
+{% block nav_isa %}active{% endblock %}
+{% block extra_styles %}{% include "audit/isa/_style.html" %}{% endblock %}
+{% block content %}
+<div class="isa-wrap">
+  <div class="isa-crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "ISA Assessments" %}</div>
+
+  <div class="isa-hero">
+    <span class="std">ISA 330</span>
+    <h1>{% trans "Responses to Assessed Risks" %}</h1>
+    <p>{% trans "Enter the assessed risks of material misstatement; the engine maps each to responsive procedures — nature, timing, extent, and staffing — escalating significant and fraud risks." %}</p>
+  </div>
+
+  {% with active="resp" %}{% include "audit/isa/_nav.html" %}{% endwith %}
+
+  <div class="advisory"><b>{% trans "Advisory only" %}</b> — {% trans "a deterministic ISA 330 mapping aid; not an audit conclusion or opinion." %}</div>
+  {% if error %}<div class="err" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:12px;padding:11px 15px;margin-bottom:14px;">{{ error }}</div>{% endif %}
+
+  <form method="post" class="isa-card">
+    {% csrf_token %}
+    <h3>{% trans "Assessed risk register" %}</h3>
+    <div class="sub">{% trans "Add one row per risk (ISA 315 output). Combined risk = max(inherent, control)." %}</div>
+
+    <div id="rows">
+      {% for r in rows %}
+      <div class="lb-row">
+        <button type="button" class="rm" onclick="this.closest('.lb-row').remove()">{% trans "Remove" %}</button>
+        <div class="lb-grid">
+          <div class="fld"><label>{% trans "Risk name" %}</label><input type="text" name="risk_name[]" value="{{ r.risk_name }}"></div>
+          <div class="fld"><label>{% trans "Assertion" %}</label><select name="assertion[]">{% for a in assertions %}<option value="{{ a }}" {% if r.assertion == a %}selected{% endif %}>{{ a|cut:"_"|capfirst }}</option>{% endfor %}</select></div>
+        </div>
+        <div class="lb-grid-3">
+          <div class="fld"><label>{% trans "Inherent risk" %}</label><select name="inherent_risk[]">{% for l in ir_levels %}<option value="{{ l }}" {% if r.inherent_risk == l %}selected{% endif %}>{{ l|capfirst }}</option>{% endfor %}</select></div>
+          <div class="fld"><label>{% trans "Control risk" %}</label><select name="control_risk[]">{% for l in cr_levels %}<option value="{{ l }}" {% if r.control_risk == l %}selected{% endif %}>{{ l|capfirst }}</option>{% endfor %}</select></div>
+          <div class="fld"><label>{% trans "Flags" %}</label>
+            <div style="display:flex;gap:8px;">
+              <select name="is_significant[]" title="{% trans 'Significant risk' %}"><option value="no" {% if r.is_significant != 'yes' %}selected{% endif %}>{% trans "Sig: no" %}</option><option value="yes" {% if r.is_significant == 'yes' %}selected{% endif %}>{% trans "Sig: yes" %}</option></select>
+              <select name="is_fraud[]" title="{% trans 'Fraud risk' %}"><option value="no" {% if r.is_fraud != 'yes' %}selected{% endif %}>{% trans "Fraud: no" %}</option><option value="yes" {% if r.is_fraud == 'yes' %}selected{% endif %}>{% trans "Fraud: yes" %}</option></select>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <button type="button" class="lb-add" onclick="addRow()">+ {% trans "Add risk" %}</button><br>
+    <button type="submit" class="isa-btn">{% trans "Map responses" %}</button>
+  </form>
+
+  {% if mappings %}
+  <div class="isa-card">
+    <h3>{% trans "Responsive procedures" %} <span class="tag">{{ mappings|length }}</span></h3>
+    <div style="overflow-x:auto;">
+    <table class="isa-tbl">
+      <thead><tr><th>{% trans "Risk" %}</th><th>{% trans "Nature" %}</th><th>{% trans "Timing" %}</th><th>{% trans "Extent" %}</th><th>{% trans "Staff" %}</th><th>{% trans "Rationale" %}</th></tr></thead>
+      <tbody>
+      {% for m in mappings %}
+      <tr>
+        <td><b>{{ m.risk_name }}</b></td>
+        <td>{{ m.nature }}</td>
+        <td>{{ m.timing }}</td>
+        <td><span class="tag {% if m.extent == 'increased' %}req{% else %}opt{% endif %}">{{ m.extent }}</span></td>
+        <td>{{ m.staff_seniority }}</td>
+        <td>{{ m.rationale }}<div class="para" style="margin-top:4px;">{% for p in m.isa330_paras %}{{ p }}{% if not forloop.last %} · {% endif %}{% endfor %}</div></td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<template id="rowTpl">
+  <div class="lb-row">
+    <button type="button" class="rm" onclick="this.closest('.lb-row').remove()">{% trans "Remove" %}</button>
+    <div class="lb-grid">
+      <div class="fld"><label>{% trans "Risk name" %}</label><input type="text" name="risk_name[]"></div>
+      <div class="fld"><label>{% trans "Assertion" %}</label><select name="assertion[]">{% for a in assertions %}<option value="{{ a }}">{{ a|cut:"_"|capfirst }}</option>{% endfor %}</select></div>
+    </div>
+    <div class="lb-grid-3">
+      <div class="fld"><label>{% trans "Inherent risk" %}</label><select name="inherent_risk[]">{% for l in ir_levels %}<option value="{{ l }}" {% if l == 'medium' %}selected{% endif %}>{{ l|capfirst }}</option>{% endfor %}</select></div>
+      <div class="fld"><label>{% trans "Control risk" %}</label><select name="control_risk[]">{% for l in cr_levels %}<option value="{{ l }}" {% if l == 'medium' %}selected{% endif %}>{{ l|capfirst }}</option>{% endfor %}</select></div>
+      <div class="fld"><label>{% trans "Flags" %}</label>
+        <div style="display:flex;gap:8px;">
+          <select name="is_significant[]"><option value="no">{% trans "Sig: no" %}</option><option value="yes">{% trans "Sig: yes" %}</option></select>
+          <select name="is_fraud[]"><option value="no">{% trans "Fraud: no" %}</option><option value="yes">{% trans "Fraud: yes" %}</option></select>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+  function addRow(){
+    var t=document.getElementById('rowTpl');
+    document.getElementById('rows').appendChild(t.content.cloneNode(true));
+  }
+  if(!document.querySelector('#rows .lb-row')){addRow();}
+</script>
+{% endblock %}

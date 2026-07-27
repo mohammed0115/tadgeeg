@@ -1,0 +1,86 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Planning" %}{% endblock %}
+{% block nav_isa %}active{% endblock %}
+{% block extra_styles %}{% include "audit/isa/_style.html" %}{% endblock %}
+{% block content %}
+<div class="isa-wrap">
+  <div class="isa-crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "ISA Assessments" %}</div>
+
+  <div class="isa-hero">
+    <span class="std">ISA 300</span>
+    <h1>{% trans "Audit Planning" %}</h1>
+    <p>{% trans "Capture the engagement context to derive an overall audit strategy (scope, timing, direction, resourcing) and a detailed audit plan of procedures." %}</p>
+  </div>
+
+  {% with active="plan" %}{% include "audit/isa/_nav.html" %}{% endwith %}
+
+  <div class="advisory"><b>{% trans "Advisory only" %}</b> — {% trans "a deterministic ISA 300 planning aid; not an audit conclusion or opinion." %}</div>
+  {% if error %}<div class="err" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:12px;padding:11px 15px;margin-bottom:14px;">{{ error }}</div>{% endif %}
+
+  <div class="isa-grid">
+    <form method="post" class="isa-card">
+      {% csrf_token %}
+      <h3>{% trans "Engagement context" %}</h3>
+      <div class="sub">{% trans "Facts known to the auditor at planning time (ISA 300 §7–9)." %}</div>
+      <div class="fld-row">
+        <div class="fld"><label>{% trans "Entity name" %}</label><input type="text" name="organization_name" value="{{ form.organization_name }}"></div>
+        <div class="fld"><label>{% trans "Reporting period" %}</label><input type="text" name="reporting_period" value="{{ form.reporting_period }}" placeholder="FY2026"></div>
+      </div>
+      <div class="fld-row">
+        <div class="fld"><label>{% trans "Industry" %}</label>
+          <select name="industry">{% for i in industries %}<option value="{{ i }}" {% if form.industry == i %}selected{% endif %}>{{ i|cut:"_"|capfirst }}</option>{% endfor %}</select>
+        </div>
+        <div class="fld"><label>{% trans "Revenue base" %}</label><input type="text" name="revenue_base" value="{{ form.revenue_base }}"></div>
+      </div>
+
+      <div class="isa-group-title" style="margin-top:6px;">{% trans "Circumstances" %}</div>
+      <div class="chk-grid" style="margin-bottom:14px;">
+        <label class="chk {% if form.is_listed %}on{% endif %}"><input type="checkbox" name="is_listed" {% if form.is_listed %}checked{% endif %} onchange="this.closest('label').classList.toggle('on',this.checked)"><span>{% trans "Listed / public-interest entity" %}</span></label>
+        <label class="chk {% if form.is_first_year %}on{% endif %}"><input type="checkbox" name="is_first_year" {% if form.is_first_year %}checked{% endif %} onchange="this.closest('label').classList.toggle('on',this.checked)"><span>{% trans "First-year audit (ISA 510)" %}</span></label>
+        <label class="chk {% if form.prior_year_modification %}on{% endif %}"><input type="checkbox" name="prior_year_modification" {% if form.prior_year_modification %}checked{% endif %} onchange="this.closest('label').classList.toggle('on',this.checked)"><span>{% trans "Prior-year modified opinion" %}</span></label>
+        <label class="chk {% if form.has_internal_audit %}on{% endif %}"><input type="checkbox" name="has_internal_audit" {% if form.has_internal_audit %}checked{% endif %} onchange="this.closest('label').classList.toggle('on',this.checked)"><span>{% trans "Has internal audit function" %}</span></label>
+        <label class="chk {% if form.has_subsidiaries %}on{% endif %}"><input type="checkbox" name="has_subsidiaries" {% if form.has_subsidiaries %}checked{% endif %} onchange="this.closest('label').classList.toggle('on',this.checked)"><span>{% trans "Group with subsidiaries (ISA 600)" %}</span></label>
+      </div>
+
+      <div class="fld"><label>{% trans "Known risk areas (one per line)" %}</label><textarea name="risk_areas" rows="3" placeholder="{% trans 'e.g. revenue recognition&#10;inventory valuation' %}">{{ form.risk_areas }}</textarea></div>
+      <button type="submit" class="isa-btn">{% trans "Build strategy & plan" %}</button>
+    </form>
+
+    <div>
+      {% if strategy %}
+      <div class="isa-card">
+        <h3>{% trans "Overall audit strategy" %}</h3>
+        <div class="sub">{% for p in strategy.isa_paras %}<span class="para">{{ p }}</span>{% if not forloop.last %} · {% endif %}{% endfor %}</div>
+        <div class="kv" style="flex-direction:column;gap:10px;">
+          <div><b>{% trans "Scope" %}:</b> {{ strategy.scope }}</div>
+          <div><b>{% trans "Timing" %}:</b> {{ strategy.timing }}</div>
+          <div><b>{% trans "Direction" %}:</b> {{ strategy.direction }}</div>
+          <div><b>{% trans "Materiality benchmark" %}:</b> {{ strategy.materiality_benchmark }}</div>
+          <div><b>{% trans "Resourcing" %}:</b> {{ strategy.resourcing }}</div>
+        </div>
+        <div class="isa-group-title">{% trans "Communications" %}</div>
+        {% for c in strategy.communications %}<div style="font-size:12px;color:#334155;margin-bottom:5px;">• {{ c }}</div>{% endfor %}
+      </div>
+
+      <div class="isa-card">
+        <h3>{% trans "Detailed audit plan" %}</h3>
+        <div class="sub">{% trans "Nature / timing / extent of planned procedures (ISA 300 §9)." %}</div>
+        <div style="overflow-x:auto;">
+        <table class="isa-tbl">
+          <thead><tr><th>{% trans "Procedure" %}</th><th>{% trans "Nature" %}</th><th>{% trans "Timing" %}</th><th>{% trans "Extent" %}</th></tr></thead>
+          <tbody>
+          {% for p in plan.procedures %}
+          <tr><td>{{ p.name }}</td><td>{{ p.nature }}</td><td>{{ p.timing }}</td><td><span class="tag">{{ p.extent }}</span></td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        </div>
+      </div>
+      {% else %}
+      <div class="isa-card"><div class="isa-empty">{% trans "Enter the engagement context to build the strategy and plan." %}</div></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

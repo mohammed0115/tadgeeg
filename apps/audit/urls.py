@@ -7,6 +7,7 @@ from . import views_journal_analytics as jan
 from . import views_financial_statements as vfs
 from . import views_confirmations as vcf
 from . import views_management_letter as vml
+from . import views_substantive as vst
 from . import views_rule_builder as rb
 from . import views_trial_balance as tb
 
@@ -86,6 +87,10 @@ urlpatterns = [
     path("control-deficiencies/", vml.DeficiencyListCreateView.as_view(), name="deficiency-list"),
     path("control-deficiencies/<uuid:pk>/", vml.DeficiencyDetailView.as_view(), name="deficiency-detail"),
     path("engagements/<uuid:pk>/management-letter/", vml.EngagementManagementLetterView.as_view(), name="management-letter"),
+    # TADGEEG-FIN-AUDIT-9D — substantive testing (ISA 501 / assets / payroll).
+    path("substantive-items/", vst.SubstantiveItemListCreateView.as_view(), name="substantive-list"),
+    path("substantive-items/<uuid:pk>/", vst.SubstantiveItemDetailView.as_view(), name="substantive-detail"),
+    path("engagements/<uuid:pk>/substantive-summary/", vst.EngagementSubstantiveSummaryView.as_view(), name="substantive-summary"),
     path("dashboard/overview/", views.AuditDashboardOverviewView.as_view(), name="dashboard-overview"),
     path("big-four/", views.BigFourComplianceView.as_view(), name="big-four-compliance"),
     # Phase 2.2 — visual rule builder. The DSL-driven endpoints sit under

@@ -79,6 +79,13 @@ from apps.audit.control_deficiency_models import (  # noqa: F401
     AuditControlDeficiency,
 )
 
+# Substantive Testing — Inventory / Fixed Assets / Payroll
+# (TADGEEG-FIN-AUDIT-9D · ISA 501). Book vs independently-tested value with a
+# flagged variance. Never posts to apps.ledger.
+from apps.audit.substantive_test_models import (  # noqa: F401
+    SubstantiveTestItem,
+)
+
 
 class AuditSession(SoftDeleteModel):
     """Tracks the lifecycle and aggregate progress of a related audit upload."""

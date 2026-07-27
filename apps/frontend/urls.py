@@ -17,6 +17,7 @@ from . import isa_assessment_views
 from . import financial_statements_views
 from . import confirmation_views
 from . import management_letter_views
+from . import substantive_views
 
 app_name = 'frontend'
 
@@ -138,6 +139,9 @@ urlpatterns = [
 
     # TADGEEG-FIN-AUDIT-9B — Management Letter (ISA 265)
     path('audit/management-letter/', management_letter_views.management_letter, name='management_letter'),
+
+    # TADGEEG-FIN-AUDIT-9D — Substantive Testing (ISA 501 / assets / payroll)
+    path('audit/substantive-testing/', substantive_views.substantive_testing, name='substantive_testing'),
 
     # Audit tools (ISA 320 materiality, ISA 530 sampling)
     path('audit/tools/', views.audit_tools, name='audit_tools'),

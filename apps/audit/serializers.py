@@ -20,6 +20,7 @@ from .models import (
     GeneralLedgerRiskFinding,
     GeneralLedgerRiskFindingReview,
     GeneralLedgerRow,
+    SubstantiveTestItem,
     TrialBalanceImport,
     TrialBalanceRow,
 )
@@ -483,3 +484,31 @@ class AuditControlDeficiencySerializer(serializers.ModelSerializer):
             "identified_by_name", "created_at", "updated_at",
         ]
         read_only_fields = fields
+
+
+# ── TADGEEG-FIN-AUDIT-9D — Substantive Testing (ISA 501 / assets / payroll) ──
+class SubstantiveTestItemSerializer(serializers.ModelSerializer):
+    area_display = serializers.CharField(source="get_area_display", read_only=True)
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    created_by_name = serializers.CharField(
+        source="created_by.full_name", read_only=True, default="")
+    variance = serializers.SerializerMethodField()
+    is_within_tolerance = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SubstantiveTestItem
+        fields = [
+            "id", "reference", "engagement", "organization", "area", "area_display",
+            "item_reference", "description", "book_value", "tested_value",
+            "tolerance", "quantity_book", "quantity_counted", "inputs", "notes",
+            "status", "status_display", "variance", "is_within_tolerance",
+            "created_by", "created_by_name", "created_at", "updated_at",
+        ]
+        read_only_fields = fields
+
+    def get_variance(self, obj):
+        v = obj.variance
+        return str(v) if v is not None else None
+
+    def get_is_within_tolerance(self, obj):
+        return obj.is_within_tolerance

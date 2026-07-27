@@ -1,0 +1,164 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Substantive Testing" %}{% endblock %}
+{% block nav_substantive %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/modules/_shared.html" %}
+  .fld input,.fld select,.fld textarea{width:100%;border:1px solid var(--border,#cbd5e1);border-radius:8px;padding:8px;font-size:12px;}
+  .fld label{display:block;font-size:11px;font-weight:700;color:#475569;margin-bottom:3px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  .row4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  @media(max-width:640px){.row2,.row3,.row4{grid-template-columns:1fr;}}
+  .recbox{background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;padding:11px 13px;margin:10px 0;}
+  .recbox h4{margin:0 0 8px;font-size:12px;color:#0f2b4a;}
+  table.stbl{width:100%;border-collapse:collapse;font-size:12px;}
+  table.stbl th,table.stbl td{padding:7px 9px;text-align:start;border-bottom:1px solid #eef2f7;}
+  table.stbl th{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#64748b;}
+  table.stbl td.num{text-align:end;font-variant-numeric:tabular-nums;}
+  .sst{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;}
+  .sst.open{background:#e2e8f0;color:#475569;} .sst.matched{background:#dcfce7;color:#166534;}
+  .sst.variance{background:#fee2e2;color:#991b1b;} .sst.cancelled{background:#f1f5f9;color:#94a3b8;}
+  .vpos{color:#991b1b;font-weight:700;} .vzero{color:#166534;font-weight:700;}
+  .inline-rec{display:flex;gap:6px;align-items:center;}
+  .inline-rec input{width:110px;border:1px solid #cbd5e1;border-radius:7px;padding:5px 7px;font-size:11px;}
+  .minibtn{background:var(--primary,#002244);color:#fff;border:none;border-radius:7px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;}
+  .minibtn.ghost{background:#fff;color:#64748b;border:1px solid #cbd5e1;}
+{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "Substantive Testing" %}</div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Substantive Testing" %} · الاختبارات الأساسية</div>
+      <div class="ev-sub">{% trans "Inventory (ISA 501), fixed assets and payroll — recorded value vs an independently recomputed value, with variances flagged." %}</div>
+    </div>
+    {% if engagement %}
+    <div style="display:flex;gap:8px;">
+      <a class="runbtn" style="text-decoration:none;display:inline-block;background:#0369a1;" href="/api/v1/audit/engagements/{{ engagement.id }}/substantive-summary/">{% trans "Summary JSON" %}</a>
+    </div>
+    {% endif %}
+  </div>
+  {% include "audit/modules/_picker.html" %}
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="ok">{{ notice }}</div>{% endif %}
+
+  {% if engagement %}
+  <div class="advisory">{% trans "Deterministic re-performance under ISA 500/501. Variances are flagged for auditor judgement — nothing is posted to the ledger." %}</div>
+
+  {# ── Area tabs ─────────────────────────────────────────────────────── #}
+  <div class="mod-tabs">
+    {% for v,l in area_choices %}
+      <a href="?engagement={{ engagement.id }}&area={{ v }}" class="{% if area == v %}active{% endif %}">{{ l }}</a>
+    {% endfor %}
+  </div>
+
+  {# ── Per-area KPIs ─────────────────────────────────────────────────── #}
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">{% trans "Items (area)" %}</div><div class="val">{{ items|length }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Matched" %}</div><div class="val">{{ totals.matched|default:0 }}</div></div>
+    <div class="kpi alert"><div class="lbl">{% trans "Variances" %}</div><div class="val">{{ totals.variance|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Total items" %}</div><div class="val">{{ totals.total|default:0 }}</div></div>
+  </div>
+
+  {# ── Create form with area-specific recompute ──────────────────────── #}
+  <div class="card" data-sec="create" data-area="{{ area }}">
+    <h3>{% trans "Add a test item" %} — {{ area }}</h3>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="engagement" value="{{ engagement.id }}">
+      <input type="hidden" name="area" value="{{ area }}">
+      <input type="hidden" name="action" value="create">
+      <div class="row3">
+        <div class="fld"><label>{% trans "Item reference" %}</label><input type="text" name="item_reference" placeholder="{% trans 'SKU / asset tag / employee id' %}"></div>
+        <div class="fld"><label>{% trans "Description" %}</label><input type="text" name="description"></div>
+        <div class="fld"><label>{% trans "Book value" %}</label><input type="number" step="any" name="book_value" required></div>
+      </div>
+
+      {% if area == 'fixed_assets' %}
+      <div class="recbox" data-rec="fixed_assets">
+        <h4>{% trans "Recompute net book value (straight-line)" %}</h4>
+        <div class="row4">
+          <div class="fld"><label>{% trans "Cost" %}</label><input type="number" step="any" name="cost"></div>
+          <div class="fld"><label>{% trans "Salvage" %}</label><input type="number" step="any" name="salvage" value="0"></div>
+          <div class="fld"><label>{% trans "Useful life (yrs)" %}</label><input type="number" step="any" name="useful_life_years"></div>
+          <div class="fld"><label>{% trans "Elapsed (yrs)" %}</label><input type="number" step="any" name="elapsed_years"></div>
+        </div>
+        <p style="font-size:11px;color:#64748b;margin:6px 0 0;">{% trans "If provided, tested value = cost − accumulated straight-line depreciation." %}</p>
+      </div>
+      {% elif area == 'payroll' %}
+      <div class="recbox" data-rec="payroll">
+        <h4>{% trans "Recompute net pay" %}</h4>
+        <div class="row2">
+          <div class="fld"><label>{% trans "Gross" %}</label><input type="number" step="any" name="gross"></div>
+          <div class="fld"><label>{% trans "Deductions" %}</label><input type="number" step="any" name="deductions" value="0"></div>
+        </div>
+        <p style="font-size:11px;color:#64748b;margin:6px 0 0;">{% trans "If provided, tested value = gross − deductions." %}</p>
+      </div>
+      {% elif area == 'inventory' %}
+      <div class="recbox" data-rec="inventory">
+        <h4>{% trans "Recompute from physical count" %}</h4>
+        <div class="row3">
+          <div class="fld"><label>{% trans "Book quantity" %}</label><input type="number" step="any" name="quantity_book"></div>
+          <div class="fld"><label>{% trans "Counted quantity" %}</label><input type="number" step="any" name="quantity_counted"></div>
+          <div class="fld"><label>{% trans "Unit cost" %}</label><input type="number" step="any" name="unit_cost"></div>
+        </div>
+        <p style="font-size:11px;color:#64748b;margin:6px 0 0;">{% trans "If counted qty and unit cost are provided, tested value = counted qty × unit cost." %}</p>
+      </div>
+      {% endif %}
+
+      <div class="row2">
+        <div class="fld"><label>{% trans "Tested value (optional — overridden by recompute)" %}</label><input type="number" step="any" name="tested_value"></div>
+        <div class="fld"><label>{% trans "Tolerance" %}</label><input type="number" step="any" name="tolerance" value="0"></div>
+      </div>
+      <button type="submit" class="runbtn">{% trans "Add item" %}</button>
+    </form>
+  </div>
+
+  {# ── Register ──────────────────────────────────────────────────────── #}
+  <div class="card" data-sec="register">
+    <h3>{% trans "Test register" %}</h3>
+    {% if items %}
+    <div style="overflow-x:auto;">
+    <table class="stbl">
+      <thead><tr>
+        <th>{% trans "Ref" %}</th><th>{% trans "Item" %}</th>
+        <th class="num">{% trans "Book" %}</th><th class="num">{% trans "Tested" %}</th>
+        <th class="num">{% trans "Variance" %}</th><th>{% trans "Status" %}</th>
+        <th>{% trans "Reconcile" %}</th>
+      </tr></thead>
+      <tbody>
+      {% for it in items %}
+      <tr data-ref="{{ it.reference }}" data-status="{{ it.status }}">
+        <td>{{ it.reference }}</td>
+        <td>{{ it.item_reference|default:'—' }}{% if it.description %}<div style="font-size:10px;color:#94a3b8;">{{ it.description }}</div>{% endif %}</td>
+        <td class="num">{{ it.book_value }}</td>
+        <td class="num">{% if it.tested_value is not None %}{{ it.tested_value }}{% else %}—{% endif %}</td>
+        <td class="num {% if it.variance is not None and it.is_within_tolerance %}vzero{% elif it.variance is not None %}vpos{% endif %}">
+          {% if it.variance is not None %}{{ it.variance }}{% else %}—{% endif %}
+        </td>
+        <td><span class="sst {{ it.status }}">{{ it.get_status_display }}</span></td>
+        <td>
+          {% if it.status != 'cancelled' %}
+          <form method="post" class="inline-rec">
+            {% csrf_token %}
+            <input type="hidden" name="engagement" value="{{ engagement.id }}">
+            <input type="hidden" name="area" value="{{ area }}">
+            <input type="hidden" name="action" value="record">
+            <input type="hidden" name="item" value="{{ it.id }}">
+            <input type="number" step="any" name="tested_value" placeholder="{% trans 'tested' %}" value="{% if it.tested_value is not None %}{{ it.tested_value }}{% endif %}">
+            <button type="submit" class="minibtn">{% trans "Test" %}</button>
+          </form>
+          {% else %}<span style="font-size:11px;color:#94a3b8;">—</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}<div class="empty">{% trans "No items in this area yet." %}</div>{% endif %}
+  </div>
+  {% else %}
+  <div class="empty">{% trans "Choose an engagement to begin substantive testing." %}</div>
+  {% endif %}
+</div>
+{% endblock %}

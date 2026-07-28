@@ -104,3 +104,23 @@ class EngagementRiskSummaryView(APIView):
             return Response({"error": "engagement not found in your organization."},
                             status=status.HTTP_404_NOT_FOUND)
         return Response(ar.summary(organization=org, engagement=engagement))
+
+
+class EngagementFindingsRegisterView(APIView):
+    """Unified findings register (G2.3) — GL findings + control deficiencies."""
+    permission_classes = [IsAuthenticated, IsSeniorAuditorOrAbove]
+
+    @extend_schema(tags=["Audit · Findings"], summary="Unified findings register")
+    def get(self, request, pk):
+        org = _org(request)
+        engagement = AuditEngagement.objects.filter(pk=pk, organization=org).first()
+        if engagement is None:
+            return Response({"error": "engagement not found in your organization."},
+                            status=status.HTTP_404_NOT_FOUND)
+        from apps.audit.services import findings_register as fr
+        source = request.query_params.get("source")
+        return Response({
+            "summary": fr.summary(organization=org, engagement=engagement),
+            "findings": fr.list_findings(organization=org, engagement=engagement,
+                                         source=source),
+        })

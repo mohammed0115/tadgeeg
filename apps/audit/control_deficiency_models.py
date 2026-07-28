@@ -81,6 +81,10 @@ class AuditControlDeficiency(models.Model):
     gl_finding = models.ForeignKey(
         GeneralLedgerRiskFinding, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="control_deficiencies")
+    # TADGEEG-G2.3 — link the deficiency to the assessed risk it relates to.
+    assessed_risk = models.ForeignKey(
+        "audit.AssessedRisk", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="control_deficiencies")
 
     identified_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,

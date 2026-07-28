@@ -101,6 +101,7 @@ urlpatterns = [
     path("assessed-risks/", var.AssessedRiskListCreateView.as_view(), name="assessed-risk-list"),
     path("assessed-risks/<uuid:pk>/", var.AssessedRiskDetailView.as_view(), name="assessed-risk-detail"),
     path("engagements/<uuid:pk>/risk-summary/", var.EngagementRiskSummaryView.as_view(), name="assessed-risk-summary"),
+    path("engagements/<uuid:pk>/findings-register/", var.EngagementFindingsRegisterView.as_view(), name="findings-register"),
     # TADGEEG-G2.2 — audit procedures (ISA 330, Risk->Procedure link).
     path("procedures/", vap.ProcedureListCreateView.as_view(), name="procedure-list"),
     path("procedures/<uuid:pk>/", vap.ProcedureDetailView.as_view(), name="procedure-detail"),

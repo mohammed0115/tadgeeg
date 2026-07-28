@@ -260,6 +260,11 @@ class GeneralLedgerRiskFinding(models.Model):
     row = models.ForeignKey(
         GeneralLedgerRow, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="risk_findings")
+    # TADGEEG-G2.3 — link the finding to the assessed risk it evidences
+    # (Risk -> ... -> Finding). Nullable/additive; SET_NULL keeps the finding.
+    assessed_risk = models.ForeignKey(
+        "audit.AssessedRisk", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="gl_findings")
 
     journal_number = models.CharField(max_length=64, blank=True, db_index=True)
     risk_code   = models.CharField(max_length=64, db_index=True)

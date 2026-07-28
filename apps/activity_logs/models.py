@@ -43,6 +43,9 @@ class ActivityLog(models.Model):
         # Auth events
         USER_LOGIN = "user_login", "User Login"
         USER_LOGOUT = "user_logout", "User Logout"
+        # Engagement events (TADGEEG-G0 — ISA engagement audit trail)
+        ENGAGEMENT_STAGE_CHANGED = "engagement_stage_changed", "Engagement Stage Changed"
+        FINDING_STATUS_CHANGED = "finding_status_changed", "Finding Status Changed"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(

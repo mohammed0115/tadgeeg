@@ -240,12 +240,20 @@ def engagement_workspace(request, pk):
         elif engagement.locked_at:
             error = "This engagement is archived and locked; its stage cannot change."
         else:
+            old_stage = engagement.stage
             engagement.stage = new_stage
             fields = ["stage", "updated_at"]
             if new_stage == _Eng.Stage.ACCEPTANCE and not engagement.accepted_at:
                 engagement.accepted_at = timezone.now()
                 fields.append("accepted_at")
             engagement.save(update_fields=fields)
+            # G0 — record the transition in the tamper-evident audit trail
+            # (defensive: a logging failure must never break the stage change).
+            if old_stage != new_stage:
+                from apps.audit.services import audit_trail
+                audit_trail.record_stage_change(
+                    engagement=engagement, actor=request.user,
+                    old_stage=old_stage, new_stage=new_stage, request=request)
             notice = f"Stage set to {engagement.get_stage_display()}."
 
     overview = _engagement_overview(engagement)

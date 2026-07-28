@@ -111,6 +111,11 @@ from apps.audit.issue_models import (  # noqa: F401
     AuditIssue,
 )
 
+# Engagement report — versioned, ISA 700-safe report builder (G6).
+from apps.audit.report_models import (  # noqa: F401
+    EngagementReport,
+)
+
 
 class AuditSession(SoftDeleteModel):
     """Tracks the lifecycle and aggregate progress of a related audit upload."""

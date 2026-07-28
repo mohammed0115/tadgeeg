@@ -44,7 +44,10 @@
       </div>
 
       <div class="fld"><label>{% trans "Known risk areas (one per line)" %}</label><textarea name="risk_areas" rows="3" placeholder="{% trans 'e.g. revenue recognition&#10;inventory valuation' %}">{{ form.risk_areas }}</textarea></div>
-      <button type="submit" class="isa-btn">{% trans "Build strategy & plan" %}</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button type="submit" class="isa-btn">{% trans "Build strategy & plan" %}</button>
+        <button type="submit" name="export" value="pdf" class="isa-btn" style="background:linear-gradient(135deg,#b91c1c,#f97316);">{% trans "Download PDF" %}</button>
+      </div>
     </form>
 
     <div>

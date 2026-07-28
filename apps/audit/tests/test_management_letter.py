@@ -130,6 +130,25 @@ class ApiTests(Base):
         self.assertIn(b"Severe control gap", h.content)
         self.assertNotIn(b"In our opinion", h.content)
 
+    def test_letter_pdf_export(self):
+        self._make(_Cls.MATERIAL_WEAKNESS, "Severe control gap")
+        resp = self.api.get(
+            f"/api/v1/audit/engagements/{self.eng.id}/management-letter/?format=pdf")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp["Content-Type"], "application/pdf")
+        self.assertTrue(resp["Content-Disposition"].startswith("attachment;"))
+        self.assertEqual(bytes(resp.content[:5]), b"%PDF-")
+
+    def test_pdf_junior_denied_and_cross_org_404(self):
+        api = APIClient(); api.force_authenticate(_junior(self.org))
+        self.assertEqual(api.get(
+            f"/api/v1/audit/engagements/{self.eng.id}/management-letter/?format=pdf"
+        ).status_code, 403)
+        other = _eng(_org("OrgB"), code="B-1")
+        self.assertEqual(self.api.get(
+            f"/api/v1/audit/engagements/{other.id}/management-letter/?format=pdf"
+        ).status_code, 404)
+
     def test_junior_denied(self):
         api = APIClient(); api.force_authenticate(_junior(self.org))
         self.assertEqual(api.get("/api/v1/audit/control-deficiencies/").status_code, 403)

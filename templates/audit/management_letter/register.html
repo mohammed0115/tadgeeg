@@ -23,6 +23,7 @@
     </div>
     {% if engagement %}
     <div style="display:flex;gap:8px;">
+      <a class="runbtn" style="text-decoration:none;display:inline-block;background:#b91c1c;" href="/api/v1/audit/engagements/{{ engagement.id }}/management-letter/?format=pdf">{% trans "Export PDF" %}</a>
       <a class="runbtn" style="text-decoration:none;display:inline-block;background:#166534;" href="/api/v1/audit/engagements/{{ engagement.id }}/management-letter/?format=html">{% trans "Export HTML" %}</a>
       <a class="runbtn" style="text-decoration:none;display:inline-block;background:#0369a1;" href="/api/v1/audit/engagements/{{ engagement.id }}/management-letter/?format=json">{% trans "JSON" %}</a>
     </div>

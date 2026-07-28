@@ -95,6 +95,15 @@ class PlanningTests(Base):
         self.assertContains(resp, "Profit before tax (5%)")
         self.assertContains(resp, "EQR partner")
 
+    def test_download_pdf(self):
+        resp = self.client.post(reverse("frontend:isa_planning"), {
+            "organization_name": "Acme LLC", "reporting_period": "FY2026",
+            "industry": "retail", "revenue_base": "1000000", "export": "pdf"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp["Content-Type"], "application/pdf")
+        self.assertTrue(resp["Content-Disposition"].startswith("attachment;"))
+        self.assertEqual(bytes(resp.content[:5]), b"%PDF-")
+
 
 # ── ISA 330 Responses ────────────────────────────────────────────────────────
 class ResponsesTests(Base):

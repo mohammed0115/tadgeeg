@@ -115,10 +115,19 @@ class _PassthroughHTMLRenderer(BaseRenderer):
         return data
 
 
+class _PassthroughPDFRenderer(BaseRenderer):
+    media_type = "application/pdf"
+    format = "pdf"
+    charset = None
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return data
+
+
 class EngagementManagementLetterView(APIView):
-    """GET the generated management letter as JSON (default) or HTML."""
+    """GET the generated management letter as JSON (default), HTML, or PDF."""
     permission_classes = [IsAuthenticated, IsSeniorAuditorOrAbove]
-    renderer_classes = [JSONRenderer, _PassthroughHTMLRenderer]
+    renderer_classes = [JSONRenderer, _PassthroughHTMLRenderer, _PassthroughPDFRenderer]
 
     @extend_schema(tags=["Audit · Management Letter"], summary="Generate management letter")
     def get(self, request, pk):
@@ -128,7 +137,19 @@ class EngagementManagementLetterView(APIView):
             return Response({"error": "engagement not found in your organization."},
                             status=status.HTTP_404_NOT_FOUND)
         letter = ml.build_management_letter(engagement=engagement)
-        if (request.query_params.get("format") or "json").lower() == "html":
+        fmt = (request.query_params.get("format") or "json").lower()
+        if fmt in ("html", "pdf"):
             html = render_to_string("audit/management_letter/letter.html", {"L": letter})
+            if fmt == "pdf":
+                try:
+                    from weasyprint import HTML as _WP
+                except Exception as exc:  # pragma: no cover - depends on system libs
+                    return Response({"error": f"PDF export unavailable: {exc}"},
+                                    status=status.HTTP_503_SERVICE_UNAVAILABLE)
+                pdf = _WP(string=html, base_url=request.build_absolute_uri("/")).write_pdf()
+                resp = HttpResponse(pdf, content_type="application/pdf")
+                fname = f"management-letter-{engagement.engagement_code or engagement.id}.pdf"
+                resp["Content-Disposition"] = f'attachment; filename="{fname}"'
+                return resp
             return HttpResponse(html, content_type="text/html; charset=utf-8")
         return Response(letter)

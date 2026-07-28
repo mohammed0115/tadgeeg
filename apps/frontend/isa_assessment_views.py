@@ -28,10 +28,24 @@ from dataclasses import fields
 from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
 from django.shortcuts import render
+from django.template.loader import render_to_string
 
 from apps.audit.services import evidence_lifecycle as lc  # reuse is_auditor
 from apps.frontend.page_views import _ctx
+
+
+def _pdf_response(html_str, filename, request):
+    """Render a self-contained HTML string to a downloadable PDF (or None)."""
+    try:
+        from weasyprint import HTML as _WP
+    except Exception:  # pragma: no cover - depends on system libs
+        return None
+    pdf = _WP(string=html_str, base_url=request.build_absolute_uri("/")).write_pdf()
+    resp = HttpResponse(pdf, content_type="application/pdf")
+    resp["Content-Disposition"] = f'attachment; filename="{filename}"'
+    return resp
 
 
 def _guard(request):
@@ -245,6 +259,15 @@ def planning(request):
             plan = pl.build_audit_plan(strat).to_dict()
         except Exception as exc:
             error = str(exc)
+
+        if strategy and not error and request.POST.get("export") == "pdf":
+            html = render_to_string("audit/isa/planning_pdf.html", {
+                "strategy": strategy, "plan": plan, "form": form})
+            entity = (form["organization_name"] or "entity").replace(" ", "_")
+            pdf = _pdf_response(html, f"audit-plan-{entity}.pdf", request)
+            if pdf is not None:
+                return pdf
+            error = "PDF export unavailable on this server."
 
     return render(request, "audit/isa/planning.html", _ctx(
         request, "audit", form=form, strategy=strategy, plan=plan, error=error,

@@ -57,6 +57,18 @@ class IssueListCreateView(APIView):
         if d.get("assessed_risk"):
             risk = AssessedRisk.objects.filter(
                 pk=d.get("assessed_risk"), organization=org, engagement=engagement).first()
+        # G5 bridge — promote a GL risk finding into an engagement issue.
+        if d.get("gl_finding"):
+            from .general_ledger_models import GeneralLedgerRiskFinding
+            finding = GeneralLedgerRiskFinding.objects.filter(
+                pk=d.get("gl_finding"), organization=org, engagement=engagement).first()
+            if finding is None:
+                return Response({"error": "gl_finding not found in this engagement."},
+                                status=status.HTTP_404_NOT_FOUND)
+            obj = ai.promote_from_gl_finding(finding=finding, actor=request.user,
+                                             assessed_risk=risk,
+                                             due_date=d.get("due_date") or None)
+            return Response(AuditIssueSerializer(obj).data, status=status.HTTP_201_CREATED)
         try:
             obj = ai.create_issue(
                 engagement=engagement, actor=request.user, title=d.get("title", ""),

@@ -49,6 +49,28 @@ def create_issue(*, engagement, actor, title, description="", severity=None,
     return obj
 
 
+def promote_from_gl_finding(*, finding, actor, assessed_risk=None, due_date=None):
+    """Bridge (G5): turn a GL risk finding into an engagement issue.
+
+    Idempotent — returns the existing issue if this finding was already promoted.
+    Links the issue back to the finding (source) and, if given/known, the risk.
+    """
+    existing = AuditIssue.objects.filter(gl_finding=finding).first()
+    if existing is not None:
+        return existing
+    sev = getattr(finding, "severity", "") or _I.Severity.MEDIUM
+    if sev not in {s.value for s in _I.Severity}:
+        sev = _I.Severity.MEDIUM
+    ref = getattr(finding, "reference", "") or getattr(finding, "account_code", "") \
+        or str(finding.pk)[:8]
+    risk = assessed_risk or getattr(finding, "assessed_risk", None)
+    return create_issue(
+        engagement=finding.engagement, actor=actor,
+        title=f"GL finding {ref}"[:255],
+        description=getattr(finding, "risk_description", "") or "",
+        severity=sev, assessed_risk=risk, gl_finding=finding, due_date=due_date)
+
+
 def set_status(*, issue, actor, status, note="") -> AuditIssue:
     if status not in _VALID_STATUS:
         raise AuditIssueError(f"invalid status: {status!r}")

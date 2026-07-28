@@ -135,6 +135,46 @@ class ApiTests(Base):
         self.assertEqual(self.api.get(f"/api/v1/audit/issues/{foreign.id}/").status_code, 404)
 
 
+class BridgeTests(Base):
+    """G5 — promote a GL risk finding into the issue/remediation loop."""
+
+    def _finding(self):
+        import datetime
+        from decimal import Decimal
+        from apps.audit.general_ledger_models import (
+            GeneralLedgerImport, GeneralLedgerRiskFinding)
+        imp = GeneralLedgerImport.objects.create(
+            engagement=self.eng, organization=self.org, source_format="csv",
+            period_end=datetime.date(2025, 12, 31))
+        return GeneralLedgerRiskFinding.objects.create(
+            engagement=self.eng, organization=self.org, general_ledger_import=imp,
+            risk_code="GL-DUP", risk_title="Duplicate posting",
+            risk_category=GeneralLedgerRiskFinding.Category.OTHER,
+            severity=GeneralLedgerRiskFinding.Severity.HIGH, score=80,
+            amount_impact=Decimal("50000"), account_code="6000",
+            risk_description="Possible duplicate journal.")
+
+    def test_promote_is_idempotent_and_linked(self):
+        risk = ar.create_risk(engagement=self.eng, actor=self.auditor, title="R")
+        f = self._finding()
+        issue = ai.promote_from_gl_finding(finding=f, actor=self.auditor, assessed_risk=risk)
+        self.assertEqual(issue.gl_finding_id, f.id)
+        self.assertEqual(issue.assessed_risk_id, risk.id)
+        self.assertEqual(issue.severity, "high")
+        # Idempotent — promoting again returns the same issue.
+        again = ai.promote_from_gl_finding(finding=f, actor=self.auditor)
+        self.assertEqual(again.id, issue.id)
+        self.assertEqual(AuditIssue.objects.filter(gl_finding=f).count(), 1)
+
+    def test_promote_via_api(self):
+        f = self._finding()
+        api = APIClient(); api.force_authenticate(self.auditor)
+        resp = api.post("/api/v1/audit/issues/", {
+            "engagement": str(self.eng.id), "gl_finding": str(f.id)}, format="json")
+        self.assertEqual(resp.status_code, 201, resp.content)
+        self.assertEqual(resp.json()["gl_finding"], str(f.id))
+
+
 class LedgerIsolationTests(Base):
     def test_no_ledger_writes(self):
         from apps.ledger.models import Account, JournalEntry, JournalLine

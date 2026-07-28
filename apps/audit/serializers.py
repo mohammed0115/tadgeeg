@@ -20,6 +20,7 @@ from .models import (
     GeneralLedgerRiskFinding,
     GeneralLedgerRiskFindingReview,
     AssessedRisk,
+    AuditProcedure,
     EngagementPlanningRecord,
     GeneralLedgerRow,
     SubstantiveTestItem,
@@ -531,6 +532,29 @@ class AssessedRiskSerializer(serializers.ModelSerializer):
             "assertion", "assertion_display", "inherent_risk", "control_risk",
             "is_significant", "is_fraud_risk", "combined_risk", "description",
             "notes", "status", "status_display", "created_by", "created_by_name",
+            "created_at", "updated_at",
+        ]
+        read_only_fields = fields
+
+
+# ── TADGEEG-G2.2 — Audit procedures (ISA 330, Risk->Procedure link) ──────────
+class AuditProcedureSerializer(serializers.ModelSerializer):
+    nature_display = serializers.CharField(source="get_nature_display", read_only=True)
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    risk_reference = serializers.CharField(source="assessed_risk.reference",
+                                           read_only=True, default="")
+    risk_title = serializers.CharField(source="assessed_risk.title",
+                                       read_only=True, default="")
+    created_by_name = serializers.CharField(
+        source="created_by.full_name", read_only=True, default="")
+
+    class Meta:
+        model = AuditProcedure
+        fields = [
+            "id", "reference", "engagement", "organization", "assessed_risk",
+            "risk_reference", "risk_title", "title", "nature", "nature_display",
+            "timing", "extent", "status", "status_display", "description",
+            "conclusion", "performed_by", "created_by", "created_by_name",
             "created_at", "updated_at",
         ]
         read_only_fields = fields

@@ -10,6 +10,7 @@ from . import views_management_letter as vml
 from . import views_substantive as vst
 from . import views_planning_records as vpr
 from . import views_assessed_risk as var
+from . import views_audit_procedure as vap
 from . import views_rule_builder as rb
 from . import views_trial_balance as tb
 
@@ -100,6 +101,10 @@ urlpatterns = [
     path("assessed-risks/", var.AssessedRiskListCreateView.as_view(), name="assessed-risk-list"),
     path("assessed-risks/<uuid:pk>/", var.AssessedRiskDetailView.as_view(), name="assessed-risk-detail"),
     path("engagements/<uuid:pk>/risk-summary/", var.EngagementRiskSummaryView.as_view(), name="assessed-risk-summary"),
+    # TADGEEG-G2.2 — audit procedures (ISA 330, Risk->Procedure link).
+    path("procedures/", vap.ProcedureListCreateView.as_view(), name="procedure-list"),
+    path("procedures/<uuid:pk>/", vap.ProcedureDetailView.as_view(), name="procedure-detail"),
+    path("engagements/<uuid:pk>/procedure-summary/", vap.EngagementProcedureSummaryView.as_view(), name="procedure-summary"),
     path("dashboard/overview/", views.AuditDashboardOverviewView.as_view(), name="dashboard-overview"),
     path("big-four/", views.BigFourComplianceView.as_view(), name="big-four-compliance"),
     # Phase 2.2 — visual rule builder. The DSL-driven endpoints sit under

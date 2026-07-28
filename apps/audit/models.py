@@ -96,6 +96,11 @@ from apps.audit.assessed_risk_models import (  # noqa: F401
     AssessedRisk,
 )
 
+# Audit procedures — Risk -> Procedure link of the traceability spine (G2.2).
+from apps.audit.procedure_models import (  # noqa: F401
+    AuditProcedure,
+)
+
 
 class AuditSession(SoftDeleteModel):
     """Tracks the lifecycle and aggregate progress of a related audit upload."""

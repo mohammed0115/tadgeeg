@@ -83,6 +83,19 @@ def link_risk(*, procedure, assessed_risk, actor) -> AuditProcedure:
     return procedure
 
 
+def request_evidence(*, procedure, actor, description="", assigned_client_user=None):
+    """Raise a 6A evidence request for a procedure (closes Risk->Procedure->Evidence)."""
+    from apps.audit.evidence_models import AuditEvidenceRequest as _ER
+    from apps.audit.services import evidence_request as ev
+    risk_ref = getattr(procedure.assessed_risk, "reference", "") if procedure.assessed_risk_id else ""
+    title = f"Evidence for procedure {procedure.reference} — {procedure.title}"
+    return ev.create_evidence_request(
+        engagement=procedure.engagement, actor=actor, title=title[:255],
+        procedure=procedure, request_reason=_ER.RequestReason.SUPPORTING_DOCUMENT,
+        description=description or (f"Supports risk {risk_ref}" if risk_ref else ""),
+        assigned_client_user=assigned_client_user)
+
+
 def list_procedures(*, engagement, assessed_risk=None, status=None, limit=500):
     qs = (AuditProcedure.objects.filter(engagement=engagement)
           .select_related("assessed_risk", "created_by", "performed_by"))

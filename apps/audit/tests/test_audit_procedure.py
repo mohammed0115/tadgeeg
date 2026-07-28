@@ -135,6 +135,32 @@ class ApiTests(Base):
             f"/api/v1/audit/procedures/{foreign.id}/").status_code, 404)
 
 
+class EvidenceLinkTests(Base):
+    def test_request_evidence_closes_chain(self):
+        # Risk -> Procedure -> Evidence, all linked and walkable.
+        risk = self._risk()
+        p = ap.create_procedure(engagement=self.eng, actor=self.auditor,
+                                title="Cut-off testing", assessed_risk=risk)
+        ereq = ap.request_evidence(procedure=p, actor=self.auditor)
+        self.assertEqual(ereq.procedure_id, p.id)
+        self.assertEqual(ereq.engagement_id, self.eng.id)
+        # Walk the chain backwards: evidence -> procedure -> risk.
+        self.assertEqual(ereq.procedure.assessed_risk_id, risk.id)
+        self.assertEqual(p.evidence_requests.count(), 1)
+
+    def test_cross_org_procedure_target_rejected(self):
+        from django.core.exceptions import ValidationError
+        from apps.audit.evidence_models import AuditEvidenceRequest
+        other = _eng(_org("OrgB"), code="B-1")
+        foreign = ap.create_procedure(engagement=other,
+                                      actor=_auditor(other.organization, "o@e.com"), title="P")
+        req = AuditEvidenceRequest(engagement=self.eng, organization=self.org,
+                                   procedure=foreign, title="X")
+        with self.assertRaises(ValidationError):
+            req.full_clean(exclude=["requested_by", "assigned_to",
+                                    "assigned_client_user", "request_number"])
+
+
 class LedgerIsolationTests(Base):
     def test_never_writes_to_ledger(self):
         from apps.ledger.models import Account, JournalEntry, JournalLine

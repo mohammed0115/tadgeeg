@@ -24,6 +24,7 @@ from apps.audit.audit_difference_models import AuditDifferenceItem
 from apps.audit.confirmation_models import AuditConfirmationRequest
 from apps.audit.engagement_models import AuditEngagement
 from apps.audit.general_ledger_models import GeneralLedgerRiskFinding
+from apps.audit.procedure_models import AuditProcedure
 from apps.audit.substantive_test_models import SubstantiveTestItem
 from apps.authentication.models import Organization, User
 
@@ -89,6 +90,11 @@ class AuditEvidenceRequest(models.Model):
         related_name="evidence_requests")
     confirmation_request = models.ForeignKey(
         AuditConfirmationRequest, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="evidence_requests")
+    # TADGEEG-G2.2 — link evidence to the procedure it supports, closing the
+    # traceability chain Risk -> Procedure -> Evidence.
+    procedure = models.ForeignKey(
+        AuditProcedure, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="evidence_requests")
 
     requested_by = models.ForeignKey(
@@ -212,11 +218,17 @@ class AuditEvidenceRequest(models.Model):
             if cr.engagement_id != self.engagement_id or cr.organization_id != self.organization_id:
                 raise ValidationError(
                     "confirmation_request must belong to the same engagement and organization.")
+        if self.procedure_id:
+            pr = self.procedure
+            if pr.engagement_id != self.engagement_id or pr.organization_id != self.organization_id:
+                raise ValidationError(
+                    "procedure must belong to the same engagement and organization.")
         if not (self.gl_finding_id or self.sad_item_id
-                or self.substantive_item_id or self.confirmation_request_id):
+                or self.substantive_item_id or self.confirmation_request_id
+                or self.procedure_id):
             raise ValidationError(
                 "An evidence request must link a GL finding, a SAD item, a "
-                "substantive-test item, or a confirmation request.")
+                "substantive-test item, a confirmation request, or a procedure.")
 
 
 class AuditEvidenceAttachment(models.Model):

@@ -80,17 +80,16 @@ Reading the code corrected the review’s P0‑1 severity:
 
 ---
 
-## G2 — Traceability Spine  *(the core domain fix)*
+## G2 — Traceability Spine  *(the core domain fix)*  — 🔄 IN PROGRESS
 **Why:** without linked Risk→…→Report, conclusions can’t be defended in an audit file.
 
-| Covers | Findings |
-|---|---|
-| Persist `AssessedRisk`, `Control`, `Procedure` as linked entities (replace stateless calculators / opaque JSON) | P0‑2 |
-| Unify the 3 finding models into one **Findings register** | P1‑1 |
-| Link chain: Risk → Assertion → Control → Procedure → Evidence → Finding | P0‑2 |
-| Wire existing 9F evidence links up to the risk/assertion | §12(e) |
+| Slice | Covers | Findings | Status |
+|---|---|---|---|
+| **G2.1** | Persist **`AssessedRisk`** (the spine anchor: assertion, FS area, inherent/control risk, significant/fraud, lifecycle) + service + API | P0‑2 | ✅ **Done** (migration `0033`, 11 tests, `TADGEEG_G2_TRACEABILITY_SPINE.md`) |
+| **G2.2** | Risk register UI + wire ISA 315/330 pages to persist `AssessedRisk`; add **`Procedure`** entity linked to risk; link 9F evidence/substantive/confirmations up to the risk | P0‑2, §12(e) | ⬜ Next |
+| **G2.3** | Unify the 3 finding models into one **Findings register** | P1‑1 | ⬜ (🔴 behind flag) |
 
-**Effort:** XL · **Risk:** 🟢 new tables (additive) · 🔴 merging finding models (migration behind flag).
+**Effort:** XL · **Risk:** 🟢 new tables (additive, done) · 🔴 merging finding models (later, behind flag).
 **Acceptance:** from any Finding an auditor navigates to its Procedure → Evidence → Risk in ≤3 clicks; one findings register; ISA 300/330/240 outputs become linked entities, not just JSON snapshots.
 
 ---

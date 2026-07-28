@@ -19,6 +19,7 @@ from .models import (
     GeneralLedgerImport,
     GeneralLedgerRiskFinding,
     GeneralLedgerRiskFindingReview,
+    AssessedRisk,
     EngagementPlanningRecord,
     GeneralLedgerRow,
     SubstantiveTestItem,
@@ -513,6 +514,26 @@ class SubstantiveTestItemSerializer(serializers.ModelSerializer):
 
     def get_is_within_tolerance(self, obj):
         return obj.is_within_tolerance
+
+
+# ── TADGEEG-G2 — Assessed risks (ISA 315, traceability anchor) ───────────────
+class AssessedRiskSerializer(serializers.ModelSerializer):
+    assertion_display = serializers.CharField(source="get_assertion_display", read_only=True)
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    combined_risk = serializers.CharField(read_only=True)
+    created_by_name = serializers.CharField(
+        source="created_by.full_name", read_only=True, default="")
+
+    class Meta:
+        model = AssessedRisk
+        fields = [
+            "id", "reference", "engagement", "organization", "title", "fs_area",
+            "assertion", "assertion_display", "inherent_risk", "control_risk",
+            "is_significant", "is_fraud_risk", "combined_risk", "description",
+            "notes", "status", "status_display", "created_by", "created_by_name",
+            "created_at", "updated_at",
+        ]
+        read_only_fields = fields
 
 
 # ── TADGEEG-FIN-AUDIT-9H — Engagement planning records ───────────────────────

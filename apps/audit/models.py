@@ -91,6 +91,11 @@ from apps.audit.planning_record_models import (  # noqa: F401
     EngagementPlanningRecord,
 )
 
+# Assessed risks of material misstatement — traceability spine anchor (G2).
+from apps.audit.assessed_risk_models import (  # noqa: F401
+    AssessedRisk,
+)
+
 
 class AuditSession(SoftDeleteModel):
     """Tracks the lifecycle and aggregate progress of a related audit upload."""

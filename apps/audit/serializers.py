@@ -19,6 +19,7 @@ from .models import (
     GeneralLedgerImport,
     GeneralLedgerRiskFinding,
     GeneralLedgerRiskFindingReview,
+    EngagementPlanningRecord,
     GeneralLedgerRow,
     SubstantiveTestItem,
     TrialBalanceImport,
@@ -512,3 +513,19 @@ class SubstantiveTestItemSerializer(serializers.ModelSerializer):
 
     def get_is_within_tolerance(self, obj):
         return obj.is_within_tolerance
+
+
+# ── TADGEEG-FIN-AUDIT-9H — Engagement planning records ───────────────────────
+class EngagementPlanningRecordSerializer(serializers.ModelSerializer):
+    kind_display = serializers.CharField(source="get_kind_display", read_only=True)
+    created_by_name = serializers.CharField(
+        source="created_by.full_name", read_only=True, default="")
+
+    class Meta:
+        model = EngagementPlanningRecord
+        fields = [
+            "id", "engagement", "organization", "kind", "kind_display", "title",
+            "payload", "inputs", "created_by", "created_by_name",
+            "created_at", "updated_at",
+        ]
+        read_only_fields = fields

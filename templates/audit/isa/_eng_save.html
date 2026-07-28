@@ -1,0 +1,12 @@
+{% load i18n %}
+{# TADGEEG-FIN-AUDIT-9H — optional engagement binding + save submit (inside form). #}
+<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-top:10px;">
+  <div class="fld" style="margin:0;min-width:240px;flex:1;">
+    <label>{% trans "Save to engagement (optional)" %}</label>
+    <select name="engagement">
+      <option value="">{% trans "— don't save —" %}</option>
+      {% for e in engagements %}<option value="{{ e.id }}" {% if engagement and engagement.id == e.id %}selected{% endif %}>{{ e.engagement_code }} — {{ e.title }}</option>{% endfor %}
+    </select>
+  </div>
+  <button type="submit" name="save" value="1" class="isa-btn" style="background:linear-gradient(135deg,#166534,#059669);">📌 {% trans "Save to engagement" %}</button>
+</div>

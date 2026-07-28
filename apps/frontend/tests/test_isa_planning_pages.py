@@ -13,6 +13,8 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.urls import reverse
 
+from apps.audit.engagement_models import AuditEngagement
+from apps.audit.planning_record_models import EngagementPlanningRecord
 from apps.authentication.models import Organization, User
 from apps.billing.choices import PlanCode
 from apps.billing.models import Plan
@@ -43,6 +45,12 @@ def _junior(org, email="junior@e.com"):
     return User.objects.create_user(
         email=email, password="StrongPass123!", full_name="Jun Ior",
         role=User.Role.JUNIOR_AUDITOR, organization=org)
+
+
+def _eng(org, code="AUD-1"):
+    return AuditEngagement.objects.create(
+        organization=org, engagement_code=code, title="FY25",
+        period_start="2025-01-01", period_end="2025-12-31")
 
 
 class Base(TestCase):
@@ -160,6 +168,67 @@ class FraudTests(Base):
         self.assertContains(resp, "Duplicate payments")
         self.assertContains(resp, "High")                 # overall severity label
         self.assertContains(resp, "Vouch to original")     # catalogue procedure for 'duplicate'
+
+
+# ── Save to engagement (9H) ──────────────────────────────────────────────────
+class SaveToEngagementTests(Base):
+    def setUp(self):
+        super().setUp()
+        self.eng = _eng(self.org)
+
+    def test_save_audit_plan(self):
+        resp = self.client.post(reverse("frontend:isa_planning"), {
+            "organization_name": "Acme LLC", "reporting_period": "FY2026",
+            "industry": "retail", "revenue_base": "1000000",
+            "engagement": str(self.eng.id), "save": "1"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "Saved to engagement")
+        recs = EngagementPlanningRecord.objects.filter(engagement=self.eng, kind="audit_plan")
+        self.assertEqual(recs.count(), 1)
+        self.assertIn("strategy", recs.first().payload)
+
+    def test_save_risk_responses(self):
+        self.client.post(reverse("frontend:isa_responses"), {
+            "engagement": str(self.eng.id), "save": "1",
+            "risk_name[]": ["Revenue cutoff"], "assertion[]": ["cutoff"],
+            "inherent_risk[]": ["high"], "control_risk[]": ["high"],
+            "is_significant[]": ["no"], "is_fraud[]": ["no"]})
+        recs = EngagementPlanningRecord.objects.filter(engagement=self.eng, kind="risk_responses")
+        self.assertEqual(recs.count(), 1)
+        self.assertEqual(len(recs.first().payload["mappings"]), 1)
+
+    def test_save_fraud_plan(self):
+        self.client.post(reverse("frontend:isa_fraud"), {
+            "engagement": str(self.eng.id), "save": "1",
+            "factor_name[]": ["Duplicate payments"], "description[]": ["d"],
+            "severity[]": ["high"], "assertions[]": ["existence"],
+            "detected_by[]": ["duplicate"]})
+        recs = EngagementPlanningRecord.objects.filter(engagement=self.eng, kind="fraud_plan")
+        self.assertEqual(recs.count(), 1)
+
+    def test_save_without_engagement_warns(self):
+        resp = self.client.post(reverse("frontend:isa_planning"), {
+            "organization_name": "Acme", "reporting_period": "FY", "industry": "retail",
+            "revenue_base": "1", "engagement": "", "save": "1"})
+        self.assertContains(resp, "Choose an engagement")
+        self.assertEqual(EngagementPlanningRecord.objects.count(), 0)
+
+    def test_saved_records_panel_lists_records(self):
+        self.client.post(reverse("frontend:isa_planning"), {
+            "organization_name": "Acme", "reporting_period": "FY2026", "industry": "retail",
+            "revenue_base": "1000000", "engagement": str(self.eng.id), "save": "1"})
+        resp = self.client.post(reverse("frontend:isa_planning"), {
+            "organization_name": "Acme", "reporting_period": "FY2026", "industry": "retail",
+            "revenue_base": "1000000", "engagement": str(self.eng.id)})
+        self.assertContains(resp, 'data-sec="saved"')
+        self.assertContains(resp, self.eng.engagement_code)
+
+    def test_compute_without_save_persists_nothing(self):
+        # Existing 8H compute path must remain side-effect-free.
+        self.client.post(reverse("frontend:isa_planning"), {
+            "organization_name": "Acme", "reporting_period": "FY", "industry": "retail",
+            "revenue_base": "1", "engagement": str(self.eng.id)})
+        self.assertEqual(EngagementPlanningRecord.objects.count(), 0)
 
 
 # ── No ledger writes ─────────────────────────────────────────────────────────

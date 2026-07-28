@@ -17,6 +17,7 @@
 
   <div class="advisory"><b>{% trans "Advisory only" %}</b> — {% trans "a deterministic ISA 300 planning aid; not an audit conclusion or opinion." %}</div>
   {% if error %}<div class="err" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:12px;padding:11px 15px;margin-bottom:14px;">{{ error }}</div>{% endif %}
+  {% if notice %}<div style="background:#e9f7ee;border:1px solid #a7e3bf;color:#166534;border-radius:12px;padding:11px 15px;margin-bottom:14px;">{{ notice }}</div>{% endif %}
 
   <div class="isa-grid">
     <form method="post" class="isa-card">
@@ -48,6 +49,7 @@
         <button type="submit" class="isa-btn">{% trans "Build strategy & plan" %}</button>
         <button type="submit" name="export" value="pdf" class="isa-btn" style="background:linear-gradient(135deg,#b91c1c,#f97316);">{% trans "Download PDF" %}</button>
       </div>
+      {% include "audit/isa/_eng_save.html" %}
     </form>
 
     <div>
@@ -85,5 +87,7 @@
       {% endif %}
     </div>
   </div>
+
+  {% include "audit/isa/_saved.html" %}
 </div>
 {% endblock %}

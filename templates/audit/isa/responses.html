@@ -17,6 +17,7 @@
 
   <div class="advisory"><b>{% trans "Advisory only" %}</b> — {% trans "a deterministic ISA 330 mapping aid; not an audit conclusion or opinion." %}</div>
   {% if error %}<div class="err" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:12px;padding:11px 15px;margin-bottom:14px;">{{ error }}</div>{% endif %}
+  {% if notice %}<div style="background:#e9f7ee;border:1px solid #a7e3bf;color:#166534;border-radius:12px;padding:11px 15px;margin-bottom:14px;">{{ notice }}</div>{% endif %}
 
   <form method="post" class="isa-card">
     {% csrf_token %}
@@ -47,6 +48,7 @@
 
     <button type="button" class="lb-add" onclick="addRow()">+ {% trans "Add risk" %}</button><br>
     <button type="submit" class="isa-btn">{% trans "Map responses" %}</button>
+    {% include "audit/isa/_eng_save.html" %}
   </form>
 
   {% if mappings %}
@@ -71,6 +73,8 @@
     </div>
   </div>
   {% endif %}
+
+  {% include "audit/isa/_saved.html" %}
 </div>
 
 <template id="rowTpl">

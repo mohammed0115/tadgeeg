@@ -86,6 +86,11 @@ from apps.audit.substantive_test_models import (  # noqa: F401
     SubstantiveTestItem,
 )
 
+# Engagement planning records — saved ISA 300/330/240 artifacts (9H).
+from apps.audit.planning_record_models import (  # noqa: F401
+    EngagementPlanningRecord,
+)
+
 
 class AuditSession(SoftDeleteModel):
     """Tracks the lifecycle and aggregate progress of a related audit upload."""

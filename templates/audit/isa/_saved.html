@@ -1,0 +1,23 @@
+{% load i18n %}
+{# TADGEEG-FIN-AUDIT-9H — records saved to the selected engagement. #}
+{% if engagement and saved %}
+<div class="isa-card" data-sec="saved">
+  <h3>{% trans "Saved to engagement" %} — {{ engagement.engagement_code }} <span class="tag">{{ saved|length }}</span></h3>
+  <div class="sub">{% trans "Dated, attributable planning records held on the audit file (ISA 300 §12)." %}</div>
+  <div style="overflow-x:auto;">
+  <table class="isa-tbl">
+    <thead><tr><th>{% trans "Title" %}</th><th>{% trans "Kind" %}</th><th>{% trans "Saved" %}</th><th>{% trans "By" %}</th></tr></thead>
+    <tbody>
+    {% for r in saved %}
+      <tr>
+        <td>{{ r.title|default:r.get_kind_display }}</td>
+        <td><span class="tag">{{ r.get_kind_display }}</span></td>
+        <td>{{ r.created_at|date:"Y-m-d H:i" }}</td>
+        <td>{{ r.created_by.full_name|default:"—" }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+{% endif %}

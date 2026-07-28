@@ -54,6 +54,47 @@ def _guard(request):
     return None
 
 
+# ── TADGEEG-FIN-AUDIT-9H — optional engagement binding + save/list ────────────
+def _org(request):
+    return getattr(request.user, "organization", None)
+
+
+def _engagements(request):
+    org = _org(request)
+    from apps.audit.engagement_models import AuditEngagement
+    return list(AuditEngagement.objects.filter(organization=org)[:200]) if org else []
+
+
+def _engagement(request):
+    """Resolve the selected engagement (org-scoped) from GET or POST, or None."""
+    org = _org(request)
+    eid = request.POST.get("engagement") or request.GET.get("engagement")
+    if not eid or org is None:
+        return None
+    from apps.audit.engagement_models import AuditEngagement
+    return AuditEngagement.objects.filter(pk=eid, organization=org).first()
+
+
+def _maybe_save(request, engagement, *, kind, payload, inputs, title):
+    """Persist a computed artifact when the form asked to (save=1). Returns a
+    (notice, error) tuple."""
+    if request.POST.get("save") != "1":
+        return None, None
+    if engagement is None:
+        return None, "Choose an engagement to save this to."
+    from apps.audit.services import planning_records as prs
+    prs.save_record(engagement=engagement, actor=request.user, kind=kind,
+                    payload=payload or {}, inputs=inputs or {}, title=title)
+    return "Saved to engagement.", None
+
+
+def _saved(engagement, kind):
+    if engagement is None:
+        return []
+    from apps.audit.services import planning_records as prs
+    return prs.list_records(engagement=engagement, kind=kind)
+
+
 def _int(value, *, lo=0, hi=25, default=0):
     try:
         return max(lo, min(hi, int(value)))
@@ -224,11 +265,12 @@ def planning(request):
         return denied
     from apps.audit.services import isa300_planning as pl
 
+    engagement = _engagement(request)
     form = {"organization_name": "", "reporting_period": "", "industry": "retail",
             "revenue_base": "0", "is_listed": False, "is_first_year": False,
             "prior_year_modification": False, "has_internal_audit": False,
             "has_subsidiaries": False, "risk_areas": ""}
-    strategy = plan = error = None
+    strategy = plan = error = notice = None
     if request.method == "POST":
         form.update({
             "organization_name": request.POST.get("organization_name", ""),
@@ -269,9 +311,17 @@ def planning(request):
                 return pdf
             error = "PDF export unavailable on this server."
 
+        if strategy and not error:
+            notice, save_err = _maybe_save(
+                request, engagement, kind="audit_plan",
+                payload={"strategy": strategy, "plan": plan}, inputs=form,
+                title=f"{form['organization_name'] or 'Entity'} — {form['reporting_period'] or ''}".strip(" —"))
+            error = error or save_err
+
     return render(request, "audit/isa/planning.html", _ctx(
         request, "audit", form=form, strategy=strategy, plan=plan, error=error,
-        industries=_INDUSTRIES))
+        notice=notice, engagement=engagement, engagements=_engagements(request),
+        saved=_saved(engagement, "audit_plan"), industries=_INDUSTRIES))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -301,7 +351,8 @@ def responses(request):
         return denied
     from apps.audit.services import isa330_risk_responses as rr
 
-    rows, mappings, error = [], None, None
+    engagement = _engagement(request)
+    rows, mappings, error, notice = [], None, None, None
     if request.method == "POST":
         raw = _parse_rows(request, "risk_name", "assertion", "inherent_risk",
                           "control_risk", "is_significant", "is_fraud")
@@ -320,9 +371,17 @@ def responses(request):
                 mappings = [m.to_dict() for m in rr.map_responses(risks)]
             except Exception as exc:
                 error = str(exc)
+        if mappings and not error:
+            notice, save_err = _maybe_save(
+                request, engagement, kind="risk_responses",
+                payload={"mappings": mappings}, inputs={"rows": rows},
+                title=f"{len(mappings)} risk response(s)")
+            error = error or save_err
 
     return render(request, "audit/isa/responses.html", _ctx(
-        request, "audit", rows=rows, mappings=mappings, error=error,
+        request, "audit", rows=rows, mappings=mappings, error=error, notice=notice,
+        engagement=engagement, engagements=_engagements(request),
+        saved=_saved(engagement, "risk_responses"),
         assertions=_ASSERTIONS, ir_levels=_IR_LEVELS, cr_levels=_CR_LEVELS))
 
 
@@ -341,7 +400,8 @@ def fraud(request):
         return denied
     from apps.audit.services import isa240_fraud_response as fr
 
-    rows, result, error = [], None, None
+    engagement = _engagement(request)
+    rows, result, error, notice = [], None, None, None
     if request.method == "POST":
         raw = _parse_rows(request, "factor_name", "description", "severity",
                           "assertions", "detected_by")
@@ -359,7 +419,15 @@ def fraud(request):
                 p["label"] = p["name"].replace("_", " ").capitalize()
         except Exception as exc:
             error = str(exc)
+        if result and not error:
+            notice, save_err = _maybe_save(
+                request, engagement, kind="fraud_plan",
+                payload=result, inputs={"rows": rows},
+                title=f"Fraud plan — {result.get('overall_label', '')}".strip(" —"))
+            error = error or save_err
 
     return render(request, "audit/isa/fraud.html", _ctx(
-        request, "audit", rows=rows, result=result, error=error,
+        request, "audit", rows=rows, result=result, error=error, notice=notice,
+        engagement=engagement, engagements=_engagements(request),
+        saved=_saved(engagement, "fraud_plan"),
         severities=_SEVERITIES, signals=_SIGNALS))

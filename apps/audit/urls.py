@@ -8,6 +8,7 @@ from . import views_financial_statements as vfs
 from . import views_confirmations as vcf
 from . import views_management_letter as vml
 from . import views_substantive as vst
+from . import views_planning_records as vpr
 from . import views_rule_builder as rb
 from . import views_trial_balance as tb
 
@@ -91,6 +92,9 @@ urlpatterns = [
     path("substantive-items/", vst.SubstantiveItemListCreateView.as_view(), name="substantive-list"),
     path("substantive-items/<uuid:pk>/", vst.SubstantiveItemDetailView.as_view(), name="substantive-detail"),
     path("engagements/<uuid:pk>/substantive-summary/", vst.EngagementSubstantiveSummaryView.as_view(), name="substantive-summary"),
+    # TADGEEG-FIN-AUDIT-9H — saved ISA 300/330/240 planning records.
+    path("engagements/<uuid:pk>/planning-records/", vpr.EngagementPlanningRecordsView.as_view(), name="planning-records"),
+    path("planning-records/<uuid:pk>/", vpr.PlanningRecordDetailView.as_view(), name="planning-record-detail"),
     path("dashboard/overview/", views.AuditDashboardOverviewView.as_view(), name="dashboard-overview"),
     path("big-four/", views.BigFourComplianceView.as_view(), name="big-four-compliance"),
     # Phase 2.2 — visual rule builder. The DSL-driven endpoints sit under

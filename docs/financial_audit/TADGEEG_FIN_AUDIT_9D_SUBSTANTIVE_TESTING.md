@@ -42,3 +42,16 @@ Bulk import of count sheets / asset registers (items are entered individually or
 
 ## 9. Recommended next phase
 The deferred **ISA 300/330/240** list-builder UIs (planning strategy, risk responses, fraud factors). Optionally: bulk CSV import of inventory count sheets / fixed-asset registers into the substantive register, and linking flagged variances to 6A evidence requests.
+
+---
+
+## 10. Follow-up (2026-07-28) — Bulk CSV/XLSX import
+Added `import_items(engagement, actor, area, file_obj, filename)` to `services/substantive_testing.py`: auditors upload the count sheet / asset register / payroll run their client already has, instead of keying rows one at a time.
+
+- **Flexible headers.** Columns are matched by a normalised alias map (`_COL_ALIASES`) — e.g. `sku` / `asset_tag` / `employee_id` → `item_reference`; `carrying_amount` / `net_book_value` → `book_value`; area recompute columns (`cost`/`salvage`/`useful_life`/`age`, `gross`/`deductions`, `counted_qty`/`unit_price`).
+- **Tolerant amounts.** `_parse_amount` strips thousands separators and currency symbols ($, £, €, SAR/ر.س); blank → skipped.
+- **Reuses `create_item`** per row, so recompute + matched/variance classification apply exactly as for manual entry. Malformed rows are skipped and reported (`{"created", "skipped", "errors"}`), never partially corrupting the register. Capped at 5 000 rows.
+- **Frontend.** An "Import count sheet / register" card (CSV/XLSX, `multipart/form-data`) on `/audit/substantive-testing/`, area-aware hint text, wired via the `action=import` branch.
+- **Tests (+10).** Service: inventory/fixed-asset/payroll recompute-on-import, tolerant amounts + currency, blank-skip + missing-book report, unsupported type rejected, XLSX path. Frontend: import card renders, CSV upload creates items, missing-file guard.
+
+No new model/migration; no ledger writes.

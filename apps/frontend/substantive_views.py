@@ -92,6 +92,19 @@ def substantive_testing(request):
                     quantity_book=_num(p.get("quantity_book")),
                     quantity_counted=_num(p.get("quantity_counted")))
                 notice = "Test item recorded."
+            elif action == "import":
+                upload = request.FILES.get("file")
+                if upload is None:
+                    error = "Choose a CSV or XLSX file to import."
+                else:
+                    summary = st.import_items(
+                        engagement=engagement, actor=request.user, area=area,
+                        file_obj=upload, filename=upload.name)
+                    notice = (f"Imported {summary['created']} item(s)"
+                              + (f", skipped {summary['skipped']}"
+                                 if summary["skipped"] else "") + ".")
+                    if summary["errors"]:
+                        error = " · ".join(summary["errors"][:5])
             elif action in ("record", "cancel"):
                 item = SubstantiveTestItem.objects.filter(
                     pk=p.get("item"), organization=org, engagement=engagement).first()

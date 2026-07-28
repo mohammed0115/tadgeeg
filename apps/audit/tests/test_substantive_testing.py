@@ -1,6 +1,7 @@
 """TADGEEG-FIN-AUDIT-9D — Substantive Testing tests (service + recompute + API)."""
 from __future__ import annotations
 
+import io
 from decimal import Decimal
 
 from django.test import TestCase
@@ -182,6 +183,84 @@ class ApiTests(Base):
             f"/api/v1/audit/substantive-items/{foreign.id}/").status_code, 404)
         self.assertEqual(self.api.get(
             f"/api/v1/audit/engagements/{other.id}/substantive-summary/").status_code, 404)
+
+
+# ── Bulk import (CSV / XLSX) ─────────────────────────────────────────────────
+class ImportTests(Base):
+    def _csv(self, text):
+        return io.BytesIO(text.encode("utf-8"))
+
+    def test_import_inventory_csv_with_recompute(self):
+        text = ("sku,description,book_value,counted_qty,unit_price,tolerance\n"
+                "A1,Widget,400,30,12.5,0\n"
+                "A2,Gadget,375,30,12.5,0\n")
+        summary = st.import_items(engagement=self.eng, actor=self.auditor,
+                                  area=_Area.INVENTORY, file_obj=self._csv(text),
+                                  filename="counts.csv")
+        self.assertEqual(summary["created"], 2)
+        items = {i.item_reference: i
+                 for i in SubstantiveTestItem.objects.filter(engagement=self.eng)}
+        self.assertEqual(items["A1"].tested_value, Decimal("375.0000"))
+        self.assertEqual(items["A1"].status, _St.VARIANCE)   # 400 vs 375
+        self.assertEqual(items["A2"].status, _St.MATCHED)    # 375 vs 375
+
+    def test_import_fixed_assets_csv_recompute_nbv(self):
+        text = ("asset_tag,cost,salvage,useful_life,age,book_value\n"
+                "FA1,10000,1000,5,2,6400\n")
+        summary = st.import_items(engagement=self.eng, actor=self.auditor,
+                                  area=_Area.FIXED_ASSETS, file_obj=self._csv(text),
+                                  filename="assets.csv")
+        self.assertEqual(summary["created"], 1)
+        it = SubstantiveTestItem.objects.get(engagement=self.eng, area=_Area.FIXED_ASSETS)
+        self.assertEqual(it.tested_value, Decimal("6400.0000"))
+        self.assertEqual(it.status, _St.MATCHED)
+
+    def test_import_payroll_csv_recompute_net_pay(self):
+        text = ("employee_id,gross,deductions,book_value\nE1,8000,1200,6800\n")
+        summary = st.import_items(engagement=self.eng, actor=self.auditor,
+                                  area=_Area.PAYROLL, file_obj=self._csv(text),
+                                  filename="payroll.csv")
+        self.assertEqual(summary["created"], 1)
+        it = SubstantiveTestItem.objects.get(engagement=self.eng, area=_Area.PAYROLL)
+        self.assertEqual(it.tested_value, Decimal("6800.0000"))
+
+    def test_import_tolerant_amounts_and_currency(self):
+        text = ("reference,book_value\nX1,\"1,234.50\"\nX2,$ 900\n")
+        summary = st.import_items(engagement=self.eng, actor=self.auditor,
+                                  area=_Area.OTHER, file_obj=self._csv(text),
+                                  filename="misc.csv")
+        self.assertEqual(summary["created"], 2)
+        vals = sorted(str(i.book_value) for i
+                      in SubstantiveTestItem.objects.filter(engagement=self.eng))
+        self.assertEqual(vals, ["1234.5000", "900.0000"])
+
+    def test_import_skips_blank_reports_missing_book(self):
+        text = ("sku,book_value\nA1,100\n,\nA2,\n")
+        summary = st.import_items(engagement=self.eng, actor=self.auditor,
+                                  area=_Area.INVENTORY, file_obj=self._csv(text),
+                                  filename="c.csv")
+        self.assertEqual(summary["created"], 1)
+        self.assertEqual(summary["skipped"], 2)
+        self.assertTrue(any("missing" in e for e in summary["errors"]))
+
+    def test_import_unsupported_type_rejected(self):
+        with self.assertRaises(st.SubstantiveTestError):
+            st.import_items(engagement=self.eng, actor=self.auditor,
+                            area=_Area.INVENTORY, file_obj=self._csv("a,b\n1,2\n"),
+                            filename="notes.txt")
+
+    def test_import_xlsx(self):
+        from openpyxl import Workbook
+        wb = Workbook(); ws = wb.active
+        ws.append(["sku", "book_value", "counted_qty", "unit_price"])
+        ws.append(["A1", 400, 30, 12.5])
+        buf = io.BytesIO(); wb.save(buf); buf.seek(0)
+        summary = st.import_items(engagement=self.eng, actor=self.auditor,
+                                  area=_Area.INVENTORY, file_obj=buf,
+                                  filename="counts.xlsx")
+        self.assertEqual(summary["created"], 1)
+        it = SubstantiveTestItem.objects.get(engagement=self.eng)
+        self.assertEqual(it.tested_value, Decimal("375.0000"))
 
 
 # ── Ledger isolation ─────────────────────────────────────────────────────────

@@ -128,3 +128,26 @@ class PageTests(TestCase):
         other = _eng(_org("OrgB"), code="B-1")
         resp = self.client.get(self._url(other))
         self.assertContains(resp, "Choose an engagement")
+
+    def test_import_card_renders(self):
+        resp = self.client.get(self._url())
+        self.assertContains(resp, 'data-sec="import"')
+        self.assertContains(resp, 'enctype="multipart/form-data"')
+
+    def test_import_csv_from_ui(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        csv_bytes = b"sku,book_value,counted_qty,unit_price\nA1,400,30,12.5\n"
+        upload = SimpleUploadedFile("counts.csv", csv_bytes, content_type="text/csv")
+        resp = self.client.post(reverse("frontend:substantive_testing"), {
+            "engagement": str(self.eng.id), "area": "inventory",
+            "action": "import", "file": upload})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(
+            SubstantiveTestItem.objects.filter(engagement=self.eng, area="inventory").count(), 1)
+        it = SubstantiveTestItem.objects.get(engagement=self.eng)
+        self.assertEqual(str(it.tested_value), "375.0000")
+
+    def test_import_requires_file(self):
+        resp = self.client.post(reverse("frontend:substantive_testing"), {
+            "engagement": str(self.eng.id), "area": "inventory", "action": "import"})
+        self.assertContains(resp, "Choose a CSV or XLSX file")

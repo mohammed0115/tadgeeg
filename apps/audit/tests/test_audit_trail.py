@@ -78,6 +78,15 @@ class ServiceTests(TestCase):
         except Exception as exc:  # noqa: BLE001
             self.fail(f"record() must not raise, but raised: {exc}")
 
+    def test_record_report_issued(self):
+        row = audit_trail.record_report_issued(
+            engagement=self.eng, actor=self.auditor,
+            report_kind="readiness_workpaper", reference="wp-123")
+        self.assertEqual(row.action, _Act.REPORT_GENERATED)
+        self.assertEqual(row.entity_type, "readiness_workpaper")
+        self.assertEqual(row.entity_id, "wp-123")
+        self.assertEqual(row.metadata["report_kind"], "readiness_workpaper")
+
     def test_finding_status_helper_shape(self):
         class _F:  # minimal duck-typed finding
             pk = "f-1"; reference = "GL-1"; organization = self.org

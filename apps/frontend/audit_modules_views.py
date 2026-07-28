@@ -270,7 +270,13 @@ def readiness_generate(request):
             request.POST.get("action") == "generate":
         try:
             from apps.audit.services import audit_readiness_workpaper as rw
-            rw.generate_for_engagement(engagement, actor=request.user)
+            wp = rw.generate_for_engagement(engagement, actor=request.user)
+            # G0 — record report/workpaper issuance in the tamper-evident trail.
+            from apps.audit.services import audit_trail
+            audit_trail.record_report_issued(
+                engagement=engagement, actor=request.user,
+                report_kind="readiness_workpaper",
+                reference=str(getattr(wp, "id", "") or ""), request=request)
             notice = "Readiness workpaper generated (subject to auditor review)."
         except Exception as exc:
             error = str(exc)

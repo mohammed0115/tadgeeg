@@ -63,6 +63,20 @@ def record_stage_change(*, engagement, actor, old_stage, new_stage, request=None
         ip=_client_ip(request))
 
 
+def record_report_issued(*, engagement, actor, report_kind, reference="",
+                         request=None):
+    """Log issuance/generation of a report or workpaper (ISA 230/700)."""
+    from apps.activity_logs.models import ActivityLog
+    return record(
+        organization=engagement.organization, actor=actor,
+        action=ActivityLog.Action.REPORT_GENERATED,
+        entity_type=report_kind, entity_id=reference,
+        description=f"{report_kind} issued for {engagement.engagement_code}",
+        metadata={"engagement_code": engagement.engagement_code,
+                  "report_kind": report_kind, "reference": str(reference or "")},
+        ip=_client_ip(request))
+
+
 def record_finding_status_change(*, finding, actor, old_status, new_status,
                                  reason="", request=None):
     """Log a GL risk finding status transition (ISA 315/330 review, 3B)."""

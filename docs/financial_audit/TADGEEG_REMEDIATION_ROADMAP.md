@@ -60,16 +60,23 @@ Reading the repository corrected several G0 assumptions. What actually happened:
 ---
 
 ## G1 — Product Consolidation  *(the two audit engines)*
-**Why:** the #1 blocker. Two "audit" products (`apps.audit` vs `apps.auditing`) confuse users and double maintenance.
 
-| Covers | Findings |
-|---|---|
-| Decide `apps.auditing` fate: **merge** its useful pieces (AI document validation) into `apps.audit` as an *analysis capability*, or formally isolate & deprecate its route | P0‑1, T‑2 |
-| Deprecate `/auditor/` UI or fold into the main app | P0‑1 |
-| Plan (not yet build) the invoice→engagement bridge | P1‑2 (prep) |
+### ⚠️ Status: RE‑SCOPED — premise corrected, no risky merge needed
 
-**Effort:** XL · **Risk:** 🔴 (data migration + route deprecation — do behind a feature flag).
-**Acceptance:** one audit engine of record; `/auditor/` either removed or clearly labelled legacy; a written migration plan for any `apps.auditing` data; no user can reach two competing "audit" homes.
+Reading the code corrected the review’s P0‑1 severity:
+
+| Assumption (review) | Reality found | Consequence |
+|---|---|---|
+| Two competing "audit" homes confuse users | `/auditor/` (`apps.auditing`) is surfaced in `base.html` as **"Upload Document" under an "Invoices" section** — *not* as an "Audit" home. The UI collision is minor. | User‑facing confusion is **low**, not P0. |
+| Merge/retire `apps.auditing` | It is a **live, self‑contained** AI document→GAAP/IFRS compliance feature (`AuditDocument`→`AuditFinding`, gpt‑4o). `apps.audit`/`apps.invoices`/`apps.frontend` **never import it**. | Merging/deleting would **destroy a working feature** for ~zero benefit. **Do not merge.** |
+| Doubles maintenance | The real overlap is **functional**: two AI *document* pipelines — `apps.auditing` (doc→standards) vs `apps.invoices` (doc→fraud/OCR). | A **future** consolidation opportunity, not an urgent blocker. |
+
+**Revised decision:**
+- **Keep `apps.auditing` as‑is** (live, isolated, low‑risk). No merge, no deletion.
+- **Developer clarity (docs only):** record the three distinct roles — `apps.audit` = ISA engagement audit · `apps.auditing` = AI document→accounting‑standards compliance · `apps.invoices` = invoice OCR + fraud. Removes the *code‑level* naming confusion (`audit` vs `auditing`), the only real smell here.
+- **Defer** any invoice↔auditing pipeline consolidation to a deliberate, separately‑scoped project (not on the critical path).
+
+**Net effect:** G1 drops from "#1 blocker / XL / 🔴" to **"documentation + de‑prioritise."** The freed priority goes to **G2 (traceability spine)** and **G3 (engagement mgmt & review)** — the genuine P0s. G1’s critical‑path status is removed.
 
 ---
 

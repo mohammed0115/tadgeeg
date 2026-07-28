@@ -28,6 +28,9 @@ _LEGACY_ROLE_NAME_MAP = {
     "external auditor": "external_auditor",
     "viewer": "external_auditor",
     "guest": "external_auditor",
+    # TADGEEG-G4 — client (auditee) role.
+    "client": "client",
+    "client user": "client",
 }
 _VALID_USER_ROLE_VALUES = set(_LEGACY_ROLE_NAME_MAP.values())
 
@@ -121,6 +124,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         COMPLIANCE_OFFICER = "compliance_officer", _("Compliance Officer")
         FINANCE_MANAGER = "finance_manager", _("Finance Manager")
         EXTERNAL_AUDITOR = "external_auditor", _("External Auditor")
+        # TADGEEG-G4 — first-class client (auditee) identity. A CLIENT is
+        # deliberately absent from every capability set below, so it is locked
+        # out of all auditor surfaces; its access is the FK-scoped evidence
+        # portal (6B) only.
+        CLIENT = "client", _("Client User")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
@@ -189,7 +197,14 @@ class User(AbstractBaseUser, PermissionsMixin):
             return "compliance_officer"
         if self.role == self.Role.EXTERNAL_AUDITOR:
             return "read_only_executive"
+        if self.role == self.Role.CLIENT:
+            return "client"
         return self.role
+
+    @property
+    def is_client(self) -> bool:
+        """A client (auditee) user — access is the evidence portal only."""
+        return self.role == self.Role.CLIENT
 
     def has_role_capability(self, capability: str) -> bool:
         capability_map = {

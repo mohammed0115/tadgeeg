@@ -106,6 +106,11 @@ from apps.audit.signoff_models import (  # noqa: F401
     EngagementSignoff,
 )
 
+# Audit issues — issue -> remediation -> closure loop (G3.2).
+from apps.audit.issue_models import (  # noqa: F401
+    AuditIssue,
+)
+
 
 class AuditSession(SoftDeleteModel):
     """Tracks the lifecycle and aggregate progress of a related audit upload."""

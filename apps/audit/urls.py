@@ -12,6 +12,7 @@ from . import views_planning_records as vpr
 from . import views_assessed_risk as var
 from . import views_audit_procedure as vap
 from . import views_signoff as vso
+from . import views_audit_issue as vai
 from . import views_rule_builder as rb
 from . import views_trial_balance as tb
 
@@ -109,6 +110,10 @@ urlpatterns = [
     path("engagements/<uuid:pk>/procedure-summary/", vap.EngagementProcedureSummaryView.as_view(), name="procedure-summary"),
     # TADGEEG-G3 — engagement review & sign-off (ISA 220/230).
     path("engagements/<uuid:pk>/signoffs/", vso.EngagementSignoffView.as_view(), name="engagement-signoffs"),
+    # TADGEEG-G3.2 — audit issues (remediation/closure loop).
+    path("issues/", vai.IssueListCreateView.as_view(), name="issue-list"),
+    path("issues/<uuid:pk>/", vai.IssueDetailView.as_view(), name="issue-detail"),
+    path("engagements/<uuid:pk>/issue-summary/", vai.EngagementIssueSummaryView.as_view(), name="issue-summary"),
     path("dashboard/overview/", views.AuditDashboardOverviewView.as_view(), name="dashboard-overview"),
     path("big-four/", views.BigFourComplianceView.as_view(), name="big-four-compliance"),
     # Phase 2.2 — visual rule builder. The DSL-driven endpoints sit under

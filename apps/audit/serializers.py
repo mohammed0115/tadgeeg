@@ -20,6 +20,7 @@ from .models import (
     GeneralLedgerRiskFinding,
     GeneralLedgerRiskFindingReview,
     AssessedRisk,
+    AuditIssue,
     AuditProcedure,
     EngagementPlanningRecord,
     GeneralLedgerRow,
@@ -533,6 +534,27 @@ class AssessedRiskSerializer(serializers.ModelSerializer):
             "is_significant", "is_fraud_risk", "combined_risk", "description",
             "notes", "status", "status_display", "created_by", "created_by_name",
             "created_at", "updated_at",
+        ]
+        read_only_fields = fields
+
+
+# ── TADGEEG-G3.2 — Audit issues (issue -> remediation -> closure) ────────────
+class AuditIssueSerializer(serializers.ModelSerializer):
+    severity_display = serializers.CharField(source="get_severity_display", read_only=True)
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    is_overdue = serializers.BooleanField(read_only=True)
+    is_open = serializers.BooleanField(read_only=True)
+    risk_reference = serializers.CharField(source="assessed_risk.reference",
+                                           read_only=True, default="")
+
+    class Meta:
+        model = AuditIssue
+        fields = [
+            "id", "reference", "engagement", "organization", "title", "description",
+            "severity", "severity_display", "assessed_risk", "risk_reference",
+            "gl_finding", "owner", "owner_user", "due_date", "remediation_plan",
+            "management_response", "status", "status_display", "is_open",
+            "is_overdue", "raised_by", "created_at", "updated_at", "closed_at",
         ]
         read_only_fields = fields
 

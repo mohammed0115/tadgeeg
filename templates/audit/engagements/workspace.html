@@ -164,6 +164,35 @@
       {% endif %}
     </div>
 
+    {# Substantive testing + confirmations + management letter (9D / 9C / 9B) #}
+    <div class="card sec" data-sec="substantive">
+      <h3>{% trans "Substantive & Communications" %} <a href="{{ links.substantive }}">{% trans "Substantive" %} →</a></h3>
+      <dl class="kv">
+        <dt>{% trans "Substantive items" %}</dt><dd>{{ overview.substantive.total|default:0 }}{% if overview.substantive.variance %} <span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;">{{ overview.substantive.variance }} {% trans "variances" %}</span>{% endif %}</dd>
+        <dt>{% trans "Confirmations" %}</dt><dd>{{ overview.confirmations.total|default:0 }}{% if overview.confirmations.discrepancy %} <span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;">{{ overview.confirmations.discrepancy }} {% trans "discrepancy" %}</span>{% endif %}</dd>
+        <dt>{% trans "Control deficiencies" %}</dt><dd>{{ overview.deficiencies.total|default:0 }}{% if overview.deficiencies.material_weakness %} <span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;">{{ overview.deficiencies.material_weakness }} {% trans "material" %}</span>{% endif %}</dd>
+      </dl>
+      <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;">
+        <a href="{{ links.confirmations }}" style="font-size:12px;color:#1e40af;font-weight:700;text-decoration:none;">{% trans "Confirmations" %} →</a>
+        <a href="{{ links.management_letter }}" style="font-size:12px;color:#1e40af;font-weight:700;text-decoration:none;">{% trans "Management letter" %} →</a>
+      </div>
+    </div>
+
+    {# ISA planning records (8H / 9H) #}
+    <div class="card sec" data-sec="planning-records">
+      <h3>{% trans "ISA Planning" %} <a href="{{ links.isa_planning }}">{% trans "Assessments" %} →</a></h3>
+      {% if overview.planning_records.total %}
+      <dl class="kv">
+        <dt>{% trans "Audit plan (300)" %}</dt><dd>{{ overview.planning_records.audit_plan|default:0 }}</dd>
+        <dt>{% trans "Risk responses (330)" %}</dt><dd>{{ overview.planning_records.risk_responses|default:0 }}</dd>
+        <dt>{% trans "Fraud plan (240)" %}</dt><dd>{{ overview.planning_records.fraud_plan|default:0 }}</dd>
+      </dl>
+      <p style="font-size:11px;color:#94a3b8;margin-top:6px;">{% trans "Saved planning records on the audit file (ISA 300 §12)." %}</p>
+      {% else %}
+      <div style="color:#94a3b8;font-size:12px;">{% trans "No planning records saved yet. Build and save a strategy, responses, or fraud plan." %}</div>
+      {% endif %}
+    </div>
+
     {# Audit readiness (5A / 5D) #}
     <div class="card sec" data-sec="readiness">
       <h3>{% trans "Audit Readiness" %} <a href="{% url 'frontend:readiness_generate' %}?engagement={{ engagement.id }}">{% trans "Generate" %} →</a>{% if links.readiness %} · <a href="{{ links.readiness }}">{% trans "Open" %} →</a>{% endif %}</h3>

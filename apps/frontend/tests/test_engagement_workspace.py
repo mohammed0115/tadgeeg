@@ -198,6 +198,25 @@ class WorkspaceAggregationTests(Base):
         resp = self.client.get(self._url(empty))
         self.assertEqual(resp.status_code, 200)
 
+    def test_newer_modules_surfaced_with_deep_links(self):
+        # 9I: substantive/confirmations/management-letter + planning-records
+        # sections and their engagement-filtered deep links are present.
+        resp = self.client.get(self._url())
+        self.assertContains(resp, 'data-sec="substantive"')
+        self.assertContains(resp, 'data-sec="planning-records"')
+        self.assertContains(resp, reverse("frontend:substantive_testing"))
+        self.assertContains(resp, reverse("frontend:confirmations"))
+        self.assertContains(resp, reverse("frontend:management_letter"))
+        self.assertContains(resp, reverse("frontend:isa_planning"))
+
+    def test_planning_records_count_surfaced(self):
+        from apps.audit.services import planning_records as pr
+        pr.save_record(engagement=self.eng, actor=self.auditor,
+                       kind="audit_plan", payload={"strategy": {}})
+        resp = self.client.get(self._url())
+        self.assertContains(resp, 'data-sec="planning-records"')
+        self.assertContains(resp, "Audit plan (300)")
+
 
 class StageActionTests(Base):
     def test_set_stage(self):

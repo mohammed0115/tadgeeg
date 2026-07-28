@@ -145,6 +145,36 @@ def _engagement_overview(engagement) -> dict:
         }
     readiness = _safe(_readiness, None)
 
+    # Substantive testing (9D) — per-area totals.
+    def _substantive():
+        from apps.audit.services import substantive_testing as st
+        t = st.area_summary(organization=org, engagement=engagement).get("_totals", {})
+        return {"total": t.get("total", 0), "variance": t.get("variance", 0),
+                "matched": t.get("matched", 0)}
+    substantive = _safe(_substantive, {})
+
+    # External confirmations (9C) — status counts.
+    def _confirmations():
+        from apps.audit.services import confirmation_request as cs
+        c = cs.status_counts(organization=org, engagement=engagement)
+        return {"total": c.get("total", 0), "discrepancy": c.get("discrepancy", 0),
+                "outstanding": c.get("outstanding", 0), "matched": c.get("matched", 0)}
+    confirmations = _safe(_confirmations, {})
+
+    # Management letter (9B) — control-deficiency counts.
+    def _deficiencies():
+        from apps.audit.services import management_letter as ml
+        c = ml.status_counts(organization=org, engagement=engagement)
+        return {"total": c.get("total", 0),
+                "material_weakness": c.get("material_weakness", 0)}
+    deficiencies = _safe(_deficiencies, {})
+
+    # Saved planning records (9H) — per-kind counts.
+    def _planning_records():
+        from apps.audit.services import planning_records as pr
+        return pr.counts(organization=org, engagement=engagement)
+    planning_records = _safe(_planning_records, {})
+
     return {
         "materiality": materiality,
         "gl_findings": gl_findings,
@@ -153,6 +183,10 @@ def _engagement_overview(engagement) -> dict:
         "assurance": assurance,
         "analytics": analytics,
         "readiness": readiness,
+        "substantive": substantive,
+        "confirmations": confirmations,
+        "deficiencies": deficiencies,
+        "planning_records": planning_records,
         "stage_steps": _stage_steps(engagement),
     }
 
@@ -224,6 +258,11 @@ def engagement_workspace(request, pk):
         "assurance_overview": f"{reverse('frontend:assurance_overview')}?engagement={engagement.id}",
         "working_papers": reverse("frontend:working_papers"),
         "audit_tools": reverse("frontend:audit_tools"),
+        # Newer modules (9B/9C/9D/9H) — engagement-filtered deep links.
+        "substantive": f"{reverse('frontend:substantive_testing')}?engagement={engagement.id}",
+        "confirmations": f"{reverse('frontend:confirmations')}?engagement={engagement.id}",
+        "management_letter": f"{reverse('frontend:management_letter')}?engagement={engagement.id}",
+        "isa_planning": f"{reverse('frontend:isa_planning')}?engagement={engagement.id}",
     }
     if overview.get("readiness"):
         links["readiness"] = reverse(

@@ -104,15 +104,18 @@ def _next_request_number(organization) -> str:
 
 
 def create_evidence_request(*, engagement, actor, title, gl_finding=None,
-                            sad_item=None, description="",
+                            sad_item=None, substantive_item=None,
+                            confirmation_request=None, description="",
                             request_reason=_R.RequestReason.SUPPORT_FINDING,
                             priority=_R.Priority.MEDIUM, due_date=None,
                             assigned_to=None,
                             assigned_client_user=None) -> AuditEvidenceRequest:
     """Create an evidence request (status ``open``) + a ``created`` event.
 
-    ``assigned_client_user`` (6B) grants that user client-portal access to this
-    request and is notified. Both assignees must belong to the same organization.
+    A request links at least one of: a GL finding, a SAD item, a substantive-test
+    item (9D), or an external confirmation (9C). ``assigned_client_user`` (6B)
+    grants that user client-portal access and is notified. Both assignees must
+    belong to the same organization.
     """
     if not title:
         raise EvidenceRequestError("title is required.")
@@ -126,6 +129,7 @@ def create_evidence_request(*, engagement, actor, title, gl_finding=None,
     req = AuditEvidenceRequest(
         engagement=engagement, organization=organization,
         gl_finding=gl_finding, sad_item=sad_item,
+        substantive_item=substantive_item, confirmation_request=confirmation_request,
         requested_by=_actor_pk(actor), assigned_to=_actor_pk(assigned_to),
         assigned_client_user=_actor_pk(assigned_client_user),
         title=title, description=description or "",

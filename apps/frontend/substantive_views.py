@@ -105,7 +105,7 @@ def substantive_testing(request):
                                  if summary["skipped"] else "") + ".")
                     if summary["errors"]:
                         error = " · ".join(summary["errors"][:5])
-            elif action in ("record", "cancel"):
+            elif action in ("record", "cancel", "request_evidence"):
                 item = SubstantiveTestItem.objects.filter(
                     pk=p.get("item"), organization=org, engagement=engagement).first()
                 if item is None:
@@ -113,6 +113,9 @@ def substantive_testing(request):
                 elif action == "cancel":
                     st.cancel(item=item, actor=request.user)
                     notice = "Item cancelled."
+                elif action == "request_evidence":
+                    ereq = st.request_evidence(item=item, actor=request.user)
+                    notice = f"Evidence request {ereq.request_number} raised."
                 else:
                     st.record_tested(item=item, actor=request.user,
                                      tested_value=p.get("tested_value", "0"),
@@ -128,7 +131,9 @@ def substantive_testing(request):
     items, summary = [], {}
     if engagement is not None:
         items = list(SubstantiveTestItem.objects.filter(engagement=engagement, area=area)
-                     .select_related("created_by").order_by("-created_at")[:300])
+                     .select_related("created_by")
+                     .prefetch_related("evidence_requests")
+                     .order_by("-created_at")[:300])
         summary = st.area_summary(organization=org, engagement=engagement)
 
     return render(request, "audit/substantive/register.html", _ctx(

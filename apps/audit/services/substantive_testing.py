@@ -157,6 +157,29 @@ def cancel(*, item, actor) -> SubstantiveTestItem:
     return item
 
 
+def request_evidence(*, item, actor, description="", assigned_client_user=None):
+    """Raise a 6A evidence request for a substantive-test item (TADGEEG-9F).
+
+    Typically used on a flagged variance to ask the client for support. Links
+    the request back to the item via ``substantive_item``; no ledger writes.
+    """
+    from apps.audit.evidence_models import AuditEvidenceRequest as _ER
+    from apps.audit.services import evidence_request as ev
+
+    variance = item.variance
+    var_txt = f" (variance {variance})" if variance is not None else ""
+    ref = item.item_reference or item.reference
+    title = f"Support for {item.get_area_display()} item {ref}{var_txt}"
+    return ev.create_evidence_request(
+        engagement=item.engagement, actor=actor, title=title[:255],
+        substantive_item=item,
+        request_reason=_ER.RequestReason.SUPPORTING_DOCUMENT,
+        description=description or "",
+        priority=(_ER.Priority.HIGH if item.status == _St.VARIANCE
+                  else _ER.Priority.MEDIUM),
+        assigned_client_user=assigned_client_user)
+
+
 def area_summary(*, organization, engagement=None) -> dict:
     """Per-area counts + total absolute variance for the dashboard."""
     qs = SubstantiveTestItem.objects.filter(organization=organization)

@@ -141,6 +141,31 @@ def cancel(*, request, actor) -> AuditConfirmationRequest:
     return _transition(request, _S.CANCELLED)
 
 
+def request_evidence(*, request, actor, description="", assigned_client_user=None):
+    """Raise a 6A evidence request for a confirmation (TADGEEG-9F).
+
+    Typically used on a discrepancy or no-reply to gather supporting documents.
+    Links back via ``confirmation_request``; no ledger writes.
+    """
+    from apps.audit.evidence_models import AuditEvidenceRequest as _ER
+    from apps.audit.services import evidence_request as ev
+
+    diff = request.difference
+    diff_txt = f" (difference {diff})" if diff is not None else ""
+    reason = (_ER.RequestReason.BANK_SUPPORT
+              if request.confirmation_type == request.ConfirmationType.BANK
+              else _ER.RequestReason.SUPPORTING_DOCUMENT)
+    title = (f"Support for {request.get_confirmation_type_display()} "
+             f"confirmation {request.request_number} — {request.party_name}{diff_txt}")
+    return ev.create_evidence_request(
+        engagement=request.engagement, actor=actor, title=title[:255],
+        confirmation_request=request, request_reason=reason,
+        description=description or "",
+        priority=(_ER.Priority.HIGH if request.status == _S.DISCREPANCY
+                  else _ER.Priority.MEDIUM),
+        assigned_client_user=assigned_client_user)
+
+
 def status_counts(*, organization, engagement=None) -> dict:
     """Counts per status + a matched/discrepancy summary for the dashboard."""
     from django.db.models import Count, Q

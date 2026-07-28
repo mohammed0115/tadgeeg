@@ -21,8 +21,10 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from apps.audit.audit_difference_models import AuditDifferenceItem
+from apps.audit.confirmation_models import AuditConfirmationRequest
 from apps.audit.engagement_models import AuditEngagement
 from apps.audit.general_ledger_models import GeneralLedgerRiskFinding
+from apps.audit.substantive_test_models import SubstantiveTestItem
 from apps.authentication.models import Organization, User
 
 
@@ -72,12 +74,21 @@ class AuditEvidenceRequest(models.Model):
     organization = models.ForeignKey(
         Organization, on_delete=models.CASCADE, related_name="evidence_requests")
 
-    # A request targets a GL finding OR a SAD item (validated in ``clean``).
+    # A request targets a GL finding, a SAD item, a substantive-test item, or an
+    # external confirmation (at least one — validated in ``clean``).
     gl_finding = models.ForeignKey(
         GeneralLedgerRiskFinding, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="evidence_requests")
     sad_item = models.ForeignKey(
         AuditDifferenceItem, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="evidence_requests")
+    # TADGEEG-FIN-AUDIT-9F — link a flagged substantive variance (9D) or an
+    # external-confirmation discrepancy/no-reply (9C) to its evidence request.
+    substantive_item = models.ForeignKey(
+        SubstantiveTestItem, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="evidence_requests")
+    confirmation_request = models.ForeignKey(
+        AuditConfirmationRequest, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="evidence_requests")
 
     requested_by = models.ForeignKey(
@@ -191,9 +202,21 @@ class AuditEvidenceRequest(models.Model):
             if it.engagement_id != self.engagement_id or it.organization_id != self.organization_id:
                 raise ValidationError(
                     "sad_item must belong to the same engagement and organization.")
-        if not self.gl_finding_id and not self.sad_item_id:
+        if self.substantive_item_id:
+            si = self.substantive_item
+            if si.engagement_id != self.engagement_id or si.organization_id != self.organization_id:
+                raise ValidationError(
+                    "substantive_item must belong to the same engagement and organization.")
+        if self.confirmation_request_id:
+            cr = self.confirmation_request
+            if cr.engagement_id != self.engagement_id or cr.organization_id != self.organization_id:
+                raise ValidationError(
+                    "confirmation_request must belong to the same engagement and organization.")
+        if not (self.gl_finding_id or self.sad_item_id
+                or self.substantive_item_id or self.confirmation_request_id):
             raise ValidationError(
-                "An evidence request must link a GL finding or a SAD item.")
+                "An evidence request must link a GL finding, a SAD item, a "
+                "substantive-test item, or a confirmation request.")
 
 
 class AuditEvidenceAttachment(models.Model):

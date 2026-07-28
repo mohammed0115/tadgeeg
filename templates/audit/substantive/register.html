@@ -159,15 +159,31 @@
         <td><span class="sst {{ it.status }}">{{ it.get_status_display }}</span></td>
         <td>
           {% if it.status != 'cancelled' %}
-          <form method="post" class="inline-rec">
-            {% csrf_token %}
-            <input type="hidden" name="engagement" value="{{ engagement.id }}">
-            <input type="hidden" name="area" value="{{ area }}">
-            <input type="hidden" name="action" value="record">
-            <input type="hidden" name="item" value="{{ it.id }}">
-            <input type="number" step="any" name="tested_value" placeholder="{% trans 'tested' %}" value="{% if it.tested_value is not None %}{{ it.tested_value }}{% endif %}">
-            <button type="submit" class="minibtn">{% trans "Test" %}</button>
-          </form>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <form method="post" class="inline-rec">
+              {% csrf_token %}
+              <input type="hidden" name="engagement" value="{{ engagement.id }}">
+              <input type="hidden" name="area" value="{{ area }}">
+              <input type="hidden" name="action" value="record">
+              <input type="hidden" name="item" value="{{ it.id }}">
+              <input type="number" step="any" name="tested_value" placeholder="{% trans 'tested' %}" value="{% if it.tested_value is not None %}{{ it.tested_value }}{% endif %}">
+              <button type="submit" class="minibtn">{% trans "Test" %}</button>
+            </form>
+            {% with ev=it.evidence_requests.all %}
+            {% if ev %}
+              <span class="sst matched" title="{% trans 'Evidence requested' %}">📎 {{ ev|length }} {% trans "evidence" %}</span>
+            {% elif it.status == 'variance' %}
+              <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="engagement" value="{{ engagement.id }}">
+                <input type="hidden" name="area" value="{{ area }}">
+                <input type="hidden" name="action" value="request_evidence">
+                <input type="hidden" name="item" value="{{ it.id }}">
+                <button type="submit" class="minibtn ghost">📎 {% trans "Request evidence" %}</button>
+              </form>
+            {% endif %}
+            {% endwith %}
+          </div>
           {% else %}<span style="font-size:11px;color:#94a3b8;">—</span>{% endif %}
         </td>
       </tr>

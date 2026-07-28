@@ -151,3 +151,23 @@ class PageTests(TestCase):
         resp = self.client.post(reverse("frontend:substantive_testing"), {
             "engagement": str(self.eng.id), "area": "inventory", "action": "import"})
         self.assertContains(resp, "Choose a CSV or XLSX file")
+
+    def test_request_evidence_from_variance(self):
+        it = st.create_item(engagement=self.eng, actor=self.auditor,
+                            area=_I.Area.INVENTORY, book_value="400",
+                            inputs={"quantity": "30", "unit_cost": "12.5"})  # variance
+        resp = self.client.post(reverse("frontend:substantive_testing"), {
+            "engagement": str(self.eng.id), "area": "inventory",
+            "action": "request_evidence", "item": str(it.id)})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(it.evidence_requests.count(), 1)
+        # After linking, the register shows the evidence badge, not the button.
+        page = self.client.get(self._url())
+        self.assertContains(page, "evidence")
+
+    def test_variance_row_offers_request_evidence_button(self):
+        st.create_item(engagement=self.eng, actor=self.auditor,
+                       area=_I.Area.INVENTORY, book_value="400",
+                       inputs={"quantity": "30", "unit_cost": "12.5"})
+        resp = self.client.get(self._url())
+        self.assertContains(resp, 'value="request_evidence"')

@@ -96,6 +96,29 @@ class AuditorPageTests(TestCase):
         resp = self.client.get(self._url())
         self.assertContains(resp, f"/confirm/{r.response_token}/")
 
+    def _discrepancy(self):
+        r = cs.create_confirmation(engagement=self.eng, actor=self.auditor,
+                                   party_name="Bank X", recorded_amount="1000",
+                                   confirmation_type="bank", tolerance="0")
+        cs.send(request=r, actor=self.auditor)
+        cs.record_response(request=r, actor=self.auditor, confirmed_amount="900")
+        cs.reconcile(request=r, actor=self.auditor)
+        return r
+
+    def test_request_evidence_button_on_discrepancy(self):
+        self._discrepancy()
+        resp = self.client.get(self._url())
+        self.assertContains(resp, 'value="request_evidence"')
+
+    def test_request_evidence_from_ui_links_request(self):
+        r = self._discrepancy()
+        resp = self.client.post(reverse("frontend:confirmations"), {
+            "engagement": str(self.eng.id), "action": "request_evidence",
+            "confirmation": str(r.id)})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(r.evidence_requests.count(), 1)
+        self.assertContains(self.client.get(self._url()), "evidence")
+
     def test_cross_org_engagement_ignored(self):
         other = _eng(_org("OrgB"), code="B-1")
         resp = self.client.get(self._url(other))

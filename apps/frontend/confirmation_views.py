@@ -65,12 +65,16 @@ def confirmations(request):
                     party_email=request.POST.get("party_email", ""),
                     tolerance=request.POST.get("tolerance", "0") or "0")
                 notice = "Confirmation request created."
-            elif action in ("send", "reconcile", "no_reply", "cancel", "record"):
+            elif action in ("send", "reconcile", "no_reply", "cancel", "record",
+                            "request_evidence"):
                 req = AuditConfirmationRequest.objects.filter(
                     pk=request.POST.get("confirmation"), organization=org,
                     engagement=engagement).first()
                 if req is None:
                     error = "Confirmation not found."
+                elif action == "request_evidence":
+                    ereq = cs.request_evidence(request=req, actor=request.user)
+                    notice = f"Evidence request {ereq.request_number} raised."
                 elif action == "send":
                     cs.send(request=req, actor=request.user); notice = "Sent."
                 elif action == "record":
@@ -94,7 +98,9 @@ def confirmations(request):
     requests, counts = [], {}
     if engagement is not None:
         requests = list(AuditConfirmationRequest.objects.filter(engagement=engagement)
-                        .select_related("requested_by").order_by("-created_at")[:200])
+                        .select_related("requested_by")
+                        .prefetch_related("evidence_requests")
+                        .order_by("-created_at")[:200])
         counts = cs.status_counts(organization=org, engagement=engagement)
 
     return render(request, "audit/confirmations/list.html", _ctx(

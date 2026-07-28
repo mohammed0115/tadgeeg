@@ -88,6 +88,13 @@
             {% if r.status == 'sent' %}
               <div class="link">{% trans "Link" %}: {{ request.scheme }}://{{ request.get_host }}{% url 'frontend:confirmation_respond' r.response_token %}</div>
             {% endif %}
+            {% with ev=r.evidence_requests.all %}
+            {% if ev %}
+              <span class="cstat matched" style="margin-top:4px;display:inline-block;" title="{% trans 'Evidence requested' %}">📎 {{ ev|length }} {% trans "evidence" %}</span>
+            {% elif r.status == 'discrepancy' or r.status == 'no_reply' %}
+              <form method="post" style="display:inline;">{% csrf_token %}<input type="hidden" name="engagement" value="{{ engagement.id }}"><input type="hidden" name="action" value="request_evidence"><input type="hidden" name="confirmation" value="{{ r.id }}"><button class="runbtn" style="padding:4px 8px;font-size:11px;background:#0369a1;">📎 {% trans "Request evidence" %}</button></form>
+            {% endif %}
+            {% endwith %}
           </td>
         </tr>
         {% endfor %}

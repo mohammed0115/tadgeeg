@@ -8,21 +8,33 @@
 
 ---
 
-## Execution order (at a glance)
+## Execution order (at a glance) — live status
 
 ```
-G0  Foundation & De-risk        (🟢🟡, safe)          ── must be first
-G1  Product Consolidation       (🔴, decision + merge) ── depends on G0
-G2  Traceability Spine          (🟢🔴)                 ── depends on G1
-G3  Engagement Mgmt & Review    (🟢🟡)                 ── depends on G2
-G4  Client Experience           (🟡🔴)                 ── depends on G0 (roles)
-G5  Bridge Invoice ↔ Engagement (🟡)                   ── depends on G2, G3
-G6  Reporting & Opinion         (🟢)                   ── depends on G2, G3
-G7  UX / UI System & IA         (🟡)                   ── depends on G1
-G8  Arabic / RTL / a11y polish  (🟢)                   ── overlaps G7
-G9  Performance & Scale         (🟡)                   ── depends on stable models (G2–G3)
-G10 Test & Security Hardening   (🟢)                   ── continuous; gate before launch
+G0  Foundation & De-risk        🟩 PARTIAL  audit-trail wired; risky items deferred (see G0)
+G1  Product Consolidation       🟩 DONE     re-scoped: no merge needed (apps.auditing is a live isolated feature)
+G2  Traceability Spine          ✅ DONE     Risk→Procedure→Evidence→Finding all linked + risk register UI
+G3  Engagement Mgmt & Review    🟨 PARTIAL  G3.1 sign-off (ISA 220) done; G3.2 members + G3.3 issue-closure pending
+G4  Client Experience           🟥 BLOCKED  needs a product decision (client-role / tenant model) — will not build blind
+G5  Bridge Invoice ↔ Engagement ⬜ PENDING  depends on unified findings (G2.3 ✅) — buildable next
+G6  Reporting & Opinion         ⬜ PENDING  additive; buildable
+G7  UX / UI System & IA         🟥 BLOCKED  needs a design decision (IA + design system) — XL UI churn, not blind-safe
+G8  Arabic / RTL / a11y polish  ⬜ PENDING  additive; buildable
+G9  Performance & Scale         ⬜ PENDING  N-query workspace fan-out; needs care
+G10 Test & Security Hardening   ⬜ PENDING  continuous; gate before launch
 ```
+
+**Delivered so far (all additive, tested, committed):** G0 audit-trail (stage +
+report issuance into the tamper-evident `ActivityLog` chain); G2 full spine —
+`AssessedRisk` → `AuditProcedure` → Evidence → Finding, plus finding→risk links,
+a unified findings register, and a Risk Register UI; G3.1 `EngagementSignoff`
+with the ISA 220 preparer≠reviewer rule. Regression: **816 passed.**
+
+**Needs your decision before I build (won't do blindly):**
+- **G4 client experience** — do we add a `client` user role + client-typed org, or keep the token/FK model? This changes the tenant model.
+- **G7 UX/IA + design system** — needs a chosen IA + visual direction before page-by-page rework.
+
+**Buildable next without a decision:** G3.2/G3.3 (team + issue-closure), G5 (promote invoice/GL signals into the findings register), G6 (report builder), G8 (AR/RTL polish), G9 (perf), G10 (tests/security).
 
 Critical path: **G0 → G1 → G2 → G3 → (G5, G6)**. G4/G7/G8/G9/G10 can be interleaved once their dependencies clear.
 

@@ -11,18 +11,29 @@
 ## Execution order (at a glance) — live status
 
 ```
-G0  Foundation & De-risk        🟩 PARTIAL  audit-trail wired; risky items deferred (see G0)
+G0  Foundation & De-risk        🟩 PARTIAL  audit-trail wired (stage+report); risky items deferred (see G0)
 G1  Product Consolidation       🟩 DONE     re-scoped: no merge needed (apps.auditing is a live isolated feature)
-G2  Traceability Spine          ✅ DONE     Risk→Procedure→Evidence→Finding all linked + risk register UI
-G3  Engagement Mgmt & Review    🟨 PARTIAL  G3.1 sign-off (ISA 220) done; G3.2 members + G3.3 issue-closure pending
-G4  Client Experience           🟥 BLOCKED  needs a product decision (client-role / tenant model) — will not build blind
-G5  Bridge Invoice ↔ Engagement ⬜ PENDING  depends on unified findings (G2.3 ✅) — buildable next
-G6  Reporting & Opinion         ⬜ PENDING  additive; buildable
-G7  UX / UI System & IA         🟥 BLOCKED  needs a design decision (IA + design system) — XL UI churn, not blind-safe
-G8  Arabic / RTL / a11y polish  ⬜ PENDING  additive; buildable
-G9  Performance & Scale         ⬜ PENDING  N-query workspace fan-out; needs care
-G10 Test & Security Hardening   ⬜ PENDING  continuous; gate before launch
+G2  Traceability Spine          ✅ DONE     Risk→Procedure→Evidence→Finding all linked + unified register + risk register UI
+G3  Engagement Mgmt & Review    🟩 MOSTLY   G3.1 sign-off (ISA 220) ✅ · G3.2 issue→remediation→closure ✅ · G3.3 members/deadlines pending
+G4  Client Experience           🟩 PARTIAL  G4.1 first-class CLIENT role, locked out of all auditor surfaces ✅ · client-typed org + portal home = G4.2
+G5  Bridge Invoice ↔ Engagement 🟩 PARTIAL  GL finding → engagement issue (promote, idempotent) ✅ · invoice/fraud→engagement = follow-on
+G6  Reporting & Opinion         ✅ DONE     versioned EngagementReport, ISA 700-safe, draft→review→final + build-from-spine
+G7  UX / UI System & IA         🟨 DIRECTION set (TADGEEG_G7_DESIGN_DIRECTION.md) — awaiting approval to execute (additive, page-by-page)
+G8  Arabic / RTL / a11y polish  ⬜ PENDING  best AFTER G7 token file lands (dependency)
+G9  Performance & Scale         ⬜ PENDING  N-query workspace fan-out — needs a deliberate, measured refactor
+G10 Test & Security Hardening   🟩 ADVANCED ~120 new tests added this session (every module: permission + cross-org + no-ledger); upload-validation/pen-test = dedicated pass
 ```
+
+**Session delivery (all additive, tested, committed — 846 passing):** G0 audit
+trail; G2 full spine (`AssessedRisk`→`AuditProcedure`→Evidence→Finding + unified
+findings register + Risk Register UI + workspace card); G3.1 `EngagementSignoff`
+(preparer≠reviewer); G3.2 `AuditIssue` (remediation/closure); G4.1 CLIENT role;
+G5 GL-finding→issue bridge; G6 `EngagementReport` (ISA 700-safe).
+Migrations 0033–0039 (audit) + 0003 (activity_logs) + 0008 (auth) — all additive.
+
+**Still needs your input:** G7 execution (approve IA + color model + tables-first);
+G4.2 (client-typed orgs?); G9 refactor scope. G8 waits on G7. G10 security items
+(upload AV/type validation, pen-test) are a dedicated hardening pass.
 
 **Delivered so far (all additive, tested, committed):** G0 audit-trail (stage +
 report issuance into the tamper-evident `ActivityLog` chain); G2 full spine —

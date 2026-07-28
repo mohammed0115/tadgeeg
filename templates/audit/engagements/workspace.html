@@ -88,6 +88,20 @@
   </div>
 
   <div class="wp-grid">
+    {# Risk register — traceability spine (G2 / ISA 315-330) #}
+    <div class="card sec" data-sec="risk-register">
+      <h3>{% trans "Risk Register" %} <a href="{{ links.risk_register }}">{% trans "Open" %} →</a></h3>
+      {% if overview.risks.total %}
+      <dl class="kv">
+        <dt>{% trans "Assessed risks" %}</dt><dd>{{ overview.risks.total }}{% if overview.risks.significant %} <span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;">{{ overview.risks.significant }} {% trans "significant" %}</span>{% endif %}</dd>
+        <dt>{% trans "Fraud risks" %}</dt><dd>{{ overview.risks.fraud|default:0 }}</dd>
+        <dt>{% trans "Procedures" %}</dt><dd>{{ overview.risks.procedures|default:0 }} <span style="color:#94a3b8;">({{ overview.risks.linked_procedures|default:0 }} {% trans "linked to risks" %})</span></dd>
+      </dl>
+      {% else %}
+      <div style="color:#94a3b8;font-size:12px;">{% trans "No assessed risks yet. Build the Risk → Procedure → Evidence chain." %}</div>
+      {% endif %}
+    </div>
+
     {# Planning & Materiality (3A / ISA 300) #}
     <div class="card sec" data-sec="planning">
       <h3>{% trans "Planning & Materiality" %} <a href="{% url 'frontend:trial_balance' %}?engagement={{ engagement.id }}">{% trans "Trial balance" %} →</a></h3>

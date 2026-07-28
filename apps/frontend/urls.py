@@ -18,6 +18,7 @@ from . import financial_statements_views
 from . import confirmation_views
 from . import management_letter_views
 from . import substantive_views
+from . import risk_register_views
 
 app_name = 'frontend'
 
@@ -146,6 +147,9 @@ urlpatterns = [
 
     # TADGEEG-FIN-AUDIT-9D — Substantive Testing (ISA 501 / assets / payroll)
     path('audit/substantive-testing/', substantive_views.substantive_testing, name='substantive_testing'),
+
+    # TADGEEG-G2 — Risk Register (ISA 315/330 traceability spine)
+    path('audit/risk-register/', risk_register_views.risk_register, name='risk_register'),
 
     # Audit tools (ISA 320 materiality, ISA 530 sampling)
     path('audit/tools/', views.audit_tools, name='audit_tools'),

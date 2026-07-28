@@ -175,6 +175,17 @@ def _engagement_overview(engagement) -> dict:
         return pr.counts(organization=org, engagement=engagement)
     planning_records = _safe(_planning_records, {})
 
+    # Assessed risks + procedures (G2 traceability spine).
+    def _risks():
+        from apps.audit.services import assessed_risk as ar
+        from apps.audit.services import audit_procedure as ap
+        r = ar.summary(organization=org, engagement=engagement)
+        p = ap.summary(organization=org, engagement=engagement)
+        return {"total": r.get("total", 0), "significant": r.get("significant", 0),
+                "fraud": r.get("fraud", 0), "procedures": p.get("total", 0),
+                "linked_procedures": p.get("linked", 0)}
+    risks = _safe(_risks, {})
+
     return {
         "materiality": materiality,
         "gl_findings": gl_findings,
@@ -187,6 +198,7 @@ def _engagement_overview(engagement) -> dict:
         "confirmations": confirmations,
         "deficiencies": deficiencies,
         "planning_records": planning_records,
+        "risks": risks,
         "stage_steps": _stage_steps(engagement),
     }
 
@@ -267,6 +279,7 @@ def engagement_workspace(request, pk):
         "working_papers": reverse("frontend:working_papers"),
         "audit_tools": reverse("frontend:audit_tools"),
         # Newer modules (9B/9C/9D/9H) — engagement-filtered deep links.
+        "risk_register": f"{reverse('frontend:risk_register')}?engagement={engagement.id}",
         "substantive": f"{reverse('frontend:substantive_testing')}?engagement={engagement.id}",
         "confirmations": f"{reverse('frontend:confirmations')}?engagement={engagement.id}",
         "management_letter": f"{reverse('frontend:management_letter')}?engagement={engagement.id}",

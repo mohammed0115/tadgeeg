@@ -1,0 +1,129 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Risk Register" %}{% endblock %}
+{% block nav_risk_register %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/modules/_shared.html" %}
+  .fld input,.fld select,.fld textarea{width:100%;border:1px solid var(--border,#cbd5e1);border-radius:8px;padding:8px;font-size:12px;}
+  .fld label{display:block;font-size:11px;font-weight:700;color:#475569;margin-bottom:3px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;} .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media(max-width:640px){.row2,.row3{grid-template-columns:1fr;}}
+  details.risk{border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:#fff;}
+  details.risk summary{cursor:pointer;font-weight:700;color:#0f2b4a;font-size:13px;list-style:none;display:flex;justify-content:space-between;gap:8px;align-items:center;}
+  details.risk summary::-webkit-details-marker{display:none;}
+  .cr{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:800;text-transform:capitalize;}
+  .cr.low{background:#dcfce7;color:#166534;} .cr.medium{background:#fef9c3;color:#854d0e;}
+  .cr.high{background:#ffedd5;color:#9a3412;} .cr.significant{background:#fee2e2;color:#991b1b;}
+  .proc{border-inline-start:3px solid #cbd5e1;padding:6px 10px;margin:6px 0;font-size:12px;color:#334155;background:#f8fafc;border-radius:0 8px 8px 0;}
+  .proc .ref{font-weight:700;color:#0f2b4a;} .pst{font-size:10px;font-weight:700;color:#64748b;}
+  .ev{font-size:10px;font-weight:700;color:#166534;} .minibtn{background:var(--primary,#002244);color:#fff;border:none;border-radius:7px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;}
+  .minibtn.ghost{background:#fff;color:#0369a1;border:1px solid #bcd9f5;}
+{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "Risk Register" %}</div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Risk Register" %} · سجلّ المخاطر</div>
+      <div class="ev-sub">{% trans "Assessed risks (ISA 315) → responsive procedures (ISA 330) → evidence. The audit traceability chain in one place." %}</div>
+    </div>
+    {% if engagement %}<a class="runbtn" style="text-decoration:none;background:#0369a1;" href="/api/v1/audit/engagements/{{ engagement.id }}/risk-summary/">{% trans "Summary JSON" %}</a>{% endif %}
+  </div>
+  {% include "audit/modules/_picker.html" %}
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="ok">{{ notice }}</div>{% endif %}
+
+  {% if engagement %}
+  <div class="advisory">{% trans "Deterministic ISA 315/330 register. Advisory — supports the audit file; not an opinion. No ledger writes." %}</div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">{% trans "Risks" %}</div><div class="val">{{ summary.total|default:0 }}</div></div>
+    <div class="kpi alert"><div class="lbl">{% trans "Significant" %}</div><div class="val">{{ summary.significant|default:0 }}</div></div>
+    <div class="kpi alert"><div class="lbl">{% trans "Fraud risks" %}</div><div class="val">{{ summary.fraud|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Responded" %}</div><div class="val">{{ summary.responded|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Concluded" %}</div><div class="val">{{ summary.concluded|default:0 }}</div></div>
+  </div>
+
+  <div class="card" data-sec="create-risk">
+    <h3>{% trans "Assess a risk (ISA 315)" %}</h3>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="engagement" value="{{ engagement.id }}">
+      <input type="hidden" name="action" value="create_risk">
+      <div class="row3">
+        <div class="fld"><label>{% trans "Title" %}</label><input type="text" name="title" required></div>
+        <div class="fld"><label>{% trans "FS area" %}</label><input type="text" name="fs_area" placeholder="{% trans 'e.g. revenue' %}"></div>
+        <div class="fld"><label>{% trans "Assertion" %}</label><select name="assertion">{% for v,l in assertion_choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+      </div>
+      <div class="row3">
+        <div class="fld"><label>{% trans "Inherent risk" %}</label><select name="inherent_risk">{% for v,l in inherent_choices %}<option value="{{ v }}" {% if v == 'medium' %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+        <div class="fld"><label>{% trans "Control risk" %}</label><select name="control_risk">{% for v,l in control_choices %}<option value="{{ v }}" {% if v == 'medium' %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+        <div class="fld"><label>{% trans "Flags" %}</label>
+          <div style="display:flex;gap:12px;padding-top:6px;font-size:12px;">
+            <label style="font-weight:600;"><input type="checkbox" name="is_significant"> {% trans "Significant" %}</label>
+            <label style="font-weight:600;"><input type="checkbox" name="is_fraud_risk"> {% trans "Fraud" %}</label>
+          </div>
+        </div>
+      </div>
+      <div class="fld"><label>{% trans "Description" %}</label><textarea name="description" rows="2"></textarea></div>
+      <button type="submit" class="runbtn">{% trans "Add risk" %}</button>
+    </form>
+  </div>
+
+  <div class="card" data-sec="register">
+    <h3>{% trans "Risk register" %}</h3>
+    {% if risks %}
+    {% for r in risks %}
+    <details class="risk" data-ref="{{ r.reference }}">
+      <summary>
+        <span>{{ r.reference }} — {{ r.title }}{% if r.fs_area %} <span class="pst">· {{ r.fs_area }}</span>{% endif %}</span>
+        <span><span class="cr {{ r.combined_risk }}">{{ r.combined_risk }}</span> <span class="pst">{{ r.get_status_display }}</span></span>
+      </summary>
+      <div style="margin-top:10px;font-size:12px;color:#334155;">
+        {% if r.description %}<p>{{ r.description }}</p>{% endif %}
+        <p class="pst">{{ r.get_assertion_display }} · {% trans "Inherent" %}: {{ r.get_inherent_risk_display }} · {% trans "Control" %}: {{ r.get_control_risk_display }}{% if r.is_fraud_risk %} · {% trans "Fraud risk" %}{% endif %}</p>
+
+        {# Procedures under this risk #}
+        <div style="margin:8px 0;">
+          <div class="pst" style="margin-bottom:4px;">{% trans "Responsive procedures (ISA 330)" %}</div>
+          {% for p in r.procedures.all %}
+          <div class="proc">
+            <span class="ref">{{ p.reference }}</span> — {{ p.title }}
+            <span class="pst">· {{ p.get_nature_display }} · {{ p.get_status_display }}</span>
+            {% with ev=p.evidence_requests.all %}
+              {% if ev %}<span class="ev">📎 {{ ev|length }} {% trans "evidence" %}</span>
+              {% else %}
+              <form method="post" style="display:inline;">{% csrf_token %}
+                <input type="hidden" name="engagement" value="{{ engagement.id }}">
+                <input type="hidden" name="action" value="request_evidence">
+                <input type="hidden" name="procedure" value="{{ p.id }}">
+                <button type="submit" class="minibtn ghost">📎 {% trans "Request evidence" %}</button>
+              </form>
+              {% endif %}
+            {% endwith %}
+          </div>
+          {% empty %}<div class="pst">{% trans "No procedures yet." %}</div>{% endfor %}
+        </div>
+
+        {# Add a procedure to this risk #}
+        <form method="post" style="margin-top:6px;border-top:1px dashed #e2e8f0;padding-top:8px;">
+          {% csrf_token %}
+          <input type="hidden" name="engagement" value="{{ engagement.id }}">
+          <input type="hidden" name="action" value="create_procedure">
+          <input type="hidden" name="assessed_risk" value="{{ r.id }}">
+          <div class="row3">
+            <div class="fld"><label>{% trans "Procedure" %}</label><input type="text" name="title" placeholder="{% trans 'e.g. Cut-off testing' %}" required></div>
+            <div class="fld"><label>{% trans "Nature" %}</label><select name="nature">{% for v,l in nature_choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+            <div class="fld"><label>{% trans "Extent" %}</label><select name="extent">{% for v,l in extent_choices %}<option value="{{ v }}" {% if v == 'standard' %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+          </div>
+          <button type="submit" class="minibtn">{% trans "Add procedure" %}</button>
+        </form>
+      </div>
+    </details>
+    {% endfor %}
+    {% else %}<div class="empty">{% trans "No assessed risks yet. Record one above to start the chain." %}</div>{% endif %}
+  </div>
+  {% else %}
+  <div class="empty">{% trans "Choose an engagement to build its risk register." %}</div>
+  {% endif %}
+</div>
+{% endblock %}

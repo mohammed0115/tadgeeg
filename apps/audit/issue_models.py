@@ -59,6 +59,11 @@ class AuditIssue(models.Model):
         GeneralLedgerRiskFinding, on_delete=models.SET_NULL, null=True, blank=True,
         related_name="issues")
 
+    # TADGEEG-G5 — generic source link (e.g. an invoice) without coupling the
+    # audit app to apps.invoices at the DB level. Used for idempotent promotion.
+    source_type = models.CharField(max_length=32, blank=True, db_index=True)
+    source_id = models.CharField(max_length=64, blank=True, db_index=True)
+
     # Remediation loop.
     owner = models.CharField(max_length=160, blank=True)  # management owner (name/role)
     owner_user = models.ForeignKey(

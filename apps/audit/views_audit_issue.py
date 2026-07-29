@@ -69,6 +69,17 @@ class IssueListCreateView(APIView):
                                              assessed_risk=risk,
                                              due_date=d.get("due_date") or None)
             return Response(AuditIssueSerializer(obj).data, status=status.HTTP_201_CREATED)
+        # G5 bridge — promote a flagged invoice into an engagement issue.
+        if d.get("invoice"):
+            from apps.invoices.models import Invoice
+            invoice = Invoice.objects.filter(pk=d.get("invoice"), organization=org).first()
+            if invoice is None:
+                return Response({"error": "invoice not found in your organization."},
+                                status=status.HTTP_404_NOT_FOUND)
+            obj = ai.promote_from_invoice(invoice=invoice, engagement=engagement,
+                                          actor=request.user, assessed_risk=risk,
+                                          due_date=d.get("due_date") or None)
+            return Response(AuditIssueSerializer(obj).data, status=status.HTTP_201_CREATED)
         try:
             obj = ai.create_issue(
                 engagement=engagement, actor=request.user, title=d.get("title", ""),

@@ -552,7 +552,8 @@ class AuditIssueSerializer(serializers.ModelSerializer):
         fields = [
             "id", "reference", "engagement", "organization", "title", "description",
             "severity", "severity_display", "assessed_risk", "risk_reference",
-            "gl_finding", "owner", "owner_user", "due_date", "remediation_plan",
+            "gl_finding", "source_type", "source_id",
+            "owner", "owner_user", "due_date", "remediation_plan",
             "management_response", "status", "status_display", "is_open",
             "is_overdue", "raised_by", "created_at", "updated_at", "closed_at",
         ]

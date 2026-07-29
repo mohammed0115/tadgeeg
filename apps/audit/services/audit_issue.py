@@ -71,6 +71,45 @@ def promote_from_gl_finding(*, finding, actor, assessed_risk=None, due_date=None
         severity=sev, assessed_risk=risk, gl_finding=finding, due_date=due_date)
 
 
+def promote_from_invoice(*, invoice, engagement, actor, assessed_risk=None,
+                         due_date=None):
+    """Bridge (G5): turn a flagged invoice into an engagement issue.
+
+    Uses the deterministic fraud engine's stored signals for severity + summary.
+    Idempotent per (source_type='invoice', source_id=invoice.id). Traceable via
+    source_type/source_id without coupling apps.audit to apps.invoices at the DB
+    level.
+    """
+    src_id = str(getattr(invoice, "id", "") or getattr(invoice, "pk", ""))
+    existing = AuditIssue.objects.filter(
+        engagement=engagement, source_type="invoice", source_id=src_id).first()
+    if existing is not None:
+        return existing
+
+    severity, reason = _I.Severity.MEDIUM, ""
+    try:
+        from apps.audit.services import fraud_engine as fe
+        assessment = fe.assess_invoice(invoice)
+        sev = getattr(assessment, "severity", "") or "medium"
+        severity = sev if sev in {s.value for s in _I.Severity} else _I.Severity.MEDIUM
+        top = getattr(assessment, "top_contributors", []) or []
+        reason = "; ".join(f"{s.name}: {s.reason}" for s in top[:3])
+    except Exception:  # noqa: BLE001 - bridge must not depend on fraud engine
+        pass
+
+    ref = (getattr(invoice, "invoice_number", "") or getattr(invoice, "original_filename", "")
+           or src_id[:8])
+    obj = create_issue(
+        engagement=engagement, actor=actor,
+        title=f"Flagged invoice {ref}"[:255],
+        description=reason or "Invoice flagged during transaction analysis.",
+        severity=severity, assessed_risk=assessed_risk, due_date=due_date)
+    obj.source_type = "invoice"
+    obj.source_id = src_id
+    obj.save(update_fields=["source_type", "source_id", "updated_at"])
+    return obj
+
+
 def set_status(*, issue, actor, status, note="") -> AuditIssue:
     if status not in _VALID_STATUS:
         raise AuditIssueError(f"invalid status: {status!r}")

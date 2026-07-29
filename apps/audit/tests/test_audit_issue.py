@@ -174,6 +174,31 @@ class BridgeTests(Base):
         self.assertEqual(resp.status_code, 201, resp.content)
         self.assertEqual(resp.json()["gl_finding"], str(f.id))
 
+    def _invoice(self):
+        from apps.invoices.models import Invoice
+        return Invoice.objects.create(
+            organization=self.org, original_filename="inv-001.pdf",
+            invoice_number="INV-001", vendor_name="Acme Supplies")
+
+    def test_promote_from_invoice_idempotent_and_traceable(self):
+        inv = self._invoice()
+        issue = ai.promote_from_invoice(invoice=inv, engagement=self.eng, actor=self.auditor)
+        self.assertEqual(issue.source_type, "invoice")
+        self.assertEqual(issue.source_id, str(inv.id))
+        self.assertIn("INV-001", issue.title)
+        again = ai.promote_from_invoice(invoice=inv, engagement=self.eng, actor=self.auditor)
+        self.assertEqual(again.id, issue.id)
+        self.assertEqual(AuditIssue.objects.filter(
+            source_type="invoice", source_id=str(inv.id)).count(), 1)
+
+    def test_promote_invoice_via_api(self):
+        inv = self._invoice()
+        api = APIClient(); api.force_authenticate(self.auditor)
+        resp = api.post("/api/v1/audit/issues/", {
+            "engagement": str(self.eng.id), "invoice": str(inv.id)}, format="json")
+        self.assertEqual(resp.status_code, 201, resp.content)
+        self.assertEqual(resp.json()["source_type"], "invoice")
+
 
 class LedgerIsolationTests(Base):
     def test_no_ledger_writes(self):

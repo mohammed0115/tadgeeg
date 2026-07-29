@@ -103,7 +103,7 @@ services:
     container_name: finai_${ENV}_web
     restart: unless-stopped
     command: >
-      sh -c "python manage.py migrate --noinput &&
+      sh -c "python manage.py migrate --noinput --fake-initial &&
              python manage.py collectstatic --noinput &&
              gunicorn finai_backend.wsgi:application
                --bind unix:/run/gunicorn/finai_${ENV}.sock

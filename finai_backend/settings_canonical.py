@@ -160,6 +160,17 @@ LOCAL_APPS = [
     "apps.ai_safety",
     "apps.erp",
     "apps.activity_logs",
+    # TADGEEG-DEPLOY-FIX — these apps are imported by installed apps
+    # (platform_admin / platform_management / vendor_dashboard / rule_engine) but
+    # were missing from INSTALLED_APPS, so `migrate` never created their tables.
+    # On a fresh Docker/MySQL deploy that surfaces as "table doesn't exist" 500s.
+    # They ship migrations, so registering them makes fresh deploys create the
+    # tables. (Dev DBs already had the tables from a legacy state, hiding this.)
+    "apps.storage_management",
+    "apps.audit_engine",
+    "apps.file_management",
+    "apps.leads",
+    "apps.cms",
 ]
 
 # ─── Rule Engine Settings ──────────────────────────────────────────────────────

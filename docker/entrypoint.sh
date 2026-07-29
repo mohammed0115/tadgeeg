@@ -49,7 +49,11 @@ else:
 PY
 fi
 
-python manage.py migrate --noinput
+# --fake-initial: create tables on a fresh DB, or mark an initial migration as
+# applied when its tables already exist (safe when an app was just added to
+# INSTALLED_APPS but its tables pre-exist from a legacy state). Prevents both
+# "table doesn't exist" (fresh) and "table already exists" (legacy) on deploy.
+python manage.py migrate --noinput --fake-initial
 python manage.py compilemessages --ignore=.venv || echo "compilemessages skipped (gettext not available)"
 python manage.py collectstatic --noinput || { echo "ERROR: collectstatic failed. Check volume permissions: docker compose exec -u root web_live chown -R www-data:www-data /app/staticfiles"; exit 1; }
 

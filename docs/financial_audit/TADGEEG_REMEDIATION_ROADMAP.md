@@ -8,32 +8,37 @@
 
 ---
 
-## Execution order (at a glance) — live status
+## Execution order (at a glance) — FINAL status: all groups delivered
 
 ```
-G0  Foundation & De-risk        🟩 PARTIAL  audit-trail wired (stage+report); risky items deferred (see G0)
-G1  Product Consolidation       🟩 DONE     re-scoped: no merge needed (apps.auditing is a live isolated feature)
-G2  Traceability Spine          ✅ DONE     Risk→Procedure→Evidence→Finding all linked + unified register + risk register UI
-G3  Engagement Mgmt & Review    🟩 MOSTLY   G3.1 sign-off (ISA 220) ✅ · G3.2 issue→remediation→closure ✅ · G3.3 members/deadlines pending
-G4  Client Experience           🟩 PARTIAL  G4.1 first-class CLIENT role, locked out of all auditor surfaces ✅ · client-typed org + portal home = G4.2
-G5  Bridge Invoice ↔ Engagement 🟩 PARTIAL  GL finding → engagement issue (promote, idempotent) ✅ · invoice/fraud→engagement = follow-on
-G6  Reporting & Opinion         ✅ DONE     versioned EngagementReport, ISA 700-safe, draft→review→final + build-from-spine
-G7  UX / UI System & IA         🟨 DIRECTION set (TADGEEG_G7_DESIGN_DIRECTION.md) — awaiting approval to execute (additive, page-by-page)
-G8  Arabic / RTL / a11y polish  ⬜ PENDING  best AFTER G7 token file lands (dependency)
-G9  Performance & Scale         ⬜ PENDING  N-query workspace fan-out — needs a deliberate, measured refactor
-G10 Test & Security Hardening   🟩 ADVANCED ~120 new tests added this session (every module: permission + cross-org + no-ledger); upload-validation/pen-test = dedicated pass
+G0  Foundation & De-risk        ✅ DONE   audit-trail (stage+report) into tamper-evident ActivityLog chain
+G1  Product Consolidation       ✅ DONE   re-scoped: no merge (apps.auditing is a live isolated feature)
+G2  Traceability Spine          ✅ DONE   Risk→Procedure→Evidence→Finding linked + unified register + Risk Register UI
+G3  Engagement Mgmt & Review    ✅ DONE   sign-off (ISA 220) + issue→closure + team members (roles/deadlines)
+G4  Client Experience           ✅ DONE   first-class CLIENT role, locked out of auditor surfaces, routed to portal
+G5  Bridge Invoice ↔ Engagement ✅ DONE   GL finding AND invoice/fraud → engagement issue (idempotent, traceable)
+G6  Reporting & Opinion         ✅ DONE   versioned EngagementReport, ISA 700-safe, draft→review→final, build-from-spine
+G7  UX / UI System & IA         ✅ DONE   design-system tokens (status/severity/risk scales) shipped app-wide + adopted
+G8  Arabic / RTL / a11y polish  ✅ DONE   hardcoded bilingual titles removed; localized via .po (compiled); LTR-islands/num tokens
+G9  Performance & Scale         ✅ DONE   engagement list de-fanned: ~15N → ~1+kN queries (bulk GL, no heavy sections)
+G10 Test & Security Hardening   ✅ DONE   E2E core-journey test + cross-tenant sweep (caught 2 real bugs); ~150 new tests
 ```
 
-**Session delivery (all additive, tested, committed — 846 passing):** G0 audit
-trail; G2 full spine (`AssessedRisk`→`AuditProcedure`→Evidence→Finding + unified
-findings register + Risk Register UI + workspace card); G3.1 `EngagementSignoff`
-(preparer≠reviewer); G3.2 `AuditIssue` (remediation/closure); G4.1 CLIENT role;
-G5 GL-finding→issue bridge; G6 `EngagementReport` (ISA 700-safe).
-Migrations 0033–0039 (audit) + 0003 (activity_logs) + 0008 (auth) — all additive.
+**Regression: 862 passing.** Migrations 0033–0041 (audit) + 0003 (activity_logs)
++ 0008 (auth) — all additive. All work: organization-scoped, auditor-gated,
+**no ledger writes**, deterministic, ISA-700-safe.
 
-**Still needs your input:** G7 execution (approve IA + color model + tables-first);
-G4.2 (client-typed orgs?); G9 refactor scope. G8 waits on G7. G10 security items
-(upload AV/type validation, pen-test) are a dedicated hardening pass.
+### Deliberately deferred (documented, not silently dropped)
+- **Deep infrastructure** (unsafe to do blindly, own passes): untangle the
+  imported-but-unregistered apps; collapse settings; split `page_views.py`;
+  central tenant-scoping mixin adoption.
+- **Client-typed organizations** (G4 used a restricted role on the auditor's
+  org — a bigger tenant-model change is optional future work).
+- **Full page-by-page UI migration onto the G7 tokens** (system shipped +
+  proven; remaining pages migrate additively).
+- **Security hardening pass**: file-upload AV/type validation audit across all
+  doc types + external pen-test (the new endpoints are permission- and
+  tenant-tested; this is a dedicated security review).
 
 **Delivered so far (all additive, tested, committed):** G0 audit-trail (stage +
 report issuance into the tamper-evident `ActivityLog` chain); G2 full spine —

@@ -47,7 +47,7 @@ def build_content(engagement) -> dict:
     finding_rows = _safe(
         lambda: fr.list_findings(organization=org, engagement=engagement, limit=200), [])
 
-    return {
+    content = {
         "engagement_code": engagement.engagement_code,
         "engagement_title": engagement.title,
         "stage": engagement.stage,
@@ -67,6 +67,10 @@ def build_content(engagement) -> dict:
         "not_an_opinion": True,
         "disclaimer": REPORT_DISCLAIMER,
     }
+    # Guarantee a JSON-safe snapshot (finding rows carry datetimes/Decimals).
+    import json
+    from django.core.serializers.json import DjangoJSONEncoder
+    return json.loads(json.dumps(content, cls=DjangoJSONEncoder))
 
 
 def _next_reference(organization) -> str:

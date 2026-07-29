@@ -25,9 +25,12 @@ _DEF_CLASS_RANK = {"material_weakness": 4, "significant_deficiency": 3,
 def _gl_row(f: GeneralLedgerRiskFinding) -> dict:
     return {
         "source": "gl_finding",
+        # GeneralLedgerRiskFinding fields are risk_code / risk_title /
+        # risk_description (there is no `reference` / `description`).
         "id": str(f.id),
-        "reference": getattr(f, "reference", "") or str(f.id)[:8],
-        "title": (f.description or "GL risk finding")[:160],
+        "reference": getattr(f, "risk_code", "") or str(f.id)[:8],
+        "title": (getattr(f, "risk_title", "") or getattr(f, "risk_description", "")
+                  or "GL risk finding")[:160],
         "severity": f.severity,
         "severity_rank": _GL_SEVERITY_RANK.get(f.severity, 0),
         "status": f.status,

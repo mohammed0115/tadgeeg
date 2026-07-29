@@ -19630,6 +19630,239 @@ msgstr ""
 msgid "Verifying your payment. Your subscription will update automatically."
 msgstr "جارٍ التحقّق من دفعك. سيُحدَّث اشتراكك تلقائيًا."
 
+msgid ""
+"One normalized view of GL risk findings (ISA 315) and control deficiencies "
+"(ISA 265), each showing its link to an assessed risk."
+msgstr ""
+"عرض موحّد لملاحظات مخاطر دفتر الأستاذ (ISA 315) وأوجه قصور الرقابة (ISA "
+"265)، يُظهر ارتباط كلٍّ منها بمخاطرة مُقيَّمة."
+
+msgid ""
+"Read-only aggregation across finding types. Advisory — supports the audit "
+"file; not an opinion. No ledger writes."
+msgstr ""
+"تجميع للقراءة فقط عبر أنواع الملاحظات. استشاري — يدعم ملف التدقيق؛ ليس "
+"رأيًا. لا يكتب في دفتر الأستاذ."
+
+msgid "GL findings"
+msgstr "ملاحظات دفتر الأستاذ"
+
+msgid "Linked to risk"
+msgstr "مرتبطة بمخاطرة"
+
+msgid "Unlinked"
+msgstr "غير مرتبطة"
+
+msgid "GL finding"
+msgstr "ملاحظة دفتر أستاذ"
+
+msgid "Deficiency"
+msgstr "قصور رقابي"
+
+msgid "Risk link"
+msgstr "ارتباط المخاطرة"
+
+msgid "Linked"
+msgstr "مرتبطة"
+
+msgid "No findings recorded yet for this engagement."
+msgstr "لا ملاحظات مسجَّلة بعد لهذا الارتباط."
+
+msgid "Choose an engagement to view its findings register."
+msgstr "اختر ارتباطًا لعرض سجل ملاحظاته."
+
+msgid "Audit Issues"
+msgstr "ملاحظات التدقيق"
+
+msgid ""
+"Track findings to closure: issue → remediation plan → remediated / accepted "
+"/ closed. Deterministic; advisory; no ledger writes."
+msgstr ""
+"تتبَّع الملاحظات حتى الإغلاق: ملاحظة ← خطة معالجة ← مُعالَجة / مقبولة / "
+"مغلقة. حتمي؛ استشاري؛ لا يكتب في دفتر الأستاذ."
+
+msgid ""
+"Issues support the audit file and management communications. They are not an"
+" audit opinion and never modify the ledger."
+msgstr ""
+"تدعم الملاحظات ملف التدقيق ومراسلات الإدارة. وهي ليست رأي تدقيق ولا تُعدِّل "
+"دفتر الأستاذ إطلاقًا."
+
+msgid "Raise an issue"
+msgstr "تسجيل ملاحظة"
+
+msgid "Raise issue"
+msgstr "تسجيل الملاحظة"
+
+msgid "Remediation plan"
+msgstr "خطة المعالجة"
+
+msgid "From GL finding"
+msgstr "من ملاحظة دفتر أستاذ"
+
+msgid "Remediation"
+msgstr "المعالجة"
+
+msgid "Record remediation"
+msgstr "تسجيل المعالجة"
+
+msgid "Set status"
+msgstr "تعيين الحالة"
+
+msgid "Note (management response)"
+msgstr "ملاحظة (رد الإدارة)"
+
+msgid "No issues match. Raise one above."
+msgstr "لا توجد ملاحظات مطابقة. سجّل واحدة أعلاه."
+
+msgid "Choose an engagement to manage its issues."
+msgstr "اختر ارتباطًا لإدارة ملاحظاته."
+
+msgid "Engagement Reports"
+msgstr "تقارير الارتباط"
+
+msgid ""
+"Versioned report snapshots assembled from the traceability spine, with "
+"preparer/reviewer/partner/EQR sign-offs (ISA 220/230)."
+msgstr ""
+"لقطات تقارير مُصدَّرة بإصدارات، مُجمَّعة من سلسلة التتبُّع، مع اعتمادات "
+"المُعِد/المراجع/الشريك/مراجع جودة الارتباط (ISA 220/230)."
+
+msgid ""
+"Reports communicate audit results and a disclaimer — never an ISA 700 "
+"opinion, and never that the statements present fairly. No ledger writes."
+msgstr ""
+"تُبلِّغ التقارير نتائج التدقيق مع إخلاء مسؤولية — وليست رأي ISA 700 إطلاقًا،"
+" ولا تُفيد بأن القوائم تعرض بعدالة. لا تكتب في دفتر الأستاذ."
+
+msgid "Build a report"
+msgstr "إنشاء تقرير"
+
+msgid "Title (optional)"
+msgstr "العنوان (اختياري)"
+
+msgid "Assemble draft"
+msgstr "تجميع مسودة"
+
+msgid ""
+"A draft snapshots current risks, procedures, findings and issues. Regenerate"
+" a new version any time to refresh the facts."
+msgstr ""
+"تلتقط المسودة المخاطر والإجراءات والملاحظات والقضايا الحالية. أعد التوليد "
+"كإصدار جديد في أي وقت لتحديث الوقائع."
+
+msgid "Open issues"
+msgstr "الملاحظات المفتوحة"
+
+msgid "Overdue issues"
+msgstr "الملاحظات المتأخرة"
+
+msgid "Sign-offs"
+msgstr "الاعتمادات"
+
+msgid "Sign as"
+msgstr "التوقيع بصفة"
+
+msgid "Sign off"
+msgstr "اعتماد"
+
+msgid ""
+"ISA 220: the preparer of an artifact cannot also sign it off as "
+"reviewer/partner/EQR."
+msgstr ""
+"ISA 220: لا يجوز لمُعِدّ المستند أن يعتمده أيضًا كمراجع/شريك/مراجع جودة."
+
+msgid "Regenerate as new version"
+msgstr "إعادة التوليد كإصدار جديد"
+
+msgid "No reports yet. Assemble a draft above."
+msgstr "لا توجد تقارير بعد. جمِّع مسودة أعلاه."
+
+msgid "Choose an engagement to build its reports."
+msgstr "اختر ارتباطًا لإنشاء تقاريره."
+
+msgid "Engagement Team"
+msgstr "فريق الارتباط"
+
+msgid ""
+"Assign team members and roles (ISA 220). Roles drive sign-off segregation on"
+" the engagement's artifacts."
+msgstr ""
+"عيّن أعضاء الفريق وأدوارهم (ISA 220). تُحدِّد الأدوار الفصل في اعتماد "
+"مستندات الارتباط."
+
+msgid ""
+"Membership records support ISA 220 direction, supervision and review. No "
+"ledger writes."
+msgstr ""
+"تدعم سجلات العضوية التوجيه والإشراف والمراجعة وفق ISA 220. لا تكتب في دفتر "
+"الأستاذ."
+
+msgid "Members"
+msgstr "الأعضاء"
+
+msgid "Reviewers"
+msgstr "المراجعون"
+
+msgid "Preparers"
+msgstr "المُعِدّون"
+
+msgid "Assign a member"
+msgstr "إضافة عضو"
+
+msgid "Responsibilities"
+msgstr "المسؤوليات"
+
+msgid "All active users in your organization are already assigned."
+msgstr "جميع المستخدمين النشطين في مؤسستك معيَّنون بالفعل."
+
+msgid "Remove this member?"
+msgstr "إزالة هذا العضو؟"
+
+msgid "No members assigned yet."
+msgstr "لا أعضاء معيَّنون بعد."
+
+msgid "Choose an engagement to manage its team."
+msgstr "اختر ارتباطًا لإدارة فريقه."
+
+msgid "Team & Sign-off"
+msgstr "الفريق والاعتماد"
+
+msgid "Report & Team"
+msgstr "التقرير والفريق"
+
+msgid "Total findings"
+msgstr "إجمالي الملاحظات"
+
+msgid "No findings recorded yet."
+msgstr "لا ملاحظات مسجَّلة بعد."
+
+msgid "No issues yet. Track findings to closure here."
+msgstr "لا ملاحظات بعد. تتبَّع الملاحظات حتى الإغلاق من هنا."
+
+msgid "Latest report"
+msgstr "آخر تقرير"
+
+msgid "None yet"
+msgstr "لا يوجد بعد"
+
+msgid "Team members"
+msgstr "أعضاء الفريق"
+
+msgid "Team & sign-off"
+msgstr "الفريق والاعتماد"
+
+msgid ""
+"Reports communicate results with a disclaimer — never an ISA 700 opinion."
+msgstr ""
+"تُبلِّغ التقارير النتائج مع إخلاء مسؤولية — وليست رأي ISA 700 إطلاقًا."
+
+msgid "overdue"
+msgstr "متأخرة"
+
+msgid "unlinked"
+msgstr "غير مرتبطة"
+
 #~ msgid "Privacy and data protection"
 #~ msgstr "الخصوصية وحماية البيانات"
 

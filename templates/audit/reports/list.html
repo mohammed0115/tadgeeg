@@ -1,0 +1,122 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Engagement Reports" %}{% endblock %}
+{% block nav_engagement_reports %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/modules/_shared.html" %}
+  .fld input,.fld select,.fld textarea{width:100%;border:1px solid var(--border,#cbd5e1);border-radius:8px;padding:8px;font-size:12px;}
+  .fld label{display:block;font-size:11px;font-weight:700;color:#475569;margin-bottom:3px;}
+  details.rep{border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:#fff;}
+  details.rep summary{cursor:pointer;font-weight:700;color:#0f2b4a;font-size:13px;list-style:none;display:flex;justify-content:space-between;gap:8px;align-items:center;}
+  details.rep summary::-webkit-details-marker{display:none;}
+  .rst{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:800;}
+  .rst.draft{background:#e0e7ff;color:#3730a3;} .rst.in_review{background:#ffedd5;color:#9a3412;}
+  .rst.final{background:#dcfce7;color:#166534;} .rst.archived{background:#e2e8f0;color:#475569;}
+  .pst{font-size:10px;font-weight:700;color:#64748b;}
+  .minibtn{background:var(--primary,#002244);color:#fff;border:none;border-radius:7px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;}
+  .minibtn.ghost{background:#fff;color:#0369a1;border:1px solid #bcd9f5;}
+  .so{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;margin:3px;}
+  .so.yes{background:#dcfce7;color:#166534;} .so.no{background:#f1f5f9;color:#94a3b8;}
+  .exec{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0;}
+  .exec div{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px;font-size:12px;}
+  .exec b{display:block;font-size:18px;color:#0f2b4a;}
+{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "Reports" %}</div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Engagement Reports" %}</div>
+      <div class="ev-sub">{% trans "Versioned report snapshots assembled from the traceability spine, with preparer/reviewer/partner/EQR sign-offs (ISA 220/230)." %}</div>
+    </div>
+  </div>
+  {% include "audit/modules/_picker.html" %}
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="ok">{{ notice }}</div>{% endif %}
+
+  {% if engagement %}
+  <div class="advisory">{% trans "Reports communicate audit results and a disclaimer — never an ISA 700 opinion, and never that the statements present fairly. No ledger writes." %}</div>
+
+  <div class="card" data-sec="create-report">
+    <h3>{% trans "Build a report" %}</h3>
+    <form method="post" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
+      {% csrf_token %}
+      <input type="hidden" name="engagement" value="{{ engagement.id }}">
+      <input type="hidden" name="action" value="create_report">
+      <div class="fld" style="flex:1;min-width:240px;"><label>{% trans "Title (optional)" %}</label><input type="text" name="title" placeholder="{% trans 'Audit report' %}"></div>
+      <button type="submit" class="runbtn">{% trans "Assemble draft" %}</button>
+    </form>
+    <p class="pst" style="margin-top:6px;">{% trans "A draft snapshots current risks, procedures, findings and issues. Regenerate a new version any time to refresh the facts." %}</p>
+  </div>
+
+  <div class="card" data-sec="reports">
+    <h3>{% trans "Reports" %}</h3>
+    {% if report_rows %}
+    {% for row in report_rows %}
+    {% with r=row.r %}
+    <details class="rep" data-ref="{{ r.reference }}">
+      <summary>
+        <span>{{ r.reference }} · v{{ r.version }}{% if r.title %} — {{ r.title }}{% endif %}</span>
+        <span><span class="rst {{ r.status }}">{{ r.get_status_display }}</span> <span class="pst">{{ r.created_at|date:"Y-m-d" }}</span></span>
+      </summary>
+      <div style="margin-top:10px;font-size:12px;color:#334155;">
+        {% with e=r.content.executive_summary %}
+        <div class="exec">
+          <div>{% trans "Assessed risks" %}<b>{{ e.assessed_risks|default:0 }}</b></div>
+          <div>{% trans "Significant" %}<b>{{ e.significant_risks|default:0 }}</b></div>
+          <div>{% trans "Procedures" %}<b>{{ e.procedures|default:0 }}</b></div>
+          <div>{% trans "Findings" %}<b>{{ e.findings|default:0 }}</b></div>
+          <div>{% trans "Open issues" %}<b>{{ e.open_issues|default:0 }}</b></div>
+          <div>{% trans "Overdue issues" %}<b>{{ e.overdue_issues|default:0 }}</b></div>
+        </div>
+        {% endwith %}
+        <p class="pst">{{ r.content.disclaimer }}</p>
+
+        {# Sign-offs (ISA 220/230) #}
+        <div style="margin:10px 0;border-top:1px dashed #e2e8f0;padding-top:8px;">
+          <div class="pst" style="margin-bottom:4px;">{% trans "Sign-offs" %}</div>
+          {% for role, signed in row.signoffs.items %}
+            <span class="so {% if signed %}yes{% else %}no{% endif %}">{% if signed %}✓{% else %}○{% endif %} {{ role }}</span>
+          {% endfor %}
+          <form method="post" style="margin-top:8px;display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
+            {% csrf_token %}
+            <input type="hidden" name="engagement" value="{{ engagement.id }}">
+            <input type="hidden" name="action" value="sign">
+            <input type="hidden" name="report" value="{{ r.id }}">
+            <div class="fld" style="min-width:160px;"><label>{% trans "Sign as" %}</label>
+              <select name="role">{% for v,l in signoff_role_choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+            <div class="fld" style="flex:1;min-width:200px;"><label>{% trans "Note" %}</label><input type="text" name="note"></div>
+            <button type="submit" class="minibtn ghost">{% trans "Sign off" %}</button>
+          </form>
+          <p class="pst" style="margin-top:4px;">{% trans "ISA 220: the preparer of an artifact cannot also sign it off as reviewer/partner/EQR." %}</p>
+        </div>
+
+        {# Actions #}
+        <div style="display:flex;gap:8px;align-items:end;flex-wrap:wrap;border-top:1px dashed #e2e8f0;padding-top:8px;">
+          <form method="post" style="display:flex;gap:8px;align-items:end;">
+            {% csrf_token %}
+            <input type="hidden" name="engagement" value="{{ engagement.id }}">
+            <input type="hidden" name="action" value="set_status">
+            <input type="hidden" name="report" value="{{ r.id }}">
+            <div class="fld" style="min-width:150px;"><label>{% trans "Set status" %}</label>
+              <select name="status">{% for v,l in status_choices %}<option value="{{ v }}" {% if r.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+            <button type="submit" class="minibtn">{% trans "Update" %}</button>
+          </form>
+          <form method="post" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="engagement" value="{{ engagement.id }}">
+            <input type="hidden" name="action" value="new_version">
+            <input type="hidden" name="report" value="{{ r.id }}">
+            <button type="submit" class="minibtn ghost">{% trans "Regenerate as new version" %}</button>
+          </form>
+        </div>
+      </div>
+    </details>
+    {% endwith %}
+    {% endfor %}
+    {% else %}<div class="empty">{% trans "No reports yet. Assemble a draft above." %}</div>{% endif %}
+  </div>
+  {% else %}
+  <div class="empty">{% trans "Choose an engagement to build its reports." %}</div>
+  {% endif %}
+</div>
+{% endblock %}

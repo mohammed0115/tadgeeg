@@ -141,6 +141,48 @@ class ListTests(Base):
         resp = self.client.get(reverse("frontend:engagement_list"))
         self.assertNotContains(resp, "OTHER-ENG")
 
+    def test_create_engagement_from_ui_redirects_to_workspace(self):
+        resp = self.client.post(reverse("frontend:engagement_list"), {
+            "action": "create", "engagement_code": "NEW-001",
+            "title": "New FY25 audit", "engagement_type": "fs",
+            "period_start": "2025-01-01", "period_end": "2025-12-31"})
+        self.assertEqual(resp.status_code, 302)
+        eng = AuditEngagement.objects.get(organization=self.org, engagement_code="NEW-001")
+        self.assertEqual(resp.url, reverse("frontend:engagement_workspace", args=[eng.id]))
+        self.assertEqual(eng.title, "New FY25 audit")
+
+    def test_create_engagement_duplicate_code_rejected(self):
+        resp = self.client.post(reverse("frontend:engagement_list"), {
+            "action": "create", "engagement_code": "AUD-1", "title": "dup",
+            "period_start": "2025-01-01", "period_end": "2025-12-31"})
+        self.assertContains(resp, "already exists")
+
+    def test_create_engagement_requires_code_and_title(self):
+        resp = self.client.post(reverse("frontend:engagement_list"), {
+            "action": "create", "engagement_code": "", "title": ""})
+        self.assertContains(resp, "required")
+
+    def test_create_engagement_without_type_defaults_to_fs(self):
+        # Empty engagement_type must fall back to the FS default, not crash.
+        resp = self.client.post(reverse("frontend:engagement_list"), {
+            "action": "create", "engagement_code": "NOTYPE-1",
+            "title": "No type given", "engagement_type": "",
+            "period_start": "2025-01-01", "period_end": "2025-12-31"})
+        self.assertEqual(resp.status_code, 302)
+        eng = AuditEngagement.objects.get(organization=self.org, engagement_code="NOTYPE-1")
+        self.assertEqual(eng.engagement_type,
+                         AuditEngagement.EngagementType.FINANCIAL_STATEMENT)
+
+    def test_create_engagement_without_period_is_friendly_error(self):
+        # period_start/period_end are NOT NULL — a missing date must be a friendly
+        # message, never a 500 / broken transaction.
+        resp = self.client.post(reverse("frontend:engagement_list"), {
+            "action": "create", "engagement_code": "NOPERIOD-1", "title": "No period"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, "dates are required")
+        self.assertFalse(AuditEngagement.objects.filter(
+            organization=self.org, engagement_code="NOPERIOD-1").exists())
+
     def test_g9_list_rows_bulk_open_counts_correct(self):
         # G9 — the bulk GL query returns correct per-engagement open counts.
         from apps.frontend.engagement_workspace_views import _list_rows

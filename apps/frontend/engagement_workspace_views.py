@@ -186,6 +186,37 @@ def _engagement_overview(engagement) -> dict:
                 "linked_procedures": p.get("linked", 0)}
     risks = _safe(_risks, {})
 
+    # Issues (G3.2) — remediation → closure loop.
+    def _issues():
+        from apps.audit.services import audit_issue as ai
+        c = ai.summary(organization=org, engagement=engagement)
+        return {"total": c.get("total", 0), "open": c.get("open", 0),
+                "overdue": c.get("overdue", 0), "critical": c.get("critical", 0)}
+    issues = _safe(_issues, {})
+
+    # Findings register (G2.3) — normalized across finding types.
+    def _findings():
+        from apps.audit.services import findings_register as fr
+        return fr.summary(organization=org, engagement=engagement)
+    findings = _safe(_findings, {})
+
+    # Engagement team (G3.3).
+    def _members():
+        from apps.audit.services import engagement_member as em
+        return em.summary(organization=org, engagement=engagement)
+    members = _safe(_members, {})
+
+    # Engagement reports (G6) — latest snapshot status.
+    def _reports():
+        from apps.audit.services import report_builder as rb
+        rows = rb.list_reports(engagement=engagement, limit=1)
+        if not rows:
+            return None
+        r = rows[0]
+        return {"reference": r.reference, "version": r.version,
+                "status_display": r.get_status_display()}
+    reports = _safe(_reports, None)
+
     return {
         "materiality": materiality,
         "gl_findings": gl_findings,
@@ -199,6 +230,10 @@ def _engagement_overview(engagement) -> dict:
         "deficiencies": deficiencies,
         "planning_records": planning_records,
         "risks": risks,
+        "issues": issues,
+        "findings": findings,
+        "members": members,
+        "reports": reports,
         "stage_steps": _stage_steps(engagement),
     }
 
@@ -237,11 +272,46 @@ def _list_rows(engagements, org):
 
 @login_required(login_url="/login/")
 def engagement_list(request):
-    """List the organization's audit engagements with lifecycle stage."""
+    """List the organization's audit engagements + create a new one."""
     denied = _guard(request)
     if denied:
         return denied
     org = _org(request)
+    error = notice = None
+
+    # Create an engagement — the entry point for the whole audit workflow.
+    if request.method == "POST" and request.POST.get("action") == "create" and org:
+        p = request.POST
+        code = (p.get("engagement_code") or "").strip()
+        title = (p.get("title") or "").strip()
+        period_start = (p.get("period_start") or "").strip()
+        period_end = (p.get("period_end") or "").strip()
+        if not code or not title:
+            error = "Engagement code and title are required."
+        elif not period_start or not period_end:
+            # period_start/period_end are NOT NULL on the model — validate here so
+            # a missing date is a friendly message, never a broken transaction.
+            error = "Period start and end dates are required."
+        elif AuditEngagement.objects.filter(organization=org, engagement_code=code).exists():
+            error = f"Engagement code '{code}' already exists."
+        else:
+            try:
+                eng = AuditEngagement.objects.create(
+                    organization=org, engagement_code=code, title=title,
+                    description=p.get("description", ""),
+                    engagement_type=p.get("engagement_type") or _Eng.EngagementType.FINANCIAL_STATEMENT,
+                    period_start=period_start, period_end=period_end,
+                    created_by=request.user if getattr(request.user, "pk", None) else None)
+                from apps.audit.services import audit_trail
+                audit_trail.record(
+                    organization=org, actor=request.user,
+                    action="engagement_stage_changed", entity_type="audit_engagement",
+                    entity_id=eng.pk, description=f"Engagement {code} created",
+                    metadata={"engagement_code": code, "event": "created"})
+                return redirect("frontend:engagement_workspace", pk=eng.id)
+            except Exception as exc:  # noqa: BLE001
+                error = str(exc)
+
     qs = AuditEngagement.objects.filter(organization=org) if org else AuditEngagement.objects.none()
     stage = request.GET.get("stage", "")
     if stage:
@@ -258,7 +328,9 @@ def engagement_list(request):
         request, "audit",
         rows=rows,
         stage_choices=_Eng.Stage.choices,
+        type_choices=_Eng.EngagementType.choices,
         active_stage=stage,
+        error=error, notice=notice,
     ))
 
 
@@ -317,6 +389,11 @@ def engagement_workspace(request, pk):
         "confirmations": f"{reverse('frontend:confirmations')}?engagement={engagement.id}",
         "management_letter": f"{reverse('frontend:management_letter')}?engagement={engagement.id}",
         "isa_planning": f"{reverse('frontend:isa_planning')}?engagement={engagement.id}",
+        # Governance modules (G2.3/G3.2/G3.3/G6) — engagement-filtered deep links.
+        "findings_register": f"{reverse('frontend:findings_register')}?engagement={engagement.id}",
+        "issues": f"{reverse('frontend:issues')}?engagement={engagement.id}",
+        "reports": f"{reverse('frontend:engagement_reports')}?engagement={engagement.id}",
+        "team": f"{reverse('frontend:engagement_team')}?engagement={engagement.id}",
     }
     if overview.get("readiness"):
         links["readiness"] = reverse(

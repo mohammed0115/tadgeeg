@@ -81,3 +81,13 @@ PASSWORD_HASHERS = [
 
 # ── Logging — suppress in tests unless debugging ─────────────────────────────
 LOGGING["root"]["level"] = "ERROR"  # type: ignore[index]
+
+# TADGEEG — tests assert against stable English source strings, not the Arabic
+# production locale. Templates render {% trans %} in English here; tests that
+# specifically check Arabic use explicit translation.override("ar").
+LANGUAGE_CODE = "en"
+
+# Tests assert raw amounts (e.g. "150000"), not grouped ("150,000"). The Arabic
+# production locale renders numbers without grouping, so disabling the separator
+# in tests keeps number assertions deterministic and locale-independent.
+USE_THOUSAND_SEPARATOR = False

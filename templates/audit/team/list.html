@@ -1,0 +1,96 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Engagement Team" %}{% endblock %}
+{% block nav_team %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/modules/_shared.html" %}
+  .fld input,.fld select,.fld textarea{width:100%;border:1px solid var(--border,#cbd5e1);border-radius:8px;padding:8px;font-size:12px;}
+  .fld label{display:block;font-size:11px;font-weight:700;color:#475569;margin-bottom:3px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+  @media(max-width:640px){.row3{grid-template-columns:1fr;}}
+  .rolechip{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:800;background:#e0e7ff;color:#3730a3;}
+  .pst{font-size:10px;font-weight:700;color:#64748b;}
+  .minibtn{background:#fff;color:#991b1b;border:1px solid #fca5a5;border-radius:7px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;}
+{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "Team" %}</div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Engagement Team" %}</div>
+      <div class="ev-sub">{% trans "Assign team members and roles (ISA 220). Roles drive sign-off segregation on the engagement's artifacts." %}</div>
+    </div>
+  </div>
+  {% include "audit/modules/_picker.html" %}
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="ok">{{ notice }}</div>{% endif %}
+
+  {% if engagement %}
+  <div class="advisory">{% trans "Membership records support ISA 220 direction, supervision and review. No ledger writes." %}</div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">{% trans "Members" %}</div><div class="val">{{ summary.total|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Partners" %}</div><div class="val">{{ summary.role_partner|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Reviewers" %}</div><div class="val">{{ summary.role_reviewer|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Preparers" %}</div><div class="val">{{ summary.role_preparer|default:0 }}</div></div>
+  </div>
+
+  <div class="card" data-sec="assign-member">
+    <h3>{% trans "Assign a member" %}</h3>
+    {% if org_users %}
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="engagement" value="{{ engagement.id }}">
+      <input type="hidden" name="action" value="assign">
+      <div class="row3">
+        <div class="fld"><label>{% trans "User" %}</label>
+          <select name="user" required>{% for u in org_users %}<option value="{{ u.pk }}">{{ u.full_name|default:u.email }} ({{ u.email }})</option>{% endfor %}</select></div>
+        <div class="fld"><label>{% trans "Role" %}</label>
+          <select name="role">{% for v,l in role_choices %}<option value="{{ v }}" {% if v == 'member' %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+        <div class="fld"><label>{% trans "Due date" %}</label><input type="date" name="due_date"></div>
+      </div>
+      <div class="fld"><label>{% trans "Responsibilities" %}</label><input type="text" name="responsibilities"></div>
+      <button type="submit" class="runbtn" style="margin-top:8px;">{% trans "Assign" %}</button>
+    </form>
+    {% else %}
+    <div class="empty">{% trans "All active users in your organization are already assigned." %}</div>
+    {% endif %}
+  </div>
+
+  <div class="card" data-sec="members">
+    <h3>{% trans "Members" %}</h3>
+    {% if members %}
+    <div class="table-scroll">
+      <table class="ev-table">
+        <thead><tr>
+          <th>{% trans "Member" %}</th><th>{% trans "Role" %}</th><th>{% trans "Responsibilities" %}</th>
+          <th>{% trans "Due" %}</th><th>{% trans "Assigned by" %}</th><th></th>
+        </tr></thead>
+        <tbody>
+          {% for m in members %}
+          <tr>
+            <td>{{ m.user.full_name|default:m.user.email }}<div class="pst">{{ m.user.email }}</div></td>
+            <td><span class="rolechip">{{ m.get_role_display }}</span></td>
+            <td>{{ m.responsibilities|default:"—" }}</td>
+            <td>{{ m.due_date|default:"—" }}</td>
+            <td>{{ m.assigned_by.full_name|default:"—" }}</td>
+            <td>
+              <form method="post" onsubmit="return confirm('{% trans "Remove this member?" %}');">
+                {% csrf_token %}
+                <input type="hidden" name="engagement" value="{{ engagement.id }}">
+                <input type="hidden" name="action" value="remove">
+                <input type="hidden" name="member" value="{{ m.id }}">
+                <button type="submit" class="minibtn">{% trans "Remove" %}</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<div class="empty">{% trans "No members assigned yet." %}</div>{% endif %}
+  </div>
+  {% else %}
+  <div class="empty">{% trans "Choose an engagement to manage its team." %}</div>
+  {% endif %}
+</div>
+{% endblock %}

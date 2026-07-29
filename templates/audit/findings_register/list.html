@@ -1,0 +1,71 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Findings Register" %}{% endblock %}
+{% block nav_findings_register %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/modules/_shared.html" %}
+  .src{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;background:#e0e7ff;color:#3730a3;}
+  .src.control_deficiency{background:#ffedd5;color:#9a3412;}
+  .sev.material_weakness{background:#fee2e2;color:#991b1b;} .sev.significant_deficiency{background:#ffedd5;color:#9a3412;}
+  .sev.other_deficiency{background:#fef9c3;color:#854d0e;}
+  .filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+  .filter-bar a{font-size:12px;padding:5px 12px;border-radius:999px;border:1px solid #e2e8f0;color:#475569;text-decoration:none;background:#fff;}
+  .filter-bar a.active{background:var(--primary,#002244);color:#fff;border-color:var(--primary,#002244);}
+{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "Findings Register" %}</div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Findings Register" %}</div>
+      <div class="ev-sub">{% trans "One normalized view of GL risk findings (ISA 315) and control deficiencies (ISA 265), each showing its link to an assessed risk." %}</div>
+    </div>
+  </div>
+  {% include "audit/modules/_picker.html" %}
+
+  {% if engagement %}
+  <div class="advisory">{% trans "Read-only aggregation across finding types. Advisory — supports the audit file; not an opinion. No ledger writes." %}</div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">{% trans "Total" %}</div><div class="val">{{ summary.total|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "GL findings" %}</div><div class="val">{{ summary.gl_findings|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Control deficiencies" %}</div><div class="val">{{ summary.control_deficiencies|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Linked to risk" %}</div><div class="val">{{ summary.linked_to_risk|default:0 }}</div></div>
+    <div class="kpi alert"><div class="lbl">{% trans "Unlinked" %}</div><div class="val">{{ summary.unlinked|default:0 }}</div></div>
+  </div>
+
+  <div class="filter-bar">
+    <a href="?engagement={{ engagement.id }}" class="{% if not active_source %}active{% endif %}">{% trans "All" %}</a>
+    <a href="?engagement={{ engagement.id }}&source=gl_finding" class="{% if active_source == 'gl_finding' %}active{% endif %}">{% trans "GL findings" %}</a>
+    <a href="?engagement={{ engagement.id }}&source=control_deficiency" class="{% if active_source == 'control_deficiency' %}active{% endif %}">{% trans "Control deficiencies" %}</a>
+  </div>
+
+  <div class="card" data-sec="findings">
+    <h3>{% trans "Findings" %}</h3>
+    {% if rows %}
+    <div class="table-scroll">
+      <table class="ev-table">
+        <thead><tr>
+          <th>{% trans "Reference" %}</th><th>{% trans "Title" %}</th><th>{% trans "Source" %}</th>
+          <th>{% trans "Severity" %}</th><th>{% trans "Status" %}</th><th>{% trans "Risk link" %}</th>
+        </tr></thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td>{{ r.reference }}</td>
+            <td>{{ r.title }}</td>
+            <td><span class="src {{ r.source }}">{% if r.source == 'gl_finding' %}{% trans "GL finding" %}{% else %}{% trans "Deficiency" %}{% endif %}</span></td>
+            <td><span class="sev {{ r.severity }}">{{ r.severity }}</span></td>
+            <td>{{ r.status }}</td>
+            <td>{% if r.assessed_risk_id %}<span style="color:#166534;font-weight:700;">✓ {% trans "Linked" %}</span>{% else %}<span style="color:#991b1b;">— {% trans "Unlinked" %}</span>{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}<div class="empty">{% trans "No findings recorded yet for this engagement." %}</div>{% endif %}
+  </div>
+  {% else %}
+  <div class="empty">{% trans "Choose an engagement to view its findings register." %}</div>
+  {% endif %}
+</div>
+{% endblock %}

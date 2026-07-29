@@ -102,6 +102,50 @@
       {% endif %}
     </div>
 
+    {# Findings register (G2.3) — normalized across finding types #}
+    <div class="card sec" data-sec="findings-register">
+      <h3>{% trans "Findings Register" %} <a href="{{ links.findings_register }}">{% trans "Open" %} →</a></h3>
+      {% if overview.findings.total %}
+      <dl class="kv">
+        <dt>{% trans "Total findings" %}</dt><dd>{{ overview.findings.total }}</dd>
+        <dt>{% trans "GL findings" %}</dt><dd>{{ overview.findings.gl_findings|default:0 }}</dd>
+        <dt>{% trans "Control deficiencies" %}</dt><dd>{{ overview.findings.control_deficiencies|default:0 }}</dd>
+        <dt>{% trans "Linked to risk" %}</dt><dd>{{ overview.findings.linked_to_risk|default:0 }} <span style="color:#94a3b8;">({{ overview.findings.unlinked|default:0 }} {% trans "unlinked" %})</span></dd>
+      </dl>
+      {% else %}
+      <div style="color:#94a3b8;font-size:12px;">{% trans "No findings recorded yet." %}</div>
+      {% endif %}
+    </div>
+
+    {# Issues (G3.2) — remediation → closure loop #}
+    <div class="card sec" data-sec="issues">
+      <h3>{% trans "Issues" %} <a href="{{ links.issues }}">{% trans "Open" %} →</a></h3>
+      {% if overview.issues.total %}
+      <dl class="kv">
+        <dt>{% trans "Total" %}</dt><dd>{{ overview.issues.total }}</dd>
+        <dt>{% trans "Open" %}</dt><dd>{{ overview.issues.open|default:0 }}{% if overview.issues.overdue %} <span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;">{{ overview.issues.overdue }} {% trans "overdue" %}</span>{% endif %}</dd>
+        <dt>{% trans "Critical" %}</dt><dd>{{ overview.issues.critical|default:0 }}</dd>
+      </dl>
+      {% else %}
+      <div style="color:#94a3b8;font-size:12px;">{% trans "No issues yet. Track findings to closure here." %}</div>
+      {% endif %}
+    </div>
+
+    {# Engagement reports (G6) + team & sign-off (G3.3) #}
+    <div class="card sec" data-sec="reporting">
+      <h3>{% trans "Report & Team" %} <a href="{{ links.reports }}">{% trans "Reports" %} →</a></h3>
+      <dl class="kv">
+        {% if overview.reports %}
+        <dt>{% trans "Latest report" %}</dt><dd>{{ overview.reports.reference }} · v{{ overview.reports.version }} <span style="color:#94a3b8;">({{ overview.reports.status_display }})</span></dd>
+        {% else %}
+        <dt>{% trans "Latest report" %}</dt><dd style="color:#94a3b8;">{% trans "None yet" %}</dd>
+        {% endif %}
+        <dt>{% trans "Team members" %}</dt><dd>{{ overview.members.total|default:0 }}</dd>
+      </dl>
+      <div style="margin-top:8px;"><a href="{{ links.team }}" style="font-size:12px;color:#1e40af;font-weight:700;text-decoration:none;">{% trans "Team & sign-off" %} →</a></div>
+      <p style="font-size:11px;color:#94a3b8;margin-top:6px;">{% trans "Reports communicate results with a disclaimer — never an ISA 700 opinion." %}</p>
+    </div>
+
     {# Planning & Materiality (3A / ISA 300) #}
     <div class="card sec" data-sec="planning">
       <h3>{% trans "Planning & Materiality" %} <a href="{% url 'frontend:trial_balance' %}?engagement={{ engagement.id }}">{% trans "Trial balance" %} →</a></h3>

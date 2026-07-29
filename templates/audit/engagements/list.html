@@ -20,9 +20,35 @@
   <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "Engagements" %}</div>
   <div class="ev-head">
     <div>
-      <div class="ev-title">{% trans "Audit Engagements" %} · مساحات عمل التدقيق</div>
+      <div class="ev-title">{% trans "Audit Engagements" %}</div>
       <div class="ev-sub">{% trans "One workspace per engagement, tying planning, risk, testing, evidence, differences and readiness together." %}</div>
     </div>
+    <button type="button" class="runbtn" onclick="document.getElementById('newEng').style.display='block';this.style.display='none';">+ {% trans "New engagement" %}</button>
+  </div>
+
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="ok">{{ notice }}</div>{% endif %}
+
+  {# Create engagement — the entry point for the whole audit workflow. #}
+  <div id="newEng" class="card" data-sec="create-engagement" style="display:{% if error %}block{% else %}none{% endif %};">
+    <h3>{% trans "New engagement" %}</h3>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+        <div class="fld"><label style="font-size:11px;font-weight:700;color:#475569;">{% trans "Code" %}</label>
+          <input type="text" name="engagement_code" required placeholder="AUD-2025-001" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:12px;"></div>
+        <div class="fld"><label style="font-size:11px;font-weight:700;color:#475569;">{% trans "Title" %}</label>
+          <input type="text" name="title" required style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:12px;"></div>
+        <div class="fld"><label style="font-size:11px;font-weight:700;color:#475569;">{% trans "Type" %}</label>
+          <select name="engagement_type" style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:12px;">{% for v,l in type_choices %}<option value="{{ v }}">{{ l }}</option>{% endfor %}</select></div>
+        <div class="fld"><label style="font-size:11px;font-weight:700;color:#475569;">{% trans "Period start" %}</label>
+          <input type="date" name="period_start" required style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:12px;"></div>
+        <div class="fld"><label style="font-size:11px;font-weight:700;color:#475569;">{% trans "Period end" %}</label>
+          <input type="date" name="period_end" required style="width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:8px;font-size:12px;"></div>
+      </div>
+      <button type="submit" class="runbtn" style="margin-top:10px;">{% trans "Create engagement" %}</button>
+    </form>
   </div>
 
   <div class="filter-bar">

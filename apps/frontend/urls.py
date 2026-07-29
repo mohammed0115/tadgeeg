@@ -12,6 +12,7 @@ from . import evidence_queue_views
 from . import evidence_assurance_views
 from . import journal_analytics_views
 from . import engagement_workspace_views
+from . import audit_governance_views
 from . import audit_modules_views
 from . import isa_assessment_views
 from . import financial_statements_views
@@ -150,6 +151,12 @@ urlpatterns = [
 
     # TADGEEG-G2 — Risk Register (ISA 315/330 traceability spine)
     path('audit/risk-register/', risk_register_views.risk_register, name='risk_register'),
+
+    # TADGEEG-G2.3/G3.2/G3.3/G6 — engagement governance pages (surface API-only modules)
+    path('audit/findings-register/', audit_governance_views.findings_register, name='findings_register'),
+    path('audit/issues/', audit_governance_views.issues, name='issues'),
+    path('audit/reports/', audit_governance_views.reports, name='engagement_reports'),
+    path('audit/team/', audit_governance_views.team, name='engagement_team'),
 
     # Audit tools (ISA 320 materiality, ISA 530 sampling)
     path('audit/tools/', views.audit_tools, name='audit_tools'),

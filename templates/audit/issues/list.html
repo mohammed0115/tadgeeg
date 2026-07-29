@@ -1,0 +1,128 @@
+{% extends "layouts/dashboard_base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Audit Issues" %}{% endblock %}
+{% block nav_issues %}active{% endblock %}
+{% block extra_styles %}{% include "audit/client_portal/_evidence_styles.html" %}{% include "audit/modules/_shared.html" %}
+  .fld input,.fld select,.fld textarea{width:100%;border:1px solid var(--border,#cbd5e1);border-radius:8px;padding:8px;font-size:12px;}
+  .fld label{display:block;font-size:11px;font-weight:700;color:#475569;margin-bottom:3px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;} .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media(max-width:640px){.row2,.row3{grid-template-columns:1fr;}}
+  details.iss{border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:#fff;}
+  details.iss summary{cursor:pointer;font-weight:700;color:#0f2b4a;font-size:13px;list-style:none;display:flex;justify-content:space-between;gap:8px;align-items:center;}
+  details.iss summary::-webkit-details-marker{display:none;}
+  .ist{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:800;}
+  .ist.open{background:#e0e7ff;color:#3730a3;} .ist.in_remediation{background:#ffedd5;color:#9a3412;}
+  .ist.remediated{background:#dcfce7;color:#166534;} .ist.accepted_risk{background:#f1f5f9;color:#475569;}
+  .ist.closed{background:#e2e8f0;color:#334155;}
+  .pst{font-size:10px;font-weight:700;color:#64748b;}
+  .minibtn{background:var(--primary,#002244);color:#fff;border:none;border-radius:7px;padding:5px 11px;font-size:11px;font-weight:700;cursor:pointer;}
+  .minibtn.ghost{background:#fff;color:#0369a1;border:1px solid #bcd9f5;}
+  .filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+  .filter-bar a{font-size:12px;padding:5px 12px;border-radius:999px;border:1px solid #e2e8f0;color:#475569;text-decoration:none;background:#fff;}
+  .filter-bar a.active{background:var(--primary,#002244);color:#fff;border-color:var(--primary,#002244);}
+{% endblock %}
+{% block content %}
+<div class="ev-wrap">
+  <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "Issues" %}</div>
+  <div class="ev-head">
+    <div>
+      <div class="ev-title">{% trans "Audit Issues" %}</div>
+      <div class="ev-sub">{% trans "Track findings to closure: issue → remediation plan → remediated / accepted / closed. Deterministic; advisory; no ledger writes." %}</div>
+    </div>
+  </div>
+  {% include "audit/modules/_picker.html" %}
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="ok">{{ notice }}</div>{% endif %}
+
+  {% if engagement %}
+  <div class="advisory">{% trans "Issues support the audit file and management communications. They are not an audit opinion and never modify the ledger." %}</div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="lbl">{% trans "Total" %}</div><div class="val">{{ summary.total|default:0 }}</div></div>
+    <div class="kpi alert"><div class="lbl">{% trans "Open" %}</div><div class="val">{{ summary.open|default:0 }}</div></div>
+    <div class="kpi alert"><div class="lbl">{% trans "Overdue" %}</div><div class="val">{{ summary.overdue|default:0 }}</div></div>
+    <div class="kpi alert"><div class="lbl">{% trans "Critical" %}</div><div class="val">{{ summary.critical|default:0 }}</div></div>
+    <div class="kpi"><div class="lbl">{% trans "Closed" %}</div><div class="val">{{ summary.closed|default:0 }}</div></div>
+  </div>
+
+  <div class="card" data-sec="create-issue">
+    <h3>{% trans "Raise an issue" %}</h3>
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="engagement" value="{{ engagement.id }}">
+      <input type="hidden" name="action" value="create_issue">
+      <div class="row3">
+        <div class="fld"><label>{% trans "Title" %}</label><input type="text" name="title" required></div>
+        <div class="fld"><label>{% trans "Severity" %}</label><select name="severity">{% for v,l in severity_choices %}<option value="{{ v }}" {% if v == 'medium' %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+        <div class="fld"><label>{% trans "Owner" %}</label><input type="text" name="owner" placeholder="{% trans 'e.g. CFO' %}"></div>
+      </div>
+      <div class="row2">
+        <div class="fld"><label>{% trans "Due date" %}</label><input type="date" name="due_date"></div>
+        <div class="fld"><label>{% trans "Remediation plan" %}</label><input type="text" name="remediation_plan"></div>
+      </div>
+      <div class="fld"><label>{% trans "Description" %}</label><textarea name="description" rows="2"></textarea></div>
+      <button type="submit" class="runbtn">{% trans "Raise issue" %}</button>
+    </form>
+  </div>
+
+  <div class="filter-bar">
+    <a href="?engagement={{ engagement.id }}" class="{% if not active_status %}active{% endif %}">{% trans "All" %}</a>
+    {% for value, label in status_choices %}
+      <a href="?engagement={{ engagement.id }}&status={{ value }}" class="{% if active_status == value %}active{% endif %}">{{ label }}</a>
+    {% endfor %}
+  </div>
+
+  <div class="card" data-sec="issue-list">
+    <h3>{% trans "Issues" %}</h3>
+    {% if rows %}
+    {% for i in rows %}
+    <details class="iss" data-ref="{{ i.reference }}">
+      <summary>
+        <span>{{ i.reference }} — {{ i.title }}{% if i.owner %} <span class="pst">· {{ i.owner }}</span>{% endif %}</span>
+        <span><span class="sev {{ i.severity }}">{{ i.get_severity_display }}</span> <span class="ist {{ i.status }}">{{ i.get_status_display }}</span></span>
+      </summary>
+      <div style="margin-top:10px;font-size:12px;color:#334155;">
+        {% if i.description %}<p>{{ i.description }}</p>{% endif %}
+        <p class="pst">
+          {% if i.due_date %}{% trans "Due" %}: {{ i.due_date }}{% if i.is_overdue %} · <span style="color:#991b1b;">{% trans "Overdue" %}</span>{% endif %} · {% endif %}
+          {% if i.gl_finding_id %}{% trans "From GL finding" %} · {% endif %}
+          {% if i.assessed_risk_id %}{% trans "Linked to risk" %}{% endif %}
+        </p>
+        {% if i.remediation_plan %}<p><strong>{% trans "Remediation" %}:</strong> {{ i.remediation_plan }}</p>{% endif %}
+        {% if i.management_response %}<p><strong>{% trans "Management response" %}:</strong> {{ i.management_response }}</p>{% endif %}
+
+        {# Record remediation #}
+        <form method="post" style="margin-top:8px;border-top:1px dashed #e2e8f0;padding-top:8px;">
+          {% csrf_token %}
+          <input type="hidden" name="engagement" value="{{ engagement.id }}">
+          <input type="hidden" name="action" value="remediate">
+          <input type="hidden" name="issue" value="{{ i.id }}">
+          <div class="row3">
+            <div class="fld"><label>{% trans "Remediation plan" %}</label><input type="text" name="remediation_plan"></div>
+            <div class="fld"><label>{% trans "Owner" %}</label><input type="text" name="owner"></div>
+            <div class="fld"><label>{% trans "Due date" %}</label><input type="date" name="due_date"></div>
+          </div>
+          <button type="submit" class="minibtn ghost">{% trans "Record remediation" %}</button>
+        </form>
+
+        {# Change status #}
+        <form method="post" style="margin-top:8px;display:flex;gap:8px;align-items:end;flex-wrap:wrap;">
+          {% csrf_token %}
+          <input type="hidden" name="engagement" value="{{ engagement.id }}">
+          <input type="hidden" name="action" value="set_status">
+          <input type="hidden" name="issue" value="{{ i.id }}">
+          <div class="fld" style="min-width:160px;"><label>{% trans "Set status" %}</label>
+            <select name="status">{% for v,l in status_choices %}<option value="{{ v }}" {% if i.status == v %}selected{% endif %}>{{ l }}</option>{% endfor %}</select></div>
+          <div class="fld" style="flex:1;min-width:200px;"><label>{% trans "Note (management response)" %}</label><input type="text" name="note"></div>
+          <button type="submit" class="minibtn">{% trans "Update" %}</button>
+        </form>
+      </div>
+    </details>
+    {% endfor %}
+    {% else %}<div class="empty">{% trans "No issues match. Raise one above." %}</div>{% endif %}
+  </div>
+  {% else %}
+  <div class="empty">{% trans "Choose an engagement to manage its issues." %}</div>
+  {% endif %}
+</div>
+{% endblock %}

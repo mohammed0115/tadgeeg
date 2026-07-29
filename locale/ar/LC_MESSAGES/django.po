@@ -11,8 +11,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 "
-"&& n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5;\n"
+"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 && n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5;\n"
 
 #: apps/audit/views.py:29 apps/reports/services/findings_service.py:102
 #: templates/invoices/detail.html:830
@@ -53,7 +52,8 @@ msgstr "الرقابة"
 #: templates/dashboard/index.html:285
 #: templates/documents/bank_statements.html:85
 #: templates/documents/expense_reports.html:85
-#: templates/documents/fixed_assets.html:85 templates/documents/payroll.html:85
+#: templates/documents/fixed_assets.html:85
+#: templates/documents/payroll.html:85
 #: templates/documents/purchase_orders.html:121
 #: templates/documents/sales_receipts.html:85
 #: templates/documents/vat_returns.html:85 templates/invoices/detail.html:835
@@ -243,8 +243,9 @@ msgstr "تم إنشاء التقرير"
 msgid "User Created"
 msgstr "تم إنشاء المستخدم"
 
-#: apps/authentication/serializers.py:90 apps/authentication/serializers.py:168
-#: apps/frontend/page_views.py:349 templates/auth/portal.html:816
+#: apps/authentication/serializers.py:90
+#: apps/authentication/serializers.py:168 apps/frontend/page_views.py:349
+#: templates/auth/portal.html:816
 msgid "Passwords do not match."
 msgstr "كلمتا المرور غير متطابقتين."
 
@@ -305,8 +306,8 @@ msgstr "تم التحقّق من هذا البريد الإلكتروني مسب
 
 #: apps/authentication/services/email_otp.py:334
 msgid ""
-"You have reached the maximum resend limit. Please try again later or contact "
-"support."
+"You have reached the maximum resend limit. Please try again later or contact"
+" support."
 msgstr ""
 "لقد وصلت إلى الحد الأقصى لإعادة الإرسال. يرجى المحاولة لاحقاً أو التواصل مع "
 "الدعم."
@@ -350,8 +351,8 @@ msgstr "تم إرسال رمز تحقق مكوّن من 6 أرقام إلى بر
 
 #: apps/authentication/views.py:84
 msgid ""
-"A recent verification code has already been sent. Check your email and enter "
-"the code."
+"A recent verification code has already been sent. Check your email and enter"
+" the code."
 msgstr "تم إرسال رمز تحقق حديث مسبقاً. تحقّق من بريدك وأدخل الرمز."
 
 #: apps/authentication/views.py:113
@@ -509,8 +510,8 @@ msgstr "أدِر خطة اشتراكك والفواتير"
 
 #: apps/billing/bulk_quota.py:213
 msgid ""
-"You have used all available invoices in your current plan. Please upgrade to "
-"continue."
+"You have used all available invoices in your current plan. Please upgrade to"
+" continue."
 msgstr ""
 
 #: apps/billing/bulk_quota.py:244
@@ -523,8 +524,8 @@ msgstr ""
 #: apps/billing/bulk_quota.py:263
 #, python-format
 msgid ""
-"You have %(remaining)d invoices remaining, and this file contains %(total)d. "
-"Upload only %(remaining)d (set accept_partial=true) or upgrade your plan."
+"You have %(remaining)d invoices remaining, and this file contains %(total)d."
+" Upload only %(remaining)d (set accept_partial=true) or upgrade your plan."
 msgstr ""
 
 #: apps/billing/middleware.py:143 apps/billing/views.py:29
@@ -742,7 +743,8 @@ msgid ""
 "The Google redirect URI does not match the current configuration. Verify "
 "GOOGLE_REDIRECT_URI."
 msgstr ""
-"رابط إعادة توجيه Google لا يطابق الإعداد الحالي. تحقّق من GOOGLE_REDIRECT_URI."
+"رابط إعادة توجيه Google لا يطابق الإعداد الحالي. تحقّق من "
+"GOOGLE_REDIRECT_URI."
 
 #: apps/frontend/page_views.py:63
 msgid "Unable to fetch the Google account profile. Please try again."
@@ -924,8 +926,8 @@ msgstr "الاسم الكامل مطلوب."
 
 #: apps/frontend/page_views.py:428
 msgid ""
-"Data was extracted automatically using local OCR. Some fields may still need "
-"human review."
+"Data was extracted automatically using local OCR. Some fields may still need"
+" human review."
 msgstr ""
 "تم استخراج البيانات تلقائياً باستخدام OCR محلّي. قد تحتاج بعض الحقول إلى "
 "مراجعة بشرية."
@@ -963,7 +965,8 @@ msgstr "مخاطرة منخفضة"
 #: templates/documents/detail/sales_receipt_detail.html:267
 #: templates/documents/detail/vat_return_detail.html:249
 #: templates/documents/expense_reports.html:69
-#: templates/documents/fixed_assets.html:69 templates/documents/payroll.html:69
+#: templates/documents/fixed_assets.html:69
+#: templates/documents/payroll.html:69
 #: templates/documents/purchase_orders.html:105
 #: templates/documents/sales_receipts.html:69
 #: templates/documents/vat_returns.html:69
@@ -979,7 +982,8 @@ msgstr "مُعتمدة"
 #: templates/cms_admin/jobs.html:148 templates/cms_admin/jobs.html:378
 #: templates/documents/bank_statements.html:70
 #: templates/documents/expense_reports.html:70
-#: templates/documents/fixed_assets.html:70 templates/documents/payroll.html:70
+#: templates/documents/fixed_assets.html:70
+#: templates/documents/payroll.html:70
 #: templates/documents/purchase_orders.html:106
 #: templates/documents/sales_receipts.html:70
 #: templates/documents/vat_returns.html:70
@@ -1020,7 +1024,8 @@ msgstr "معالجة"
 #: templates/cms_admin/jobs.html:376 templates/cms_admin/jobs.html:450
 #: templates/documents/bank_statements.html:68
 #: templates/documents/expense_reports.html:68
-#: templates/documents/fixed_assets.html:68 templates/documents/payroll.html:68
+#: templates/documents/fixed_assets.html:68
+#: templates/documents/payroll.html:68
 #: templates/documents/purchase_orders.html:104
 #: templates/documents/sales_receipts.html:68
 #: templates/documents/vat_returns.html:68 templates/invoices/batches.html:66
@@ -1031,7 +1036,8 @@ msgstr "معالجة"
 #: templates/vendor_dashboard/billing.html:159
 #: templates/vendor_dashboard/files.html:43
 #: templates/vendor_dashboard/files.html:158
-#: templates/vendor_dashboard/upload.html:115 templates/zatca/dashboard.html:93
+#: templates/vendor_dashboard/upload.html:115
+#: templates/zatca/dashboard.html:93
 msgid "Pending"
 msgstr "انتظار"
 
@@ -1047,7 +1053,8 @@ msgstr "غير محدد"
 msgid ""
 "Data was extracted automatically. Review sensitive fields before final "
 "approval."
-msgstr "تم استخراج البيانات تلقائياً. راجِع الحقول الحسّاسة قبل الاعتماد النهائي."
+msgstr ""
+"تم استخراج البيانات تلقائياً. راجِع الحقول الحسّاسة قبل الاعتماد النهائي."
 
 #: apps/frontend/page_views.py:557
 msgid "PDF Text Layer"
@@ -1217,8 +1224,8 @@ msgid ""
 "A place to share operating insights and practical guidance on financial "
 "auditing, tax compliance, and digital transformation for finance teams."
 msgstr ""
-"مكان لمشاركة الرؤى التشغيلية والإرشادات العملية حول التدقيق المالي والامتثال "
-"الضريبي والتحوّل الرقمي لفِرق المالية."
+"مكان لمشاركة الرؤى التشغيلية والإرشادات العملية حول التدقيق المالي والامتثال"
+" الضريبي والتحوّل الرقمي لفِرق المالية."
 
 #: apps/frontend/page_views.py:1498
 msgid "Best practices for reviewing invoices and vendors."
@@ -1305,8 +1312,8 @@ msgid ""
 "look for teams that combine technical depth with financial and regulatory "
 "understanding."
 msgstr ""
-"نبني منتجاً مالياً يتطلّب تنفيذاً دقيقاً، ونبحث عن فِرق تجمع بين العمق التقني "
-"والفهم المالي والتنظيمي."
+"نبني منتجاً مالياً يتطلّب تنفيذاً دقيقاً، ونبحث عن فِرق تجمع بين العمق "
+"التقني والفهم المالي والتنظيمي."
 
 #: apps/frontend/page_views.py:1544
 msgid "Opportunities in engineering, product, and user experience."
@@ -1420,7 +1427,8 @@ msgid "VAT Returns"
 msgstr "إقرارات ضريبة القيمة المضافة"
 
 #: apps/frontend/page_views.py:3771 templates/auditing/upload.html:647
-#: templates/base.html:503 templates/documents/detail/fixed_asset_detail.html:8
+#: templates/base.html:503
+#: templates/documents/detail/fixed_asset_detail.html:8
 #: templates/documents/fixed_assets.html:4
 #: templates/documents/fixed_assets.html:34
 #: templates/documents/fixed_assets.html:44 templates/documents/index.html:189
@@ -1431,7 +1439,8 @@ msgstr "الأصول الثابتة"
 
 #: apps/frontend/page_views.py:3772 templates/base.html:508
 #: templates/documents/detail/sales_receipt_detail.html:8
-#: templates/documents/index.html:182 templates/documents/sales_receipts.html:4
+#: templates/documents/index.html:182
+#: templates/documents/sales_receipts.html:4
 #: templates/documents/sales_receipts.html:34
 #: templates/documents/sales_receipts.html:44
 #: templates/documents/upload.html:280 templates/reports/index.html:182
@@ -1653,7 +1662,8 @@ msgstr ""
 msgid "Segregation of Duties violated for action: %(action)s"
 msgstr ""
 
-#: apps/invoices/views.py:137 templates/reports/document_audit_report.html:1134
+#: apps/invoices/views.py:137
+#: templates/reports/document_audit_report.html:1134
 #: templates/reports/invoice_audit_report.html:436
 #: templates/reports/invoice_audit_report_pdf.html:436
 msgid "Vendor Name"
@@ -1850,11 +1860,12 @@ msgstr "احتيال"
 
 #: apps/notifications/models.py:29 templates/base.html:449
 #: templates/compliance/index.html:4 templates/compliance/index.html:38
-#: templates/compliance/index.html:44 templates/layouts/dashboard_base.html:437
-#: templates/phase2/audits.html:394
+#: templates/compliance/index.html:44
+#: templates/layouts/dashboard_base.html:437 templates/phase2/audits.html:394
 #: templates/reports/document_audit_report.html:852
 #: templates/reports/document_audit_report.html:1468
-#: templates/reports/executive_report.html:122 templates/reports/index.html:222
+#: templates/reports/executive_report.html:122
+#: templates/reports/index.html:222
 #: templates/vendor_dashboard/audit_results.html:91
 #: templates/vendor_dashboard/audits.html:93
 #: templates/vendor_dashboard/reports.html:97
@@ -1909,7 +1920,8 @@ msgid "Document Quality"
 msgstr "جودة المستند"
 
 #: apps/reports/services/findings_service.py:119
-msgid "Reject invoices missing an invoice number; require vendors to resubmit."
+msgid ""
+"Reject invoices missing an invoice number; require vendors to resubmit."
 msgstr "ارفض الفواتير التي تفتقر لرقم فاتورة؛ اطلب من المورد إعادة الإصدار."
 
 #: apps/reports/services/findings_service.py:120
@@ -1937,7 +1949,8 @@ msgid ""
 "Investigate any zero/negative invoices — likely data error or refund "
 "mishandled."
 msgstr ""
-"حقّق في أي فاتورة بقيمة صفر أو سالبة — غالباً خطأ بيانات أو استرداد غير معالج."
+"حقّق في أي فاتورة بقيمة صفر أو سالبة — غالباً خطأ بيانات أو استرداد غير "
+"معالج."
 
 #: apps/reports/services/findings_service.py:126
 msgid "Recompute subtotal from line items or reject the invoice."
@@ -1979,7 +1992,8 @@ msgstr "أعد احتساب الضريبة؛ سيُرفض الفارق عند ت
 #: apps/reports/services/findings_service.py:134
 #: apps/reports/services/findings_service.py:160
 msgid "Subtotal + VAT must equal total — fix arithmetic error."
-msgstr "يجب أن يساوي (المجموع الفرعي + الضريبة) الإجمالي — صحّح الخطأ الحسابي."
+msgstr ""
+"يجب أن يساوي (المجموع الفرعي + الضريبة) الإجمالي — صحّح الخطأ الحسابي."
 
 #: apps/reports/services/findings_service.py:135
 msgid "Request a valid TRN from the vendor; required for input VAT recovery."
@@ -2016,7 +2030,8 @@ msgstr "تركّز نهاية السنة قد يشير لتلاعب بالقطع
 
 #: apps/reports/services/findings_service.py:142
 msgid ""
-"Reduce concentration risk by qualifying additional vendors for this category."
+"Reduce concentration risk by qualifying additional vendors for this "
+"category."
 msgstr "قلّل مخاطر التركّز بتأهيل موردين إضافيين لهذه الفئة."
 
 #: apps/reports/services/findings_service.py:143
@@ -2043,7 +2058,8 @@ msgid "Reject; every invoice must have a documented approver."
 msgstr "ارفض؛ يجب أن يكون لكل فاتورة معتمد موثّق."
 
 #: apps/reports/services/findings_service.py:148
-msgid "Audit trail must be reconstructed before this invoice can be relied on."
+msgid ""
+"Audit trail must be reconstructed before this invoice can be relied on."
 msgstr "يجب إعادة بناء سجل التدقيق قبل الاعتماد على هذه الفاتورة."
 
 #: apps/reports/services/findings_service.py:149
@@ -2243,7 +2259,8 @@ msgstr "حدّد فترة الإقرار الضريبي بوضوح."
 msgid ""
 "Investigate negative book values — likely posting error or impairment "
 "overshoot."
-msgstr "حقّق في القيم الدفترية السالبة — احتمال خطأ ترحيل أو زيادة في الانخفاض."
+msgstr ""
+"حقّق في القيم الدفترية السالبة — احتمال خطأ ترحيل أو زيادة في الانخفاض."
 
 #: apps/reports/services/findings_service.py:205
 msgid ""
@@ -2432,8 +2449,8 @@ msgid ""
 "Critical issues were detected requiring immediate remediation; investigate "
 "the items below before final approval."
 msgstr ""
-"تم اكتشاف مشاكل حرجة تتطلّب معالجة فورية؛ تحقّق من البنود أدناه قبل الاعتماد "
-"النهائي."
+"تم اكتشاف مشاكل حرجة تتطلّب معالجة فورية؛ تحقّق من البنود أدناه قبل الاعتماد"
+" النهائي."
 
 #: apps/reports/services/findings_service.py:299
 msgid ""
@@ -2650,8 +2667,8 @@ msgstr "الرئيسية"
 #: core/security/upload_guard.py:65
 #, python-format
 msgid ""
-"Uploaded file %(filename)s has an unsupported extension %(ext)s for %(kind)s "
-"uploads. Allowed: %(allowed)s."
+"Uploaded file %(filename)s has an unsupported extension %(ext)s for %(kind)s"
+" uploads. Allowed: %(allowed)s."
 msgstr ""
 
 #: core/utils/password_complexity.py:37
@@ -2711,7 +2728,8 @@ msgstr "من نحن"
 #: templates/cms_admin/services_editor.html:13
 #: templates/landing/index.html:1361 templates/landing/index.html:1820
 #: templates/landing/page.html:650 templates/landing/page.html:671
-#: templates/landing/page.html:825 templates/platform_admin/cms/services.html:5
+#: templates/landing/page.html:825
+#: templates/platform_admin/cms/services.html:5
 #: templates/platform_admin/seo.html:194
 msgid "Services"
 msgstr "الخدمات"
@@ -2882,7 +2900,8 @@ msgstr "الباقة / الفوترة"
 
 #: navigation/vendor_menu.py:99 templates/layouts/dashboard_base.html:500
 #: templates/layouts/dashboard_base.html:507
-#: templates/platform_admin/settings.html:123 templates/settings/index.html:140
+#: templates/platform_admin/settings.html:123
+#: templates/settings/index.html:140
 #: templates/vendor_dashboard/notifications.html:3
 #: templates/vendor_dashboard/notifications.html:4
 #: templates/vendor_dashboard/notifications.html:12
@@ -2931,8 +2950,8 @@ msgstr "تنبيهات"
 #: templates/alerts/index.html:58
 msgid "Route streaming anomalies to email · SMS · Slack · Teams · webhook."
 msgstr ""
-"توجيه انحرافات المسار إلى البريد الإلكتروني · الرسائل القصيرة · سلاك · الفرق "
-"· webhook."
+"توجيه انحرافات المسار إلى البريد الإلكتروني · الرسائل القصيرة · سلاك · الفرق"
+" · webhook."
 
 #: templates/alerts/index.html:61 templates/alerts/index.html:87
 #: templates/audit/rule_builder.html:65
@@ -3120,7 +3139,8 @@ msgstr "فترة التهدئة"
 #: templates/documents/bank_statements.html:88
 #: templates/documents/detail/purchase_order_detail.html:264
 #: templates/documents/expense_reports.html:88
-#: templates/documents/fixed_assets.html:88 templates/documents/payroll.html:88
+#: templates/documents/fixed_assets.html:88
+#: templates/documents/payroll.html:88
 #: templates/documents/purchase_orders.html:124
 #: templates/documents/sales_receipts.html:88
 #: templates/documents/vat_returns.html:88
@@ -3130,9 +3150,11 @@ msgstr "فترة التهدئة"
 #: templates/invoices/subreport.html:118 templates/ledger/dashboard.html:125
 #: templates/phase2/audits.html:95 templates/phase2/files.html:104
 #: templates/phase2/folders.html:234 templates/phase2/reports.html:91
-#: templates/phase2/reports.html:218 templates/platform_admin/cms/pages.html:86
+#: templates/phase2/reports.html:218
+#: templates/platform_admin/cms/pages.html:86
 #: templates/platform_admin/cms/pages.html:161
-#: templates/platform_admin/jobs.html:96 templates/platform_admin/jobs.html:170
+#: templates/platform_admin/jobs.html:96
+#: templates/platform_admin/jobs.html:170
 #: templates/platform_admin/jobs.html:250
 #: templates/platform_admin/leads.html:99
 #: templates/platform_admin/organizations.html:66
@@ -3219,7 +3241,8 @@ msgstr "لم يتم إرسال أي تنبيهات بعد."
 #: templates/partials/i18n_strings.html:74
 #: templates/platform_admin/cms/homepage.html:414
 #: templates/platform_admin/jobs.html:361
-#: templates/platform_admin/jobs.html:364 templates/platform_admin/seo.html:209
+#: templates/platform_admin/jobs.html:364
+#: templates/platform_admin/seo.html:209
 #: templates/platform_admin/storage.html:270
 #: templates/platform_admin/storage.html:273
 #: templates/vendor_dashboard/settings.html:243
@@ -3247,7 +3270,8 @@ msgstr "اتجاهات الأداء ورؤى المخاطرة عبر جميع م
 #: templates/analytics/index.html:46
 #: templates/documents/bank_statements.html:73
 #: templates/documents/expense_reports.html:73
-#: templates/documents/fixed_assets.html:73 templates/documents/payroll.html:73
+#: templates/documents/fixed_assets.html:73
+#: templates/documents/payroll.html:73
 #: templates/documents/purchase_orders.html:109
 #: templates/documents/sales_receipts.html:73
 #: templates/documents/vat_returns.html:73 templates/reports/index.html:112
@@ -3388,7 +3412,8 @@ msgstr "تم التصعيد"
 
 #: templates/audit/detail.html:56 templates/audit/detail.html:279
 #: templates/cms_admin/jobs.html:50 templates/cms_admin/jobs.html:448
-#: templates/platform_admin/jobs.html:60 templates/platform_admin/jobs.html:124
+#: templates/platform_admin/jobs.html:60
+#: templates/platform_admin/jobs.html:124
 #: templates/platform_admin/jobs.html:254
 #: templates/platform_admin/jobs.html:295
 msgid "Closed"
@@ -3595,7 +3620,8 @@ msgstr "الطرف المعني"
 #: templates/documents/bank_statements.html:87
 #: templates/documents/detail/expense_report_detail.html:252
 #: templates/documents/expense_reports.html:87
-#: templates/documents/fixed_assets.html:87 templates/documents/payroll.html:87
+#: templates/documents/fixed_assets.html:87
+#: templates/documents/payroll.html:87
 #: templates/documents/purchase_orders.html:123
 #: templates/documents/sales_receipts.html:87
 #: templates/documents/vat_returns.html:87
@@ -3620,7 +3646,8 @@ msgstr "المبلغ"
 #: templates/invoices/session_detail.html:156
 #: templates/invoices/subreport.html:60
 #: templates/reports/document_audit_report.html:453
-#: templates/vendor_dashboard/reports.html:85 templates/vendors/detail.html:108
+#: templates/vendor_dashboard/reports.html:85
+#: templates/vendors/detail.html:108
 msgid "Risk"
 msgstr "المخاطر"
 
@@ -3643,7 +3670,8 @@ msgstr "تم الإنشاء"
 #: templates/documents/_typed_list.html:109
 #: templates/documents/bank_statements.html:89
 #: templates/documents/expense_reports.html:89
-#: templates/documents/fixed_assets.html:89 templates/documents/payroll.html:89
+#: templates/documents/fixed_assets.html:89
+#: templates/documents/payroll.html:89
 #: templates/documents/purchase_orders.html:125
 #: templates/documents/sales_receipts.html:89
 #: templates/documents/vat_returns.html:89
@@ -3776,8 +3804,8 @@ msgstr "جميع السلاسل سليمة"
 
 #: templates/audit/integrity.html:56
 msgid ""
-"Every event in this organisation's audit trail hashes correctly to the chain "
-"head. No row has been mutated since it was recorded."
+"Every event in this organisation's audit trail hashes correctly to the chain"
+" head. No row has been mutated since it was recorded."
 msgstr ""
 "كل حدث في سجل تدقيق هذه المنظمة يتطابق بشكل صحيح مع رأس السلسلة. لم يتم "
 "تعديل أي صف منذ تسجيله."
@@ -3865,21 +3893,19 @@ msgstr ""
 "يسجل كل صف تدقيق SHA-256(previous_hash + canonical_payload + timestamp + "
 "organization_id). عند الحفظ، يقوم التطبيق بحساب وتخزين هذه التجزئة مع مؤشر "
 "إلى الصف السابق. إذا قام أي شخص لاحقًا بتعديل صف في قاعدة البيانات، فإن "
-"event_hash المخزنة لم تعد تتطابق مع القيمة المعاد حسابها — وينكسر أيضًا مؤشر "
-"previous_hash لكل صف لاحق. التحقق هو للقراءة فقط ويعمل في O(n) عبر السلسلة."
+"event_hash المخزنة لم تعد تتطابق مع القيمة المعاد حسابها — وينكسر أيضًا مؤشر"
+" previous_hash لكل صف لاحق. التحقق هو للقراءة فقط ويعمل في O(n) عبر السلسلة."
 
 #: templates/audit/risk_matrix.html:4 templates/audit/risk_matrix.html:39
-#, fuzzy
 #| msgid "Risk Factors"
 msgid "Risk Matrix"
 msgstr "عوامل المخاطرة"
 
 #: templates/audit/risk_matrix.html:40
 msgid "Likelihood × Impact heat map (ISO 31000 / COSO ERM)."
-msgstr ""
+msgstr "خريطة حرارية للاحتمالية × الأثر (ISO 31000 / COSO ERM)."
 
 #: templates/audit/risk_matrix.html:49
-#, fuzzy
 #| msgid "Total Cases"
 msgid "Total assessed"
 msgstr "إجمالي الحالات"
@@ -3893,7 +3919,6 @@ msgid "Upper-right band"
 msgstr ""
 
 #: templates/audit/risk_matrix.html:52
-#, fuzzy
 #| msgid "Contract"
 msgid "Central"
 msgstr "عقد"
@@ -3904,23 +3929,23 @@ msgstr ""
 
 #: templates/audit/risk_matrix.html:58
 msgid "Heat map"
-msgstr ""
+msgstr "خريطة حرارية"
 
 #: templates/audit/risk_matrix.html:60
 msgid "Risk heat map"
 msgstr ""
 
 #: templates/audit/risk_matrix.html:73
-#, fuzzy
 #| msgid "Keywords"
 msgid "records"
 msgstr "الكلمات المفتاحية"
 
-#: templates/audit/risk_matrix.html:85
 msgid ""
 "Likelihood is derived from each record's risk score (0-100). Impact is "
 "scaled against performance materiality."
 msgstr ""
+"تُشتقّ الاحتمالية من درجة مخاطرة كل سجل (0-100). ويُقاس الأثر مقابل الأهمية "
+"للأداء."
 
 #: templates/audit/risk_matrix.html:94
 #, python-format
@@ -3935,7 +3960,6 @@ msgid "Risk score"
 msgstr "درجة المخاطرة"
 
 #: templates/audit/risk_matrix.html:119
-#, fuzzy
 #| msgid "No audit records for this invoice."
 msgid "No records in this cell"
 msgstr "لا توجد سجلات تدقيق لهذه الفاتورة."
@@ -3970,7 +3994,8 @@ msgstr "المسودات"
 #: templates/platform_admin/cms/pages.html:32
 #: templates/platform_admin/cms/pages.html:50
 #: templates/platform_admin/cms/pages.html:164
-#: templates/platform_admin/jobs.html:59 templates/platform_admin/jobs.html:124
+#: templates/platform_admin/jobs.html:59
+#: templates/platform_admin/jobs.html:124
 #: templates/platform_admin/jobs.html:253
 #: templates/platform_admin/jobs.html:293
 msgid "Published"
@@ -4102,7 +4127,9 @@ msgstr "أدوات تخطيط التدقيق"
 msgid ""
 "Materiality benchmarks (ISA 320) and sampling strategies (ISA 530) for the "
 "engagement plan."
-msgstr "معايير الأهمية (ISA 320) واستراتيجيات العينة (ISA 530) لخطة المشاركة."
+msgstr ""
+"مراجع الأهمية النسبية (ISA 320) واستراتيجيات المعاينة (ISA 530) لخطة "
+"الارتباط."
 
 #: templates/audit/tools.html:49
 msgid "Materiality Calculator"
@@ -4232,7 +4259,8 @@ msgstr "توزيع المكونات"
 msgid "Component"
 msgstr "مكون"
 
-#: templates/audit/tools.html:172 templates/components/_fraud_breakdown.html:34
+#: templates/audit/tools.html:172
+#: templates/components/_fraud_breakdown.html:34
 #: templates/reports/invoice_audit_report.html:156
 #: templates/reports/invoice_audit_report_pdf.html:279
 msgid "Weight"
@@ -4260,8 +4288,8 @@ msgstr "محرك العينة"
 
 #: templates/audit/tools.html:225
 msgid ""
-"Pick a method and sample size; Tadgeeg generates a deterministic sample with "
-"a reproducible seed for the working papers."
+"Pick a method and sample size; Tadgeeg generates a deterministic sample with"
+" a reproducible seed for the working papers."
 msgstr ""
 "اختر طريقة وحجم العينة؛ ستقوم تدقيق بإنشاء عينة حتمية مع بذور قابلة للتكرار "
 "لأوراق العمل."
@@ -4378,7 +4406,8 @@ msgstr "الفواتير المختارة"
 #: templates/documents/detail/expense_report_detail.html:252
 #: templates/documents/detail/sales_receipt_detail.html:238
 #: templates/documents/expense_reports.html:86
-#: templates/documents/fixed_assets.html:86 templates/documents/payroll.html:86
+#: templates/documents/fixed_assets.html:86
+#: templates/documents/payroll.html:86
 #: templates/documents/purchase_orders.html:122
 #: templates/documents/sales_receipts.html:86
 #: templates/documents/vat_returns.html:86
@@ -4519,7 +4548,8 @@ msgid "Confidence Score"
 msgstr "درجة الثقة"
 
 #: templates/auditing/partials/summary_cards.html:50
-#: templates/dashboard/index.html:288 templates/documents/_typed_detail.html:63
+#: templates/dashboard/index.html:288
+#: templates/documents/_typed_detail.html:63
 #: templates/invoices/detail.html:391 templates/invoices/invoice_pdf.html:53
 #: templates/phase2/audit_result.html:109
 #: templates/reports/document_audit_report.html:383
@@ -4748,7 +4778,8 @@ msgstr "يرجى اختيار ملف واحد أو أكثر أولاً."
 
 #: templates/auditing/upload.html:311
 msgid ""
-"The server could not complete the upload right now. Please try again shortly."
+"The server could not complete the upload right now. Please try again "
+"shortly."
 msgstr "تعذّر على الخادم إكمال الرفع الآن. يرجى المحاولة بعد قليل."
 
 #: templates/auditing/upload.html:312
@@ -4894,7 +4925,8 @@ msgstr "الحد الأقصى 50 ميجابايت لكل ملف"
 
 #: templates/auditing/upload.html:701
 msgid ""
-"Analysis is performed fully on the server. Your data is secure and protected."
+"Analysis is performed fully on the server. Your data is secure and "
+"protected."
 msgstr "يتم التحليل بالكامل على الخادم. بياناتك آمنة ومحمية."
 
 #: templates/auditing/upload.html:718
@@ -4957,8 +4989,8 @@ msgid ""
 "You signed in successfully. Your account is currently being reviewed by a "
 "system administrator before it is linked to the appropriate organization."
 msgstr ""
-"تم تسجيل دخولك بنجاح. حسابك قيد المراجعة حاليًا من قبل مسؤول النظام قبل ربطه "
-"بالمؤسسة المناسبة."
+"تم تسجيل دخولك بنجاح. حسابك قيد المراجعة حاليًا من قبل مسؤول النظام قبل ربطه"
+" بالمؤسسة المناسبة."
 
 #: templates/auth/google_pending.html:60
 msgid ""
@@ -4974,8 +5006,8 @@ msgstr ""
 msgid "Email Address"
 msgstr "عنوان البريد الإلكتروني"
 
-#: templates/auth/google_pending.html:70 templates/cms_admin/dashboard.html:269
-#: templates/cms_admin/seo.html:210
+#: templates/auth/google_pending.html:70
+#: templates/cms_admin/dashboard.html:269 templates/cms_admin/seo.html:210
 #: templates/documents/detail/bank_statement_detail.html:6
 #: templates/documents/detail/expense_report_detail.html:6
 #: templates/documents/detail/fixed_asset_detail.html:6
@@ -5115,7 +5147,8 @@ msgstr "فشل التحقّق بالمصادقة متعدّدة العوامل"
 msgid "Email Verification Code"
 msgstr "رمز التحقق بالبريد الإلكتروني"
 
-#: templates/auth/otp_email.html:23 templates/auth/password_reset_base.html:493
+#: templates/auth/otp_email.html:23
+#: templates/auth/password_reset_base.html:493
 msgid "Email verification"
 msgstr "التحقق عبر البريد"
 
@@ -5146,11 +5179,11 @@ msgstr ""
 
 #: templates/auth/otp_email.html:50
 msgid ""
-"To keep your account secure, never share this code with anyone, even if they "
-"claim to be from support."
+"To keep your account secure, never share this code with anyone, even if they"
+" claim to be from support."
 msgstr ""
-"للحفاظ على أمان حسابك، لا تشارك هذا الرمز مع أي شخص حتى لو ادّعى أنه من فريق "
-"الدعم."
+"للحفاظ على أمان حسابك، لا تشارك هذا الرمز مع أي شخص حتى لو ادّعى أنه من فريق"
+" الدعم."
 
 #: templates/auth/otp_verify.html:9 templates/auth/otp_verify.html:415
 msgid "Verify your email"
@@ -5213,13 +5246,13 @@ msgid ""
 "If you did not request this account or sign-in attempt, you can ignore this "
 "step and your account will remain inactive."
 msgstr ""
-"إذا لم تطلب هذا الحساب أو محاولة تسجيل الدخول، يمكنك تجاهل هذه الخطوة وسيبقى "
-"حسابك غير نشط."
+"إذا لم تطلب هذا الحساب أو محاولة تسجيل الدخول، يمكنك تجاهل هذه الخطوة وسيبقى"
+" حسابك غير نشط."
 
 #: templates/auth/otp_verify.html:505
 msgid ""
-"Two-step verification keeps your account <span class=\"highlight\">safer</"
-"span>."
+"Two-step verification keeps your account <span "
+"class=\"highlight\">safer</span>."
 msgstr "يجعل التحقّق الثنائي حسابك <span class=\"highlight\">أكثر أماناً</span>."
 
 #: templates/auth/otp_verify.html:512
@@ -5358,8 +5391,8 @@ msgid ""
 "You can now sign in using the new password and return directly to the "
 "dashboard."
 msgstr ""
-"يمكنك الآن تسجيل الدخول باستخدام كلمة المرور الجديدة والعودة مباشرة إلى لوحة "
-"التحكم."
+"يمكنك الآن تسجيل الدخول باستخدام كلمة المرور الجديدة والعودة مباشرة إلى لوحة"
+" التحكم."
 
 #: templates/auth/password_reset_complete.html:8
 msgid "The account is"
@@ -5375,8 +5408,8 @@ msgid ""
 "Your new password is now active. Use it for your next sign-in to access "
 "%(product)s."
 msgstr ""
-"كلمة المرور الجديدة أصبحت فعالة الآن. استخدمها في تسجيل الدخول القادم للوصول "
-"إلى %(product)s."
+"كلمة المرور الجديدة أصبحت فعالة الآن. استخدمها في تسجيل الدخول القادم للوصول"
+" إلى %(product)s."
 
 #: templates/auth/password_reset_complete.html:28
 msgid "Go to login"
@@ -5430,8 +5463,8 @@ msgstr "تأكيد كلمة المرور الجديدة"
 
 #: templates/auth/password_reset_confirm.html:54
 msgid ""
-"Use at least 8 characters, ideally mixing uppercase, lowercase, numbers, and "
-"symbols."
+"Use at least 8 characters, ideally mixing uppercase, lowercase, numbers, and"
+" symbols."
 msgstr ""
 "استخدم 8 أحرف على الأقل، ويُفضل الجمع بين الأحرف الكبيرة والصغيرة والأرقام "
 "والرموز."
@@ -5445,8 +5478,8 @@ msgid ""
 "This link can no longer be used. Request a new recovery email and open the "
 "most recent link sent to you."
 msgstr ""
-"لا يمكن استخدام هذا الرابط بعد الآن. اطلب بريد استعادة جديدًا وافتح أحدث رابط "
-"أُرسل إليك."
+"لا يمكن استخدام هذا الرابط بعد الآن. اطلب بريد استعادة جديدًا وافتح أحدث "
+"رابط أُرسل إليك."
 
 #: templates/auth/password_reset_confirm.html:75
 msgid "Request a new link"
@@ -5465,8 +5498,8 @@ msgid ""
 "If the email address belongs to an active account, you will receive a "
 "password reset message shortly."
 msgstr ""
-"إذا كان عنوان البريد الإلكتروني مرتبطًا بحساب نشط، فستتلقى رسالة إعادة تعيين "
-"كلمة المرور بعد قليل."
+"إذا كان عنوان البريد الإلكتروني مرتبطًا بحساب نشط، فستتلقى رسالة إعادة تعيين"
+" كلمة المرور بعد قليل."
 
 #: templates/auth/password_reset_done.html:8
 msgid "Recovery link"
@@ -5621,8 +5654,8 @@ msgid ""
 "Pull bank statements directly into Tadgeeg, then match them against open "
 "invoices automatically."
 msgstr ""
-"سحب كشوف الحسابات البنكية مباشرة إلى تدقيق، ثم مطابقتها تلقائيًا مع الفواتير "
-"المفتوحة."
+"سحب كشوف الحسابات البنكية مباشرة إلى تدقيق، ثم مطابقتها تلقائيًا مع الفواتير"
+" المفتوحة."
 
 #: templates/banking/dashboard.html:65
 msgid "Re-run reconciliation"
@@ -5694,7 +5727,8 @@ msgstr "معاملة"
 msgid "Reasons"
 msgstr "الأسباب"
 
-#: templates/banking/dashboard.html:192 templates/partials/i18n_strings.html:92
+#: templates/banking/dashboard.html:192
+#: templates/partials/i18n_strings.html:92
 msgid "Confirm"
 msgstr "تأكيد"
 
@@ -5871,6 +5905,7 @@ msgid ""
 "Upload a CSV, Excel, JSONL, or ZIP. We check it against your subscription "
 "quota before processing."
 msgstr ""
+"ارفع CSV أو Excel أو JSONL أو ZIP. نفحصه مقابل حصّة اشتراكك قبل المعالجة."
 
 #: templates/billing/bulk_upload.html:89
 msgid "Drag and drop your file here"
@@ -5878,30 +5913,32 @@ msgstr "اسحب الملفات وأفلتها هنا"
 
 #: templates/billing/bulk_upload.html:90
 msgid "CSV · XLSX · JSONL · JSON · ZIP   (up to 50 MB)"
-msgstr ""
+msgstr "CSV · XLSX · JSONL · JSON · ZIP (حتى 50 ميغابايت)"
 
 #: templates/billing/bulk_upload.html:91
 msgid "Choose a file"
 msgstr "اختيار الملفات"
 
-#: templates/billing/bulk_upload.html:96 templates/billing/bulk_upload.html:177
+#: templates/billing/bulk_upload.html:96
+#: templates/billing/bulk_upload.html:177
 #: templates/billing/bulk_upload.html:183
 msgid "Upload and check quota"
 msgstr "رفع ومعالجة المستندات"
 
 #: templates/billing/bulk_upload.html:98 templates/billing/plans.html:214
-#: templates/billing/subscription.html:5 templates/billing/subscription.html:78
+#: templates/billing/subscription.html:5
+#: templates/billing/subscription.html:78
 #: templates/layouts/dashboard_base.html:459
 msgid "My subscription"
 msgstr "اشتراكي"
 
 #: templates/billing/bulk_upload.html:106
 msgid "Not enough quota for this upload"
-msgstr ""
+msgstr "لا حصّة كافية لهذا الرفع"
 
 #: templates/billing/bulk_upload.html:109
 msgid "Items in file"
-msgstr ""
+msgstr "البنود في الملف"
 
 #: templates/billing/bulk_upload.html:110
 msgid "Quota available"
@@ -5909,7 +5946,7 @@ msgstr "لا توجد بيانات قواعد متاحة."
 
 #: templates/billing/bulk_upload.html:111
 msgid "Would be blocked"
-msgstr ""
+msgstr "سيُحظَر"
 
 #: templates/billing/bulk_upload.html:114
 #: templates/billing/subscription.html:151
@@ -5918,13 +5955,15 @@ msgstr "ترقية الباقة"
 
 #: templates/billing/bulk_upload.html:115
 msgid "Process the available count only"
-msgstr ""
+msgstr "معالجة العدد المتاح فقط"
 
 #: templates/billing/bulk_upload.html:118
 msgid ""
 "Selecting the partial option submits the same file with accept_partial=true "
 "so only the items that fit your remaining quota are processed."
 msgstr ""
+"اختيار الخيار الجزئي يرسل نفس الملف مع accept_partial=true لتُعالَج فقط "
+"البنود التي تناسب حصّتك المتبقّية."
 
 #: templates/billing/bulk_upload.html:164
 msgid "Uploading…"
@@ -5947,7 +5986,7 @@ msgstr "تم إنشاء المجلّد."
 
 #: templates/billing/bulk_upload.html:210
 msgid "Processing only the items that fit your remaining quota."
-msgstr ""
+msgstr "معالجة البنود التي تناسب حصّتك المتبقّية فقط."
 
 #: templates/billing/bulk_upload.html:211
 msgid "Processing now."
@@ -5955,7 +5994,7 @@ msgstr "معالجة"
 
 #: templates/billing/plans.html:9 templates/billing/plans.html:221
 msgid "Choose Your Plan"
-msgstr ""
+msgstr "اختر باقتك"
 
 #: templates/billing/plans.html:95 templates/landing/pricing.html:69
 msgid "Most popular"
@@ -5964,7 +6003,7 @@ msgstr "الأكثر طلبًا"
 #: templates/billing/plans.html:222
 msgid ""
 "Pick a plan to start auditing invoices. You can upgrade or change later."
-msgstr ""
+msgstr "اختر باقة لبدء تدقيق الفواتير. يمكنك الترقية أو التغيير لاحقًا."
 
 #: templates/billing/plans.html:237 templates/landing/pricing.html:160
 msgid "First time only"
@@ -5999,7 +6038,7 @@ msgstr "كشف الاحتيال + الامتثال لزاتكا"
 
 #: templates/billing/plans.html:263
 msgid "30-day trial — once per organization"
-msgstr ""
+msgstr "تجربة 30 يومًا — مرّة واحدة لكل منظمة"
 
 #: templates/billing/plans.html:266 templates/landing/pricing.html:182
 msgid "Email + dashboard reports"
@@ -6145,7 +6184,7 @@ msgstr "سجل الاستخدام"
 #: templates/billing/usage.html:48
 msgid ""
 "Every reserve, consume, release, and refund event for this organization."
-msgstr ""
+msgstr "كل أحداث الحجز والاستهلاك والإفراج والاسترداد لهذه المنظمة."
 
 #: templates/billing/usage.html:58
 #: templates/documents/detail/purchase_order_detail.html:258
@@ -6167,15 +6206,15 @@ msgstr "إعادة تعيين"
 
 #: templates/billing/usage.html:69
 msgid "Consume"
-msgstr ""
+msgstr "استهلاك"
 
 #: templates/billing/usage.html:70
 msgid "Release"
-msgstr ""
+msgstr "إفراج"
 
 #: templates/billing/usage.html:71
 msgid "Refund"
-msgstr ""
+msgstr "استرداد"
 
 #: templates/billing/usage.html:83
 msgid "No usage events recorded yet."
@@ -6204,7 +6243,8 @@ msgstr "محرر صفحة من نحن"
 msgid "Platform CMS"
 msgstr "نظام إدارة محتوى المنصّة"
 
-#: templates/cms_admin/about.html:30 templates/platform_admin/cms/about.html:40
+#: templates/cms_admin/about.html:30
+#: templates/platform_admin/cms/about.html:40
 msgid "About Content"
 msgstr "محتوى صفحة من نحن"
 
@@ -6340,7 +6380,8 @@ msgstr "لا توجد مزايا بعد."
 #: templates/platform_admin/cms/about.html:132
 #: templates/platform_admin/cms/homepage.html:307
 #: templates/platform_admin/cms/homepage.html:343
-#: templates/platform_admin/jobs.html:271 templates/platform_admin/seo.html:203
+#: templates/platform_admin/jobs.html:271
+#: templates/platform_admin/seo.html:203
 #: templates/platform_admin/storage.html:205 templates/settings/index.html:193
 #: templates/settings/index.html:316
 #: templates/vendor_dashboard/settings.html:95
@@ -6442,7 +6483,8 @@ msgstr "العنصر"
 #: templates/cms_admin/dashboard.html:143
 #: templates/invoices/invoice_pdf.html:175
 #: templates/layouts/dashboard_base.html:561
-#: templates/layouts/dashboard_base.html:571 templates/phase2/activity.html:167
+#: templates/layouts/dashboard_base.html:571
+#: templates/phase2/activity.html:167
 #: templates/platform_admin/activity_logs.html:105
 #: templates/settings/index.html:438 templates/working_papers/detail.html:159
 msgid "User"
@@ -6463,7 +6505,8 @@ msgstr "إجراءات سريعة"
 msgid "Add Page"
 msgstr "إضافة صفحة"
 
-#: templates/cms_admin/dashboard.html:188 templates/platform_admin/jobs.html:17
+#: templates/cms_admin/dashboard.html:188
+#: templates/platform_admin/jobs.html:17
 msgid "Add Job"
 msgstr "إضافة وظيفة"
 
@@ -6805,9 +6848,11 @@ msgstr "كل الحالات"
 #: templates/platform_admin/cms/pages.html:37
 #: templates/platform_admin/cms/pages.html:51
 #: templates/platform_admin/cms/pages.html:163
-#: templates/platform_admin/jobs.html:58 templates/platform_admin/jobs.html:124
+#: templates/platform_admin/jobs.html:58
+#: templates/platform_admin/jobs.html:124
 #: templates/platform_admin/jobs.html:252
-#: templates/platform_admin/jobs.html:294 templates/working_papers/list.html:57
+#: templates/platform_admin/jobs.html:294
+#: templates/working_papers/list.html:57
 msgid "Draft"
 msgstr "مسوّدة"
 
@@ -6824,8 +6869,8 @@ msgstr "لم يتم العثور على وظائف."
 #: templates/documents/detail/fixed_asset_detail.html:238
 #: templates/documents/detail/payroll_detail.html:238
 #: templates/documents/detail/purchase_order_detail.html:240
-#: templates/platform_admin/jobs.html:92 templates/platform_admin/jobs.html:233
-#: templates/settings/index.html:440
+#: templates/platform_admin/jobs.html:92
+#: templates/platform_admin/jobs.html:233 templates/settings/index.html:440
 msgid "Department"
 msgstr "القسم"
 
@@ -6834,7 +6879,8 @@ msgstr "القسم"
 #: templates/cms_admin/pages.html:65 templates/phase2/audits.html:100
 #: templates/phase2/files.html:108 templates/phase2/folders.html:236
 #: templates/phase2/reports.html:94 templates/platform_admin/cms/pages.html:88
-#: templates/platform_admin/jobs.html:97 templates/platform_admin/jobs.html:171
+#: templates/platform_admin/jobs.html:97
+#: templates/platform_admin/jobs.html:171
 #: templates/platform_admin/leads.html:100
 #: templates/platform_admin/media.html:140
 #: templates/platform_admin/organizations.html:68
@@ -6878,8 +6924,8 @@ msgstr "المتقدّم"
 #: templates/cms_admin/leads.html:85 templates/cms_admin/leads.html:168
 #: templates/landing/page.html:755 templates/platform_admin/leads.html:174
 #: templates/platform_admin/organizations.html:64
-#: templates/platform_admin/settings.html:120 templates/settings/index.html:176
-#: templates/settings/index.html:375
+#: templates/platform_admin/settings.html:120
+#: templates/settings/index.html:176 templates/settings/index.html:375
 #: templates/vendor_dashboard/settings.html:65
 #: templates/vendor_dashboard/team.html:140
 msgid "Email"
@@ -7013,7 +7059,8 @@ msgstr "جارٍ التحديث..."
 msgid "Update"
 msgstr "تحديث"
 
-#: templates/cms_admin/jobs.html:405 templates/components/_delete_modal.html:14
+#: templates/cms_admin/jobs.html:405
+#: templates/components/_delete_modal.html:14
 msgid "Confirm Delete"
 msgstr "تأكيد الحذف"
 
@@ -7869,8 +7916,8 @@ msgid ""
 "Rules that run synchronously on every uploaded document. Each rule produces "
 "an explanatory finding when it fails."
 msgstr ""
-"قواعد تعمل بشكل متزامن على كل مستند تم تحميله. كل قاعدة تنتج نتيجة تفسيرية "
-"عند الفشل."
+"قواعد تعمل تزامنيًّا على كل مستند مرفوع. تُنتج كل قاعدة ملاحظة تفسيرية عند "
+"إخفاقها."
 
 #: templates/compliance/index.html:162
 #: templates/reports/invoice_audit_report.html:154
@@ -7970,24 +8017,22 @@ msgid "Breadcrumb"
 msgstr ""
 
 #: templates/components/_command_palette.html:21
-#, fuzzy
 #| msgid "Search by invoice number, vendor..."
 msgid "Search pages, invoices, vendors…"
 msgstr "ابحث برقم الفاتورة، المورد..."
 
 #: templates/components/_command_palette.html:41
-#, fuzzy
 #| msgid "Results"
 msgid "No results"
 msgstr "النتائج"
 
 #: templates/components/_command_palette.html:45
 msgid "Navigate with ↑↓ — Enter to open"
-msgstr ""
+msgstr "تنقّل بـ ↑↓ — Enter للفتح"
 
 #: templates/components/_command_palette.html:46
 msgid "Press Cmd+K to open anywhere"
-msgstr ""
+msgstr "اضغط Cmd+K للفتح من أي مكان"
 
 #: templates/components/_data_table.html:25
 msgid "Data table"
@@ -8010,13 +8055,11 @@ msgid "Delete Permanently"
 msgstr "حذف نهائي"
 
 #: templates/components/_form_field.html:26
-#, fuzzy
 #| msgid "Required"
 msgid "(required)"
 msgstr "مطلوب"
 
 #: templates/components/_fraud_breakdown.html:16
-#, fuzzy
 #| msgid "Fraud signal analysis"
 msgid "Fraud signal breakdown"
 msgstr "تحليل إشارات الاحتيال"
@@ -8025,7 +8068,7 @@ msgstr "تحليل إشارات الاحتيال"
 msgid ""
 "Weighted aggregation of duplicate / Benford / vendor / behavioral / "
 "structural signals."
-msgstr ""
+msgstr "تجميع موزون لإشارات التكرار / بنفورد / المورّد / السلوكية / البنيوية."
 
 #: templates/components/_fraud_breakdown.html:20
 #, python-format
@@ -8033,7 +8076,6 @@ msgid "Score %(score)s / 100"
 msgstr ""
 
 #: templates/components/_fraud_breakdown.html:32
-#, fuzzy
 #| msgid "Sign In"
 msgid "Signal"
 msgstr "تسجيل الدخول"
@@ -8049,14 +8091,12 @@ msgstr "مكرّرة"
 
 #: templates/components/_fraud_breakdown.html:44
 #: templates/components/_fraud_breakdown.html:75
-#, fuzzy
 #| msgid "Benford's Law"
 msgid "Benford-law"
 msgstr "قانون بنفورد"
 
 #: templates/components/_fraud_breakdown.html:45
 #: templates/components/_fraud_breakdown.html:76
-#, fuzzy
 #| msgid "Vendor Risk"
 msgid "Vendor risk"
 msgstr "مخاطر البائعين"
@@ -8064,11 +8104,10 @@ msgstr "مخاطر البائعين"
 #: templates/components/_fraud_breakdown.html:46
 #: templates/components/_fraud_breakdown.html:77
 msgid "Behavioral"
-msgstr ""
+msgstr "سلوكي"
 
 #: templates/components/_fraud_breakdown.html:47
 #: templates/components/_fraud_breakdown.html:78
-#, fuzzy
 #| msgid "Structured data"
 msgid "Structural"
 msgstr "بيانات منظَّمة"
@@ -8076,14 +8115,13 @@ msgstr "بيانات منظَّمة"
 #: templates/components/_fraud_breakdown.html:62
 #: templates/components/_fraud_breakdown.html:64
 msgid "Top contributors"
-msgstr ""
+msgstr "أبرز المساهمين"
 
 #: templates/components/_fraud_breakdown.html:85
 msgid "No signals were available for ranking."
-msgstr ""
+msgstr "لا إشارات متاحة للترتيب."
 
 #: templates/components/_skip_link.html:7
-#, fuzzy
 #| msgid "Main Content"
 msgid "Skip to main content"
 msgstr "المحتوى الرئيسي"
@@ -8107,8 +8145,8 @@ msgstr "لست مرتبطاً بمؤسسة بعد."
 
 #: templates/dashboard/index.html:49
 msgid ""
-"Until your account is added to an organization, the dashboard has no data to "
-"show."
+"Until your account is added to an organization, the dashboard has no data to"
+" show."
 msgstr "حسابك غير مرتبط بمؤسسة. تواصل مع مسؤول المنصّة لمعالجة ذلك."
 
 #: templates/dashboard/index.html:52
@@ -8119,7 +8157,8 @@ msgstr "الحسابات"
 msgid "Current plan"
 msgstr "الباقة الحالية"
 
-#: templates/dashboard/index.html:69 templates/vendor_dashboard/billing.html:44
+#: templates/dashboard/index.html:69
+#: templates/vendor_dashboard/billing.html:44
 msgid "Trial"
 msgstr "تجربة"
 
@@ -8158,12 +8197,14 @@ msgstr "لوحة التحكم الرئيسية"
 #: templates/dashboard/index.html:109
 #, python-format
 msgid "%(product)s — Unified AI-powered financial document auditor"
-msgstr "%(product)s — مدقق المستندات المالية الموحّد المدعوم بالذكاء الاصطناعي"
+msgstr ""
+"%(product)s — مدقق المستندات المالية الموحّد المدعوم بالذكاء الاصطناعي"
 
 #: templates/dashboard/index.html:117
 #: templates/documents/bank_statements.html:51
 #: templates/documents/expense_reports.html:51
-#: templates/documents/fixed_assets.html:51 templates/documents/payroll.html:51
+#: templates/documents/fixed_assets.html:51
+#: templates/documents/payroll.html:51
 #: templates/documents/purchase_orders.html:51
 #: templates/documents/sales_receipts.html:51
 #: templates/documents/vat_returns.html:51 templates/phase2/activity.html:84
@@ -8230,11 +8271,11 @@ msgstr "ابدأ تدقيق مستنداتك المالية الآن"
 
 #: templates/dashboard/index.html:235
 msgid ""
-"Upload invoices, bank statements, or VAT records and our system will analyze "
-"them in seconds."
+"Upload invoices, bank statements, or VAT records and our system will analyze"
+" them in seconds."
 msgstr ""
-"ارفع الفواتير أو كشوف الحسابات أو سجلات ضريبة القيمة المضافة وسيُحلّلها نظامنا "
-"خلال ثوانٍ."
+"ارفع الفواتير أو كشوف الحسابات أو سجلات ضريبة القيمة المضافة وسيُحلّلها "
+"نظامنا خلال ثوانٍ."
 
 #: templates/dashboard/index.html:239
 msgid "Start Upload"
@@ -8264,7 +8305,8 @@ msgid "Filter"
 msgstr "تصفية"
 
 #: templates/dashboard/index.html:277 templates/phase2/dashboard.html:143
-#: templates/platform_admin/dashboard.html:133 templates/reports/index.html:480
+#: templates/platform_admin/dashboard.html:133
+#: templates/reports/index.html:480
 #: templates/vendor_dashboard/dashboard.html:135
 #: templates/vendor_dashboard/storage.html:102
 msgid "View all"
@@ -8336,7 +8378,8 @@ msgstr ""
 
 #: templates/dashboard/index.html:428
 msgid ""
-"— pick a document type at /documents/upload/ and drop your PDF / Excel / CSV."
+"— pick a document type at /documents/upload/ and drop your PDF / Excel / "
+"CSV."
 msgstr "— اختر نوع الوثيقة في /documents/upload/ واسحب ملف PDF / Excel / CSV."
 
 #: templates/dashboard/index.html:429
@@ -8347,7 +8390,8 @@ msgstr ""
 
 #: templates/dashboard/index.html:430
 msgid ""
-"— open the detail page to see risk score, failed rules, and linked documents."
+"— open the detail page to see risk score, failed rules, and linked "
+"documents."
 msgstr ""
 "— افتح صفحة التفاصيل لرؤية درجة المخاطر، القواعد الفاشلة، والوثائق المرتبطة."
 
@@ -8467,7 +8511,8 @@ msgstr "تصدير إلى Excel"
 #: templates/documents/_typed_list.html:85
 #: templates/documents/bank_statements.html:65
 #: templates/documents/expense_reports.html:65
-#: templates/documents/fixed_assets.html:65 templates/documents/payroll.html:65
+#: templates/documents/fixed_assets.html:65
+#: templates/documents/payroll.html:65
 #: templates/documents/purchase_orders.html:101
 #: templates/documents/sales_receipts.html:65
 #: templates/documents/vat_returns.html:65
@@ -8500,8 +8545,8 @@ msgstr "لا يوجد %(t)s بعد"
 #: templates/documents/sales_receipts.html:114
 #: templates/documents/vat_returns.html:114
 msgid ""
-"Upload your first document and our AI will extract data and run audit checks "
-"automatically."
+"Upload your first document and our AI will extract data and run audit checks"
+" automatically."
 msgstr ""
 "ارفع أوّل مستند وسيستخرج الذكاء الاصطناعي البيانات ويُشغّل فحوصات التدقيق "
 "تلقائياً."
@@ -8512,7 +8557,8 @@ msgstr "سَوِّ كشوف الحسابات البنكية مع معاملات�
 
 #: templates/documents/bank_statements.html:55
 #: templates/documents/expense_reports.html:55
-#: templates/documents/fixed_assets.html:55 templates/documents/payroll.html:55
+#: templates/documents/fixed_assets.html:55
+#: templates/documents/payroll.html:55
 #: templates/documents/purchase_orders.html:55
 #: templates/documents/sales_receipts.html:55
 #: templates/documents/vat_returns.html:55
@@ -8527,19 +8573,22 @@ msgstr "رفع كشوف بنكية"
 
 #: templates/documents/bank_statements.html:67
 #: templates/documents/expense_reports.html:67
-#: templates/documents/fixed_assets.html:67 templates/documents/payroll.html:67
+#: templates/documents/fixed_assets.html:67
+#: templates/documents/payroll.html:67
 #: templates/documents/purchase_orders.html:103
 #: templates/documents/sales_receipts.html:67
 #: templates/documents/vat_returns.html:67
-#: templates/platform_admin/jobs.html:57 templates/platform_admin/leads.html:44
-#: templates/users/index.html:154 templates/vendor_dashboard/audits.html:48
+#: templates/platform_admin/jobs.html:57
+#: templates/platform_admin/leads.html:44 templates/users/index.html:154
+#: templates/vendor_dashboard/audits.html:48
 #: templates/vendor_dashboard/files.html:42
 msgid "All statuses"
 msgstr "كل الحالات"
 
 #: templates/documents/bank_statements.html:74
 #: templates/documents/expense_reports.html:74
-#: templates/documents/fixed_assets.html:74 templates/documents/payroll.html:74
+#: templates/documents/fixed_assets.html:74
+#: templates/documents/payroll.html:74
 #: templates/documents/purchase_orders.html:110
 #: templates/documents/sales_receipts.html:74
 #: templates/documents/vat_returns.html:74
@@ -8548,7 +8597,8 @@ msgstr "آخر 90 يوماً"
 
 #: templates/documents/bank_statements.html:75
 #: templates/documents/expense_reports.html:75
-#: templates/documents/fixed_assets.html:75 templates/documents/payroll.html:75
+#: templates/documents/fixed_assets.html:75
+#: templates/documents/payroll.html:75
 #: templates/documents/purchase_orders.html:111
 #: templates/documents/sales_receipts.html:75
 #: templates/documents/vat_returns.html:75
@@ -9096,7 +9146,8 @@ msgstr "لا توجد تقارير مصروفات حتى الآن"
 msgid "Capital assets and depreciation schedules."
 msgstr "الأصول الرأسمالية وجداول الإهلاك."
 
-#: templates/documents/fixed_assets.html:59 templates/documents/upload.html:301
+#: templates/documents/fixed_assets.html:59
+#: templates/documents/upload.html:301
 msgid "Upload Fixed Assets"
 msgstr "رفع الأصول الثابتة"
 
@@ -9129,9 +9180,9 @@ msgid ""
 "Pick any of the 21 document types below, click Upload, drop a PDF / Excel / "
 "CSV, and our AI will extract the data and run audit rules instantly."
 msgstr ""
-"اختر أيًا من 21 نوعًا من الوثائق أدناه، انقر على تحميل، اسحب ملف PDF / Excel / "
-"CSV، وسيتولى الذكاء الاصطناعي لدينا استخراج البيانات وتشغيل قواعد التدقيق "
-"على الفور."
+"اختر أيًا من 21 نوعًا من الوثائق أدناه، انقر على تحميل، اسحب ملف PDF / Excel"
+" / CSV، وسيتولى الذكاء الاصطناعي لدينا استخراج البيانات وتشغيل قواعد التدقيق"
+" على الفور."
 
 #: templates/documents/index.html:150
 msgid "Upload your first document"
@@ -9397,7 +9448,8 @@ msgstr "نصائح لأفضل دقّة"
 #: templates/documents/upload.html:260 templates/invoices/upload.html:215
 msgid ""
 "Make sure scanned images and documents are high resolution (300dpi or "
-"higher). Avoid skewed images or poor lighting. For multi-page files, use PDF."
+"higher). Avoid skewed images or poor lighting. For multi-page files, use "
+"PDF."
 msgstr ""
 "تأكّد أن الصور والمستندات الممسوحة بدقة عالية (300 نقطة في البوصة أو أعلى). "
 "تجنّب الصور المائلة أو الإضاءة الضعيفة. للملفات متعدّدة الصفحات استخدم PDF."
@@ -9666,7 +9718,8 @@ msgid ""
 "We could not fetch this batch right now. Refresh the page or try again "
 "shortly."
 msgstr ""
-"لم نتمكّن من جلب بيانات هذه الدفعة الآن. حدّث الصفحة أو أعد المحاولة بعد قليل."
+"لم نتمكّن من جلب بيانات هذه الدفعة الآن. حدّث الصفحة أو أعد المحاولة بعد "
+"قليل."
 
 #: templates/invoices/batches.html:4
 msgid "Upload Batches"
@@ -9845,8 +9898,8 @@ msgstr "الحالة والإجراءات"
 #: templates/invoices/detail.html:418
 #, python-format
 msgid ""
-"The displayed status was adjusted to <strong>%(status)s</strong> because the "
-"current risk score is high and requires review."
+"The displayed status was adjusted to <strong>%(status)s</strong> because the"
+" current risk score is high and requires review."
 msgstr ""
 "تم تعديل الحالة المعروضة إلى <strong>%(status)s</strong> لأن درجة المخاطرة "
 "الحالية عالية وتتطلّب مراجعة."
@@ -9940,7 +9993,8 @@ msgstr "اكتب سبب الرفض بوضوح..."
 msgid ""
 "This invoice has non-blocking audit warnings. You must confirm you have "
 "reviewed them."
-msgstr "تحتوي هذه الفاتورة على تحذيرات تدقيق غير حاجبة. يجب تأكيد أنك راجعتها."
+msgstr ""
+"تحتوي هذه الفاتورة على تحذيرات تدقيق غير حاجبة. يجب تأكيد أنك راجعتها."
 
 #: templates/invoices/detail.html:646
 msgid "I have reviewed all warnings and confirm approval."
@@ -10065,11 +10119,11 @@ msgstr "قواعد التدقيق الفاشلة"
 
 #: templates/invoices/invoice_pdf.html:128
 msgid ""
-"Rule code, rule text, severity, and score. Score = severity weight (critical "
-"25 · high 15 · medium 8 · low 3)."
+"Rule code, rule text, severity, and score. Score = severity weight (critical"
+" 25 · high 15 · medium 8 · low 3)."
 msgstr ""
-"رمز القاعدة، نص القاعدة، الشدّة، والدرجة. الدرجة = وزن الشدّة (حرج 25 · مرتفع "
-"15 · متوسط 8 · منخفض 3)."
+"رمز القاعدة ونصّها وشدّتها ودرجتها. الدرجة = وزن الشدّة (حرجة 25 · عالية 15 "
+"· متوسّطة 8 · منخفضة 3)."
 
 #: templates/invoices/invoice_pdf.html:133
 #: templates/reports/executive_report.html:529
@@ -10125,11 +10179,11 @@ msgstr "علم"
 
 #: templates/invoices/list.html:127
 msgid ""
-"Upload your first invoice to start the auditing process. Our AI will extract "
-"data and analyze risks automatically."
+"Upload your first invoice to start the auditing process. Our AI will extract"
+" data and analyze risks automatically."
 msgstr ""
-"ارفع أوّل فاتورة لبدء عملية التدقيق. سيستخرج الذكاء الاصطناعي البيانات ويُحلّل "
-"المخاطر تلقائياً."
+"ارفع أوّل فاتورة لبدء عملية التدقيق. سيستخرج الذكاء الاصطناعي البيانات "
+"ويُحلّل المخاطر تلقائياً."
 
 #: templates/invoices/list.html:175
 msgid "Reason (required for reject):"
@@ -10165,7 +10219,6 @@ msgstr "خطأ في الشبكة."
 
 #: templates/invoices/override_request.html:4
 #: templates/invoices/override_request.html:16
-#, fuzzy
 #| msgid "Demo request"
 msgid "Override request"
 msgstr "طلب عرض توضيحي"
@@ -10174,50 +10227,42 @@ msgstr "طلب عرض توضيحي"
 #, python-format
 msgid ""
 "\n"
-"          This approval exceeds the SAR %(threshold)s threshold and needs a "
-"second admin\n"
+"          This approval exceeds the SAR %(threshold)s threshold and needs a second admin\n"
 "          to countersign within %(window_hours)s hours.\n"
 "        "
 msgstr ""
 
 #: templates/invoices/override_request.html:63
-#, fuzzy
 #| msgid "Pending review"
 msgid "Pending request"
 msgstr "بانتظار المراجعة"
 
 #: templates/invoices/override_request.html:67
-#, fuzzy
 #| msgid "Requester"
 msgid "Requested by"
 msgstr "مقدّم الطلب"
 
 #: templates/invoices/override_request.html:71
-#, fuzzy
 #| msgid "Requester"
 msgid "Requested at"
 msgstr "مقدّم الطلب"
 
 #: templates/invoices/override_request.html:75
-#, fuzzy
 #| msgid "Expired"
 msgid "Expires"
 msgstr "منتهية"
 
 #: templates/invoices/override_request.html:89
-#, fuzzy
 #| msgid "Country"
 msgid "Countersign"
 msgstr "الدولة"
 
 #: templates/invoices/override_request.html:117
-#, fuzzy
 #| msgid "Requester"
 msgid "Request override"
 msgstr "مقدّم الطلب"
 
 #: templates/invoices/override_request.html:134
-#, fuzzy
 #| msgid "Submit for review"
 msgid "Submit for countersignature"
 msgstr "تقديم للمراجعة"
@@ -10404,8 +10449,8 @@ msgstr "رفع ومعالجة المستندات"
 
 #: templates/invoices/upload.html:84
 msgid ""
-"AI will analyze your documents in seconds — with full ZATCA checks and fraud "
-"detection."
+"AI will analyze your documents in seconds — with full ZATCA checks and fraud"
+" detection."
 msgstr ""
 "سيحلّل الذكاء الاصطناعي مستنداتك خلال ثوانٍ — مع فحص ZATCA كامل واكتشاف "
 "الاحتيال."
@@ -10510,8 +10555,8 @@ msgstr "الامتثال التنظيمي"
 
 #: templates/landing/index.html:1571
 msgid ""
-"Reviews financial operations against VAT, ZATCA, and local and international "
-"regulations."
+"Reviews financial operations against VAT, ZATCA, and local and international"
+" regulations."
 msgstr ""
 "تراجع العمليات المالية وفق متطلبات ضريبة القيمة المضافة، ZATCA، واللوائح "
 "المحلية والدولية."
@@ -10571,7 +10616,8 @@ msgid ""
 "Produces comprehensive financial and audit reports with actionable "
 "indicators for management and reviewers."
 msgstr ""
-"تولّد تقارير مالية وتدقيقية شاملة مع مؤشرات قابلة للتنفيذ للإدارة والمراجعين."
+"تولّد تقارير مالية وتدقيقية شاملة مع مؤشرات قابلة للتنفيذ للإدارة "
+"والمراجعين."
 
 #: templates/landing/index.html:1655
 msgid "Data Security"
@@ -10600,11 +10646,11 @@ msgstr "لماذا يختار المدققون تدقيق"
 
 #: templates/landing/index.html:1678
 msgid ""
-"We provide all the tools you need to ensure the highest standards of quality "
-"and security in financial operations."
+"We provide all the tools you need to ensure the highest standards of quality"
+" and security in financial operations."
 msgstr ""
-"نوفّر جميع الأدوات التي تحتاجها لضمان أعلى معايير الجودة والأمان في العمليات "
-"المالية."
+"نوفّر جميع الأدوات التي تحتاجها لضمان أعلى معايير الجودة والأمان في العمليات"
+" المالية."
 
 #: templates/landing/index.html:1688
 #, python-format
@@ -10613,7 +10659,8 @@ msgstr "أتمتة بنسبة 95%%"
 
 #: templates/landing/index.html:1689
 msgid ""
-"Fully automated workflow for review and audit, minimizing human intervention."
+"Fully automated workflow for review and audit, minimizing human "
+"intervention."
 msgstr "سير عمل آلي بالكامل للمراجعة والتدقيق، يُقلّل التدخّل البشري."
 
 #: templates/landing/index.html:1701
@@ -10621,7 +10668,8 @@ msgid ""
 "Over 10 specialized algorithms to instantly detect fraud indicators and "
 "suspicious transactions."
 msgstr ""
-"أكثر من 10 خوارزميات متخصّصة لاكتشاف مؤشّرات الاحتيال والمعاملات المشبوهة فوراً."
+"أكثر من 10 خوارزميات متخصّصة لاكتشاف مؤشّرات الاحتيال والمعاملات المشبوهة "
+"فوراً."
 
 #: templates/landing/index.html:1712
 msgid "Smart Reports"
@@ -10629,8 +10677,8 @@ msgstr "تقارير ذكية"
 
 #: templates/landing/index.html:1713
 msgid ""
-"Generate comprehensive reports compliant with international standards in one "
-"click."
+"Generate comprehensive reports compliant with international standards in one"
+" click."
 msgstr "أنشئ تقارير شاملة متوافقة مع المعايير الدولية بنقرة واحدة."
 
 #: templates/landing/index.html:1725
@@ -10639,8 +10687,8 @@ msgstr "نُغطّي منطقة الخليج"
 
 #: templates/landing/index.html:1726
 msgid ""
-"Our solutions are compliant with all tax authorities in the region to ensure "
-"your business runs smoothly across borders."
+"Our solutions are compliant with all tax authorities in the region to ensure"
+" your business runs smoothly across borders."
 msgstr ""
 "تتوافق حلولنا مع جميع الهيئات الضريبية في المنطقة لضمان سَير أعمالك بسلاسة "
 "عبر الحدود."
@@ -10920,20 +10968,20 @@ msgstr "كيف يعمل"
 
 #: templates/ledger/dashboard.html:153
 msgid ""
-"Every invoice you upload can be auto-posted to the ledger via POST /api/v1/"
-"ledger/post-invoice/ with {invoice_id, direction}. Sales invoices debit AR + "
-"credit Revenue + VAT Output; purchase invoices debit Expense + VAT Input + "
-"credit AP. Bank reconciliations post the cash leg automatically once an "
-"invoice is matched. Posted entries are immutable (audit hash chain) — "
-"voiding generates a compensating entry rather than editing the original."
+"Every invoice you upload can be auto-posted to the ledger via POST "
+"/api/v1/ledger/post-invoice/ with {invoice_id, direction}. Sales invoices "
+"debit AR + credit Revenue + VAT Output; purchase invoices debit Expense + "
+"VAT Input + credit AP. Bank reconciliations post the cash leg automatically "
+"once an invoice is matched. Posted entries are immutable (audit hash chain) "
+"— voiding generates a compensating entry rather than editing the original."
 msgstr ""
-"يمكن نشر كل فاتورة تقوم بتحميلها تلقائيًا إلى دفتر الحسابات عبر POST /api/v1/"
-"ledger/post-invoice/ مع {invoice_id, direction}. فواتير المبيعات تدين "
-"الحسابات المدينة + ائتمان الإيرادات + ضريبة القيمة المضافة الناتجة؛ فواتير "
-"الشراء تدين المصروفات + ضريبة القيمة المضافة المدخلة + ائتمان الحسابات "
-"الدائنة. تسويات البنك تنشر الساق النقدية تلقائيًا بمجرد مطابقة فاتورة. القيود "
-"المنشورة غير قابلة للتغيير (سلسلة تجزئة التدقيق) - إلغاء يولد قيد تعويضي "
-"بدلاً من تعديل الأصل."
+"يمكن نشر كل فاتورة تقوم بتحميلها تلقائيًا إلى دفتر الحسابات عبر POST "
+"/api/v1/ledger/post-invoice/ مع {invoice_id, direction}. فواتير المبيعات "
+"تدين الحسابات المدينة + ائتمان الإيرادات + ضريبة القيمة المضافة الناتجة؛ "
+"فواتير الشراء تدين المصروفات + ضريبة القيمة المضافة المدخلة + ائتمان "
+"الحسابات الدائنة. تسويات البنك تنشر الساق النقدية تلقائيًا بمجرد مطابقة "
+"فاتورة. القيود المنشورة غير قابلة للتغيير (سلسلة تجزئة التدقيق) - إلغاء يولد"
+" قيد تعويضي بدلاً من تعديل الأصل."
 
 #: templates/partials/_pagination.html:18
 #, python-format
@@ -11476,8 +11524,8 @@ msgid ""
 "Performs a full document analysis including classification, extraction, "
 "duplicate detection, fraud scoring, and compliance checking."
 msgstr ""
-"يُنفّذ تحليلاً كاملاً للمستند يشمل التصنيف والاستخراج واكتشاف التكرار وتقييم "
-"الاحتيال وفحص الامتثال."
+"يُنفّذ تحليلاً كاملاً للمستند يشمل التصنيف والاستخراج واكتشاف التكرار وتقييم"
+" الاحتيال وفحص الامتثال."
 
 #: templates/phase2/audits.html:404
 msgid ""
@@ -11503,7 +11551,8 @@ msgstr ""
 #: templates/phase2/audits.html:407
 #, python-format
 msgid ""
-"Validates VAT calculations, tax rates (15%%), and ZATCA invoice requirements."
+"Validates VAT calculations, tax rates (15%%), and ZATCA invoice "
+"requirements."
 msgstr "يتحقّق من احتسابات الضريبة ومعدّلاتها (15%%) ومتطلّبات فواتير ZATCA."
 
 #: templates/phase2/base_phase2.html:6
@@ -11692,7 +11741,8 @@ msgstr "اسم المجلّد الفرعي..."
 msgid "Select a folder to view its files"
 msgstr "اختر مجلّداً لعرض ملفّاته"
 
-#: templates/phase2/folders.html:183 templates/vendor_dashboard/folders.html:25
+#: templates/phase2/folders.html:183
+#: templates/vendor_dashboard/folders.html:25
 msgid "Root"
 msgstr "جذر"
 
@@ -11700,7 +11750,8 @@ msgstr "جذر"
 msgid "Select a folder from the left panel"
 msgstr "اختر مجلّداً من اللوحة الجانبية"
 
-#: templates/phase2/folders.html:222 templates/vendor_dashboard/folders.html:56
+#: templates/phase2/folders.html:222
+#: templates/vendor_dashboard/folders.html:56
 msgid "This folder is empty"
 msgstr "هذا المجلّد فارغ"
 
@@ -11832,7 +11883,8 @@ msgstr ""
 msgid ""
 "User activity log showing all actions performed within the selected time "
 "period."
-msgstr "سجل نشاط المستخدم يُظهر جميع الإجراءات المُنفّذة خلال الفترة المختارة."
+msgstr ""
+"سجل نشاط المستخدم يُظهر جميع الإجراءات المُنفّذة خلال الفترة المختارة."
 
 #: templates/platform_admin/activity_logs.html:13
 msgid "Track all actions and operations across the platform"
@@ -11868,7 +11920,8 @@ msgstr "كل الإجراءات"
 msgid "Search logs..."
 msgstr "ابحث في السجلات..."
 
-#: templates/platform_admin/activity_logs.html:69 templates/users/index.html:62
+#: templates/platform_admin/activity_logs.html:69
+#: templates/users/index.html:62
 msgid "Clear filters"
 msgstr "مسح الفلاتر"
 
@@ -12374,7 +12427,8 @@ msgid "Job Title"
 msgstr "المسمّى الوظيفي"
 
 # --- Auditing partials ---
-#: templates/platform_admin/jobs.html:94 templates/platform_admin/jobs.html:241
+#: templates/platform_admin/jobs.html:94
+#: templates/platform_admin/jobs.html:241
 msgid "Employment Type"
 msgstr "نوع التوظيف"
 
@@ -13301,7 +13355,8 @@ msgstr "الفترة:"
 msgid "Overall Risk Score"
 msgstr "درجة المخاطرة الإجمالية"
 
-#: templates/reports/executive_report.html:136 templates/reports/index.html:488
+#: templates/reports/executive_report.html:136
+#: templates/reports/index.html:488
 #: templates/reports/invoice_audit_report_pdf.html:214
 #: templates/reports/invoice_audit_report_v2.html:146
 msgid "Generated"
@@ -13312,7 +13367,8 @@ msgid "Prepared by"
 msgstr "إعداد"
 
 #: templates/reports/executive_report.html:144
-#: templates/reports/executive_report.html:532 templates/reports/index.html:144
+#: templates/reports/executive_report.html:532
+#: templates/reports/index.html:144
 #: templates/reports/invoice_audit_report.html:223
 #: templates/reports/invoice_audit_report.html:358
 msgid "Avg Risk Score"
@@ -13389,7 +13445,8 @@ msgstr "أكثر القواعد فشلاً"
 msgid "× %(v0)s"
 msgstr "× %(v0)s"
 
-#: templates/reports/executive_report.html:348 templates/reports/index.html:374
+#: templates/reports/executive_report.html:348
+#: templates/reports/index.html:374
 #: templates/reports/invoice_audit_report.html:354
 #: templates/reports/invoice_audit_report_pdf.html:397
 #: templates/vendor_dashboard/reports.html:24
@@ -13491,7 +13548,8 @@ msgstr "على فريق التدقيق الداخلي مراجعة كل المس
 
 #: templates/reports/executive_report.html:676
 msgid "AI detected no fraud indicators or critical violations in this period."
-msgstr "لم يكتشف الذكاء الاصطناعي مؤشّرات احتيال أو مخالفات حرجة في هذه الفترة."
+msgstr ""
+"لم يكتشف الذكاء الاصطناعي مؤشّرات احتيال أو مخالفات حرجة في هذه الفترة."
 
 #: templates/reports/executive_report.html:683
 msgid "Anomaly Pattern Analysis — AI Interpretation"
@@ -13681,9 +13739,10 @@ msgstr "الأوراق العملية"
 
 #: templates/reports/index.html:294
 msgid ""
-"ISA 230 sign-off — preparer · senior reviewer · partner, with tamper-evident "
-"lock."
-msgstr "توقيع ISA 230 - المعدّ · المراجع الأول · الشريك، مع قفل يظهر التلاعب."
+"ISA 230 sign-off — preparer · senior reviewer · partner, with tamper-evident"
+" lock."
+msgstr ""
+"اعتماد ISA 230 — المُعِدّ · المراجِع الأول · الشريك، مع قفل مقاوم للعبث."
 
 #: templates/reports/index.html:302
 msgid ""
@@ -13719,8 +13778,8 @@ msgid ""
 "Email · SMS · Slack · Teams · webhook channels with cooldown and "
 "acknowledgement."
 msgstr ""
-"البريد الإلكتروني · الرسائل القصيرة · سلاك · الفرق · قنوات الويب هوك مع فترة "
-"تبريد وإقرار."
+"البريد الإلكتروني · الرسائل القصيرة · سلاك · الفرق · قنوات الويب هوك مع فترة"
+" تبريد وإقرار."
 
 #: templates/reports/index.html:333 templates/zatca/dashboard.html:58
 msgid "ZATCA Phase 2"
@@ -13738,7 +13797,8 @@ msgid ""
 "Pull statements from Al Rajhi · SNB · Riyad · SAB · BSF and auto-match "
 "invoices."
 msgstr ""
-"سحب البيانات من الراجحي · SNB · الرياض · SAB · BSF ومطابقة الفواتير تلقائيًا."
+"سحب البيانات من الراجحي · SNB · الرياض · SAB · BSF ومطابقة الفواتير "
+"تلقائيًا."
 
 #: templates/reports/index.html:350
 msgid ""
@@ -13766,7 +13826,8 @@ msgstr "مؤشّرات مخاطرة تفصيلية وحالات شذوذ ودر�
 
 #: templates/reports/index.html:384
 msgid "ZATCA Phase 2, VAT validation, and tax compliance details."
-msgstr "المرحلة الثانية لـ ZATCA والتحقّق من الضريبة وتفاصيل الامتثال الضريبي."
+msgstr ""
+"المرحلة الثانية لـ ZATCA والتحقّق من الضريبة وتفاصيل الامتثال الضريبي."
 
 #: templates/reports/index.html:385
 msgid "GOSI / labor law compliance and policy validation."
@@ -13840,7 +13901,8 @@ msgstr "الأهمية النسبية والأنماط"
 
 #: templates/reports/index.html:469
 msgid "Round-number bias, off-hours uploads, materiality thresholds."
-msgstr "انحياز الأرقام المُدوَّرة والرفع خارج ساعات العمل وعتبات الأهمية النسبية."
+msgstr ""
+"انحياز الأرقام المُدوَّرة والرفع خارج ساعات العمل وعتبات الأهمية النسبية."
 
 #: templates/reports/index.html:470
 msgid "Within materiality"
@@ -13888,7 +13950,8 @@ msgstr "تقارير الفواتير"
 msgid ""
 "Audit summary, ZATCA compliance, fraud detection, and vendor analysis for "
 "invoices."
-msgstr "ملخّص التدقيق وامتثال ZATCA واكتشاف الاحتيال وتحليل الموردين للفواتير."
+msgstr ""
+"ملخّص التدقيق وامتثال ZATCA واكتشاف الاحتيال وتحليل الموردين للفواتير."
 
 #: templates/reports/index.html:561
 msgid "Purchase Order Reports"
@@ -13912,7 +13975,8 @@ msgid "VAT Return Reports"
 msgstr "تقارير إقرارات الضريبة"
 
 #: templates/reports/index.html:563
-msgid "Quarterly VAT analysis, ZATCA Phase 2 status, and tax position summary."
+msgid ""
+"Quarterly VAT analysis, ZATCA Phase 2 status, and tax position summary."
 msgstr ""
 "تحليل ضريبة القيمة المضافة الربع سنوي وحالة المرحلة الثانية لـ ZATCA وملخّص "
 "الموقف الضريبي."
@@ -13977,8 +14041,8 @@ msgid ""
 "Showing invoice-level analytics — dedicated reports for \"%(type_label)s\" "
 "are coming soon."
 msgstr ""
-"تُعرَض تحليلات على مستوى الفاتورة — تقارير مخصّصة لـ \"%(type_label)s\" قادمة "
-"قريباً."
+"تُعرَض تحليلات على مستوى الفاتورة — تقارير مخصّصة لـ \"%(type_label)s\" "
+"قادمة قريباً."
 
 #: templates/reports/invoice_audit_report.html:40
 msgid ""
@@ -13998,8 +14062,8 @@ msgid ""
 "you upload %(type_label)s for analysis. AI extraction, audit rules, fraud "
 "detection, and ZATCA compliance run automatically on every upload."
 msgstr ""
-"هذا تقرير \"%(kind_label)s\". سيتم تعبئته تلقائياً بمجرّد رفع %(type_label)s "
-"للتحليل. يعمل الاستخراج بالذكاء الاصطناعي وقواعد التدقيق واكتشاف الاحتيال "
+"هذا تقرير \"%(kind_label)s\". سيتم تعبئته تلقائياً بمجرّد رفع %(type_label)s"
+" للتحليل. يعمل الاستخراج بالذكاء الاصطناعي وقواعد التدقيق واكتشاف الاحتيال "
 "وامتثال ZATCA تلقائياً على كل رفع."
 
 #: templates/reports/invoice_audit_report.html:91
@@ -14071,7 +14135,8 @@ msgstr "محرّك قواعد تدقيق ذكي"
 msgid ""
 "Smart Audit Rule Engine — %(total_rules)s rules applied across %(docs)s "
 "documents"
-msgstr "محرك التدقيق الذكي — تم تطبيق %(total_rules)s قاعدة عبر %(docs)s مستند"
+msgstr ""
+"محرك التدقيق الذكي — تم تطبيق %(total_rules)s قاعدة عبر %(docs)s مستند"
 
 #: templates/reports/invoice_audit_report.html:203
 msgid "Audited Documents"
@@ -14220,8 +14285,8 @@ msgstr "التوصيات الرئيسية"
 
 #: templates/reports/invoice_audit_report_pdf.html:265
 msgid ""
-"Each invoice is examined through control rules to determine compliance score "
-"and risk classification."
+"Each invoice is examined through control rules to determine compliance score"
+" and risk classification."
 msgstr ""
 "يتم فحص كل فاتورة عبر قواعد رقابية لتحديد درجة الامتثال وتصنيف المخاطر."
 
@@ -14254,8 +14319,8 @@ msgid ""
 "Rule code, rule text, severity, and weighted score. Score = severity weight "
 "× failure count."
 msgstr ""
-"رمز القاعدة، نص القاعدة، الشدّة، والدرجة المرجَّحة. الدرجة = وزن الشدّة × عدد "
-"مرات الإخفاق."
+"رمز القاعدة ونصّها وشدّتها ودرجتها الموزونة. الدرجة = وزن الشدّة × عدد "
+"الإخفاقات."
 
 #: templates/reports/invoice_audit_report_pdf.html:356
 #: templates/reports/invoice_audit_report_v2.html:262
@@ -14678,7 +14743,7 @@ msgstr "أمور التدقيق الرئيسية"
 #: templates/reports/partials/_key_audit_matters.html:12
 msgid ""
 "Matters we determined to be of most significance during our audit (ISA 701)"
-msgstr "الأمور التي اعتبرناها الأكثر أهمية خلال تدقيقنا (ISA 701)"
+msgstr "الأمور التي رأينا أنها الأكثر أهمية خلال تدقيقنا (ISA 701)"
 
 #: templates/reports/partials/_key_audit_matters.html:20
 msgid "Total KAMs"
@@ -14735,9 +14800,9 @@ msgid ""
 "determined to be the most significant matters communicated to those charged "
 "with governance."
 msgstr ""
-"تمثّل هذه الأمور مجالات أعلى من حيث المخاطرة المُقيَّمة لتحريف جوهري أو الأحكام "
-"المهمّة المُتّخذة خلال التدقيق، وقد تم تحديدها بوصفها الأمور الأكثر أهمية التي "
-"أُبلغت لِمن يتولّون الحوكمة."
+"تمثّل هذه الأمور مجالات أعلى من حيث المخاطرة المُقيَّمة لتحريف جوهري أو "
+"الأحكام المهمّة المُتّخذة خلال التدقيق، وقد تم تحديدها بوصفها الأمور الأكثر "
+"أهمية التي أُبلغت لِمن يتولّون الحوكمة."
 
 #: templates/reports/partials/_key_audit_matters.html:184
 msgid "No key audit matters identified"
@@ -14850,7 +14915,6 @@ msgid "Share"
 msgstr "مشاركة"
 
 #: templates/reports/partials/_progress_bar.html:313
-#, fuzzy
 #| msgid "URL copied to clipboard"
 msgid "Link copied to clipboard"
 msgstr "تم نسخ الرابط إلى الحافظة"
@@ -15081,7 +15145,8 @@ msgstr "احترافي"
 msgid ""
 "Organization settings are managed by your account administrator. Contact "
 "them to update these fields."
-msgstr "تُدار إعدادات المؤسسة من قِبَل مسؤول حسابك. تواصل معه لتحديث هذه الحقول."
+msgstr ""
+"تُدار إعدادات المؤسسة من قِبَل مسؤول حسابك. تواصل معه لتحديث هذه الحقول."
 
 #: templates/settings/index.html:226
 msgid "You are not associated with an organization yet."
@@ -15196,8 +15261,8 @@ msgid ""
 "Self-service API key management and webhook subscriptions are in active "
 "development. For now, contact support for an API key."
 msgstr ""
-"إدارة مفاتيح API والاشتراك في Webhooks ذاتياً قيد التطوير حالياً. حالياً، تواصل "
-"مع الدعم للحصول على مفتاح API."
+"إدارة مفاتيح API والاشتراك في Webhooks ذاتياً قيد التطوير حالياً. حالياً، "
+"تواصل مع الدعم للحصول على مفتاح API."
 
 #: templates/settings/index.html:362
 msgid "Invite a New User"
@@ -15207,7 +15272,8 @@ msgstr "دعوة مستخدم جديد"
 msgid ""
 "Create an account for a colleague in your organization. They'll receive a "
 "verification email at the address you provide."
-msgstr "أنشئ حساباً لزميل في مؤسستك. سيستلم رسالة تحقق على البريد الذي تُدخله."
+msgstr ""
+"أنشئ حساباً لزميل في مؤسستك. سيستلم رسالة تحقق على البريد الذي تُدخله."
 
 #: templates/settings/index.html:379 templates/settings/index.html:439
 #: templates/vendor_dashboard/team.html:144
@@ -15371,7 +15437,8 @@ msgstr "تطبيق المصادقة"
 
 #: templates/settings/mfa_settings.html:60
 msgid ""
-"Use an authenticator app like Google Authenticator or Microsoft Authenticator"
+"Use an authenticator app like Google Authenticator or Microsoft "
+"Authenticator"
 msgstr ""
 "استخدم تطبيق مصادقة مثل Google Authenticator أو Microsoft Authenticator"
 
@@ -15458,7 +15525,8 @@ msgid "Use a unique, strong password in addition to two-factor authentication"
 msgstr "استخدم كلمة مرور فريدة وقوية بالإضافة إلى المصادقة الثنائية"
 
 #: templates/settings/mfa_settings.html:193
-msgid "Update your authenticator app regularly for the latest security patches"
+msgid ""
+"Update your authenticator app regularly for the latest security patches"
 msgstr "حدِّث تطبيق المصادقة بانتظام للحصول على أحدث تصحيحات الأمان"
 
 #: templates/storage_management/_s3_fields.html:6
@@ -15871,7 +15939,8 @@ msgstr "التدقيق المستمر - العمليات الحية"
 #: templates/streaming/ops.html:48
 msgid ""
 "Throughput, latency, and anomaly hits across the streaming audit pipeline."
-msgstr "الإنتاجية، زمن الاستجابة، وضربات الشذوذ عبر خط أنابيب التدقيق المتدفق."
+msgstr ""
+"الإنتاجية، زمن الاستجابة، وضربات الشذوذ عبر خط أنابيب التدقيق المتدفق."
 
 #: templates/streaming/ops.html:52
 msgid "Window"
@@ -15957,12 +16026,12 @@ msgid ""
 "submitting too many invoices in a short window), Sudden Spike (invoice "
 "amount above 5σ of the vendor's own history), and Vendor Concentration (one "
 "vendor crossing 30%% of org spend). Each trigger persists an AnomalyHit row "
-"that this dashboard reads. Phase 3.2 will pipe these hits into email / SMS / "
-"Slack channels."
+"that this dashboard reads. Phase 3.2 will pipe these hits into email / SMS /"
+" Slack channels."
 msgstr ""
 "كل فاتورة تم تحميلها تنشر حدثًا على الحافلة. يقوم عامل باستهلاك الحدث ويشغل "
-"ثلاثة كاشفات نوافذ ضده: السرعة (البائع الذي يقدم عددًا كبيرًا من الفواتير في "
-"فترة قصيرة)، الزيادة المفاجئة (مبلغ الفاتورة يتجاوز 5σ من تاريخ البائع "
+"ثلاثة كاشفات نوافذ ضده: السرعة (البائع الذي يقدم عددًا كبيرًا من الفواتير في"
+" فترة قصيرة)، الزيادة المفاجئة (مبلغ الفاتورة يتجاوز 5σ من تاريخ البائع "
 "الخاص)، وتركيز البائع (بائع واحد يتجاوز 30%% من إنفاق المنظمة). كل مشغل "
 "يحتفظ بسجل AnomalyHit الذي تقرأه هذه اللوحة. المرحلة 3.2 ستقوم بتوجيه هذه "
 "الضربات إلى قنوات البريد الإلكتروني / الرسائل القصيرة / Slack."
@@ -16001,8 +16070,8 @@ msgid ""
 "Control active accounts, access roles, and security readiness for the "
 "finance and audit team from one clearer workspace."
 msgstr ""
-"تحكم في الحسابات النشطة وأدوار الوصول واستعداد الأمان لفريق المالية والتدقيق "
-"من واجهة واحدة أوضح."
+"تحكم في الحسابات النشطة وأدوار الوصول واستعداد الأمان لفريق المالية والتدقيق"
+" من واجهة واحدة أوضح."
 
 #: templates/users/index.html:69
 msgid "Add new user"
@@ -16072,7 +16141,8 @@ msgid ""
 "Try changing the filters or add the first user to start building your team "
 "inside %(product)s."
 msgstr ""
-"جرّب تغيير عوامل التصفية أو أضِف أوّل مستخدم لبدء بناء فريقك داخل %(product)s."
+"جرّب تغيير عوامل التصفية أو أضِف أوّل مستخدم لبدء بناء فريقك داخل "
+"%(product)s."
 
 #: templates/users/index.html:205
 msgid "Reset filters"
@@ -16187,7 +16257,8 @@ msgid "Strong access readiness"
 msgstr "جاهزية وصول قوية"
 
 #: templates/users/index.html:439
-msgid "Choose the role that best matches this user's current responsibilities."
+msgid ""
+"Choose the role that best matches this user's current responsibilities."
 msgstr "اختر الدور الأقرب لمسؤوليات هذا المستخدم الحالية."
 
 #: templates/users/index.html:440
@@ -16215,8 +16286,8 @@ msgid ""
 "Suitable for operational reviewers who need inspection and follow-up access "
 "without elevated privileges."
 msgstr ""
-"يناسب أعضاء المراجعة التشغيليين الذين يحتاجون إلى الوصول للفحص والمتابعة دون "
-"صلاحيات عليا."
+"يناسب أعضاء المراجعة التشغيليين الذين يحتاجون إلى الوصول للفحص والمتابعة دون"
+" صلاحيات عليا."
 
 #: templates/users/index.html:444
 msgid ""
@@ -16230,7 +16301,8 @@ msgid ""
 "Suitable for finance leaders who need executive visibility, approvals, and "
 "spend-threshold oversight."
 msgstr ""
-"مناسب للقيادات المالية التي تحتاج رؤية تنفيذية ومتابعة الموافقات وحدود الصرف."
+"مناسب للقيادات المالية التي تحتاج رؤية تنفيذية ومتابعة الموافقات وحدود "
+"الصرف."
 
 #: templates/users/index.html:446
 msgid ""
@@ -16360,8 +16432,8 @@ msgid ""
 "Are you sure you want to cancel your subscription? You will lose advanced "
 "features at the end of the current billing cycle."
 msgstr ""
-"هل أنت متأكد من إلغاء اشتراكك؟ ستفقد الميزات المتقدّمة في نهاية دورة الفوترة "
-"الحالية."
+"هل أنت متأكد من إلغاء اشتراكك؟ ستفقد الميزات المتقدّمة في نهاية دورة الفوترة"
+" الحالية."
 
 #: templates/vendor_dashboard/billing.html:216
 msgid "Subscription cancellation request submitted"
@@ -16963,7 +17035,8 @@ msgid ""
 "Vendors will be auto-extracted from invoice uploads. You can also add them "
 "manually."
 msgstr ""
-"سيتم استخراج الموردين تلقائياً من الفواتير المرفوعة. يمكنك أيضاً إضافتهم يدوياً."
+"سيتم استخراج الموردين تلقائياً من الفواتير المرفوعة. يمكنك أيضاً إضافتهم "
+"يدوياً."
 
 #: templates/vendors/index.html:122
 msgid "Upload Invoices"
@@ -17076,10 +17149,11 @@ msgstr "إنشاء مسودة"
 
 #: templates/working_papers/list.html:38
 msgid ""
-"ISA 230 — preparer · senior reviewer · partner sign-off, with tamper-evident "
-"lock on signing."
+"ISA 230 — preparer · senior reviewer · partner sign-off, with tamper-evident"
+" lock on signing."
 msgstr ""
-"ISA 230 — المُعدّ · المراجع الأول · توقيع الشريك، مع قفل واضح على التوقيع."
+"ISA 230 — اعتماد المُعِدّ · المراجِع الأول · الشريك، مع قفل مقاوم للعبث عند "
+"التوقيع."
 
 #: templates/working_papers/list.html:42
 msgid "New Paper"
@@ -17112,7 +17186,7 @@ msgstr "تم التحديث"
 #: templates/working_papers/list.html:95
 msgid ""
 "No working papers yet. Create your first paper to start an audit engagement."
-msgstr "لا توجد أوراق عمل حتى الآن. أنشئ ورقتك الأولى لبدء عملية التدقيق."
+msgstr "لا أوراق عمل بعد. أنشئ أول ورقة لبدء ارتباط تدقيق."
 
 #: templates/zatca/dashboard.html:4
 msgid "ZATCA Phase 2 — Compliance"
@@ -17213,33 +17287,7 @@ msgstr "إدخال جهاز EGS جديد"
 msgid "Onboard"
 msgstr "إضافة"
 
-#~ msgid "Privacy and data protection"
-#~ msgstr "الخصوصية وحماية البيانات"
-
-#~ msgid ""
-#~ "We handle financial data with a high standard of care, including clear "
-#~ "tenant isolation and audit trails for sensitive actions."
-#~ msgstr ""
-#~ "نتعامل مع البيانات المالية بمعيار عالٍ من العناية، بما في ذلك العزل الواضح "
-#~ "بين المؤسسات وسجلات التدقيق للإجراءات الحسّاسة."
-
-#~ msgid "Organization-level data isolation."
-#~ msgstr "عزل البيانات على مستوى المؤسسة."
-
-#~ msgid "Audit logs for sensitive operations."
-#~ msgstr "سجلات التدقيق للعمليات الحسّاسة."
-
-#~ msgid "Access controls based on organizational roles."
-#~ msgstr "ضوابط وصول مبنية على الأدوار التنظيمية."
-
-#~ msgid "AI Auditor"
-#~ msgstr "المدقق الذكي"
-
-#~ msgid "Request Demo"
-#~ msgstr "اطلب عرضاً توضيحياً"
-
 # PLATFORM-ADMIN-CONSISTENCY-A — unified admin/CRM Arabic strings
-
 msgid "Get Solution Platform Admin"
 msgstr "لوحة إدارة Get Solution"
 
@@ -17270,8 +17318,8 @@ msgstr "الأنشطة"
 msgid "Quick actions"
 msgstr "إجراءات سريعة"
 
-# PLATFORM-ADMIN-SHELL-RESET-C2 — remaining CRM labels and enum display strings
-
+# PLATFORM-ADMIN-SHELL-RESET-C2 — remaining CRM labels and enum display
+# strings
 msgid "need attention"
 msgstr "تحتاج إلى إجراء"
 
@@ -17398,3 +17446,2211 @@ msgstr "الاختبارات الأساسية"
 
 msgid "External Confirmations"
 msgstr "التأكيدات الخارجية"
+
+# TADGEEG-G8 — audit UI Arabic translations
+msgid "Engagements"
+msgstr "الارتباطات"
+
+msgid "Engagement"
+msgstr "الارتباط"
+
+msgid "Engagement Workspace"
+msgstr "مساحة عمل الارتباط"
+
+msgid "Audit Engagements"
+msgstr "ارتباطات التدقيق"
+
+msgid "Trial Balance"
+msgstr "ميزان المراجعة"
+
+msgid "Trial Balance Analyzer"
+msgstr "محلّل ميزان المراجعة"
+
+msgid "General Ledger Review"
+msgstr "مراجعة الأستاذ العام"
+
+msgid "Differences (SAD)"
+msgstr "الفروقات (SAD)"
+
+msgid "Financial Statements"
+msgstr "القوائم المالية"
+
+msgid "Financial Statements Review"
+msgstr "مراجعة القوائم المالية"
+
+msgid "Confirmations"
+msgstr "التأكيدات"
+
+msgid "ISA Assessments"
+msgstr "تقييمات ISA"
+
+msgid "ISA Planning"
+msgstr "تخطيط ISA"
+
+msgid "Evidence Requests"
+msgstr "طلبات الأدلة"
+
+msgid "Evidence Request"
+msgstr "طلب دليل"
+
+msgid "Evidence requests"
+msgstr "طلبات الأدلة"
+
+msgid "Evidence Queue"
+msgstr "قائمة الأدلة"
+
+msgid "Evidence queue"
+msgstr "قائمة الأدلة"
+
+msgid "Evidence Assurance"
+msgstr "توكيد الأدلة"
+
+msgid "Evidence assurance"
+msgstr "توكيد الأدلة"
+
+msgid "Evidence Coverage"
+msgstr "تغطية الأدلة"
+
+msgid "Evidence coverage"
+msgstr "تغطية الأدلة"
+
+msgid "Evidence Index"
+msgstr "فهرس الأدلة"
+
+msgid "Evidence Retention Policy"
+msgstr "سياسة الاحتفاظ بالأدلة"
+
+msgid "Client Evidence Portal"
+msgstr "بوابة أدلة العميل"
+
+msgid "Journal Analytics"
+msgstr "تحليلات القيود"
+
+msgid "Journal"
+msgstr "قيد"
+
+msgid "Journals"
+msgstr "القيود"
+
+msgid "journals"
+msgstr "قيود"
+
+msgid "Analytics Runs"
+msgstr "تشغيلات التحليل"
+
+msgid "Analytics Results"
+msgstr "نتائج التحليل"
+
+msgid "Analytics Rules"
+msgstr "قواعد التحليل"
+
+msgid "Analytics Runs & Execution History"
+msgstr "تشغيلات التحليل وسجلّ التنفيذ"
+
+msgid "Risk register"
+msgstr "سجلّ المخاطر"
+
+msgid "Assessed risk register"
+msgstr "سجلّ المخاطر المقيَّمة"
+
+msgid "Readiness"
+msgstr "الجاهزية"
+
+msgid "Management letter"
+msgstr "خطاب الإدارة"
+
+msgid "Substantive"
+msgstr "الاختبارات الأساسية"
+
+msgid "Substantive items"
+msgstr "بنود الاختبارات الأساسية"
+
+msgid "Substantive & Communications"
+msgstr "الاختبارات الأساسية والمراسلات"
+
+msgid "open"
+msgstr "مفتوح"
+
+msgid "Submitted"
+msgstr "مُقدَّم"
+
+msgid "Under review"
+msgstr "قيد المراجعة"
+
+msgid "Accepted"
+msgstr "مقبول"
+
+msgid "More needed"
+msgstr "يلزم المزيد"
+
+msgid "More Needed"
+msgstr "يلزم المزيد"
+
+msgid "Overdue"
+msgstr "متأخّر"
+
+msgid "Overdue only"
+msgstr "المتأخّر فقط"
+
+msgid "Pending reviews"
+msgstr "مراجعات معلّقة"
+
+msgid "Avg review time"
+msgstr "متوسّط زمن المراجعة"
+
+msgid "Verification"
+msgstr "التحقّق"
+
+msgid "verified"
+msgstr "مُتحقَّق"
+
+msgid "Frozen"
+msgstr "مجمّد"
+
+msgid "Freeze"
+msgstr "تجميد"
+
+msgid "Integrity"
+msgstr "السلامة"
+
+msgid "Integrity %"
+msgstr "نسبة السلامة"
+
+msgid "Coverage Report"
+msgstr "تقرير التغطية"
+
+msgid "Overall coverage"
+msgstr "التغطية الإجمالية"
+
+msgid "Open evidence queue"
+msgstr "فتح قائمة الأدلة"
+
+msgid "Open evidence"
+msgstr "الأدلة المفتوحة"
+
+msgid "Open findings"
+msgstr "الملاحظات المفتوحة"
+
+msgid "Open GL findings"
+msgstr "ملاحظات الأستاذ المفتوحة"
+
+msgid "Open needs-evidence findings"
+msgstr "ملاحظات تحتاج أدلة"
+
+msgid "Open requests"
+msgstr "الطلبات المفتوحة"
+
+msgid "Open readiness summary"
+msgstr "فتح ملخّص الجاهزية"
+
+msgid "Open workspace"
+msgstr "فتح مساحة العمل"
+
+msgid "High-risk journals"
+msgstr "قيود عالية الخطورة"
+
+msgid "Total journals"
+msgstr "إجمالي القيود"
+
+msgid "Add item"
+msgstr "إضافة بند"
+
+msgid "Add a test item"
+msgstr "إضافة بند اختبار"
+
+msgid "Add risk"
+msgstr "إضافة مخاطرة"
+
+msgid "Add procedure"
+msgstr "إضافة إجراء"
+
+msgid "Add factor"
+msgstr "إضافة عامل"
+
+msgid "Add deficiency"
+msgstr "إضافة أوجه ضعف"
+
+msgid "Add message"
+msgstr "إضافة رسالة"
+
+msgid "Assess risk"
+msgstr "تقييم المخاطرة"
+
+msgid "Assess a risk (ISA 315)"
+msgstr "تقييم مخاطرة (ISA 315)"
+
+msgid "Assess estimate"
+msgstr "تقييم التقدير"
+
+msgid "Assess going concern"
+msgstr "تقييم الاستمرارية"
+
+msgid "Build response plan"
+msgstr "بناء خطة الاستجابة"
+
+msgid "Build strategy & plan"
+msgstr "بناء الاستراتيجية والخطة"
+
+msgid "Map responses"
+msgstr "ربط الاستجابات"
+
+msgid "Recalculate"
+msgstr "إعادة الحساب"
+
+msgid "Reconcile"
+msgstr "التسوية"
+
+msgid "Record"
+msgstr "تسجيل"
+
+msgid "Record a deficiency"
+msgstr "تسجيل أوجه ضعف"
+
+msgid "Request"
+msgstr "طلب"
+
+msgid "Request evidence"
+msgstr "طلب دليل"
+
+msgid "Request Evidence"
+msgstr "طلب دليل"
+
+msgid "Request more"
+msgstr "طلب المزيد"
+
+msgid "Request information"
+msgstr "طلب معلومات"
+
+msgid "Run"
+msgstr "تشغيل"
+
+msgid "Run analytics"
+msgstr "تشغيل التحليل"
+
+msgid "Run risk analysis"
+msgstr "تشغيل تحليل المخاطر"
+
+msgid "Run integrity sweep"
+msgstr "تشغيل فحص السلامة"
+
+msgid "Generate readiness"
+msgstr "توليد الجاهزية"
+
+msgid "Send"
+msgstr "إرسال"
+
+msgid "Submit"
+msgstr "إرسال"
+
+msgid "Submit confirmation"
+msgstr "إرسال التأكيد"
+
+msgid "Save response"
+msgstr "حفظ الاستجابة"
+
+msgid "Save policy"
+msgstr "حفظ السياسة"
+
+msgid "Save explanation"
+msgstr "حفظ الإيضاح"
+
+msgid "Save to engagement"
+msgstr "الحفظ إلى الارتباط"
+
+msgid "Save to engagement (optional)"
+msgstr "الحفظ إلى الارتباط (اختياري)"
+
+msgid "Saved to engagement"
+msgstr "محفوظ على الارتباط"
+
+msgid "Set policy"
+msgstr "تعيين السياسة"
+
+msgid "Set stage"
+msgstr "تعيين المرحلة"
+
+msgid "Set policy "
+msgstr "تعيين السياسة"
+
+msgid "Update assignment"
+msgstr "تحديث الإسناد"
+
+msgid "Update stage"
+msgstr "تحديث المرحلة"
+
+msgid "Update status"
+msgstr "تحديث الحالة"
+
+msgid "Upload evidence"
+msgstr "رفع الدليل"
+
+msgid "Upload & validate"
+msgstr "الرفع والتحقّق"
+
+msgid "Import file"
+msgstr "استيراد ملف"
+
+msgid "Import count sheet / register"
+msgstr "استيراد كشف الجرد / السجل"
+
+msgid "Import general ledger"
+msgstr "استيراد الأستاذ العام"
+
+msgid "Import trial balance"
+msgstr "استيراد ميزان المراجعة"
+
+msgid "Export HTML"
+msgstr "تصدير HTML"
+
+msgid "Summary JSON"
+msgstr "ملخّص JSON"
+
+msgid "JSON report"
+msgstr "تقرير JSON"
+
+msgid "Start auditing"
+msgstr "بدء التدقيق"
+
+msgid "Assign selected"
+msgstr "إسناد المحدَّد"
+
+msgid "Assign selected to reviewer"
+msgstr "إسناد المحدَّد للمراجِع"
+
+msgid "Cancel request"
+msgstr "إلغاء الطلب"
+
+msgid "Create request"
+msgstr "إنشاء طلب"
+
+msgid "Accept evidence"
+msgstr "قبول الدليل"
+
+msgid "Mark under review"
+msgstr "تعليم كقيد المراجعة"
+
+msgid "New confirmation request"
+msgstr "طلب تأكيد جديد"
+
+msgid "New run"
+msgstr "تشغيل جديد"
+
+msgid "Recompute from physical count"
+msgstr "إعادة الاحتساب من الجرد الفعلي"
+
+msgid "Recompute net book value (straight-line)"
+msgstr "إعادة احتساب القيمة الدفترية (القسط الثابت)"
+
+msgid "Recompute net pay"
+msgstr "إعادة احتساب صافي الأجر"
+
+msgid "Area"
+msgstr "المجال"
+
+msgid "Assertion"
+msgstr "التأكيد"
+
+msgid "Assessments"
+msgstr "التقييمات"
+
+msgid "Assessed risks"
+msgstr "المخاطر المقيَّمة"
+
+msgid "Assets"
+msgstr "الأصول"
+
+msgid "Liabilities"
+msgstr "الالتزامات"
+
+msgid "Liabilities + equity"
+msgstr "الالتزامات + حقوق الملكية"
+
+msgid "Equity"
+msgstr "حقوق الملكية"
+
+msgid "Total equity (incl. profit)"
+msgstr "إجمالي حقوق الملكية (شامل الربح)"
+
+msgid "Total assets"
+msgstr "إجمالي الأصول"
+
+msgid "Total liabilities"
+msgstr "إجمالي الالتزامات"
+
+msgid "Revenue"
+msgstr "الإيرادات"
+
+msgid "Revenue base"
+msgstr "أساس الإيرادات"
+
+msgid "Cost of sales"
+msgstr "تكلفة المبيعات"
+
+msgid "Gross profit"
+msgstr "إجمالي الربح"
+
+msgid "Gross margin"
+msgstr "هامش إجمالي الربح"
+
+msgid "Net profit"
+msgstr "صافي الربح"
+
+msgid "Net margin"
+msgstr "هامش صافي الربح"
+
+msgid "Profit for the period"
+msgstr "ربح الفترة"
+
+msgid "Other income / expense"
+msgstr "إيرادات/مصروفات أخرى"
+
+msgid "Balance Sheet"
+msgstr "قائمة المركز المالي"
+
+msgid "Income Statement"
+msgstr "قائمة الدخل"
+
+msgid "Statements"
+msgstr "القوائم"
+
+msgid "Key ratios"
+msgstr "النسب الرئيسية"
+
+msgid "Current ratio"
+msgstr "نسبة التداول"
+
+msgid "Debt to equity"
+msgstr "الدين إلى حقوق الملكية"
+
+msgid "Return on equity"
+msgstr "العائد على حقوق الملكية"
+
+msgid "Current"
+msgstr "الحالية"
+
+msgid "Prior"
+msgstr "السابقة"
+
+msgid "Year-over-year"
+msgstr "المقارنة السنوية"
+
+msgid "Δ%"
+msgstr "التغيّر %"
+
+msgid "vs"
+msgstr "مقابل"
+
+msgid "Book"
+msgstr "الدفترية"
+
+msgid "Book value"
+msgstr "القيمة الدفترية"
+
+msgid "Book quantity"
+msgstr "الكمية الدفترية"
+
+msgid "Counted quantity"
+msgstr "الكمية المعدودة"
+
+msgid "Tested"
+msgstr "المُختبَرة"
+
+msgid "Test register"
+msgstr "سجلّ الاختبارات"
+
+msgid "Variance"
+msgstr "الفرق"
+
+msgid "Variances"
+msgstr "الفروقات"
+
+msgid "variances"
+msgstr "فروقات"
+
+msgid "Tolerance"
+msgstr "حدّ التسامح"
+
+msgid "Unit cost"
+msgstr "تكلفة الوحدة"
+
+msgid "Salvage"
+msgstr "قيمة الخردة"
+
+msgid "Useful life (yrs)"
+msgstr "العمر الإنتاجي (سنوات)"
+
+msgid "Elapsed (yrs)"
+msgstr "المنقضية (سنوات)"
+
+msgid "Gross"
+msgstr "الإجمالي"
+
+msgid "Item reference"
+msgstr "مرجع البند"
+
+msgid "Items"
+msgstr "البنود"
+
+msgid "Items (area)"
+msgstr "البنود (المجال)"
+
+msgid "Total items"
+msgstr "إجمالي البنود"
+
+msgid "Assets "
+msgstr "الأصول"
+
+msgid "Risks"
+msgstr "المخاطر"
+
+msgid "Risk name"
+msgstr "اسم المخاطرة"
+
+msgid "Risk register "
+msgstr "سجلّ المخاطر"
+
+msgid "Risk drivers"
+msgstr "محرّكات المخاطر"
+
+msgid "Risk components"
+msgstr "مكوّنات المخاطرة"
+
+msgid "Risk findings"
+msgstr "ملاحظات المخاطر"
+
+msgid "Risk factors (1 = low, 5 = high)"
+msgstr "عوامل الخطر (1 = منخفض، 5 = مرتفع)"
+
+msgid "Inherent"
+msgstr "المتأصّلة"
+
+msgid "Inherent risk"
+msgstr "المخاطرة المتأصّلة"
+
+msgid "Control"
+msgstr "الرقابة"
+
+msgid "Control risk"
+msgstr "مخاطرة الرقابة"
+
+msgid "Control deficiencies"
+msgstr "أوجه ضعف الرقابة"
+
+msgid "Detection risk (planned)"
+msgstr "مخاطرة الاكتشاف (المخطّطة)"
+
+msgid "Audit Risk Assessment"
+msgstr "تقييم مخاطر التدقيق"
+
+msgid "Audit risk (IR × CR × DR)"
+msgstr "مخاطر التدقيق (IR × CR × DR)"
+
+msgid "Fraud risk"
+msgstr "مخاطرة الاحتيال"
+
+msgid "Fraud risks"
+msgstr "مخاطر الاحتيال"
+
+msgid "Fraud: no"
+msgstr "احتيال: لا"
+
+msgid "Fraud: yes"
+msgstr "احتيال: نعم"
+
+msgid "Fraud plan (240)"
+msgstr "خطة الاحتيال (240)"
+
+msgid "Fraud Response Plan"
+msgstr "خطة الاستجابة للاحتيال"
+
+msgid "Sig: no"
+msgstr "هامة: لا"
+
+msgid "Sig: yes"
+msgstr "هامة: نعم"
+
+msgid "significant"
+msgstr "هامة"
+
+msgid "Significant"
+msgstr "هامة"
+
+msgid "Low risk"
+msgstr "مخاطرة منخفضة"
+
+msgid "Medium risk"
+msgstr "مخاطرة متوسّطة"
+
+msgid "material"
+msgstr "جوهري"
+
+msgid "Material weakness"
+msgstr "ضعف جوهري"
+
+msgid "Going Concern"
+msgstr "الاستمرارية"
+
+msgid "Going-concern conclusion"
+msgstr "استنتاج الاستمرارية"
+
+msgid "Estimates"
+msgstr "التقديرات"
+
+msgid "Estimate profile"
+msgstr "ملف التقدير"
+
+msgid "Estimation uncertainty (range width)"
+msgstr "عدم يقين التقدير (اتّساع النطاق)"
+
+msgid "Estimation uncertainty score"
+msgstr "درجة عدم يقين التقدير"
+
+msgid "Accounting Estimate Uncertainty"
+msgstr "عدم يقين التقدير المحاسبي"
+
+msgid "Uncertainty"
+msgstr "عدم اليقين"
+
+msgid "Complexity"
+msgstr "التعقيد"
+
+msgid "Subjectivity"
+msgstr "الذاتية"
+
+msgid "Disclosure quality"
+msgstr "جودة الإفصاح"
+
+msgid "Drivers"
+msgstr "المحرّكات"
+
+msgid "Indicators present"
+msgstr "المؤشّرات الموجودة"
+
+msgid "Indicators (ISA 570 A3)"
+msgstr "المؤشّرات (ISA 570 A3)"
+
+msgid "Mitigants"
+msgstr "المخفّفات"
+
+msgid "Responses"
+msgstr "الاستجابات"
+
+msgid "Responses to Assessed Risks"
+msgstr "الاستجابات للمخاطر المقيَّمة"
+
+msgid "Responsive procedures"
+msgstr "الإجراءات المستجيبة"
+
+msgid "Responsive procedures (ISA 330)"
+msgstr "الإجراءات المستجيبة (ISA 330)"
+
+msgid "Procedure"
+msgstr "الإجراء"
+
+msgid "Procedures"
+msgstr "الإجراءات"
+
+msgid "No procedures yet."
+msgstr "لا إجراءات بعد."
+
+msgid "Factor name"
+msgstr "اسم العامل"
+
+msgid "Factor-specific procedures"
+msgstr "إجراءات خاصّة بالعامل"
+
+msgid "Identified fraud risk factors"
+msgstr "عوامل خطر الاحتيال المحدَّدة"
+
+msgid "Management-override procedures"
+msgstr "إجراءات تجاوز الإدارة"
+
+msgid "Overall fraud severity"
+msgstr "شدّة الاحتيال الإجمالية"
+
+msgid "Overall audit strategy"
+msgstr "استراتيجية التدقيق الكلية"
+
+msgid "Detailed audit plan"
+msgstr "خطة التدقيق التفصيلية"
+
+msgid "Audit Plan"
+msgstr "خطة التدقيق"
+
+msgid "Audit plan (300)"
+msgstr "خطة التدقيق (300)"
+
+msgid "Audit Planning"
+msgstr "تخطيط التدقيق"
+
+msgid "Risk responses (330)"
+msgstr "استجابات المخاطر (330)"
+
+msgid "Engagement context"
+msgstr "سياق الارتباط"
+
+msgid "Circumstances"
+msgstr "الظروف"
+
+msgid "Communications"
+msgstr "المراسلات"
+
+msgid "Scope"
+msgstr "النطاق"
+
+msgid "Direction"
+msgstr "التوجيه"
+
+msgid "Timing"
+msgstr "التوقيت"
+
+msgid "Extent"
+msgstr "المدى"
+
+msgid "Nature"
+msgstr "الطبيعة"
+
+msgid "Staff"
+msgstr "الفريق"
+
+msgid "Rationale"
+msgstr "المبرّر"
+
+msgid "Resourcing"
+msgstr "الموارد"
+
+msgid "Materiality"
+msgstr "الأهمية النسبية"
+
+msgid "Materiality benchmark"
+msgstr "مرجع الأهمية النسبية"
+
+msgid "Trivial threshold"
+msgstr "حدّ التفاهة"
+
+msgid "Suggested direction"
+msgstr "التوجيه المقترح"
+
+msgid "Suggested reporting response"
+msgstr "الاستجابة المقترحة للتقرير"
+
+msgid "Assess going concern "
+msgstr "تقييم الاستمرارية"
+
+msgid "Finding"
+msgstr "ملاحظة"
+
+msgid "Findings"
+msgstr "الملاحظات"
+
+msgid "findings"
+msgstr "ملاحظات"
+
+msgid "Finding details"
+msgstr "تفاصيل الملاحظة"
+
+msgid "Findings by rule"
+msgstr "الملاحظات حسب القاعدة"
+
+msgid "Findings by severity"
+msgstr "الملاحظات حسب الشدّة"
+
+msgid "GL Finding"
+msgstr "ملاحظة الأستاذ"
+
+msgid "GL Findings"
+msgstr "ملاحظات الأستاذ"
+
+msgid "GL Risk Findings"
+msgstr "ملاحظات مخاطر الأستاذ"
+
+msgid "GL Finding (needs evidence / escalated)"
+msgstr "ملاحظة الأستاذ (تحتاج دليلًا / مُصعَّدة)"
+
+msgid "General Ledger risk finding"
+msgstr "ملاحظة مخاطر الأستاذ العام"
+
+msgid "Candidate"
+msgstr "مرشّحة"
+
+msgid "Needs evidence"
+msgstr "تحتاج دليلًا"
+
+msgid "Dismissed"
+msgstr "مستبعَدة"
+
+msgid "Concluded"
+msgstr "منتهية"
+
+msgid "Remediated"
+msgstr "مُعالَجة"
+
+msgid "Source finding"
+msgstr "الملاحظة المصدر"
+
+msgid "Deficiency register"
+msgstr "سجلّ أوجه الضعف"
+
+msgid "Potential effect"
+msgstr "الأثر المحتمل"
+
+msgid "Classification & integrity flags"
+msgstr "التصنيف وأعلام السلامة"
+
+msgid "SAD"
+msgstr "ملخّص الفروقات"
+
+msgid "SAD item"
+msgstr "بند الفروقات"
+
+msgid "SAD Item"
+msgstr "بند الفروقات"
+
+msgid "SAD items"
+msgstr "بنود الفروقات"
+
+msgid "SAD Items"
+msgstr "بنود الفروقات"
+
+msgid "Summary of Audit Differences"
+msgstr "ملخّص فروقات التدقيق"
+
+msgid "Summary of Audit Differences — item"
+msgstr "ملخّص فروقات التدقيق — بند"
+
+msgid "Difference details"
+msgstr "تفاصيل الفرق"
+
+msgid "Difference items"
+msgstr "بنود الفروقات"
+
+msgid "Amount impact"
+msgstr "أثر المبلغ"
+
+msgid "Total impact"
+msgstr "الأثر الإجمالي"
+
+msgid "Total absolute impact"
+msgstr "إجمالي الأثر المطلق"
+
+msgid "Exceeds PM"
+msgstr "يتجاوز الأهمية للأداء"
+
+msgid "Exceeds OM"
+msgstr "يتجاوز الأهمية الكلية"
+
+msgid "Exceeds PM "
+msgstr "يتجاوز الأهمية للأداء"
+
+msgid "Exceeds overall materiality"
+msgstr "يتجاوز الأهمية النسبية الكلية"
+
+msgid "exceeds"
+msgstr "يتجاوز"
+
+msgid "within"
+msgstr "ضمن"
+
+msgid "Auditor range vs materiality"
+msgstr "نطاق المدقّق مقابل الأهمية النسبية"
+
+msgid "Confirmation register"
+msgstr "سجلّ التأكيدات"
+
+msgid "Balance Confirmation"
+msgstr "تأكيد رصيد"
+
+msgid "Balance Confirmation Request"
+msgstr "طلب تأكيد رصيد"
+
+msgid "External Confirmation"
+msgstr "تأكيد خارجي"
+
+msgid "Party name"
+msgstr "اسم الطرف"
+
+msgid "Party email (optional)"
+msgstr "بريد الطرف (اختياري)"
+
+msgid "Recorded amount"
+msgstr "المبلغ المسجَّل"
+
+msgid "Recorded"
+msgstr "المسجَّل"
+
+msgid "discrepancy"
+msgstr "تباين"
+
+msgid "Discrepancy"
+msgstr "تباين"
+
+msgid "No reply"
+msgstr "لا رد"
+
+msgid "I agree with this balance"
+msgstr "أوافق على هذا الرصيد"
+
+msgid "The balance differs"
+msgstr "الرصيد مختلف"
+
+msgid "Evidence"
+msgstr "الدليل"
+
+msgid "evidence"
+msgstr "دليل"
+
+msgid "Evidence #"
+msgstr "الدليل رقم"
+
+msgid "Attachments"
+msgstr "المرفقات"
+
+msgid "Attachments marked"
+msgstr "المرفقات المعلَّمة"
+
+msgid "No attachments yet."
+msgstr "لا مرفقات بعد."
+
+msgid "Retention"
+msgstr "الاحتفاظ"
+
+msgid "Retention policy"
+msgstr "سياسة الاحتفاظ"
+
+msgid "Retention Policy"
+msgstr "سياسة الاحتفاظ"
+
+msgid "Existing policies"
+msgstr "السياسات القائمة"
+
+msgid "Readiness conclusion"
+msgstr "استنتاج الجاهزية"
+
+msgid "Readiness workpaper"
+msgstr "ورقة عمل الجاهزية"
+
+msgid "Generate readiness "
+msgstr "توليد الجاهزية"
+
+msgid "Audit Readiness — Evidence"
+msgstr "جاهزية التدقيق — الأدلة"
+
+msgid "Audit Readiness — Generate & Export"
+msgstr "جاهزية التدقيق — التوليد والتصدير"
+
+msgid "Audit Readiness — Outstanding Evidence"
+msgstr "جاهزية التدقيق — الأدلة المعلّقة"
+
+msgid "Outstanding evidence requests"
+msgstr "طلبات الأدلة المعلّقة"
+
+msgid "Subject to auditor review"
+msgstr "خاضع لمراجعة المدقّق"
+
+msgid "Integrity Exception Report"
+msgstr "تقرير استثناءات السلامة"
+
+msgid "Integrity Report"
+msgstr "تقرير السلامة"
+
+msgid "Management explanation"
+msgstr "إيضاح الإدارة"
+
+msgid "Management response"
+msgstr "استجابة الإدارة"
+
+msgid "Mgmt response"
+msgstr "استجابة الإدارة"
+
+msgid "Reviewer note"
+msgstr "ملاحظة المراجِع"
+
+msgid "Reviewed by"
+msgstr "روجِع بواسطة"
+
+msgid "Review date"
+msgstr "تاريخ المراجعة"
+
+msgid "Reason (required)"
+msgstr "السبب (مطلوب)"
+
+msgid "Reason / internal note"
+msgstr "السبب / ملاحظة داخلية"
+
+msgid "Advisory only"
+msgstr "استشاري فقط"
+
+msgid "Assigned"
+msgstr "مُسنَد"
+
+msgid "Assigned to"
+msgstr "مُسنَد إلى"
+
+msgid "Assigned by"
+msgstr "أُسنِد بواسطة"
+
+msgid "Assigned auditor"
+msgstr "المدقّق المُسنَد"
+
+msgid "Assign to (optional)"
+msgstr "الإسناد إلى (اختياري)"
+
+msgid "Assurance"
+msgstr "التوكيد"
+
+msgid "Basis"
+msgstr "الأساس"
+
+msgid "Kind"
+msgstr "النوع"
+
+msgid "Lifecycle"
+msgstr "دورة الحياة"
+
+msgid "Line"
+msgstr "سطر"
+
+msgid "Lines"
+msgstr "الأسطر"
+
+msgid "Link"
+msgstr "رابط"
+
+msgid "Linked to"
+msgstr "مرتبط بـ"
+
+msgid "linked to risks"
+msgstr "مرتبطة بالمخاطر"
+
+msgid "Linked GL finding"
+msgstr "ملاحظة الأستاذ المرتبطة"
+
+msgid "Linked SAD item"
+msgstr "بند الفروقات المرتبط"
+
+msgid "Manager"
+msgstr "المدير"
+
+msgid "Materiality "
+msgstr "الأهمية النسبية"
+
+msgid "Priority"
+msgstr "الأولوية"
+
+msgid "Due"
+msgstr "مستحق"
+
+msgid "Due date"
+msgstr "تاريخ الاستحقاق"
+
+msgid "Target date"
+msgstr "التاريخ المستهدف"
+
+msgid "History"
+msgstr "السجلّ"
+
+msgid "Version"
+msgstr "الإصدار"
+
+msgid "Version history"
+msgstr "سجلّ الإصدارات"
+
+msgid "Ver"
+msgstr "إصدار"
+
+msgid "State"
+msgstr "الحالة"
+
+msgid "Stage"
+msgstr "المرحلة"
+
+msgid "Reference number"
+msgstr "الرقم المرجعي"
+
+msgid "Ref"
+msgstr "مرجع"
+
+msgid "Ref #"
+msgstr "المرجع رقم"
+
+msgid "Request #"
+msgstr "الطلب رقم"
+
+msgid "Filename"
+msgstr "اسم الملف"
+
+msgid "SHA256"
+msgstr "SHA256"
+
+msgid "bytes"
+msgstr "بايت"
+
+msgid "rows"
+msgstr "صفوف"
+
+msgid "Days"
+msgstr "أيام"
+
+msgid "Years"
+msgstr "سنوات"
+
+msgid "Entered by"
+msgstr "أُدخِل بواسطة"
+
+msgid "Entity name"
+msgstr "اسم المنشأة"
+
+msgid "Industry"
+msgstr "القطاع"
+
+msgid "Reporting period"
+msgstr "فترة التقرير"
+
+msgid "Latest upload"
+msgstr "آخر رفع"
+
+msgid "Last verified"
+msgstr "آخر تحقّق"
+
+msgid "Applied at"
+msgstr "طُبِّق في"
+
+msgid "Registered"
+msgstr "مُسجَّل"
+
+msgid "Analyzed"
+msgstr "مُحلَّل"
+
+msgid "Newest"
+msgstr "الأحدث"
+
+msgid "Oldest"
+msgstr "الأقدم"
+
+msgid "Sort"
+msgstr "ترتيب"
+
+msgid "Queue"
+msgstr "القائمة"
+
+msgid "Runs"
+msgstr "التشغيلات"
+
+msgid "Runs & History"
+msgstr "التشغيلات والسجلّ"
+
+msgid "Run analytics "
+msgstr "تشغيل التحليل"
+
+msgid "Execution history"
+msgstr "سجلّ التنفيذ"
+
+msgid "Rules run"
+msgstr "القواعد المشغَّلة"
+
+msgid "Top affected accounts"
+msgstr "أكثر الحسابات تأثّرًا"
+
+msgid "Top affected users"
+msgstr "أكثر المستخدمين تأثّرًا"
+
+msgid "Top triggered rules"
+msgstr "أكثر القواعد إطلاقًا"
+
+msgid "Unusual accounts"
+msgstr "حسابات غير معتادة"
+
+msgid "Account mappings"
+msgstr "ربط الحسابات"
+
+msgid "Account Status"
+msgstr "حالة الحساب"
+
+msgid "Closing balance"
+msgstr "الرصيد الختامي"
+
+msgid "Closing credit"
+msgstr "الدائن الختامي"
+
+msgid "Closing debit"
+msgstr "المدين الختامي"
+
+msgid "General ledger import"
+msgstr "استيراد الأستاذ العام"
+
+msgid "Imports"
+msgstr "الاستيرادات"
+
+msgid "Select an import…"
+msgstr "اختر استيرادًا…"
+
+msgid "Select a plan"
+msgstr "اختر باقة"
+
+msgid "Select engagement…"
+msgstr "اختر ارتباطًا…"
+
+msgid "All engagements"
+msgstr "كل الارتباطات"
+
+msgid "All requests"
+msgstr "كل الطلبات"
+
+msgid "No requests"
+msgstr "لا طلبات"
+
+msgid "— don't save —"
+msgstr "— بلا حفظ —"
+
+msgid "— unassign —"
+msgstr "— إلغاء الإسناد —"
+
+msgid "Planning"
+msgstr "التخطيط"
+
+msgid "Planning & Materiality"
+msgstr "التخطيط والأهمية النسبية"
+
+msgid "Suggested direction "
+msgstr "التوجيه المقترح"
+
+msgid "consider"
+msgstr "يُنظر فيه"
+
+msgid "required"
+msgstr "مطلوب"
+
+msgid "Waiting review"
+msgstr "بانتظار المراجعة"
+
+msgid "Within target"
+msgstr "ضمن المستهدف"
+
+msgid "Above target"
+msgstr "فوق المستهدف"
+
+msgid "No engagements in your organization yet."
+msgstr "لا ارتباطات في منظمتك بعد."
+
+msgid "No evidence requests yet."
+msgstr "لا طلبات أدلة بعد."
+
+msgid "No evidence requests assigned to you."
+msgstr "لا طلبات أدلة مُسنَدة إليك."
+
+msgid "No evidence recorded yet."
+msgstr "لا أدلة مسجَّلة بعد."
+
+msgid "No confirmation requests yet."
+msgstr "لا طلبات تأكيد بعد."
+
+msgid "No deficiencies recorded yet."
+msgstr "لا أوجه ضعف مسجَّلة بعد."
+
+msgid "No items in this area yet."
+msgstr "لا بنود في هذا المجال بعد."
+
+msgid "No difference items."
+msgstr "لا بنود فروقات."
+
+msgid "No GL findings."
+msgstr "لا ملاحظات أستاذ."
+
+msgid "No SAD calculated yet."
+msgstr "لم تُحسب الفروقات بعد."
+
+msgid "No SAD items."
+msgstr "لا بنود فروقات."
+
+msgid "No mappings yet."
+msgstr "لا روابط حسابات بعد."
+
+msgid "No general ledger imported yet."
+msgstr "لم يُستورد أستاذ عام بعد."
+
+msgid "No trial balance imported yet."
+msgstr "لم يُستورد ميزان مراجعة بعد."
+
+msgid "No readiness workpaper generated yet."
+msgstr "لم تُولَّد ورقة جاهزية بعد."
+
+msgid "No analytics runs yet."
+msgstr "لا تشغيلات تحليل بعد."
+
+msgid "No analytics run yet."
+msgstr "لا تشغيل تحليل بعد."
+
+msgid "No completed analytics run yet."
+msgstr "لا تشغيل تحليل مكتمل بعد."
+
+msgid "No runs yet."
+msgstr "لا تشغيلات بعد."
+
+msgid "No rules registered yet."
+msgstr "لا قواعد مسجَّلة بعد."
+
+msgid "No versions yet."
+msgstr "لا إصدارات بعد."
+
+msgid "No procedures yet. "
+msgstr "لا إجراءات بعد."
+
+msgid "No attachments yet. "
+msgstr "لا مرفقات بعد."
+
+msgid "No events."
+msgstr "لا أحداث."
+
+msgid "No audit entries."
+msgstr "لا قيود تدقيق."
+
+msgid "No unusual accounts detected."
+msgstr "لم تُكتشف حسابات غير معتادة."
+
+msgid "No results match these filters."
+msgstr "لا نتائج تطابق هذه المرشّحات."
+
+msgid "None."
+msgstr "لا شيء."
+
+msgid "Not available"
+msgstr "غير متاح"
+
+msgid "Nothing in this queue."
+msgstr "لا شيء في هذه القائمة."
+
+msgid "No retention policies defined yet."
+msgstr "لا سياسات احتفاظ معرّفة بعد."
+
+msgid "Profile an estimate and run the assessment."
+msgstr "صف تقديرًا وشغّل التقييم."
+
+msgid "Select every indicator you have identified."
+msgstr "حدّد كل مؤشّر رصدته."
+
+msgid "First-year audit (ISA 510)"
+msgstr "تدقيق السنة الأولى (ISA 510)"
+
+msgid "Prior-year modified opinion"
+msgstr "رأي معدَّل للسنة السابقة"
+
+msgid "Group with subsidiaries (ISA 600)"
+msgstr "مجموعة ذات شركات تابعة (ISA 600)"
+
+msgid "Has internal audit function"
+msgstr "لديها وظيفة تدقيق داخلي"
+
+msgid "Listed / public-interest entity"
+msgstr "منشأة مدرجة / ذات نفع عام"
+
+msgid "Relies on external data / valuations"
+msgstr "تعتمد على بيانات/تقييمات خارجية"
+
+msgid "Misstated in a prior period"
+msgstr "محرَّفة في فترة سابقة"
+
+msgid "Known risk areas (one per line)"
+msgstr "مجالات المخاطر المعروفة (واحد بكل سطر)"
+
+msgid "Management estimate (book value)"
+msgstr "تقدير الإدارة (القيمة الدفترية)"
+
+msgid "Affected assertions (comma-separated)"
+msgstr "التأكيدات المتأثّرة (مفصولة بفواصل)"
+
+msgid "Detected by (signal)"
+msgstr "اكتُشف بواسطة (إشارة)"
+
+msgid "FS area"
+msgstr "مجال القائمة المالية"
+
+msgid "Archived / locked"
+msgstr "مؤرشف / مقفل"
+
+msgid "Freeze "
+msgstr "تجميد"
+
+msgid "Advisory only "
+msgstr "استشاري فقط"
+
+# TADGEEG-G8 batch2 — audit UI Arabic translations
+msgid "95% Automation"
+msgstr "أتمتة 95%"
+
+msgid "(95% confidence, 5% expected error)"
+msgstr "(ثقة 95%، خطأ متوقّع 5%)"
+
+msgid "Activity Timeline"
+msgstr "الخط الزمني للنشاط"
+
+msgid "Activity Type"
+msgstr "نوع النشاط"
+
+msgid "Add Manual Payment"
+msgstr "إضافة دفعة يدوية"
+
+msgid "Amount (must equal plan price)"
+msgstr "المبلغ (يجب أن يساوي سعر الباقة)"
+
+msgid "Awaiting payment"
+msgstr "بانتظار الدفع"
+
+msgid "Back to customers"
+msgstr "العودة للعملاء"
+
+msgid "Back to tickets"
+msgstr "العودة للتذاكر"
+
+msgid "Client"
+msgstr "العميل"
+
+msgid "% completed"
+msgstr "% مكتمل"
+
+msgid "Components (name:weight%, comma-separated)"
+msgstr "المكوّنات (اسم:وزن%، مفصولة بفواصل)"
+
+msgid "Conversation"
+msgstr "المحادثة"
+
+msgid "Create manual payment"
+msgstr "إنشاء دفعة يدوية"
+
+msgid "Create Support Ticket"
+msgstr "إنشاء تذكرة دعم"
+
+msgid "Create ticket"
+msgstr "إنشاء تذكرة"
+
+msgid "Create Ticket"
+msgstr "إنشاء تذكرة"
+
+msgid "Customer Notes"
+msgstr "ملاحظات العميل"
+
+msgid "Customers"
+msgstr "العملاء"
+
+msgid "Custom years (only for 'Custom')"
+msgstr "سنوات مخصّصة (لـ 'مخصّص' فقط)"
+
+msgid "Disable"
+msgstr "تعطيل"
+
+msgid "Enable"
+msgstr "تفعيل"
+
+msgid "Downgrade unavailable"
+msgstr "الخفض غير متاح"
+
+msgid "Extend subscription"
+msgstr "تمديد الاشتراك"
+
+msgid "Extend Subscription"
+msgstr "تمديد الاشتراك"
+
+msgid "Manage subscription"
+msgstr "إدارة الاشتراك"
+
+msgid "Has active"
+msgstr "لديه نشط"
+
+msgid "indicator(s)"
+msgstr "مؤشّر/مؤشّرات"
+
+msgid "mitigant(s)"
+msgstr "مخفّف/مخفّفات"
+
+msgid "Internal"
+msgstr "داخلي"
+
+msgid "Internal only (not visible to customer)"
+msgstr "داخلي فقط (غير ظاهر للعميل)"
+
+msgid "Invoice limit"
+msgstr "حدّ الفواتير"
+
+msgid "JSON"
+msgstr "JSON"
+
+msgid "Last login"
+msgstr "آخر دخول"
+
+msgid "Last payment"
+msgstr "آخر دفعة"
+
+msgid "Link not found"
+msgstr "الرابط غير موجود"
+
+msgid "New Ticket"
+msgstr "تذكرة جديدة"
+
+msgid "No active"
+msgstr "لا نشط"
+
+msgid "No active plan"
+msgstr "لا باقة نشطة"
+
+msgid "No activity recorded."
+msgstr "لا نشاط مسجَّل."
+
+msgid "No activity recorded yet."
+msgstr "لا نشاط مسجَّل بعد."
+
+msgid "No customers match your filters."
+msgstr "لا عملاء يطابقون مرشّحاتك."
+
+msgid "No internal notes."
+msgstr "لا ملاحظات داخلية."
+
+msgid "No messages on this ticket."
+msgstr "لا رسائل على هذه التذكرة."
+
+msgid "No notes match your filters."
+msgstr "لا ملاحظات تطابق مرشّحاتك."
+
+msgid "No payments on record."
+msgstr "لا دفعات مسجَّلة."
+
+msgid "No payments recorded yet."
+msgstr "لا دفعات مسجَّلة بعد."
+
+msgid "No subscription on record."
+msgstr "لا اشتراك مسجَّل."
+
+msgid "No tickets."
+msgstr "لا تذاكر."
+
+msgid "No tickets match your filters."
+msgstr "لا تذاكر تطابق مرشّحاتك."
+
+msgid "No users."
+msgstr "لا مستخدمين."
+
+msgid "Only platform CRM staff can be assigned."
+msgstr "يُسنَد فقط لموظّفي إدارة علاقات العملاء بالمنصّة."
+
+msgid "or click to choose. Allowed:"
+msgstr "أو انقر للاختيار. المسموح:"
+
+msgid "paid"
+msgstr "مدفوع"
+
+msgid "Paid on"
+msgstr "دُفِع في"
+
+msgid "Payment history"
+msgstr "سجلّ الدفعات"
+
+msgid "Payment reference"
+msgstr "مرجع الدفع"
+
+msgid "Platform CRM"
+msgstr "إدارة علاقات العملاء بالمنصّة"
+
+msgid "Policy"
+msgstr "السياسة"
+
+msgid "Primary contact"
+msgstr "جهة الاتصال الرئيسية"
+
+msgid "Reactivate Customer"
+msgstr "إعادة تفعيل العميل"
+
+msgid "Recently updated"
+msgstr "حُدِّث حديثًا"
+
+msgid "Recent Payments"
+msgstr "الدفعات الأخيرة"
+
+msgid "Reserved"
+msgstr "محجوز"
+
+msgid "Responded"
+msgstr "تمّت الاستجابة"
+
+msgid "shift the % within the benchmark band"
+msgstr "حرّك النسبة ضمن نطاق المرجع"
+
+msgid "SLA"
+msgstr "اتفاقية مستوى الخدمة"
+
+msgid "Starts"
+msgstr "يبدأ"
+
+msgid "Suspend Customer"
+msgstr "تعليق العميل"
+
+msgid "Tickets"
+msgstr "التذاكر"
+
+msgid "VAT Rate Validity (KSA 0/5/15%)"
+msgstr "صحّة نسبة الضريبة (السعودية 0/5/15%)"
+
+msgid "View payment history"
+msgstr "عرض سجلّ الدفعات"
+
+msgid "View receipt"
+msgstr "عرض الإيصال"
+
+msgid "Your current plan."
+msgstr "باقتك الحالية."
+
+msgid "Your payment receipts for this organization."
+msgstr "إيصالات دفعك لهذه المنظمة."
+
+msgid "Accepting evidence does not close the finding — review it separately."
+msgstr "قبول الدليل لا يُغلق الملاحظة — راجعها بشكل منفصل."
+
+msgid ""
+"Accumulated accepted misstatements compared against materiality (ISA 450)."
+msgstr "التحريفات المقبولة المتراكمة مقارنةً بالأهمية النسبية (ISA 450)."
+
+msgid ""
+"Add one row per risk (ISA 315 output). Combined risk = max(inherent, "
+"control)."
+msgstr ""
+"أضف صفًّا لكل مخاطرة (مخرج ISA 315). المخاطرة المركّبة = الأعلى بين "
+"المتأصّلة والرقابية."
+
+msgid ""
+"a deterministic auditor aid to structure judgment; not an audit conclusion "
+"or opinion."
+msgstr "معين حتمي للمدقّق لتنظيم الحكم؛ ليس استنتاج تدقيق ولا رأيًا."
+
+msgid ""
+"a deterministic ISA 240 response aid; not an audit conclusion or opinion."
+msgstr "معين حتمي للاستجابة وفق ISA 240؛ ليس استنتاج تدقيق ولا رأيًا."
+
+msgid ""
+"a deterministic ISA 300 planning aid; not an audit conclusion or opinion."
+msgstr "معين حتمي للتخطيط وفق ISA 300؛ ليس استنتاج تدقيق ولا رأيًا."
+
+msgid ""
+"a deterministic ISA 330 mapping aid; not an audit conclusion or opinion."
+msgstr "معين حتمي للربط وفق ISA 330؛ ليس استنتاج تدقيق ولا رأيًا."
+
+msgid "a deterministic ISA 540 aid; not an audit conclusion or opinion."
+msgstr "معين حتمي وفق ISA 540؛ ليس استنتاج تدقيق ولا رأيًا."
+
+msgid ""
+"A discrepancy is flagged for the auditor — never auto-posted. No ledger "
+"entry is made."
+msgstr ""
+"يُعلَّم التباين للمدقّق — لا يُرحَّل تلقائيًا. لا يُنشأ أي قيد في دفتر "
+"الأستاذ."
+
+msgid ""
+"Advisory planning document under ISA 300 — an overall strategy and detailed "
+"plan. Not an audit conclusion or opinion."
+msgstr ""
+"وثيقة تخطيط استشارية وفق ISA 300 — استراتيجية كلية وخطة تفصيلية. ليست "
+"استنتاج تدقيق ولا رأيًا."
+
+msgid ""
+"Ask for supporting evidence against a GL finding or a SAD item. This does "
+"not change the finding — the auditor reviews it separately."
+msgstr ""
+"اطلب أدلة داعمة مقابل ملاحظة أستاذ أو بند فروقات. هذا لا يغيّر الملاحظة — "
+"يراجعها المدقّق بشكل منفصل."
+
+msgid ""
+"Assessed risks (ISA 315) → responsive procedures (ISA 330) → evidence. The "
+"audit traceability chain in one place."
+msgstr ""
+"المخاطر المقيَّمة (ISA 315) ← الإجراءات المستجيبة (ISA 330) ← الأدلة. سلسلة "
+"تتبّع التدقيق في مكان واحد."
+
+msgid ""
+"Assets: add cost, salvage, useful_life_years, elapsed_years to recompute "
+"NBV."
+msgstr ""
+"الأصول: أضف التكلفة والخردة والعمر الإنتاجي والسنوات المنقضية لإعادة احتساب "
+"القيمة الدفترية."
+
+msgid ""
+"Balance sheet and income statement derived from the trial balance and "
+"account mappings, with key ratios, a year-over-year comparison and "
+"classification-anomaly flags."
+msgstr ""
+"قائمتا المركز المالي والدخل مشتقّتان من ميزان المراجعة وربط الحسابات، مع نسب"
+" رئيسية ومقارنة سنوية وأعلام لشذوذ التصنيف."
+
+msgid ""
+"Capture the engagement context to derive an overall audit strategy (scope, "
+"timing, direction, resourcing) and a detailed audit plan of procedures."
+msgstr ""
+"التقط سياق الارتباط لاشتقاق استراتيجية تدقيق كلية (النطاق، التوقيت، التوجيه،"
+" الموارد) وخطة تدقيق تفصيلية للإجراءات."
+
+msgid "Choose an engagement above to set its retention policy."
+msgstr "اختر ارتباطًا أعلاه لتعيين سياسة الاحتفاظ به."
+
+msgid "Choose an engagement to analyze its trial balance."
+msgstr "اختر ارتباطًا لتحليل ميزان مراجعته."
+
+msgid "Choose an engagement to begin substantive testing."
+msgstr "اختر ارتباطًا لبدء الاختبارات الأساسية."
+
+msgid "Choose an engagement to build its management letter."
+msgstr "اختر ارتباطًا لبناء خطاب إدارته."
+
+msgid "Choose an engagement to build its risk register."
+msgstr "اختر ارتباطًا لبناء سجلّ مخاطره."
+
+msgid "Choose an engagement to manage its external confirmations."
+msgstr "اختر ارتباطًا لإدارة تأكيداته الخارجية."
+
+msgid "Choose an engagement to prepare its audit readiness."
+msgstr "اختر ارتباطًا لإعداد جاهزية تدقيقه."
+
+msgid "Choose an engagement to review its financial statements."
+msgstr "اختر ارتباطًا لمراجعة قوائمه المالية."
+
+msgid "Choose an engagement to review its general ledger."
+msgstr "اختر ارتباطًا لمراجعة أستاذه العام."
+
+msgid "Choose an engagement to view its Summary of Audit Differences."
+msgstr "اختر ارتباطًا لعرض ملخّص فروقات تدقيقه."
+
+msgid "Choose at least one: a GL finding or a SAD item."
+msgstr "اختر واحدًا على الأقل: ملاحظة أستاذ أو بند فروقات."
+
+msgid ""
+"Dated, attributable planning records held on the audit file (ISA 300 §12)."
+msgstr "سجلّات تخطيط مؤرّخة ومنسوبة محفوظة على ملف التدقيق (ISA 300 §12)."
+
+msgid ""
+"derived deterministically from the trial balance; not a formal opinion."
+msgstr "مشتقّة حتميًّا من ميزان المراجعة؛ ليست رأيًا رسميًّا."
+
+msgid "Describe the estimate and score the ISA 540 A20–A24 factors."
+msgstr "صف التقدير وقيّم عوامل ISA 540 A20–A24."
+
+msgid ""
+"Deterministic indicators for auditor consideration; not audit findings and "
+"never auto-accepted."
+msgstr "مؤشّرات حتمية لنظر المدقّق؛ ليست ملاحظات تدقيق ولا تُقبل تلقائيًا."
+
+msgid ""
+"Deterministic ISA 315/330 register. Advisory — supports the audit file; not "
+"an opinion. No ledger writes."
+msgstr ""
+"سجلّ حتمي وفق ISA 315/330. استشاري — يدعم ملف التدقيق؛ ليس رأيًا. بلا كتابة "
+"في دفتر الأستاذ."
+
+msgid "Deterministic journal-level analytics over the staged general ledger."
+msgstr "تحليلات حتمية على مستوى القيود فوق الأستاذ العام المُجهَّز."
+
+msgid ""
+"Deterministic re-performance under ISA 500/501. Variances are flagged for "
+"auditor judgement — nothing is posted to the ledger."
+msgstr ""
+"إعادة أداء حتمية وفق ISA 500/501. تُعلَّم الفروقات لحكم المدقّق — لا يُرحَّل"
+" شيء إلى دفتر الأستاذ."
+
+msgid "Deterministic rules. Disable a rule to exclude it from future runs."
+msgstr "قواعد حتمية. عطّل قاعدة لاستبعادها من التشغيلات المقبلة."
+
+msgid ""
+"Each driver is scored 0–25. Higher inherent = worse; higher "
+"control/procedure strength = better."
+msgstr ""
+"يُقيَّم كل محرّك من 0–25. أعلى للمتأصّلة = أسوأ؛ أعلى لقوة الرقابة/الإجراء ="
+" أفضل."
+
+msgid ""
+"Enter the assessed risks of material misstatement; the engine maps each to "
+"responsive procedures — nature, timing, extent, and staffing — escalating "
+"significant and fraud risks."
+msgstr ""
+"أدخل مخاطر التحريف الجوهري المقيَّمة؛ يربط المحرّك كلًّا بإجراءات مستجيبة — "
+"الطبيعة والتوقيت والمدى والفريق — مع تصعيد المخاطر الهامة والاحتيالية."
+
+msgid "Enter the engagement context to build the strategy and plan."
+msgstr "أدخل سياق الارتباط لبناء الاستراتيجية والخطة."
+
+msgid ""
+"Evidence requested from you by the audit team. Upload supporting documents "
+"and submit for review."
+msgstr "أدلة طلبها منك فريق التدقيق. ارفع المستندات الداعمة وأرسلها للمراجعة."
+
+msgid ""
+"Execute the deterministic rule set over a staged general ledger import."
+msgstr "شغّل مجموعة القواعد الحتمية على استيراد أستاذ عام مُجهَّز."
+
+msgid "Facts known to the auditor at planning time (ISA 300 §7–9)."
+msgstr "الحقائق المعلومة للمدقّق وقت التخطيط (ISA 300 §7–9)."
+
+msgid ""
+"Findings are machine-suggested candidates for auditor review — never audit "
+"conclusions."
+msgstr ""
+"الملاحظات مرشّحات يقترحها النظام لمراجعة المدقّق — ليست استنتاجات تدقيق."
+
+msgid ""
+"If counted qty and unit cost are provided, tested value = counted qty × unit"
+" cost."
+msgstr ""
+"إذا وُفِّرت الكمية المعدودة وتكلفة الوحدة: القيمة المُختبَرة = الكمية "
+"المعدودة × تكلفة الوحدة."
+
+msgid ""
+"If provided, tested value = cost − accumulated straight-line depreciation."
+msgstr "إذا وُفِّرت: القيمة المُختبَرة = التكلفة − مجمّع إهلاك القسط الثابت."
+
+msgid "If provided, tested value = gross − deductions."
+msgstr "إذا وُفِّرت: القيمة المُختبَرة = الإجمالي − الاستقطاعات."
+
+msgid ""
+"Immutable reference listing included in exported reports. Contains no "
+"download links by design."
+msgstr ""
+"قائمة مرجعية ثابتة تُضمَّن في التقارير المصدَّرة. لا تحتوي روابط تنزيل "
+"عمدًا."
+
+msgid ""
+"Import a GL, run deterministic risk analysis, and review candidate findings."
+msgstr ""
+"استورد أستاذًا عامًا، شغّل تحليل مخاطر حتميًّا، وراجع الملاحظات المرشّحة."
+
+msgid ""
+"Import a prior-period trial balance to enable the year-over-year comparison."
+msgstr "استورد ميزان مراجعة لفترة سابقة لتفعيل المقارنة السنوية."
+
+msgid ""
+"Import a trial balance, review account mappings, and flag unusual accounts."
+msgstr "استورد ميزان مراجعة، راجع ربط الحسابات، وعلّم الحسابات غير المعتادة."
+
+msgid ""
+"Integrity, coverage and retention reporting. Reporting only — no evidence is"
+" modified or deleted."
+msgstr ""
+"تقارير السلامة والتغطية والاحتفاظ. تقارير فقط — لا يُعدَّل أو يُحذَف أي "
+"دليل."
+
+msgid "Inventory: add quantity_counted, unit_cost to recompute value."
+msgstr "المخزون: أضف الكمية المعدودة وتكلفة الوحدة لإعادة احتساب القيمة."
+
+msgid ""
+"Inventory (ISA 501), fixed assets and payroll — recorded value vs an "
+"independently recomputed value, with variances flagged."
+msgstr ""
+"المخزون (ISA 501) والأصول الثابتة والرواتب — القيمة المسجَّلة مقابل قيمة "
+"مُعاد احتسابها مستقلًّا، مع تعليم الفروقات."
+
+msgid ""
+"List the identified fraud risk factors; the engine builds the responsive "
+"procedures and always includes the ISA 240 §32 management-override "
+"procedures — even when no specific factor is entered."
+msgstr ""
+"اسرد عوامل خطر الاحتيال المحدَّدة؛ يبني المحرّك الإجراءات المستجيبة ويشمل "
+"دائمًا إجراءات تجاوز الإدارة (ISA 240 §32) — حتى دون إدخال عامل محدّد."
+
+msgid ""
+"Mandatory regardless of specific factors — management override is a presumed"
+" risk."
+msgstr "إلزامية بغضّ النظر عن العوامل المحدّدة — تجاوز الإدارة مخاطرة مفترضة."
+
+msgid "Nature / timing / extent of planned procedures (ISA 300 §9)."
+msgstr "طبيعة/توقيت/مدى الإجراءات المخطّطة (ISA 300 §9)."
+
+msgid "No assessed risks yet. Build the Risk → Procedure → Evidence chain."
+msgstr "لا مخاطر مقيَّمة بعد. ابنِ سلسلة المخاطرة ← الإجراء ← الدليل."
+
+msgid "No assessed risks yet. Record one above to start the chain."
+msgstr "لا مخاطر مقيَّمة بعد. سجّل واحدة أعلاه لبدء السلسلة."
+
+msgid "No evidence has been requested for this finding yet."
+msgstr "لم يُطلب دليل لهذه الملاحظة بعد."
+
+msgid "No evidence has been requested for this SAD item yet."
+msgstr "لم يُطلب دليل لبند الفروقات هذا بعد."
+
+msgid "No findings. Import a GL and run risk analysis."
+msgstr "لا ملاحظات. استورد أستاذًا وشغّل تحليل المخاطر."
+
+msgid ""
+"No GL risk findings yet. Import a general ledger and run risk analysis."
+msgstr "لا ملاحظات مخاطر أستاذ بعد. استورد أستاذًا عامًا وشغّل تحليل المخاطر."
+
+msgid "No materiality profile set for this engagement."
+msgstr "لا ملف أهمية نسبية معرَّف لهذا الارتباط."
+
+msgid "No outstanding evidence requests for this engagement."
+msgstr "لا طلبات أدلة معلّقة لهذا الارتباط."
+
+msgid ""
+"No planning records saved yet. Build and save a strategy, responses, or "
+"fraud plan."
+msgstr ""
+"لا سجلّات تخطيط محفوظة بعد. ابنِ واحفظ استراتيجية أو استجابات أو خطة احتيال."
+
+msgid "No readiness workpaper yet. Recalculate the SAD, then generate."
+msgstr "لا ورقة جاهزية بعد. أعد حساب الفروقات ثم ولّد."
+
+msgid "No SAD calculated yet. Accept some GL findings, then recalculate."
+msgstr "لم تُحسب الفروقات بعد. اقبل بعض ملاحظات الأستاذ ثم أعد الحساب."
+
+msgid "No trial balance imported for this engagement yet."
+msgstr "لم يُستورد ميزان مراجعة لهذا الارتباط بعد."
+
+msgid ""
+"One workspace per engagement, tying planning, risk, testing, evidence, "
+"differences and readiness together."
+msgstr ""
+"مساحة عمل واحدة لكل ارتباط تربط التخطيط والمخاطر والاختبار والأدلة والفروقات"
+" والجاهزية معًا."
+
+msgid ""
+"Optional — the §32 management-override procedures are always produced. Link "
+"a factor to a detection signal to pull its catalogue procedures."
+msgstr ""
+"اختياري — تُنتَج دائمًا إجراءات تجاوز الإدارة (§32). اربط عاملًا بإشارة "
+"اكتشاف لسحب إجراءات كتالوجها."
+
+msgid ""
+"Prepare the opinion-readiness workpaper from the SAD. Subject to auditor "
+"review — not a formal audit opinion."
+msgstr ""
+"أعِدّ ورقة جاهزية الرأي من الفروقات. خاضعة لمراجعة المدقّق — ليست رأي تدقيق "
+"رسميًّا."
+
+msgid ""
+"Profile a management estimate — complexity, subjectivity, uncertainty and "
+"disclosure — to score its estimation uncertainty and flag significant-risk "
+"estimates."
+msgstr ""
+"صِف تقدير الإدارة — التعقيد والذاتية وعدم اليقين والإفصاح — لتقييم عدم يقين "
+"تقديره وتعليم التقديرات عالية المخاطر."
+
+msgid ""
+"Read-only view. Evidence activity never modifies this SAD item or its "
+"conclusion."
+msgstr "عرض للقراءة فقط. نشاط الأدلة لا يعدّل بند الفروقات هذا ولا استنتاجه."
+
+msgid ""
+"Read-only view. Finding status changes go through the finding review "
+"workflow; requesting or accepting evidence never changes this finding."
+msgstr ""
+"عرض للقراءة فقط. تغييرات حالة الملاحظة تمرّ عبر سير مراجعة الملاحظات؛ طلب "
+"الدليل أو قبوله لا يغيّر هذه الملاحظة."
+
+msgid ""
+"Record internal-control deficiencies (ISA 265), capture management "
+"responses, and generate the letter."
+msgstr ""
+"سجّل أوجه ضعف الرقابة الداخلية (ISA 265)، والتقط استجابات الإدارة، وولّد "
+"الخطاب."
+
+msgid ""
+"Request an external party to confirm a balance (ISA 505) and reconcile the "
+"reply against the books."
+msgstr "اطلب من طرف خارجي تأكيد رصيد (ISA 505) وسوِّ الرد مقابل الدفاتر."
+
+msgid "Request, track, and review supporting evidence for audit findings."
+msgstr "اطلب وتتبّع وراجع الأدلة الداعمة لملاحظات التدقيق."
+
+msgid ""
+"Required vs uploaded, accepted, rejected and pending evidence per finding "
+"and SAD item."
+msgstr ""
+"المطلوب مقابل المرفوع والمقبول والمرفوض والمعلّق من الأدلة لكل ملاحظة وبند "
+"فروقات."
+
+msgid "Review, prioritise and assign outstanding evidence requests."
+msgstr "راجع ورتّب وأسنِد طلبات الأدلة المعلّقة."
+
+msgid "Saved planning records on the audit file (ISA 300 §12)."
+msgstr "سجلّات تخطيط محفوظة على ملف التدقيق (ISA 300 §12)."
+
+msgid ""
+"Score the inherent, control and detection risk drivers to derive the audit-"
+"risk model (IR × CR × DR) and see whether your planned work meets the target"
+" audit risk."
+msgstr ""
+"قيّم محرّكات المخاطرة المتأصّلة والرقابية والاكتشاف لاشتقاق نموذج مخاطر "
+"التدقيق (IR × CR × DR) ومعرفة ما إذا كان عملك المخطّط يحقّق مخاطر التدقيق "
+"المستهدفة."
+
+msgid "Secure balance confirmation · powered by Tadgeeg"
+msgstr "تأكيد رصيد آمن · مُشغَّل بواسطة تدقيق"
+
+msgid "Select indicators and run the assessment to see the conclusion."
+msgstr "اختر المؤشّرات وشغّل التقييم لرؤية الاستنتاج."
+
+msgid "Send your evidence to the audit team for review."
+msgstr "أرسل دليلك إلى فريق التدقيق للمراجعة."
+
+msgid "Set the drivers and run the assessment to see the audit-risk model."
+msgstr "عيّن المحرّكات وشغّل التقييم لرؤية نموذج مخاطر التدقيق."
+
+msgid "Subject to auditor review — not a formal audit opinion."
+msgstr "خاضع لمراجعة المدقّق — ليس رأي تدقيق رسميًّا."
+
+msgid "Tested value (optional — overridden by recompute)"
+msgstr "القيمة المُختبَرة (اختياري — تتجاوزها إعادة الاحتساب)"
+
+msgid "Thank you — your response has been recorded."
+msgstr "شكرًا — سُجِّلت استجابتك."
+
+msgid ""
+"There are still open evidence requests for this engagement. Review them "
+"before concluding readiness."
+msgstr ""
+"لا تزال هناك طلبات أدلة مفتوحة لهذا الارتباط. راجعها قبل إنهاء الجاهزية."
+
+msgid ""
+"These analytics are deterministic indicators for auditor consideration. They"
+" are not audit findings, are never auto-accepted, and do not constitute an "
+"audit opinion."
+msgstr ""
+"هذه التحليلات مؤشّرات حتمية لنظر المدقّق. ليست ملاحظات تدقيق، ولا تُقبل "
+"تلقائيًا، ولا تشكّل رأي تدقيق."
+
+msgid ""
+"This communicates deficiencies to those charged with governance (ISA 265). "
+"It is not an audit opinion."
+msgstr "يُبلِّغ هذا أوجه الضعف للمكلَّفين بالحوكمة (ISA 265). ليس رأي تدقيق."
+
+msgid ""
+"This confirmation has already been responded to. No further action is "
+"needed."
+msgstr "تمّت الاستجابة لهذا التأكيد مسبقًا. لا حاجة لإجراء آخر."
+
+msgid "This confirmation link is invalid or has expired."
+msgstr "رابط التأكيد هذا غير صالح أو منتهي الصلاحية."
+
+msgid ""
+"This output is an audit-readiness aid. The final audit opinion must be "
+"prepared and approved by a licensed auditor."
+msgstr ""
+"هذا المخرَج معين لجاهزية التدقيق. يجب أن يُعِدّ الرأي النهائي ويعتمده مدقّق "
+"مرخَّص."
+
+msgid ""
+"This page shows outstanding evidence only. It is not a formal audit opinion;"
+" the final opinion must be prepared and approved by a licensed auditor."
+msgstr ""
+"تعرض هذه الصفحة الأدلة المعلّقة فقط. ليست رأي تدقيق رسميًّا؛ يجب أن يُعِدّ "
+"الرأي النهائي ويعتمده مدقّق مرخَّص."
+
+msgid ""
+"Tick the financial, operating and other indicators present, plus any "
+"mitigating evidence, to classify going-concern doubt and the suggested "
+"reporting response."
+msgstr ""
+"علّم المؤشّرات المالية والتشغيلية وغيرها الموجودة، مع أي أدلة مخفِّفة، "
+"لتصنيف الشكّ في الاستمرارية والاستجابة المقترحة للتقرير."
+
+msgid ""
+"the suggested reporting response is an auditor aid and never a formal audit "
+"opinion."
+msgstr ""
+"الاستجابة المقترحة للتقرير معين للمدقّق وليست رأي تدقيق رسميًّا أبدًا."
+
+msgid ""
+"Upload a CSV or XLSX. Headers are matched flexibly (e.g. "
+"reference/sku/asset_tag, book_value, tested_value, tolerance)."
+msgstr ""
+"ارفع ملف CSV أو XLSX. تُطابَق العناوين بمرونة (مثل reference/sku/asset_tag "
+"وbook_value وtested_value وtolerance)."
+
+msgid "When the audit team requests evidence, it will appear here."
+msgstr "عندما يطلب فريق التدقيق دليلًا، سيظهر هنا."
+
+msgid "Applied in a single transaction; final requests are skipped."
+msgstr "يُطبَّق في معاملة واحدة؛ تُتخطّى الطلبات النهائية."
+
+msgid "Apply now (stamps calculated expiry on attachment metadata)"
+msgstr "طبّق الآن (يختم انتهاء الصلاحية المحسوب على بيانات المرفق)"
+
+msgid ""
+"Engagement-level retention. Metadata only — evidence is never deleted or "
+"purged automatically."
+msgstr ""
+"احتفاظ على مستوى الارتباط. بيانات وصفية فقط — لا يُحذَف الدليل أو يُطهَّر "
+"تلقائيًا."
+
+msgid ""
+"Every uploaded invoice publishes an event onto the bus. A worker consumes "
+"the event and runs three window detectors against it: Velocity (vendor "
+"submitting too many invoices in a short window), Sudden Spike (invoice "
+"amount above 5σ of the vendor's own history), and Vendor Concentration (one "
+"vendor crossing 30% of org spend). Each trigger persists an AnomalyHit row "
+"that this dashboard reads. Phase 3.2 will pipe these hits into email / SMS /"
+" Slack channels."
+msgstr ""
+"تنشر كل فاتورة مرفوعة حدثًا على الناقل. يستهلك عامل الحدث ويشغّل ثلاثة كواشف"
+" نافذة: السرعة (مورّد يقدّم فواتير كثيرة في نافذة قصيرة)، والارتفاع المفاجئ "
+"(مبلغ فاتورة يتجاوز 5σ من تاريخ المورّد نفسه)، وتركّز المورّد (مورّد واحد "
+"يتجاوز 30% من إنفاق المنظمة). يحفظ كل إطلاق صفّ AnomalyHit تقرؤه هذه اللوحة."
+" ستوجّه المرحلة 3.2 هذه الإطلاقات إلى قنوات البريد / الرسائل / سلاك."
+
+msgid ""
+"Generated by Tadgeeg — deterministic ISA 300 planning aid. Not a formal "
+"audit opinion."
+msgstr ""
+"مُولَّد بواسطة تدقيق — معين تخطيط حتمي وفق ISA 300. ليس رأي تدقيق رسميًّا."
+
+msgid ""
+"No customers yet. Registered companies will appear here automatically after "
+"signup."
+msgstr "لا عملاء بعد. ستظهر الشركات المسجَّلة هنا تلقائيًا بعد التسجيل."
+
+msgid "No usage recorded yet. Upload your first invoice to get started."
+msgstr "لا استخدام مسجَّل بعد. ارفع أول فاتورة للبدء."
+
+msgid "Payment did not complete. Your subscription was not activated."
+msgstr "لم يكتمل الدفع. لم يُفعَّل اشتراكك."
+
+msgid "Payment successful — your subscription is now active."
+msgstr "نجح الدفع — اشتراكك نشط الآن."
+
+msgid "Payroll: add gross, deductions to recompute net pay."
+msgstr "الرواتب: أضف الإجمالي والاستقطاعات لإعادة احتساب صافي الأجر."
+
+msgid "This action changes the subscription end date and will be audited."
+msgstr "يغيّر هذا الإجراء تاريخ انتهاء الاشتراك وسيُدقَّق."
+
+msgid "This will create a pending manual payment and will be audited."
+msgstr "سيُنشئ هذا دفعة يدوية معلّقة وسيُدقَّق."
+
+msgid "This will restore customer access and will be audited."
+msgstr "سيعيد هذا وصول العميل وسيُدقَّق."
+
+msgid "This will suspend customer access and will be audited."
+msgstr "سيعلّق هذا وصول العميل وسيُدقَّق."
+
+msgid ""
+"Validates VAT calculations, tax rates (15%), and ZATCA invoice requirements."
+msgstr ""
+"يتحقّق من حسابات الضريبة ونسبها (15%) ومتطلّبات فاتورة هيئة الزكاة والضريبة."
+
+msgid "Verifying your payment. Your subscription will update automatically."
+msgstr "جارٍ التحقّق من دفعك. سيُحدَّث اشتراكك تلقائيًا."
+
+#~ msgid "Privacy and data protection"
+#~ msgstr "الخصوصية وحماية البيانات"
+
+#~ msgid ""
+#~ "We handle financial data with a high standard of care, including clear "
+#~ "tenant isolation and audit trails for sensitive actions."
+#~ msgstr ""
+#~ "نتعامل مع البيانات المالية بمعيار عالٍ من العناية، بما في ذلك العزل الواضح "
+#~ "بين المؤسسات وسجلات التدقيق للإجراءات الحسّاسة."
+
+#~ msgid "Organization-level data isolation."
+#~ msgstr "عزل البيانات على مستوى المؤسسة."
+
+#~ msgid "Audit logs for sensitive operations."
+#~ msgstr "سجلات التدقيق للعمليات الحسّاسة."
+
+#~ msgid "Access controls based on organizational roles."
+#~ msgstr "ضوابط وصول مبنية على الأدوار التنظيمية."
+
+#~ msgid "AI Auditor"
+#~ msgstr "المدقق الذكي"
+
+#~ msgid "Request Demo"
+#~ msgstr "اطلب عرضاً توضيحياً"

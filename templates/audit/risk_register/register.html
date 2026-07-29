@@ -10,9 +10,12 @@
   details.risk{border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;margin-bottom:10px;background:#fff;}
   details.risk summary{cursor:pointer;font-weight:700;color:#0f2b4a;font-size:13px;list-style:none;display:flex;justify-content:space-between;gap:8px;align-items:center;}
   details.risk summary::-webkit-details-marker{display:none;}
-  .cr{display:inline-block;padding:2px 9px;border-radius:999px;font-size:10px;font-weight:800;text-transform:capitalize;}
-  .cr.low{background:#dcfce7;color:#166534;} .cr.medium{background:#fef9c3;color:#854d0e;}
-  .cr.high{background:#ffedd5;color:#9a3412;} .cr.significant{background:#fee2e2;color:#991b1b;}
+  /* G7 — risk chip colours sourced from the design-system risk scale (tokens). */
+  .cr{display:inline-block;padding:2px 9px;border-radius:var(--radius-pill,999px);font-size:10px;font-weight:800;text-transform:capitalize;}
+  .cr.low{background:var(--risk-low-bg,#ccfbf1);color:var(--risk-low-fg,#0f766e);}
+  .cr.medium{background:var(--risk-medium-bg,#fef3c7);color:var(--risk-medium-fg,#92610a);}
+  .cr.high{background:var(--risk-high-bg,#ffe4d0);color:var(--risk-high-fg,#c2410c);}
+  .cr.significant{background:var(--risk-significant-bg,#fee2e2);color:var(--risk-significant-fg,#991b1b);}
   .proc{border-inline-start:3px solid #cbd5e1;padding:6px 10px;margin:6px 0;font-size:12px;color:#334155;background:#f8fafc;border-radius:0 8px 8px 0;}
   .proc .ref{font-weight:700;color:#0f2b4a;} .pst{font-size:10px;font-weight:700;color:#64748b;}
   .ev{font-size:10px;font-weight:700;color:#166534;} .minibtn{background:var(--primary,#002244);color:#fff;border:none;border-radius:7px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;}

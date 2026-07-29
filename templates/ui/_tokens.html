@@ -1,0 +1,74 @@
+{# TADGEEG-G7 — design-system tokens (single source of truth).                #}
+{# Semantic scales are SEPARATE per meaning: status ≠ severity ≠ risk, so the  #}
+{# same hue never means two things. RTL-safe (logical properties). Light/dark. #}
+<style>
+  :root {
+    /* Spacing (4px base) */
+    --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px;
+    --space-5:24px; --space-6:32px; --space-8:48px;
+    /* Radius */
+    --radius-control:8px; --radius-card:12px; --radius-pill:999px;
+    /* Container */
+    --container-max:1180px;
+    /* Typography scale */
+    --fs-h1:24px; --fs-h2:18px; --fs-h3:14px; --fs-body:13px; --fs-table:12.5px; --fs-meta:11px;
+    /* Neutrals */
+    --ink:#0f2b4a; --ink-2:#334155; --muted:#64748b; --faint:#94a3b8;
+    --line:#e8edf3; --surface:#ffffff; --surface-2:#f8fafc;
+    --primary:#14508a; --primary-ink:#ffffff;
+    --shadow-card:0 1px 2px rgba(16,24,40,.04),0 8px 24px -18px rgba(16,24,40,.25);
+
+    /* STATUS scale (workflow) — neutral/blue/green/amber/red */
+    --status-draft-bg:#f1f5f9; --status-draft-fg:#475569;
+    --status-progress-bg:#e0f2fe; --status-progress-fg:#075985;
+    --status-done-bg:#dcfce7; --status-done-fg:#166534;
+    --status-attention-bg:#fef9c3; --status-attention-fg:#854d0e;
+    --status-blocked-bg:#fee2e2; --status-blocked-fg:#991b1b;
+
+    /* SEVERITY scale (findings) — green→amber→orange→red */
+    --sev-low-bg:#dcfce7; --sev-low-fg:#166534;
+    --sev-medium-bg:#fef9c3; --sev-medium-fg:#854d0e;
+    --sev-high-bg:#ffedd5; --sev-high-fg:#9a3412;
+    --sev-critical-bg:#fee2e2; --sev-critical-fg:#991b1b;
+
+    /* RISK scale (assessed) — its OWN ramp (teal→amber→orange→red), distinct
+       from severity so "high risk" ≠ "high severity" by accident */
+    --risk-low-bg:#ccfbf1; --risk-low-fg:#0f766e;
+    --risk-medium-bg:#fef3c7; --risk-medium-fg:#92610a;
+    --risk-high-bg:#ffe4d0; --risk-high-fg:#c2410c;
+    --risk-significant-bg:#fee2e2; --risk-significant-fg:#991b1b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink:#e2e8f0; --ink-2:#cbd5e1; --muted:#94a3b8; --faint:#64748b;
+      --line:#1e293b; --surface:#0f172a; --surface-2:#111c33;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ink:#e2e8f0; --ink-2:#cbd5e1; --muted:#94a3b8; --faint:#64748b;
+    --line:#1e293b; --surface:#0f172a; --surface-2:#111c33;
+  }
+
+  /* Chip — one component, three semantic variants. */
+  .ds-chip{display:inline-block;font-size:var(--fs-meta);font-weight:700;
+    padding:2px 9px;border-radius:var(--radius-pill);text-transform:capitalize;
+    line-height:1.5;white-space:nowrap;}
+  .ds-chip.status-draft{background:var(--status-draft-bg);color:var(--status-draft-fg);}
+  .ds-chip.status-progress{background:var(--status-progress-bg);color:var(--status-progress-fg);}
+  .ds-chip.status-done{background:var(--status-done-bg);color:var(--status-done-fg);}
+  .ds-chip.status-attention{background:var(--status-attention-bg);color:var(--status-attention-fg);}
+  .ds-chip.status-blocked{background:var(--status-blocked-bg);color:var(--status-blocked-fg);}
+  .ds-chip.sev-low{background:var(--sev-low-bg);color:var(--sev-low-fg);}
+  .ds-chip.sev-medium{background:var(--sev-medium-bg);color:var(--sev-medium-fg);}
+  .ds-chip.sev-high{background:var(--sev-high-bg);color:var(--sev-high-fg);}
+  .ds-chip.sev-critical{background:var(--sev-critical-bg);color:var(--sev-critical-fg);}
+  .ds-chip.risk-low{background:var(--risk-low-bg);color:var(--risk-low-fg);}
+  .ds-chip.risk-medium{background:var(--risk-medium-bg);color:var(--risk-medium-fg);}
+  .ds-chip.risk-high{background:var(--risk-high-bg);color:var(--risk-high-fg);}
+  .ds-chip.risk-significant{background:var(--risk-significant-bg);color:var(--risk-significant-fg);}
+
+  /* LTR islands — codes/IDs/emails/invoice numbers stay LTR inside RTL text. */
+  .ltr{direction:ltr;unicode-bidi:isolate;display:inline-block;}
+  /* Tabular numerals for money/counts. */
+  .num{font-variant-numeric:tabular-nums;}
+</style>

@@ -391,6 +391,8 @@
 
     {% block extra_styles %}{% endblock %}
   </style>
+  {# TADGEEG-G7 — design-system tokens (single source of truth). #}
+  {% include "ui/_tokens.html" %}
 </head>
 <body>
   <div class="app">

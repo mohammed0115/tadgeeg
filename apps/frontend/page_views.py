@@ -1907,6 +1907,11 @@ def dashboard(request):
         (deduplicated by (org, vendor_name) at write time) and falls back
         to invoice-name grouping only when the registry is empty.
     """
+    # TADGEEG-G4.2 — a client (auditee) user's home is their evidence portal,
+    # never the auditor dashboard.
+    if getattr(request.user, "is_client", False):
+        return redirect("frontend:client_evidence_list")
+
     from datetime import timedelta
     from django.core.cache import cache
     from django.db.models import Count, Sum, Q, Avg

@@ -65,6 +65,38 @@ class ApiLockoutTests(TestCase):
             self.assertEqual(self.api.get(url).status_code, 403, url)
 
 
+class ClientHomeRoutingTests(TestCase):
+    """G4.2 — a client's home is the evidence portal, not the auditor dashboard."""
+
+    def setUp(self):
+        from io import StringIO
+        from django.core.management import call_command
+        from apps.billing.choices import PlanCode
+        from apps.billing.models import Plan
+        from apps.billing.services.subscription_service import SubscriptionService
+        self.org = _org()
+        if not Plan.objects.filter(code=PlanCode.BUSINESS).exists():
+            call_command("seed_billing_plans", stdout=StringIO())
+        svc = SubscriptionService()
+        svc.activate_subscription(
+            svc.create_pending_paid_subscription(
+                self.org, Plan.objects.get(code=PlanCode.BUSINESS)))
+        self.auditor = _auditor(self.org)
+        self.client_user = _client(self.org)
+
+    def test_client_redirected_to_portal(self):
+        from django.urls import reverse
+        self.client.force_login(self.client_user)
+        resp = self.client.get("/dashboard/")
+        self.assertEqual(resp.status_code, 302)
+        self.assertEqual(resp.url, reverse("frontend:client_evidence_list"))
+
+    def test_auditor_not_redirected(self):
+        self.client.force_login(self.auditor)
+        resp = self.client.get("/dashboard/")
+        self.assertEqual(resp.status_code, 200)
+
+
 class PortalAccessTests(TestCase):
     def setUp(self):
         self.org = _org(); self.auditor = _auditor(self.org)

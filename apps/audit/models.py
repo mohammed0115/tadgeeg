@@ -116,6 +116,11 @@ from apps.audit.report_models import (  # noqa: F401
     EngagementReport,
 )
 
+# Engagement team members (G3.3 · ISA 220).
+from apps.audit.member_models import (  # noqa: F401
+    EngagementMember,
+)
+
 
 class AuditSession(SoftDeleteModel):
     """Tracks the lifecycle and aggregate progress of a related audit upload."""

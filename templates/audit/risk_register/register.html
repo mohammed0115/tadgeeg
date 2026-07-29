@@ -26,7 +26,7 @@
   <div class="crumbs"><a href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a> / {% trans "Audit" %} / {% trans "Risk Register" %}</div>
   <div class="ev-head">
     <div>
-      <div class="ev-title">{% trans "Risk Register" %} · سجلّ المخاطر</div>
+      <div class="ev-title">{% trans "Risk Register" %}</div>
       <div class="ev-sub">{% trans "Assessed risks (ISA 315) → responsive procedures (ISA 330) → evidence. The audit traceability chain in one place." %}</div>
     </div>
     {% if engagement %}<a class="runbtn" style="text-decoration:none;background:#0369a1;" href="/api/v1/audit/engagements/{{ engagement.id }}/risk-summary/">{% trans "Summary JSON" %}</a>{% endif %}

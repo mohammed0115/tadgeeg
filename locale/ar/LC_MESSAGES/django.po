@@ -17385,3 +17385,16 @@ msgstr "مُسترَدّ"
 
 msgid "Partially refunded"
 msgstr "مُسترَدّ جزئيًا"
+
+#: templates/audit G8 — audit module titles
+msgid "Risk Register"
+msgstr "سجلّ المخاطر"
+
+msgid "Management Letter"
+msgstr "خطاب الإدارة"
+
+msgid "Substantive Testing"
+msgstr "الاختبارات الأساسية"
+
+msgid "External Confirmations"
+msgstr "التأكيدات الخارجية"

@@ -141,6 +141,55 @@ class ListTests(Base):
         resp = self.client.get(reverse("frontend:engagement_list"))
         self.assertNotContains(resp, "OTHER-ENG")
 
+    def test_g9_list_rows_bulk_open_counts_correct(self):
+        # G9 — the bulk GL query returns correct per-engagement open counts.
+        from apps.frontend.engagement_workspace_views import _list_rows
+        e2 = _eng(self.org, code="AUD-2")
+        _finding(self.eng, self.imp, status=_FS.NEEDS_EVIDENCE)
+        _finding(self.eng, self.imp, status=_FS.ESCALATED)
+        _finding(self.eng, self.imp, status=_FS.ACCEPTED)  # not "open"
+        rows = _list_rows([self.eng, e2], self.org)
+        by = {r["e"].id: r["overview"]["gl_findings"]["open"] for r in rows}
+        self.assertEqual(by[self.eng.id], 2)   # candidate/needs_evidence/escalated only
+        self.assertEqual(by[e2.id], 0)
+
+    def test_g9_list_path_skips_heavy_overview_sections(self):
+        # G9 — the list path must NOT fan out into the full ~15-section overview
+        # (materiality/SAD/substantive/confirmations/risks/planning/analytics…).
+        # It touches only what the list renders: open GL findings + assurance.
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        from apps.frontend.engagement_workspace_views import _list_rows
+        engs = [self.eng] + [_eng(self.org, code=f"AUD-{i}") for i in range(2, 6)]
+        with CaptureQueriesContext(connection) as ctx:
+            _list_rows(engs, self.org)
+        sql = " ".join(q["sql"].lower() for q in ctx.captured_queries)
+        # These overview sections are eliminated from the list path (the full
+        # overview queried them per row; the light path does not touch them).
+        for heavy in ("audit_assessed_risks", "audit_procedures",
+                      "audit_substantive_test_items", "audit_engagement_planning_records"):
+            self.assertNotIn(heavy, sql, f"list path must not query {heavy}")
+
+    def test_g9_open_gl_findings_is_one_bulk_query(self):
+        # The open-GL-findings count for ALL rows is a single grouped query
+        # (isolated from the assurance service, which is called separately).
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        from apps.frontend.engagement_workspace_views import _list_rows
+        from apps.audit.services import evidence_assurance as ea
+        engs = [self.eng] + [_eng(self.org, code=f"AUD-{i}") for i in range(2, 6)]
+        # Stub assurance so we measure only the list path's own GL aggregation.
+        orig = ea.assurance_dashboard
+        ea.assurance_dashboard = lambda **kw: {"coverage_percent": 0}
+        try:
+            with CaptureQueriesContext(connection) as ctx:
+                _list_rows(engs, self.org)
+        finally:
+            ea.assurance_dashboard = orig
+        gl_group = [q for q in ctx.captured_queries
+                    if "gl_risk_finding" in q["sql"].lower() and "group by" in q["sql"].lower()]
+        self.assertEqual(len(gl_group), 1, "open GL findings must be one bulk query for N rows")
+
 
 class WorkspaceAggregationTests(Base):
     def test_lifecycle_rail_marks_current_stage(self):

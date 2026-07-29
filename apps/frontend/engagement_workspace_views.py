@@ -203,6 +203,38 @@ def _engagement_overview(engagement) -> dict:
     }
 
 
+def _list_rows(engagements, org):
+    """Light per-row badges for the engagement list (G9 — bulk, not N×full).
+
+    Returns rows shaped exactly like the template expects
+    (``row.overview.gl_findings.open`` + ``row.overview.assurance.coverage_percent``),
+    but computes open GL findings for ALL engagements in a single grouped query.
+    """
+    if not engagements or org is None:
+        return [{"e": e, "overview": {"gl_findings": {"open": 0},
+                                      "assurance": {"coverage_percent": 0}}}
+                for e in engagements]
+    from django.db.models import Count, Q
+    ids = [e.id for e in engagements]
+    open_statuses = [_FS.CANDIDATE, _FS.NEEDS_EVIDENCE, _FS.ESCALATED]
+    gl_open = {r["engagement_id"]: r["n"] for r in (
+        GeneralLedgerRiskFinding.objects
+        .filter(engagement_id__in=ids, organization=org)
+        .values("engagement_id")
+        .annotate(n=Count("id", filter=Q(status__in=open_statuses))))}
+
+    def _coverage(e):
+        def _cov():
+            from apps.audit.services import evidence_assurance as ea
+            return ea.assurance_dashboard(organization=org, engagement=e).get(
+                "coverage_percent", 0)
+        return _safe(_cov, 0)
+
+    return [{"e": e, "overview": {
+        "gl_findings": {"open": gl_open.get(e.id, 0)},
+        "assurance": {"coverage_percent": _coverage(e)}}} for e in engagements]
+
+
 @login_required(login_url="/login/")
 def engagement_list(request):
     """List the organization's audit engagements with lifecycle stage."""
@@ -216,10 +248,11 @@ def engagement_list(request):
         qs = qs.filter(stage=stage)
     engagements = list(qs.select_related("engagement_partner", "engagement_manager")[:200])
 
-    # A light per-engagement badge: open GL findings + evidence coverage.
-    rows = []
-    for e in engagements:
-        rows.append({"e": e, "overview": _engagement_overview(e)})
+    # G9 — the list template uses only two overview metrics (gl_findings.open +
+    # assurance.coverage_percent). Building the FULL overview per row was ~15
+    # queries × N engagements. Instead: ONE bulk query for open GL findings
+    # across all engagements, and one assurance call per row.
+    rows = _list_rows(engagements, org)
 
     return render(request, "audit/engagements/list.html", _ctx(
         request, "audit",

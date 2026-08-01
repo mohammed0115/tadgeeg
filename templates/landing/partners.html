@@ -1,0 +1,249 @@
+{% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
+<!DOCTYPE html>
+{% comment %}
+Public «شركاؤنا» page (§C / §L.2).
+
+Standalone document with no {% extends %} — that is the established pattern for
+templates/landing/* (see pricing.html). Do not introduce inheritance here.
+
+LAYOUT is from the stakeholder deck and is a requirement: 1 + 4 structure with
+the strategic partner in a doubled-area hero, tier sections beneath, a tier
+badge on every card, and the 7-element card anatomy.
+
+COLOURS are NOT from the deck — the product owner rejected its dark palette
+(§L.0). The values below are the canonical tokens from
+static/src/css/tokens.css: --color-primary-500 #003366 (identity) and
+--color-accent-500 #10b981 (primary action).
+
+Note: templates/landing/pricing.html declares --primary: #073763, which is a
+DIFFERENT navy. §L.1.1 flags that as a known blocking inconsistency and
+recommends unifying on tokens.css. This page therefore uses the canonical
+value rather than propagating the divergent one.
+{% endcomment %}
+<html lang="{{ LANGUAGE_CODE|default:'ar' }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page_title }} — Tadgeeg</title>
+  <meta name="description" content="{{ page_description }}">
+  <meta name="theme-color" content="#003366">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    /* Mirrors static/src/css/tokens.css. Landing pages are standalone
+       documents outside the Tailwind build, so tokens are restated as CSS
+       custom properties — values copied verbatim, never invented. */
+    :root {
+      --primary:      #003366;   /* --color-primary-500 */
+      --primary-600:  #002b57;   /* --color-primary-600 */
+      --primary-50:   #e6f0fa;   /* --color-primary-50  */
+      --accent:       #10b981;   /* --color-accent-500  */
+      --accent-600:   #059669;   /* --color-accent-600  */
+      --accent-50:    #ecfdf5;   /* --color-accent-50   */
+      --bg:           #f8fafc;   /* --bg-page           */
+      --card:         #ffffff;   /* --bg-card           */
+      --soft:         #f1f5f9;   /* --bg-soft           */
+      --border:       #e2e8f0;   /* --border            */
+      --border-soft:  #f1f5f9;   /* --border-soft       */
+      --text:         #1e293b;   /* --text              */
+      --text-muted:   #64748b;   /* --text-muted        */
+      --text-light:   #94a3b8;   /* --text-light        */
+      --shadow-sm:    0 1px 2px 0 rgb(0 51 102 / 5%);
+      --shadow-md:    0 4px 6px -1px rgb(0 51 102 / 8%);
+      --shadow-lg:    0 10px 15px -3px rgb(0 51 102 / 10%);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Tajawal','Cairo', system-ui, sans-serif;
+      color: var(--text); background: var(--bg);
+      line-height: 1.6; min-height: 100vh; overflow-x: hidden;
+    }
+    h1, h2, h3 { font-family: 'Cairo', sans-serif; color: var(--primary); }
+    a { text-decoration: none; }
+
+    .topbar { background: var(--card); border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; }
+    .topbar .logo { display: flex; align-items: center; gap: 10px; font-weight: 800; color: var(--primary); }
+    .topbar nav { display: flex; gap: 18px; align-items: center; }
+    .topbar nav a { color: var(--text-muted); font-size: 14px; font-weight: 500; }
+    .topbar nav a:hover, .topbar nav a.active { color: var(--primary); }
+
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+    .hero-head { text-align: center; padding: 56px 0 32px; }
+    .hero-head h1 { font-size: 38px; font-weight: 900; margin-bottom: 12px; }
+    .hero-head p { color: var(--text-muted); font-size: 17px; max-width: 640px; margin: 0 auto; }
+
+    /* Primary action = green (--color-accent-500). Not a "success" colour. */
+    .btn-primary { display: inline-flex; align-items: center; gap: 8px; background: var(--accent); color: #fff; padding: 12px 26px; border-radius: 10px; font-weight: 700; font-size: 15px; border: none; cursor: pointer; }
+    .btn-primary:hover { background: var(--accent-600); }
+    .btn-secondary { display: inline-flex; align-items: center; gap: 8px; background: var(--card); color: var(--primary); padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 14px; border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--primary); }
+
+    .cta-row { display: flex; justify-content: center; gap: 12px; margin-top: 22px; flex-wrap: wrap; align-items: center; }
+    .cta-note { width: 100%; text-align: center; font-size: 13px; color: var(--text-light); margin-top: 6px; }
+
+    /* ── Hero: the strategic partner, doubled visual area (§L.2) ───────── */
+    .strategic { background: var(--card); border: 2px solid var(--primary); border-radius: 18px; padding: 38px; margin: 26px 0 46px; box-shadow: var(--shadow-lg); display: grid; grid-template-columns: 200px 1fr; gap: 34px; align-items: center; }
+    .strategic .logo-box { width: 200px; height: 200px; border-radius: 14px; background: var(--soft); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .strategic .logo-box img { max-width: 84%; max-height: 84%; object-fit: contain; }
+    .strategic .logo-box .initials { font-family: 'Cairo'; font-size: 46px; font-weight: 900; color: var(--primary); }
+    .strategic h2 { font-size: 30px; font-weight: 900; margin: 10px 0 6px; }
+    .strategic .desc { color: var(--text-muted); font-size: 16px; margin: 12px 0 18px; max-width: 70ch; }
+
+    .badge { display: inline-block; padding: 5px 13px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .6px; }
+    .badge-strategic  { background: var(--primary);    color: #fff; }
+    .badge-platinum   { background: var(--primary-50); color: var(--primary); border: 1px solid var(--primary); }
+    .badge-gold       { background: #fef3c7;           color: #92400e; border: 1px solid #fcd34d; }
+    .badge-silver     { background: var(--soft);       color: var(--text-muted); border: 1px solid var(--border); }
+    .badge-distributor{ background: var(--accent-50);  color: var(--accent-600); border: 1px solid var(--accent); }
+
+    .meta-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .meta { font-size: 13px; color: var(--text-light); }
+
+    /* ── Tier sections ─────────────────────────────────────────────────── */
+    .section { margin-bottom: 44px; }
+    .section-head { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .section-head h3 { font-size: 20px; font-weight: 800; }
+    .section-head .rule { flex: 1; height: 1px; background: var(--border); }
+
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(268px, 1fr)); gap: 20px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 10px; box-shadow: var(--shadow-sm); }
+    .card:hover { box-shadow: var(--shadow-md); border-color: var(--primary-50); }
+    .card .logo-box { width: 62px; height: 62px; border-radius: 12px; background: var(--soft); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .card .logo-box img { max-width: 82%; max-height: 82%; object-fit: contain; }
+    .card .logo-box .initials { font-family: 'Cairo'; font-size: 22px; font-weight: 900; color: var(--primary); }
+    .card h4 { font-family: 'Cairo'; font-size: 17px; font-weight: 800; color: var(--primary); }
+    .card .desc { color: var(--text-muted); font-size: 14px; flex: 1; }
+    .card .foot { display: flex; gap: 10px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+
+    .empty { background: var(--card); border: 1px dashed var(--border); border-radius: 14px; padding: 40px; text-align: center; color: var(--text-muted); }
+
+    footer { border-top: 1px solid var(--border); margin-top: 40px; padding: 26px 0; text-align: center; color: var(--text-light); font-size: 13px; }
+
+    @media (max-width: 720px) {
+      .strategic { grid-template-columns: 1fr; text-align: center; }
+      .strategic .logo-box { width: 140px; height: 140px; margin: 0 auto; }
+      .hero-head h1 { font-size: 28px; }
+    }
+  
+    /* Partner-supplied text (name, country, description) carries its own
+       language, which is not always the page's. `plaintext` derives direction
+       from the content's first strong character, so an Arabic description on
+       the English page — and the reverse — keeps its punctuation at the right
+       end instead of jumping to the page's edge. */
+    .bidi-auto { unicode-bidi: plaintext; text-align: start; }
+</style>
+</head>
+<body>
+
+{% include "partials/public_header.html" with active_page="partners" %}
+
+  <div class="wrap">
+
+    <div class="hero-head">
+      <h1>{% trans "Our Partners" %}</h1>
+      <p>{{ page_description }}</p>
+      <div class="cta-row">
+        {% comment %} §D — «انضم كشريك». Phase 2B opened the application form, so
+           this now links to it. The disabled state AND its explanatory note were
+           removed together: leaving either behind would contradict the other.
+        {% endcomment %}
+        <a href="{% url 'frontend:partner_apply' %}" class="btn-primary">
+          {% trans "Join as a Partner" %}
+        </a>
+        <a href="/contact/" class="btn-secondary">{% trans "Contact us" %}</a>
+      </div>
+    </div>
+
+    {# ── 1: strategic hero, doubled area (§L.2) ───────────────────────── #}
+    {% for partner in strategic_partners %}
+    <div class="strategic">
+      <div class="logo-box">
+        {% if partner.logo %}
+          <img src="{{ partner.logo.url }}" alt="{{ partner.company_name }}">
+        {% else %}
+          <span class="initials">{{ partner.company_name|slice:":2"|upper }}</span>
+        {% endif %}
+      </div>
+      <div>
+        <span class="badge badge-strategic">{% trans "STRATEGIC PARTNER" %}</span>
+        <h2 class="bidi-auto">{{ partner.company_name }}</h2>
+        <div class="meta-row">
+          {% if partner.country %}<span class="meta">{{ partner.country.name }}</span>{% endif %}
+          <span class="meta">·</span>
+          <span class="meta">{{ partner.get_partner_type_display }}</span>
+        </div>
+        <p class="desc bidi-auto">{{ partner.short_description }}</p>
+        <div class="meta-row">
+          <a href="{% url 'frontend:partner_detail' partner.slug %}" class="btn-primary">
+            {% trans "View details" %}
+          </a>
+          {% if partner.website %}
+          <a href="{{ partner.website }}" class="btn-secondary" target="_blank" rel="noopener noreferrer">
+            {% trans "Visit website" %}
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+    {# ── 4: tier sections + the distributors section (§D3) ─────────────── #}
+    {% for section in partner_sections %}
+    <div class="section">
+      <div class="section-head">
+        <h3>
+          {% if section.key == 'platinum' %}{% trans "Platinum Partners" %}
+          {% elif section.key == 'gold' %}{% trans "Gold Partners" %}
+          {% elif section.key == 'silver' %}{% trans "Silver Partners" %}
+          {% else %}{% trans "Authorized Distributors" %}{% endif %}
+        </h3>
+        <span class="rule"></span>
+      </div>
+      <div class="grid">
+        {% for partner in section.partners %}
+        {% comment %} Card anatomy — 7 mandatory elements (§L.2):
+           logo · name · country · blurb · type · website · details button {% endcomment %}
+        <div class="card">
+          <div class="logo-box">
+            {% if partner.logo %}
+              <img src="{{ partner.logo.url }}" alt="{{ partner.company_name }}">
+            {% else %}
+              <span class="initials">{{ partner.company_name|slice:":2"|upper }}</span>
+            {% endif %}
+          </div>
+          <span class="badge badge-{{ section.key }}">{{ section.badge }}</span>
+          <h4>{{ partner.company_name }}</h4>
+          <div class="meta">
+            {% if partner.country %}{{ partner.country.name }} · {% endif %}
+            {{ partner.get_partner_type_display }}
+          </div>
+          <p class="desc bidi-auto">{{ partner.short_description }}</p>
+          <div class="foot">
+            <a href="{% url 'frontend:partner_detail' partner.slug %}" class="btn-secondary">
+              {% trans "Details" %}
+            </a>
+            {% if partner.website %}
+            <a href="{{ partner.website }}" class="btn-secondary" target="_blank" rel="noopener noreferrer">
+              {% trans "Website" %}
+            </a>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+
+    {% if not strategic_partners and not partner_sections %}
+    <div class="empty">{% trans "Partner listings are being prepared." %}</div>
+    {% endif %}
+
+  </div>
+
+  <footer>© {% now "Y" %} Tadgeeg — {% trans "All rights reserved" %}</footer>
+</body>
+</html>

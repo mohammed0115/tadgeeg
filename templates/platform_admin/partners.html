@@ -1,0 +1,172 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+
+{% comment %}
+Partner administration console (Phase 2A, §C/§F).
+
+Inherits the console shell, so colours and fonts come from the Tailwind build
+over static/src/css/tokens.css — navy identity, green primary action, white +
+border secondary. No hex value is written here.
+
+Publish and hide POST to dedicated audited endpoints rather than PATCHing
+`status`; the serializer treats status as read-only for exactly that reason.
+{% endcomment %}
+
+{% block page_title %}{% trans "Partners" %}{% endblock %}
+{% block breadcrumb_current %}{% trans "Partners" %}{% endblock %}
+
+{% block content %}
+<div x-data="partnersAdmin()" x-init="init()" class="space-y-5 fade-in">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans "Partners" %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+        {% trans "Manage the partner ecosystem shown on the public page" %}
+      </p>
+    </div>
+    <a href="/partners/" target="_blank" rel="noopener" class="btn-secondary">
+      <i data-lucide="external-link" class="w-4 h-4"></i>
+      {% trans "View public page" %}
+    </a>
+  </div>
+
+  <!-- Filters -->
+  <div class="card p-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <input type="search" x-model.debounce.400ms="filters.q" @input="reload()"
+             class="form-input text-sm" placeholder="{% trans 'Search partners...' %}">
+      <select x-model="filters.partner_tier" @change="reload()" class="form-select text-sm">
+        <option value="">{% trans "All tiers" %}</option>
+        {% for value, label in tier_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+      </select>
+      <select x-model="filters.partner_type" @change="reload()" class="form-select text-sm">
+        <option value="">{% trans "All types" %}</option>
+        {% for value, label in type_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+      </select>
+      <select x-model="filters.status" @change="reload()" class="form-select text-sm">
+        <option value="">{% trans "All statuses" %}</option>
+        {% for value, label in status_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 dark:bg-slate-800/60">
+          <tr>
+            <th class="p-3 text-start font-semibold text-slate-600 dark:text-slate-300">{% trans "Company" %}</th>
+            <th class="p-3 text-start font-semibold text-slate-600 dark:text-slate-300">{% trans "Country" %}</th>
+            <th class="p-3 text-start font-semibold text-slate-600 dark:text-slate-300">{% trans "Type" %}</th>
+            <th class="p-3 text-start font-semibold text-slate-600 dark:text-slate-300">{% trans "Tier" %}</th>
+            <th class="p-3 text-start font-semibold text-slate-600 dark:text-slate-300">{% trans "Status" %}</th>
+            <th class="p-3 text-start font-semibold text-slate-600 dark:text-slate-300">{% trans "Order" %}</th>
+            <th class="p-3 text-end font-semibold text-slate-600 dark:text-slate-300">{% trans "Actions" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="row in rows" :key="row.id">
+            <tr class="border-t border-slate-100 dark:border-slate-800">
+              <td class="p-3">
+                <div class="font-medium text-slate-800 dark:text-slate-100" x-text="row.company_name"></div>
+                <div class="text-xs text-slate-400" x-text="row.slug"></div>
+              </td>
+              <td class="p-3 text-slate-600 dark:text-slate-300" x-text="row.country || '—'"></td>
+              <td class="p-3 text-slate-600 dark:text-slate-300" x-text="row.partner_type"></td>
+              <td class="p-3 text-slate-600 dark:text-slate-300" x-text="row.partner_tier || '—'"></td>
+              <td class="p-3">
+                <span class="text-xs font-semibold"
+                      :class="row.status === 'published' ? 'text-emerald-600' : 'text-slate-500'"
+                      x-text="row.status"></span>
+              </td>
+              <td class="p-3">
+                <input type="number" min="0" class="form-input text-xs w-20"
+                       :value="row.display_order"
+                       @change="setOrder(row, $event.target.value)">
+              </td>
+              <td class="p-3 text-end">
+                <button type="button" class="btn-primary text-xs"
+                        x-show="row.status !== 'published'" @click="publish(row)">
+                  {% trans "Publish" %}
+                </button>
+                <button type="button" class="btn-secondary text-xs"
+                        x-show="row.status === 'published'" @click="hide(row)">
+                  {% trans "Hide" %}
+                </button>
+              </td>
+            </tr>
+          </template>
+          <tr x-show="!loading && !rows.length">
+            <td colspan="7" class="p-6 text-center text-slate-400">
+              {% trans "No partners match the current filters." %}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="p-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500">
+      <span x-text="count"></span> {% trans "partners" %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function partnersAdmin() {
+    return {
+      loading: true,
+      rows: [],
+      count: 0,
+      filters: { q: '', partner_tier: '', partner_type: '', status: '' },
+
+      query() {
+        const params = new URLSearchParams();
+        Object.entries(this.filters).forEach(([k, v]) => { if (v) params.append(k, v); });
+        return params.toString();
+      },
+
+      async init() { await this.reload(); },
+
+      async reload() {
+        this.loading = true;
+        try {
+          const res = await apiFetch('/api/platform-admin/partners/?' + this.query());
+          if (res && res.ok) {
+            const data = await res.json();
+            this.rows = data.results || [];
+            this.count = data.count || 0;
+          }
+        } catch (e) {
+          notify('{% trans "Failed to load partners" %}', 'error');
+        } finally {
+          this.loading = false;
+          this.$nextTick(() => lucide.createIcons());
+        }
+      },
+
+      async publish(row) {
+        const res = await apiFetch(`/api/platform-admin/partners/${row.id}/publish/`, { method: 'POST' });
+        if (res && res.ok) { notify('{% trans "Partner published" %}', 'success'); await this.reload(); }
+      },
+
+      async hide(row) {
+        const res = await apiFetch(`/api/platform-admin/partners/${row.id}/hide/`, { method: 'POST' });
+        if (res && res.ok) { notify('{% trans "Partner hidden" %}', 'success'); await this.reload(); }
+      },
+
+      async setOrder(row, value) {
+        const order = parseInt(value, 10);
+        if (Number.isNaN(order) || order < 0) return;
+        const res = await apiFetch('/api/platform-admin/partners/reorder/', {
+          method: 'POST',
+          body: JSON.stringify({ order: [{ id: row.id, display_order: order }] }),
+        });
+        if (res && res.ok) await this.reload();
+      },
+    };
+  }
+</script>
+{% endblock %}

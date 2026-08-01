@@ -1,0 +1,135 @@
+{% load i18n %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
+<!DOCTYPE html>
+{% comment %}
+Public partner profile (§C.4).
+
+Only reachable for published partners — the view resolves through
+Partner.published and raises 404 otherwise, so this template never has to
+decide whether a record may be shown.
+
+Rendered fields come from `partner_public` (Partner.public_payload()), an
+allow-list. contact_email / contact_phone are deliberately absent: §C.4 and §N
+require an explicit consent policy to publish partner contact details, and none
+exists. Do not add them here — add the policy first.
+
+Colours are the canonical tokens from static/src/css/tokens.css, restated as
+custom properties because landing pages sit outside the Tailwind build.
+{% endcomment %}
+<html lang="{{ LANGUAGE_CODE|default:'ar' }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page_title }} — Tadgeeg</title>
+  <meta name="description" content="{{ page_description }}">
+  <meta name="theme-color" content="#003366">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary:     #003366;  /* --color-primary-500 */
+      --primary-50:  #e6f0fa;  /* --color-primary-50  */
+      --accent:      #10b981;  /* --color-accent-500  */
+      --accent-600:  #059669;  /* --color-accent-600  */
+      --bg:          #f8fafc;  /* --bg-page           */
+      --card:        #ffffff;  /* --bg-card           */
+      --soft:        #f1f5f9;  /* --bg-soft           */
+      --border:      #e2e8f0;  /* --border            */
+      --text:        #1e293b;  /* --text              */
+      --text-muted:  #64748b;  /* --text-muted        */
+      --text-light:  #94a3b8;  /* --text-light        */
+      --shadow-lg:   0 10px 15px -3px rgb(0 51 102 / 10%);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Tajawal','Cairo', system-ui, sans-serif; color: var(--text); background: var(--bg); line-height: 1.7; }
+    h1, h2, h3 { font-family: 'Cairo', sans-serif; color: var(--primary); }
+    a { text-decoration: none; }
+
+    .topbar { background: var(--card); border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; }
+    .topbar .logo { font-weight: 800; color: var(--primary); }
+    .topbar nav { display: flex; gap: 18px; align-items: center; }
+    .topbar nav a { color: var(--text-muted); font-size: 14px; font-weight: 500; }
+
+    .wrap { max-width: 940px; margin: 0 auto; padding: 0 24px 48px; }
+    .crumb { padding: 22px 0 10px; font-size: 13px; color: var(--text-light); }
+    .crumb a { color: var(--text-muted); }
+
+    .head { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 34px; display: grid; grid-template-columns: 150px 1fr; gap: 28px; align-items: center; box-shadow: var(--shadow-lg); }
+    .logo-box { width: 150px; height: 150px; border-radius: 14px; background: var(--soft); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .logo-box img { max-width: 84%; max-height: 84%; object-fit: contain; }
+    .logo-box .initials { font-family: 'Cairo'; font-size: 38px; font-weight: 900; color: var(--primary); }
+    .head h1 { font-size: 30px; font-weight: 900; margin-bottom: 6px; }
+    .meta { color: var(--text-light); font-size: 14px; }
+
+    .badge { display: inline-block; padding: 5px 13px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .6px; background: var(--primary-50); color: var(--primary); border: 1px solid var(--primary); margin-bottom: 8px; }
+
+    .btn-primary { display: inline-flex; background: var(--accent); color: #fff; padding: 11px 22px; border-radius: 10px; font-weight: 700; font-size: 14px; }
+    .btn-primary:hover { background: var(--accent-600); }
+    .btn-secondary { display: inline-flex; background: var(--card); color: var(--primary); padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 14px; border: 1px solid var(--border); }
+
+    .body { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 30px; margin-top: 22px; }
+    .body h2 { font-size: 19px; margin-bottom: 12px; }
+    .body p { color: var(--text-muted); white-space: pre-line; }
+
+    footer { border-top: 1px solid var(--border); padding: 26px 0; text-align: center; color: var(--text-light); font-size: 13px; }
+
+    @media (max-width: 720px) {
+      .head { grid-template-columns: 1fr; text-align: center; }
+      .logo-box { margin: 0 auto; }
+    }
+  
+    /* Partner-supplied text (name, country, description) carries its own
+       language, which is not always the page's. `plaintext` derives direction
+       from the content's first strong character, so an Arabic description on
+       the English page — and the reverse — keeps its punctuation at the right
+       end instead of jumping to the page's edge. */
+    .bidi-auto { unicode-bidi: plaintext; text-align: start; }
+</style>
+</head>
+<body>
+
+{% include "partials/public_header.html" with active_page="partners" %}
+
+  <div class="wrap">
+    <div class="crumb">
+      <a href="/partners/">{% trans "Our Partners" %}</a> / <bdi>{{ partner_public.company_name }}</bdi>
+    </div>
+
+    <div class="head">
+      <div class="logo-box">
+        {% if partner_public.logo_url %}
+          <img src="{{ partner_public.logo_url }}" alt="{{ partner_public.company_name }}">
+        {% else %}
+          <span class="initials">{{ partner_public.company_name|slice:":2"|upper }}</span>
+        {% endif %}
+      </div>
+      <div>
+        <span class="badge">{{ partner.get_partner_tier_display|default:partner.get_partner_type_display|upper }}</span>
+        <h1 class="bidi-auto">{{ partner_public.company_name }}</h1>
+        <div class="meta">
+          {% if partner_public.country_name %}{{ partner_public.country_name }} · {% endif %}
+          {{ partner.get_partner_type_display }}
+        </div>
+        <p class="bidi-auto" style="color:var(--text-muted);margin:12px 0 16px">{{ partner_public.short_description }}</p>
+        {% if partner_public.website %}
+        <a href="{{ partner_public.website }}" class="btn-primary" target="_blank" rel="noopener noreferrer">
+          {% trans "Visit website" %}
+        </a>
+        {% endif %}
+        <a href="/partners/" class="btn-secondary">{% trans "All partners" %}</a>
+      </div>
+    </div>
+
+    {% if partner_public.long_description %}
+    <div class="body">
+      <h2>{% trans "About the partner" %}</h2>
+      <p class="bidi-auto">{{ partner_public.long_description }}</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <footer>© {% now "Y" %} Tadgeeg — {% trans "All rights reserved" %}</footer>
+</body>
+</html>

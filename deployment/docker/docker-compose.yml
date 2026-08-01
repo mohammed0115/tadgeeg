@@ -60,6 +60,11 @@ services:
       - static_live:/app/staticfiles
       - media_live:/app/media
       - logs_live:/app/logs
+      # Partner commercial registers and certificates. On NO volume before this,
+      # so every `docker compose up --build` destroyed them. Deliberately a
+      # separate volume from media_live: nginx serves media publicly and must
+      # never be able to reach this one.
+      - private_live:/app/private_media
 
   celery_live:
     build:
@@ -79,6 +84,7 @@ services:
     volumes:
       - media_live:/app/media
       - logs_live:/app/logs
+      - private_live:/app/private_media
 
   # ── Dev environment ──────────────────────────────────────────────────────────
   db_dev:
@@ -125,6 +131,7 @@ services:
       - static_dev:/app/staticfiles
       - media_dev:/app/media
       - logs_dev:/app/logs
+      - private_dev:/app/private_media
 
   celery_dev:
     build:
@@ -144,6 +151,7 @@ services:
     volumes:
       - media_dev:/app/media
       - logs_dev:/app/logs
+      - private_dev:/app/private_media
 
   # ── Test environment ─────────────────────────────────────────────────────────
   db_test:
@@ -190,6 +198,7 @@ services:
       - static_test:/app/staticfiles
       - media_test:/app/media
       - logs_test:/app/logs
+      - private_test:/app/private_media
 
   # ── Nginx reverse proxy ──────────────────────────────────────────────────────
   nginx:
@@ -230,3 +239,9 @@ volumes:
   logs_live:
   logs_dev:
   logs_test:
+  # Private partner documents. NOT mounted into the nginx container — see the
+  # nginx service above, which mounts only static_* and media_*. Adding these
+  # there would put third-party commercial registers behind a public alias.
+  private_live:
+  private_dev:
+  private_test:

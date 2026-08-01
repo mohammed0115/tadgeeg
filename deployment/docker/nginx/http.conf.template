@@ -30,6 +30,19 @@ server {
         access_log off;
     }
 
+    # Partner commercial registers and certificates are private and are
+    # downloaded only through a staff endpoint that checks permission per
+    # request. They live on their own volume, which is NOT mounted into this
+    # container — so nginx cannot serve them today.
+    #
+    # This block exists so that stays true. If someone later mounts the private
+    # volume here, or drops a symlink under the media root, the request fails
+    # CLOSED instead of publishing a third party's commercial register to
+    # anyone who guesses a URL.
+    location ^~ /private_media/ { return 404; }
+    location ^~ /media/partner_applications/ { return 404; }
+    location ^~ /media/private/ { return 404; }
+
     location /media/ {
         alias /vol/live/media/;
         expires 7d;
@@ -72,6 +85,19 @@ server {
         access_log off;
     }
 
+    # Partner commercial registers and certificates are private and are
+    # downloaded only through a staff endpoint that checks permission per
+    # request. They live on their own volume, which is NOT mounted into this
+    # container — so nginx cannot serve them today.
+    #
+    # This block exists so that stays true. If someone later mounts the private
+    # volume here, or drops a symlink under the media root, the request fails
+    # CLOSED instead of publishing a third party's commercial register to
+    # anyone who guesses a URL.
+    location ^~ /private_media/ { return 404; }
+    location ^~ /media/partner_applications/ { return 404; }
+    location ^~ /media/private/ { return 404; }
+
     location /media/ {
         alias /vol/dev/media/;
         expires 7d;
@@ -113,6 +139,19 @@ server {
         add_header Cache-Control "public, immutable";
         access_log off;
     }
+
+    # Partner commercial registers and certificates are private and are
+    # downloaded only through a staff endpoint that checks permission per
+    # request. They live on their own volume, which is NOT mounted into this
+    # container — so nginx cannot serve them today.
+    #
+    # This block exists so that stays true. If someone later mounts the private
+    # volume here, or drops a symlink under the media root, the request fails
+    # CLOSED instead of publishing a third party's commercial register to
+    # anyone who guesses a URL.
+    location ^~ /private_media/ { return 404; }
+    location ^~ /media/partner_applications/ { return 404; }
+    location ^~ /media/private/ { return 404; }
 
     location /media/ {
         alias /vol/test/media/;

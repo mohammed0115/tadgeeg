@@ -6,6 +6,8 @@
 .idea
 .vscode
 .editorconfig
+.ai-workspace
+.claude
 
 # --- Python ---
 .venv
@@ -46,6 +48,12 @@ staticfiles/*
 logs
 logs/*
 node_modules
+
+# Partner commercial registers and certificates. Runtime data on a docker
+# volume, never build input — copying it into the image would bake third-party
+# documents into every layer and every registry that stores them.
+private_media
+private_media/*
 
 # --- Logs / diagnostics ---
 *.log

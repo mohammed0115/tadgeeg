@@ -104,12 +104,18 @@ for env_name in live dev test; do
   fi
 done
 
-if [ ! -f "$SCRIPT_DIR/nginx/generated/default.conf" ]; then
-  bash "$SCRIPT_DIR/render_nginx_config.sh" http
-  ok "Generated nginx config"
-else
-  ok "Nginx config exists"
+# Always re-render from the template, in whichever mode is already in force.
+# This previously ran only when the generated file was missing — and it is
+# committed, so it never ran and template edits never reached the server.
+# The mode is detected, not assumed: rendering http over a live HTTPS site
+# would downgrade it.
+NGINX_MODE="http"
+if [ -f "$SCRIPT_DIR/nginx/generated/default.conf" ] \
+   && grep -q "listen 443" "$SCRIPT_DIR/nginx/generated/default.conf"; then
+  NGINX_MODE="https"
 fi
+bash "$SCRIPT_DIR/render_nginx_config.sh" "$NGINX_MODE"
+ok "Rendered nginx config from template (mode: $NGINX_MODE)"
 
 # ── 3. Build + restart ────────────────────────────────────────────────────────
 log "3/4  Building and restarting containers for [$TARGET] ..."

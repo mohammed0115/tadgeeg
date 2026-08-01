@@ -117,7 +117,17 @@ fi
 log "2/5  Source"
 cd "$PROJECT_ROOT"
 if [ "$DO_PULL" -eq 1 ]; then
-  git pull --ff-only || die "git pull failed (local changes or diverged history?)"
+  # Only fetch/pull when actually behind. Operators normally run `git pull`
+  # themselves first, and pulling again over HTTPS asks for a GitHub password
+  # a second time for no gain.
+  BRANCH_NAME="$(git rev-parse --abbrev-ref HEAD)"
+  if git fetch --quiet origin "$BRANCH_NAME" 2>/dev/null \
+     && [ -n "$(git rev-list --count HEAD..origin/"$BRANCH_NAME" 2>/dev/null)" ] \
+     && [ "$(git rev-list --count HEAD..origin/"$BRANCH_NAME")" -gt 0 ]; then
+    git pull --ff-only || die "git pull failed (local changes or diverged history?)"
+  else
+    ok "Already at the latest commit — no pull needed"
+  fi
 fi
 ok "HEAD: $(git rev-parse --short HEAD) — $(git log -1 --pretty=%s)"
 
@@ -137,7 +147,8 @@ ok "Rendered (mode: $NGINX_MODE)"
 
 # ── 4. Build and start ──────────────────────────────────────────────────────
 log "4/5  Build and start"
-bash "$SCRIPT_DIR/deploy.sh" "$TARGET" up \
+# deploy.sh takes ACTION first, TARGET second (deploy.sh:6-7).
+bash "$SCRIPT_DIR/deploy.sh" up "$TARGET" \
   || die "Build/start failed. The entrypoint runs migrate, compilemessages,
      collectstatic and the seeds — check the container logs:
        docker compose -f $COMPOSE_FILE logs --tail=80 $WEB"
@@ -148,7 +159,21 @@ compose exec -T nginx nginx -s reload >/dev/null 2>&1 \
 
 # ── 5. Verification ─────────────────────────────────────────────────────────
 log "5/5  Post-deploy verification"
-sleep 6
+
+# Wait for the app to answer rather than guessing at a duration. The entrypoint
+# runs migrations, compilemessages, collectstatic and three seeds before
+# gunicorn binds — on a first deploy of several phases that is well over a
+# fixed 6s, and a short sleep would report a healthy deploy as broken.
+printf '  waiting for %s ' "$DOMAIN"
+for _ in $(seq 1 60); do
+  if [ "$(curl -sk -o /dev/null -w '%{http_code}' --max-time 5 "https://${DOMAIN}/" || echo 000)" = "200" ]; then
+    printf ' up\n'
+    break
+  fi
+  printf '.'
+  sleep 5
+done
+echo
 
 check() {  # url  expected-codes  label
   local code

@@ -53,6 +53,16 @@ warn() { printf '\033[1;33m  ! %s\033[0m\n' "$1"; }
 die()  { printf '\n\033[1;31m✗ %s\033[0m\n' "$1" >&2; exit 1; }
 compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
 
+# Read ONE value from an env file without sourcing it.
+#
+# These files contain unquoted values with spaces (SERVER_NAMES=a.com www.a.com),
+# so `. file` makes the shell try to execute the second word as a command.
+# `cut -d= -f2-` keeps '=' characters inside passwords intact.
+env_value() {  # key file
+  grep -E "^[[:space:]]*$1=" "$2" | tail -1 | cut -d= -f2- | sed 's/^["'"'"']//; s/["'"'"']$//'
+}
+
+
 # ── list ────────────────────────────────────────────────────────────────────
 if [ "$ACTION" = "list" ]; then
   echo "Backups for $TARGET:"
@@ -77,12 +87,10 @@ if [ "$ACTION" = "restore" ]; then
   read -r confirm
   [ "$confirm" = "$TARGET" ] || die "Aborted (typed '$confirm', expected '$TARGET')."
 
-  set -a; . "$SCRIPT_DIR/env/${TARGET}.env"; set +a
-
   if [ -f "$RESTORE_DIR/db.sql.gz" ]; then
     gzip -t "$RESTORE_DIR/db.sql.gz" || die "The dump is corrupt — refusing to restore from it."
     gunzip -c "$RESTORE_DIR/db.sql.gz" \
-      | compose exec -T "$DB" sh -c "exec mysql -u root -p\"\$MYSQL_ROOT_PASSWORD\" \"\$MYSQL_DATABASE\"" \
+      | compose exec -T "$DB" sh -c 'exec mysql -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' \
       || die "Database restore failed."
     ok "Database restored"
   else
@@ -113,7 +121,6 @@ echo "  Backup: $TARGET  →  $DEST"
 echo "════════════════════════════════════════════════"
 
 [ -f "$SCRIPT_DIR/env/${TARGET}.env" ] || die "Missing env file for $TARGET"
-set -a; . "$SCRIPT_DIR/env/${TARGET}.env"; set +a
 
 # 1. database
 compose ps --status running --services 2>/dev/null | grep -q "^${DB}$" \
@@ -123,9 +130,9 @@ compose ps --status running --services 2>/dev/null | grep -q "^${DB}$" \
 # which matters on live. --routines/--triggers because a schema-only dump that
 # silently drops them restores into a subtly different database.
 compose exec -T "$DB" sh -c \
-  "exec mysqldump -u root -p\"\$MYSQL_ROOT_PASSWORD\" \
+  'exec mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" \
      --single-transaction --quick --routines --triggers --events \
-     \"\$MYSQL_DATABASE\"" \
+     "$MYSQL_DATABASE"' \
   | gzip > "$DEST/db.sql.gz" \
   || die "mysqldump failed — backup NOT taken."
 
@@ -158,7 +165,7 @@ fi
   echo "taken_at    : $(date -Is)"
   echo "git_commit  : $(git -C "$SCRIPT_DIR/../.." rev-parse HEAD 2>/dev/null || echo unknown)"
   echo "git_subject : $(git -C "$SCRIPT_DIR/../.." log -1 --pretty=%s 2>/dev/null || echo unknown)"
-  echo "db_name     : ${MYSQL_DATABASE:-unknown}"
+  echo "db_name     : $(env_value MYSQL_DATABASE "$SCRIPT_DIR/env/${TARGET}.env")"
 } > "$DEST/MANIFEST.txt"
 ok "Manifest written"
 

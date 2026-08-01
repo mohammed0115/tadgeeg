@@ -46,6 +46,16 @@ die()  { printf '\n\033[1;31m✗ DEPLOY STOPPED: %s\033[0m\n' "$1" >&2; exit 1; 
 
 compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
 
+# Read ONE value from an env file without sourcing it.
+#
+# These files contain unquoted values with spaces (SERVER_NAMES=a.com www.a.com),
+# so `. file` makes the shell try to execute the second word as a command.
+# `cut -d= -f2-` keeps '=' characters inside passwords intact.
+env_value() {  # key file
+  grep -E "^[[:space:]]*$1=" "$2" | tail -1 | cut -d= -f2- | sed 's/^["'"'"']//; s/["'"'"']$//'
+}
+
+
 case "$TARGET" in
   live) WEB=web_live;  DB=db_live;  DOMAIN=tadgeeg.com ;;
   dev)  WEB=web_dev;   DB=db_dev;   DOMAIN=dev.tadgeeg.com ;;
@@ -89,10 +99,10 @@ if [ "$DO_BACKUP" -eq 1 ]; then
   STAMP="$(date +%Y%m%d-%H%M%S)"
   BACKUP_FILE="$BACKUP_DIR/${TARGET}-${STAMP}.sql.gz"
   if compose ps --status running --services 2>/dev/null | grep -q "^${DB}$"; then
-    # Read credentials from the env file rather than echoing them anywhere.
-    set -a; . "$SCRIPT_DIR/env/${TARGET}.env"; set +a
+    # Credentials come from the DB container's own environment — never echoed
+    # here, and never sourced (see env_value above).
     compose exec -T "$DB" sh -c \
-      "exec mysqldump -u root -p\"\$MYSQL_ROOT_PASSWORD\" --single-transaction --quick \"\$MYSQL_DATABASE\"" \
+      'exec mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" --single-transaction --quick "$MYSQL_DATABASE"' \
       | gzip > "$BACKUP_FILE" \
       || die "Backup failed. Not deploying — this deploy applies migrations."
     ok "Backup: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"

@@ -428,6 +428,10 @@
         ["/api/v1/cms/admin/leads/", "/api/platform-admin/leads/"],
         ["/api/v1/cms/admin/media/", "/api/platform-admin/media/"],
         ["/api/v1/cms/admin/storage-providers/", "/api/platform-admin/storage/providers/"],
+        // Per-key setting writes (settings.html saveSetting) — the bare
+        // /settings/ path is handled by exactMappings above; this covers
+        // /settings/<key>/, which resolves to PlatformSettingDetailView.
+        ["/api/v1/cms/admin/settings/", "/api/platform-admin/settings/"],
         ["/api/v1/auth/organizations/", "/api/platform-admin/organizations/"]
       ];
 

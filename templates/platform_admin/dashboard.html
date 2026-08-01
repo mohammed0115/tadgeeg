@@ -41,8 +41,14 @@
       <template x-if="loading">
         <div class="h-8 w-16 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
       </template>
-      <template x-if="!loading">
+      <!-- Recruitment module is quarantined (apps.jobs not installed). Show
+           that explicitly: a "0" here would read as "no open jobs", which is
+           a different — and false — claim. -->
+      <template x-if="!loading && stats.jobs_feature_enabled">
         <p class="text-3xl font-black text-slate-900 dark:text-white" x-text="(stats.active_jobs || 0).toLocaleString()"></p>
+      </template>
+      <template x-if="!loading && !stats.jobs_feature_enabled">
+        <p class="text-sm font-semibold text-slate-400 dark:text-slate-500">{% trans "Feature not enabled" %}</p>
       </template>
     </div>
 
@@ -94,12 +100,16 @@
         <i data-lucide="home" class="w-6 h-6 text-indigo-600 dark:text-indigo-400"></i>
         <span class="text-xs font-semibold text-indigo-700 dark:text-indigo-300">{% trans "Edit Homepage" %}</span>
       </a>
-      <a href="/platform-admin/jobs/"
-         class="flex flex-col items-center gap-2 p-4 rounded-xl bg-violet-50 dark:bg-violet-900/20
-                hover:bg-violet-100 dark:hover:bg-violet-900/40 transition text-center">
-        <i data-lucide="briefcase" class="w-6 h-6 text-violet-600 dark:text-violet-400"></i>
-        <span class="text-xs font-semibold text-violet-700 dark:text-violet-300">{% trans "Jobs" %}</span>
-      </a>
+      <!-- Recruitment module quarantined — the page loads but every API call
+           on it 404s, so the entry is shown disabled instead of linking to a
+           screen that cannot work. See docs/adr/0003-quarantine-apps-jobs.md -->
+      <div class="flex flex-col items-center gap-2 p-4 rounded-xl bg-slate-100 dark:bg-slate-800/40
+                  text-center opacity-60 cursor-not-allowed"
+           title="{% trans 'Feature not enabled' %}">
+        <i data-lucide="briefcase" class="w-6 h-6 text-slate-400 dark:text-slate-500"></i>
+        <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">{% trans "Jobs" %}</span>
+        <span class="text-[10px] text-slate-400 dark:text-slate-500">{% trans "Feature not enabled" %}</span>
+      </div>
       <a href="/platform-admin/leads/"
          class="flex flex-col items-center gap-2 p-4 rounded-xl bg-amber-50 dark:bg-amber-900/20
                 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition text-center">
@@ -188,8 +198,11 @@
           <template x-if="loading">
             <div class="h-4 w-10 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
           </template>
-          <template x-if="!loading">
+          <template x-if="!loading && stats.jobs_feature_enabled">
             <span class="badge-indigo" x-text="stats.active_jobs || 0"></span>
+          </template>
+          <template x-if="!loading && !stats.jobs_feature_enabled">
+            <span class="text-xs text-slate-400 dark:text-slate-500">{% trans "Feature not enabled" %}</span>
           </template>
         </div>
         <div class="flex items-center justify-between">

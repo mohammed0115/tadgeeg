@@ -13,7 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary:       #073763;
+      --primary:       #003366;   /* unified with static/src/css/tokens.css --color-primary-500 (D6) */
       --primary-dark:  #052747;
       --accent:        #11B565;
       --accent-dark:   #0E9C56;
@@ -52,7 +52,25 @@
     .hero p { color: var(--text-muted); font-size: 17px; }
 
     .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 24px 80px; }
-    .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; align-items: stretch; }
+    /* §L.4: the six main plans sit in ONE row that scrolls horizontally on
+       small screens — not a wrapping grid. repeat(4,…) wrapped them 4+2 and
+       left an orphan row. The accounting section keeps the plain 3-up grid. */
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; align-items: stretch; }
+    .grid-plans {
+      display: grid; grid-template-columns: repeat(6, minmax(200px, 1fr));
+      gap: 18px; align-items: stretch;
+    }
+    @media (max-width: 1180px) {
+      /* Scroll rather than wrap, so the commercial ladder stays readable
+         left-to-right (right-to-left in Arabic) instead of breaking mid-tier. */
+      .grid-plans {
+        grid-auto-flow: column; grid-auto-columns: minmax(240px, 1fr);
+        grid-template-columns: none;
+        overflow-x: auto; scroll-snap-type: x mandatory;
+        padding-bottom: 12px; margin-inline: -24px; padding-inline: 24px;
+      }
+      .grid-plans > .card { scroll-snap-align: start; }
+    }
     @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 580px)  { .grid { grid-template-columns: 1fr; } }
 
@@ -95,6 +113,14 @@
     .footnote { text-align: center; margin-top: 32px; font-size: 13px; color: var(--text-muted); }
     .footnote a { color: var(--primary); font-weight: 600; }
 
+    .quote { font-size: 22px; font-weight: 800; color: var(--primary); }
+    .limits { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 4px; }
+    .limit-box { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+    .accounting { margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--border); }
+    .accounting-head { text-align: center; margin-bottom: 22px; }
+    .accounting-tag { display: inline-block; background: var(--accent); color: #fff; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 999px; letter-spacing: .4px; }
+    .accounting-head h2 { font-family: 'Cairo', sans-serif; color: var(--primary); font-size: 24px; font-weight: 900; margin: 10px 0 6px; }
+    .accounting-head p { color: var(--text-muted); font-size: 15px; }
     .empty { background: white; border: 1px dashed var(--border); border-radius: 16px; padding: 56px 24px; text-align: center; color: var(--text-muted); }
 
     /* ===== Responsive ===== */
@@ -120,26 +146,7 @@
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <a class="logo" href="{% url 'frontend:home' %}">
-      <svg class="mark" viewBox="0 0 100 100" fill="none" aria-hidden="true">
-        <circle cx="50" cy="50" r="46" stroke="#073763" stroke-width="6"/>
-        <path d="M28 50 L44 66 L72 36" stroke="#11B565" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-      </svg>
-      <span>Tadgeeg</span>
-    </a>
-    <nav>
-      <a href="{% url 'frontend:home' %}">{% trans "Home" %}</a>
-      <a href="{% url 'frontend:pricing' %}" class="active">{% trans "Pricing" %}</a>
-      <a href="{% url 'frontend:about' %}">{% trans "About" %}</a>
-      <a href="{% url 'frontend:contact' %}">{% trans "Contact" %}</a>
-      {% if is_authenticated %}
-        <a href="{% url 'frontend:dashboard' %}" class="cta">{% trans "Dashboard" %}</a>
-      {% else %}
-        <a href="{% url 'frontend:register' %}" class="cta">{% trans "Start free trial" %}</a>
-      {% endif %}
-    </nav>
-  </header>
+{% include "partials/public_header.html" with active_page="pricing" %}
 
   <section class="hero">
     <span class="eyebrow">{{ page_eyebrow }}</span>
@@ -153,15 +160,17 @@
         {% trans "Pricing is being prepared. Please check back shortly." %}
       </div>
     {% else %}
-      <div class="grid">
-        {% for plan in plans %}
+      <div class="grid-plans">
+        {% for plan in business_plans %}
           {% with code=plan.code %}
           <article class="card {% if code == 'business' %}featured{% endif %} {% if plan.is_trial %}trial{% endif %}" data-plan="{{ code }}">
             {% if plan.is_trial %}<span class="badge-first">{% trans "First time only" %}</span>{% endif %}
             <h3 class="plan-name">{% if LANGUAGE_CODE == 'ar' %}{{ plan.name_ar|default:plan.name_en }}{% else %}{{ plan.name_en|default:plan.name_ar }}{% endif %}</h3>
             <p class="plan-desc">{% if LANGUAGE_CODE == 'ar' %}{{ plan.description_ar|default:plan.description_en|default:"" }}{% else %}{{ plan.description_en|default:plan.description_ar|default:"" }}{% endif %}</p>
             <div class="price">
-              {% if plan.is_free %}
+              {% if plan.is_custom_quote %}
+                <span class="quote">{% trans "Custom quote" %}</span>
+              {% elif plan.is_free %}
                 <span class="free">{% trans "Free" %}</span>
               {% else %}
                 <span class="num">{{ plan.price|floatformat:0 }}</span>
@@ -169,11 +178,29 @@
               {% endif %}
             </div>
             <div class="duration">
-              {% blocktrans with count=plan.invoice_limit days=plan.duration_days %}{{ count }} invoices · {{ days }} days{% endblocktrans %}
+              {% comment %} invoice_limit is NULL for unlimited plans — the template
+                 must say "unlimited", never render an empty string or a 0. {% endcomment %}
+              {% if plan.invoice_limit is None %}
+                {% trans "Unlimited invoices" %}
+              {% else %}
+                {% blocktrans with count=plan.invoice_limit days=plan.duration_days %}{{ count }} invoices · {{ days }} days{% endblocktrans %}
+              {% endif %}
+            </div>
+            <div class="limits">
+              {% if plan.user_limit is None %}
+                <span class="limit-box">{% trans "Unlimited users" %}</span>
+              {% else %}
+                <span class="limit-box">{% blocktrans with n=plan.user_limit %}{{ n }} users{% endblocktrans %}</span>
+              {% endif %}
+              {% if plan.invoice_limit is None %}
+                <span class="limit-box">{% trans "Unlimited invoices" %}</span>
+              {% else %}
+                <span class="limit-box">{% blocktrans with n=plan.invoice_limit %}{{ n }} invoices/mo{% endblocktrans %}</span>
+              {% endif %}
             </div>
             <ul class="features">
               <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
-                  <span>{% blocktrans with count=plan.invoice_limit %}{{ count }} invoice audits{% endblocktrans %}</span></li>
+                  <span>{% if plan.invoice_limit is None %}{% trans "Unlimited invoice audits" %}{% else %}{% blocktrans with count=plan.invoice_limit %}{{ count }} invoice audits{% endblocktrans %}{% endif %}</span></li>
               <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
                   <span>{% trans "Bulk upload (CSV / Excel / ZIP)" %}</span></li>
               <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
@@ -181,7 +208,15 @@
               <li><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
                   <span>{% trans "Email + dashboard reports" %}</span></li>
             </ul>
-            {% if is_authenticated %}
+            {% comment %} A custom-quote plan has no list price, so it must never
+               offer a purchase path — the checkout would have nothing to charge.
+               SelectPlanView refuses it server-side too (409 contact_sales);
+               this is the matching UI, not the enforcement. {% endcomment %}
+            {% if plan.is_custom_quote %}
+              <a class="btn btn-outline" href="{% url 'frontend:contact' %}">
+                {% trans "Contact sales" %}
+              </a>
+            {% elif is_authenticated %}
               <a class="btn {% if code == 'business' %}btn-primary{% else %}btn-outline{% endif %}" href="/billing/plans/">
                 {% if plan.is_trial %}{% trans "Start trial" %}
                 {% elif code == 'business' %}{% trans "Choose this plan" %}
@@ -196,6 +231,57 @@
           {% endwith %}
         {% endfor %}
       </div>
+
+      {% comment %} §L.4 — accounting-firm plans get their own titled section
+         rather than being mixed into the main row: they address a different
+         buyer and are priced on a different basis. {% endcomment %}
+      {% if accounting_plans %}
+      <section class="accounting">
+        <div class="accounting-head">
+          <span class="accounting-tag">{% trans "Competitive advantage" %}</span>
+          <h2>{% trans "Plans for accounting firms" %}</h2>
+          <p>{% trans "Built for practices auditing on behalf of multiple clients." %}</p>
+        </div>
+        <div class="grid">
+          {% for plan in accounting_plans %}
+            {% with code=plan.code %}
+            <article class="card" data-plan="{{ code }}">
+              <h3 class="plan-name">{% if LANGUAGE_CODE == 'ar' %}{{ plan.name_ar|default:plan.name_en }}{% else %}{{ plan.name_en|default:plan.name_ar }}{% endif %}</h3>
+              <p class="plan-desc">{% if LANGUAGE_CODE == 'ar' %}{{ plan.description_ar|default:plan.description_en|default:"" }}{% else %}{{ plan.description_en|default:plan.description_ar|default:"" }}{% endif %}</p>
+              <div class="price">
+                {% if plan.is_custom_quote %}
+                  <span class="quote">{% trans "Custom quote" %}</span>
+                {% else %}
+                  <span class="num">{{ plan.price|floatformat:0 }}</span>
+                  <span class="currency">{{ plan.currency }} / {% trans "month" %}</span>
+                {% endif %}
+              </div>
+              <div class="limits">
+                {% if plan.user_limit is None %}
+                  <span class="limit-box">{% trans "Unlimited users" %}</span>
+                {% else %}
+                  <span class="limit-box">{% blocktrans with n=plan.user_limit %}{{ n }} users{% endblocktrans %}</span>
+                {% endif %}
+                {% if plan.invoice_limit is None %}
+                  <span class="limit-box">{% trans "Unlimited invoices" %}</span>
+                {% else %}
+                  <span class="limit-box">{% blocktrans with n=plan.invoice_limit %}{{ n }} invoices/mo{% endblocktrans %}</span>
+                {% endif %}
+              </div>
+              {% if plan.is_custom_quote %}
+                <a class="btn btn-outline" href="{% url 'frontend:contact' %}">{% trans "Contact sales" %}</a>
+              {% elif is_authenticated %}
+                <a class="btn btn-outline" href="/billing/plans/">{% trans "Subscribe" %}</a>
+              {% else %}
+                <a class="btn btn-outline" href="{% url 'frontend:register' %}">{% trans "Start free trial" %}</a>
+              {% endif %}
+            </article>
+            {% endwith %}
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
       <p class="footnote">
         {% trans "Already subscribed?" %}
         <a href="/billing/subscription/">{% trans "Manage your subscription →" %}</a>

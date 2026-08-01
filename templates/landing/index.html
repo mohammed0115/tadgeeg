@@ -1314,43 +1314,7 @@
 <body>
 
   <!-- ===== Navigation ===== -->
-  <nav class="navbar">
-    <div class="nav-content">
-      <a href="{% url 'frontend:home' %}" class="logo">
-        <div class="logo-mark">
-          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="50" cy="50" r="40" stroke="#003366" stroke-width="8" fill="none"/>
-            <path d="M28 50 L44 66 L72 36" stroke="#10B981" stroke-width="9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <div class="logo-text">
-          <span class="ar">تدقيق</span>
-          <span class="en">{{ product_name }}</span>
-          <span class="tagline">{% trans "Financial Auditing" %}</span>
-        </div>
-      </a>
-
-      <ul class="nav-links">
-        <li><a href="#home">{% trans "Home" %}</a></li>
-        <li><a href="#features">{% trans "Features" %}</a></li>
-        <li><a href="{% url 'frontend:pricing' %}">{% trans "Pricing" %}</a></li>
-        <li><a href="{% url 'frontend:about' %}">{% trans "About" %}</a></li>
-        <li><a href="{% url 'frontend:contact' %}">{% trans "Contact" %}</a></li>
-      </ul>
-
-      <div class="nav-actions">
-        {# Custom pill language toggle (AR | EN) — see partials/language_switcher_select.html. #}
-        {% include "partials/language_switcher_select.html" %}
-        <a href="{% url 'frontend:login' %}" class="btn btn-outline">{% trans "Sign In" %}</a>
-        <a href="{% url 'frontend:register' %}" class="btn btn-primary">{% trans "Start Free Trial" %}</a>
-        <div class="menu-toggle" onclick="toggleMenu()">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-      </div>
-    </div>
-  </nav>
+{% include "partials/public_header.html" with active_page="home" mobile_drawer=True %}
 
   <!-- Mobile menu -->
   <div class="menu-overlay" onclick="toggleMenu()"></div>
@@ -1360,6 +1324,7 @@
       <li><a href="#features">{% trans "Features" %}</a></li>
       <li><a href="{% url 'frontend:services' %}">{% trans "Services" %}</a></li>
       <li><a href="{% url 'frontend:pricing' %}">{% trans "Pricing" %}</a></li>
+      <li><a href="{% url 'frontend:partners' %}">{% trans "Partners" %}</a></li>
       <li><a href="{% url 'frontend:about' %}">{% trans "About" %}</a></li>
       <li><a href="{% url 'frontend:contact' %}">{% trans "Contact" %}</a></li>
     </ul>

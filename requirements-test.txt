@@ -27,3 +27,6 @@ memory-profiler==0.61.0
 coverage==7.13.5
 coverage-badge==1.1.2
 pyzbar  
+# Reads the gettext catalogue in tests/test_arabic_coverage.py. A regex
+# cannot: gettext wraps long msgids across continuation lines.
+polib>=1.2

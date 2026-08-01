@@ -1,8 +1,10 @@
 """Platform admin console template views."""
 
 from django.shortcuts import redirect, render
+from django.utils.translation import gettext_lazy as _
 
 from core.dashboard_context import build_platform_context
+from core.feature_flags import jobs_enabled
 from core.permissions import platform_admin_required
 
 
@@ -97,11 +99,104 @@ def intro_video_editor(request):
 
 @platform_admin_required
 def jobs_manager(request):
-    return render(
-        request,
-        "platform_admin/jobs.html",
-        build_platform_context(request, active_key="jobs"),
+    """Recruitment console — disabled while apps.jobs is quarantined.
+
+    ``templates/platform_admin/jobs.html`` is deliberately left on disk (and
+    still renders correctly once the module is registered), but it is NOT
+    rendered here: apps.jobs is absent from INSTALLED_APPS, so every API call
+    that page makes 404s. Serving it would give staff a screen that loads and
+    then silently fails on every action. We render an explicit unavailable
+    state instead. See docs/adr/0003-quarantine-apps-jobs.md.
+    """
+    if jobs_enabled():                                  # pragma: no cover
+        # Reached only once apps.jobs is registered again.
+        return render(
+            request,
+            "platform_admin/jobs.html",
+            build_platform_context(request, active_key="jobs"),
+        )
+    context = build_platform_context(request, active_key="jobs")
+    context.update(
+        feature_title=_("Jobs & Careers"),
+        feature_reason=_(
+            "The recruitment module is not installed on this deployment, so job "
+            "listings and applications cannot be loaded or edited."
+        ),
     )
+    return render(request, "platform_admin/feature_unavailable.html", context)
+
+
+@platform_admin_required
+def partner_applications(request):
+    """Partner application review console (Phase 3A STEP 0).
+
+    A UI over the endpoints Phase 2B already shipped and tested. Server-renders
+    only the choice lists; every read and every transition goes through
+    /api/platform-admin/partner-applications/*, which is staff-only and audits
+    each transition.
+    """
+    from apps.authentication.models import Organization
+    from apps.partners.models import ApplicationStatus, PartnerTier, PartnerType
+
+    context = build_platform_context(request, active_key="partner_applications")
+    context.update(
+        country_choices=Organization.Country.choices,
+        type_choices=PartnerType.choices,
+        tier_choices=PartnerTier.choices,
+        status_choices=ApplicationStatus.choices,
+    )
+    return render(request, "platform_admin/partner_applications.html", context)
+
+
+@platform_admin_required
+def partners_manager(request):
+    """Partner administration console (Phase 2A).
+
+    Server-renders only the choice lists; the table and every mutation go
+    through /api/platform-admin/partners/*, which is staff-only and audits
+    publish/hide.
+    """
+    from apps.partners.models import PartnerStatus, PartnerTier, PartnerType
+
+    context = build_platform_context(request, active_key="partners")
+    context.update(
+        type_choices=PartnerType.choices,
+        tier_choices=PartnerTier.choices,
+        status_choices=PartnerStatus.choices,
+    )
+    return render(request, "platform_admin/partners.html", context)
+
+
+@platform_admin_required
+def trial_users(request):
+    """Trial Users Dashboard shell (§B / §L.5).
+
+    Server-renders only the choice lists and the purchasable-plan list; every
+    metric is fetched from /api/platform-admin/trial-users/* so aggregation
+    stays in SQL and this view does no counting.
+
+    Choice labels are passed as JSON for the Alpine layer because the API
+    returns raw enum values — sending labels per row would bloat every
+    response and duplicate the translation.
+    """
+    import json
+
+    from apps.authentication.models import Organization
+    from apps.billing.services.plan_service import list_purchasable_plans
+    from apps.leads.models import TrialLeadProfile
+
+    country_choices = Organization.Country.choices
+    client_type_choices = TrialLeadProfile.PrimaryBenefit.choices
+
+    context = build_platform_context(request, active_key="trial_users")
+    context.update(
+        country_choices=country_choices,
+        client_type_choices=client_type_choices,
+        country_labels_json=json.dumps({k: str(v) for k, v in country_choices}),
+        client_type_labels_json=json.dumps({k: str(v) for k, v in client_type_choices}),
+        purchasable_plans=list(list_purchasable_plans()),
+    )
+    return render(request, "platform_admin/trial_users.html", context)
 
 
 @platform_admin_required

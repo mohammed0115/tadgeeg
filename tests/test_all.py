@@ -555,6 +555,11 @@ class FrontendRouteTests(BaseFinAITestCase):
                 "email": "new-auditor@finai.sa",
                 "password": "StrongPass123!",
                 "password_confirm": "StrongPass123!",
+                # Phase 1 (spec §A.1/§A.2): registration now requires these
+                # server-side. Assertions below are unchanged.
+                "phone": "+966501234567",
+                "country": "SA",
+                "primary_benefit": "company",
             },
         )
 
@@ -713,6 +718,10 @@ class EmailOTPFlowTests(BaseFinAITestCase):
                 "email": email,
                 "password": "StrongPass123!",
                 "password_confirm": "StrongPass123!",
+                # Phase 1 (spec §A.1/§A.2) — required at registration.
+                "phone": "+966501234567",
+                "country": "SA",
+                "primary_benefit": "company",
             },
         )
         self.assertEqual(response.status_code, 200)

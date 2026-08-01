@@ -17,6 +17,9 @@ urlpatterns = [
     path("intro-video/", views.intro_video_editor, name="intro_video"),
     # Recruitment & Leads
     path("jobs/", views.jobs_manager, name="jobs"),
+    path("partner-applications/", views.partner_applications, name="partner_applications"),
+    path("partners/", views.partners_manager, name="partners"),
+    path("trial-users/", views.trial_users, name="trial_users"),
     path("leads/", views.leads_manager, name="leads"),
     # Technical
     path("seo/", views.seo_settings, name="seo"),

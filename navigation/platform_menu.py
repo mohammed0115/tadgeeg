@@ -76,11 +76,29 @@ PLATFORM_MENU = [
         "section": "growth",
         "section_label": _("Growth"),
         "items": [
+            # "jobs" is intentionally absent: apps.jobs is quarantined (not in
+            # INSTALLED_APPS), so the recruitment screen cannot load or save
+            # anything. The route still exists and renders an explicit
+            # "feature not enabled" page for anyone reaching it by URL.
+            # Restore this entry when re-enabling the module —
+            # see docs/adr/0003-quarantine-apps-jobs.md
             {
-                "key": "jobs",
-                "label": _("Jobs"),
-                "route_name": PlatformAdminRoute.JOBS,
-                "icon": "briefcase",
+                "key": "trial_users",
+                "label": _("Trial Users"),
+                "route_name": PlatformAdminRoute.TRIAL_USERS,
+                "icon": "user-plus",
+            },
+            {
+                "key": "partners",
+                "label": _("Partners"),
+                "route_name": PlatformAdminRoute.PARTNERS,
+                "icon": "handshake",
+            },
+            {
+                "key": "partner_applications",
+                "label": _("Partner Applications"),
+                "route_name": PlatformAdminRoute.PARTNER_APPLICATIONS,
+                "icon": "clipboard-list",
             },
             {
                 "key": "leads",

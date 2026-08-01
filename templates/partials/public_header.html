@@ -1,0 +1,156 @@
+{% load i18n %}
+{% comment %}
+The single public header for every `landing/*` page.
+
+Why this exists: the public pages each carried their own header, and they had
+drifted apart. Measured before writing this:
+
+  page                    logo            lang toggle  trial CTA  -> /partners/
+  landing/index.html      full lockup     yes          yes        no
+  landing/pricing.html    mark + wordmark no           yes        no
+  landing/partners.html   bare text       no           no         (self)
+  landing/partner_*.html  bare text       no           no         yes
+
+Two consequences a visitor could see: /partners/ and /partners/apply/ offered
+no way to change language and no trial CTA, and **nothing anywhere linked to
+/partners/** — the page shipped in 2A and was reachable only by typing its URL,
+because its tests call the URL directly and so nothing ever failed.
+
+`landing/*` templates are standalone documents by convention (§L.1.2) — no
+`{% extends %}`. So this include carries its own scoped styles rather than
+assuming a base stylesheet, and every colour falls back to the declared
+identity in tokens.css (navy #003366, green #10B981) when a host page does not
+define the variable. That also settles the §L.1.1 drift where the public pages
+rendered a different navy (#073763) from the dashboard.
+
+Guarded by tests/test_public_shell.py, which renders every public URL and
+asserts the shell elements are present on all of them.
+{% endcomment %}
+<style>
+  .site-header {
+    position: sticky; top: 0; z-index: 900;
+    background: rgba(255,255,255,.92);
+    backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid var(--border, #e2e8f0);
+  }
+  .site-header__inner {
+    max-width: 1180px; margin: 0 auto;
+    padding: 12px 24px;
+    display: flex; align-items: center; gap: 20px;
+  }
+  .site-header__logo {
+    display: flex; align-items: center; gap: 10px;
+    text-decoration: none; flex-shrink: 0;
+  }
+  .site-header__mark { width: 34px; height: 34px; flex-shrink: 0; }
+  .site-header__wordmark { display: flex; flex-direction: column; line-height: 1.05; }
+  .site-header__wordmark .ar {
+    font-family: 'Cairo', sans-serif; font-size: 17px; font-weight: 900;
+    color: var(--primary, #003366);
+  }
+  .site-header__wordmark .en {
+    font-size: 10px; font-weight: 700; letter-spacing: .5px;
+    color: var(--accent, #10B981); text-transform: uppercase;
+  }
+  .site-header__nav {
+    display: flex; align-items: center; gap: 18px;
+    margin-inline-start: auto;
+  }
+  .site-header__nav a {
+    font-size: 14px; font-weight: 600; text-decoration: none;
+    color: var(--text-muted, #64748b); white-space: nowrap;
+    transition: color .2s ease;
+  }
+  .site-header__nav a:hover,
+  .site-header__nav a.is-active { color: var(--primary, #003366); }
+  .site-header__actions { display: flex; align-items: center; gap: 10px; }
+  .site-header__btn {
+    font-size: 13px; font-weight: 700; text-decoration: none;
+    padding: 8px 14px; border-radius: 9px; white-space: nowrap;
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .site-header__btn--ghost {
+    color: var(--primary, #003366);
+    border: 1px solid var(--border, #e2e8f0); background: #fff;
+  }
+  .site-header__btn--cta {
+    color: #fff; background: var(--accent, #10B981); border: 1px solid transparent;
+    box-shadow: 0 2px 8px rgba(16,185,129,.28);
+  }
+  .site-header__btn--cta:hover { transform: translateY(-1px); }
+
+  /* On small screens the nav scrolls rather than disappearing. index.html
+     used to hide it behind a JS drawer; the other public pages had no drawer
+     at all, so links simply vanished. Scrolling keeps every destination
+     reachable on every page with no script — which is what made one shared
+     header possible in the first place. */
+  @media (max-width: 900px) {
+    .site-header__inner { padding: 10px 16px; flex-wrap: wrap; }
+    .site-header__nav {
+      order: 3; width: 100%; margin-inline-start: 0;
+      gap: 16px; overflow-x: auto; padding-bottom: 2px;
+      -webkit-overflow-scrolling: touch; scrollbar-width: none;
+    }
+    .site-header__nav::-webkit-scrollbar { display: none; }
+    .site-header__actions { margin-inline-start: auto; }
+  }
+  @media (max-width: 560px) {
+    .site-header__btn--ghost { display: none; }
+    .site-header__wordmark .en { display: none; }
+  }
+
+  /* A host page may already own a richer mobile drawer (index.html carries
+     Services and the legal links in its own). When it does, it passes
+     mobile_drawer=True: the drawer wins and the scrolling nav stands down, so
+     the two never both appear. */
+  .site-header--has-drawer .site-header__toggle { display: none; }
+  @media (max-width: 900px) {
+    .site-header--has-drawer .site-header__nav { display: none; }
+    .site-header--has-drawer .site-header__toggle {
+      display: flex; flex-direction: column; justify-content: center; gap: 5px;
+      width: 34px; height: 34px; cursor: pointer; background: none; border: 0; padding: 0;
+    }
+    .site-header--has-drawer .site-header__toggle span {
+      display: block; height: 2px; width: 22px; border-radius: 2px;
+      background: var(--primary, #003366);
+    }
+  }
+</style>
+
+<header class="site-header{% if mobile_drawer %} site-header--has-drawer{% endif %}">
+  <div class="site-header__inner">
+    <a class="site-header__logo" href="{% url 'frontend:home' %}">
+      <svg class="site-header__mark" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+        <circle cx="50" cy="50" r="40" stroke="#003366" stroke-width="8" fill="none"/>
+        <path d="M28 50 L44 66 L72 36" stroke="#10B981" stroke-width="9"
+              fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="site-header__wordmark">
+        <span class="ar">تدقيق</span>
+        <span class="en">Tadgeeg</span>
+      </span>
+    </a>
+
+    <nav class="site-header__nav">
+      <a href="{% url 'frontend:home' %}"{% if active_page == 'home' %} class="is-active"{% endif %}>{% trans "Home" %}</a>
+      <a href="{% url 'frontend:pricing' %}"{% if active_page == 'pricing' %} class="is-active"{% endif %}>{% trans "Pricing" %}</a>
+      <a href="{% url 'frontend:partners' %}"{% if active_page == 'partners' %} class="is-active"{% endif %}>{% trans "Partners" %}</a>
+      <a href="{% url 'frontend:about' %}"{% if active_page == 'about' %} class="is-active"{% endif %}>{% trans "About" %}</a>
+      <a href="{% url 'frontend:contact' %}"{% if active_page == 'contact' %} class="is-active"{% endif %}>{% trans "Contact" %}</a>
+    </nav>
+
+    <div class="site-header__actions">
+      {% include "partials/language_switcher_select.html" %}
+      {% if request.user.is_authenticated %}
+        <a class="site-header__btn site-header__btn--cta" href="{% url 'frontend:dashboard' %}">{% trans "Dashboard" %}</a>
+      {% else %}
+        <a class="site-header__btn site-header__btn--ghost" href="{% url 'frontend:login' %}">{% trans "Sign In" %}</a>
+        <a class="site-header__btn site-header__btn--cta" href="{% url 'frontend:register' %}">{% trans "Start free trial" %}</a>
+      {% endif %}
+      {% if mobile_drawer %}
+        <button type="button" class="site-header__toggle" onclick="toggleMenu()"
+                aria-label="{% trans 'Menu' %}"><span></span><span></span><span></span></button>
+      {% endif %}
+    </div>
+  </div>
+</header>

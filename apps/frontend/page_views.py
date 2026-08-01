@@ -17,6 +17,11 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 
 from apps.authentication.forms import EmailOTPResendForm, EmailOTPVerifyForm
 from apps.authentication.serializers import LoginSerializer, RegisterSerializer
+from django_countries import countries
+
+from apps.authentication.models import Organization
+from apps.leads.attribution import remember_campaign
+from apps.leads.models import TrialLeadProfile
 from apps.authentication.services.email_otp import (
     EmailOTPError,
     clear_pending_verification,
@@ -244,9 +249,38 @@ def _report_types():
     ]
 
 
+#: Countries shown at the top of the registration dropdown. Derived from the
+#: billing enum so the two can never drift apart. These are the markets the
+#: product bills in; the rest of the ISO list is still selectable below them.
+_GCC_CODES = set(Organization.Country.values)
+
+
 def _public_ctx(request, **extra):
+    # Campaign attribution is captured on the FIRST public page a visitor sees
+    # (landing, pricing, auth portal...), not at /register/. By the time the
+    # form is submitted the utm parameters are several navigations in the past,
+    # so they are stashed in the session here. First value wins — see
+    # apps.leads.attribution.remember_campaign.
+    remember_campaign(request)
+
     auth_error = (request.GET.get("auth_error") or "").strip()
     return {
+        # Registration dropdowns (§A.1/§A.2/§A.3). Sourced from the same
+        # choices the serializer validates against, so the form can never drift
+        # from what the server accepts.
+        #
+        # Full ISO list, NOT Organization.Country: the latter is the billing
+        # jurisdiction (paired with a currency, GCC-only). Using it here locked
+        # every non-GCC prospect out of registration entirely.
+        "country_choices": list(countries),
+        # GCC members shown first — they are the overwhelming majority of
+        # registrants, and 249 options with no ordering is a usability problem.
+        "priority_country_choices": [
+            (code, name) for code, name in countries if code in _GCC_CODES
+        ],
+        "primary_benefit_choices": TrialLeadProfile.PrimaryBenefit.choices,
+        "employee_count_choices": TrialLeadProfile.EmployeeCount.choices,
+        "heard_about_choices": TrialLeadProfile.HeardAbout.choices,
         "google_client_id": getattr(django_settings, "GOOGLE_CLIENT_ID", ""),
         "google_oauth_enabled": is_google_oauth_configured(),
         "auth_error": auth_error,
@@ -709,12 +743,20 @@ def pricing(request):
     the Plan table so a price change in the DB shows up here without a
     redeploy. Falls back to a static layout if apps.billing isn't
     installed (so unrelated deployments don't break)."""
-    plans = []
+    plans, business_plans, accounting_plans = [], [], []
     try:
+        from apps.billing.choices import ACCOUNTING_PLAN_CODES
         from apps.billing.services.plan_service import list_purchasable_plans
+
         plans = list(list_purchasable_plans())
+        # §L.4 — accounting-firm plans get their own section rather than being
+        # mixed into the main row: different buyer, different pricing basis.
+        # Split here rather than in the template so the grouping rule lives in
+        # one place and the template just renders.
+        business_plans = [p for p in plans if p.code not in ACCOUNTING_PLAN_CODES]
+        accounting_plans = [p for p in plans if p.code in ACCOUNTING_PLAN_CODES]
     except Exception:                       # noqa: BLE001 — degrade gracefully
-        plans = []
+        plans, business_plans, accounting_plans = [], [], []
 
     ctx = _public_ctx(
         request,
@@ -726,9 +768,104 @@ def pricing(request):
             "the full Tadgeeg AI pipeline, fraud detection, and ZATCA-ready exports."
         )),
         plans=plans,
+        business_plans=business_plans,
+        accounting_plans=accounting_plans,
         is_authenticated=request.user.is_authenticated,
     )
     return render(request, "landing/pricing.html", ctx)
+
+
+def partners(request):
+    """Public «شركاؤنا» page (§C / §L.2).
+
+    Sections come from apps.partners.selectors, which builds them off
+    ``Partner.published`` — the publish gate lives in the data layer, so an
+    unpublished partner is unreachable here regardless of what the template
+    does (§D4).
+
+    _public_ctx() is called deliberately: besides the shared context it is the
+    campaign-attribution chokepoint Phase 1 depends on, so skipping it would
+    silently break utm capture for anyone landing on this page first.
+    """
+    from apps.partners.selectors import get_public_sections, get_strategic_partners
+
+    return render(
+        request,
+        "landing/partners.html",
+        _public_ctx(
+            request,
+            page_title=str(_("Our Partners")),
+            page_description=str(_(
+                "The Tadgeeg partner ecosystem — strategic partners, tiered "
+                "partners, and authorized distributors."
+            )),
+            strategic_partners=list(get_strategic_partners()),
+            partner_sections=get_public_sections(),
+        ),
+    )
+
+
+def partner_apply(request):
+    """Public partner application form (§E / §L.3).
+
+    Renders only; the POST goes to /api/v1/partners/applications/, which is
+    throttled per IP and validates everything server-side. Keeping the write on
+    the API means the form has no privileged path of its own.
+    """
+    from django.conf import settings
+
+    from apps.partners.models import BusinessArea, PartnerType
+    from apps.partners.uploads import ALLOWED_EXTENSIONS
+
+    return render(
+        request,
+        "landing/partner_apply.html",
+        _public_ctx(
+            request,
+            page_title=str(_("Join as a Partner")),
+            page_description=str(_(
+                "Apply to join the Tadgeeg partner ecosystem."
+            )),
+            partner_type_choices=PartnerType.choices,
+            business_area_choices=BusinessArea.choices,
+            # The wizard pre-checks files before upload starts. These come from
+            # the server's own rules rather than being restated in JavaScript,
+            # so the convenience check cannot drift away from the authority.
+            # The server still validates everything; this only saves the user a
+            # failed upload.
+            upload_max_mb=settings.PARTNER_DOC_MAX_FILE_MB,
+            upload_max_files=settings.PARTNER_DOC_MAX_FILES,
+            upload_allowed_extensions=sorted(ALLOWED_EXTENSIONS),
+        ),
+    )
+
+
+def partner_detail(request, slug):
+    """Public partner profile. Published partners only.
+
+    404 (not 403) for an unpublished slug: a 403 would confirm the record
+    exists, telling an anonymous visitor about partners the company has not
+    announced.
+    """
+    from django.http import Http404
+
+    from apps.partners.selectors import get_public_partner_by_slug
+
+    partner = get_public_partner_by_slug(slug)
+    if partner is None:
+        raise Http404("Partner not found.")
+
+    return render(
+        request,
+        "landing/partner_detail.html",
+        _public_ctx(
+            request,
+            page_title=partner.company_name,
+            page_description=partner.short_description,
+            partner=partner,
+            partner_public=partner.public_payload(),
+        ),
+    )
 
 
 def about(request):
@@ -1619,13 +1756,29 @@ def register_view(request):
             "email": request.POST.get("email", "").strip(),
             "password": request.POST.get("password", ""),
             "password_confirm": request.POST.get("password_confirm", ""),
+            # §A.1/§A.2 — required. Passed through even when blank so the
+            # serializer produces the field-specific error rather than a
+            # generic one; validation belongs to the serializer, not here.
+            "phone": request.POST.get("phone", "").strip(),
+            "country": request.POST.get("country", "").strip(),
+            "primary_benefit": request.POST.get("primary_benefit", "").strip(),
         }
+
+        # §A.3 — optional. Only forwarded when supplied, so an omitted field
+        # stays "not provided" rather than becoming an empty-string choice.
+        for optional_field in ("city", "company_name", "employee_count", "sector", "heard_about"):
+            value = request.POST.get(optional_field, "").strip()
+            if value:
+                payload[optional_field] = value
 
         organization_name = request.POST.get("organization_name", "").strip()
         if organization_name:
             payload["organization_name"] = organization_name
 
-        serializer = RegisterSerializer(data=payload)
+        # request in context: the serializer derives the auto-captured block
+        # (IP, device, language, referrer, campaign) from it — those values are
+        # never read from POST, so a client cannot forge them.
+        serializer = RegisterSerializer(data=payload, context={"request": request})
         if not serializer.is_valid():
             return JsonResponse({"success": False, "error": _first_error(serializer.errors, flow="register")}, status=400)
 

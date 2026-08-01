@@ -19863,6 +19863,667 @@ msgstr "متأخرة"
 msgid "unlinked"
 msgstr "غير مرتبطة"
 
+#. Phase 3A — plan catalogue: custom-quote, unlimited, and the
+#. accounting-firm section. Arabic is the primary language of this
+#. product, so a new customer-facing string is not done until it is here.
+#: templates/landing/pricing.html
+msgid "Custom quote"
+msgstr "تسعير حسب العرض"
+
+#: templates/landing/pricing.html
+msgid "Unlimited invoices"
+msgstr "فواتير بلا حدود"
+
+#: templates/landing/pricing.html
+msgid "Unlimited users"
+msgstr "مستخدمون بلا حدود"
+
+#: templates/landing/pricing.html
+msgid "Unlimited invoice audits"
+msgstr "تدقيق فواتير بلا حدود"
+
+#: templates/landing/pricing.html
+msgid "Contact sales"
+msgstr "تواصل مع المبيعات"
+
+#: templates/landing/pricing.html
+msgid "Competitive advantage"
+msgstr "ميزة تنافسية"
+
+#: templates/landing/pricing.html
+msgid "Plans for accounting firms"
+msgstr "باقات مكاتب المحاسبة"
+
+#: templates/landing/pricing.html
+msgid "Built for practices auditing on behalf of multiple clients."
+msgstr "مصمّمة للمكاتب التي تدقّق نيابةً عن عملاء متعددين."
+
+#: templates/landing/pricing.html
+msgid "%(n)s users"
+msgstr "%(n)s مستخدم"
+
+#: templates/landing/pricing.html
+msgid "%(n)s invoices/mo"
+msgstr "%(n)s فاتورة/شهر"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "A connection error occurred. Please try again."
+msgstr "حدث خطأ في الاتصال. يُرجى المحاولة مرة أخرى."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "About the company"
+msgstr "عن الشركة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "About the partner"
+msgstr "عن الشريك"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Add an internal note..."
+msgstr "أضف ملاحظة داخلية..."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Additional information"
+msgstr "معلومات إضافية"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "All activity"
+msgstr "كل الأنشطة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "All client types"
+msgstr "كل أنواع العملاء"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "All countries"
+msgstr "كل الدول"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "All partners"
+msgstr "كل الشركاء"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "All rights reserved"
+msgstr "جميع الحقوق محفوظة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "All tiers"
+msgstr "كل الفئات"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Areas of business"
+msgstr "مجالات العمل"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Authorized Distributors"
+msgstr "الموزّعون المعتمدون"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Back to dashboard"
+msgstr "العودة إلى لوحة التحكم"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "By activity"
+msgstr "حسب النشاط"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "By client type"
+msgstr "حسب نوع العميل"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "By country"
+msgstr "حسب الدولة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "By registration date"
+msgstr "حسب تاريخ التسجيل"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Certificates"
+msgstr "الشهادات"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Client type"
+msgstr "نوع العميل"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Commercial registration"
+msgstr "السجل التجاري"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Company information"
+msgstr "معلومات الشركة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Company logo"
+msgstr "شعار الشركة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Company name"
+msgstr "اسم الشركة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Company profile"
+msgstr "الملف التعريفي للشركة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Contact name"
+msgstr "اسم مسؤول التواصل"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Contact us"
+msgstr "تواصل معنا"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Conversion failed"
+msgstr "تعذّر التحويل"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Convert to paid customer"
+msgstr "تحويل إلى عميل مدفوع"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Converting..."
+msgstr "جارٍ التحويل..."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Customer converted successfully"
+msgstr "تم تحويل العميل بنجاح"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Declaration"
+msgstr "إقرار"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Employees"
+msgstr "الموظفون"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Established"
+msgstr "سنة التأسيس"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Expired trials"
+msgstr "التجارب المنتهية"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Failed to load partners"
+msgstr "تعذّر تحميل الشركاء"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Failed to load trial users"
+msgstr "تعذّر تحميل مستخدمي التجربة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Gold Partners"
+msgstr "الشركاء الذهبيون"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid ""
+"I confirm that the information provided in this application is accurate."
+msgstr "أقرّ بأن المعلومات الواردة في هذا الطلب صحيحة."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Idle"
+msgstr "غير نشط"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Internal follow-up"
+msgstr "متابعة داخلية"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Internal notes"
+msgstr "ملاحظات داخلية"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Internal screen for following up on trial registrants"
+msgstr "شاشة داخلية لمتابعة المسجّلين في التجربة المجانية"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Join as a Partner"
+msgstr "انضم كشريك"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Key clients"
+msgstr "أبرز العملاء"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Manage the partner ecosystem shown on the public page"
+msgstr "إدارة منظومة الشركاء الظاهرة في الصفحة العامة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Mobile"
+msgstr "الجوال"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Never started"
+msgstr "لم تبدأ مطلقًا"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "No applications match the current filters."
+msgstr "لا توجد طلبات مطابقة للتصفية الحالية."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid ""
+"No data has been lost. Contact the platform team to enable this module."
+msgstr "لم تُفقد أي بيانات. تواصل مع فريق المنصة لتفعيل هذه الوحدة."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "No documents were submitted."
+msgstr "لم تُرفَق أي مستندات."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "No partners match the current filters."
+msgstr "لا يوجد شركاء مطابقون للتصفية الحالية."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "No records match the current filters."
+msgstr "لا توجد سجلات مطابقة للتصفية الحالية."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "No subscription"
+msgstr "بلا اشتراك"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "No trial users match the current filters."
+msgstr "لا يوجد مستخدمو تجربة مطابقون للتصفية الحالية."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Number of employees"
+msgstr "عدد الموظفين"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Other documents"
+msgstr "مستندات أخرى"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Our Partners"
+msgstr "شركاؤنا"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "PDF"
+msgstr "PDF"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "PDF, PNG or JPG"
+msgstr "PDF أو PNG أو JPG"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "PDF, PNG or JPG — multiple files allowed"
+msgstr "PDF أو PNG أو JPG — يُسمح بعدة ملفات"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "PNG or JPG"
+msgstr "PNG أو JPG"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Partner Applications"
+msgstr "طلبات الشراكة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Partner hidden"
+msgstr "تم إخفاء الشريك"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Partner listings are being prepared."
+msgstr "يجري إعداد قائمة الشركاء."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Partner published"
+msgstr "تم نشر الشريك"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Partnership type requested"
+msgstr "نوع الشراكة المطلوبة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Platinum Partners"
+msgstr "الشركاء البلاتينيون"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Rejection reason (internal)"
+msgstr "سبب الرفض (داخلي)"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Requested"
+msgstr "المطلوب"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Review incoming partnership requests"
+msgstr "مراجعة طلبات الشراكة الواردة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "STRATEGIC PARTNER"
+msgstr "شريك استراتيجي"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Search company, contact, email..."
+msgstr "ابحث باسم الشركة أو مسؤول التواصل أو البريد..."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Search partners..."
+msgstr "ابحث في الشركاء..."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Select a country"
+msgstr "اختر الدولة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Select a registrant from the table to convert."
+msgstr "اختر مسجّلًا من الجدول لتحويله."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Select an application to review it."
+msgstr "اختر طلبًا لمراجعته."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Select tier (required)"
+msgstr "اختر الفئة (مطلوب)"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Silver Partners"
+msgstr "الشركاء الفضّيون"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Start review"
+msgstr "بدء المراجعة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Submit application"
+msgstr "إرسال الطلب"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Tadgeeg"
+msgstr "تدقيق"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid ""
+"Tell us about your company and how you would like to work with Tadgeeg."
+msgstr "عرّفنا بشركتك وبالطريقة التي ترغب في العمل بها مع تدقيق."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "The action could not be completed"
+msgstr "تعذّر إتمام العملية"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid ""
+"This activates a paid subscription immediately. No payment is collected."
+msgstr "يفعّل هذا اشتراكًا مدفوعًا فورًا دون تحصيل أي مبلغ."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "This application has been decided and cannot be reopened."
+msgstr "صدر قرار في هذا الطلب ولا يمكن إعادة فتحه."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "This feature is not enabled"
+msgstr "هذه الميزة غير مفعّلة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Tier"
+msgstr "الفئة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Total trial users"
+msgstr "إجمالي مستخدمي التجربة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Trial Users"
+msgstr "مستخدمو التجربة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Trial Users Dashboard"
+msgstr "لوحة مستخدمي التجربة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "View public page"
+msgstr "عرض الصفحة العامة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Visit website"
+msgstr "زيارة الموقع"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid ""
+"We could not submit your application. Please review the form and try again."
+msgstr "تعذّر إرسال طلبك. يُرجى مراجعة النموذج والمحاولة مرة أخرى."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Why do you want to partner with us?"
+msgstr "لماذا ترغب في الشراكة معنا؟"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Year established"
+msgstr "سنة التأسيس"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "Years of experience"
+msgstr "سنوات الخبرة"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid ""
+"Your application has been received. Our partnerships team will be in touch."
+msgstr "تم استلام طلبك، وسيتواصل معك فريق الشراكات."
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "applications"
+msgstr "طلب"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "attachments"
+msgstr "مرفقات"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "never shown to the applicant"
+msgstr "لا يظهر لمقدّم الطلب إطلاقًا"
+
+#. Phases 1-3A — Arabic is this product's primary language.
+msgid "partners"
+msgstr "شريك"
+
+#. Phase 3A — seat dimension on the dashboard quota bar (§L.1.3).
+msgid "users"
+msgstr "مستخدم"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Strategic"
+msgstr "استراتيجي"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Strategic Partner"
+msgstr "شريك استراتيجي"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Technical Partner"
+msgstr "شريك تقني"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Training Partner"
+msgstr "شريك تدريب"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Authorized Distributor"
+msgstr "موزّع معتمد"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Platinum"
+msgstr "بلاتيني"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Gold"
+msgstr "ذهبي"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Silver"
+msgstr "فضّي"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Accounting"
+msgstr "محاسبة"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Auditing"
+msgstr "تدقيق"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Consulting"
+msgstr "استشارات"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "ERP"
+msgstr "تخطيط موارد المؤسسات (ERP)"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Software development"
+msgstr "تطوير البرمجيات"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Cloud services"
+msgstr "الخدمات السحابية"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Cybersecurity"
+msgstr "الأمن السيبراني"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Artificial intelligence"
+msgstr "الذكاء الاصطناعي"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Digital transformation"
+msgstr "التحوّل الرقمي"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Infrastructure"
+msgstr "البنية التحتية"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Training"
+msgstr "التدريب"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Certificate"
+msgstr "شهادة"
+
+#. Phase 3B-1 STEP 0.2 — partner surfaces; Arabic is primary.
+msgid "Apply to join the Tadgeeg partner ecosystem."
+msgstr "قدّم طلبك للانضمام إلى منظومة شركاء تدقيق."
+
+#. Phase 3B-1 STEP 0.2 — partners hero subtitle.
+msgid ""
+"The Tadgeeg partner ecosystem — strategic partners, tiered partners, and "
+"authorized distributors."
+msgstr ""
+"منظومة شركاء تدقيق — شركاء استراتيجيون وشركاء بالفئات وموزّعون معتمدون."
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "Use it in my own company"
+msgstr "استخدامه في شركتي"
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "Offer the platform to other companies"
+msgstr "تقديم المنصة لشركات أخرى"
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "I am an accountant"
+msgstr "أنا محاسب"
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "I am a trainer"
+msgstr "أنا مدرّب"
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "A friend"
+msgstr "صديق"
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "A partner"
+msgstr "شريك"
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "Google"
+msgstr "جوجل"
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "Facebook"
+msgstr "فيسبوك"
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "LinkedIn"
+msgstr "لينكدإن"
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "Desktop"
+msgstr "حاسوب مكتبي"
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "Tablet"
+msgstr "جهاز لوحي"
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "How will you use Tadgeeg?"
+msgstr "كيف ستستخدم تدقيق؟"
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "How did you hear about us?"
+msgstr "كيف سمعت عنّا؟"
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "Select an option"
+msgstr "اختر خيارًا"
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "Sector"
+msgstr "القطاع"
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "Tell us more (optional)"
+msgstr "أخبرنا المزيد (اختياري)"
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "Gulf Cooperation Council"
+msgstr "مجلس التعاون الخليجي"
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "Enter a valid phone number."
+msgstr "أدخل رقم هاتف صحيحًا."
+
+#. Phase 3B-1 — registration surface (§A.2/§A.3); Arabic is primary.
+msgid "Client User"
+msgstr "مستخدم عميل"
+
+#. Phase 3B-1 STEP 0.3 — partner application wizard.
+msgid "Step"
+msgstr "الخطوة"
+
+#. Phase 3B-1 STEP 0.3 — partner application wizard.
+msgid "This field is required."
+msgstr "هذا الحقل مطلوب."
+
+#. Phase 3B-1 STEP 0.3 — partner application wizard.
+msgid "Enter a valid email address."
+msgstr "أدخل بريدًا إلكترونيًا صحيحًا."
+
+#. Phase 3B-1 STEP 0.3 — partner application wizard.
+msgid "You must confirm the declaration."
+msgstr "يجب تأكيد الإقرار."
+
+#. Phase 3B-1 STEP 0.3 — partner application wizard.
+msgid "Please complete the required fields before continuing."
+msgstr "يُرجى إكمال الحقول المطلوبة قبل المتابعة."
+
+#. Phase 3B-1 STEP 0.3 — partner application wizard.
+msgid "file type not allowed"
+msgstr "نوع الملف غير مسموح"
+
+#. Phase 3B-1 STEP 0.3 — partner application wizard.
+msgid "Too many files"
+msgstr "عدد الملفات كبير جدًا"
+
+#. Phase 3B-1 STEP 0.3 — partner application wizard.
+msgid ""
+"Your entries are saved on this device until you submit. Files are not saved."
+msgstr "تُحفَظ مدخلاتك على هذا الجهاز حتى الإرسال. أمّا الملفات فلا تُحفَظ."
+
 #~ msgid "Privacy and data protection"
 #~ msgstr "الخصوصية وحماية البيانات"
 

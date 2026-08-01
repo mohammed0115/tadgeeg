@@ -4,7 +4,6 @@ from django.urls import path
 
 from apps.activity_logs.views import ActivityLogViewSet
 from apps.cms import views as cms_views
-from apps.jobs import views as jobs_views
 from apps.leads import views as leads_views
 from apps.storage_management.views import StorageProviderViewSet
 
@@ -44,13 +43,10 @@ urlpatterns = [
     path("faq/categories/<int:pk>/", cms_views.FAQCategoryDetailView.as_view(), name="faq-category-detail"),
     path("faq/items/", cms_views.FAQItemListView.as_view(), name="faq-items"),
     path("faq/items/<int:pk>/", cms_views.FAQItemDetailView.as_view(), name="faq-item-detail"),
-    path("jobs/", jobs_views.AdminJobListView.as_view(), name="jobs"),
-    path("jobs/<uuid:pk>/", jobs_views.AdminJobDetailView.as_view(), name="job-detail"),
-    path("jobs/<uuid:pk>/publish/", jobs_views.AdminJobPublishView.as_view(), name="job-publish"),
-    path("jobs/<uuid:pk>/close/", jobs_views.AdminJobCloseView.as_view(), name="job-close"),
-    path("jobs/stats/", jobs_views.JobStatsView.as_view(), name="jobs-stats"),
-    path("jobs/applications/", jobs_views.AdminApplicationListView.as_view(), name="job-applications"),
-    path("jobs/applications/<uuid:pk>/", jobs_views.AdminApplicationDetailView.as_view(), name="job-application-detail"),
+    # ── jobs/* — intentionally NOT routed ────────────────────────────────
+    # apps.jobs is quarantined (absent from INSTALLED_APPS); importing
+    # apps.jobs.views raises RuntimeError at import time.
+    # See docs/adr/0003-quarantine-apps-jobs.md.
     path("leads/", leads_views.AdminLeadListView.as_view(), name="leads"),
     path("leads/stats/", leads_views.LeadStatsView.as_view(), name="leads-stats"),
     path("leads/mark-all-read/", api_views.PlatformMarkAllLeadsReadView.as_view(), name="leads-mark-all-read"),

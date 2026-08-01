@@ -5,11 +5,21 @@ A read-only dashboard shell for platform CRM staff. Every view is GET-only and
 renders data through the selectors layer. There are NO create/update/delete
 paths, NO forms that mutate, and NO billing/payments/subscription calls.
 
-Security: two layers.
-  1. NamespaceAccessControlMiddleware already blocks non-staff from
-     ``/platform-admin/*`` (anonymous → login, org users → /dashboard/).
-  2. ``crm_read_required`` enforces the CRM-1B permission model on top of
-     is_staff — a staff member still needs a CRM group (or be superuser).
+Security: ONE layer — the ``crm_read_required`` decorator on every view, which
+enforces the CRM-1B permission model (``can_view_crm``): the caller must be
+``is_staff`` AND belong to a CRM group, or be a superuser.
+
+An earlier version of this docstring claimed a second layer,
+``NamespaceAccessControlMiddleware``, guarding ``/platform-admin/*``. That
+class exists (``core/namespace_access.py``) and does define matching prefixes,
+but it is **not listed in ``MIDDLEWARE``** in any settings module — verified at
+runtime against both the base and production settings. It never runs. The
+decorator is the whole of the enforcement, which is why
+``apps/platform_admin/tests/test_crm_views_access.py`` asserts access control
+per route rather than relying on a global gate.
+
+Do not re-add the two-layer claim unless the middleware is actually installed.
+Behaviour is unchanged by this correction; only the comment was wrong.
 """
 
 from __future__ import annotations

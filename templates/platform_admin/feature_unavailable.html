@@ -1,0 +1,41 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+
+{% comment %}
+Honest placeholder for a console screen whose backing app is not installed.
+
+Rendered instead of a screen that would load but whose every API call 404s.
+Context:
+  feature_title  — human name of the module
+  feature_reason — one sentence on why it is off
+{% endcomment %}
+
+{% block page_title %}{{ feature_title }}{% endblock %}
+{% block breadcrumb_current %}{{ feature_title }}{% endblock %}
+
+{% block content %}
+<div class="space-y-5 fade-in">
+  <div>
+    <h1 class="text-2xl font-black text-slate-900 dark:text-white">{{ feature_title }}</h1>
+  </div>
+
+  <div class="card p-8 flex flex-col items-center text-center gap-3">
+    <div class="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+      <i data-lucide="power-off" class="w-7 h-7 text-slate-400 dark:text-slate-500"></i>
+    </div>
+    <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100">
+      {% trans "This feature is not enabled" %}
+    </h2>
+    <p class="text-sm text-slate-500 dark:text-slate-400 max-w-xl">
+      {{ feature_reason }}
+    </p>
+    <p class="text-xs text-slate-400 dark:text-slate-500">
+      {% trans "No data has been lost. Contact the platform team to enable this module." %}
+    </p>
+    <a href="{% url 'platform_admin:dashboard' %}" class="btn-secondary mt-2">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      {% trans "Back to dashboard" %}
+    </a>
+  </div>
+</div>
+{% endblock %}

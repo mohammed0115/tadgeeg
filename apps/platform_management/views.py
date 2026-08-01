@@ -73,3 +73,15 @@ def monitoring(request, *args, **kwargs):
 
 def activity_logs(request, *args, **kwargs):
     return legacy_views.activity_logs(request, *args, **kwargs)
+
+
+def trial_users(request, *args, **kwargs):
+    return legacy_views.trial_users(request, *args, **kwargs)
+
+
+def partners_manager(request, *args, **kwargs):
+    return legacy_views.partners_manager(request, *args, **kwargs)
+
+
+def partner_applications(request, *args, **kwargs):
+    return legacy_views.partner_applications(request, *args, **kwargs)

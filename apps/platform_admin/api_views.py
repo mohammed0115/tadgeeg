@@ -6,7 +6,9 @@ import os
 import shutil
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db.models import Count
+from django.utils.dateparse import parse_date
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -15,11 +17,16 @@ from rest_framework.views import APIView
 from apps.activity_logs.models import ActivityLog
 from apps.authentication.models import Organization
 from apps.authentication.serializers import OrganizationSerializer
+from apps.leads.trial_selectors import (
+    build_summary,
+    get_dashboard_queryset,
+    row_values,
+)
 from apps.cms.models import CMSPage, FAQCategory, FAQItem, IntroVideo, MediaAsset, PlatformSetting, SEOSetting
 from apps.cms.serializers import IntroVideoSerializer, PlatformSettingSerializer, SEOSettingSerializer
 from apps.cms.services import update_platform_setting, update_seo_setting
-from apps.jobs.models import JobPost
 from apps.leads.models import ContactLead
+from core.feature_flags import JOBS_DISABLED_COUNT, jobs_enabled
 from core.permissions import IsPlatformAdmin
 from core.services.monitoring import get_health_check_report
 
@@ -31,10 +38,14 @@ class PlatformAdminAPIView(APIView):
 class PlatformDashboardStatsView(PlatformAdminAPIView):
     def get(self, request):
         pages = CMSPage.objects.all()
+        # apps.jobs is quarantined — see core.feature_flags. The key is kept
+        # so the response shape is stable; the value is None rather than 0
+        # because the honest statement is "feature off", not "no jobs".
         return Response(
             {
                 "total_organizations": Organization.objects.count(),
-                "active_jobs": JobPost.objects.filter(status=JobPost.Status.PUBLISHED).count(),
+                "jobs_feature_enabled": jobs_enabled(),
+                "active_jobs": JOBS_DISABLED_COUNT,
                 "new_leads": ContactLead.objects.filter(status=ContactLead.Status.NEW).count(),
                 "total_leads": ContactLead.objects.count(),
                 "total_pages": pages.count(),
@@ -367,3 +378,431 @@ class PlatformSEOCompatView(PlatformAdminAPIView):
         }
         setting = update_seo_setting(page_key, payload, request.user)
         return Response(self._serialize(setting))
+
+
+# ─── Trial Users Dashboard (Phase 1, spec §B) ────────────────────────────────
+#
+# Every view below is staff-only via PlatformAdminAPIView (IsAuthenticated +
+# IsPlatformAdmin). There is NO middleware fronting /api/platform-admin/ —
+# core/namespace_access.py defines matching prefixes but is not installed in
+# MIDDLEWARE — so these permission classes are the only control. Each endpoint
+# has a matching permission test in tests/test_trial_dashboard.py.
+#
+# No endpoint here returns TrialLeadProfile.registered_ip (ADR 0004 §2).
+
+def _trial_filters(request):
+    """Read dashboard filters off the query string.
+
+    Values are handed to apply_filters(), which validates each against a known
+    set and ignores anything unrecognised — so this does no trusting of its own.
+    """
+    return {
+        "country": request.query_params.get("country"),
+        "primary_benefit": request.query_params.get("client_type"),
+        "trial_status": request.query_params.get("trial_status"),
+        "activity": request.query_params.get("activity"),
+        "registered_from": parse_date(request.query_params.get("from") or ""),
+        "registered_to": parse_date(request.query_params.get("to") or ""),
+    }
+
+
+class TrialUsersSummaryView(PlatformAdminAPIView):
+    """The six dashboard cards. Aggregated in SQL, never in Python."""
+
+    def get(self, request):
+        queryset = get_dashboard_queryset(**_trial_filters(request))
+        summary = build_summary(queryset)
+        summary["filters_applied"] = {
+            key: value for key, value in _trial_filters(request).items() if value
+        }
+        return Response(summary)
+
+
+class TrialUsersListView(PlatformAdminAPIView):
+    """Paginated registrant list backing the dashboard table."""
+
+    PAGE_SIZE = 25
+    MAX_PAGE_SIZE = 100
+
+    def get(self, request):
+        queryset = get_dashboard_queryset(**_trial_filters(request))
+
+        try:
+            page = max(1, int(request.query_params.get("page", 1)))
+        except (TypeError, ValueError):
+            page = 1
+        try:
+            page_size = int(request.query_params.get("page_size", self.PAGE_SIZE))
+        except (TypeError, ValueError):
+            page_size = self.PAGE_SIZE
+        page_size = max(1, min(page_size, self.MAX_PAGE_SIZE))
+
+        total = queryset.count()
+        start = (page - 1) * page_size
+        rows = [row_values(profile) for profile in queryset[start:start + page_size]]
+
+        return Response({
+            "count": total,
+            "page": page,
+            "page_size": page_size,
+            "results": rows,
+        })
+
+
+class TrialUserConvertView(PlatformAdminAPIView):
+    """POST — move a trial registrant onto a paid plan.
+
+    Delegates to apps.leads.trial_conversion, which wraps the official
+    SubscriptionService. No subscription field is written here.
+    """
+
+    def post(self, request, pk):
+        from apps.leads.models import TrialLeadProfile
+        from apps.leads.trial_conversion import (
+            TrialConversionError,
+            convert_trial_to_paid,
+        )
+
+        try:
+            profile = TrialLeadProfile.objects.select_related(
+                "user", "user__organization"
+            ).get(pk=pk)
+        except (TrialLeadProfile.DoesNotExist, ValidationError, ValueError):
+            return Response({"detail": "Trial user not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        plan_code = (request.data.get("plan_code") or "").strip()
+        if not plan_code:
+            return Response(
+                {"detail": "plan_code is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            subscription = convert_trial_to_paid(
+                actor=request.user, profile=profile,
+                plan_code=plan_code, request=request,
+            )
+        except TrialConversionError as exc:
+            # Domain refusal (already paid, no organisation) — 409, not 400:
+            # the request was well-formed, the state disallows it.
+            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
+        except ValidationError as exc:
+            return Response(
+                {"detail": "; ".join(exc.messages)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response({
+            "subscription_id": str(subscription.id),
+            "plan": subscription.plan.code,
+            "status": subscription.status,
+            "ends_at": subscription.ends_at.isoformat() if subscription.ends_at else None,
+        }, status=status.HTTP_201_CREATED)
+
+
+class TrialUsersExportXlsxView(PlatformAdminAPIView):
+    """Excel export of the CURRENTLY FILTERED registrants."""
+
+    def get(self, request):
+        from apps.leads.trial_exports import export_xlsx
+
+        return export_xlsx(get_dashboard_queryset(**_trial_filters(request)))
+
+
+class TrialUsersExportPdfView(PlatformAdminAPIView):
+    """PDF export of the CURRENTLY FILTERED registrants.
+
+    503 when the renderer is unavailable — a missing system library is not a
+    server fault and must not surface as a 500.
+    """
+
+    def get(self, request):
+        from apps.leads.trial_exports import export_pdf
+
+        queryset = get_dashboard_queryset(**_trial_filters(request))
+        response = export_pdf(queryset, summary=build_summary(queryset))
+        if response is None:
+            return Response(
+                {"detail": "PDF rendering is unavailable on this deployment."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return response
+
+
+# ─── Partner administration (Phase 2A, spec §C/§F) ───────────────────────────
+#
+# Staff-only via PlatformAdminAPIView. There is NO middleware on
+# /api/platform-admin/ — these permission classes are the only control, and each
+# endpoint has its matching permission test in tests/test_partners.py.
+#
+# Publish/hide are audited through log_crm_action, the same hash-chained
+# AuditLog path Phase 1's trial conversion uses. No second audit mechanism.
+
+def _partner_filters(request):
+    return {
+        "q": request.query_params.get("q"),
+        "country": request.query_params.get("country"),
+        "partner_type": request.query_params.get("partner_type"),
+        "partner_tier": request.query_params.get("partner_tier"),
+        "status": request.query_params.get("status"),
+    }
+
+
+class PartnerListCreateView(PlatformAdminAPIView):
+    """GET a filtered partner list · POST a new partner (Draft by default)."""
+
+    def get(self, request):
+        from apps.partners.selectors import admin_row, list_partners_for_admin
+
+        queryset = list_partners_for_admin(**_partner_filters(request))
+        return Response({
+            "count": queryset.count(),
+            "results": [admin_row(p) for p in queryset],
+        })
+
+    def post(self, request):
+        from apps.partners.serializers import PartnerAdminSerializer
+
+        serializer = PartnerAdminSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        partner = serializer.save()
+        return Response(
+            PartnerAdminSerializer(partner).data, status=status.HTTP_201_CREATED
+        )
+
+
+class PartnerDetailView(PlatformAdminAPIView):
+    """GET / PATCH a single partner. Status is not editable here — use the
+    publish and hide endpoints, which are audited."""
+
+    def _get(self, pk):
+        from apps.partners.models import Partner
+
+        try:
+            return Partner.objects.get(pk=pk)
+        except (Partner.DoesNotExist, ValidationError, ValueError):
+            return None
+
+    def get(self, request, pk):
+        from apps.partners.serializers import PartnerAdminSerializer
+
+        partner = self._get(pk)
+        if partner is None:
+            return Response({"detail": "Partner not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(PartnerAdminSerializer(partner).data)
+
+    def patch(self, request, pk):
+        from apps.partners.serializers import PartnerAdminSerializer
+
+        partner = self._get(pk)
+        if partner is None:
+            return Response({"detail": "Partner not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = PartnerAdminSerializer(partner, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+class PartnerPublishView(PlatformAdminAPIView):
+    """POST — make a partner public. Audited."""
+
+    def post(self, request, pk):
+        from apps.partners.services import PartnerVisibilityError, publish_partner
+
+        try:
+            partner = publish_partner(pk=pk, actor=request.user, request=request)
+        except PartnerVisibilityError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({
+            "id": str(partner.id),
+            "status": partner.status,
+            "published_at": partner.published_at.isoformat() if partner.published_at else None,
+        })
+
+
+class PartnerHideView(PlatformAdminAPIView):
+    """POST — remove a partner from public surfaces. Audited.
+
+    Does NOT clear published_at: the first-publication date stays available.
+    """
+
+    def post(self, request, pk):
+        from apps.partners.services import PartnerVisibilityError, hide_partner
+
+        try:
+            partner = hide_partner(pk=pk, actor=request.user, request=request)
+        except PartnerVisibilityError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response({
+            "id": str(partner.id),
+            "status": partner.status,
+            "published_at": partner.published_at.isoformat() if partner.published_at else None,
+        })
+
+
+class PartnerReorderView(PlatformAdminAPIView):
+    """POST — set display_order for several partners at once."""
+
+    def post(self, request):
+        from apps.partners.services import reorder_partners
+
+        entries = request.data.get("order")
+        if not isinstance(entries, list) or not entries:
+            return Response(
+                {"detail": "order must be a non-empty list of {id, display_order}."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            updated = reorder_partners(entries)
+        except (ValidationError, ValueError, TypeError) as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"updated": updated})
+
+
+# ─── Partner application review (Phase 2B, §E.7/§F) ──────────────────────────
+#
+# Staff-only, like everything on this prefix. Applications have NO public read
+# surface — this is the only way to see one.
+
+def _application_filters(request):
+    return {
+        "q": request.query_params.get("q"),
+        "country": request.query_params.get("country"),
+        "requested_partner_type": request.query_params.get("requested_partner_type"),
+        "status": request.query_params.get("status"),
+    }
+
+
+class PartnerApplicationListView(PlatformAdminAPIView):
+    """GET applications with search and filters."""
+
+    def get(self, request):
+        from apps.partners.selectors import application_row, list_applications_for_admin
+
+        queryset = list_applications_for_admin(**_application_filters(request))
+        return Response({
+            "count": queryset.count(),
+            "results": [application_row(a) for a in queryset],
+        })
+
+
+class PartnerApplicationDetailView(PlatformAdminAPIView):
+    """GET one application, with attachment metadata and internal notes."""
+
+    def get(self, request, pk):
+        from apps.partners.models import PartnerApplication
+        from apps.partners.serializers import PartnerApplicationAdminSerializer
+
+        try:
+            application = PartnerApplication.objects.prefetch_related(
+                "attachments", "notes"
+            ).get(pk=pk)
+        except (PartnerApplication.DoesNotExist, ValidationError, ValueError):
+            return Response({"detail": "Application not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(PartnerApplicationAdminSerializer(application).data)
+
+
+class PartnerApplicationTransitionView(PlatformAdminAPIView):
+    """POST a state transition. Legality is enforced in the service layer."""
+
+    def post(self, request, pk, action):
+        from apps.partners.services import (
+            ApplicationTransitionError,
+            PartnerVisibilityError,
+            approve_application,
+            reject_application,
+            start_review,
+        )
+
+        try:
+            if action == "review":
+                application = start_review(pk=pk, actor=request.user, request=request)
+                payload = {"status": application.status}
+            elif action == "approve":
+                application, partner = approve_application(
+                    pk=pk, actor=request.user,
+                    partner_tier=request.data.get("partner_tier"),
+                    partner_type=request.data.get("partner_type"),
+                    request=request,
+                )
+                payload = {
+                    "status": application.status,
+                    "partner_id": str(partner.id),
+                    "partner_slug": partner.slug,
+                    "partner_status": partner.status,
+                }
+            elif action == "reject":
+                application = reject_application(
+                    pk=pk, actor=request.user,
+                    reason=request.data.get("reason", ""), request=request,
+                )
+                payload = {"status": application.status}
+            else:
+                return Response({"detail": "Unknown action."}, status=status.HTTP_400_BAD_REQUEST)
+        except PartnerVisibilityError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
+        except ApplicationTransitionError as exc:
+            # Well-formed request, illegal in the current state → 409.
+            return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
+        except ValidationError as exc:
+            return Response(
+                {"detail": "; ".join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response(payload)
+
+
+class PartnerApplicationNoteView(PlatformAdminAPIView):
+    """POST an internal reviewer note. Never served publicly."""
+
+    def post(self, request, pk):
+        from apps.partners.services import PartnerVisibilityError, add_note
+
+        try:
+            note = add_note(pk=pk, actor=request.user, note=request.data.get("note", ""))
+        except PartnerVisibilityError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
+        except ValidationError as exc:
+            return Response(
+                {"detail": "; ".join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response(
+            {"id": str(note.id), "note": note.note,
+             "created_at": note.created_at.isoformat()},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class PartnerApplicationExportXlsxView(PlatformAdminAPIView):
+    """Excel export of the CURRENTLY FILTERED applications."""
+
+    def get(self, request):
+        from apps.partners.exports import export_applications_xlsx
+        from apps.partners.selectors import list_applications_for_admin
+
+        return export_applications_xlsx(
+            list_applications_for_admin(**_application_filters(request))
+        )
+
+
+class PartnerApplicationExportPdfView(PlatformAdminAPIView):
+    """PDF export of the CURRENTLY FILTERED applications."""
+
+    def get(self, request):
+        from apps.partners.exports import export_applications_pdf
+        from apps.partners.selectors import list_applications_for_admin
+
+        response = export_applications_pdf(
+            list_applications_for_admin(**_application_filters(request))
+        )
+        if response is None:
+            return Response(
+                {"detail": "PDF rendering is unavailable on this deployment."},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        return response

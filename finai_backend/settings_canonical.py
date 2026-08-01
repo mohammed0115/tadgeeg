@@ -123,6 +123,11 @@ THIRD_PARTY_APPS = [
     "corsheaders",
     "drf_spectacular",
     "django_filters",
+    # ISO 3166-1 country data for trial-lead capture. Installed (not just
+    # imported) so its bundled Arabic translations load — the product is
+    # Arabic-first. It does NOT replace Organization.Country, which is the
+    # billing-jurisdiction enum and stays GCC-only.
+    "django_countries",
 ]
 
 LOCAL_APPS = [
@@ -171,6 +176,12 @@ LOCAL_APPS = [
     "apps.file_management",
     "apps.leads",
     "apps.cms",
+    # Partner ecosystem (Phase 2A). Registered in the SAME change that
+    # creates the app: an installed app importing an unregistered one
+    # raises RuntimeError at import time and stops the process booting.
+    # That has happened twice here — see docs/adr/0003-quarantine-apps-jobs.md
+    # and tests/test_app_registry_integrity.py.
+    "apps.partners",
 ]
 
 # ─── Rule Engine Settings ──────────────────────────────────────────────────────
@@ -301,6 +312,37 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 STATIC_ROOT.mkdir(parents=True, exist_ok=True)
 MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+
+
+# ─── Partner application documents — PRIVATE storage ──────────────────────────
+#
+# Deliberately OUTSIDE MEDIA_ROOT. Commercial registrations and certificates
+# arrive from unauthenticated strangers and must never be reachable by URL.
+#
+# The existing private-media approach gates /media/(documents|invoices|batches)
+# at nginx (Docs/PHASE_4_PRIVATE_MEDIA_SECURITY_FIX.md). That protects real
+# deployments but depends on web-server config being correct, and it is absent
+# in tests and in `runserver`. Keeping these files out of the web root entirely
+# means no server configuration can expose them.
+#
+# The storage is constructed with base_url=None, so calling `.url` on one of
+# these files RAISES instead of returning a guessable path — an accidental
+# template exposure fails loudly rather than silently leaking a document.
+PARTNER_DOCS_ROOT = Path(os.environ.get(
+    "PARTNER_DOCS_ROOT", str(BASE_DIR / "private_media" / "partner_applications")
+))
+PARTNER_DOCS_ROOT.mkdir(parents=True, exist_ok=True)
+
+#: Per-file cap, in MB.
+PARTNER_DOC_MAX_FILE_MB = int(os.environ.get("PARTNER_DOC_MAX_FILE_MB", "10"))
+#: Total across one submission, in MB.
+PARTNER_DOC_MAX_TOTAL_MB = int(os.environ.get("PARTNER_DOC_MAX_TOTAL_MB", "25"))
+#: Maximum attachments per application.
+PARTNER_DOC_MAX_FILES = int(os.environ.get("PARTNER_DOC_MAX_FILES", "10"))
+#: Reject a second submission from the same email inside this window (minutes).
+PARTNER_APPLICATION_DEDUPE_MINUTES = int(
+    os.environ.get("PARTNER_APPLICATION_DEDUPE_MINUTES", "60")
+)
 (BASE_DIR / "static").mkdir(parents=True, exist_ok=True)
 
 if not DEBUG:
@@ -410,6 +452,12 @@ REST_FRAMEWORK = {
         "anon": "100/day",
         "user": "1000/day",
         "payments_create": "30/min",
+        # Anonymous write paths. OrgRateLimitMiddleware is organization-scoped
+        # and does NOT cover anonymous callers, so these are the only limit on
+        # a stranger POSTing repeatedly. Rates live here (env-tunable), never
+        # hardcoded in a view.
+        "partner_application": os.environ.get("THROTTLE_PARTNER_APPLICATION", "5/day"),
+        "public_contact": os.environ.get("THROTTLE_PUBLIC_CONTACT", "10/day"),
     },
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.AcceptHeaderVersioning",
     "ALLOWED_VERSIONS": ["1.0", "1.1", "2.0"],

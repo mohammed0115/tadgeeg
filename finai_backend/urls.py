@@ -69,6 +69,29 @@ urlpatterns = [
     path("invoices/bulk/",                 InvoiceBulkActionView.as_view(),    name="invoice-bulk-compat"),
     # Auditing app (AI document auditor)
     path("auditor/", include("apps.auditing.urls")),
+    # ── Platform admin console API (staff / Get Solution internal) ──────────
+    # namespace = "platform_admin_api" → reverse("platform_admin_api:stats")
+    #
+    # This prefix is not arbitrary: the admin console's client-side rewrite
+    # layer (templates/layouts/base_platform_admin.html) translates every
+    # legacy /api/v1/cms/admin/* and /api/v1/platform/* call to
+    # /api/platform-admin/*, and this module's prefixes match that table
+    # element for element. Before this mount existed, all 61 admin API call
+    # sites in the console returned 404 — the console rendered but could not
+    # load or save anything.
+    #
+    # Every path here is staff-only; see the permission contract documented in
+    # apps/platform_management/api_urls.py. There is no middleware fronting
+    # this prefix: core/namespace_access.py defines PLATFORM_PREFIXES covering
+    # it, but NamespaceAccessControlMiddleware is NOT in settings.MIDDLEWARE,
+    # so per-view permission classes are the only layer. Do not add a path
+    # here without a test that executes the view body as staff and asserts
+    # 403 for a non-staff authenticated user.
+    path(
+        "api/platform-admin/",
+        include("apps.platform_management.api_urls", namespace="platform_admin_api"),
+    ),
+
     # ── Platform admin console (staff / Get Solution internal) ──────────────
     # namespace = "platform_admin"  →  reverse("platform_admin:dashboard")
     # IMPORTANT: must come before the frontend catch-all include
@@ -96,6 +119,9 @@ urlpatterns = [
     path("api/v1/notifications/", include("apps.notifications.urls")),
     path("api/v1/assistant/", include("apps.assistant.urls")),
     path("api/v1/webhooks/", include("apps.webhooks.urls")),
+    # Public partner application submission (Phase 2B). Unauthenticated and
+    # file-accepting — throttled per IP via the partner_application scope.
+    path("api/v1/partners/", include(("apps.partners.urls", "partners"), namespace="partners")),
     path("api/v1/export/", include("apps.data_export.urls")),
     path("api/v1/health/", HealthCheckView.as_view(), name="api-health"),
     path("api/v1/health/full/", FullHealthCheckView.as_view(), name="api-health-full"),

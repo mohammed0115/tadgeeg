@@ -5,6 +5,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from core.feature_flags import JOBS_DISABLED_COUNT, jobs_enabled
+from core.permissions import is_platform_user
+
 from .exceptions import (
     CMSError,
     ContentNotFoundError,
@@ -79,11 +82,31 @@ from .services import (
 
 
 def _is_cms_admin(user) -> bool:
-    return bool(user and (user.is_staff or getattr(user, "role", None) == "admin"))
+    """Platform authority check for the CMS admin surface.
+
+    This used to accept ``user.role == "admin"`` as well as ``is_staff``. That
+    was a privilege-escalation hole: ``User.Role.ADMIN`` is an *organization*
+    role, not platform authority, and every self-service registrant is granted
+    it (apps/authentication/serializers.py — ``validated_data["role"] =
+    User.Role.ADMIN``). ``CMSAdminPermission`` was therefore equivalent to
+    ``IsAuthenticated`` for any customer who signed up.
+
+    The project already draws the org/platform line in core.permissions:
+    ``is_org_member`` is explicitly "has an organization AND is NOT a platform
+    user", and ``LEGACY_ORG_ADMIN_ROLES`` classifies "admin" as an org role.
+    So we defer to ``is_platform_user`` (is_staff or is_superuser) — the same
+    predicate ``IsPlatformAdmin`` uses, which keeps the whole
+    ``/api/platform-admin/`` surface on one consistent rule.
+
+    Registration is NOT changed: granting the org owner ``Role.ADMIN`` is
+    correct and load-bearing for owner detection, ``effective_role`` and
+    ``is_org_admin``.
+    """
+    return is_platform_user(user)
 
 
 class CMSAdminPermission(IsAuthenticated):
-    """Allow access only to staff or admin-role users."""
+    """Allow access only to platform staff (is_staff or is_superuser)."""
 
     def has_permission(self, request, view) -> bool:
         return bool(
@@ -685,8 +708,14 @@ class CMSDashboardStatsView(APIView):
         from apps.cms.models import (
             CMSPage, MediaAsset, PricingPlan, Service, FAQItem,
         )
-        from apps.jobs.models import JobPost, JobApplication
         from apps.leads.models import ContactLead
+
+        # apps.jobs is quarantined (not in INSTALLED_APPS). Importing its
+        # models raises RuntimeError, so we must not import them at all — not
+        # even lazily. Keys stay in the payload so the response shape is
+        # unchanged for existing clients; values are None (not 0) because
+        # "unknown, feature off" is not the same claim as "zero jobs".
+        jobs_on = jobs_enabled()
 
         pages_qs = CMSPage.objects.all()
         return Response({
@@ -694,8 +723,9 @@ class CMSDashboardStatsView(APIView):
             "published_pages": pages_qs.filter(status="published").count(),
             "draft_pages": pages_qs.filter(status="draft").count(),
             "archived_pages": pages_qs.filter(status="archived").count(),
-            "active_jobs": JobPost.objects.filter(status="published").count(),
-            "total_applications": JobApplication.objects.count(),
+            "jobs_feature_enabled": jobs_on,
+            "active_jobs": JOBS_DISABLED_COUNT,
+            "total_applications": JOBS_DISABLED_COUNT,
             "new_leads": ContactLead.objects.filter(status="new").count(),
             "unread_leads": ContactLead.objects.filter(is_read=False).count(),
             "total_leads": ContactLead.objects.count(),

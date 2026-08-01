@@ -1,24 +1,65 @@
-"""Platform management API URLs for the internal console namespace."""
+"""Platform management API URLs for the internal console namespace.
+
+Mounted at ``/api/platform-admin/`` — the surface the admin console's
+client-side rewrite layer (templates/layouts/base_platform_admin.html) targets.
+
+Permission contract for this module: **every path is staff-only**
+(``is_platform_user`` → ``is_staff or is_superuser``). Two of the viewsets
+reused here ship weaker defaults intended for organisation-scoped mounts, so
+they are re-gated locally below rather than mutated in their own apps — those
+apps keep their semantics for any future org-facing mount.
+"""
 
 from django.urls import include, path
 
 from apps.activity_logs.views import ActivityLogViewSet
 from apps.cms import views as cms_views
-from apps.jobs import views as jobs_views
 from apps.leads import views as leads_views
+from apps.partners import views as partner_views
 from apps.storage_management.views import StorageProviderViewSet
+from core.permissions import IsPlatformAdmin
 
 from . import api_views
 
 app_name = "platform_admin_api"
 
-activity_log_list = ActivityLogViewSet.as_view({"get": "list"})
-activity_log_detail = ActivityLogViewSet.as_view({"get": "retrieve"})
-storage_provider_list = StorageProviderViewSet.as_view({"get": "list", "post": "create"})
-storage_provider_detail = StorageProviderViewSet.as_view(
+
+class _PlatformActivityLogViewSet(ActivityLogViewSet):
+    """Staff-only view of the activity log.
+
+    ``ActivityLogViewSet`` defaults to ``IsAuthenticated`` and narrows the
+    queryset to the caller's own organisation for non-staff. That is sensible
+    for an organisation-facing mount, but on ``/api/platform-admin/`` it would
+    let an ordinary customer reach a platform-console endpoint and receive
+    their own tenant's logs — contradicting the staff-only contract of this
+    surface. Platform authority is required here.
+    """
+
+    permission_classes = [IsPlatformAdmin]
+
+
+class _PlatformStorageProviderViewSet(StorageProviderViewSet):
+    """Staff-only storage-provider administration.
+
+    ``IsOrgAdminOrSuperAdmin`` (apps/storage_management/permissions.py) allows
+    *any* authenticated user to read, and allows writes to anyone whose role is
+    ``admin``/``org_admin``. ``User.Role.ADMIN`` is granted to every
+    self-service registrant, and ``StorageProvider.save()`` clears
+    ``is_default`` on every other row — so under the original permission a
+    customer could repoint the platform's default storage backend for all
+    tenants. Platform authority is required here.
+    """
+
+    permission_classes = [IsPlatformAdmin]
+
+
+activity_log_list = _PlatformActivityLogViewSet.as_view({"get": "list"})
+activity_log_detail = _PlatformActivityLogViewSet.as_view({"get": "retrieve"})
+storage_provider_list = _PlatformStorageProviderViewSet.as_view({"get": "list", "post": "create"})
+storage_provider_detail = _PlatformStorageProviderViewSet.as_view(
     {"get": "retrieve", "put": "update", "patch": "partial_update", "delete": "destroy"}
 )
-storage_provider_test = StorageProviderViewSet.as_view({"post": "test_connection"})
+storage_provider_test = _PlatformStorageProviderViewSet.as_view({"post": "test_connection"})
 
 urlpatterns = [
     path("stats/", api_views.PlatformDashboardStatsView.as_view(), name="stats"),
@@ -44,13 +85,40 @@ urlpatterns = [
     path("faq/categories/<int:pk>/", cms_views.FAQCategoryDetailView.as_view(), name="faq-category-detail"),
     path("faq/items/", cms_views.FAQItemListView.as_view(), name="faq-items"),
     path("faq/items/<int:pk>/", cms_views.FAQItemDetailView.as_view(), name="faq-item-detail"),
-    path("jobs/", jobs_views.AdminJobListView.as_view(), name="jobs"),
-    path("jobs/<uuid:pk>/", jobs_views.AdminJobDetailView.as_view(), name="job-detail"),
-    path("jobs/<uuid:pk>/publish/", jobs_views.AdminJobPublishView.as_view(), name="job-publish"),
-    path("jobs/<uuid:pk>/close/", jobs_views.AdminJobCloseView.as_view(), name="job-close"),
-    path("jobs/stats/", jobs_views.JobStatsView.as_view(), name="jobs-stats"),
-    path("jobs/applications/", jobs_views.AdminApplicationListView.as_view(), name="job-applications"),
-    path("jobs/applications/<uuid:pk>/", jobs_views.AdminApplicationDetailView.as_view(), name="job-application-detail"),
+    # ── jobs/* — intentionally NOT routed ────────────────────────────────
+    # apps.jobs is quarantined (absent from INSTALLED_APPS). Importing
+    # apps.jobs.views raises RuntimeError at import time, and because
+    # include() imports this module while the URL tree is built, restoring
+    # these seven paths would stop the whole process from booting — not just
+    # break /jobs/. The recruitment UI is disabled at the template level so
+    # nothing requests them. See docs/adr/0003-quarantine-apps-jobs.md.
+    # ── Trial Users Dashboard (Phase 1, §B) ──────────────────────────────
+    # Staff-only like everything else on this prefix. Declared before
+    # leads/<uuid:pk>/ so the literal segments win over the uuid converter.
+    path("trial-users/summary/", api_views.TrialUsersSummaryView.as_view(), name="trial-users-summary"),
+    path("trial-users/export.xlsx", api_views.TrialUsersExportXlsxView.as_view(), name="trial-users-export-xlsx"),
+    path("trial-users/export.pdf", api_views.TrialUsersExportPdfView.as_view(), name="trial-users-export-pdf"),
+    path("trial-users/<uuid:pk>/convert/", api_views.TrialUserConvertView.as_view(), name="trial-user-convert"),
+    path("trial-users/", api_views.TrialUsersListView.as_view(), name="trial-users"),
+
+    # ── Partner administration (Phase 2A, §C/§F) ─────────────────────────
+    # Staff-only. Publish/hide are audited via apps.partners.services.
+    # Applications (Phase 2B). Literal segments declared before <uuid:pk> so
+    # they win over the converter.
+    path("partner-applications/export.xlsx", api_views.PartnerApplicationExportXlsxView.as_view(), name="partner-applications-export-xlsx"),
+    path("partner-applications/export.pdf", api_views.PartnerApplicationExportPdfView.as_view(), name="partner-applications-export-pdf"),
+    path("partner-applications/<uuid:pk>/notes/", api_views.PartnerApplicationNoteView.as_view(), name="partner-application-note"),
+    path("partner-applications/<uuid:pk>/<str:action>/", api_views.PartnerApplicationTransitionView.as_view(), name="partner-application-transition"),
+    path("partner-applications/<uuid:pk>/", api_views.PartnerApplicationDetailView.as_view(), name="partner-application-detail"),
+    path("partner-applications/", api_views.PartnerApplicationListView.as_view(), name="partner-applications"),
+    path("partner-attachments/<uuid:pk>/download/", partner_views.PartnerApplicationAttachmentDownloadView.as_view(), name="partner-attachment-download"),
+
+    path("partners/reorder/", api_views.PartnerReorderView.as_view(), name="partner-reorder"),
+    path("partners/<uuid:pk>/publish/", api_views.PartnerPublishView.as_view(), name="partner-publish"),
+    path("partners/<uuid:pk>/hide/", api_views.PartnerHideView.as_view(), name="partner-hide"),
+    path("partners/<uuid:pk>/", api_views.PartnerDetailView.as_view(), name="partner-detail"),
+    path("partners/", api_views.PartnerListCreateView.as_view(), name="partners"),
+
     path("leads/", leads_views.AdminLeadListView.as_view(), name="leads"),
     path("leads/stats/", leads_views.LeadStatsView.as_view(), name="leads-stats"),
     path("leads/mark-all-read/", api_views.PlatformMarkAllLeadsReadView.as_view(), name="leads-mark-all-read"),

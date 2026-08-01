@@ -116,7 +116,7 @@ class PlansPageTests(TestCase):
         )
         self.assertEqual(r["Content-Type"].split(";")[0], "application/json")
         data = r.json()
-        self.assertEqual(len(data["plans"]), 4)
+        self.assertEqual(len(data["plans"]), 9)  # Phase 3A: catalogue is nine plans
 
 
 class SubscriptionPageTests(TestCase):
@@ -146,10 +146,16 @@ class SubscriptionPageTests(TestCase):
         self.assertIn("Business", html)              # plan name
         self.assertIn("Active", html)                # localised status
         self.assertIn("320", html)                   # used
-        self.assertIn("180", html)                   # remaining (500 - 320)
+        # Remaining is derived from the seeded plan rather than hardcoded: this
+        # test is about the subscription page RENDERING used/remaining, not
+        # about what Business costs. The literal catalogue figures are asserted
+        # in tests/test_plan_catalogue.py.
+        from apps.billing.models import Plan
+        limit = Plan.objects.get(code=PlanCode.BUSINESS).invoice_limit
+        self.assertIn(str(limit - 320), html)        # remaining
 
     def test_progress_bar_width_matches_used_pct(self):
-        self._activate(used=400)                     # 80% of 500
+        self._activate(used=1600)                    # 80% of 2,000
         r = self.client.get(reverse("billing:subscription"))
         html = r.content.decode("utf-8")
         self.assertIn("width: 80%", html)
@@ -161,7 +167,7 @@ class SubscriptionPageTests(TestCase):
         self.assertIn("don't have an active subscription", html.lower())
 
     def test_quota_full_warning_card_appears(self):
-        self._activate(used=500)
+        self._activate(used=2000)
         r = self.client.get(reverse("billing:subscription"), HTTP_ACCEPT_LANGUAGE="en")
         html = r.content.decode("utf-8")
         self.assertIn("used all available invoices", html.lower())

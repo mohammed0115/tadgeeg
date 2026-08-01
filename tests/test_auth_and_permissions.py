@@ -32,14 +32,27 @@ User = get_user_model()
 class TestRegistration:
 
     def test_register_with_valid_data_succeeds(self):
+        """"Valid data" now includes the lead fields §A.1/§A.2 made mandatory.
+
+        Trial registration is a lead-generation flow: phone and country (§A.1)
+        and primary_benefit (§A.2) are required at the serializer, so a payload
+        of email+password alone is no longer valid data and correctly 400s.
+        This test asserts the success path, so it has to send them.
+        """
         client = APIClient()
         response = client.post("/api/v1/auth/register/", {
             "email": "newuser@test.finai",
             "password": "SecurePass1!",
             "password_confirm": "SecurePass1!",
             "full_name": "New User",
+            "phone": "+966501234567",
+            "country": "SA",
+            "primary_benefit": "company",
         }, format="json")
-        assert response.status_code in (status.HTTP_200_OK, status.HTTP_201_CREATED)
+        assert response.status_code in (status.HTTP_200_OK, status.HTTP_201_CREATED), (
+            f"registration rejected valid data: {response.status_code} "
+            f"{getattr(response, 'data', None)}"
+        )
 
     def test_register_duplicate_email_fails(self, db):
         User.objects.create_user(

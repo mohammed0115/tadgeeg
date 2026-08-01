@@ -83,6 +83,12 @@ def plan_action(plan, active_sub, *, used_trial, now):
     Shared by the plans page (button rendering) AND SelectPlanView (backend
     enforcement) so UI and server can never disagree.
     """
+    # Custom-quote plans are never purchasable through self-service: they have
+    # no list price, so there is nothing to charge. Checked FIRST so the branch
+    # below never compares a NULL price.
+    if getattr(plan, "is_custom_quote", False):
+        return "contact_sales"
+
     if getattr(plan, "is_trial", False):
         # A free trial cannot be started while any usable subscription exists,
         # nor if this org has already used its trial.
@@ -94,11 +100,31 @@ def plan_action(plan, active_sub, *, used_trial, now):
     current = active_sub.plan
     if plan.pk == current.pk or plan.code == current.code:
         return "renew" if _is_renewal_window(active_sub, now) else "current"
-    if plan.price > current.price:
+
+    # ── Cross-family moves are not a self-service upgrade path ──────────
+    # Accounting-firm plans address a different buyer, and their headline
+    # capability — many client companies under one subscription — is NOT
+    # implemented (see docs/adr/0006-plan-limit-dimensions.md). Ranking purely
+    # by sort_order would put them "above" Professional and offer them as an
+    # Upgrade button to an ordinary business customer, selling a capability
+    # that does not exist. Route those to sales instead.
+    from apps.billing.choices import ACCOUNTING_PLAN_CODES
+
+    plan_is_accounting = plan.code in ACCOUNTING_PLAN_CODES
+    current_is_accounting = current.code in ACCOUNTING_PLAN_CODES
+    if plan_is_accounting != current_is_accounting:
+        return "contact_sales"
+
+    # Rank by sort_order, not price. Price became nullable when custom-quote
+    # plans landed, and `None > Decimal` raises TypeError. sort_order is the
+    # explicit commercial ladder and is always populated, so it ranks plans
+    # without a comparison that can blow up.
+    plan_rank = plan.sort_order
+    current_rank = getattr(current, "sort_order", 0)
+    if plan_rank > current_rank:
         return "upgrade"
-    if plan.price < current.price:
+    if plan_rank < current_rank:
         return "downgrade_unavailable"
-    # Equal price, different plan — treat as a lateral change (allowed).
     return "upgrade"
 
 
@@ -283,6 +309,17 @@ class SelectPlanView(APIView):
                  "code": "trial_unavailable"},
                 status=drf_status.HTTP_409_CONFLICT,
             )
+        if action == "contact_sales":
+            # Custom-quote plans carry no list price. Letting one through would
+            # reach apps/payments/pricing.py with a NULL amount — at best a 500,
+            # at worst an unlimited plan sold for nothing. Refused server-side,
+            # not merely hidden in the UI.
+            return Response(
+                {"detail": _("This plan is priced by quotation. Please contact our "
+                             "sales team to arrange it."),
+                 "code": "contact_sales"},
+                status=drf_status.HTTP_409_CONFLICT,
+            )
 
         svc = SubscriptionService()
         if plan_code == PlanCode.FREE_TRIAL.value:
@@ -442,13 +479,22 @@ class CurrentSubscriptionView(APIView):
                 and sub.ends_at <= now + _td(days=7)
             ):
                 show_renew = True
+        # Reuse plan_action rather than re-deriving "is there something better".
+        # The old rule was `price__gt=sub.plan.price`, a SECOND ranking rule that
+        # now diverges from the one on the plans page: it would offer
+        # accounting-firm plans as an upgrade to an ordinary business customer,
+        # and `price__gt=None` is a broken query once the current plan is a
+        # custom-quote one. plan_action already encodes family and custom-quote
+        # rules, so asking it keeps both surfaces in agreement — which is the
+        # property it was written for.
         show_upgrade = False
         if sub is not None and sub.plan_id is not None:
-            show_upgrade = (
-                Plan.objects
-                .filter(is_active=True, is_free=False, is_trial=False,
-                        price__gt=sub.plan.price)
-                .exists()
+            used_trial = OrganizationSubscription.objects.filter(
+                organization=organization, plan__is_trial=True,
+            ).exists()
+            show_upgrade = any(
+                plan_action(candidate, sub, used_trial=used_trial, now=now) == "upgrade"
+                for candidate in Plan.objects.filter(is_active=True)
             )
 
         return render(request, "billing/subscription.html", {

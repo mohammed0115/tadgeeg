@@ -86,7 +86,7 @@ class MiddlewareBlocksUnsubscribedDashboardTests(TestCase):
         r = self.client.get(reverse("billing:plans"), HTTP_ACCEPT="application/json")
         self.assertEqual(r.status_code, 200, r.content[:200])
         plans = r.json()["plans"]
-        self.assertEqual(len(plans), 4)
+        self.assertEqual(len(plans), 9)  # Phase 3A: catalogue is nine plans
 
     def test_subscribed_user_can_reach_dashboard(self):
         """Middleware must NOT redirect a subscribed user away from the

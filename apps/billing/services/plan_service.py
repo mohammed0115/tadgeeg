@@ -31,5 +31,30 @@ def get_plan(code: str) -> Plan:
 
 
 def list_purchasable_plans():
-    """Return the active plans, ordered for display on the billing page."""
-    return Plan.objects.filter(is_active=True).order_by("sort_order", "price")
+    """Active plans for display, ordered by the commercial ladder.
+
+    Ordered by ``sort_order`` alone now, not ``sort_order, price``: custom-quote
+    plans have a NULL price, and NULL ordering differs between backends
+    (SQLite sorts NULL first, MySQL likewise, PostgreSQL last). ``sort_order``
+    is explicit and identical everywhere.
+
+    This returns everything DISPLAYABLE, including custom-quote plans — the
+    pricing page must show Enterprise. Use ``list_checkout_plans()`` for what a
+    customer may actually buy.
+    """
+    return Plan.objects.filter(is_active=True).order_by("sort_order")
+
+
+def list_checkout_plans():
+    """Plans a customer may purchase through self-service checkout.
+
+    Excludes custom-quote plans: they carry no list price, so there is nothing
+    for apps/payments/pricing.py to charge. Selling one at NULL/0 would hand
+    away an unlimited plan for free.
+    """
+    return [plan for plan in list_purchasable_plans() if plan.is_purchasable]
+
+
+def is_checkout_allowed(plan) -> bool:
+    """Single predicate for 'can this be bought without talking to sales'."""
+    return bool(plan) and plan.is_purchasable

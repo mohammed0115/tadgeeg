@@ -68,6 +68,7 @@ class SubscriptionService:
             starts_at=now,
             ends_at=now + timedelta(days=plan.duration_days),
             invoice_limit=plan.invoice_limit,
+            user_limit=plan.user_limit,
             used_invoices=0,
             reserved_invoices=0,
             auto_renew=False,
@@ -87,11 +88,23 @@ class SubscriptionService:
             raise SubscriptionError(
                 f"Plan {plan.code} is free/trial — use create_free_trial instead."
             )
+        # A custom-quote plan has no list price. Letting one through would
+        # produce a payable subscription that `payments.pricing` cannot price:
+        # `_subscription_resolver` does `Decimal(sub.plan.price)` on a NULL and
+        # raises TypeError at payment time. Refuse in the domain layer so every
+        # caller is covered, not just the self-service view.
+        if plan.is_custom_quote or plan.price is None:
+            raise SubscriptionError(
+                f"Plan {plan.code} is priced by quotation and cannot be "
+                f"purchased through self-service checkout."
+            )
         return OrganizationSubscription.objects.create(
             organization=organization,
             plan=plan,
             status=SubscriptionStatus.PENDING_PAYMENT,
-            invoice_limit=plan.invoice_limit,  # frozen at creation time
+            # Both limits are frozen at creation time. NULL = unlimited.
+            invoice_limit=plan.invoice_limit,
+            user_limit=plan.user_limit,
             used_invoices=0,
             reserved_invoices=0,
         )
@@ -149,11 +162,12 @@ class SubscriptionService:
         locked.starts_at         = now
         locked.ends_at           = now + timedelta(days=plan.duration_days)
         locked.invoice_limit     = plan.invoice_limit
+        locked.user_limit        = plan.user_limit
         locked.used_invoices     = 0
         locked.reserved_invoices = 0
         locked.save(update_fields=[
             "status", "starts_at", "ends_at",
-            "invoice_limit", "used_invoices", "reserved_invoices",
+            "invoice_limit", "user_limit", "used_invoices", "reserved_invoices",
             "updated_at",
         ])
 

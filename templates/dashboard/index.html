@@ -73,12 +73,35 @@ Shows the org's current plan, usage, and remaining quota. The
         </div>
         <div style="flex:1;min-width:240px;">
           <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:4px;">
+            {% if billing.is_unlimited %}
+            {% comment %}
+              An unlimited plan has no denominator and no remainder to show;
+              rendering them would print "None".
+            {% endcomment %}
+            <span>{{ billing.used_invoices }} {% trans "audited" %}</span>
+            <span>{% trans "Unlimited" %}</span>
+            {% else %}
             <span>{{ billing.used_invoices }} / {{ billing.invoice_limit }} {% trans "audited" %}</span>
             <span>{{ billing.remaining_invoices }} {% trans "remaining" %}</span>
+            {% endif %}
           </div>
           <div style="height:8px;background:#EEF1F6;border-radius:100px;overflow:hidden;">
             <div style="height:100%;width:{{ billing.usage_percent }}%;background:{% if billing.usage_percent >= 90 %}#EF4444{% elif billing.usage_percent >= 70 %}#F59E0B{% else %}#10B981{% endif %};transition:width .4s ease;"></div>
           </div>
+          {% comment %}
+            §L.1.3: the seat dimension is shown by EXTENDING this existing bar.
+            Building a second quota widget beside it is explicitly forbidden.
+          {% endcomment %}
+          {% if billing.has_subscription %}
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-top:6px;">
+            {% if billing.is_unlimited_users %}
+            <span>{{ billing.seats_used }} {% trans "users" %}</span>
+            <span>{% trans "Unlimited" %}</span>
+            {% else %}
+            <span>{{ billing.seats_used }} / {{ billing.user_limit }} {% trans "users" %}</span>
+            {% endif %}
+          </div>
+          {% endif %}
         </div>
       </div>
       <div style="display:flex;gap:8px;">

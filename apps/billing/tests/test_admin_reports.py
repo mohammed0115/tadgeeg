@@ -266,8 +266,10 @@ class BillingUsageReportCommandTests(TestCase):
         # Top10 list shows the active orgs by used_invoices
         self.assertIn("Active org", text)
         self.assertIn("Low quota org", text)
-        # Expected revenue (350 + 350 = 700)
-        self.assertIn("700", text)
+        # Expected revenue: two starter subscriptions at the current list price.
+        from apps.billing.models import Plan
+        expected = int(Plan.objects.get(code=PlanCode.STARTER).price) * 2
+        self.assertIn(str(expected), text)
 
     def test_report_csv_output(self):
         out = StringIO()

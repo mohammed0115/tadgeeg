@@ -283,6 +283,11 @@
                     title="{% trans 'Downgrades are available at renewal. Contact support.' %}">
               {% trans "Downgrade unavailable" %}
             </button>
+          {% elif plan.action == 'contact_sales' %}
+            {% comment %} Custom-quote plans, and any cross-family move: neither
+               can be completed by self-service checkout, so the button must not
+               pretend otherwise. SelectPlanView refuses both server-side. {% endcomment %}
+            <a class="btn btn-outline" href="/contact/">{% trans "Contact sales" %}</a>
           {% elif plan.action == 'trial_unavailable' %}
             <button class="btn btn-outline" aria-disabled="true" disabled
                     title="{% trans 'Not available while you have an active subscription, or trial already used.' %}">

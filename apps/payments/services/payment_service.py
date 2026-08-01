@@ -243,6 +243,15 @@ class PaymentService:
             )
         # amount must equal the authoritative plan price
         plan = subscription.plan
+        # A custom-quote plan has no list price to match against. Without this
+        # guard `Decimal(plan.price)` below raises TypeError on the NULL — a 500
+        # instead of a refusal. Recording a negotiated amount needs an agreed
+        # price stored on the subscription; see ADR 0006.
+        if plan.price is None:
+            raise PaymentValidationError(
+                f"Plan {plan.code} is priced by quotation and has no list "
+                f"price; a manual payment cannot be validated against it."
+            )
         amount = _coerce_amount(amount).quantize(Decimal("0.01"))
         authoritative = Decimal(plan.price).quantize(Decimal("0.01"))
         if amount != authoritative:

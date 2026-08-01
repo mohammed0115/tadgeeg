@@ -99,6 +99,12 @@ class QuotaService:
             return {"allowed": False, "reason": reason,
                     "remaining": 0, "subscription": None}
 
+        # Unlimited bypasses the comparison entirely rather than being compared
+        # against a sentinel big number: remaining_invoices returns None for an
+        # unlimited plan, and `None < quantity` would raise.
+        if sub.is_unlimited_invoices:
+            return {"allowed": True, "reason": "", "remaining": None, "subscription": sub}
+
         remaining = sub.remaining_invoices
         if remaining < quantity:
             return {"allowed": False, "reason": "quota_exceeded",
@@ -154,11 +160,18 @@ class QuotaService:
             .get(pk=sub.pk)
         )
 
-        remaining = max(0, locked.invoice_limit - locked.used_invoices - locked.reserved_invoices)
-        if remaining < quantity:
-            raise QuotaExceeded(
-                f"Not enough quota: requested {quantity}, remaining {remaining}."
+        # Unlimited (invoice_limit IS NULL) skips the check. Guarded here as
+        # well as in can_audit because this is the row-locked write path and is
+        # reachable directly — an unlimited plan must not fall into arithmetic
+        # on None.
+        if locked.invoice_limit is not None:
+            remaining = max(
+                0, locked.invoice_limit - locked.used_invoices - locked.reserved_invoices
             )
+            if remaining < quantity:
+                raise QuotaExceeded(
+                    f"Not enough invoice quota: requested {quantity}, remaining {remaining}."
+                )
 
         locked.reserved_invoices += quantity
         locked.save(update_fields=["reserved_invoices", "updated_at"])
@@ -298,3 +311,82 @@ class QuotaService:
             quantity=quantity,
             reason=reason,
         )
+
+
+# ─── Seat (user) limit enforcement — Phase 3A, spec §H ───────────────────────
+
+class SeatLimitExceeded(QuotaError):
+    """Adding another user would exceed the plan's seat allowance."""
+
+
+class SeatService:
+    """Enforcement for the ``user_limit`` dimension.
+
+    Deliberately shaped like QuotaService rather than as a second mechanism:
+    same "read the active subscription, compare against the snapshotted limit,
+    refuse server-side" flow. The difference is that seats are a *live count*
+    of the organisation's users, not a consumed-and-ledgered allowance — there
+    is nothing to reserve or release, so no UsageLedger rows are written.
+
+    Counting is done in SQL (``.count()``), never by materialising users.
+    """
+
+    def _active_subscription(self, organization):
+        return QuotaService().get_active_subscription(organization)
+
+    def seat_limit(self, organization):
+        """The organisation's seat allowance, or None for unlimited.
+
+        None is also returned when there is no active subscription: seat
+        enforcement is not the right place to block an unsubscribed org — that
+        is SubscriptionRequiredMiddleware's job, and duplicating it here would
+        produce two different errors for the same condition.
+        """
+        sub = self._active_subscription(organization)
+        if sub is None:
+            return None
+        return sub.user_limit
+
+    def seats_used(self, organization) -> int:
+        """Active users in the organisation, counted in the database."""
+        from apps.authentication.models import User
+
+        return User.objects.filter(organization=organization, is_active=True).count()
+
+    def can_add_user(self, organization, quantity: int = 1) -> dict:
+        """Structured decision. Never raises — mirrors QuotaService.can_audit."""
+        if quantity <= 0:
+            return {"allowed": False, "reason": "Quantity must be > 0",
+                    "limit": None, "used": 0, "remaining": 0}
+
+        limit = self.seat_limit(organization)
+        used = self.seats_used(organization)
+
+        if limit is None:
+            # Unlimited (or no subscription — see seat_limit).
+            return {"allowed": True, "reason": "", "limit": None,
+                    "used": used, "remaining": None}
+
+        remaining = max(0, limit - used)
+        if remaining < quantity:
+            return {"allowed": False, "reason": "seat_limit_exceeded",
+                    "limit": limit, "used": used, "remaining": remaining}
+        return {"allowed": True, "reason": "", "limit": limit,
+                "used": used, "remaining": remaining}
+
+    def assert_can_add_user(self, organization, quantity: int = 1):
+        """Raise ``SeatLimitExceeded`` when the seat allowance is exhausted.
+
+        The message names WHICH limit was hit — a caller staring at a bare
+        "limit exceeded" cannot tell seats from invoices.
+        """
+        decision = self.can_add_user(organization, quantity)
+        if not decision["allowed"]:
+            if decision["reason"] == "seat_limit_exceeded":
+                raise SeatLimitExceeded(
+                    f"User limit reached: this plan allows {decision['limit']} "
+                    f"user(s) and {decision['used']} are already active. "
+                    f"Upgrade the plan to add more."
+                )
+            raise QuotaError(decision["reason"])
+        return decision

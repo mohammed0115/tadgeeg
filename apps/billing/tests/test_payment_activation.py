@@ -73,7 +73,7 @@ class PaidPlanSelectionTests(TestCase):
         self.assertEqual(txn.purpose, "subscription")
         self.assertEqual(txn.reference_type, "organization_subscription")
         self.assertEqual(txn.reference_id, str(sub.id))
-        self.assertEqual(txn.amount, Decimal("350.00"))
+        self.assertEqual(txn.amount, Decimal("149.00"))
 
     @mock.patch(
         "apps.payments.gateways.moyasar.MoyasarGateway.create_payment",
@@ -86,7 +86,7 @@ class PaidPlanSelectionTests(TestCase):
         sub = OrganizationSubscription.objects.get(organization=self.org)
         self.assertEqual(sub.status, SubscriptionStatus.PENDING_PAYMENT)
         self.assertEqual(sub.plan.code, PlanCode.BUSINESS)
-        self.assertEqual(sub.invoice_limit, 500)
+        self.assertEqual(sub.invoice_limit, 2000)
 
     @mock.patch(
         "apps.payments.gateways.moyasar.MoyasarGateway.create_payment",
@@ -98,9 +98,9 @@ class PaidPlanSelectionTests(TestCase):
         self.assertEqual(r.status_code, 201)
         sub = OrganizationSubscription.objects.get(organization=self.org)
         self.assertEqual(sub.status, SubscriptionStatus.PENDING_PAYMENT)
-        self.assertEqual(sub.invoice_limit, 1000)
+        self.assertEqual(sub.invoice_limit, 5000)
         txn = sub.payment_transaction
-        self.assertEqual(txn.amount, Decimal("890.00"))
+        self.assertEqual(txn.amount, Decimal("999.00"))
 
 
 @override_settings(PAYMENT_PROVIDER="moyasar")
@@ -122,7 +122,7 @@ class WebhookActivatesSubscriptionTests(TestCase):
         ):
             self.txn = PaymentService().create_transaction(
                 organization=self.org, user=self.user,
-                amount=Decimal("350.00"), currency="SAR",
+                amount=Decimal("149.00"), currency="SAR",
                 purpose="subscription",
                 reference_type="organization_subscription",
                 reference_id=str(self.sub.id),
@@ -168,7 +168,7 @@ class PaymentFailureFlipsSubscriptionTests(TestCase):
         ):
             self.txn = PaymentService().create_transaction(
                 organization=self.org, user=self.user,
-                amount=Decimal("350.00"), currency="SAR",
+                amount=Decimal("149.00"), currency="SAR",
                 purpose="subscription",
                 reference_type="organization_subscription",
                 reference_id=str(self.sub.id),
@@ -200,7 +200,7 @@ class CallbackDoesNotActivateTests(TestCase):
         ):
             self.txn = PaymentService().create_transaction(
                 organization=self.org, user=self.user,
-                amount=Decimal("350.00"), currency="SAR",
+                amount=Decimal("149.00"), currency="SAR",
                 purpose="subscription",
                 reference_type="organization_subscription",
                 reference_id=str(self.sub.id),

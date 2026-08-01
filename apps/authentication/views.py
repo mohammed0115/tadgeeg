@@ -126,7 +126,11 @@ class RegisterView(APIView):
         responses={201: UserSerializer},
     )
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
+        # context={"request": ...} so the serializer can derive the
+        # auto-captured lead block (IP, device, language, referrer, campaign).
+        # Without it the API path would silently record none of it, and the two
+        # registration surfaces would disagree.
+        serializer = RegisterSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         log_action(request, AuditLog.Action.USER_CREATED, "user", str(user.id))
@@ -322,6 +326,20 @@ class UserListView(generics.ListCreateAPIView):
                 })
             if organization and organization.id != self.request.user.organization_id:
                 raise PermissionDenied(_("You can only create users inside your own organization."))
+
+        # ── Seat limit (§H) — enforced in the DOMAIN layer ──────────────────
+        # A limit checked only in the UI is not a limit, and this is the API a
+        # customer's own admin uses to add colleagues. Platform staff bypass:
+        # support needs to be able to fix an account regardless of its plan.
+        target_org = organization or getattr(self.request.user, "organization", None)
+        if target_org is not None and not _is_global_admin(self.request.user):
+            from apps.billing.services.quota_service import SeatLimitExceeded, SeatService
+
+            try:
+                SeatService().assert_can_add_user(target_org)
+            except SeatLimitExceeded as exc:
+                raise ValidationError({"user_limit": str(exc)}) from exc
+
         user = serializer.save()
         log_action(self.request, AuditLog.Action.USER_CREATED, "user", str(user.id))
 

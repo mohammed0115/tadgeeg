@@ -136,6 +136,15 @@ def _subscription_resolver(reference_type: str, reference_id: str, organization)
         raise PriceResolutionError(
             f"Subscription {reference_id} not found in this organization."
         )
+    if sub.plan.price is None:
+        # Custom-quote plan: no list price exists, so there is nothing
+        # authoritative to charge. Refuse rather than let Decimal(None) raise
+        # TypeError — this resolver is the server-side authority on amounts and
+        # must fail as a priced-refusal, not as a crash. See ADR 0006.
+        raise PriceResolutionError(
+            f"Plan {sub.plan.code} is priced by quotation; no list price is "
+            f"available to authorise this payment."
+        )
     return Decimal(sub.plan.price), (sub.plan.currency or "SAR").upper()
 
 

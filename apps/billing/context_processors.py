@@ -48,6 +48,10 @@ def _empty():
         plan_name="",
         plan_code="",
         status="",
+        is_unlimited=False,
+        is_unlimited_users=False,
+        user_limit=0,
+        seats_used=0,
         invoice_limit=0,
         used_invoices=0,
         reserved_invoices=0,
@@ -102,6 +106,10 @@ def billing(request):
             plan_name=(_plan_name(last.plan) if last else ""),
             plan_code=(last.plan.code if last else ""),
             status=(last.status if last else "none"),
+            is_unlimited=False,
+            is_unlimited_users=False,
+            user_limit=0,
+            seats_used=0,
             invoice_limit=0,
             used_invoices=0,
             reserved_invoices=0,
@@ -113,17 +121,37 @@ def billing(request):
             show_billing_nav=show_nav,
         )}
 
-    invoice_limit = int(sub.invoice_limit or 0)
+    # NULL means unlimited; 0 means no allowance at all. `or 0` collapses the
+    # two, which would tell an Enterprise customer their quota is zero on every
+    # authenticated page. Branch on the flag instead of coercing.
+    # §L.1.3 — the seat dimension rides on this same bar. Counted in SQL by
+    # SeatService rather than by materialising the org's users here.
+    from apps.billing.services.quota_service import SeatService
+
+    seat_service       = SeatService()
+    user_limit         = sub.user_limit
+    is_unlimited_users = user_limit is None
+    seats_used         = seat_service.seats_used(sub.organization)
+
+    is_unlimited  = sub.is_unlimited_invoices
+    invoice_limit = None if is_unlimited else int(sub.invoice_limit or 0)
     used          = int(sub.used_invoices or 0)
     reserved      = int(sub.reserved_invoices or 0)
     remaining     = sub.remaining_invoices
-    usage_pct     = int(round((used + reserved) * 100 / invoice_limit)) if invoice_limit else 0
+    usage_pct     = (
+        0 if is_unlimited or not invoice_limit
+        else int(round((used + reserved) * 100 / invoice_limit))
+    )
 
     return {"billing": SimpleNamespace(
         has_subscription=True,
         plan_name=_plan_name(sub.plan),
         plan_code=sub.plan.code,
         status=sub.status,
+        is_unlimited=is_unlimited,
+        is_unlimited_users=is_unlimited_users,
+        user_limit=user_limit,
+        seats_used=seats_used,
         invoice_limit=invoice_limit,
         used_invoices=used,
         reserved_invoices=reserved,

@@ -31,7 +31,9 @@ class Plan(models.Model):
     id   = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     code = models.CharField(
-        max_length=20, unique=True, choices=PlanCode.choices,
+        # 32, not 20: "accounting_professional" is 23 characters. Widening a
+        # CharField is a safe, non-destructive schema change.
+        max_length=32, unique=True, choices=PlanCode.choices,
         help_text="Stable identifier used by code and APIs.",
     )
 
@@ -41,8 +43,37 @@ class Plan(models.Model):
     description_ar = models.TextField(blank=True, default="")
     description_en = models.TextField(blank=True, default="")
 
-    invoice_limit  = models.PositiveIntegerField(help_text="Invoices auditable per billing period.")
-    price          = models.DecimalField(max_digits=10, decimal_places=2)
+    # ── Limits ──────────────────────────────────────────────────────────
+    # NULL means UNLIMITED, not zero. Zero already means "no allowance at all"
+    # on these columns, so overloading it would make an enterprise plan
+    # indistinguishable from a disabled one. Every read path must therefore ask
+    # "is this None?" before comparing — see UNLIMITED / has_limit() below.
+    invoice_limit  = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Invoices auditable per billing period. NULL = unlimited.",
+    )
+    user_limit = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Seats (active users in the organisation). NULL = unlimited.",
+    )
+    # company_limit is deliberately ABSENT. See docs/adr/0006-plan-limit-dimensions.md:
+    # one OrganizationSubscription FKs to exactly one Organization and a unique
+    # constraint enforces one usable subscription per organisation, so "one
+    # subscription covering 20 client companies" cannot be expressed today.
+    # Storing an unenforceable number would be a guarantee that does not exist.
+
+    # ── Price ───────────────────────────────────────────────────────────
+    # NULL price + is_custom_quote=True means "contact sales". NOT 0.00, which
+    # would read as FREE and make the plan purchasable through self-service
+    # checkout at no charge.
+    price          = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="NULL when is_custom_quote is set — the plan has no list price.",
+    )
+    is_custom_quote = models.BooleanField(
+        default=False,
+        help_text="Priced by negotiation. Not purchasable through self-service checkout.",
+    )
     currency       = models.CharField(max_length=3, default="SAR")
     duration_days  = models.PositiveIntegerField(default=30)
 
@@ -62,8 +93,31 @@ class Plan(models.Model):
         ordering = ["sort_order", "price"]
         indexes  = [models.Index(fields=["is_active", "sort_order"])]
 
+    UNLIMITED = None
+
+    @staticmethod
+    def has_limit(value) -> bool:
+        """True when a limit column actually constrains something.
+
+        The one place the None-means-unlimited convention is interpreted, so
+        enforcement never open-codes ``if limit is not None`` and never compares
+        against a sentinel big number.
+        """
+        return value is not None
+
+    @property
+    def is_purchasable(self) -> bool:
+        """Self-service checkout eligibility.
+
+        Custom-quote plans are excluded: they have no list price, so there is
+        nothing for the payment resolver to charge.
+        """
+        return self.is_active and not self.is_custom_quote and self.price is not None
+
     def __str__(self):
-        return f"{self.code} ({self.invoice_limit} inv / {self.price} {self.currency})"
+        invoices = self.invoice_limit if self.invoice_limit is not None else "unlimited"
+        price = f"{self.price} {self.currency}" if self.price is not None else "custom quote"
+        return f"{self.code} ({invoices} inv / {price})"
 
 
 class OrganizationSubscription(models.Model):
@@ -87,7 +141,11 @@ class OrganizationSubscription(models.Model):
     ends_at   = models.DateTimeField(null=True, blank=True)
 
     # Snapshot of the plan's quota at activation time — frozen.
-    invoice_limit      = models.PositiveIntegerField(default=0)
+    # Snapshot of the plan's limits at activation — frozen. A later catalogue
+    # edit must never reprice or re-limit a paying customer, and this is the
+    # mechanism that guarantees it. NULL = unlimited, same convention as Plan.
+    invoice_limit      = models.PositiveIntegerField(null=True, blank=True, default=0)
+    user_limit         = models.PositiveIntegerField(null=True, blank=True, default=None)
     used_invoices      = models.PositiveIntegerField(default=0)
     reserved_invoices  = models.PositiveIntegerField(default=0)
 
@@ -134,7 +192,19 @@ class OrganizationSubscription(models.Model):
 
     # ---- derived helpers ----
     @property
-    def remaining_invoices(self) -> int:
+    def is_unlimited_invoices(self) -> bool:
+        return self.invoice_limit is None
+
+    @property
+    def remaining_invoices(self):
+        """Remaining allowance, or None when unlimited.
+
+        Returns None rather than a huge number so callers must handle the
+        unlimited case explicitly instead of accidentally arithmetic-ing on a
+        sentinel.
+        """
+        if self.invoice_limit is None:
+            return None
         return max(0, self.invoice_limit - self.used_invoices - self.reserved_invoices)
 
     @property

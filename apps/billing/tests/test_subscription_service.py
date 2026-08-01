@@ -42,7 +42,8 @@ class SubscriptionLifecycleTests(TestCase):
         self.assertEqual(activated.status, SubscriptionStatus.ACTIVE)
         self.assertIsNotNone(activated.starts_at)
         self.assertIsNotNone(activated.ends_at)
-        self.assertEqual(activated.invoice_limit, 500)
+        # Activation snapshots whatever the plan currently offers.
+        self.assertEqual(activated.invoice_limit, self.business.invoice_limit)
 
     def test_activate_is_idempotent(self):
         sub = SubscriptionService().create_pending_paid_subscription(self.org, self.starter)

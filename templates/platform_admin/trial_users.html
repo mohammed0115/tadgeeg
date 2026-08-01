@@ -1,0 +1,427 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+
+{% comment %}
+Trial Users Dashboard (§B, layout approved in §L.5).
+
+Layout is taken from the approved deck: six metric cards in a 2×3 grid, then an
+action bar with convert (primary) + two exports (secondary). The deck's DARK
+palette is explicitly rejected (§L.0) — this renders in the platform's light
+identity.
+
+Colours/fonts come from the console shell (base_platform_admin.html → Tailwind
+build → static/src/css/tokens.css): navy #003366 for identity/structure, green
+#10b981 for the primary action, white+border for secondary. No colour, font or
+UI library is introduced here. Icons are Lucide, already loaded by the shell.
+{% endcomment %}
+
+{% block page_title %}{% trans "Trial Users Dashboard" %}{% endblock %}
+{% block breadcrumb_current %}{% trans "Trial Users" %}{% endblock %}
+
+{% block content %}
+<div x-data="trialUsersDashboard()" x-init="init()" class="space-y-5 fade-in">
+
+  <!-- Header -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">
+        {% trans "Trial Users Dashboard" %}
+      </h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+        {% trans "Internal screen for following up on trial registrants" %}
+      </p>
+    </div>
+    <span class="px-3 py-1 rounded-full text-xs font-semibold
+                 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+      {% trans "Internal follow-up" %}
+    </span>
+  </div>
+
+  <!-- Filters. Every request the page makes carries these, and so does every
+       export — the export endpoints read the same query string. -->
+  <div class="card p-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <select x-model="filters.country" @change="reload()" class="form-select text-sm">
+        <option value="">{% trans "All countries" %}</option>
+        {% for value, label in country_choices %}
+        <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select x-model="filters.client_type" @change="reload()" class="form-select text-sm">
+        <option value="">{% trans "All client types" %}</option>
+        {% for value, label in client_type_choices %}
+        <option value="{{ value }}">{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select x-model="filters.activity" @change="reload()" class="form-select text-sm">
+        <option value="">{% trans "All activity" %}</option>
+        <option value="active">{% trans "Active" %}</option>
+        <option value="idle">{% trans "Idle" %}</option>
+        <option value="never_started">{% trans "Never started" %}</option>
+      </select>
+      <select x-model="filters.trial_status" @change="reload()" class="form-select text-sm">
+        <option value="">{% trans "All statuses" %}</option>
+        <option value="trialing">{% trans "Trialing" %}</option>
+        <option value="expired">{% trans "Expired" %}</option>
+        <option value="paid">{% trans "Paid" %}</option>
+        <option value="no_subscription">{% trans "No subscription" %}</option>
+      </select>
+      <div class="flex gap-2">
+        <input type="date" x-model="filters.from" @change="reload()" class="form-input text-sm w-full">
+        <input type="date" x-model="filters.to" @change="reload()" class="form-input text-sm w-full">
+      </div>
+    </div>
+  </div>
+
+  <!-- Six metric cards, 2 × 3 (§L.5) -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+    <!-- 1. Total -->
+    <div class="card p-5">
+      <div class="flex items-center gap-2 mb-2">
+        <i data-lucide="users" class="w-4 h-4 text-[#003366] dark:text-slate-300"></i>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+          {% trans "Total trial users" %}
+        </p>
+      </div>
+      <template x-if="loading">
+        <div class="h-9 w-24 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+      </template>
+      <template x-if="!loading">
+        <p class="text-3xl font-black text-slate-900 dark:text-white"
+           x-text="(summary.total || 0).toLocaleString()"></p>
+      </template>
+    </div>
+
+    <!-- 2. By country -->
+    <div class="card p-5">
+      <div class="flex items-center gap-2 mb-3">
+        <i data-lucide="globe" class="w-4 h-4 text-[#003366] dark:text-slate-300"></i>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+          {% trans "By country" %}
+        </p>
+      </div>
+      <template x-if="!loading">
+        <div class="space-y-1.5">
+          <template x-for="item in (summary.by_country || []).slice(0, 5)" :key="item.value">
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-slate-600 dark:text-slate-300"
+                    x-text="labelCountry(item.value)"></span>
+              <span class="font-bold text-slate-900 dark:text-white" x-text="item.count"></span>
+            </div>
+          </template>
+          <p x-show="!(summary.by_country || []).length"
+             class="text-sm text-slate-400">{% trans "No data" %}</p>
+        </div>
+      </template>
+    </div>
+
+    <!-- 3. By client type -->
+    <div class="card p-5">
+      <div class="flex items-center gap-2 mb-3">
+        <i data-lucide="briefcase" class="w-4 h-4 text-[#003366] dark:text-slate-300"></i>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+          {% trans "By client type" %}
+        </p>
+      </div>
+      <template x-if="!loading">
+        <div class="space-y-1.5">
+          <template x-for="item in (summary.by_client_type || [])" :key="item.value">
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-slate-600 dark:text-slate-300"
+                    x-text="labelClientType(item.value)"></span>
+              <span class="font-bold text-slate-900 dark:text-white" x-text="item.count"></span>
+            </div>
+          </template>
+          <p x-show="!(summary.by_client_type || []).length"
+             class="text-sm text-slate-400">{% trans "No data" %}</p>
+        </div>
+      </template>
+    </div>
+
+    <!-- 4. By activity -->
+    <div class="card p-5">
+      <div class="flex items-center gap-2 mb-3">
+        <i data-lucide="activity" class="w-4 h-4 text-[#003366] dark:text-slate-300"></i>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+          {% trans "By activity" %}
+        </p>
+      </div>
+      <template x-if="!loading">
+        <div class="space-y-1.5">
+          <template x-for="item in (summary.by_activity || [])" :key="item.value">
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-slate-600 dark:text-slate-300"
+                    x-text="labelActivity(item.value)"></span>
+              <span class="font-bold text-slate-900 dark:text-white" x-text="item.count"></span>
+            </div>
+          </template>
+          <p x-show="!(summary.by_activity || []).length"
+             class="text-sm text-slate-400">{% trans "No data" %}</p>
+        </div>
+      </template>
+    </div>
+
+    <!-- 5. By registration date -->
+    <div class="card p-5">
+      <div class="flex items-center gap-2 mb-3">
+        <i data-lucide="calendar" class="w-4 h-4 text-[#003366] dark:text-slate-300"></i>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+          {% trans "By registration date" %}
+        </p>
+      </div>
+      <template x-if="!loading">
+        <div class="space-y-1.5">
+          <template x-for="item in (summary.by_registration_date || []).slice(0, 5)" :key="item.value">
+            <div class="flex items-center justify-between text-sm">
+              <span class="text-slate-600 dark:text-slate-300" x-text="item.value"></span>
+              <span class="font-bold text-slate-900 dark:text-white" x-text="item.count"></span>
+            </div>
+          </template>
+          <p x-show="!(summary.by_registration_date || []).length"
+             class="text-sm text-slate-400">{% trans "No data" %}</p>
+        </div>
+      </template>
+    </div>
+
+    <!-- 6. Expired trials -->
+    <div class="card p-5">
+      <div class="flex items-center gap-2 mb-2">
+        <i data-lucide="clock-alert" class="w-4 h-4 text-[#003366] dark:text-slate-300"></i>
+        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+          {% trans "Expired trials" %}
+        </p>
+      </div>
+      <template x-if="!loading">
+        <div>
+          <p class="text-3xl font-black text-slate-900 dark:text-white"
+             x-text="(summary.expired_trials || 0).toLocaleString()"></p>
+          <p class="text-xs text-slate-500 mt-1">
+            {% trans "Converted" %}:
+            <span class="font-bold text-emerald-600" x-text="summary.converted || 0"></span>
+          </p>
+        </div>
+      </template>
+    </div>
+  </div>
+
+  <!-- Action bar (§L.5): convert is primary (green), exports secondary -->
+  <div class="card p-4 flex flex-wrap items-center gap-3">
+    <button type="button" @click="openConvert()" :disabled="!selected"
+            class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+      <i data-lucide="arrow-up-circle" class="w-4 h-4"></i>
+      {% trans "Convert to paid customer" %}
+    </button>
+    <a :href="exportUrl('xlsx')" class="btn-secondary">
+      <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+      {% trans "Export Excel" %}
+    </a>
+    <a :href="exportUrl('pdf')" class="btn-secondary">
+      <i data-lucide="file-text" class="w-4 h-4"></i>
+      {% trans "Export PDF" %}
+    </a>
+    <span class="text-xs text-slate-500" x-show="!selected">
+      {% trans "Select a registrant from the table to convert." %}
+    </span>
+  </div>
+
+  <!-- Registrant table -->
+  <div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 dark:bg-slate-800/60">
+          <tr>
+            <th class="p-3 w-10"></th>
+            <th class="p-3 text-start font-semibold text-slate-600 dark:text-slate-300">{% trans "Name" %}</th>
+            <th class="p-3 text-start font-semibold text-slate-600 dark:text-slate-300">{% trans "Email" %}</th>
+            <th class="p-3 text-start font-semibold text-slate-600 dark:text-slate-300">{% trans "Country" %}</th>
+            <th class="p-3 text-start font-semibold text-slate-600 dark:text-slate-300">{% trans "Client type" %}</th>
+            <th class="p-3 text-start font-semibold text-slate-600 dark:text-slate-300">{% trans "Activity" %}</th>
+            <th class="p-3 text-start font-semibold text-slate-600 dark:text-slate-300">{% trans "Status" %}</th>
+            <th class="p-3 text-start font-semibold text-slate-600 dark:text-slate-300">{% trans "Registered" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template x-for="row in rows" :key="row.id">
+            <tr class="border-t border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40">
+              <td class="p-3">
+                <input type="radio" name="trial-user" :value="row.id" x-model="selected">
+              </td>
+              <td class="p-3 font-medium text-slate-800 dark:text-slate-100" x-text="row.full_name"></td>
+              <td class="p-3 text-slate-600 dark:text-slate-300" x-text="row.email"></td>
+              <td class="p-3 text-slate-600 dark:text-slate-300" x-text="labelCountry(row.country)"></td>
+              <td class="p-3 text-slate-600 dark:text-slate-300" x-text="labelClientType(row.primary_benefit)"></td>
+              <td class="p-3"><span class="text-xs" x-text="labelActivity(row.activity)"></span></td>
+              <td class="p-3"><span class="text-xs" x-text="labelStatus(row.trial_status)"></span></td>
+              <td class="p-3 text-slate-500" x-text="(row.registered_at || '').slice(0, 10)"></td>
+            </tr>
+          </template>
+          <tr x-show="!loading && !rows.length">
+            <td colspan="8" class="p-6 text-center text-slate-400">
+              {% trans "No trial users match the current filters." %}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="p-3 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
+      <span class="text-xs text-slate-500">
+        <span x-text="count"></span> {% trans "records" %}
+      </span>
+      <div class="flex gap-2">
+        <button type="button" class="btn-secondary text-xs" @click="prevPage()" :disabled="page <= 1">
+          {% trans "Previous" %}
+        </button>
+        <button type="button" class="btn-secondary text-xs" @click="nextPage()"
+                :disabled="page * pageSize >= count">
+          {% trans "Next" %}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Convert dialog -->
+  <div x-show="convertOpen" x-cloak
+       class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div class="card p-6 w-full max-w-md" @click.outside="convertOpen = false">
+      <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-1">
+        {% trans "Convert to paid customer" %}
+      </h3>
+      <p class="text-sm text-slate-500 mb-4">
+        {% trans "This activates a paid subscription immediately. No payment is collected." %}
+      </p>
+      <select x-model="convertPlan" class="form-select w-full text-sm mb-4">
+        <option value="">{% trans "Select a plan" %}</option>
+        {% for plan in purchasable_plans %}
+        <option value="{{ plan.code }}">{{ plan.name_ar }} — {{ plan.price }} {{ plan.currency }}</option>
+        {% endfor %}
+      </select>
+      <p x-show="convertError" x-text="convertError"
+         class="text-sm text-red-600 mb-3"></p>
+      <div class="flex gap-2 justify-end">
+        <button type="button" class="btn-secondary" @click="convertOpen = false">
+          {% trans "Cancel" %}
+        </button>
+        <button type="button" class="btn-primary" @click="doConvert()"
+                :disabled="!convertPlan || converting">
+          <span x-text="converting ? '{% trans "Converting..." %}' : '{% trans "Confirm" %}'"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function trialUsersDashboard() {
+    const COUNTRY_LABELS = {{ country_labels_json|safe }};
+    const CLIENT_TYPE_LABELS = {{ client_type_labels_json|safe }};
+    const ACTIVITY_LABELS = {
+      active: '{% trans "Active" %}',
+      idle: '{% trans "Idle" %}',
+      never_started: '{% trans "Never started" %}',
+    };
+    const STATUS_LABELS = {
+      trialing: '{% trans "Trialing" %}',
+      expired: '{% trans "Expired" %}',
+      paid: '{% trans "Paid" %}',
+      no_subscription: '{% trans "No subscription" %}',
+    };
+
+    return {
+      loading: true,
+      summary: {},
+      rows: [],
+      count: 0,
+      page: 1,
+      pageSize: 25,
+      selected: '',
+      filters: { country: '', client_type: '', activity: '', trial_status: '', from: '', to: '' },
+      convertOpen: false,
+      convertPlan: '',
+      converting: false,
+      convertError: '',
+
+      query() {
+        const params = new URLSearchParams();
+        Object.entries(this.filters).forEach(([key, value]) => {
+          if (value) params.append(key, value);
+        });
+        return params;
+      },
+
+      exportUrl(kind) {
+        // Exports carry the SAME filters as the view — never a full dump.
+        return `/api/platform-admin/trial-users/export.${kind}?` + this.query().toString();
+      },
+
+      labelCountry(value) { return COUNTRY_LABELS[value] || value || '—'; },
+      labelClientType(value) { return CLIENT_TYPE_LABELS[value] || value || '—'; },
+      labelActivity(value) { return ACTIVITY_LABELS[value] || value || '—'; },
+      labelStatus(value) { return STATUS_LABELS[value] || value || '—'; },
+
+      async init() { await this.reload(); },
+
+      async reload() {
+        this.loading = true;
+        this.selected = '';
+        try {
+          const params = this.query();
+          const listParams = new URLSearchParams(params);
+          listParams.append('page', this.page);
+          listParams.append('page_size', this.pageSize);
+
+          const [summaryRes, listRes] = await Promise.all([
+            apiFetch('/api/platform-admin/trial-users/summary/?' + params.toString()),
+            apiFetch('/api/platform-admin/trial-users/?' + listParams.toString()),
+          ]);
+          if (summaryRes && summaryRes.ok) this.summary = await summaryRes.json();
+          if (listRes && listRes.ok) {
+            const data = await listRes.json();
+            this.rows = data.results || [];
+            this.count = data.count || 0;
+          }
+        } catch (error) {
+          notify('{% trans "Failed to load trial users" %}', 'error');
+        } finally {
+          this.loading = false;
+          this.$nextTick(() => lucide.createIcons());
+        }
+      },
+
+      prevPage() { if (this.page > 1) { this.page -= 1; this.reload(); } },
+      nextPage() { if (this.page * this.pageSize < this.count) { this.page += 1; this.reload(); } },
+
+      openConvert() {
+        this.convertError = '';
+        this.convertPlan = '';
+        this.convertOpen = true;
+      },
+
+      async doConvert() {
+        this.converting = true;
+        this.convertError = '';
+        try {
+          const res = await apiFetch(
+            `/api/platform-admin/trial-users/${this.selected}/convert/`,
+            { method: 'POST', body: JSON.stringify({ plan_code: this.convertPlan }) },
+          );
+          if (res && res.ok) {
+            notify('{% trans "Customer converted successfully" %}', 'success');
+            this.convertOpen = false;
+            await this.reload();
+          } else if (res) {
+            const data = await res.json().catch(() => ({}));
+            this.convertError = data.detail || '{% trans "Conversion failed" %}';
+          }
+        } catch (error) {
+          this.convertError = '{% trans "Conversion failed" %}';
+        } finally {
+          this.converting = false;
+        }
+      },
+    };
+  }
+</script>
+{% endblock %}

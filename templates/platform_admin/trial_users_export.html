@@ -1,0 +1,69 @@
+{% load i18n %}<!doctype html>
+{% comment %}
+Print sheet for the trial-users PDF export.
+
+Standalone by design: WeasyPrint renders this string with no browser, no
+Tailwind build and no JavaScript, so the console layout templates are not
+usable here. Colours are the literal token values from
+static/src/css/tokens.css (navy #003366 identity, green #10b981 accent) — the
+same palette, hard-coded because a print run cannot resolve CSS variables from
+the app bundle.
+
+registered_ip is absent from `columns` by construction (ADR 0004 §2).
+{% endcomment %}
+<html lang="{{ LANGUAGE_CODE|default:'ar' }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
+<head>
+  <meta charset="utf-8">
+  <title>{% trans "Trial Users" %}</title>
+  <style>
+    @page { size: A4 landscape; margin: 14mm 10mm; }
+    body { font-family: "Tajawal", "DejaVu Sans", sans-serif; font-size: 8pt; color: #0f172a; }
+    h1 { font-family: "Cairo", "DejaVu Sans", sans-serif; font-size: 15pt; color: #003366; margin: 0 0 2mm; }
+    .meta { color: #64748b; font-size: 8pt; margin-bottom: 4mm; }
+    .cards { display: flex; flex-wrap: wrap; gap: 3mm; margin-bottom: 5mm; }
+    .card { border: 0.4mm solid #e2e8f0; border-radius: 2mm; padding: 2.5mm 4mm; }
+    .card .label { color: #64748b; font-size: 7pt; text-transform: uppercase; }
+    .card .value { color: #003366; font-size: 13pt; font-weight: 700; }
+    .card.accent .value { color: #10b981; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #003366; color: #fff; font-size: 7.5pt; padding: 1.6mm; text-align: start; }
+    td { border-bottom: 0.2mm solid #e2e8f0; padding: 1.4mm 1.6mm; }
+    tr:nth-child(even) td { background: #f8fafc; }
+    .note { margin-top: 4mm; padding: 2mm 3mm; border: 0.3mm solid #10b981; border-radius: 2mm; font-size: 8pt; }
+  </style>
+</head>
+<body>
+  <h1>{% trans "Trial Users" %}</h1>
+  <div class="meta">
+    {% trans "Generated" %}: {{ generated_at|date:"Y-m-d H:i" }} ·
+    {% blocktrans count counter=row_count %}{{ counter }} record{% plural %}{{ counter }} records{% endblocktrans %}
+  </div>
+
+  {% if summary %}
+  <div class="cards">
+    <div class="card"><div class="label">{% trans "Total" %}</div><div class="value">{{ summary.total }}</div></div>
+    <div class="card"><div class="label">{% trans "Expired trials" %}</div><div class="value">{{ summary.expired_trials }}</div></div>
+    <div class="card accent"><div class="label">{% trans "Converted" %}</div><div class="value">{{ summary.converted }}</div></div>
+  </div>
+  {% endif %}
+
+  <table>
+    <thead>
+      <tr>{% for label in headers %}<th>{{ label }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      {% for cells in table_rows %}
+      <tr>{% for cell in cells %}<td>{{ cell|default_if_none:"" }}</td>{% endfor %}</tr>
+      {% empty %}
+      <tr><td colspan="{{ headers|length }}">{% trans "No records match the current filters." %}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if truncated %}
+  <div class="note">
+    {% blocktrans %}Truncated at {{ max_rows }} rows. Narrow the filters to export the remainder.{% endblocktrans %}
+  </div>
+  {% endif %}
+</body>
+</html>

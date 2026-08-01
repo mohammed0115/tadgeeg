@@ -3,7 +3,10 @@ from __future__ import annotations
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
+
+from core.permissions import is_platform_user
 
 from .exceptions import LeadNotFoundError, LeadsError
 from .selectors import get_all_leads, get_lead_by_id, get_lead_notes, get_lead_stats
@@ -32,7 +35,19 @@ from .services import (
 # ---------------------------------------------------------------------------
 
 def _is_admin(user) -> bool:
-    return user.is_staff or getattr(user, 'role', None) == 'admin'
+    """Platform authority check for the leads admin surface.
+
+    Same fix as apps/cms/views.py._is_cms_admin, for the same reason: this
+    used to accept ``user.role == "admin"``, which is an *organization* role
+    granted to every self-service registrant, not platform authority. That
+    made ``_AdminPermission`` equivalent to ``IsAuthenticated`` — any customer
+    could read, reassign, and delete every lead in the CRM funnel.
+
+    Now defers to ``is_platform_user`` (is_staff or is_superuser), matching
+    ``IsPlatformAdmin`` so the whole ``/api/platform-admin/`` surface obeys one
+    rule.
+    """
+    return is_platform_user(user)
 
 
 class _AdminPermission(IsAuthenticated):
@@ -186,9 +201,18 @@ class LeadStatsView(APIView):
 # ---------------------------------------------------------------------------
 
 class PublicContactFormView(APIView):
-    """POST /contact/ — submit a contact/inquiry form (public, no auth required)."""
+    """POST /contact/ — submit a contact/inquiry form (public, no auth required).
+
+    Throttled per IP. This is an anonymous WRITE path: it creates a ContactLead
+    row on every call, and OrgRateLimitMiddleware is organization-scoped so it
+    does not see anonymous callers at all. The Phase 0-A-PRE audit logged that
+    gap as B-8; this closes it with the same mechanism the partner application
+    endpoint uses, so there is one throttling approach rather than two.
+    """
 
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "public_contact"
 
     def post(self, request):
         serializer = ContactFormSerializer(data=request.data)

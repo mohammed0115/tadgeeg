@@ -153,3 +153,40 @@ def mark_as_spam(lead_id, user) -> ContactLead:
         description=f"Lead from '{lead.full_name}' marked as spam.",
     )
     return lead
+
+
+# ── Trial lead capture (Phase 1) ─────────────────────────────────────────────
+
+#: Fields a registrant may supply. Anything not listed is ignored, so a caller
+#: cannot smuggle values into the auto-captured block by posting them.
+TRIAL_LEAD_INPUT_FIELDS = (
+    "country",
+    "city",
+    "company_name",
+    "primary_benefit",
+    "employee_count",
+    "sector",
+    "heard_about",
+)
+
+
+def create_trial_lead_profile(user, *, lead_data: dict, request=None):
+    """Create the TrialLeadProfile for a freshly registered user.
+
+    Call inside the registration transaction: a failure here must roll the
+    user and organisation back rather than leave a registrant with no lead
+    record (see apps/authentication/serializers.py).
+
+    ``lead_data`` is validated input from the registration serializer. The
+    auto-captured block is derived from ``request`` here — never accepted from
+    the caller — so a client cannot forge its own IP, referrer, or campaign.
+    """
+    from .attribution import build_capture
+    from .models import TrialLeadProfile
+
+    payload = {
+        field: (lead_data.get(field) or "")
+        for field in TRIAL_LEAD_INPUT_FIELDS
+    }
+    payload.update(build_capture(request))
+    return TrialLeadProfile.objects.create(user=user, **payload)

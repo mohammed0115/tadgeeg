@@ -79,6 +79,10 @@ class OrganizationBootstrapAPITests(TestCase):
 
 
 class RegistrationProvisioningTests(TestCase):
+    # Phase 1 (spec §A.1/§A.2) made phone, country and primary_benefit
+    # mandatory on registration, so the payload below now carries them. The
+    # assertions are unchanged: organisation provisioning and the owner role
+    # must behave exactly as before.
     def test_register_serializer_auto_provisions_organization_and_admin_role(self):
         serializer = RegisterSerializer(
             data={
@@ -86,6 +90,9 @@ class RegistrationProvisioningTests(TestCase):
                 "full_name": "Founding Team",
                 "password": "StrongPass123!",
                 "password_confirm": "StrongPass123!",
+                "phone": "+966501234567",
+                "country": "SA",
+                "primary_benefit": "company",
             }
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
@@ -95,6 +102,22 @@ class RegistrationProvisioningTests(TestCase):
         self.assertEqual(user.role, get_user_model().Role.ADMIN)
         self.assertTrue(user.organization.name)
         self.assertTrue(OrganizationSettings.objects.filter(organization=user.organization).exists())
+
+    def test_registration_now_requires_the_lead_fields(self):
+        """The three new fields are enforced server-side, not just in the form."""
+        serializer = RegisterSerializer(
+            data={
+                "email": "nolead@example.com",
+                "full_name": "No Lead Data",
+                "password": "StrongPass123!",
+                "password_confirm": "StrongPass123!",
+            }
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertEqual(
+            set(serializer.errors) & {"phone", "country", "primary_benefit"},
+            {"phone", "country", "primary_benefit"},
+        )
 
 
 class UserIsolationAPITests(TestCase):

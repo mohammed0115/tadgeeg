@@ -583,6 +583,93 @@
               </div>
             </div>
 
+            {% comment %} §A.1 — phone and country are required; the server rejects them
+               independently, this markup is convenience only. {% endcomment %}
+            <div class="form-group">
+              <label class="form-label">{% trans "Phone Number" %}</label>
+              <div class="input-wrap">
+                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0122 16.92z"/>
+                </svg>
+                <input type="tel" name="phone" class="form-input" placeholder="+966 5X XXX XXXX"
+                       x-model="register.phone" required autocomplete="tel" dir="ltr">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">{% trans "Country" %}</label>
+              <div class="input-wrap">
+                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                  <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
+                </svg>
+                {% comment %} Full ISO list. Grouped rather than typeahead: a searchable
+                   combobox would mean a new UI library, and native <select> is
+                   already searchable by typing on every browser and screen
+                   reader. GCC first because they are almost all registrants. {% endcomment %}
+                <select name="country" class="form-input" x-model="register.country" required>
+                  <option value="">{% trans "Select a country" %}</option>
+                  <optgroup label="{% trans 'Gulf Cooperation Council' %}">
+                    {% for value, label in priority_country_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                  </optgroup>
+                  <optgroup label="{% trans 'All countries' %}">
+                    {% for value, label in country_choices %}
+                    <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                  </optgroup>
+                </select>
+              </div>
+            </div>
+
+            {% comment %} §A.2 — required single-select. Also drives the trial dashboard's
+               "client type" grouping, so an empty value is not acceptable. {% endcomment %}
+            <div class="form-group">
+              <label class="form-label">{% trans "How will you use Tadgeeg?" %}</label>
+              <div class="input-wrap">
+                <svg class="input-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                </svg>
+                <select name="primary_benefit" class="form-input" x-model="register.primary_benefit" required>
+                  <option value="">{% trans "Select an option" %}</option>
+                  {% for value, label in primary_benefit_choices %}
+                  <option value="{{ value }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+
+            {% comment %} §A.3 — optional. Collapsed so the required path stays short;
+               an over-long form is the main cause of signup drop-off. {% endcomment %}
+            <details class="form-group" style="margin-bottom:14px">
+              <summary style="cursor:pointer;font-size:13px;color:#64748b;padding:4px 0">
+                {% trans "Tell us more (optional)" %}
+              </summary>
+              <div style="margin-top:10px;display:flex;flex-direction:column;gap:10px">
+                <input type="text" name="company_name" class="form-input"
+                       placeholder="{% trans 'Company name' %}" x-model="register.company_name"
+                       autocomplete="organization">
+                <input type="text" name="city" class="form-input"
+                       placeholder="{% trans 'City' %}" x-model="register.city"
+                       autocomplete="address-level2">
+                <select name="employee_count" class="form-input" x-model="register.employee_count">
+                  <option value="">{% trans "Number of employees" %}</option>
+                  {% for value, label in employee_count_choices %}
+                  <option value="{{ value }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+                <input type="text" name="sector" class="form-input"
+                       placeholder="{% trans 'Sector' %}" x-model="register.sector">
+                <select name="heard_about" class="form-input" x-model="register.heard_about">
+                  <option value="">{% trans "How did you hear about us?" %}</option>
+                  {% for value, label in heard_about_choices %}
+                  <option value="{{ value }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </details>
+
             <div class="form-group">
               <label class="form-label">{% trans "Password" %}</label>
               <div class="input-wrap">
@@ -729,7 +816,11 @@
         showPassword: false,
         showConfirm: false,
         login: { email: '', password: '', remember: false },
-        register: { full_name: '', email: '', password: '', password_confirm: '' },
+        register: {
+          full_name: '', email: '', password: '', password_confirm: '',
+          phone: '', country: '', primary_benefit: '',
+          company_name: '', city: '', employee_count: '', sector: '', heard_about: '',
+        },
 
         // MFA
         mfaRequired: false,
@@ -804,7 +895,8 @@
 
         async submitRegister() {
           this.registerError = '';
-          if (!this.register.full_name || !this.register.email || !this.register.password || !this.register.password_confirm) {
+          if (!this.register.full_name || !this.register.email || !this.register.password || !this.register.password_confirm
+              || !this.register.phone || !this.register.country || !this.register.primary_benefit) {
             this.registerError = '{% trans "Please complete all required fields." %}';
             return;
           }
@@ -822,6 +914,12 @@
           formData.append('email', this.register.email);
           formData.append('password', this.register.password);
           formData.append('password_confirm', this.register.password_confirm);
+          formData.append('phone', this.register.phone);
+          formData.append('country', this.register.country);
+          formData.append('primary_benefit', this.register.primary_benefit);
+          ['company_name', 'city', 'employee_count', 'sector', 'heard_about'].forEach((field) => {
+            if (this.register[field]) formData.append(field, this.register[field]);
+          });
           try {
             const response = await fetch('{% url "frontend:register" %}', {
               method: 'POST',

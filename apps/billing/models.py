@@ -149,6 +149,29 @@ class OrganizationSubscription(models.Model):
     used_invoices      = models.PositiveIntegerField(default=0)
     reserved_invoices  = models.PositiveIntegerField(default=0)
 
+    # The price this customer agreed to, frozen the same way the limits are.
+    #
+    # Until now only limits were snapshotted: payment resolved the amount from
+    # the LIVE plan, so editing a catalogue price changed what an already-placed
+    # subscription would be charged — a price the customer never agreed to.
+    #
+    # NULL does NOT mean free and does NOT mean "look it up". It means this row
+    # predates the snapshot and its agreed price is unknowable. Backfilling from
+    # today's catalogue would invent history, so resolution refuses instead; see
+    # payments/pricing.py.
+    price_at_purchase = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="Agreed price, frozen at creation. NULL = pre-snapshot row.",
+    )
+    currency_at_purchase = models.CharField(
+        max_length=8, blank=True, default="",
+        help_text="Currency frozen alongside price_at_purchase.",
+    )
+    # Set when staff record a negotiated amount for a custom-quote plan, which
+    # has no list price to freeze. Kept separate from the value itself so the
+    # provenance of an amount is never a guess.
+    price_is_negotiated = models.BooleanField(default=False)
+
     auto_renew = models.BooleanField(default=False)
 
     # FK to PaymentTransaction (Stage-9 QA hardening D-2). String FK
@@ -191,6 +214,16 @@ class OrganizationSubscription(models.Model):
         return f"{self.organization_id} → {self.plan.code} ({self.status})"
 
     # ---- derived helpers ----
+    @property
+    def has_frozen_price(self) -> bool:
+        """Whether this row carries the price its customer agreed to.
+
+        False only for rows created before the snapshot existed. Callers must
+        branch on this rather than treating a NULL price as zero — one of those
+        readings charges nothing, the other refuses, and they are not the same.
+        """
+        return self.price_at_purchase is not None
+
     @property
     def is_unlimited_invoices(self) -> bool:
         return self.invoice_limit is None

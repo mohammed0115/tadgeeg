@@ -136,16 +136,29 @@ def _subscription_resolver(reference_type: str, reference_id: str, organization)
         raise PriceResolutionError(
             f"Subscription {reference_id} not found in this organization."
         )
+    # The authoritative amount is the one frozen on the subscription, not the
+    # one the catalogue happens to show now. Reading the live plan here meant a
+    # price edit changed what an already-placed subscription was charged.
+    if sub.price_at_purchase is not None:
+        currency = (sub.currency_at_purchase or sub.plan.currency or "SAR").upper()
+        return Decimal(sub.price_at_purchase), currency
+
+    # No snapshot: this row predates the freeze and the price its customer
+    # agreed to is unknowable. Falling back to the live plan would charge them
+    # today's number as if they had agreed to it — silently, and possibly
+    # wrongly. Refusing is loud, and a refused payment can be corrected by a
+    # human; an incorrect charge cannot be undone as easily.
     if sub.plan.price is None:
-        # Custom-quote plan: no list price exists, so there is nothing
-        # authoritative to charge. Refuse rather than let Decimal(None) raise
-        # TypeError — this resolver is the server-side authority on amounts and
-        # must fail as a priced-refusal, not as a crash. See ADR 0006.
         raise PriceResolutionError(
             f"Plan {sub.plan.code} is priced by quotation; no list price is "
             f"available to authorise this payment."
         )
-    return Decimal(sub.plan.price), (sub.plan.currency or "SAR").upper()
+    raise PriceResolutionError(
+        f"Subscription {sub.id} carries no frozen price (created before the "
+        f"price snapshot existed). Its agreed amount cannot be derived from "
+        f"the current catalogue — record the agreed price on the subscription "
+        f"before charging it."
+    )
 
 
 register_resolver(PaymentPurpose.SUBSCRIPTION.value, _subscription_resolver)

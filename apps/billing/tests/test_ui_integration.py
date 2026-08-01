@@ -68,7 +68,9 @@ class PricingPageTests(TestCase):
         html = r.content.decode("utf-8")
         # Authenticated → the Dashboard CTA is rendered (label is
         # translation-aware; assert the href instead of the visible text).
-        self.assertIn('href="/dashboard/" class="cta"', html)
+        # The markup moved when the public pages adopted one shared header;
+        # the behaviour asserted here did not change.
+        self.assertIn('site-header__btn--cta" href="/dashboard/"', html)
         # And the "Start free trial" CTA is suppressed.
         self.assertNotIn(">Start free trial<", html)
 

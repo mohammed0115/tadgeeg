@@ -241,22 +241,31 @@ class PaymentService:
             raise PaymentValidationError(
                 "A payment reference is required for manual payments."
             )
-        # amount must equal the authoritative plan price
+        # The amount must equal what THIS subscription was sold at — the
+        # frozen price, not the catalogue's current number. Validating against
+        # the live plan meant a catalogue edit could reject a correct manual
+        # payment, or accept a wrong one.
         plan = subscription.plan
-        # A custom-quote plan has no list price to match against. Without this
-        # guard `Decimal(plan.price)` below raises TypeError on the NULL — a 500
-        # instead of a refusal. Recording a negotiated amount needs an agreed
-        # price stored on the subscription; see ADR 0006.
-        if plan.price is None:
-            raise PaymentValidationError(
-                f"Plan {plan.code} is priced by quotation and has no list "
-                f"price; a manual payment cannot be validated against it."
-            )
         amount = _coerce_amount(amount).quantize(Decimal("0.01"))
-        authoritative = Decimal(plan.price).quantize(Decimal("0.01"))
+
+        if subscription.price_at_purchase is not None:
+            authoritative = Decimal(subscription.price_at_purchase).quantize(Decimal("0.01"))
+        elif plan.price is not None:
+            # Pre-snapshot row on a listed plan: the catalogue price is the only
+            # value available. Allowed here — unlike the gateway path — because
+            # a member of staff is entering the amount deliberately and can see
+            # what it is being matched against.
+            authoritative = Decimal(plan.price).quantize(Decimal("0.01"))
+        else:
+            raise PaymentValidationError(
+                f"Plan {plan.code} is priced by quotation and this subscription "
+                f"carries no agreed price; record the negotiated amount on the "
+                f"subscription before taking a manual payment."
+            )
+
         if amount != authoritative:
             raise PaymentValidationError(
-                f"Manual amount {amount} does not match the plan price "
+                f"Manual amount {amount} does not match the agreed price "
                 f"{authoritative}."
             )
         # currency must match the plan currency

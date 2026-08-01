@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 from datetime import timedelta
+from decimal import Decimal
 from typing import Optional
 
 from django.core.exceptions import ValidationError
@@ -69,13 +70,15 @@ class SubscriptionService:
             ends_at=now + timedelta(days=plan.duration_days),
             invoice_limit=plan.invoice_limit,
             user_limit=plan.user_limit,
+            price_at_purchase=plan.price,
+            currency_at_purchase=(plan.currency or "SAR").upper(),
             used_invoices=0,
             reserved_invoices=0,
             auto_renew=False,
         )
 
     def create_pending_paid_subscription(
-        self, organization, plan: Plan,
+        self, organization, plan: Plan, *, negotiated_price=None,
     ) -> OrganizationSubscription:
         """For paid plans only — creates the row in PENDING_PAYMENT state.
 
@@ -94,9 +97,26 @@ class SubscriptionService:
         # raises TypeError at payment time. Refuse in the domain layer so every
         # caller is covered, not just the self-service view.
         if plan.is_custom_quote or plan.price is None:
+            # A custom-quote plan has no list price, so self-service still has
+            # nothing to charge. It becomes sellable only when someone supplies
+            # the negotiated amount, which is what unblocks Enterprise.
+            if negotiated_price is None:
+                raise SubscriptionError(
+                    f"Plan {plan.code} is priced by quotation and cannot be "
+                    f"purchased through self-service checkout."
+                )
+            negotiated_price = Decimal(str(negotiated_price))
+            if negotiated_price <= 0:
+                raise SubscriptionError(
+                    "A negotiated price must be greater than zero."
+                )
+        elif negotiated_price is not None:
+            # Refusing here keeps one amount per subscription. Allowing an
+            # override on a listed plan would mean the catalogue price and the
+            # charged price could disagree with nothing recording which won.
             raise SubscriptionError(
-                f"Plan {plan.code} is priced by quotation and cannot be "
-                f"purchased through self-service checkout."
+                f"Plan {plan.code} has a list price; a negotiated amount "
+                f"cannot override it."
             )
         return OrganizationSubscription.objects.create(
             organization=organization,
@@ -105,6 +125,13 @@ class SubscriptionService:
             # Both limits are frozen at creation time. NULL = unlimited.
             invoice_limit=plan.invoice_limit,
             user_limit=plan.user_limit,
+            # …and so is the price, so a later catalogue edit cannot change
+            # what this customer is charged.
+            price_at_purchase=(
+                negotiated_price if negotiated_price is not None else plan.price
+            ),
+            currency_at_purchase=(plan.currency or "SAR").upper(),
+            price_is_negotiated=negotiated_price is not None,
             used_invoices=0,
             reserved_invoices=0,
         )
@@ -163,11 +190,21 @@ class SubscriptionService:
         locked.ends_at           = now + timedelta(days=plan.duration_days)
         locked.invoice_limit     = plan.invoice_limit
         locked.user_limit        = plan.user_limit
+        # Price is deliberately NOT re-read from the plan here. Limits are
+        # re-snapshotted at activation because the customer receives the
+        # current allowance, but the amount was agreed when the subscription
+        # was created — re-reading it would let a catalogue edit between
+        # creation and payment change what is charged, which is the defect
+        # this whole change exists to close. Only fill it if it is missing.
+        if locked.price_at_purchase is None and not locked.price_is_negotiated:
+            locked.price_at_purchase = plan.price
+            locked.currency_at_purchase = (plan.currency or "SAR").upper()
         locked.used_invoices     = 0
         locked.reserved_invoices = 0
         locked.save(update_fields=[
             "status", "starts_at", "ends_at",
             "invoice_limit", "user_limit", "used_invoices", "reserved_invoices",
+            "price_at_purchase", "currency_at_purchase",
             "updated_at",
         ])
 

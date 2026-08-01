@@ -213,14 +213,34 @@ done
 log "3b/4  Verifying migrations ..."
 
 for svc in $(web_services_for_target "$TARGET"); do
-  # Wait for the entrypoint to finish (migrate + compilemessages + collectstatic
-  # + seeds) before asking anything of Django. On a multi-phase deploy this is
-  # minutes, not seconds.
+  # Wait for the entrypoint to FINISH, not merely for the container to exist.
+  #
+  # `python -c "import django"` was the wrong signal: `compose exec` starts a
+  # NEW process, which succeeds the moment the container runs — while the
+  # entrypoint is still applying migrations. That reported "40 unapplied
+  # migrations" for migrations that were being applied at that exact moment.
+  #
+  # The honest signal is the entrypoint's last act: gunicorn binding port 8000.
+  # celery has no port, so it waits for its own process instead.
   printf '  waiting for %s ' "$svc"
   ready=0
-  for _ in $(seq 1 60); do
-    if compose exec -T "$svc" python -c "import django" >/dev/null 2>&1; then
-      ready=1; printf ' ready\n'; break
+  for _ in $(seq 1 120); do
+    case "$svc" in
+      celery*)
+        compose exec -T "$svc" sh -c 'pgrep -f "celery.*worker" >/dev/null' 2>/dev/null \
+          && { ready=1; printf ' ready\n'; break; } ;;
+      *)
+        compose exec -T "$svc" sh -c \
+          'python -c "import socket,sys; s=socket.socket(); sys.exit(s.connect_ex((\"127.0.0.1\",8000)))"' \
+          >/dev/null 2>&1 \
+          && { ready=1; printf ' ready\n'; break; } ;;
+    esac
+    # A container that exited is never going to become ready.
+    if ! compose ps --status running --services 2>/dev/null | grep -q "^${svc}$"; then
+      printf '\n'
+      err "$svc stopped while starting. Last 40 log lines:"
+      compose logs --tail=40 "$svc" || true
+      exit 1
     fi
     printf '.'
     sleep 5

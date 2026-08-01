@@ -199,8 +199,18 @@ def validate_zip_bomb(
 
             if info.filename.lower().endswith(".zip"):
                 has_nested_zip = True
-                if not allow_nesting:
-                    warnings.append(f"Nested ZIP rejected: {info.filename}")
+                if allow_nesting:
+                    # Permitted, but still worth saying: a nested archive is
+                    # the shape a decompression bomb usually arrives in, and a
+                    # caller that allows it should know it is there.
+                    warnings.append(f"Nested ZIP present: {info.filename}")
+                else:
+                    # This used to append to `warnings` while `valid` is
+                    # computed as `len(errors) == 0` — so the message said
+                    # "rejected" and nothing was rejected. A guarantee that
+                    # does not exist is worse than none; the caller asked for
+                    # nesting to be disallowed, so it is an error.
+                    errors.append(f"Nested ZIP rejected: {info.filename}")
 
             # ── Streaming verification ──────────────────────────────────────
             # Open the member as a stream and read it in chunks with a hard
@@ -259,8 +269,13 @@ def validate_zip_bomb_silent(
     max_total_size: int = MAX_TOTAL_SIZE_BYTES,
     max_files: int = MAX_FILE_COUNT,
     max_ratio: int = MAX_COMPRESSION_RATIO,
+    allow_nesting: bool = True,
 ) -> Tuple[bool, str]:
     """Non-raising wrapper around validate_zip_bomb.
+
+    ``allow_nesting`` is forwarded so the two entry points can express the same
+    policy. Without it a caller on this path could not refuse a nested archive
+    at all, which is a quieter version of the defect this parameter guards.
 
     Returns: (is_valid, error_message)
     """
@@ -271,6 +286,7 @@ def validate_zip_bomb_silent(
             max_total_size=max_total_size,
             max_files=max_files,
             max_ratio=max_ratio,
+            allow_nesting=allow_nesting,
         )
         return True, ""
     except ZipValidationError as exc:

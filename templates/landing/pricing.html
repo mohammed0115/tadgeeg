@@ -169,6 +169,12 @@
     .calc-result .price { font-family: 'Cairo', sans-serif; font-size: 34px; font-weight: 900; color: var(--accent); }
     .calc-result .per { font-size: 13px; color: var(--text-muted); }
     .calc-result a { margin-top: 14px; }
+
+    .savings { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+    .savings span {
+      font-size: 13px; font-weight: 800; color: var(--accent-dark, #0E9C56);
+      background: rgba(17,181,101,.10); border-radius: 999px; padding: 6px 14px;
+    }
 </style>
 </head>
 <body>
@@ -272,6 +278,26 @@
           <h2>{% trans "Which plan fits you?" %}</h2>
           <p>{% trans "Move the sliders and we will suggest a plan." %}</p>
         </div>
+
+        {% comment %}
+          §I.4 — these percentages are COMPUTED from the add-on prices in
+          plan_service.addon_savings(), never written as text. Hardcoded, they
+          would quietly become false the first time a pack price changed. If
+          the arithmetic stops producing a saving, the claim disappears with it
+          rather than lingering as a false promise.
+        {% endcomment %}
+        {% if savings.users_percent or savings.invoices_percent %}
+        <div class="savings">
+          {% if savings.users_percent %}
+            <span>{% blocktrans with pct=savings.users_percent %}Save up to {{ pct }}% on user packs{% endblocktrans %}</span>
+          {% endif %}
+          {% if savings.invoices_percent %}
+            <span>{% blocktrans with pct=savings.invoices_percent %}Up to {{ pct }}% lower per invoice{% endblocktrans %}</span>
+          {% endif %}
+        </div>
+        {% endif %}
+
+
         <div class="calc-body">
           <div>
             <div class="calc-field">

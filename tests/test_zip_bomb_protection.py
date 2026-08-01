@@ -318,3 +318,48 @@ print(int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024))
             f"something is expanding the payload instead of reading the "
             f"central directory"
         )
+
+
+class TestNestedZipRejectionIsReal:
+    """`allow_nesting=False` must actually refuse, not just say so.
+
+    The guard appended "Nested ZIP rejected" to `warnings` while `valid` is
+    computed as `len(errors) == 0`, so the archive passed. No production caller
+    passes allow_nesting=False today (the default is True), which made this a
+    latent trap rather than a live hole — the kind that becomes real the moment
+    someone tightens a call site and trusts the message.
+    """
+
+    def _nested(self):
+        inner = io.BytesIO()
+        with zipfile.ZipFile(inner, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("inner.txt", "hello")
+        outer = io.BytesIO()
+        with zipfile.ZipFile(outer, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("payload.zip", inner.getvalue())
+            zf.writestr("readme.txt", "ok")
+        outer.seek(0)
+        return outer
+
+    def test_disallowed_nesting_is_refused(self):
+        with pytest.raises(ZipValidationError) as exc:
+            validate_zip_bomb(self._nested(), allow_nesting=False)
+        assert "nested" in str(exc.value).lower()
+
+    def test_disallowed_nesting_is_refused_in_the_silent_api_too(self):
+        """Both entry points must be able to express the same policy.
+
+        The silent wrapper did not accept `allow_nesting` at all, so a caller
+        on that path could not refuse a nested archive even if it wanted to.
+        """
+        ok, message = validate_zip_bomb_silent(self._nested(), allow_nesting=False)
+        assert ok is False, "the silent API still reports a nested archive as valid"
+        assert "nested" in message.lower()
+
+    def test_permitted_nesting_passes_but_still_says_so(self):
+        """Allowed is not the same as unremarkable — a nested archive is the
+        shape a decompression bomb usually arrives in."""
+        result = validate_zip_bomb(self._nested(), allow_nesting=True)
+        assert result["valid"] is True
+        assert result["metadata"]["has_nesting"] is True
+        assert any("nested" in w.lower() for w in result["warnings"])

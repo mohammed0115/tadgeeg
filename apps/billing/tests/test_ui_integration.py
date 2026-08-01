@@ -71,8 +71,15 @@ class PricingPageTests(TestCase):
         # The markup moved when the public pages adopted one shared header;
         # the behaviour asserted here did not change.
         self.assertIn('site-header__btn--cta" href="/dashboard/"', html)
-        # And the "Start free trial" CTA is suppressed.
-        self.assertNotIn(">Start free trial<", html)
+
+        # …and the header offers no trial CTA. Scoped to the header on
+        # purpose: the plan CARDS legitimately say "Start free trial" to a
+        # signed-in user whose organisation has no subscription yet, so
+        # asserting over the whole page made this depend on what other tests
+        # had left in the database.
+        header = html[html.index('<header class="site-header'):]
+        header = header[:header.index("</header>")]
+        self.assertNotIn("Start free trial", header)
 
 
 class BillingContextProcessorTests(TestCase):

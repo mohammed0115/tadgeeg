@@ -128,3 +128,65 @@ def recommend_plan(*, users: int, invoices: int) -> dict:
         "invoice_limit": None,
         "requested": {"users": users, "invoices": invoices},
     }
+
+
+def addon_savings() -> dict:
+    """Savings percentages derived from the add-on prices (§I.4).
+
+    The pricing page advertises "up to 27%" on user packs and "up to 40%" on
+    invoice packs. Both happen to be right today. Written as literals they stop
+    being right the first time someone edits a price — silently, because
+    nothing connects the sentence to the number it describes.
+
+    So they are computed at render time from the same rows the packs are sold
+    from. If the numbers change, the claim changes with them or disappears.
+
+    Returns ints (percent) or None where there is nothing to compare against.
+    """
+    from apps.billing.choices import AddonDimension
+    from apps.billing.models import Addon
+
+    def best_saving(dimension: str, unit_code: str):
+        """Largest discount versus buying the same volume one unit at a time."""
+        try:
+            unit = Addon.objects.get(code=unit_code, is_active=True)
+        except Addon.DoesNotExist:
+            return None
+        if not unit.price or not unit.quantity:
+            return None
+        unit_rate = unit.price / unit.quantity
+
+        best = None
+        packs = Addon.objects.filter(
+            is_active=True, dimension=dimension, is_price_from=False,
+        ).exclude(pk=unit.pk).exclude(price__isnull=True).exclude(quantity__isnull=True)
+        for pack in packs:
+            if not pack.quantity:
+                continue
+            baseline = unit_rate * pack.quantity
+            if baseline <= 0:
+                continue
+            pct = int(round((baseline - pack.price) / baseline * 100))
+            if pct > 0 and (best is None or pct > best):
+                best = pct
+        return best
+
+    # Users: the single extra seat is the per-unit reference (§I.1).
+    users_pct = best_saving(AddonDimension.USERS, "user_extra_1")
+
+    # Invoices have no single-unit product, so the smallest pack is the
+    # reference: "the tiered discount relative to the entry pack" (§I.2).
+    invoices_pct = None
+    packs = list(
+        Addon.objects.filter(
+            is_active=True, dimension=AddonDimension.INVOICES, is_price_from=False,
+        ).exclude(price__isnull=True).exclude(quantity__isnull=True).order_by("quantity")
+    )
+    if len(packs) >= 2 and packs[0].quantity and packs[0].price:
+        base_rate = packs[0].price / packs[0].quantity
+        rates = [(p.price / p.quantity) for p in packs[1:] if p.quantity]
+        if rates and base_rate > 0:
+            cheapest = min(rates)
+            invoices_pct = int(round((base_rate - cheapest) / base_rate * 100))
+
+    return {"users_percent": users_pct, "invoices_percent": invoices_pct}

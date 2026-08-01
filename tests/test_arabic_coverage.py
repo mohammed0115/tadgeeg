@@ -158,3 +158,72 @@ def test_compiled_catalogue_is_not_stale():
         "site is still serving the previously compiled strings. Run "
         "`manage.py compilemessages -l ar`."
     )
+
+
+# ── the scope problem, made measurable ───────────────────────────────────────
+#
+# OWNED above is a hand-maintained list, and twice in one session English
+# reached a user from a file nobody had remembered to add to it. A guard whose
+# scope is a manual list will keep missing what nobody thought of.
+#
+# Widening it to the whole repository would fail immediately on ~101 strings
+# that predate this work, and a permanently red test is a test people learn to
+# ignore. So the gap is measured instead: it is allowed to exist, it is not
+# allowed to GROW. Lowering this number is the only permitted direction.
+UNTRANSLATED_BUDGET = 105
+
+
+def _repo_scan_paths():
+    repo = Path(__file__).resolve().parent.parent
+    seen: set[Path] = set()
+    for pattern in ("templates/**/*.html", "apps/**/*.py",
+                    "navigation/*.py", "core/**/*.py"):
+        for path in repo.glob(pattern):
+            rel = str(path.relative_to(repo))
+            # Migrations carry historical verbose_names nobody reads, and test
+            # files are not user-facing.
+            if "/migrations/" in rel or "/tests/" in rel or rel.startswith("tests/"):
+                continue
+            seen.add(path)
+    return sorted(seen)
+
+
+def test_untranslated_strings_outside_the_guard_do_not_grow():
+    """A ratchet on the strings the explicit list does not cover.
+
+    This does not assert the repository is fully translated — it is not. It
+    asserts the untranslated surface is no larger than it was when measured,
+    so a new English string in an uncovered file fails here even though nobody
+    added that file to OWNED.
+    """
+    repo = Path(__file__).resolve().parent.parent
+    covered = {str(repo / rel) for rel in OWNED}
+    have = _translated()
+
+    total = 0
+    offenders: list[tuple[int, str]] = []
+    for path in _repo_scan_paths():
+        if str(path) in covered:
+            continue
+        try:
+            missing = {s for s in _strings_in(path) if s not in have}
+        except (UnicodeDecodeError, OSError):
+            continue
+        if missing:
+            total += len(missing)
+            offenders.append((len(missing), str(path.relative_to(repo))))
+
+    offenders.sort(reverse=True)
+    worst = "\n".join(f"    {n:>4}  {rel}" for n, rel in offenders[:10])
+    assert total <= UNTRANSLATED_BUDGET, (
+        f"untranslated strings outside the guard grew to {total} "
+        f"(budget {UNTRANSLATED_BUDGET}).\n"
+        f"Translate the new string, or add its file to OWNED.\n"
+        f"Largest offenders:\n{worst}"
+    )
+
+    # Ratchet: if the number has come down, the budget follows it down.
+    assert total >= UNTRANSLATED_BUDGET - 25, (
+        f"only {total} untranslated strings remain (budget {UNTRANSLATED_BUDGET}). "
+        f"Lower UNTRANSLATED_BUDGET to {total} so the gap cannot silently reopen."
+    )

@@ -20552,6 +20552,47 @@ msgstr "جارٍ الحساب…"
 msgid "Could not calculate right now."
 msgstr "تعذّر الحساب الآن."
 
+#. Phase 3B — billing add-ons, rollover policy, plan refusals.
+msgid "Recurring"
+msgstr "متكرر"
+
+#. Phase 3B — billing add-ons, rollover policy, plan refusals.
+msgid "One-time"
+msgstr "لمرة واحدة"
+
+#. Phase 3B — billing add-ons, rollover policy, plan refusals.
+msgid "No quota"
+msgstr "بلا حصة"
+
+#. Phase 3B — billing add-ons, rollover policy, plan refusals.
+msgid "Carry unused credit over"
+msgstr "ترحيل الرصيد غير المستخدم"
+
+#. Phase 3B — billing add-ons, rollover policy, plan refusals.
+msgid "Expire unused credit at reset"
+msgstr "إنهاء الرصيد غير المستخدم عند التجديد"
+
+#. Phase 3B — billing add-ons, rollover policy, plan refusals.
+msgid "A free trial is not available for this organization."
+msgstr "التجربة المجانية غير متاحة لهذه المنظمة."
+
+#. Phase 3B — billing add-ons, rollover policy, plan refusals.
+msgid "You are already subscribed to this plan."
+msgstr "أنت مشترك في هذه الباقة بالفعل."
+
+#. Phase 3B — billing add-ons, rollover policy, plan refusals.
+msgid ""
+"Downgrade is not available during the active billing period. Please contact "
+"support."
+msgstr "التخفيض غير متاح خلال فترة الفوترة النشطة. يُرجى التواصل مع الدعم."
+
+#. Phase 3B — billing add-ons, rollover policy, plan refusals.
+msgid ""
+"This plan is priced by quotation. Please contact our sales team to arrange "
+"it."
+msgstr ""
+"هذه الباقة تُسعَّر حسب العرض. يُرجى التواصل مع فريق المبيعات لترتيبها."
+
 #~ msgid "Privacy and data protection"
 #~ msgstr "الخصوصية وحماية البيانات"
 

@@ -163,3 +163,98 @@ def test_alpine_loads_from_safe_static_with_cdn_only_as_fallback():
     src = TEMPLATE.read_text(encoding="utf-8")
     assert "safe_static 'vendor/alpine.min.js'" in src
     assert "onerror=" in src, "no local-first load with a CDN fallback"
+
+
+# ── §I.4 — savings are derived, never written ────────────────────────────────
+
+@pytest.fixture
+def catalogue(db):
+    call_command("seed_billing_plans", stdout=StringIO())
+    call_command("seed_addons", stdout=StringIO())
+
+
+def test_the_advertised_savings_match_the_spec_when_computed(catalogue):
+    """§I.4 claims 27% on user packs and 40% per invoice.
+
+    Computed from the seeded prices rather than asserted against a constant the
+    page also reads — that would only prove two copies agree.
+    """
+    from apps.billing.services.plan_service import addon_savings
+
+    s = addon_savings()
+    assert s["users_percent"] == 27
+    assert s["invoices_percent"] == 40
+
+
+def test_savings_follow_a_price_change_instead_of_going_stale(catalogue):
+    """The reason they are computed at all.
+
+    Make the 25-seat pack far cheaper and the advertised saving must move. A
+    hardcoded percentage would keep claiming the old number.
+    """
+    from decimal import Decimal
+
+    from apps.billing.models import Addon
+    from apps.billing.services.plan_service import addon_savings
+
+    before = addon_savings()["users_percent"]
+
+    pack = Addon.objects.get(code="user_pack_25")
+    pack.price = Decimal("150.00")          # 25 seats for the price of five
+    pack.save(update_fields=["price"])
+
+    after = addon_savings()["users_percent"]
+    assert after > before, (
+        f"the advertised saving did not follow the price ({before}% -> {after}%)"
+    )
+
+
+def test_the_page_renders_no_hardcoded_savings_percentage():
+    """Asserted by absence: the literals must not appear in the template."""
+    src = TEMPLATE.read_text(encoding="utf-8")
+    body = src[src.index("<body"):]
+    for literal in ("27%", "40%", "٢٧٪", "٤٠٪"):
+        assert literal not in body, (
+            f"the pricing page hardcodes {literal!r} — §I.4 requires it be "
+            f"computed from the add-on prices at render time"
+        )
+
+
+def test_the_savings_claim_disappears_when_there_is_nothing_to_claim(catalogue):
+    """A claim with no arithmetic behind it must not linger."""
+    from apps.billing.choices import AddonDimension
+    from apps.billing.models import Addon
+    from apps.billing.services.plan_service import addon_savings
+
+    Addon.objects.filter(dimension=AddonDimension.USERS).exclude(
+        code="user_extra_1",
+    ).update(is_active=False)
+
+    assert addon_savings()["users_percent"] is None
+
+
+# ── 2.3 — accounting plans promise nothing the platform cannot enforce ───────
+
+def test_accounting_cards_do_not_advertise_a_company_allowance(client, catalogue):
+    """§J prices these on 20 / 50 / unlimited client companies.
+
+    3A established the tenant architecture cannot express one subscription
+    covering many organizations (ADR 0006), so that dimension is not built and
+    cannot be enforced. A number on a pricing page is a promise, so the page
+    must not show one.
+    """
+    body = client.get("/pricing/").content.decode()
+
+    for claim in ("20 شركة", "50 شركة", "20 companies", "50 companies",
+                  "client companies", "شركة عميلة"):
+        assert claim not in body, (
+            f"the pricing page advertises {claim!r}, a company allowance "
+            f"nothing in the system can enforce"
+        )
+
+
+def test_accounting_plans_still_show_their_real_limits(client, catalogue):
+    """Omitting the unenforceable dimension must not hide the real ones."""
+    body = client.get("/pricing/").content.decode()
+    assert "990" in body and "1990" in body          # §J prices
+    assert "10000" in body or "10,000" in body       # accounting_partner invoices

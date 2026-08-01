@@ -746,9 +746,16 @@ def pricing(request):
     plans, business_plans, accounting_plans = [], [], []
     try:
         from apps.billing.choices import ACCOUNTING_PLAN_CODES
-        from apps.billing.services.plan_service import list_purchasable_plans
+        from apps.billing.services.plan_service import (
+            addon_savings,
+            list_purchasable_plans,
+        )
 
         plans = list(list_purchasable_plans())
+        # §I.4 — computed from the add-on prices at render time, never written
+        # as text. A hardcoded "27%" stops being true at the first price edit,
+        # silently, because nothing ties the sentence to the number.
+        savings = addon_savings()
         # §L.4 — accounting-firm plans get their own section rather than being
         # mixed into the main row: different buyer, different pricing basis.
         # Split here rather than in the template so the grouping rule lives in
@@ -757,6 +764,7 @@ def pricing(request):
         accounting_plans = [p for p in plans if p.code in ACCOUNTING_PLAN_CODES]
     except Exception:                       # noqa: BLE001 — degrade gracefully
         plans, business_plans, accounting_plans = [], [], []
+        savings = {"users_percent": None, "invoices_percent": None}
 
     ctx = _public_ctx(
         request,
@@ -770,6 +778,7 @@ def pricing(request):
         plans=plans,
         business_plans=business_plans,
         accounting_plans=accounting_plans,
+        savings=savings,
         is_authenticated=request.user.is_authenticated,
     )
     return render(request, "landing/pricing.html", ctx)

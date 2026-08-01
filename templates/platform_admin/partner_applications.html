@@ -1,0 +1,308 @@
+{% extends "layouts/base_platform_admin.html" %}
+{% load i18n %}
+
+{% comment %}
+Partner application review console (Phase 3A STEP 0).
+
+Purely a UI over the seven endpoints Phase 2B already shipped and tested. No new
+endpoint, no new serializer, no new permission, no workflow change — the state
+machine and its legality rules stay in apps/partners/services.py, and this
+screen only calls them.
+
+Attachment downloads go to the staff-only endpoint, which checks permission per
+request and logs the access. The files have no URL of their own by design.
+
+Inherits the console shell, so every colour and font comes from the Tailwind
+build over static/src/css/tokens.css. No hex value is written here.
+{% endcomment %}
+
+{% block page_title %}{% trans "Partner Applications" %}{% endblock %}
+{% block breadcrumb_current %}{% trans "Applications" %}{% endblock %}
+
+{% block content %}
+<div x-data="applicationsConsole()" x-init="init()" class="space-y-5 fade-in">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div>
+      <h1 class="text-2xl font-black text-slate-900 dark:text-white">{% trans "Partner Applications" %}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
+        {% trans "Review incoming partnership requests" %}
+      </p>
+    </div>
+    <div class="flex gap-2">
+      <a :href="exportUrl('xlsx')" class="btn-secondary">
+        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>{% trans "Export Excel" %}
+      </a>
+      <a :href="exportUrl('pdf')" class="btn-secondary">
+        <i data-lucide="file-text" class="w-4 h-4"></i>{% trans "Export PDF" %}
+      </a>
+    </div>
+  </div>
+
+  <!-- Filters. Exports read the same query string, so they cannot drift. -->
+  <div class="card p-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <input type="search" x-model.debounce.400ms="filters.q" @input="reload()"
+             class="form-input text-sm" placeholder="{% trans 'Search company, contact, email...' %}">
+      <select x-model="filters.country" @change="reload()" class="form-select text-sm">
+        <option value="">{% trans "All countries" %}</option>
+        {% for value, label in country_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+      </select>
+      <select x-model="filters.requested_partner_type" @change="reload()" class="form-select text-sm">
+        <option value="">{% trans "All types" %}</option>
+        {% for value, label in type_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+      </select>
+      <select x-model="filters.status" @change="reload()" class="form-select text-sm">
+        <option value="">{% trans "All statuses" %}</option>
+        {% for value, label in status_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-5 gap-4">
+
+    <!-- List -->
+    <div class="xl:col-span-2 card overflow-hidden">
+      <div class="max-h-[640px] overflow-y-auto">
+        <template x-for="row in rows" :key="row.id">
+          <button type="button" @click="open(row.id)"
+                  class="w-full text-start p-4 border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                  :class="selected && selected.id === row.id ? 'bg-slate-50 dark:bg-slate-800/60' : ''">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-semibold text-slate-800 dark:text-slate-100" x-text="row.company_name"></span>
+              <span class="text-xs font-semibold"
+                    :class="row.status === 'approved' ? 'text-emerald-600' : (row.status === 'rejected' ? 'text-red-600' : 'text-slate-500')"
+                    x-text="row.status"></span>
+            </div>
+            <div class="text-xs text-slate-500 mt-1">
+              <span x-text="row.contact_name"></span> ·
+              <span x-text="row.country || '—'"></span> ·
+              <span x-text="row.requested_partner_type"></span>
+            </div>
+            <div class="text-xs text-slate-400 mt-1">
+              <span x-text="(row.created_at || '').slice(0, 10)"></span> ·
+              <span x-text="row.attachment_count"></span> {% trans "attachments" %}
+            </div>
+          </button>
+        </template>
+        <div x-show="!loading && !rows.length" class="p-6 text-center text-slate-400">
+          {% trans "No applications match the current filters." %}
+        </div>
+      </div>
+      <div class="p-3 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500">
+        <span x-text="count"></span> {% trans "applications" %}
+      </div>
+    </div>
+
+    <!-- Detail -->
+    <div class="xl:col-span-3 card p-5">
+      <div x-show="!selected" class="text-center text-slate-400 py-12">
+        {% trans "Select an application to review it." %}
+      </div>
+
+      <div x-show="selected" x-cloak class="space-y-5">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-black text-slate-900 dark:text-white" x-text="selected?.company_name"></h2>
+            <p class="text-sm text-slate-500" x-text="selected?.contact_name + ' · ' + (selected?.position || '')"></p>
+          </div>
+          <span class="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800"
+                x-text="selected?.status"></span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div><span class="text-slate-400">{% trans "Email" %}:</span> <span x-text="selected?.email"></span></div>
+          <div><span class="text-slate-400">{% trans "Mobile" %}:</span> <span dir="ltr" x-text="selected?.mobile"></span></div>
+          <div><span class="text-slate-400">{% trans "Country" %}:</span> <span x-text="selected?.country || '—'"></span></div>
+          <div><span class="text-slate-400">{% trans "City" %}:</span> <span x-text="selected?.city || '—'"></span></div>
+          <div><span class="text-slate-400">{% trans "Website" %}:</span> <span x-text="selected?.website || '—'"></span></div>
+          <div><span class="text-slate-400">{% trans "Requested" %}:</span> <span x-text="selected?.requested_partner_type"></span></div>
+          <div><span class="text-slate-400">{% trans "Established" %}:</span> <span x-text="selected?.established_year || '—'"></span></div>
+          <div><span class="text-slate-400">{% trans "Employees" %}:</span> <span x-text="selected?.employee_count || '—'"></span></div>
+        </div>
+
+        <div x-show="selected?.business_areas?.length">
+          <p class="text-xs font-semibold text-slate-500 uppercase mb-2">{% trans "Areas of business" %}</p>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="area in (selected?.business_areas || [])" :key="area">
+              <span class="text-xs px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800" x-text="area"></span>
+            </template>
+          </div>
+        </div>
+
+        <template x-if="selected?.company_summary">
+          <div>
+            <p class="text-xs font-semibold text-slate-500 uppercase mb-1">{% trans "About the company" %}</p>
+            <p class="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-line" x-text="selected?.company_summary"></p>
+          </div>
+        </template>
+
+        <!-- Attachments: staff-only download endpoint, never a direct file URL -->
+        <div>
+          <p class="text-xs font-semibold text-slate-500 uppercase mb-2">{% trans "Documents" %}</p>
+          <div class="space-y-2">
+            <template x-for="a in (selected?.attachments || [])" :key="a.id">
+              <a :href="`/api/platform-admin/partner-attachments/${a.id}/download/`"
+                 class="flex items-center justify-between gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-slate-400 text-sm">
+                <span class="flex items-center gap-2">
+                  <i data-lucide="paperclip" class="w-4 h-4 text-slate-400"></i>
+                  <span x-text="a.original_filename"></span>
+                </span>
+                <span class="text-xs text-slate-400" x-text="a.file_type"></span>
+              </a>
+            </template>
+            <p x-show="!(selected?.attachments || []).length" class="text-sm text-slate-400">
+              {% trans "No documents were submitted." %}
+            </p>
+          </div>
+        </div>
+
+        <!-- Internal notes -->
+        <div>
+          <p class="text-xs font-semibold text-slate-500 uppercase mb-2">
+            {% trans "Internal notes" %}
+            <span class="text-slate-400 normal-case font-normal">— {% trans "never shown to the applicant" %}</span>
+          </p>
+          <div class="space-y-2 mb-3">
+            <template x-for="n in (selected?.notes || [])" :key="n.id">
+              <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/60 text-sm">
+                <p class="text-slate-700 dark:text-slate-200" x-text="n.note"></p>
+                <p class="text-xs text-slate-400 mt-1">
+                  <span x-text="n.author"></span> · <span x-text="(n.created_at || '').slice(0, 16)"></span>
+                </p>
+              </div>
+            </template>
+          </div>
+          <div class="flex gap-2">
+            <input type="text" x-model="noteText" class="form-input text-sm flex-1"
+                   placeholder="{% trans 'Add an internal note...' %}">
+            <button type="button" class="btn-secondary" @click="addNote()" :disabled="!noteText.trim()">
+              {% trans "Add" %}
+            </button>
+          </div>
+        </div>
+
+        <!-- Transitions -->
+        <div class="border-t border-slate-100 dark:border-slate-800 pt-4">
+          <p x-show="error" x-text="error" class="text-sm text-red-600 mb-3"></p>
+          <div class="flex flex-wrap items-center gap-2">
+            <button type="button" class="btn-secondary" @click="transition('review')"
+                    x-show="selected?.status === 'submitted'">
+              {% trans "Start review" %}
+            </button>
+
+            <template x-if="selected?.status === 'submitted' || selected?.status === 'under_review'">
+              <div class="flex flex-wrap items-center gap-2">
+                {% comment %} Approval requires a tier (decision D3): without one the
+                   approved partner would appear in no public section. The API
+                   refuses a tier-less approval — this select is the matching UI. {% endcomment %}
+                <select x-model="tier" class="form-select text-sm">
+                  <option value="">{% trans "Select tier (required)" %}</option>
+                  {% for value, label in tier_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+                </select>
+                <button type="button" class="btn-primary" @click="transition('approve')" :disabled="!tier">
+                  {% trans "Approve" %}
+                </button>
+                <input type="text" x-model="reason" class="form-input text-sm"
+                       placeholder="{% trans 'Rejection reason (internal)' %}">
+                <button type="button" class="btn-secondary" @click="transition('reject')">
+                  {% trans "Reject" %}
+                </button>
+              </div>
+            </template>
+
+            <span x-show="selected?.status === 'approved' || selected?.status === 'rejected'"
+                  class="text-sm text-slate-400">
+              {% trans "This application has been decided and cannot be reopened." %}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function applicationsConsole() {
+    return {
+      loading: true,
+      rows: [],
+      count: 0,
+      selected: null,
+      tier: '',
+      reason: '',
+      noteText: '',
+      error: '',
+      filters: { q: '', country: '', requested_partner_type: '', status: '' },
+
+      query() {
+        const params = new URLSearchParams();
+        Object.entries(this.filters).forEach(([k, v]) => { if (v) params.append(k, v); });
+        return params.toString();
+      },
+
+      exportUrl(kind) {
+        return `/api/platform-admin/partner-applications/export.${kind}?` + this.query();
+      },
+
+      async init() { await this.reload(); },
+
+      async reload() {
+        this.loading = true;
+        try {
+          const res = await apiFetch('/api/platform-admin/partner-applications/?' + this.query());
+          if (res && res.ok) {
+            const data = await res.json();
+            this.rows = data.results || [];
+            this.count = data.count || 0;
+          }
+        } catch (e) {
+          notify('{% trans "Failed to load applications" %}', 'error');
+        } finally {
+          this.loading = false;
+          this.$nextTick(() => lucide.createIcons());
+        }
+      },
+
+      async open(id) {
+        this.error = ''; this.tier = ''; this.reason = ''; this.noteText = '';
+        const res = await apiFetch(`/api/platform-admin/partner-applications/${id}/`);
+        if (res && res.ok) {
+          this.selected = await res.json();
+          this.$nextTick(() => lucide.createIcons());
+        }
+      },
+
+      async transition(action) {
+        this.error = '';
+        const body = {};
+        if (action === 'approve') body.partner_tier = this.tier;
+        if (action === 'reject') body.reason = this.reason;
+
+        const res = await apiFetch(
+          `/api/platform-admin/partner-applications/${this.selected.id}/${action}/`,
+          { method: 'POST', body: JSON.stringify(body) },
+        );
+        if (res && res.ok) {
+          notify('{% trans "Application updated" %}', 'success');
+          await this.open(this.selected.id);
+          await this.reload();
+        } else if (res) {
+          const data = await res.json().catch(() => ({}));
+          this.error = data.detail || '{% trans "The action could not be completed" %}';
+        }
+      },
+
+      async addNote() {
+        const res = await apiFetch(
+          `/api/platform-admin/partner-applications/${this.selected.id}/notes/`,
+          { method: 'POST', body: JSON.stringify({ note: this.noteText }) },
+        );
+        if (res && res.ok) { this.noteText = ''; await this.open(this.selected.id); }
+      },
+    };
+  }
+</script>
+{% endblock %}

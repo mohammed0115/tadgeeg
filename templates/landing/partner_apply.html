@@ -1,0 +1,555 @@
+{% load i18n static asset_tags %}
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
+<!DOCTYPE html>
+{% comment %}
+Partner application form (§E / §L.3).
+
+Standalone document, no {% extends %} — the established landing/* pattern.
+{% comment %} rather than {# #} because this spans lines: a multi-line {# #}
+renders to the visitor, which shipped to the live registration page in Phase 1.
+
+Six numbered sections per §L.3. Colours are the canonical tokens from
+static/src/css/tokens.css, restated as custom properties because landing pages
+sit outside the Tailwind build. Every value is copied, none invented.
+
+ALL validation is server-side (apps/partners/serializers.py). The `required`
+attributes below are a convenience for humans and are not the contract — the
+API rejects a submission that omits the declaration even if the browser did not.
+{% endcomment %}
+<html lang="{{ LANGUAGE_CODE|default:'ar' }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page_title }} — Tadgeeg</title>
+  <meta name="description" content="{{ page_description }}">
+  <meta name="theme-color" content="#003366">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;700;800;900&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  {% comment %} Vendored copy first, CDN only as a fallback — the project
+     pattern (see templates/auth/portal.html). A public page that only works
+     when a third-party CDN is reachable is both an availability risk and a
+     supply-chain dependency, and this is the anonymous file-upload page.
+  {% endcomment %}
+  <script defer src="{% safe_static 'vendor/alpine.min.js' %}"
+          onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
+  <style>
+    :root {
+      --primary:     #003366;  /* --color-primary-500 */
+      --primary-50:  #e6f0fa;  /* --color-primary-50  */
+      --accent:      #10b981;  /* --color-accent-500  */
+      --accent-600:  #059669;  /* --color-accent-600  */
+      --danger:      #ef4444;  /* --color-danger      */
+      --bg:          #f8fafc;  /* --bg-page           */
+      --card:        #ffffff;  /* --bg-card           */
+      --soft:        #f1f5f9;  /* --bg-soft           */
+      --border:      #e2e8f0;  /* --border            */
+      --text:        #1e293b;  /* --text              */
+      --text-muted:  #64748b;  /* --text-muted        */
+      --text-light:  #94a3b8;  /* --text-light        */
+      --shadow-sm:   0 1px 2px 0 rgb(0 51 102 / 5%);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Tajawal','Cairo', system-ui, sans-serif; color: var(--text); background: var(--bg); line-height: 1.6; }
+    h1, h2, h3 { font-family: 'Cairo', sans-serif; color: var(--primary); }
+    a { text-decoration: none; }
+
+    .topbar { background: var(--card); border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; }
+    .topbar .logo { font-weight: 800; color: var(--primary); }
+    .topbar nav { display: flex; gap: 18px; align-items: center; }
+    .topbar nav a { color: var(--text-muted); font-size: 14px; font-weight: 500; }
+
+    .wrap { max-width: 880px; margin: 0 auto; padding: 0 24px 60px; }
+    .head { text-align: center; padding: 44px 0 26px; }
+    .head h1 { font-size: 32px; font-weight: 900; margin-bottom: 10px; }
+    .head p { color: var(--text-muted); }
+
+    .section { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 26px; margin-bottom: 18px; box-shadow: var(--shadow-sm); }
+    .section-title { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+    .section-num { width: 30px; height: 30px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; flex-shrink: 0; }
+    .section-title h2 { font-size: 18px; font-weight: 800; }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 13px; font-weight: 700; }
+    .req { color: var(--danger); }
+    input[type=text], input[type=email], input[type=tel], input[type=url], input[type=number], select, textarea {
+      width: 100%; padding: 11px 13px; background: var(--soft); border: 1.5px solid var(--border);
+      border-radius: 10px; font-size: 14px; font-family: inherit; color: var(--text);
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); background: var(--card); }
+    textarea { min-height: 90px; resize: vertical; }
+
+    .radio-grid, .check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+    .opt { display: flex; align-items: center; gap: 9px; padding: 11px 13px; border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer; font-size: 14px; background: var(--card); }
+    .opt:hover { border-color: var(--primary); }
+    .opt input { accent-color: var(--primary); width: 16px; height: 16px; cursor: pointer; }
+
+    .drop { border: 1.5px dashed var(--border); border-radius: 10px; padding: 15px; margin-bottom: 11px; background: var(--card); }
+    .drop label { font-size: 13px; font-weight: 700; display: block; margin-bottom: 4px; }
+    .drop .hint { font-size: 12px; color: var(--text-light); margin-bottom: 8px; }
+    .drop input[type=file] { font-size: 13px; width: 100%; }
+
+    .declare { display: flex; gap: 11px; align-items: flex-start; padding: 15px; background: var(--primary-50); border-radius: 10px; margin-bottom: 16px; }
+    .declare input { margin-top: 3px; width: 17px; height: 17px; accent-color: var(--primary); cursor: pointer; }
+    .declare label { font-size: 14px; font-weight: 600; cursor: pointer; }
+
+    .btn-primary { background: var(--accent); color: #fff; padding: 14px 34px; border-radius: 10px; font-weight: 700; font-size: 15px; border: none; cursor: pointer; font-family: inherit; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-600); }
+    .btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+
+    .alert { padding: 13px 16px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; }
+    .alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    .alert-ok { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+
+    footer { border-top: 1px solid var(--border); padding: 24px 0; text-align: center; color: var(--text-light); font-size: 13px; }
+    @media (max-width: 680px) { .grid2 { grid-template-columns: 1fr; } }
+  
+    /* ── Wizard chrome (§L.3: six numbered sections, now one at a time) ──
+       Colours are the existing tokens; no new palette entry. */
+    .steps { display: flex; align-items: center; gap: 6px; margin-bottom: 22px; flex-wrap: wrap; }
+    .steps__item { display: flex; align-items: center; gap: 8px; }
+    .steps__dot {
+      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 13px;
+      background: var(--bg-soft, #f1f5f9); color: var(--text-muted, #64748b);
+      border: 1px solid var(--border); transition: all .2s ease;
+    }
+    .steps__item.is-current .steps__dot { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .steps__item.is-done .steps__dot { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .steps__item.is-done .steps__dot::after { content: '✓'; }
+    .steps__item.is-done .steps__num { display: none; }
+    .steps__bar { width: 22px; height: 2px; background: var(--border); border-radius: 2px; }
+    .steps__item.is-done + .steps__bar { background: var(--accent); }
+    .steps__label { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+    @media (max-width: 720px) { .steps__label { display: none; } .steps__bar { width: 12px; } }
+
+    .wizard-count { font-size: 13px; color: var(--text-muted); font-weight: 700; margin-bottom: 10px; }
+    .wizard-nav { display: flex; gap: 10px; align-items: center; margin-top: 20px; }
+    .wizard-nav .spacer { margin-inline-start: auto; }
+    .btn-ghost {
+      background: #fff; color: var(--primary); border: 1px solid var(--border);
+      border-radius: 10px; padding: 11px 20px; font-weight: 800; font-size: 14px; cursor: pointer;
+    }
+    .btn-ghost:disabled { opacity: .45; cursor: not-allowed; }
+    .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+    /* Field-level errors, shown on blur — not held back until submit. */
+    .field .err { color: #ef4444; font-size: 12px; font-weight: 700; margin-top: 5px; }
+    .field input.invalid, .field select.invalid, .field textarea.invalid { border-color: #ef4444; }
+    .file-err { color: #ef4444; font-size: 12px; font-weight: 700; margin-top: 6px; }
+    .draft-note { font-size: 12px; color: var(--text-muted); margin-top: 14px; }
+
+    /* Without this every step renders at once for the moment before Alpine
+       boots — the whole six-section form flashes, which is precisely the
+       layout the wizard replaces. */
+    [x-cloak] { display: none !important; }
+</style>
+</head>
+<body>
+
+{% include "partials/public_header.html" with active_page="partners" %}
+
+  <div class="wrap" x-data="partnerApply()">
+    <div class="head">
+      <h1>{% trans "Join as a Partner" %}</h1>
+      <p>{% trans "Tell us about your company and how you would like to work with Tadgeeg." %}</p>
+    </div>
+
+    <template x-if="error">
+      <div class="alert alert-error" x-text="error"></div>
+    </template>
+    <template x-if="done">
+      <div class="alert alert-ok">
+        {% trans "Your application has been received. Our partnerships team will be in touch." %}
+      </div>
+    </template>
+
+
+    <div class="wizard-count" x-show="!done">
+      <span x-text="`{% trans "Step" %} ${step} / ${TOTAL}`"></span>
+      <span x-text="` · ${completedCount()} {% trans "completed" %}`"></span>
+    </div>
+    <div class="steps" x-show="!done" aria-label="{% trans 'Progress' %}">
+      <template x-for="(title, idx) in TITLES" :key="idx">
+        <div style="display:contents">
+          <div class="steps__item"
+               :class="{ 'is-current': step === idx + 1, 'is-done': isComplete(idx + 1) && step !== idx + 1 }">
+            <button type="button" class="steps__dot" @click="goTo(idx + 1)"
+                    :aria-current="step === idx + 1 ? 'step' : null"
+                    :title="title">
+              <span class="steps__num" x-text="idx + 1"></span>
+            </button>
+            <span class="steps__label" x-text="title"></span>
+          </div>
+          <div class="steps__bar" x-show="idx < TOTAL - 1"></div>
+        </div>
+      </template>
+    </div>
+    <form @submit.prevent="submit()" x-show="!done" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <div class="section" x-show="step === 1" x-cloak>
+        <div class="section-title"><span class="section-num">1</span><h2>{% trans "Company information" %}</h2></div>
+        <div class="grid2">
+          <div class="field"><label>{% trans "Company name" %} <span class="req">*</span></label><input type="text" x-model="f.company_name" @blur="blur('company_name')" :class="showError('company_name') && 'invalid'" required><div class="err" x-show="showError('company_name')" x-text="showError('company_name')"></div></div>
+          <div class="field"><label>{% trans "Contact name" %} <span class="req">*</span></label><input type="text" x-model="f.contact_name" @blur="blur('contact_name')" :class="showError('contact_name') && 'invalid'" required><div class="err" x-show="showError('contact_name')" x-text="showError('contact_name')"></div></div>
+          <div class="field"><label>{% trans "Position" %}</label><input type="text" x-model="f.position"></div>
+          <div class="field"><label>{% trans "Email" %} <span class="req">*</span></label><input type="email" x-model="f.email" @blur="blur('email')" :class="showError('email') && 'invalid'" required><div class="err" x-show="showError('email')" x-text="showError('email')"></div></div>
+          <div class="field"><label>{% trans "Mobile" %} <span class="req">*</span></label><input type="tel" x-model="f.mobile" dir="ltr" @blur="blur('mobile')" :class="showError('mobile') && 'invalid'" required><div class="err" x-show="showError('mobile')" x-text="showError('mobile')"></div></div>
+          <div class="field">
+            <label>{% trans "Country" %} <span class="req">*</span></label>
+            <select x-model="f.country" @blur="blur('country')" :class="showError('country') && 'invalid'" required>
+              <option value="">{% trans "Select a country" %}</option>
+              {% for value, label in country_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}
+            </select>
+            <div class="err" x-show="showError('country')" x-text="showError('country')"></div>
+          </div>
+          <div class="field"><label>{% trans "City" %}</label><input type="text" x-model="f.city"></div>
+          <div class="field"><label>{% trans "Website" %}</label><input type="url" x-model="f.website" dir="ltr" placeholder="https://"></div>
+          <div class="field"><label>{% trans "Year established" %}</label><input type="number" x-model="f.established_year" min="1800" max="2100"></div>
+          <div class="field"><label>{% trans "Number of employees" %}</label><input type="text" x-model="f.employee_count"></div>
+        </div>
+      </div>
+
+      <div class="section" x-show="step === 2" x-cloak>
+        <div class="section-title"><span class="section-num">2</span><h2>{% trans "Partnership type requested" %}</h2></div>
+        <div class="radio-grid">
+          {% for value, label in partner_type_choices %}
+          <label class="opt">
+            <input type="radio" name="requested_partner_type" value="{{ value }}" x-model="f.requested_partner_type" required>
+            <span>{{ label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="section" x-show="step === 3" x-cloak>
+        <div class="section-title"><span class="section-num">3</span><h2>{% trans "Areas of business" %}</h2></div>
+        <div class="check-grid">
+          {% for value, label in business_area_choices %}
+          <label class="opt">
+            <input type="checkbox" value="{{ value }}" x-model="f.business_areas">
+            <span>{{ label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="section" x-show="step === 4" x-cloak>
+        <div class="section-title"><span class="section-num">4</span><h2>{% trans "Additional information" %}</h2></div>
+        <div class="field" style="margin-bottom:12px"><label>{% trans "About the company" %}</label><textarea x-model="f.company_summary"></textarea></div>
+        <div class="field" style="margin-bottom:12px"><label>{% trans "Why do you want to partner with us?" %}</label><textarea x-model="f.partnership_reason"></textarea></div>
+        <div class="field" style="margin-bottom:12px"><label>{% trans "Key clients" %}</label><textarea x-model="f.key_clients"></textarea></div>
+        <div class="field"><label>{% trans "Years of experience" %}</label><input type="number" x-model="f.years_experience" min="0" max="200"></div>
+      </div>
+
+      <div class="section" x-show="step === 5" x-cloak>
+        <div class="section-title"><span class="section-num">5</span><h2>{% trans "Documents" %}</h2></div>
+        <div class="drop">
+          <label>{% trans "Company logo" %}</label>
+          <div class="hint">{% trans "PNG or JPG" %}</div>
+          <input type="file" name="logo" accept=".png,.jpg,.jpeg" @change="pick('logo', $event)">
+          <div class="file-err" x-show="fileErrors.logo" x-text="fileErrors.logo"></div>
+        </div>
+        <div class="drop">
+          <label>{% trans "Company profile" %}</label>
+          <div class="hint">{% trans "PDF" %}</div>
+          <input type="file" name="company_profile" accept=".pdf" @change="pick('company_profile', $event)">
+          <div class="file-err" x-show="fileErrors.company_profile" x-text="fileErrors.company_profile"></div>
+        </div>
+        <div class="drop">
+          <label>{% trans "Commercial registration" %}</label>
+          <div class="hint">{% trans "PDF, PNG or JPG" %}</div>
+          <input type="file" name="commercial_register" accept=".pdf,.png,.jpg,.jpeg" @change="pick('commercial_register', $event)">
+          <div class="file-err" x-show="fileErrors.commercial_register" x-text="fileErrors.commercial_register"></div>
+        </div>
+        <div class="drop">
+          <label>{% trans "Certificates" %}</label>
+          <div class="hint">{% trans "PDF, PNG or JPG — multiple files allowed" %}</div>
+          <input type="file" name="certificates" accept=".pdf,.png,.jpg,.jpeg" multiple @change="pick('certificates', $event)">
+          <div class="file-err" x-show="fileErrors.certificates" x-text="fileErrors.certificates"></div>
+        </div>
+        <div class="drop">
+          <label>{% trans "Other documents" %}</label>
+          <div class="hint">{% trans "PDF, PNG or JPG — multiple files allowed" %}</div>
+          <input type="file" name="other_files" accept=".pdf,.png,.jpg,.jpeg" multiple @change="pick('other_files', $event)">
+          <div class="file-err" x-show="fileErrors.other_files" x-text="fileErrors.other_files"></div>
+        </div>
+      </div>
+
+      <div class="section" x-show="step === 6" x-cloak>
+        <div class="section-title"><span class="section-num">6</span><h2>{% trans "Declaration" %}</h2></div>
+        <div class="declare">
+          <input type="checkbox" id="declare" x-model="f.declaration_accepted" required>
+          <label for="declare">{% trans "I confirm that the information provided in this application is accurate." %}</label>
+        </div>
+      </div>
+
+      {% comment %}
+        One nav bar for the whole wizard. Back is always available and never
+        discards input; Next refuses to advance while the current step has an
+        invalid required field; Submit appears only on the last step and stays
+        disabled until the declaration is ticked.
+
+        All three are conveniences. The API re-validates everything, including
+        the declaration, so a visitor who bypasses this JavaScript entirely
+        gets the same answer from the server.
+      {% endcomment %}
+      <div class="wizard-nav">
+        <button type="button" class="btn-ghost" @click="back()" :disabled="step === 1">
+          {% trans "Back" %}
+        </button>
+        <div class="spacer"></div>
+        <template x-if="step < TOTAL">
+          <button type="button" class="btn-primary" @click="next()">{% trans "Next" %}</button>
+        </template>
+        <template x-if="step === TOTAL">
+          <button type="submit" class="btn-primary"
+                  :disabled="sending || !f.declaration_accepted">
+            <span x-text="sending ? '{% trans "Sending..." %}' : '{% trans "Submit application" %}'"></span>
+          </button>
+        </template>
+      </div>
+
+      <p class="draft-note" x-show="draftSaved">
+        {% trans "Your entries are saved on this device until you submit. Files are not saved." %}
+      </p>
+    </form>
+  </div>
+
+  <footer>© {% now "Y" %} Tadgeeg — {% trans "All rights reserved" %}</footer>
+
+<script>
+  function getCookie(name) {
+    const m = document.cookie.split(';').map(s => s.trim()).find(s => s.startsWith(name + '='));
+    return m ? decodeURIComponent(m.split('=')[1]) : '';
+  }
+
+  function partnerApply() {
+    return {
+      // ── wizard state ──────────────────────────────────────────────────
+      TOTAL: 6,
+      TITLES: [
+        '{% trans "Company information" %}',
+        '{% trans "Partnership type requested" %}',
+        '{% trans "Areas of business" %}',
+        '{% trans "Additional information" %}',
+        '{% trans "Documents" %}',
+        '{% trans "Declaration" %}',
+      ],
+      // Required fields per step. Steps 3-5 have none: business areas,
+      // free-text detail and documents are all optional server-side, and
+      // gating on them would invent a rule the API does not enforce.
+      REQUIRED: {
+        1: ['company_name', 'contact_name', 'email', 'mobile', 'country'],
+        2: ['requested_partner_type'],
+        3: [], 4: [], 5: [],
+        6: ['declaration_accepted'],
+      },
+      // Mirrors the server's allow-list, rendered from its own settings so the
+      // two cannot drift. See apps/partners/uploads.py.
+      MAX_MB: {{ upload_max_mb|default:10 }},
+      MAX_FILES: {{ upload_max_files|default:10 }},
+      ALLOWED: {{ upload_allowed_extensions|default:'[".pdf",".png",".jpg",".jpeg"]'|safe }},
+      DRAFT_KEY: 'tadgeeg.partner_apply.draft',
+
+      step: 1,
+      visited: { 1: true },
+      touched: {},
+      errors: {},
+      fileErrors: {},
+      draftSaved: false,
+
+      sending: false,
+      done: false,
+      error: '',
+      files: {},
+      f: {
+        company_name: '', contact_name: '', position: '', email: '', mobile: '',
+        country: '', city: '', website: '', established_year: '', employee_count: '',
+        requested_partner_type: '', business_areas: [],
+        company_summary: '', partnership_reason: '', key_clients: '', years_experience: '',
+        declaration_accepted: false,
+      },
+
+      init() {
+        this.restoreDraft();
+        // Persist on any change to `f`. Files are deliberately excluded — a
+        // File cannot be serialised, and writing document contents into
+        // localStorage would leave a commercial register sitting in the
+        // browser of a shared machine.
+        this.$watch('f', () => this.saveDraft(), { deep: true });
+      },
+
+      // ── draft persistence ────────────────────────────────────────────
+      saveDraft() {
+        try {
+          localStorage.setItem(this.DRAFT_KEY, JSON.stringify(this.f));
+          this.draftSaved = true;
+        } catch (e) { /* private mode / quota — the form still works */ }
+      },
+      restoreDraft() {
+        try {
+          const raw = localStorage.getItem(this.DRAFT_KEY);
+          if (!raw) return;
+          const saved = JSON.parse(raw);
+          Object.keys(this.f).forEach(k => {
+            if (saved[k] !== undefined && saved[k] !== null) this.f[k] = saved[k];
+          });
+          // Re-consenting is deliberate: a declaration is an act, not a value
+          // to restore from storage.
+          this.f.declaration_accepted = false;
+          this.draftSaved = true;
+        } catch (e) { /* corrupt draft — ignore rather than block the form */ }
+      },
+      clearDraft() {
+        try { localStorage.removeItem(this.DRAFT_KEY); } catch (e) {}
+        this.draftSaved = false;
+      },
+
+      // ── validation ───────────────────────────────────────────────────
+      fieldError(name) {
+        const v = this.f[name];
+        if (name === 'declaration_accepted') {
+          return v ? '' : '{% trans "You must confirm the declaration." %}';
+        }
+        if (Array.isArray(v) ? v.length === 0 : String(v || '').trim() === '') {
+          return '{% trans "This field is required." %}';
+        }
+        if (name === 'email' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v)) {
+          return '{% trans "Enter a valid email address." %}';
+        }
+        if (name === 'mobile' && !/^[+]?[0-9\s()-]{7,20}$/.test(v)) {
+          return '{% trans "Enter a valid phone number." %}';
+        }
+        return '';
+      },
+      // Shown on blur rather than on submit: a message that appears only after
+      // the last step is a message about work already done.
+      blur(name) {
+        this.touched[name] = true;
+        this.errors[name] = this.fieldError(name);
+      },
+      showError(name) { return this.touched[name] ? (this.errors[name] || '') : ''; },
+
+      stepErrors(n) {
+        const out = {};
+        (this.REQUIRED[n] || []).forEach(name => {
+          const e = this.fieldError(name);
+          if (e) out[name] = e;
+        });
+        return out;
+      },
+      // "Valid" is not the same as "done". Steps 3-5 have no required fields,
+      // so they are valid from the start — marking them complete before the
+      // visitor has seen them would tick boxes on their behalf.
+      isValid(n) { return Object.keys(this.stepErrors(n)).length === 0; },
+      isComplete(n) { return !!this.visited[n] && this.isValid(n); },
+      completedCount() {
+        let c = 0;
+        for (let n = 1; n <= this.TOTAL; n++) if (this.isComplete(n)) c++;
+        return c;
+      },
+
+      // ── navigation ───────────────────────────────────────────────────
+      next() {
+        const errs = this.stepErrors(this.step);
+        if (Object.keys(errs).length) {
+          Object.keys(errs).forEach(k => { this.touched[k] = true; this.errors[k] = errs[k]; });
+          this.error = '{% trans "Please complete the required fields before continuing." %}';
+          return false;
+        }
+        this.error = '';
+        if (this.step < this.TOTAL) { this.step++; this.visited[this.step] = true; }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return true;
+      },
+      // Back never validates: moving away from a half-filled step must not
+      // punish the visitor, and nothing is lost by going backwards.
+      back() {
+        if (this.step > 1) { this.step--; this.visited[this.step] = true; }
+        this.error = '';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+      // Jumping forward is only allowed across steps already satisfied, so the
+      // stepper cannot be used to skip the gate the Next button enforces.
+      goTo(n) {
+        if (n === this.step) return;
+        if (n < this.step) { this.step = n; this.visited[n] = true; return; }
+        for (let i = this.step; i < n; i++) {
+          if (!this.isValid(i)) { this.step = i; this.next(); return; }
+        }
+        this.step = n;
+        this.visited[n] = true;
+      },
+
+      // ── files ────────────────────────────────────────────────────────
+      pick(field, event) {
+        const list = Array.from(event.target.files || []);
+        const bad = [];
+        list.forEach(file => {
+          const dot = file.name.lastIndexOf('.');
+          const ext = dot === -1 ? '' : file.name.slice(dot).toLowerCase();
+          if (!this.ALLOWED.includes(ext)) {
+            bad.push(`${file.name}: {% trans "file type not allowed" %}`);
+          } else if (file.size > this.MAX_MB * 1024 * 1024) {
+            bad.push(`${file.name}: {% trans "exceeds" %} ${this.MAX_MB}MB`);
+          }
+        });
+        if (list.length > this.MAX_FILES) {
+          bad.push(`{% trans "Too many files" %} (${this.MAX_FILES})`);
+        }
+        if (bad.length) {
+          // Refuse locally so the upload never starts. The server enforces the
+          // same rules by magic byte, which an extension check cannot do.
+          this.fileErrors[field] = bad.join(' · ');
+          this.files[field] = [];
+          event.target.value = '';
+          return;
+        }
+        this.fileErrors[field] = '';
+        this.files[field] = list;
+      },
+
+      async submit() {
+        this.error = '';
+        this.sending = true;
+        try {
+          const body = new FormData();
+          Object.entries(this.f).forEach(([key, value]) => {
+            if (key === 'business_areas') {
+              value.forEach(v => body.append('business_areas', v));
+            } else if (value !== '' && value !== null && value !== undefined) {
+              body.append(key, value);
+            }
+          });
+          Object.entries(this.files).forEach(([field, list]) => {
+            (list || []).forEach(file => body.append(field, file));
+          });
+
+          const res = await fetch('/api/v1/partners/applications/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            body,
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok) {
+            this.clearDraft();
+            this.done = true;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          } else {
+            this.error = data.detail || '{% trans "We could not submit your application. Please review the form and try again." %}';
+          }
+        } catch (e) {
+          this.error = '{% trans "A connection error occurred. Please try again." %}';
+        } finally {
+          this.sending = false;
+        }
+      },
+    };
+  }
+</script>
+</body>
+</html>

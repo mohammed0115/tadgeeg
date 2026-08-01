@@ -39,6 +39,20 @@ while time.time() < deadline:
         connections["default"].ensure_connection()
         print("MySQL is ready.")
         break
+    except PermissionError as exc:
+        # Not a database problem at all. Django creates MEDIA_ROOT and
+        # PARTNER_DOCS_ROOT at import, so a volume owned by root while the
+        # container runs as www-data fails here — and used to be reported as
+        # "Database unavailable", which is where an hour of the wrong
+        # investigation goes. Fail immediately with the real cause.
+        print(f"\nPERMISSION ERROR (not a database fault): {exc}", file=sys.stderr)
+        print("A mounted volume is not writable by www-data. Fix it with:",
+              file=sys.stderr)
+        print("  docker compose -f deployment/docker/docker-compose.yml \\",
+              file=sys.stderr)
+        print("    run --rm -u root web_live chown -R www-data:www-data /app/private_media /app/media",
+              file=sys.stderr)
+        sys.exit(1)
     except Exception as exc:
         last_error = exc
         print(f"Database unavailable: {exc}")

@@ -36,7 +36,15 @@ RUN chmod +x /entrypoint.sh
 
 COPY . .
 
-RUN mkdir -p /app/staticfiles /app/media /app/logs /var/www && \
+# private_media belongs in this list for the same reason the others do: Docker
+# populates a NEW named volume from the image path it is mounted over, including
+# ownership. Create it here owned by www-data and a fresh private_* volume
+# inherits that. Omit it — as the first version of this change did — and Docker
+# creates the mountpoint owned by root, the container runs as www-data, and
+# Django's PARTNER_DOCS_ROOT.mkdir() raises PermissionError at import. The
+# entrypoint's database-wait catches every exception, so that surfaced as
+# "Database unavailable: Permission denied" and looked like a database fault.
+RUN mkdir -p /app/staticfiles /app/media /app/logs /app/private_media /var/www && \
     chown -R www-data:www-data /app /entrypoint.sh /var/www
 
 USER www-data

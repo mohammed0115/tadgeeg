@@ -18,9 +18,12 @@ from __future__ import annotations
 import uuid
 
 from django.db import models
+from django.utils import timezone
 
 from apps.authentication.models import Organization
 from apps.billing.choices import (
+    AddonBillingType,
+    AddonDimension,
     PlanCode,
     SubscriptionStatus,
     UsageAction,
@@ -288,3 +291,138 @@ class UsageLedger(models.Model):
 
     def __str__(self):
         return f"{self.organization_id} {self.action} {self.quantity} ({self.created_at:%Y-%m-%d})"
+
+
+class Addon(models.Model):
+    """Catalogue of purchasable add-ons (§I).
+
+    One table, three billing types — and the type, not a convention, decides
+    what happens at renewal. §I is explicit that these must not be treated as
+    one billing type, so `billing_type` drives `SubscriptionAddon.renew()`
+    rather than being descriptive metadata.
+
+    `dimension` says which ceiling the add-on raises. Professional services
+    raise none: they are billable but grant no quota, and folding them in with
+    quota packs would inflate an allowance nobody bought.
+    """
+
+    UNLIMITED = None
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.CharField(max_length=48, unique=True)
+    name_en = models.CharField(max_length=120)
+    name_ar = models.CharField(max_length=120, blank=True, default="")
+
+    billing_type = models.CharField(
+        max_length=16, choices=AddonBillingType.choices,
+    )
+    dimension = models.CharField(
+        max_length=16, choices=AddonDimension.choices,
+        default=AddonDimension.NONE,
+    )
+    #: How much of `dimension` this add-on grants. NULL for services and for
+    #: custom quotes, which grant nothing measurable.
+    quantity = models.PositiveIntegerField(null=True, blank=True)
+
+    #: NULL price means "no list price". For CUSTOM_QUOTE that is the whole
+    #: point; the same NULL-is-not-zero rule as Plan.price applies — 0.00 would
+    #: read as free and let it through self-service for nothing.
+    price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=8, default="SAR")
+
+    #: "يبدأ من" in §I.3 — a floor for a negotiated engagement, not a price
+    #: anyone can pay today. Treated as not self-service purchasable.
+    is_price_from = models.BooleanField(
+        default=False,
+        help_text='Spec says "starts from": a floor for negotiation, not a payable price.',
+    )
+
+    is_active = models.BooleanField(default=True)
+    sort_order = models.PositiveIntegerField(default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["sort_order", "code"]
+
+    def __str__(self):
+        return f"{self.code} ({self.billing_type})"
+
+    @property
+    def is_purchasable(self) -> bool:
+        """Self-service eligibility.
+
+        A custom quote has nothing to charge, and a "from" price is a floor
+        under a negotiation — neither can be bought from a page.
+        """
+        return (
+            self.is_active
+            and self.billing_type != AddonBillingType.CUSTOM_QUOTE
+            and self.price is not None
+            and not self.is_price_from
+        )
+
+    @property
+    def renews(self) -> bool:
+        """Whether buying this again happens automatically at renewal."""
+        return self.billing_type == AddonBillingType.RECURRING
+
+
+class SubscriptionAddon(models.Model):
+    """An add-on actually bought by an organisation.
+
+    Prices are frozen here for the same reason they are frozen on the
+    subscription (D1): what someone agreed to pay must survive a catalogue
+    edit. `quantity_at_purchase` is frozen too, so re-sizing a pack in the
+    catalogue never silently changes an existing customer's ceiling.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    subscription = models.ForeignKey(
+        "billing.OrganizationSubscription",
+        on_delete=models.CASCADE, related_name="addons",
+    )
+    addon = models.ForeignKey(Addon, on_delete=models.PROTECT, related_name="purchases")
+
+    billing_type = models.CharField(max_length=16, choices=AddonBillingType.choices)
+    dimension = models.CharField(max_length=16, choices=AddonDimension.choices)
+    quantity_at_purchase = models.PositiveIntegerField(null=True, blank=True)
+    price_at_purchase = models.DecimalField(max_digits=10, decimal_places=2)
+    currency_at_purchase = models.CharField(max_length=8, default="SAR")
+
+    #: An add-on counts toward the effective quota only while active. A
+    #: recurring add-on that lapses must drop the ceiling automatically, which
+    #: is why this is a queryable column rather than an inference.
+    is_active = models.BooleanField(default=True)
+    starts_at = models.DateTimeField(default=timezone.now)
+    #: NULL = no end date. For one-time credit this is deliberate: the credit
+    #: belongs to the customer until consumed, subject to the rollover policy.
+    ends_at = models.DateTimeField(null=True, blank=True)
+
+    #: One-time invoice credit is consumed like plan quota, so it needs its own
+    #: counter — otherwise "how much of the pack is left" has no answer.
+    used_units = models.PositiveIntegerField(default=0)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["subscription", "is_active"]),
+            models.Index(fields=["subscription", "dimension", "is_active"]),
+        ]
+
+    def __str__(self):
+        return f"{self.addon.code} x{self.quantity_at_purchase or 0}"
+
+    @property
+    def renews(self) -> bool:
+        return self.billing_type == AddonBillingType.RECURRING
+
+    @property
+    def remaining_units(self) -> int:
+        """Unconsumed credit on a one-time pack."""
+        total = self.quantity_at_purchase or 0
+        return max(total - (self.used_units or 0), 0)

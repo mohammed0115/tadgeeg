@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
 class PlanCode(models.TextChoices):
@@ -56,3 +57,29 @@ class UsageAction(models.TextChoices):
     CONSUME = "consume", "Consume"
     RELEASE = "release", "Release"
     REFUND  = "refund",  "Refund"
+
+
+class AddonBillingType(models.TextChoices):
+    """§I insists these are three billing types, never one.
+
+    Modelling one and flagging the rest is the failure mode the spec names
+    explicitly: «لا تعامل هذه الثلاثة كنوع billing واحد». The type is what
+    drives renewal, so it is a column and not a convention.
+    """
+
+    RECURRING = "recurring", _("Recurring")
+    ONE_TIME = "one_time", _("One-time")
+    CUSTOM_QUOTE = "custom_quote", _("Custom quote")
+
+
+class AddonDimension(models.TextChoices):
+    """Which ceiling an add-on raises, if any.
+
+    A professional service (training, an integration) raises nothing — it is
+    billable but grants no quota, and conflating that with a quota pack would
+    silently inflate someone's allowance.
+    """
+
+    USERS = "users", _("Users")
+    INVOICES = "invoices", _("Invoices")
+    NONE = "none", _("No quota")

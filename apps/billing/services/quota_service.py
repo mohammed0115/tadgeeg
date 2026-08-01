@@ -28,6 +28,10 @@ from apps.billing.choices import (
     UsageAction,
 )
 from apps.billing.models import OrganizationSubscription, UsageLedger
+from apps.billing.services.entitlements import (
+    effective_invoice_quota,
+    effective_seat_quota,
+)
 
 
 logger = logging.getLogger("billing.quota")
@@ -77,8 +81,20 @@ class QuotaService:
         )
 
     def get_remaining_quota(self, organization) -> int:
+        """Remaining invoices including add-on credit. 0 when unsubscribed.
+
+        Returns 0 rather than None for unlimited to keep the historical int
+        contract of this helper; callers needing the distinction should ask
+        ``effective_invoice_quota`` directly.
+        """
         sub = self.get_active_subscription(organization)
-        return sub.remaining_invoices if sub else 0
+        if sub is None:
+            return 0
+        entitlement = effective_invoice_quota(sub)
+        if entitlement.is_unlimited:
+            return 0
+        used = (sub.used_invoices or 0) + (sub.reserved_invoices or 0)
+        return max(entitlement.total - used, 0)
 
     def can_audit(self, organization, quantity: int = 1) -> dict:
         """Return a structured decision dict. Never raises — callers can
@@ -100,12 +116,16 @@ class QuotaService:
                     "remaining": 0, "subscription": None}
 
         # Unlimited bypasses the comparison entirely rather than being compared
-        # against a sentinel big number: remaining_invoices returns None for an
-        # unlimited plan, and `None < quantity` would raise.
-        if sub.is_unlimited_invoices:
+        # against a sentinel big number: `None < quantity` would raise, and
+        # `int(None or 0)` would silently mean zero.
+        entitlement = effective_invoice_quota(sub)
+        if entitlement.is_unlimited:
             return {"allowed": True, "reason": "", "remaining": None, "subscription": sub}
 
-        remaining = sub.remaining_invoices
+        # The ceiling is plan + active add-ons (§I.5), composed in one place so
+        # this service and SeatService cannot disagree about what counts.
+        used = (sub.used_invoices or 0) + (sub.reserved_invoices or 0)
+        remaining = max(entitlement.total - used, 0)
         if remaining < quantity:
             return {"allowed": False, "reason": "quota_exceeded",
                     "remaining": remaining, "subscription": sub}
@@ -160,14 +180,18 @@ class QuotaService:
             .get(pk=sub.pk)
         )
 
-        # Unlimited (invoice_limit IS NULL) skips the check. Guarded here as
-        # well as in can_audit because this is the row-locked write path and is
-        # reachable directly — an unlimited plan must not fall into arithmetic
-        # on None.
-        if locked.invoice_limit is not None:
-            remaining = max(
-                0, locked.invoice_limit - locked.used_invoices - locked.reserved_invoices
-            )
+        # This is the row-locked write path and the decisive one: can_audit is
+        # advisory, this is what actually refuses. It therefore has to read the
+        # SAME composed ceiling — reading `locked.invoice_limit` here would
+        # refuse a customer who had paid for an invoice pack, while can_audit
+        # told them they had room.
+        #
+        # Unlimited is guarded before any arithmetic, here as well as in
+        # can_audit, because this path is reachable directly.
+        entitlement = effective_invoice_quota(locked)
+        if not entitlement.is_unlimited:
+            used = (locked.used_invoices or 0) + (locked.reserved_invoices or 0)
+            remaining = max(0, entitlement.total - used)
             if remaining < quantity:
                 raise QuotaExceeded(
                     f"Not enough invoice quota: requested {quantity}, remaining {remaining}."
@@ -345,7 +369,9 @@ class SeatService:
         sub = self._active_subscription(organization)
         if sub is None:
             return None
-        return sub.user_limit
+        # Plan seats plus active seat packs. Reading `sub.user_limit` directly
+        # here would ignore every add-on the customer paid for.
+        return effective_seat_quota(sub).total
 
     def seats_used(self, organization) -> int:
         """Active users in the organisation, counted in the database."""

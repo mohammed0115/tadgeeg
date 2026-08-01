@@ -45,3 +45,8 @@ Thumbs.db
 # Python IDE
 *.sublime-workspace
 *.sublime-project
+
+# Partner application documents (Phase 2B). Commercial registrations and
+# certificates submitted by third parties — private storage, outside MEDIA_ROOT,
+# and never committed. See docs/adr/0005-partner-document-security.md
+private_media/

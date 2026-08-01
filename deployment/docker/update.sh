@@ -31,6 +31,17 @@ err() { printf '\033[1;31m  ✗ %s\033[0m\n' "$1"; }
 
 compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
 
+# Which env files a target needs. Referenced by the pre-flight checks below.
+envs_for_target() {
+  case "$1" in
+    live) echo "live" ;;
+    dev)  echo "dev" ;;
+    test) echo "test" ;;
+    all)  echo "live dev test" ;;
+    *)    echo "live" ;;
+  esac
+}
+
 web_services_for_target() {
   case "$1" in
     live) echo "web_live celery_live" ;;
@@ -117,6 +128,52 @@ fi
 bash "$SCRIPT_DIR/render_nginx_config.sh" "$NGINX_MODE"
 ok "Rendered nginx config from template (mode: $NGINX_MODE)"
 
+# ── 2b. Guards that would otherwise fail AFTER the containers start ──────────
+# Everything below was learned from a real outage: a root-owned volume made
+# Django raise PermissionError at import, gunicorn never bound, and nginx
+# served 502 for an hour while the entrypoint printed "Database unavailable".
+log "2b/4  Pre-flight checks ..."
+
+# (a) required env keys — an env file created before these phases passes the
+#     "file exists" check while silently missing keys, and the app then falls
+#     back to a default. For PARTNER_DOCS_ROOT that default is inside the
+#     container, on no volume, so uploads die on the next rebuild.
+REQUIRED_KEYS="PARTNER_DOCS_ROOT PARTNER_DOC_MAX_FILE_MB PARTNER_DOC_MAX_TOTAL_MB
+PARTNER_DOC_MAX_FILES PARTNER_APPLICATION_DEDUPE_MINUTES
+THROTTLE_PARTNER_APPLICATION THROTTLE_PUBLIC_CONTACT THROTTLE_PRICING_CALCULATOR"
+
+for env_name in $(envs_for_target "$TARGET"); do
+  env_file="$SCRIPT_DIR/env/${env_name}.env"
+  for key in $REQUIRED_KEYS; do
+    if ! grep -qE "^[[:space:]]*${key}=" "$env_file"; then
+      err "Missing key '${key}' in ${env_file}"
+      echo "    انسخه من ${env_name}.env.example ثم أعد المحاولة."
+      exit 1
+    fi
+  done
+  docs_root="$(grep -E "^[[:space:]]*PARTNER_DOCS_ROOT=" "$env_file" | tail -1 | cut -d= -f2-)"
+  case "$docs_root" in
+    */media/*|/app/media*)
+      err "PARTNER_DOCS_ROOT is inside the PUBLIC media root: $docs_root"
+      echo "    nginx يخدم /media/ علنًا — سجل تجاري لطرف ثالث سيصبح قابلًا للتنزيل."
+      exit 1 ;;
+  esac
+done
+ok "Env keys present, PARTNER_DOCS_ROOT outside the media root"
+
+# (b) volume ownership. Docker creates a NEW named volume owned by root; the
+#     container runs as www-data. Django creates MEDIA_ROOT and
+#     PARTNER_DOCS_ROOT at import, so a root-owned volume stops the app before
+#     it can report anything useful. Idempotent — safe on every deploy.
+for svc in $(web_services_for_target "$TARGET"); do
+  if compose ps --status running --services 2>/dev/null | grep -q "^${svc}$"; then
+    compose exec -T -u root "$svc" \
+      sh -c 'chown -R www-data:www-data /app/private_media /app/media /app/staticfiles /app/logs 2>/dev/null' \
+      >/dev/null 2>&1 || true
+  fi
+done
+ok "Volume ownership normalised (www-data)"
+
 # ── 3. Build + restart ────────────────────────────────────────────────────────
 log "3/4  Building and restarting containers for [$TARGET] ..."
 WEB_SERVICES=$(web_services_for_target "$TARGET")
@@ -130,9 +187,76 @@ ok "Build complete"
 compose up -d $ALL_SERVICES
 ok "Containers restarted"
 
+# A volume created for the FIRST time during the `up` above is root-owned and
+# the container is already failing on it. Fix and restart once — this is the
+# exact failure that took production down.
+sleep 5
+for svc in $(web_services_for_target "$TARGET"); do
+  if compose logs --tail=20 "$svc" 2>/dev/null | grep -q "Permission denied"; then
+    err "$svc cannot write to a mounted volume — fixing ownership and restarting"
+    compose exec -T -u root "$svc" \
+      sh -c 'chown -R www-data:www-data /app/private_media /app/media /app/staticfiles /app/logs' \
+      >/dev/null 2>&1 \
+      || compose run --rm -u root "$svc" \
+           chown -R www-data:www-data /app/private_media /app/media /app/staticfiles /app/logs \
+           >/dev/null 2>&1 || true
+    compose up -d "$svc"
+    ok "$svc restarted after ownership fix"
+  fi
+done
+
+# ── 3b. Migrations — verify, do not assume ───────────────────────────────────
+# The entrypoint runs `migrate` at container start. If it FAILED, the container
+# exits and the site is down; if it was skipped, every query against a new
+# column throws and the billing context processor swallows it into a silently
+# missing menu. Neither is acceptable to discover from a user report.
+log "3b/4  Verifying migrations ..."
+
+for svc in $(web_services_for_target "$TARGET"); do
+  # Wait for the entrypoint to finish (migrate + compilemessages + collectstatic
+  # + seeds) before asking anything of Django. On a multi-phase deploy this is
+  # minutes, not seconds.
+  printf '  waiting for %s ' "$svc"
+  ready=0
+  for _ in $(seq 1 60); do
+    if compose exec -T "$svc" python -c "import django" >/dev/null 2>&1; then
+      ready=1; printf ' ready\n'; break
+    fi
+    printf '.'
+    sleep 5
+  done
+  [ "$ready" -eq 1 ] || {
+    printf '\n'
+    err "$svc never became ready. Last 40 log lines:"
+    compose logs --tail=40 "$svc" || true
+    exit 1
+  }
+
+  # showmigrations --plan marks unapplied ones with "[ ]".
+  UNAPPLIED="$(compose exec -T "$svc" python manage.py showmigrations --plan 2>/dev/null \
+                | grep -c '^\[ \]' || true)"
+  if [ "${UNAPPLIED:-0}" -gt 0 ]; then
+    err "$svc has $UNAPPLIED UNAPPLIED migration(s) — the database is behind the code."
+    compose exec -T "$svc" python manage.py showmigrations --plan 2>/dev/null \
+      | grep '^\[ \]' | head -20 || true
+    echo
+    echo "    شغّلها يدويًا ثم تحقّق:"
+    echo "      docker compose -f $COMPOSE_FILE exec $svc python manage.py migrate"
+    exit 1
+  fi
+  ok "$svc: all migrations applied"
+
+  # A model change with no migration file is the mirror image of the same
+  # problem, and just as invisible until a query fails.
+  if ! compose exec -T "$svc" python manage.py makemigrations --check --dry-run >/dev/null 2>&1; then
+    err "$svc: model changes exist with no migration file. Run makemigrations."
+    exit 1
+  fi
+  ok "$svc: no missing migration files"
+done
+
 # ── 4. Health check ───────────────────────────────────────────────────────────
 log "4/4  Waiting for services to become healthy ..."
-sleep 8
 
 compose ps
 echo ""

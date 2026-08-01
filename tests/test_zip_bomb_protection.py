@@ -15,6 +15,35 @@ from core.services.zip_validator import (
 )
 
 
+# One megabyte of zeros, reused for every streamed write. Allocated once.
+_CHUNK = b"\0" * (1024 * 1024)
+
+
+def _streamed_bomb(members, compression=zipfile.ZIP_DEFLATED):
+    """Build a ZIP whose central directory *declares* huge members, without
+    ever materialising them in the harness.
+
+    ``members`` is a list of ``(name, megabytes)``.
+
+    A protection test must never perform the attack it defends against. The
+    original versions of the two tests below did exactly that — they built the
+    decompressed payload as a Python string first (measured at 1.8 GB and
+    2.1 GB per loop iteration), which is what OOM-killed the whole `tests/`
+    run at ~8.8 GB RSS. The guard itself never expands anything: it reads the
+    declared sizes from the central directory. So the archive only has to
+    *declare* the size, and streaming zeros through ``ZipFile.open(..., "w")``
+    declares it at roughly one chunk of resident memory.
+    """
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", compression) as zf:
+        for name, megabytes in members:
+            with zf.open(name, "w") as dst:
+                for _ in range(megabytes):
+                    dst.write(_CHUNK)
+    buf.seek(0)
+    return buf
+
+
 class TestZipBombValidation:
     """Test decompression bomb protection."""
 
@@ -60,37 +89,47 @@ class TestZipBombValidation:
         print(f"✓ Suspicious compression rejected: {exc_info.value}")
 
     def test_oversized_uncompressed_file_fails(self):
-        """ZIP with single file > limit should be rejected."""
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_STORED) as zf:
-            # Create a file larger than 500 MB limit (store, no compression)
-            # We'll create a small marker and use the allowed limit
-            large_content = "X" * (600 * 1024 * 1024)  # 600 MB
-            zf.writestr("huge_file.txt", large_content)
-        
-        zip_buffer.seek(0)
-        
+        """A member declaring more than the per-file limit must be rejected.
+
+        `max_ratio` is deliberately permissive so that the *size* rule is the
+        one under test: a compressed bomb also trips the ratio rule, and a test
+        that could pass on either gives no signal about which one works.
+        """
+        zip_buffer = _streamed_bomb([("huge_file.bin", 600)])
+
         with pytest.raises(ZipValidationError) as exc_info:
-            validate_zip_bomb(zip_buffer, max_file_size=500 * 1024 * 1024)
-        
-        assert "exceeds" in str(exc_info.value).lower() or "larger than" in str(exc_info.value).lower()
+            validate_zip_bomb(
+                zip_buffer,
+                max_file_size=500 * 1024 * 1024,
+                max_ratio=10**9,
+            )
+
+        msg = str(exc_info.value).lower()
+        assert "exceeds" in msg or "larger than" in msg
+        assert "600 mb" in msg, f"the declared size should be named: {msg}"
         print(f"✓ Oversized file rejected: {exc_info.value}")
 
     def test_excessive_total_uncompressed_size_fails(self):
-        """ZIP with total uncompressed size > limit should be rejected."""
-        zip_buffer = io.BytesIO()
-        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_STORED) as zf:
-            # Create multiple files totaling > 1 GB
-            for i in range(3):
-                content = f"File {i}\n" * (300 * 1024 * 1024)  # 300 MB each
-                zf.writestr(f"file_{i}.txt", content)
-        
-        zip_buffer.seek(0)
-        
+        """Members that are individually legal but collectively over the cap.
+
+        Each member is 400 MB — under the 500 MB per-file limit — so the
+        per-file rule cannot fire and the *total* rule is what must catch this.
+        """
+        zip_buffer = _streamed_bomb([(f"file_{i}.bin", 400) for i in range(3)])
+
         with pytest.raises(ZipValidationError) as exc_info:
-            validate_zip_bomb(zip_buffer, max_total_size=1000 * 1024 * 1024)
-        
-        assert "exceed" in str(exc_info.value).lower()
+            validate_zip_bomb(
+                zip_buffer,
+                max_file_size=500 * 1024 * 1024,
+                max_total_size=1000 * 1024 * 1024,
+                max_ratio=10**9,
+            )
+
+        msg = str(exc_info.value).lower()
+        assert "exceed" in msg
+        assert "total declared" in msg, (
+            f"the total rule should be the one that fired, not per-file: {msg}"
+        )
         print(f"✓ Excessive total size rejected: {exc_info.value}")
 
     def test_path_traversal_attack_fails(self):
@@ -218,3 +257,64 @@ class TestZipValidationIntegration:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+class TestGuardDoesNotExpandPayloads:
+    """The guard must reject a bomb *without* expanding it — and this must be
+    measured, not assumed.
+
+    `tests/` could not complete on a 12 GB machine: the kernel OOM-killed it at
+    ~8.8 GB RSS. The cause was not the guard but two tests in this file, which
+    built the decompressed payload as a Python object before handing it over —
+    performing the very attack they defend against. The guard itself peaks at
+    ~16 MB on the same input because it reads declared sizes from the central
+    directory (`core/services/zip_validator.py:156,181,188`).
+
+    This test pins that property so the pattern cannot come back silently.
+    """
+
+    def test_guard_rejects_a_real_bomb_within_a_memory_ceiling(self):
+        import subprocess
+        import sys
+        from pathlib import Path
+
+        repo = Path(__file__).resolve().parent.parent
+        # A subprocess is required: ru_maxrss is a per-process high-water mark,
+        # so measuring in-process would inherit whatever earlier tests peaked at
+        # and the ceiling would prove nothing.
+        probe = """
+import io, resource, sys, zipfile
+sys.path.insert(0, %r)
+from core.services.zip_validator import validate_zip_bomb, ZipValidationError
+
+buf = io.BytesIO()
+chunk = b"\\0" * (1024 * 1024)
+with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+    with zf.open("bomb.bin", "w") as dst:
+        for _ in range(2000):          # declares 2 GB
+            dst.write(chunk)
+buf.seek(0)
+try:
+    validate_zip_bomb(buf, max_file_size=500 * 1024 * 1024, max_ratio=10**9)
+    print("NOT_REJECTED")
+except ZipValidationError:
+    print("REJECTED")
+print(int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024))
+""" % str(repo)
+
+        out = subprocess.run(
+            [sys.executable, "-c", probe],
+            capture_output=True, text=True, timeout=300, cwd=str(repo),
+        )
+        assert out.returncode == 0, f"probe crashed: {out.stderr[-500:]}"
+        verdict, peak_mb = out.stdout.split()
+        peak_mb = int(peak_mb)
+
+        assert verdict == "REJECTED", "a 2 GB declared member was not rejected"
+        # The archive declares 2 GB. Anything near that means something expanded
+        # it. 512 MB is generous headroom over the ~16 MB actually observed.
+        assert peak_mb < 512, (
+            f"guard peaked at {peak_mb} MB validating a 2 GB declared bomb — "
+            f"something is expanding the payload instead of reading the "
+            f"central directory"
+        )

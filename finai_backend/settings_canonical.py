@@ -458,6 +458,10 @@ REST_FRAMEWORK = {
         # hardcoded in a view.
         "partner_application": os.environ.get("THROTTLE_PARTNER_APPLICATION", "5/day"),
         "public_contact": os.environ.get("THROTTLE_PUBLIC_CONTACT", "10/day"),
+        # The pricing calculator is a read-only public endpoint driven by two
+        # sliders, so it is far chattier than a form submission and needs its
+        # own rate rather than borrowing a write scope.
+        "pricing_calculator": os.environ.get("THROTTLE_PRICING_CALCULATOR", "120/hour"),
     },
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.AcceptHeaderVersioning",
     "ALLOWED_VERSIONS": ["1.0", "1.1", "2.0"],

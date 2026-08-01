@@ -28,9 +28,17 @@ from django.utils.translation import gettext as _
 def _stringify_expired_message() -> str:
     return str(_("Your subscription has expired. Please renew to continue."))
 from rest_framework import status as drf_status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.decorators import (
+    api_view,
+    permission_classes,
+    throttle_classes,
+)
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
+
+from apps.billing.services.plan_service import recommend_plan
 
 from apps.billing.choices import PlanCode, SubscriptionStatus, USABLE_STATUSES
 from apps.billing.models import OrganizationSubscription, Plan
@@ -679,3 +687,37 @@ class PaymentHistoryView(APIView):
             "page_obj":   page_obj,
             "active_nav": "payments",
         })
+
+
+# ── Pricing calculator (§K) ─────────────────────────────────────────────────
+@api_view(["GET"])
+@permission_classes([AllowAny])
+@throttle_classes([ScopedRateThrottle])
+def pricing_recommendation(request):
+    """Recommend a plan for a given number of users and invoices.
+
+    Public and unauthenticated by design — it answers a question a prospect
+    asks before signing up — so it exposes nothing beyond the public catalogue
+    that /pricing/ already shows.
+
+    The recommendation itself is computed in `plan_service.recommend_plan`.
+    §K and §M require a single source of truth for pricing and limits: if the
+    page carried the thresholds, the first catalogue edit would make it lie.
+    """
+    def _int(name, default=0):
+        raw = request.query_params.get(name, default)
+        try:
+            return max(int(raw), 0)
+        except (TypeError, ValueError):
+            return 0
+
+    users = _int("users")
+    invoices = _int("invoices")
+
+    result = recommend_plan(users=users, invoices=invoices)
+    if result.get("price") is not None:
+        result["price"] = str(result["price"])
+    return Response(result)
+
+
+pricing_recommendation.throttle_scope = "pricing_calculator"

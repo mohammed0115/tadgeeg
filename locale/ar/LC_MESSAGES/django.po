@@ -20524,6 +20524,34 @@ msgid ""
 "Your entries are saved on this device until you submit. Files are not saved."
 msgstr "تُحفَظ مدخلاتك على هذا الجهاز حتى الإرسال. أمّا الملفات فلا تُحفَظ."
 
+#. Phase 3B §K — pricing calculator.
+msgid "Which plan fits you?"
+msgstr "أي باقة تناسبك؟"
+
+#. Phase 3B §K — pricing calculator.
+msgid "Move the sliders and we will suggest a plan."
+msgstr "حرّك المؤشّرين وسنقترح عليك الباقة المناسبة."
+
+#. Phase 3B §K — pricing calculator.
+msgid "Number of users"
+msgstr "عدد المستخدمين"
+
+#. Phase 3B §K — pricing calculator.
+msgid "Invoices per month"
+msgstr "عدد الفواتير شهريًا"
+
+#. Phase 3B §K — pricing calculator.
+msgid "Suggested plan"
+msgstr "الباقة المقترحة"
+
+#. Phase 3B §K — pricing calculator.
+msgid "Calculating…"
+msgstr "جارٍ الحساب…"
+
+#. Phase 3B §K — pricing calculator.
+msgid "Could not calculate right now."
+msgstr "تعذّر الحساب الآن."
+
 #~ msgid "Privacy and data protection"
 #~ msgstr "الخصوصية وحماية البيانات"
 

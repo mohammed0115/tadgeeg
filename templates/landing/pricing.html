@@ -1,4 +1,4 @@
-{% load i18n %}
+{% load i18n asset_tags %}
 {% get_current_language as LANGUAGE_CODE %}
 {% get_current_language_bidi as LANGUAGE_BIDI %}
 <!DOCTYPE html>
@@ -143,7 +143,33 @@
       .wrap { padding: 24px 16px 56px; }
       .card { padding: 24px 20px; }
     }
-  </style>
+  
+    /* §K calculator. Existing tokens only — no new colour or font. */
+    .calc { margin-top: 44px; padding-top: 32px; border-top: 1px solid var(--border); }
+    .calc-head { text-align: center; margin-bottom: 24px; }
+    .calc-head h2 { font-family: 'Cairo', sans-serif; color: var(--primary); font-size: 24px; font-weight: 900; margin-bottom: 6px; }
+    .calc-head p { color: var(--text-muted); font-size: 15px; }
+    .calc-body {
+      display: grid; grid-template-columns: 1fr 320px; gap: 26px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 18px; padding: 26px; box-shadow: var(--shadow-sm);
+    }
+    @media (max-width: 860px) { .calc-body { grid-template-columns: 1fr; } }
+    .calc-field { margin-bottom: 22px; }
+    .calc-field label { display: flex; justify-content: space-between; align-items: baseline;
+      font-weight: 800; color: var(--primary); font-size: 14px; margin-bottom: 10px; }
+    .calc-field output { font-family: 'Cairo', sans-serif; font-size: 20px; font-weight: 900; color: var(--accent); }
+    .calc-field input[type=range] { width: 100%; accent-color: var(--accent); }
+    .calc-result {
+      background: var(--bg); border: 1px solid var(--border); border-radius: 14px;
+      padding: 22px; text-align: center; display: flex; flex-direction: column; justify-content: center;
+    }
+    .calc-result .label { font-size: 12px; font-weight: 800; color: var(--text-muted); letter-spacing: .4px; }
+    .calc-result .plan { font-family: 'Cairo', sans-serif; font-size: 22px; font-weight: 900; color: var(--primary); margin: 8px 0; }
+    .calc-result .price { font-family: 'Cairo', sans-serif; font-size: 34px; font-weight: 900; color: var(--accent); }
+    .calc-result .per { font-size: 13px; color: var(--text-muted); }
+    .calc-result a { margin-top: 14px; }
+</style>
 </head>
 <body>
 {% include "partials/public_header.html" with active_page="pricing" %}
@@ -232,6 +258,64 @@
         {% endfor %}
       </div>
 
+
+      {% comment %}
+        §K — two sliders, a recommendation, a price.
+
+        The page holds NO thresholds. It sends the two numbers to
+        /billing/recommend/ and renders the answer. §K and §M require one
+        source of truth for pricing and limits: duplicating the ladder here
+        would make this page lie the first time the catalogue changes.
+      {% endcomment %}
+      <section class="calc" x-data="planCalculator()" x-init="recalc()">
+        <div class="calc-head">
+          <h2>{% trans "Which plan fits you?" %}</h2>
+          <p>{% trans "Move the sliders and we will suggest a plan." %}</p>
+        </div>
+        <div class="calc-body">
+          <div>
+            <div class="calc-field">
+              <label>
+                <span>{% trans "Number of users" %}</span>
+                <output x-text="users"></output>
+              </label>
+              <input type="range" min="1" max="60" step="1" x-model.number="users" @input="recalc()">
+            </div>
+            <div class="calc-field" style="margin-bottom:0">
+              <label>
+                <span>{% trans "Invoices per month" %}</span>
+                <output x-text="invoices.toLocaleString()"></output>
+              </label>
+              <input type="range" min="20" max="40000" step="20" x-model.number="invoices" @input="recalc()">
+            </div>
+          </div>
+
+          <div class="calc-result">
+            <span class="label">{% trans "Suggested plan" %}</span>
+            <template x-if="!loading && result">
+              <div>
+                <div class="plan" x-text="planName()"></div>
+                <template x-if="result.is_custom_quote">
+                  <div>
+                    <div class="price" style="font-size:22px">{% trans "Custom quote" %}</div>
+                    <a class="btn btn-outline" href="{% url 'frontend:contact' %}">{% trans "Contact sales" %}</a>
+                  </div>
+                </template>
+                <template x-if="!result.is_custom_quote">
+                  <div>
+                    <div class="price" x-text="result.price"></div>
+                    <div class="per" x-text="`${result.currency} / {% trans "month" %}`"></div>
+                    <a class="btn btn-primary" href="{% url 'frontend:register' %}">{% trans "Start free trial" %}</a>
+                  </div>
+                </template>
+              </div>
+            </template>
+            <template x-if="loading"><div class="per">{% trans "Calculating…" %}</div></template>
+            <template x-if="error"><div class="per" x-text="error"></div></template>
+          </div>
+        </div>
+      </section>
+
       {% comment %} §L.4 — accounting-firm plans get their own titled section
          rather than being mixed into the main row: they address a different
          buyer and are priced on a different basis. {% endcomment %}
@@ -288,5 +372,54 @@
       </p>
     {% endif %}
   </main>
+
+<script defer src="{% safe_static 'vendor/alpine.min.js' %}"
+        onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js'"></script>
+<script>
+  function planCalculator() {
+    return {
+      // Opening slider positions only — inputs the visitor immediately
+      // changes, not thresholds. Which plan they map to is the backend's
+      // answer, and deliberately not restated here: even in a comment, a
+      // second copy of the ladder is a second thing to fall out of date.
+      users: 10,
+      invoices: 2000,
+      result: null,
+      loading: false,
+      error: '',
+      _timer: null,
+
+      planName() {
+        if (!this.result || !this.result.plan_code) return '{% trans "Contact sales" %}';
+        return document.documentElement.lang === 'ar'
+          ? this.result.plan_name_ar : this.result.plan_name_en;
+      },
+
+      recalc() {
+        // Sliders fire continuously; debounce so dragging is one request, not
+        // a hundred against a throttled public endpoint.
+        clearTimeout(this._timer);
+        this._timer = setTimeout(() => this.fetchRecommendation(), 180);
+      },
+
+      async fetchRecommendation() {
+        this.loading = true;
+        this.error = '';
+        try {
+          const qs = new URLSearchParams({ users: this.users, invoices: this.invoices });
+          const res = await fetch(`/billing/recommend/?${qs}`, {
+            headers: { 'Accept': 'application/json' },
+          });
+          if (!res.ok) throw new Error('bad status');
+          this.result = await res.json();
+        } catch (e) {
+          this.error = '{% trans "Could not calculate right now." %}';
+        } finally {
+          this.loading = false;
+        }
+      },
+    };
+  }
+</script>
 </body>
 </html>

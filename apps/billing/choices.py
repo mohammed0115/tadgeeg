@@ -83,3 +83,10 @@ class AddonDimension(models.TextChoices):
     USERS = "users", _("Users")
     INVOICES = "invoices", _("Invoices")
     NONE = "none", _("No quota")
+
+
+class RolloverPolicy(models.TextChoices):
+    """What happens to unused one-time invoice credit at a cycle reset (§D3)."""
+
+    CARRY_OVER = "carry_over", _("Carry unused credit over")
+    EXPIRE = "expire", _("Expire unused credit at reset")

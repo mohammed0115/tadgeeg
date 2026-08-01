@@ -141,4 +141,8 @@ urlpatterns = [
     path("activity-logs/", activity_log_list, name="activity-logs"),
     path("activity-logs/stats/", api_views.PlatformActivityLogStatsView.as_view(), name="activity-logs-stats"),
     path("activity-logs/<uuid:pk>/", activity_log_detail, name="activity-log-detail"),
+    # Billing rollover policy (Phase 3B D3) — staff-only, audited, and never
+    # publicly readable. Permission tests live in
+    # apps/billing/tests/test_rollover_policy.py, in the same change.
+    path("billing-policy/", api_views.BillingPolicyView.as_view(), name="billing-policy"),
 ]

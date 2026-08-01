@@ -806,3 +806,54 @@ class PartnerApplicationExportPdfView(PlatformAdminAPIView):
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         return response
+
+
+# ── Billing policy (Phase 3B D3) ────────────────────────────────────────────
+class BillingPolicyView(APIView):
+    """Read and change the platform's rollover policy.
+
+    Staff-only and never publicly readable: this governs what happens to credit
+    customers have paid for, which is why it is not a `cms.PlatformSetting`
+    (that table carries an `is_public` flag). Every change is audited through
+    `log_crm_action`.
+    """
+
+    permission_classes = [IsAuthenticated, IsPlatformAdmin]
+
+    def get(self, request):
+        from apps.billing.choices import RolloverPolicy
+        from apps.billing.services.rollover import RolloverService
+
+        policy = RolloverService().get_policy()
+        return Response({
+            "invoice_credit_rollover": policy.invoice_credit_rollover,
+            "effective_from": policy.effective_from,
+            "updated_by": getattr(policy.updated_by, "email", None),
+            "choices": [
+                {"value": v, "label": str(l)} for v, l in RolloverPolicy.choices
+            ],
+        })
+
+    def patch(self, request):
+        from apps.billing.services.rollover import RolloverService
+
+        value = (request.data or {}).get("invoice_credit_rollover")
+        if not value:
+            return Response(
+                {"detail": "invoice_credit_rollover is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            policy = RolloverService().set_policy(
+                value=value,
+                actor=request.user,
+                request=request,
+                reason=(request.data or {}).get("reason", ""),
+            )
+        except ValueError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            "invoice_credit_rollover": policy.invoice_credit_rollover,
+            "effective_from": policy.effective_from,
+        })

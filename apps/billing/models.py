@@ -24,6 +24,7 @@ from apps.authentication.models import Organization
 from apps.billing.choices import (
     AddonBillingType,
     AddonDimension,
+    RolloverPolicy,
     PlanCode,
     SubscriptionStatus,
     UsageAction,
@@ -426,3 +427,61 @@ class SubscriptionAddon(models.Model):
         """Unconsumed credit on a one-time pack."""
         total = self.quantity_at_purchase or 0
         return max(total - (self.used_units or 0), 0)
+
+
+class BillingPolicy(models.Model):
+    """Platform-wide billing behaviour. One row (pk=1).
+
+    **Why here and not in cms.PlatformSetting.** That table is admin-editable
+    and would have been the quick route, but a billing behaviour stored in the
+    CMS settings table recreates the split that made cms.PricingPlan a
+    source-of-truth problem (ADR 0001): two places that look authoritative and
+    one that is. It also carries an `is_public` flag, and a billing policy must
+    never be publicly readable.
+
+    A model rather than a setting because changing how customers' paid credit
+    behaves is exactly the class of action that must be attributable — it is a
+    database write, and it is audited.
+    """
+
+    SINGLETON_PK = 1
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=SINGLETON_PK)
+    invoice_credit_rollover = models.CharField(
+        max_length=16,
+        choices=RolloverPolicy.choices,
+        default=RolloverPolicy.CARRY_OVER,
+        help_text="What happens to unused one-time invoice credit at cycle reset.",
+    )
+    #: When the current value took effect. Credit accrued before this instant
+    #: was earned under the previous policy and is honoured on its terms.
+    effective_from = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(
+        "authentication.User", on_delete=models.SET_NULL,
+        null=True, blank=True, related_name="+",
+    )
+
+    class Meta:
+        verbose_name = "billing policy"
+        verbose_name_plural = "billing policy"
+
+    def __str__(self):
+        return f"BillingPolicy(rollover={self.invoice_credit_rollover})"
+
+    def save(self, *args, **kwargs):
+        # Enforced in code as well as by default so a stray create() cannot
+        # produce a second row that silently disagrees with the first.
+        #
+        # force_insert has to be dropped along with it: pinning the pk turns an
+        # insert into an update of the existing row, and Django would otherwise
+        # still emit an INSERT and hit the primary-key constraint.
+        self.pk = self.SINGLETON_PK
+        kwargs.pop("force_insert", None)
+        # Django picks INSERT vs UPDATE from `_state.adding`, not from the pk.
+        # A freshly constructed instance always claims to be new, so pinning
+        # the pk alone still emits an INSERT and collides. Telling it the row
+        # exists turns the second save into the update it actually is.
+        if type(self).objects.filter(pk=self.SINGLETON_PK).exists():
+            self._state.adding = False
+        return super().save(*args, **kwargs)

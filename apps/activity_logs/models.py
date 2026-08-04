@@ -5,10 +5,11 @@ import uuid
 from django.conf import settings
 from django.db import models
 
+from apps.audit.integrity import HashChainMixin
 from apps.authentication.models import Organization
 
 
-class ActivityLog(models.Model):
+class ActivityLog(HashChainMixin):
     """Append-only activity log with a tamper-evident hash chain.
 
     Every save links to the previous row in the org's chain via
@@ -70,9 +71,11 @@ class ActivityLog(models.Model):
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    # ── Tamper-evidence — hash chain per organization ──────────────────
-    previous_hash = models.CharField(max_length=64, blank=True, db_index=True)
-    chain_hash    = models.CharField(max_length=64, blank=True, db_index=True)
+    # Tamper-evidence comes from HashChainMixin: previous_hash, event_hash and
+    # chain_position. The hand-rolled `chain_hash` that used to live here
+    # ordered by created_at and took no lock, so two writes in the same
+    # microsecond both chained off the same predecessor and forked the chain
+    # without raising. See tests/test_audit_trail_integrity.py.
 
     class Meta:
         ordering = ["-created_at"]
@@ -83,25 +86,34 @@ class ActivityLog(models.Model):
             models.Index(fields=["entity_type", "entity_id"]),
         ]
 
-    # ── Append-only enforcement + chain computation ────────────────────
+    # ── Append-only enforcement ────────────────────────────────────────
     def save(self, *args, **kwargs):
         if self.pk and ActivityLog.objects.filter(pk=self.pk).exists():
             raise ValueError(
                 "ActivityLog rows are append-only — save() on an existing "
                 "row is forbidden."
             )
-        if not self.chain_hash:
-            prev = (
-                ActivityLog.objects
-                .filter(organization=self.organization)
-                .order_by("-created_at")
-                .first()
-            )
-            self.previous_hash = prev.chain_hash if prev else ""
-            self.chain_hash = self._compute_chain_hash()
+        # Chain assignment is the mixin's pre_save signal, not ours. Doing it
+        # here would run outside its lock.
         return super().save(*args, **kwargs)
 
-    def _payload_for_hash(self) -> dict:
+    # ── HashChainMixin contract ────────────────────────────────────────
+
+    @classmethod
+    def _chain_org_filter_key(cls) -> str:
+        return "organization_id"
+
+    def _chain_organization_id(self):
+        return self.organization_id
+
+    def _chain_payload(self) -> dict:
+        """The immutable snapshot the hash commits to.
+
+        `created_at` is excluded deliberately: auto_now_add populates it in the
+        field-level pre_save, which fires AFTER the chain signal, so the value
+        is still None when we hash. chain_position already encodes order —
+        see InvoiceAuditEvent._chain_payload for the same reasoning.
+        """
         return {
             "org":         str(self.organization_id or ""),
             "user":        str(self.user_id or ""),
@@ -111,13 +123,6 @@ class ActivityLog(models.Model):
             "ip":          str(self.ip_address or ""),
             "metadata":    self.metadata or {},
         }
-
-    def _compute_chain_hash(self) -> str:
-        body = json.dumps(self._payload_for_hash(),
-                          sort_keys=True, separators=(",", ":"),
-                          default=str).encode("utf-8")
-        material = (self.previous_hash + "|").encode("utf-8") + body
-        return hashlib.sha256(material).hexdigest()
 
     def __str__(self):
         return f"{self.action} by {self.user} at {self.created_at:%Y-%m-%d %H:%M}"

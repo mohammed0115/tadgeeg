@@ -10,6 +10,10 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+# HashChainMixin lives in apps.audit; apps.audit.integrity imports nothing
+# from authentication, so this is not a cycle.
+from apps.audit.integrity import HashChainMixin
+
 from core.utils.encrypted_field import EncryptedCharField
 
 
@@ -351,7 +355,7 @@ class OrganizationSettings(models.Model):
         return f"Settings for {self.organization.name}"
 
 
-class AuditLog(models.Model):
+class AuditLog(HashChainMixin):
     """Immutable audit trail for all system actions."""
 
     class Action(models.TextChoices):
@@ -386,11 +390,23 @@ class AuditLog(models.Model):
         null=True, blank=True, db_index=True,
         help_text="Records are retained until this date (7-year minimum per regulatory requirements)."
     )
-    # Tamper-evidence: every entry's chain_hash = SHA-256(prev_chain_hash || canonical_json(payload)).
-    # Auditors can walk the chain and detect any inserted, deleted, or
-    # modified record. Computed in save(); never edited after creation.
-    previous_hash = models.CharField(max_length=64, blank=True, db_index=True)
-    chain_hash    = models.CharField(max_length=64, blank=True, db_index=True)
+    # Tamper-evidence comes from HashChainMixin — previous_hash, event_hash and
+    # chain_position. The hand-rolled chain that used to live here had three
+    # defects, each of which broke the guarantee silently:
+    #
+    #   · no select_for_update, so two concurrent writes read the same
+    #     predecessor and both chained off it — a fork, and verification then
+    #     walks one branch and reports success
+    #   · order_by("-timestamp"), and timestamps tie under load, which leaves
+    #     "the previous row" undefined
+    #   · one GLOBAL chain: organisation A's next entry chained off B's hash,
+    #     so B's write ordering changed A's chain and verifying A meant reading
+    #     every tenant's rows
+    #
+    # `chain_hash` is kept as a read-only mirror of `event_hash` so existing
+    # readers, exports and the 11 rows written before this change keep working.
+    # New code should read event_hash.
+    chain_hash = models.CharField(max_length=64, blank=True, db_index=True)
 
     class Meta:
         db_table = "audit_logs"
@@ -421,26 +437,48 @@ class AuditLog(models.Model):
                 )
             return super().save(*args, **kwargs)
 
-        # Insert path — compute chain hash from the previous entry's hash.
-        if not self.chain_hash:
-            from core.utils.audit_log import compute_chain_hash
-            prev = (
-                AuditLog.objects
-                .order_by("-timestamp")
-                .values_list("chain_hash", flat=True)
-                .first()
-            ) or ""
-            payload = {
-                "action": self.action,
-                "user_id": str(self.user_id) if self.user_id else None,
-                "organization_id": str(self.organization_id) if self.organization_id else None,
-                "resource_type": self.resource_type,
-                "resource_id": self.resource_id,
-                "details": self.details,
-            }
-            self.previous_hash = prev
-            self.chain_hash = compute_chain_hash(prev, payload)
-        return super().save(*args, **kwargs)
+        # Insert path — chaining is HashChainMixin's pre_save signal, which
+        # holds the row lock. Doing it here would run outside that lock and
+        # reintroduce the fork.
+        result = super().save(*args, **kwargs)
+        if self.event_hash and self.chain_hash != self.event_hash:
+            # Mirror for existing readers. update() rather than save() so the
+            # append-only guard above does not reject its own bookkeeping.
+            AuditLog.objects.filter(pk=self.pk).update(chain_hash=self.event_hash)
+            self.chain_hash = self.event_hash
+        return result
+
+    # ── HashChainMixin contract ────────────────────────────────────────────
+
+    @classmethod
+    def _chain_org_filter_key(cls) -> str:
+        return "organization_id"
+
+    def _chain_organization_id(self):
+        """Entries with no organisation share one platform-level chain.
+
+        Not a fallback to the old global behaviour: platform-staff actions
+        genuinely belong to no tenant, and giving them their own chain keeps
+        them verifiable without letting them interleave with a customer's.
+        """
+        return self.organization_id
+
+    def _chain_payload(self) -> dict:
+        """The immutable snapshot the hash commits to.
+
+        Same fields the previous implementation committed to, so the meaning of
+        "tampered" does not change — only how the chain is built. `timestamp`
+        stays out for the reason documented on InvoiceAuditEvent: auto_now_add
+        fires after the chain signal, so it is None at hashing time.
+        """
+        return {
+            "action": self.action,
+            "user_id": str(self.user_id) if self.user_id else None,
+            "organization_id": str(self.organization_id) if self.organization_id else None,
+            "resource_type": self.resource_type,
+            "resource_id": self.resource_id,
+            "details": self.details,
+        }
 
     def delete(self, *args, **kwargs):
         """Block deletion — audit log is append-only."""

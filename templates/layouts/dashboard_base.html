@@ -726,7 +726,20 @@ cookie + session so subsequent pages render in the new language.
         <div class="ai-panel-body" x-ref="body">
           <template x-for="(m, i) in messages" :key="i">
             <div class="ai-msg" :class="m.role">
-              <div class="ai-msg-bubble" x-text="m.text"></div>
+              <div class="ai-msg-bubble">
+                <span x-text="m.text" style="unicode-bidi:plaintext;"></span>
+                {% comment %}
+                When the server names a page — the plan selector for a 402, for
+                instance — offer it. Telling someone their subscription does not
+                cover this and leaving them in the chat box is a dead end.
+                {% endcomment %}
+                <template x-if="m.link">
+                  <a :href="m.link" class="ai-msg-link"
+                     style="display:inline-block;margin-top:6px;font-weight:700;text-decoration:underline;">
+                    {% trans "Go to plans" %}
+                  </a>
+                </template>
+              </div>
             </div>
           </template>
           <div class="ai-msg assistant" x-show="loading">
@@ -841,9 +854,20 @@ cookie + session so subsequent pages render in the new language.
                 body: JSON.stringify({ message: msg, ...this._detectFocus() }),
               });
               const data = await r.json();
+
+              // `detail` as well as `answer`/`error`. The subscription gate
+              // answers 402 with {detail, code, redirect} — a complete, correct
+              // explanation that this handler dropped on the floor, because it
+              // only looked for the other two names. The user was told
+              // "Something went wrong" when nothing had: their plan does not
+              // include AI, and the server had even said which page to go to.
+              const text = data.answer || data.detail || data.error;
               this.messages.push({
                 role: 'assistant',
-                text: data.answer || data.error || '{% trans "Something went wrong." %}'
+                text: text || '{% trans "Something went wrong." %}',
+                // A dead end becomes an action when the server names the next
+                // page. Rendered as a link by the template below.
+                link: data.redirect || null,
               });
             } catch (e) {
               this.messages.push({ role: 'assistant', text: '{% trans "Connection error." %}' });

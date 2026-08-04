@@ -22690,3 +22690,6 @@ msgstr ""
 
 msgid "CR"
 msgstr "س.ت"
+
+msgid "Go to plans"
+msgstr "اذهب إلى الباقات"

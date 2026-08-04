@@ -1,3 +1,29 @@
+"""Dashboard metrics over the audit-engine job pipeline.
+
+Moved here from `apps/reporting/` — an app that was not in INSTALLED_APPS, had
+no URLs, no database tables and no production importer. Django never loaded it.
+
+Seven tests imported this module and passed, which is the part worth naming:
+they exercised code that could not run in production and reported green, so the
+pipeline looked covered while nothing called it. That is the same shape as the
+other silent failures in this codebase — a green signal standing in for a thing
+that does not happen.
+
+It belongs in audit_engine because that is what it queries (AuditJob,
+AuditResult, AuditFile). Its old home was called "reporting", one character
+from `apps.reports`, which renders PDF and Excel reports over invoices and is
+otherwise unrelated. That name pair is the overlap the assessment flagged; half
+of it turned out not to exist.
+
+Kept separate from `selectors.py` in this app, which answers "which jobs" —
+these answer "how many, how bad". Merging them would put two different
+questions behind one import.
+
+NOTE: no view calls these yet. The queries work and the metrics are real; the
+audit-engine dashboard they were written for was never built. Wiring them to a
+page is a product decision, not a cleanup.
+"""
+
 from django.db.models import Avg, Count, Sum, Q
 from django.utils import timezone
 from datetime import timedelta

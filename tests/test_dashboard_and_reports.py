@@ -87,21 +87,21 @@ def admin_client(admin_user):
 class TestDashboardMetricsSelectors:
 
     def test_org_metrics_has_required_keys(self, auditor):
-        from apps.reporting.dashboard_selectors import get_org_dashboard_metrics
+        from apps.audit_engine.dashboard_selectors import get_org_dashboard_metrics
         metrics = get_org_dashboard_metrics(auditor.organization)
         assert isinstance(metrics, dict)
         for key in ("total_files", "total_audits", "avg_audit_score"):
             assert key in metrics
 
     def test_org_metrics_non_negative(self, auditor):
-        from apps.reporting.dashboard_selectors import get_org_dashboard_metrics
+        from apps.audit_engine.dashboard_selectors import get_org_dashboard_metrics
         metrics = get_org_dashboard_metrics(auditor.organization)
         assert metrics["total_files"] >= 0
         assert metrics["total_audits"] >= 0
         assert metrics["avg_audit_score"] >= 0.0
 
     def test_admin_metrics_has_required_keys(self, db):
-        from apps.reporting.dashboard_selectors import get_admin_dashboard_metrics
+        from apps.audit_engine.dashboard_selectors import get_admin_dashboard_metrics
         metrics = get_admin_dashboard_metrics()
         assert isinstance(metrics, dict)
         assert "total_organizations" in metrics
@@ -109,7 +109,7 @@ class TestDashboardMetricsSelectors:
 
     def test_org_metrics_scoped_to_own_data(self, org, db):
         from apps.authentication.models import Organization
-        from apps.reporting.dashboard_selectors import get_org_dashboard_metrics
+        from apps.audit_engine.dashboard_selectors import get_org_dashboard_metrics
         org2 = Organization.objects.create(
             name="Other", name_ar="أخرى", country="SA",
             currency="SAR", vat_number="300000000099900",
@@ -119,16 +119,16 @@ class TestDashboardMetricsSelectors:
         assert isinstance(m1, dict) and isinstance(m2, dict)
 
     def test_recent_activity_returns_list(self, auditor):
-        from apps.reporting.dashboard_selectors import get_recent_activity
+        from apps.audit_engine.dashboard_selectors import get_recent_activity
         activity = get_recent_activity(auditor.organization, limit=10)
         assert isinstance(activity, list)
 
     def test_activity_none_org_empty(self):
-        from apps.reporting.dashboard_selectors import get_recent_activity
+        from apps.audit_engine.dashboard_selectors import get_recent_activity
         assert get_recent_activity(None, limit=10) == []
 
     def test_activity_respects_limit(self, auditor):
-        from apps.reporting.dashboard_selectors import get_recent_activity
+        from apps.audit_engine.dashboard_selectors import get_recent_activity
         activity = get_recent_activity(auditor.organization, limit=3)
         assert len(activity) <= 3
 

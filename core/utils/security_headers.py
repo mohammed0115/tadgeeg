@@ -34,12 +34,24 @@ class SecurityHeadersMiddleware:
     CSP = (
         "default-src 'self'; "
         # 'unsafe-inline' is required by the templates (see module docstring).
-        # 'unsafe-eval' was here too and has been REMOVED: nothing in this
-        # codebase needs eval(), and leaving it turns any injected string into
-        # executable code — it defeats much of what the rest of this policy
-        # buys. Re-add it only with a named dependency that provably requires
-        # it, never "just in case".
-        "script-src 'self' 'unsafe-inline' "
+        #
+        # 'unsafe-eval' is required by Alpine.js. I removed it on the reasoning
+        # that "nothing in this codebase needs eval()", shipped it, and broke
+        # every Alpine page on production: Alpine compiles each x-show / x-model
+        # / x-data expression with `new Function`, CSP blocked it, and the login
+        # page rendered all three panels stacked with empty error boxes. No
+        # console visit, no test, nothing server-side — the pages returned 200
+        # and were simply inert.
+        #
+        # Restored, and the lesson is recorded rather than the reasoning
+        # repaired: a CSP change is not verified by reading the policy, it is
+        # verified by loading a page that uses the framework.
+        #
+        # The real fix is Alpine's CSP build (alpinejs/csp), which evaluates a
+        # restricted expression syntax instead of calling Function. That is a
+        # migration — every inline expression has to move into a component
+        # method — not a header edit. Until then this stays.
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' "
         "https://accounts.google.com https://apis.google.com "
         "https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com "
         "https://cdn.tailwindcss.com; "

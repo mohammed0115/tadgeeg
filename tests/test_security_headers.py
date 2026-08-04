@@ -33,9 +33,21 @@ def _directive(name):
     return None
 
 
-def test_unsafe_eval_is_not_in_script_src():
-    """With 'unsafe-eval', any injected string becomes executable code."""
-    assert "'unsafe-eval'" not in _policy()
+def test_unsafe_eval_is_present_because_alpine_needs_it():
+    """Not an endorsement — a record of a shipped regression.
+
+    I removed 'unsafe-eval' on the reasoning that nothing here calls eval(),
+    and broke every Alpine page on production. Alpine compiles each x-show /
+    x-model / x-data expression with `new Function`; CSP blocked it, the pages
+    still returned 200, and the login form rendered all three panels at once
+    with empty error boxes. Nothing failed server-side, so nothing noticed.
+
+    This test exists so the next person to read the policy and think "eval is
+    obviously unnecessary" finds out here instead of on production. Removing it
+    is a migration to alpinejs/csp, not a header edit — invert this test then,
+    with the migration in the same change.
+    """
+    assert "'unsafe-eval'" in _directive("script-src")
 
 
 def test_frame_ancestors_blocks_clickjacking():

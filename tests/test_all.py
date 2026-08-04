@@ -12,8 +12,7 @@ from django.contrib.auth import get_user_model
 from django.core import mail
 from django.core.management import call_command
 from django.template.loader import get_template
-from django.test import Client, TestCase
-from django.test.utils import override_settings
+from django.test import Client, TestCase, override_settings
 from rest_framework.test import APIClient
 
 from apps.analytics.models import NLQueryHistory
@@ -36,6 +35,12 @@ class BaseFinAITestCase(TestCase):
             currency=Organization.Currency.SAR,
             vat_number="300000000000003",
         )
+        # An active subscription is a precondition for the authenticated app.
+        # Without it these tests measured the billing gate's 402/redirect
+        # rather than the flows they were written for.
+        from tests.conftest import activate_trial
+
+        activate_trial(self.organization)
         self.admin = User.objects.create_user(
             email="admin@finai.sa",
             password="StrongPass123!",
@@ -149,7 +154,15 @@ class OrganizationSettingsApiTests(BaseFinAITestCase):
         self.assertFalse(second_response.data["notifications"]["email_weekly_summary"])
 
 
+@override_settings(LANGUAGE_CODE="ar")
 class AuthenticationFlowTests(BaseFinAITestCase):
+    """Asserted in Arabic, so the locale is forced.
+
+    `finai_backend/settings/test.py` runs the suite in English on purpose; this
+    class pins the exact Arabic sentences the API returns, and without the
+    override it was failing on the language rather than on the behaviour.
+    """
+
     def test_set_password_allows_same_user(self):
         self.api_client.force_authenticate(user=self.compliance_user)
 
@@ -710,6 +723,22 @@ class InvoiceRiskLogicTests(BaseFinAITestCase):
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 class EmailOTPFlowTests(BaseFinAITestCase):
+    """Registration builds a fresh organisation of its own.
+
+    BaseFinAITestCase.setUp gives *its* organisation a trial, but the org
+    created by /register/ has none — so the post-verification redirect was
+    /billing/plans/ rather than /dashboard/. Plans are seeded here so the
+    registration path can activate a trial the way production does.
+    """
+
+    def setUp(self):
+        super().setUp()
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        call_command("seed_billing_plans", stdout=StringIO())
+
     def _register_pending_user(self, email="otp-user@finai.sa"):
         response = self.web_client.post(
             "/register/",
@@ -746,7 +775,11 @@ class EmailOTPFlowTests(BaseFinAITestCase):
         self.assertEqual(response.status_code, 200)
         payload = response.json()
         self.assertTrue(payload["success"])
-        self.assertEqual(payload["redirect"], "/dashboard/")
+        # A freshly registered organisation has no subscription, and
+        # `_post_auth_redirect` routes it to plan selection on purpose — that
+        # is the onboarding funnel, not a bug. This asserted "/dashboard/",
+        # which predates billing onboarding entirely.
+        self.assertEqual(payload["redirect"], "/billing/plans/")
         self.assertIn("tokens", payload)
 
         user.refresh_from_db()
@@ -756,6 +789,25 @@ class EmailOTPFlowTests(BaseFinAITestCase):
 
         verification = EmailOTPVerification.objects.get(user=user)
         self.assertTrue(verification.is_used)
+
+    def test_a_verified_user_with_a_subscription_lands_on_the_dashboard(self):
+        """The other half of the redirect rule.
+
+        Asserting only the no-subscription case would let a redirect that
+        always returns /billing/plans/ pass — including for paying customers.
+        """
+        from apps.frontend.page_views import _post_auth_redirect
+        from tests.conftest import activate_trial
+
+        from django.utils import timezone
+
+        user = self._register_pending_user(email="subscribed@finai.sa")
+        # is_email_verified is a read-only property over email_verified_at.
+        user.email_verified_at = timezone.now()
+        user.save(update_fields=["email_verified_at"])
+        activate_trial(user.organization)
+
+        self.assertEqual(_post_auth_redirect(user), "/dashboard/")
 
     def test_invalid_email_otp_increments_attempt_counter(self):
         user = self._register_pending_user("wrong-otp@finai.sa")

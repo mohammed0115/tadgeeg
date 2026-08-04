@@ -82,10 +82,13 @@ class Partner(models.Model):
     #: and no such policy exists — so they are stored and never served.
     PUBLIC_FIELDS = (
         "company_name",
+        "company_name_ar",
         "slug",
         "country",
         "short_description",
+        "short_description_en",
         "long_description",
+        "long_description_en",
         "website",
         "partner_type",
         "partner_tier",
@@ -96,6 +99,14 @@ class Partner(models.Model):
 
     # ── Identity ────────────────────────────────────────────────────────
     company_name = models.CharField(max_length=200)
+    company_name_ar = models.CharField(
+        max_length=200, blank=True,
+        help_text=(
+            "Arabic legal/trading name. Blank falls back to company_name — a "
+            "partner with no Arabic name should read in Latin script rather "
+            "than not at all. Follows the Plan.name_ar / name_en pattern."
+        ),
+    )
     slug = models.SlugField(
         max_length=120, unique=True,
         help_text="Used for /partners/<slug>/. Unique across all partners.",
@@ -113,10 +124,23 @@ class Partner(models.Model):
     # Full ISO, not Organization.Country: a partner's country is descriptive,
     # not a billing jurisdiction. See 14-country-fix-report.md.
     country = CountryField(blank=True)
+    # Arabic-first: the unsuffixed field holds the Arabic copy, because that is
+    # what every existing row contains and what the default site serves. The
+    # `_en` variants are the translation. (Note the asymmetry with
+    # company_name / company_name_ar, where the unsuffixed field is Latin —
+    # that is how the data already was, and renaming a populated column to
+    # tidy the convention would be churn for its own sake.)
     short_description = models.CharField(
-        max_length=300, blank=True, help_text="Card blurb on /partners/.",
+        max_length=300, blank=True, help_text="Card blurb on /partners/ — Arabic.",
     )
-    long_description = models.TextField(blank=True, help_text="Detail page body.")
+    short_description_en = models.CharField(
+        max_length=300, blank=True,
+        help_text="English card blurb. Blank falls back to the Arabic one.",
+    )
+    long_description = models.TextField(blank=True, help_text="Detail page body — Arabic.")
+    long_description_en = models.TextField(
+        blank=True, help_text="English detail body. Blank falls back to the Arabic one.",
+    )
     website = models.URLField(blank=True)
 
     # ── Classification — three independent axes (§C.2 / D2) ─────────────
@@ -188,6 +212,45 @@ class Partner(models.Model):
     def __str__(self):
         return f"{self.company_name} ({self.partner_tier or self.partner_type}/{self.status})"
 
+    @property
+    def display_name(self):
+        """The name to render, chosen by the active language.
+
+        The public partners page is Arabic by default, and a Latin-script name
+        sitting inside an otherwise Arabic card is the same failure this
+        project guards against everywhere else — English reaching an
+        Arabic-first surface. Falls back rather than showing nothing.
+        """
+        from django.utils.translation import get_language
+
+        if self._arabic():
+            return self.company_name_ar or self.company_name
+        return self.company_name or self.company_name_ar
+
+    @staticmethod
+    def _arabic():
+        from django.utils.translation import get_language
+
+        return (get_language() or "").lower().startswith("ar")
+
+    @property
+    def display_short_description(self):
+        """Card blurb in the active language.
+
+        An English visitor was reading an Arabic paragraph under a Latin
+        company name — the mirror image of the bug on the Arabic page, and
+        just as much a failure of an "Arabic-first, English-supported" product.
+        """
+        if self._arabic():
+            return self.short_description
+        return self.short_description_en or self.short_description
+
+    @property
+    def display_long_description(self):
+        if self._arabic():
+            return self.long_description
+        return self.long_description_en or self.long_description
+
     # ── state transitions ───────────────────────────────────────────────
 
     def publish(self):
@@ -229,6 +292,15 @@ class Partner(models.Model):
                 payload["country_name"] = value.name if value else ""
                 continue
             payload[field] = value
+
+        # Resolved for the active language, alongside the raw fields. Without
+        # these the detail page has to pick a column itself, which is how an
+        # English visitor ended up reading an Arabic paragraph under a Latin
+        # company name. The raw fields stay in the payload — an API consumer
+        # may legitimately want both languages.
+        payload["display_name"] = self.display_name
+        payload["display_short_description"] = self.display_short_description
+        payload["display_long_description"] = self.display_long_description
         return payload
 
 

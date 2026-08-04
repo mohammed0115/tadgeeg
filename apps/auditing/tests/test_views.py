@@ -38,7 +38,10 @@ def other_user(db):
 
 @pytest.fixture
 def authenticated_client(client, user):
-    client.login(username="testuser", password="testpass123")
+    # The User model is email-keyed (USERNAME_FIELD="email"), so username-based
+    # login can't authenticate. force_login is backend-agnostic and matches how
+    # the rest of the suite authenticates.
+    client.force_login(user)
     return client
 
 

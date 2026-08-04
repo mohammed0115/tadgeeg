@@ -282,10 +282,19 @@ class TestGuardDoesNotExpandPayloads:
         # A subprocess is required: ru_maxrss is a per-process high-water mark,
         # so measuring in-process would inherit whatever earlier tests peaked at
         # and the ceiling would prove nothing.
+        # The DELTA across the validation call, not the process peak. The peak
+        # also contains whatever importing the app costs, and that baseline is
+        # not constant: installing scipy/scikit-learn for the Benford and
+        # anomaly work moved it by hundreds of MB, which tripped a ceiling
+        # chosen before they existed. The number this test cares about is what
+        # the GUARD expands, and that is the difference.
         probe = """
 import io, resource, sys, zipfile
 sys.path.insert(0, %r)
 from core.services.zip_validator import validate_zip_bomb, ZipValidationError
+
+def peak_mb():
+    return int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024)
 
 buf = io.BytesIO()
 chunk = b"\\0" * (1024 * 1024)
@@ -294,12 +303,14 @@ with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for _ in range(2000):          # declares 2 GB
             dst.write(chunk)
 buf.seek(0)
+
+before = peak_mb()
 try:
     validate_zip_bomb(buf, max_file_size=500 * 1024 * 1024, max_ratio=10**9)
     print("NOT_REJECTED")
 except ZipValidationError:
     print("REJECTED")
-print(int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024))
+print(max(0, peak_mb() - before))
 """ % str(repo)
 
         out = subprocess.run(
@@ -311,10 +322,12 @@ print(int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024))
         peak_mb = int(peak_mb)
 
         assert verdict == "REJECTED", "a 2 GB declared member was not rejected"
-        # The archive declares 2 GB. Anything near that means something expanded
-        # it. 512 MB is generous headroom over the ~16 MB actually observed.
-        assert peak_mb < 512, (
-            f"guard peaked at {peak_mb} MB validating a 2 GB declared bomb — "
+        # The archive declares 2 GB. The guard reads declared sizes from the
+        # central directory, so validating it should cost approximately
+        # nothing; 64 MB is wide headroom over the ~0-2 MB actually observed,
+        # and still three orders of magnitude below the declared payload.
+        assert peak_mb < 64, (
+            f"validating a 2 GB declared bomb grew the process by {peak_mb} MB — "
             f"something is expanding the payload instead of reading the "
             f"central directory"
         )

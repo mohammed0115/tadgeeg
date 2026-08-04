@@ -163,20 +163,20 @@ value rather than propagating the divergent one.
     <div class="strategic">
       <div class="logo-box">
         {% if partner.logo %}
-          <img src="{{ partner.logo.url }}" alt="{{ partner.company_name }}">
+          <img src="{{ partner.logo.url }}" alt="{{ partner.display_name }}">
         {% else %}
-          <span class="initials">{{ partner.company_name|slice:":2"|upper }}</span>
+          <span class="initials">{{ partner.display_name|slice:":2"|upper }}</span>
         {% endif %}
       </div>
       <div>
         <span class="badge badge-strategic">{% trans "STRATEGIC PARTNER" %}</span>
-        <h2 class="bidi-auto">{{ partner.company_name }}</h2>
+        <h2 class="bidi-auto">{{ partner.display_name }}</h2>
         <div class="meta-row">
           {% if partner.country %}<span class="meta">{{ partner.country.name }}</span>{% endif %}
           <span class="meta">·</span>
           <span class="meta">{{ partner.get_partner_type_display }}</span>
         </div>
-        <p class="desc bidi-auto">{{ partner.short_description }}</p>
+        <p class="desc bidi-auto">{{ partner.display_short_description }}</p>
         <div class="meta-row">
           <a href="{% url 'frontend:partner_detail' partner.slug %}" class="btn-primary">
             {% trans "View details" %}
@@ -210,18 +210,18 @@ value rather than propagating the divergent one.
         <div class="card">
           <div class="logo-box">
             {% if partner.logo %}
-              <img src="{{ partner.logo.url }}" alt="{{ partner.company_name }}">
+              <img src="{{ partner.logo.url }}" alt="{{ partner.display_name }}">
             {% else %}
-              <span class="initials">{{ partner.company_name|slice:":2"|upper }}</span>
+              <span class="initials">{{ partner.display_name|slice:":2"|upper }}</span>
             {% endif %}
           </div>
           <span class="badge badge-{{ section.key }}">{{ section.badge }}</span>
-          <h4>{{ partner.company_name }}</h4>
+          <h4>{{ partner.display_name }}</h4>
           <div class="meta">
             {% if partner.country %}{{ partner.country.name }} · {% endif %}
             {{ partner.get_partner_type_display }}
           </div>
-          <p class="desc bidi-auto">{{ partner.short_description }}</p>
+          <p class="desc bidi-auto">{{ partner.display_short_description }}</p>
           <div class="foot">
             <a href="{% url 'frontend:partner_detail' partner.slug %}" class="btn-secondary">
               {% trans "Details" %}

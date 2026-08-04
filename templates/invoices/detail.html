@@ -609,6 +609,160 @@
     </aside>
   </div>
 
+  {% comment %}
+  ══ Manual review — compare sources, correct fields ═══════════════════════
+
+  Restored. The backend for this always existed (InvoiceManualReviewView plus
+  _build_review_payload); the panel disappeared in a page rewrite, leaving an
+  auditor with no way to fix a field the OCR misread — on a product whose whole
+  job is getting those fields right.
+
+  Four columns per field because the value has four possible provenances and
+  they disagree: what OCR read, what normalisation made of it, what the model
+  extracted, and what a human corrected it to. Showing only the final value
+  hides which stage went wrong.
+
+  Segregation of duties is applied HERE, not just on submit: whoever uploaded
+  the invoice sees the comparison read-only rather than a button that 403s.
+  {% endcomment %}
+  {% if review.fields %}
+  <section class="card mt-6 p-6" id="manual-review"
+           x-data="manualReview()">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="text-lg font-bold text-slate-800 dark:text-white">
+          {% trans "Compare sources and correct fields" %}
+        </h2>
+        <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          {% trans "Where the extracted value is wrong, enter the correct one. Corrections are recorded against your name." %}
+        </p>
+      </div>
+      {% if review.last_review_event %}
+        <span class="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-500">
+          {% trans "Last reviewed" %}: {{ review.last_review_event.timestamp|date:"Y-m-d H:i" }}
+        </span>
+      {% endif %}
+    </div>
+
+    {% if review_blocked_reason %}
+      <div role="alert" dir="auto"
+           class="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800"
+           style="unicode-bidi:plaintext;">
+        {{ review_blocked_reason }}
+      </div>
+    {% endif %}
+
+    <div class="mt-5 overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-200 text-xs uppercase text-slate-500 dark:border-slate-700">
+            <th class="px-3 py-2 text-start font-semibold">{% trans "Field" %}</th>
+            <th class="px-3 py-2 text-start font-semibold">{% trans "Current" %}</th>
+            <th class="px-3 py-2 text-start font-semibold">{% trans "Normalized" %}</th>
+            <th class="px-3 py-2 text-start font-semibold">{% trans "AI extracted" %}</th>
+            <th class="px-3 py-2 text-start font-semibold">{% trans "Correction" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in review.fields %}
+          <tr class="border-b border-slate-100 dark:border-slate-700/50">
+            <td class="px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200">{{ f.label }}</td>
+            <td class="px-3 py-2 font-mono text-xs" style="unicode-bidi:plaintext;">{{ f.current|default:"—" }}</td>
+            <td class="px-3 py-2 font-mono text-xs text-slate-500" style="unicode-bidi:plaintext;">{{ f.normalized|default:"—" }}</td>
+            <td class="px-3 py-2 font-mono text-xs text-slate-500" style="unicode-bidi:plaintext;">{{ f.ai|default:"—" }}</td>
+            <td class="px-3 py-2">
+              <label class="sr-only" for="fix-{{ f.field }}">{{ f.label }}</label>
+              <input id="fix-{{ f.field }}" type="text" dir="auto"
+                     data-field="{{ f.field }}"
+                     value="{{ f.manual|default:'' }}"
+                     placeholder="{{ f.current|default:'—' }}"
+                     {% if review_blocked_reason %}disabled{% endif %}
+                     class="w-full rounded-lg border border-slate-200 px-2 py-1 font-mono text-xs disabled:bg-slate-50 disabled:text-slate-400"
+                     style="unicode-bidi:plaintext;">
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-4">
+      <label class="text-xs font-semibold text-slate-600" for="review-note">{% trans "Note" %}</label>
+      <textarea id="review-note" x-model="note" rows="2" dir="auto"
+                {% if review_blocked_reason %}disabled{% endif %}
+                placeholder="{% trans 'Why did the extraction need correcting? This is what improves the rules.' %}"
+                class="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs disabled:bg-slate-50"
+                style="unicode-bidi:plaintext;"></textarea>
+    </div>
+
+    <div class="mt-4 flex flex-wrap items-center gap-3">
+      <label class="flex items-center gap-2 text-xs text-slate-600">
+        <input type="checkbox" x-model="revalidate" class="h-4 w-4 rounded border-slate-300"
+               {% if review_blocked_reason %}disabled{% endif %}>
+        {% trans "Re-run the audit rules after saving" %}
+      </label>
+      <button type="button" @click="save()"
+              :disabled="busy"
+              {% if review_blocked_reason %}disabled{% endif %}
+              class="rounded-full bg-primary-600 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-700 disabled:opacity-50">
+        <span x-show="!busy">{% trans "Save corrections" %}</span>
+        <span x-show="busy">{% trans "Saving…" %}</span>
+      </button>
+      <p role="alert" aria-live="polite" dir="auto" x-show="message" x-text="message"
+         :class="ok ? 'text-emerald-600' : 'text-rose-600'"
+         class="text-xs" style="unicode-bidi:plaintext;"></p>
+    </div>
+  </section>
+
+  <script>
+    function manualReview() {
+      return {
+        note: '', revalidate: false, busy: false, message: '', ok: false,
+        async save() {
+          // Only changed fields are sent. Posting every field would rewrite
+          // values the reviewer never touched, and would make the audit trail
+          // claim they corrected fourteen things when they corrected one.
+          const corrections = {};
+          document.querySelectorAll('#manual-review input[data-field]').forEach(el => {
+            const value = el.value.trim();
+            if (value && value !== (el.placeholder === '—' ? '' : el.placeholder)) {
+              corrections[el.dataset.field] = value;
+            }
+          });
+          if (!Object.keys(corrections).length) {
+            this.ok = false;
+            this.message = "{% trans 'No changes to save.' %}";
+            return;
+          }
+          this.busy = true; this.message = '';
+          try {
+            await apiFetch('/invoices/{{ invoice.id }}/review/', {
+              method: 'POST',
+              body: JSON.stringify({
+                corrections: corrections,
+                note: this.note,
+                revalidate: this.revalidate,
+              }),
+            });
+            this.ok = true;
+            this.message = "{% trans 'Corrections saved.' %}";
+            setTimeout(() => window.location.reload(), 900);
+          } catch (err) {
+            // apiFetch throws Error(detail) — the server writes that text for
+            // this reader (e.g. the segregation-of-duties refusal).
+            this.ok = false;
+            this.message = (err && err.message)
+              ? err.message
+              : "{% trans 'The corrections could not be saved. Please try again.' %}";
+          } finally {
+            this.busy = false;
+          }
+        },
+      };
+    }
+  </script>
+  {% endif %}
+
   {# ══ MODAL: Approve / Reject / Approve-with-Warning ═══════════════════════ #}
   <div id="approveModal"
        x-data="{ open:false, action:'approve', reason:'', warningConfirmed:false }"

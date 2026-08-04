@@ -132,8 +132,26 @@ def test_partner_supplied_text_is_bidi_isolated():
         "partner descriptions are not isolated — an Arabic description on the "
         "English page will scramble its punctuation"
     )
-    assert '<h2 class="bidi-auto">{{ partner.company_name }}</h2>' in partners
+    # display_name, not company_name: the card picks the Arabic or the Latin
+    # name by active language, so the isolation has to wrap whichever it
+    # resolves to. Pinning the field name keeps this from silently drifting
+    # onto a raw, unisolated value.
+    assert '<h2 class="bidi-auto">{{ partner.display_name }}</h2>' in partners
 
     detail = (landing / "partner_detail.html").read_text(encoding="utf-8")
-    for needle in ('<h1 class="bidi-auto">', 'class="bidi-auto">{{ partner_public.long_description }}'):
+    # display_* rather than the raw columns: the page resolves name and
+    # description by active language, so the isolation must wrap the resolved
+    # value. Pinning the exact expression keeps a future edit from dropping the
+    # class while the page still looks right in whichever language was tested.
+    for needle in ('<h1 class="bidi-auto">',
+                   'class="bidi-auto">{{ partner_public.display_long_description }}'):
         assert needle in detail, f"partner_detail.html missing isolation: {needle}"
+
+    # Both directions matter here, and the reason is asymmetric: an Arabic name
+    # inside an English page scrambles its punctuation, and a Latin name inside
+    # an Arabic page does the same in reverse. Neither is visible unless the
+    # tester happens to read the language they did not write the test in.
+    assert 'class="bidi-auto">{{ partner_public.display_short_description }}' in detail \
+        or 'bidi-auto"' in detail.split("display_short_description")[0][-200:], (
+        "the short description is rendered without bidi isolation"
+    )

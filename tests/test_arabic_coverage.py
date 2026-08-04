@@ -160,6 +160,123 @@ def test_compiled_catalogue_is_not_stale():
     )
 
 
+# ── translations that crash, and translations that silently do nothing ───────
+#
+# `makemessages` fuzzy-matches a new msgid against an old translation and marks
+# the guess `fuzzy`. Two ways that hurts, both found in this catalogue:
+#
+#   · msgfmt SKIPS fuzzy entries, so the string ships in English on an
+#     Arabic-first site — and every existing coverage test above passes,
+#     because the .po *has* a msgstr.
+#   · the guessed msgstr can carry different placeholders than the msgid. The
+#     ZATCA compliance string was matched to an unrelated Arabic sentence using
+#     %(u)s / %(l)s while the msgid uses %(n)s / %(total)s — that is a KeyError
+#     and a 500 on the reports page, not a cosmetic error.
+
+_PLACEHOLDER = re.compile(r"%\((\w+)\)[sd]")
+
+
+def test_translations_use_the_same_placeholders_as_the_source_string():
+    """A msgstr naming a variable the msgid does not pass raises at render.
+
+    Plural forms are checked too, and that is not a detail: the first version
+    of this test looked only at ``entry.msgstr`` and passed while two plural
+    entries carried ``%(count)s تعطيل`` against a ``%(counter)s`` msgid — wrong
+    variable AND unrelated text. They stayed invisible because a plural entry
+    leaves ``msgstr`` empty, and because both were `fuzzy`, which msgfmt skips.
+    Clearing the fuzzy flags is what finally made msgfmt refuse the file.
+    """
+    import polib
+
+    broken = []
+    for entry in polib.pofile(str(CATALOGUE)):
+        if entry.obsolete:
+            continue
+
+        in_source = set(_PLACEHOLDER.findall(entry.msgid))
+        if entry.msgid_plural:
+            in_source |= set(_PLACEHOLDER.findall(entry.msgid_plural))
+
+        candidates = [entry.msgstr] + list(entry.msgstr_plural.values())
+        for index, translation in enumerate(candidates):
+            if not translation:
+                continue
+            # Extra names in the source are survivable (the translation just
+            # drops a detail). Extra names in the *translation* are a KeyError.
+            unknown = set(_PLACEHOLDER.findall(translation)) - in_source
+            if unknown:
+                where = "msgstr" if index == 0 else f"msgstr[{index - 1}]"
+                broken.append(
+                    f"{entry.msgid[:55]!r} {where} wants {sorted(unknown)}, "
+                    f"source provides {sorted(in_source)}"
+                )
+    assert not broken, (
+        "translation would raise KeyError at render time:\n  " + "\n  ".join(broken)
+    )
+
+
+def test_every_plural_entry_has_all_six_arabic_forms():
+    """Arabic takes six gettext plural forms; a missing one renders empty.
+
+    Not hypothetical: `%(counter)s pending` had a single wrong string copied
+    into all six slots, which is what a fuzzy match produces.
+    """
+    import polib
+
+    incomplete = []
+    for entry in polib.pofile(str(CATALOGUE)):
+        if entry.obsolete or not entry.msgid_plural:
+            continue
+        filled = {k for k, v in entry.msgstr_plural.items() if v.strip()}
+        if filled and filled != set(range(6)):
+            incomplete.append(f"{entry.msgid[:60]!r} has forms {sorted(filled)}")
+    assert not incomplete, (
+        "plural entries with missing forms:\n  " + "\n  ".join(incomplete)
+    )
+
+
+def test_the_catalogue_compiles():
+    """msgfmt is the last word — a .po it refuses ships nothing at all.
+
+    Run with --check-format, which is what caught the plural mismatches above.
+    """
+    import subprocess
+
+    result = subprocess.run(
+        ["msgfmt", "--check-format", "-o", "/dev/null", str(CATALOGUE)],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0, f"msgfmt refuses the catalogue:\n{result.stderr}"
+
+
+def test_no_fuzzy_translation_on_a_page_a_customer_sees():
+    """Fuzzy = an unreviewed machine guess. Zero is the only safe number.
+
+    All 35 that predated this work have been corrected by hand, and two of them
+    were not merely wrong but dangerous — confirmation dialogs whose Arabic
+    described a different action than the button performed:
+
+        "This will cancel the pending manual payment"
+            → «سيُنشئ هذا دفعة يدوية معلّقة»   (this will CREATE one)
+
+    They were invisible precisely because they were fuzzy: msgfmt skips such
+    entries, so the dialogs rendered in English and nothing complained. Clearing
+    the flags is what made msgfmt read them and refuse the file.
+
+    Hence a budget of zero rather than a ratchet. A fuzzy entry is not a partial
+    translation to be improved later; it is an assertion nobody checked.
+    """
+    import polib
+
+    fuzzy = [e.msgid for e in polib.pofile(str(CATALOGUE))
+             if "fuzzy" in e.flags and not e.obsolete]
+    assert not fuzzy, (
+        f"{len(fuzzy)} fuzzy translation(s). Review each and clear the flag, or "
+        f"delete the guess — a fuzzy entry is skipped by msgfmt and ships in "
+        f"English:\n  " + "\n  ".join(sorted(fuzzy)[:10])
+    )
+
+
 # ── the scope problem, made measurable ───────────────────────────────────────
 #
 # OWNED above is a hand-maintained list, and twice in one session English
@@ -170,7 +287,7 @@ def test_compiled_catalogue_is_not_stale():
 # that predate this work, and a permanently red test is a test people learn to
 # ignore. So the gap is measured instead: it is allowed to exist, it is not
 # allowed to GROW. Lowering this number is the only permitted direction.
-UNTRANSLATED_BUDGET = 105
+UNTRANSLATED_BUDGET = 66
 
 
 def _repo_scan_paths():

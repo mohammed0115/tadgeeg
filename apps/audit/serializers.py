@@ -81,6 +81,18 @@ class AuditSessionSerializer(serializers.ModelSerializer):
 class AuditFindingSerializer(serializers.ModelSerializer):
     invoice_number = serializers.CharField(source="invoice.invoice_number", read_only=True, default="")
     vendor_name = serializers.CharField(source="invoice.vendor_name", read_only=True, default="")
+    # Name, not email: the UI shows who judged a finding to colleagues in the
+    # same organisation, and a display name is enough for that.
+    verdict_by_name = serializers.CharField(source="verdict_by.full_name", read_only=True, default="")
+    # XAI: what the rule actually compared. See finding_explanation for why the
+    # `complete` flag matters — an explanation that cannot be given must say so
+    # rather than be reconstructed from the message text.
+    explanation = serializers.SerializerMethodField()
+
+    def get_explanation(self, obj):
+        from apps.audit.services.finding_explanation import explain
+
+        return explain(obj).as_dict()
 
     class Meta:
         model = AuditFinding
@@ -101,7 +113,17 @@ class AuditFindingSerializer(serializers.ModelSerializer):
             "first_detected_at",
             "last_detected_at",
             "resolved_at",
+            # Feedback loop. Read-only here on purpose: a verdict carries an
+            # author, a timestamp and an audit-chain entry, so it is recorded
+            # through FindingFeedbackService via POST .../verdict/ and never by
+            # PATCHing this serializer.
+            "verdict",
+            "verdict_at",
+            "verdict_by_name",
+            "verdict_note",
+            "explanation",
         ]
+        read_only_fields = ["verdict", "verdict_at", "verdict_by_name", "verdict_note", "explanation"]
 
 
 class CustomRuleDefinitionSerializer(serializers.ModelSerializer):

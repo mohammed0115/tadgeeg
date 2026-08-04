@@ -254,9 +254,40 @@ class TestInvoiceApprovalAPI:
             status.HTTP_400_BAD_REQUEST
         ]
     
-    def test_approve_changes_invoice_status(self, admin_client, invoice):
-        """Should update invoice status"""
-        response = admin_client.post(
+    def test_approve_changes_invoice_status(self, api_client, organization, invoice):
+        """Should update invoice status.
+
+        The approver must NOT be the uploader. This used `admin_client`, whose
+        user is exactly who the `invoice` fixture records as `uploaded_by`, so
+        the request was correctly refused with a 403 segregation-of-duties
+        error — the test was asserting that a real control does not work.
+        A second admin approves instead, which exercises approval and leaves
+        the SoD rule intact.
+        """
+        from django.contrib.auth import get_user_model
+
+        from apps.rule_engine.models.risk import RiskScoreSummary
+
+        # An invoice that was never audited cannot be approved — deliberately,
+        # and the endpoint now says so instead of reporting phantom "critical
+        # failures". So the audit result has to exist for this test to be about
+        # approval at all.
+        RiskScoreSummary.objects.create(
+            organization=organization,
+            document_type="invoice",
+            document_id=invoice.id,
+            risk_score=5,
+            risk_level="low",
+            blocking_failures=0,
+            blocks_approval=False,
+        )
+
+        approver = get_user_model().objects.create_user(
+            email="approver@test.finai", password="StrongPass123!",
+            full_name="Second Admin", role="admin", organization=organization,
+        )
+        api_client.force_authenticate(approver)
+        response = api_client.post(
             reverse('invoice-approve', args=[invoice.id]),
             {'action': 'approve'},
             format='json'

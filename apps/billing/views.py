@@ -16,6 +16,8 @@ integration pending" or queue the redirect.
 """
 from __future__ import annotations
 
+import logging
+import uuid
 from datetime import timedelta
 
 from django.conf import settings
@@ -23,6 +25,8 @@ from django.core.paginator import Paginator
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from django.utils.translation import gettext as _
+
+logger = logging.getLogger("billing.views")
 
 
 def _stringify_expired_message() -> str:
@@ -180,7 +184,30 @@ def _initiate_payment(request, subscription, plan):
             user_agent=request.META.get("HTTP_USER_AGENT", "")[:512],
         )
     except (PaymentValidationError, GatewayError) as exc:
-        return None, str(exc)
+        # The gateway's own words are for us, not for the customer. Moyasar
+        # answered a misconfigured key with "You provided your secret key ID
+        # instead of the full secret key" and that sentence went straight into
+        # an alert() on the customer's screen: it names our infrastructure,
+        # tells an attacker exactly which credential is wrong, and means
+        # nothing to the person trying to buy a plan.
+        #
+        # So: full detail to the log, a generic sentence to the browser, and a
+        # short reference that lets support join the two. The reference is
+        # random rather than derived from the subscription id — a predictable
+        # one would let a customer probe for other organisations' failures.
+        reference = uuid.uuid4().hex[:12]
+        logger.error(
+            "payment initiation failed [ref=%s] organization=%s subscription=%s "
+            "plan=%s gateway=%s: %s",
+            reference,
+            subscription.organization_id,
+            subscription.id,
+            plan.code,
+            (getattr(settings, "PAYMENT_PROVIDER", "") or "unset"),
+            exc,
+            exc_info=True,
+        )
+        return None, reference
 
     # Link payment → subscription so future webhook receivers can find it.
     if subscription.payment_transaction_id != txn.id:
@@ -370,10 +397,16 @@ class SelectPlanView(APIView):
                     "message": "Existing pending payment reused.",
                 }, status=drf_status.HTTP_200_OK)
 
-        txn, error = _initiate_payment(request, sub, plan)
+        txn, reference = _initiate_payment(request, sub, plan)
         if txn is None:
+            # `reference` is a log correlation id, never the gateway's text.
             return Response(
-                {"detail": error or "Could not initiate payment with the configured gateway."},
+                {
+                    "detail": _("Payment could not be started. Please try again, "
+                                "or contact support quoting reference %(ref)s.")
+                              % {"ref": reference},
+                    "reference": reference,
+                },
                 status=drf_status.HTTP_502_BAD_GATEWAY,
             )
 

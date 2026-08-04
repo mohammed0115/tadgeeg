@@ -1,5 +1,6 @@
 """Tadgeeg AI frontend page views."""
 
+import logging
 import secrets
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
@@ -20,6 +21,8 @@ from apps.authentication.serializers import LoginSerializer, RegisterSerializer
 from django_countries import countries
 
 from apps.authentication.models import Organization
+
+logger = logging.getLogger("frontend.pages")
 from apps.leads.attribution import remember_campaign
 from apps.leads.models import TrialLeadProfile
 from apps.authentication.services.email_otp import (
@@ -869,8 +872,13 @@ def partner_detail(request, slug):
         "landing/partner_detail.html",
         _public_ctx(
             request,
-            page_title=partner.company_name,
-            page_description=partner.short_description,
+            # The <title> and <meta description> are what a search engine
+            # indexes and what a shared link previews, so they follow the
+            # active language like the page body does. Reading the raw columns
+            # here put a Latin name on the Arabic page's title bar and an
+            # Arabic sentence in the English page's meta description.
+            page_title=partner.display_name,
+            page_description=partner.display_short_description,
             partner=partner,
             partner_public=partner.public_payload(),
         ),
@@ -2469,6 +2477,11 @@ def invoice_detail(request, pk):
 
     invoice_display   = _build_invoice_display(invoice)
     user_can_override = request.user.has_perm("invoices.can_override_approval")
+
+    # NOTE: /invoices/<uuid>/ is NOT served by this function — apps.invoices.urls
+    # is included ahead of the frontend catch-all, so the DRF InvoiceDetailView
+    # content-negotiates and renders detail_premium.html itself. The manual
+    # review panel is wired up there. This function stays as the fallback.
     return render(
         request,
         "invoices/detail_premium.html",
@@ -3695,6 +3708,15 @@ def audit_tools(request):
                     Decimal(str(materiality_result["performance_materiality"])),
                 )[:50]
             except Exception:
+                # ISA 320 materiality. A blank panel where a number should be
+                # is indistinguishable from "not calculated yet", so the
+                # auditor cannot tell a bad benchmark from a broken feature.
+                # At minimum it must be findable in the log.
+                logger.exception(
+                    "materiality calculation failed for organization=%s "
+                    "benchmark=%s amount=%s — the panel will render empty",
+                    getattr(org, "pk", "?"), benchmark_key, benchmark_amount,
+                )
                 materiality_result = None
 
         if pop_count and sample_size:
@@ -3711,6 +3733,14 @@ def audit_tools(request):
                 else:
                     sampling_result = S.random_sample(pop, sample_size, seed).to_dict()
             except Exception:
+                # ISA 530 sampling. Same reasoning as materiality above: an
+                # empty result is not evidence of anything, and silently
+                # producing one in an audit tool is worse than an error page.
+                logger.exception(
+                    "sampling failed for organization=%s method=%s "
+                    "population=%s sample_size=%s",
+                    getattr(org, "pk", "?"), sample_method, pop_count, sample_size,
+                )
                 sampling_result = None
 
             # Phase 1.2: project errors to the population if the auditor
@@ -3739,6 +3769,11 @@ def audit_tools(request):
                         method=sample_method,
                     ).to_dict()
                 except Exception:
+                    logger.exception(
+                        "error projection failed for organization=%s method=%s "
+                        "— the auditor supplied misstatements and gets no projection",
+                        getattr(org, "pk", "?"), sample_method,
+                    )
                     error_projection = None
 
     return render(request, "audit/tools.html", _ctx(
@@ -3812,6 +3847,19 @@ def reports(request):
             sum(M.objects.filter(organization=org).count() for M in all_typed_models)
         )
 
+        # ZATCA Phase 2 compliance, MEASURED. Phase 2 requires a cryptographic
+        # QR on every invoice, so "share of this org's invoices carrying a QR
+        # that validated" is a defensible number. The template used to print a
+        # hardcoded 95% here, under a label that told the auditor it was their
+        # organisation's figure — a fabricated measurement inside an audit
+        # product. None means "no invoices yet", which the template must render
+        # as "—", never as 0% or 95%.
+        kpis["zatca_qr_valid_count"] = invs.filter(qr_code_valid=True).count()
+        kpis["zatca_compliance_pct"] = (
+            round(100.0 * kpis["zatca_qr_valid_count"] / kpis["total_invoices"], 1)
+            if kpis["total_invoices"] else None
+        )
+
         # Top 5 most-recent flagged invoices (anchor for "recent reports")
         recent_reports = list(
             invs.filter(Q(risk_level__in=["high", "critical"]) | Q(is_duplicate=True))
@@ -3826,7 +3874,87 @@ def reports(request):
         selected_type=request.GET.get("type", "invoice"),
         report_kpis=kpis,
         recent_reports=recent_reports,
+        # Extraction accuracy is NOT computable from tenant data — it needs a
+        # labelled ground-truth set. The one honest source is a validation run
+        # (apps.auditing.models.AIValidationRun, populated by the
+        # validate_ai_claim command). Until one is approved this is None and
+        # the card says so, rather than printing the 98.5% that used to be
+        # hardcoded in the template.
+        extraction_accuracy=_latest_measured_extraction_accuracy(),
+        # Rule precision, in contrast, IS computable from this tenant's own
+        # data — the auditors' verdicts are the labels. It answers a different
+        # question from extraction accuracy (did the rule fire correctly, not
+        # did OCR read the field correctly), so it is a separate figure and
+        # never a substitute.
+        rule_accuracy=_measured_rule_accuracy(org),
     ))
+
+
+def _measured_rule_accuracy(organization):
+    """Precision across all judged findings, with the coverage behind it.
+
+    Returns None when nothing has been judged. Coverage travels with the
+    number and is not optional: 100% precision over four judged findings is
+    not a fact about the engine, and a template that shows the ratio without
+    the sample size rebuilds the unsourced claim this work removed.
+    """
+    if organization is None:
+        return None
+    try:
+        from apps.audit.services.finding_feedback import FindingFeedbackService
+    except ImportError:  # pragma: no cover - app not installed
+        # ImportError only. A broad catch here would also swallow a real fault
+        # inside the service module and render it as "no data" — the exact
+        # failure shape that cost hours on the billing menu.
+        return None
+
+    service = FindingFeedbackService()
+    rows = service.rule_precision(organization)
+    judged = sum(r["judged"] for r in rows)
+    if not judged:
+        return None
+
+    true_positives = sum(r["true_positives"] for r in rows)
+    coverage = service.coverage(organization)
+    # Worst measured rule first — the actionable end of the list. Rules with
+    # no judgements are excluded rather than shown as perfect.
+    worst = next((r for r in rows if r["precision"] is not None), None)
+    return {
+        "pct": round(100.0 * true_positives / judged, 1),
+        "judged": judged,
+        "coverage_pct": coverage["percent"],
+        "worst_rule": worst["rule_code"] if worst else "",
+        "worst_pct": round(100.0 * worst["precision"], 1) if worst else None,
+    }
+
+
+def _latest_measured_extraction_accuracy():
+    """Approved OCR/extraction accuracy from the validation harness, or None.
+
+    None is the correct answer when nothing has been measured, and it must
+    stay distinguishable from 0.0 — the same unlimited-vs-zero trap the billing
+    quotas hit. Callers render None as "not measured", not as a number.
+    """
+    try:
+        from apps.auditing.models import AIValidationRun
+    except ImportError:  # pragma: no cover - app not installed
+        return None
+
+    run = (
+        AIValidationRun.objects
+        .filter(component=AIValidationRun.Component.OCR,
+                decision=AIValidationRun.Decision.APPROVED)
+        .exclude(field_accuracy=None)
+        .order_by("-created_at")
+        .first()
+    )
+    if run is None:
+        return None
+    return {
+        "pct": round(100.0 * run.field_accuracy, 1),
+        "model_version": run.model_version,
+        "dataset": run.dataset.name,
+    }
 
 
 def _weight_for_rule(rule_code):
@@ -4641,6 +4769,22 @@ def vendors(request):
         def _is_zatca_valid(vat: str) -> bool:
             return bool(vat) and len(vat) == 15 and vat.isdigit() and vat.startswith("3") and vat.endswith("3")
 
+        # Vendor risk lives on VendorProfile and was never joined here, so the
+        # list a user browses showed none of it — the risk score existed, the
+        # API served it, and vendors/detail.html displayed it, but you had to
+        # already know which vendor to open. Risk that is only visible after
+        # you have chosen cannot tell you what to choose.
+        #
+        # One query into a dict rather than a lookup per row: this page caps at
+        # 200 vendors and a per-row query would be 200 round trips.
+        profiles = {
+            (p.vendor_name or "").strip(): p
+            for p in VendorProfile.objects.filter(organization=org).only(
+                "vendor_name", "risk_score", "risk_tier", "transaction_frequency_30d",
+                "compliance_issue_count", "duplicate_count", "is_suspicious",
+            )
+        }
+
         rows = sorted(agg.values(), key=lambda r: r["invoice_count"] + r["po_count"], reverse=True)
         for r in rows:
             r["total_doc_count"] = r["invoice_count"] + r["po_count"]
@@ -4648,6 +4792,18 @@ def vendors(request):
             r["is_verified"] = _is_zatca_valid(r["vendor_vat_number"])
             r["needs_review"] = not r["vendor_vat_number"] or not r["is_verified"]
             r["initials"] = "".join(w[0] for w in r["vendor_name"].split()[:2]).upper() or "?"
+
+            # None, not 0: a vendor with no profile has not been scored, and
+            # "unscored" must not render as "lowest possible risk" — that is
+            # the same unmeasured-is-not-zero trap as the quota and precision
+            # code, and here it would hide exactly the vendors nobody has
+            # looked at yet.
+            profile = profiles.get(r["vendor_name"])
+            r["risk_score"] = profile.risk_score if profile else None
+            r["risk_tier"] = profile.risk_tier if profile else ""
+            r["frequency_30d"] = profile.transaction_frequency_30d if profile else None
+            r["compliance_issues"] = profile.compliance_issue_count if profile else None
+            r["is_suspicious"] = bool(profile and profile.is_suspicious)
 
         stats["total"] = len(rows)
         stats["verified"] = sum(1 for r in rows if r["is_verified"])

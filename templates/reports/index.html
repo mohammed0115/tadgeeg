@@ -201,19 +201,37 @@
   <div class="summary-card blue">
     <div class="summary-card-header">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-      <span class="summary-card-label">{% trans "Accuracy Rate" %}</span>
+      <span class="summary-card-label">{% trans "Extraction accuracy" %}</span>
     </div>
-    <div class="summary-card-value">98.5%</div>
-    <p class="summary-card-sub">{% trans "AI extraction quality" %}</p>
+    {% if extraction_accuracy %}
+      <div class="summary-card-value">{{ extraction_accuracy.pct }}%</div>
+      <p class="summary-card-sub">{{ extraction_accuracy.model_version }} · {{ extraction_accuracy.dataset }}</p>
+    {% else %}
+      <div class="summary-card-value">—</div>
+      <p class="summary-card-sub">{% trans "Not yet measured against a labelled dataset" %}</p>
+    {% endif %}
   </div>
 
   <div class="summary-card amber">
     <div class="summary-card-header">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
-      <span class="summary-card-label">{% trans "Risks Found" %}</span>
+      <span class="summary-card-label">{% trans "Rule precision" %}</span>
     </div>
-    <div class="summary-card-value">0</div>
-    <p class="summary-card-sub">{% trans "Across this document type" %}</p>
+    {% comment %}
+    Measured from this organisation's own auditors' verdicts — the feedback
+    loop in apps/audit/services/finding_feedback.py. Coverage is printed with
+    it deliberately: a ratio without its sample size is the unsourced claim
+    rebuilt in a different place.
+    {% endcomment %}
+    {% if rule_accuracy %}
+      <div class="summary-card-value">{{ rule_accuracy.pct }}%</div>
+      <p class="summary-card-sub">
+        {% blocktrans with judged=rule_accuracy.judged coverage=rule_accuracy.coverage_pct %}from {{ judged }} judged findings · {{ coverage }}% of findings reviewed{% endblocktrans %}
+      </p>
+    {% else %}
+      <div class="summary-card-value">—</div>
+      <p class="summary-card-sub">{% trans "No findings judged yet — use the Correct / False positive buttons on a finding" %}</p>
+    {% endif %}
   </div>
 
   <div class="summary-card dark">
@@ -221,8 +239,15 @@
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6l-8-4z"/><path d="M9 12l2 2 4-4"/></svg>
       <span class="summary-card-label">{% trans "Compliance" %}</span>
     </div>
-    <div class="summary-card-value">95%</div>
-    <p class="summary-card-sub">{% trans "ZATCA Phase 2 status" %}</p>
+    {% if report_kpis.zatca_compliance_pct is not None %}
+      <div class="summary-card-value">{{ report_kpis.zatca_compliance_pct }}%</div>
+      <p class="summary-card-sub">
+        {% blocktrans with n=report_kpis.zatca_qr_valid_count total=report_kpis.total_invoices %}{{ n }} of {{ total }} invoices carry a valid ZATCA QR{% endblocktrans %}
+      </p>
+    {% else %}
+      <div class="summary-card-value">—</div>
+      <p class="summary-card-sub">{% trans "No invoices yet" %}</p>
+    {% endif %}
   </div>
 </div>
 

@@ -184,6 +184,41 @@ def reject_requisition(pr: PurchaseRequisition, *, user, reason: str) -> Purchas
     return pr
 
 
+def _generated_po_document(pr, *, user):
+    """The Document row a system-issued PO hangs off.
+
+    Every typed record inherits `AuditMixin.document`, a non-null OneToOne to
+    Document — the model says a typed record is always the structured reading
+    of some uploaded file. A PO issued from an approved requisition has no
+    uploaded file, so `convert_to_po` created one without a document and every
+    conversion died on `NOT NULL constraint failed: purchase_orders.document_id`.
+    Approving a requisition and then issuing its PO was simply broken.
+
+    Two ways out. Making `document` nullable would weaken the invariant for all
+    twenty-one typed models to accommodate one caller, and would leave typed
+    records that belong to no document with nothing tying them to the audit
+    trail. So instead the generated PO gets a real Document of its own: it is a
+    genuine business document, it belongs in the documents list beside the
+    uploaded ones, and the one-to-one invariant stays true.
+
+    `file` is left empty rather than fabricated — there is no PDF, and pointing
+    at a path that holds nothing would be worse than an obviously blank field.
+    `source` records where it came from so nothing mistakes it for an upload.
+    """
+    from apps.documents.models import Document
+
+    return Document.objects.create(
+        organization=pr.organization,
+        uploaded_by=user,
+        original_filename=f"PO-{pr.pr_number.split('-', 1)[-1]}.generated",
+        file="",
+        file_size=0,
+        mime_type="application/x-tadgeeg-generated",
+        document_type=Document.DocumentType.PURCHASE_ORDER,
+        processing_status=Document.ProcessingStatus.COMPLETED,
+    )
+
+
 @transaction.atomic
 def convert_to_po(pr: PurchaseRequisition, *, user) -> "documents.PurchaseOrder":
     """Issue a Purchase Order from an APPROVED PR.
@@ -199,6 +234,7 @@ def convert_to_po(pr: PurchaseRequisition, *, user) -> "documents.PurchaseOrder"
 
     po = PurchaseOrder.objects.create(
         organization=pr.organization,
+        document=_generated_po_document(pr, user=user),
         po_number=f"PO-{pr.pr_number.split('-', 1)[-1]}",
         po_date=timezone.now().date(),
         vendor_name=pr.vendor_name or "",

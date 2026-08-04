@@ -132,9 +132,123 @@
                 <div class="flex items-start justify-between gap-3">
                   <div>
                     <p class="text-sm font-bold text-slate-800 dark:text-white" x-text="finding.rule_code"></p>
-                    <p class="mt-1 text-xs leading-6 text-slate-500" x-text="finding.message"></p>
+                    <p class="mt-1 text-xs leading-6 text-slate-500" style="unicode-bidi:plaintext;" x-text="finding.message"></p>
                   </div>
                   <span class="rounded-full px-2.5 py-1 text-[11px] font-bold" :class="findingBadge(finding.severity)" x-text="riskLabel(finding.severity)"></span>
+                </div>
+
+                {% comment %}
+                XAI. An auditor signing off is exercising professional
+                judgement, and ISA does not let them delegate it — so they need
+                to see what the engine compared, not just its conclusion.
+
+                When the producing rule never recorded a field and an expected
+                value, that is stated. It is NOT reconstructed from the message
+                text: a plausible-looking "expected: 15%" under an audit finding
+                would be a fabricated measurement in the worst possible place.
+                {% endcomment %}
+                <template x-if="finding.explanation && finding.explanation.checks.length">
+                  <div class="mt-3 rounded-xl bg-white px-3 py-2">
+                    <button type="button" @click="explainOpen = (explainOpen === finding.id ? null : finding.id)"
+                            class="text-[11px] font-semibold text-slate-500 hover:text-slate-700"
+                            :aria-expanded="explainOpen === finding.id">
+                      {% trans "Why did this fire?" %}
+                    </button>
+                    <template x-if="explainOpen === finding.id">
+                      <div class="mt-2 space-y-2">
+                        <template x-for="(check, i) in finding.explanation.checks" :key="i">
+                          <div class="text-[11px]" style="unicode-bidi:plaintext;">
+                            <template x-if="check.kind !== 'narrative'">
+                              <div>
+                                <span class="font-semibold text-slate-700" x-text="check.field"></span>
+                                <span class="text-slate-500">
+                                  — {% trans "expected" %} <code class="rounded bg-slate-100 px-1" x-text="fmtCheck(check.expected)"></code>،
+                                  {% trans "found" %} <code class="rounded bg-rose-50 px-1" x-text="fmtCheck(check.actual)"></code>
+                                </span>
+                              </div>
+                            </template>
+                            <template x-if="check.note">
+                              <p class="text-slate-500" x-text="check.note"></p>
+                            </template>
+                          </div>
+                        </template>
+                        <template x-if="!finding.explanation.complete">
+                          <p class="rounded-lg bg-amber-50 px-2 py-1 text-[11px] text-amber-800" style="unicode-bidi:plaintext;">
+                            {% trans "This rule did not record which field it compared, so the check cannot be shown in full. Review the invoice directly before relying on this finding." %}
+                          </p>
+                        </template>
+                      </div>
+                    </template>
+                  </div>
+                </template>
+
+                {% comment %}
+                The feedback loop's only entry point. Everything the engine
+                knows about its own accuracy arrives through these two buttons,
+                so they sit on the finding itself rather than behind a review
+                screen nobody opens — see .ai-workspace/31-remediation-plan.md §1.1.
+
+                "Wrong" opens a reason box because a false-positive verdict
+                without a reason cannot be acted on: whoever fixes the rule
+                learns only that someone disagreed, not what to change.
+                {% endcomment %}
+                <div class="mt-3 border-t border-slate-200 pt-3">
+                  <template x-if="finding.verdict && finding.verdict !== 'unreviewed'">
+                    <p class="text-[11px] text-slate-500" style="unicode-bidi:plaintext;">
+                      <span x-text="verdictLabel(finding.verdict)"></span>
+                      <template x-if="finding.verdict_by_name">
+                        <span> — <span x-text="finding.verdict_by_name"></span></span>
+                      </template>
+                      <template x-if="finding.verdict_note">
+                        <span class="block text-slate-400" x-text="finding.verdict_note"></span>
+                      </template>
+                    </p>
+                  </template>
+
+                  <template x-if="!finding.verdict || finding.verdict === 'unreviewed'">
+                    <div>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <span class="text-[11px] text-slate-400">{% trans "Was this finding correct?" %}</span>
+                        <button type="button"
+                                :disabled="verdictBusy === finding.id"
+                                @click="recordVerdict(finding, 'true_positive')"
+                                class="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50">
+                          {% trans "Correct" %}
+                        </button>
+                        <button type="button"
+                                :disabled="verdictBusy === finding.id"
+                                @click="verdictNoteFor = (verdictNoteFor === finding.id ? null : finding.id)"
+                                class="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-50">
+                          {% trans "False positive" %}
+                        </button>
+                        <button type="button"
+                                :disabled="verdictBusy === finding.id"
+                                @click="recordVerdict(finding, 'uncertain')"
+                                class="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50">
+                          {% trans "Not sure" %}
+                        </button>
+                      </div>
+
+                      <template x-if="verdictNoteFor === finding.id">
+                        <div class="mt-2">
+                          <label class="sr-only" :for="'note-' + finding.id">{% trans "Why is this a false positive?" %}</label>
+                          <textarea :id="'note-' + finding.id" x-model="verdictNote" rows="2" dir="auto"
+                                    placeholder="{% trans 'Why did the rule misfire? This is what gets it fixed.' %}"
+                                    class="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs" style="unicode-bidi:plaintext;"></textarea>
+                          <button type="button"
+                                  :disabled="!verdictNote.trim() || verdictBusy === finding.id"
+                                  @click="recordVerdict(finding, 'false_positive', verdictNote)"
+                                  class="mt-1 rounded-full bg-rose-600 px-3 py-1 text-[11px] font-semibold text-white hover:bg-rose-700 disabled:opacity-50">
+                            {% trans "Submit" %}
+                          </button>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+
+                  <template x-if="verdictError && verdictErrorFor === finding.id">
+                    <p role="alert" class="mt-2 text-[11px] text-rose-600" style="unicode-bidi:plaintext;" x-text="verdictError"></p>
+                  </template>
                 </div>
               </div>
             </template>
@@ -202,6 +316,60 @@ function auditSessionDetail() {
     i18nSystem:        "{% trans 'System' %}",
     i18nOf:            "{% trans 'of' %}",
     i18nCompletedFem:  "{% trans 'completed' %}",
+
+    // ── Feedback loop state ────────────────────────────────────────────
+    verdictBusy: null,       // finding id currently being submitted
+    verdictNoteFor: null,    // finding id whose reason box is open
+    verdictNote: '',
+    verdictError: '',
+    verdictErrorFor: null,
+    verdictLabels: {
+      true_positive:  "{% trans 'Marked correct' %}",
+      false_positive: "{% trans 'Marked a false positive' %}",
+      uncertain:      "{% trans 'Marked uncertain' %}",
+    },
+
+    verdictLabel(verdict) { return this.verdictLabels[verdict] || verdict; },
+
+    // ── XAI ────────────────────────────────────────────────────────────
+    explainOpen: null,
+    fmtCheck(value) {
+      // null and the string "null" must not look alike: the first means the
+      // rule recorded no value, the second would be a value that IS null.
+      if (value === null || value === undefined) return "{% trans '(not recorded)' %}";
+      if (typeof value === 'object') return JSON.stringify(value);
+      return String(value);
+    },
+
+    async recordVerdict(finding, verdict, note = '') {
+      this.verdictBusy = finding.id;
+      this.verdictError = '';
+      this.verdictErrorFor = null;
+      try {
+        const updated = await apiFetch(`/audit/findings/${finding.id}/verdict/`, {
+          method: 'POST',
+          body: JSON.stringify({ verdict, note }),
+        });
+        // Update in place rather than reloading: a full reload would lose the
+        // reviewer's scroll position part-way through a list of findings,
+        // which is exactly when people stop giving feedback.
+        finding.verdict      = updated.verdict;
+        finding.verdict_note = updated.note;
+        finding.verdict_by_name = updated.verdict_by_name || '';
+        this.verdictNoteFor = null;
+        this.verdictNote = '';
+      } catch (err) {
+        // apiFetch throws `new Error(data.detail || ...)`, so the server's
+        // message arrives as err.message — NOT err.detail. For this endpoint
+        // that text is a FeedbackError, written to be read by this user.
+        this.verdictError = (err && err.message)
+          ? err.message
+          : "{% trans 'The judgement could not be saved. Please try again.' %}";
+        this.verdictErrorFor = finding.id;
+      } finally {
+        this.verdictBusy = null;
+      }
+    },
 
     async load() {
       this.loading = true;

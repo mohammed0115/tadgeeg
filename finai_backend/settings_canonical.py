@@ -36,8 +36,30 @@ except ImportError:
     pass  # Sentry not installed, error tracking disabled
 
 PRODUCT_NAME = "Tadgeeg"
-COMPANY_NAME = "Get Solution Company"
-COMPANY_NAME_AR = "شركة احصل الحل"
+COMPANY_NAME = os.environ.get("COMPANY_NAME", "Get Solution Company")
+
+# ⚠️ The ZATCA registration notice (ref 60001208479) names the taxpayer
+# «مؤسسة أحصل الحل» — مؤسسة, and أحصل with a hamza. The value below says
+# «شركة احصل الحل». One of the two is the registered legal entity and the
+# other is not, and that is not a call this code can make: it appears in the
+# public footer, in the API description, and beside a CR number.
+#
+# So it reads from the environment. Set COMPANY_NAME_AR in the env file to the
+# name on the commercial register, and this default stops mattering.
+COMPANY_NAME_AR = os.environ.get("COMPANY_NAME_AR", "شركة احصل الحل")
+
+# Commercial registration, from the same notice. Empty by default because
+# publishing a CR number is a decision, not a default — set COMPANY_CR to show
+# it in the footer. Saudi buyers generally expect to see it.
+COMPANY_CR = os.environ.get("COMPANY_CR", "")
+
+# ZATCA: مؤسسة أحصل الحل is registered as NOT subject to VAT
+# (إشعار طلب التسجيل — غير خاضع). The platform therefore adds no VAT to its own
+# subscription prices and publishes no VAT number of its own. This is separate
+# from the ZATCA features in the product, which validate CUSTOMERS' invoices —
+# customers are subject; the vendor is not. Guarded by
+# tests/test_no_fabricated_metrics.py.
+COMPANY_IS_VAT_REGISTERED = os.environ.get("COMPANY_IS_VAT_REGISTERED", "False") == "True"
 PRODUCT_TAGLINE_AR = "منصة الذكاء الاصطناعي للتدقيق المالي والامتثال"
 PRODUCT_TAGLINE_EN = "AI platform for financial auditing and compliance"
 PRODUCT_DESCRIPTION_AR = "منصة الذكاء الاصطناعي الرائدة للتدقيق المالي والامتثال"

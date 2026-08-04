@@ -267,9 +267,18 @@ def test_match_three_way_total_mismatch(db, org, admin, junior):
     proc.approve_requisition(pr, user=admin)
     po = proc.convert_to_po(pr, user=admin)
 
+    # `grn_date`, not `receipt_date` — the latter is not a field on this model,
+    # and `document` is required by AuditMixin on every typed record.
+    from apps.documents.models import Document
+
+    grn_document = Document.objects.create(
+        organization=org, uploaded_by=admin, original_filename="grn-1.pdf",
+        file="", file_size=0, mime_type="application/pdf",
+        document_type=Document.DocumentType.PURCHASE_ORDER,
+    )
     grn = GoodsReceiptNote.objects.create(
-        organization=org, grn_number="GRN-1",
-        receipt_date=date.today(), vendor_name="Acme",
+        organization=org, document=grn_document, grn_number="GRN-1",
+        grn_date=date.today(), vendor_name="Acme",
         total_amount=Decimal("1000"),
     )
     inv = Invoice.objects.create(

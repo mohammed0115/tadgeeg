@@ -57,6 +57,22 @@ _WHITELIST_PREFIXES = (
     "/google-pending/",
     "/auth/",
     "/accounts/",
+    # The API forms of the same auth routes. The prefixes above are matched as
+    # starts-with against request.path, so "/auth/" never matched
+    # "/api/v1/auth/logout/" — an organisation without a subscription could not
+    # log out, refresh its token, or read its own profile. Being unable to
+    # leave is a worse state to be locked into than being unable to enter.
+    #
+    # Listed one by one rather than as "/api/v1/auth/": that tree also holds
+    # `users/` and `organizations/`, and opening it wholesale would let an
+    # unsubscribed org create seats through the API.
+    "/api/v1/auth/login/",
+    "/api/v1/auth/register/",
+    "/api/v1/auth/logout/",
+    "/api/v1/auth/google/",
+    "/api/v1/auth/otp/",
+    "/api/v1/auth/token/refresh/",
+    "/api/v1/auth/me/",
     # Public marketing
     "/about/",
     "/pricing/",

@@ -2,7 +2,16 @@
 {# TADGEEG-FIN-AUDIT-9C — PUBLIC external-confirmation response page.        #}
 {# Standalone (external party is not logged in); token-gated; no app chrome. #}
 {% load i18n %}
-<html lang="en">
+{% get_current_language as LANGUAGE_CODE %}
+{% get_current_language_bidi as LANGUAGE_BIDI %}
+{% comment %}
+Language and direction come from the request, not a hardcoded "en".
+These render Arabic content — a management letter, an ISA 300 plan, a
+confirmation page an external party opens — and an Arabic paragraph
+inside dir=ltr renders with its punctuation and numerals reordered.
+A screen reader with lang="en" reads Arabic with English phonetics.
+{% endcomment %}
+<html lang="{{ LANGUAGE_CODE|default:'ar' }}" dir="{% if LANGUAGE_BIDI %}rtl{% else %}ltr{% endif %}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

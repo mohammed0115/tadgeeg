@@ -68,14 +68,16 @@ class IAS7CashFlowClassifier:
         "equipment", "machinery", "machine", "tools", "tool",
         "property", "real estate", "building", "construction", "land",
         "vehicle", "car", "truck", "bus", "fleet",
-        "computer", "laptop", "server", "it", "hardware",
+        "computer", "laptop", "server", "hardware",
         "software", "development", "platform",
-        "patent", "trademark", "intellectual property", "ip",
+        "patent", "trademark", "intellectual property",
         "intangible", "goodwill",
         "investment", "securities", "stocks", "bonds",
-        "acquisition", "purchase", "capex",
+        # "purchase" was here. Every invoice is a purchase, so it made any
+        # description mentioning the word into capital expenditure.
+        "acquisition", "capex",
         "refurbish", "upgrade", "renovation",
-        "research", "development", "rd", "product development",
+        "research", "development", "product development",
         "furniture", "fixture", "asset",
     }
 
@@ -135,7 +137,9 @@ class IAS7CashFlowClassifier:
         r"(utility|water|electricity|gas company)": ("operating", "op_utilities"),
         r"(landlord|property|real estate)": ("operating", "op_rent"),
         r"(bank|financial|lender)": ("financing", "fin_loan"),
-        r"(equipment|machinery|vendor)": ("investing", "inv_equipment"),
+        # "vendor" was in this group and matched ANY company with the word in
+        # its name, turning ordinary trade payables into capital expenditure.
+        r"(equipment|machinery)": ("investing", "inv_equipment"),
         r"(construction|contractor|developer)": ("investing", "inv_property"),
         r"(insurance|broker)": ("operating", "op_insurance"),
         r"(consultant|professional|legal)": ("operating", "op_professional"),
@@ -167,7 +171,7 @@ class IAS7CashFlowClassifier:
             account_result = self._classify_by_account_code(invoice.account_code)
             if account_result:
                 cf_class, subcat = account_result
-                scores[cf_class].append(0.95)  # Very high confidence
+                scores[cf_class].append((0.95, subcat))  # Very high confidence
                 reasoning.append(f"Account code '{invoice.account_code}' → {subcat}")
                 result = self._finalize_classification(scores, reasoning, invoice)
                 return result
@@ -177,7 +181,7 @@ class IAS7CashFlowClassifier:
             costctr_result = self._classify_by_cost_center(invoice.cost_center)
             if costctr_result:
                 cf_class, subcat = costctr_result
-                scores[cf_class].append(0.85)
+                scores[cf_class].append((0.85, subcat))
                 reasoning.append(f"Cost center '{invoice.cost_center}' → {subcat}")
 
         # ── Strategy 3: Vendor Type Analysis ──────────────────────────────────
@@ -185,7 +189,7 @@ class IAS7CashFlowClassifier:
             vendor_result = self._classify_by_vendor_name(invoice.vendor_name)
             if vendor_result:
                 cf_class, subcat = vendor_result
-                scores[cf_class].append(0.75)
+                scores[cf_class].append((0.75, subcat))
                 reasoning.append(f"Vendor '{invoice.vendor_name}' → {subcat}")
 
         # ── Strategy 4: Invoice Description / Line Items ───────────────────────
@@ -195,7 +199,7 @@ class IAS7CashFlowClassifier:
             cf_class, subcat, keyword_count = desc_result
             # Confidence based on keyword matches (0.5-0.8)
             confidence = 0.5 + min(0.3, keyword_count * 0.1)
-            scores[cf_class].append(confidence)
+            scores[cf_class].append((confidence, subcat))
             reasoning.append(f"Keywords: {', '.join([invoice.ai_summary[:30], invoice.notes[:30]])}")
 
         # ── Finalize Classification ───────────────────────────────────────────
@@ -215,21 +219,69 @@ class IAS7CashFlowClassifier:
                 return (cf_class, subcat)
         return None
 
+    #: When a vendor name matches more than one pattern, the specific signal
+    #: wins over the generic one. "Heavy Equipment Supplier Corp" matches both
+    #: `supplier` (operating) and `equipment` (investing); first-match-wins over
+    #: a plain dict returned whichever happened to be declared first, and
+    #: declaration order carried no meaning. Under IAS 7 that is not cosmetic:
+    #: capital expenditure recorded as an operating outflow misstates cash
+    #: generated from operations, which is one of the headline figures on the
+    #: statement.
+    #:
+    #: `supplier`, `distributor` and the like describe HOW a company sells;
+    #: `equipment`, `construction`, `bank` describe WHAT it sells, and that is
+    #: what determines the activity. So the what-signals rank above.
+    _VENDOR_CLASS_PRECEDENCE = ("investing", "financing", "operating")
+
     def _classify_by_vendor_name(self, vendor_name: str) -> Optional[Tuple[str, str]]:
-        """Analyze vendor name to infer cash flow class."""
-        vendor_lower = vendor_name.lower()
-        for pattern, (cf_class, subcat) in self.VENDOR_TYPE_PATTERNS.items():
-            if re.search(pattern, vendor_lower):
-                return (cf_class, subcat)
-        return None
+        """Infer a cash-flow class from a vendor name.
+
+        Returns the highest-precedence match rather than the first one, so the
+        result does not depend on dictionary declaration order.
+        """
+        vendor_lower = (vendor_name or "").lower()
+
+        matches = [
+            (cf_class, subcat)
+            for pattern, (cf_class, subcat) in self.VENDOR_TYPE_PATTERNS.items()
+            if re.search(pattern, vendor_lower)
+        ]
+        if not matches:
+            return None
+
+        return min(
+            matches,
+            key=lambda m: self._VENDOR_CLASS_PRECEDENCE.index(m[0])
+            if m[0] in self._VENDOR_CLASS_PRECEDENCE
+            else len(self._VENDOR_CLASS_PRECEDENCE),
+        )
+
+    @staticmethod
+    def _count_keywords(keywords, text_lower: str) -> int:
+        """Count keywords present as WHOLE WORDS, not as substrings.
+
+        Substring matching turned two-letter tokens into wrecking balls: "it"
+        was an investing keyword, so «credit note» and «debit» and «audit» all
+        counted as capital expenditure, and «Monthly IT support» — genuinely
+        operating — was classified investing. Nothing raised; the cash flow
+        statement was simply wrong, in the direction that flatters cash
+        generated from operations.
+
+        `\b` also makes multi-word keys like "real estate" behave, since the
+        boundary sits at the ends of the phrase rather than inside it.
+        """
+        return sum(
+            1 for kw in keywords
+            if re.search(rf"\b{re.escape(kw)}\b", text_lower)
+        )
 
     def _classify_by_keywords(self, text: str) -> Optional[Tuple[str, str, int]]:
         """Count keywords from description to determine class."""
         text_lower = text.lower()
-        
-        op_count = sum(1 for kw in self.OPERATING_KEYWORDS if kw in text_lower)
-        inv_count = sum(1 for kw in self.INVESTING_KEYWORDS if kw in text_lower)
-        fin_count = sum(1 for kw in self.FINANCING_KEYWORDS if kw in text_lower)
+
+        op_count = self._count_keywords(self.OPERATING_KEYWORDS, text_lower)
+        inv_count = self._count_keywords(self.INVESTING_KEYWORDS, text_lower)
+        fin_count = self._count_keywords(self.FINANCING_KEYWORDS, text_lower)
 
         # Return class with highest keyword count
         if max(op_count, inv_count, fin_count) == 0:
@@ -265,13 +317,17 @@ class IAS7CashFlowClassifier:
     def _finalize_classification(self, scores: Dict, reasoning: List, invoice) -> Dict:
         """Calculate final classification from accumulated scores."""
         
-        # Calculate average score for each class
+        # Each entry is (confidence, subcategory): the subcategory has to
+        # travel with its score. It used to be discarded here and replaced by
+        # `_default_subcategory_for_class`, so an invoice matched to op_salary
+        # by its account code was reported as op_other — the class survived and
+        # the detail did not, which flattens every sub-line of the cash flow
+        # statement into "other".
         final_scores = {}
-        for cf_class, score_list in scores.items():
-            if score_list:
-                final_scores[cf_class] = sum(score_list) / len(score_list)
-            else:
-                final_scores[cf_class] = 0.0
+        for cf_class, entries in scores.items():
+            final_scores[cf_class] = (
+                sum(score for score, _ in entries) / len(entries) if entries else 0.0
+            )
 
         # Determine winning class
         winning_class = max(final_scores.keys(), key=lambda k: final_scores[k])
@@ -282,9 +338,13 @@ class IAS7CashFlowClassifier:
             winning_class = "unclassified"
             confidence = 0.0
             reasoning.append("No clear classification pattern matched (confidence < 0.5)")
-
-        # Determine subcategory based on class
-        subcat = self._default_subcategory_for_class(winning_class)
+            subcat = self._default_subcategory_for_class(winning_class)
+        else:
+            # The most confident strategy names the subcategory. Falling back to
+            # the class default only when nothing supplied one.
+            best = max(scores[winning_class], key=lambda entry: entry[0], default=None)
+            subcat = (best[1] if best and best[1]
+                      else self._default_subcategory_for_class(winning_class))
 
         return {
             "cash_flow_class": winning_class,

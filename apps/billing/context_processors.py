@@ -10,15 +10,33 @@ subscription without re-querying:
     {{ billing.usage_percent }}
     {{ billing.status }}
     {{ billing.show_billing_nav }}   ← role-gated visibility
+    {{ billing.degraded }}           ← the query failed; figures are not real
 
 Safe for unauthenticated traffic, missing-org users, and deployments
 without ``apps.billing`` installed — returns an empty namespace.
+
+**Why the failure path is shaped the way it is.** This ran on every page and
+answered *any* exception with the empty namespace, whose
+``show_billing_nav=False`` is correct for a logged-out visitor and badly wrong
+for a billing fault. Unapplied migrations on production therefore presented as
+"the الفوترة والاشتراك menu is gone" — no error, no banner, nothing in the UI
+to suggest a fault. Hours went into looking for a permissions bug in the
+navigation code. Two separate things were conflated:
+
+  · **whether the menu may be shown** — a function of the user's role alone,
+    which needs no subscription query and must survive one failing;
+  · **what the quota figures are** — which does need the query.
+
+So the role check is computed *before* the query, the failure path keeps the
+menu visible, and ``degraded`` marks the figures as not real so a template can
+say so out loud. A fault must never render as a missing feature.
 """
 from __future__ import annotations
 
 import logging
 from types import SimpleNamespace
 
+from django.conf import settings
 from django.utils.translation import get_language
 
 
@@ -42,8 +60,8 @@ _BILLING_ROLES = {
 }
 
 
-def _empty():
-    return {"billing": SimpleNamespace(
+def _blank(*, show_billing_nav=False, degraded=False):
+    return SimpleNamespace(
         has_subscription=False,
         plan_name="",
         plan_code="",
@@ -60,8 +78,22 @@ def _empty():
         starts_at=None,
         ends_at=None,
         is_expired=False,
-        show_billing_nav=False,
-    )}
+        show_billing_nav=show_billing_nav,
+        degraded=degraded,
+    )
+
+
+def _empty():
+    return {"billing": _blank()}
+
+
+def _nav_visible(user):
+    """Role-only. Deliberately independent of any query that can fail."""
+    return bool(
+        user.is_superuser
+        or user.is_staff
+        or (getattr(user, "role", "") in _BILLING_ROLES)
+    )
 
 
 def billing(request):
@@ -76,19 +108,34 @@ def billing(request):
     try:
         from apps.billing.services.quota_service import QuotaService
     except ImportError:
+        # The app genuinely is not deployed. There is no billing to link to,
+        # so hiding the nav is the right answer here — unlike the failure path.
         return _empty()
+
+    show_nav = _nav_visible(user)
 
     try:
-        sub = QuotaService().get_active_subscription(organization)
-    except Exception:                       # noqa: BLE001 — never break a page
-        logger.exception("billing context processor failed")
-        return _empty()
+        return {"billing": _subscription_context(organization, show_nav)}
+    except Exception:                       # noqa: BLE001
+        # A context processor raising takes down every authenticated page, so
+        # production degrades rather than 500s. It degrades LOUDLY: ERROR with
+        # a traceback, the nav still visible, and `degraded` set so the page
+        # can tell the user the numbers are not real.
+        logger.exception(
+            "billing context failed for organization=%s — serving degraded "
+            "context. Quota figures on this page are NOT real.",
+            getattr(organization, "pk", "?"),
+        )
+        if settings.DEBUG:
+            # In development the same fault must be impossible to miss.
+            raise
+        return {"billing": _blank(show_billing_nav=show_nav, degraded=True)}
 
-    show_nav = bool(
-        user.is_superuser
-        or user.is_staff
-        or (getattr(user, "role", "") in _BILLING_ROLES)
-    )
+
+def _subscription_context(organization, show_nav):
+    from apps.billing.services.quota_service import QuotaService
+
+    sub = QuotaService().get_active_subscription(organization)
 
     if sub is None:
         # Either no subscription yet, or expired/canceled/payment_failed.
@@ -101,7 +148,7 @@ def billing(request):
             .order_by("-created_at")
             .first()
         )
-        return {"billing": SimpleNamespace(
+        return SimpleNamespace(
             has_subscription=False,
             plan_name=(_plan_name(last.plan) if last else ""),
             plan_code=(last.plan.code if last else ""),
@@ -119,7 +166,8 @@ def billing(request):
             ends_at=None,
             is_expired=bool(last and last.status == "expired"),
             show_billing_nav=show_nav,
-        )}
+            degraded=False,
+        )
 
     # NULL means unlimited; 0 means no allowance at all. `or 0` collapses the
     # two, which would tell an Enterprise customer their quota is zero on every
@@ -143,7 +191,7 @@ def billing(request):
         else int(round((used + reserved) * 100 / invoice_limit))
     )
 
-    return {"billing": SimpleNamespace(
+    return SimpleNamespace(
         has_subscription=True,
         plan_name=_plan_name(sub.plan),
         plan_code=sub.plan.code,
@@ -161,4 +209,5 @@ def billing(request):
         ends_at=sub.ends_at,
         is_expired=False,
         show_billing_nav=show_nav,
-    )}
+        degraded=False,
+    )

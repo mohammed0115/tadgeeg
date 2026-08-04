@@ -159,6 +159,18 @@ class TestInvoiceListTenantIsolation:
             vendor_name="V", invoice_date=date(2026, 4, 1),
             total_amount=Decimal("100"), currency="SAR",
         )
+        # /invoices/ redirects an org with no subscription to /billing/plans/,
+        # so without this the test measured the billing gate instead of tenant
+        # isolation. Created through the real service, not an inserted row.
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        from apps.billing.services.subscription_service import SubscriptionService
+
+        call_command("seed_billing_plans", stdout=StringIO())
+        SubscriptionService().create_free_trial(org_a)
+
         U = get_user_model()
         u = U.objects.create_user(email="user-a@x.local", password="x",
                                   is_active=True, organization=org_a)

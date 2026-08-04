@@ -81,7 +81,14 @@ def test_manual_review_can_trigger_revalidation(authenticated_client, invoice):
 
 
 @pytest.mark.django_db
-def test_invoice_detail_page_renders_manual_review_panel(web_client, auditor_user, invoice):
+def test_invoice_detail_page_renders_manual_review_panel(web_client, auditor_user, invoice, active_subscription):
+    """Asserted against the Arabic strings, so the client asks for Arabic.
+
+    The suite runs in English by design (finai_backend/settings/test.py), so
+    without this the page rendered English and the test failed on language
+    rather than on whether the manual-review panel is there.
+    """
+    web_client.cookies["django_language"] = "ar"
     web_client.force_login(auditor_user)
     response = web_client.get(f"/invoices/{invoice.id}/")
 

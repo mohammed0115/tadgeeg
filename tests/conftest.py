@@ -21,7 +21,104 @@ from rest_framework.test import APIClient
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "finai_backend.settings")
 
 
+# ─── Encryption keys for the test run ────────────────────────────────────────
+
+@pytest.fixture(scope="session", autouse=True)
+def _throwaway_encryption_keys():
+    """Give the suite a real Fernet key, generated fresh for this run.
+
+    `apps.zatca.crypto` refuses to derive an EGS key from SECRET_KEY unless
+    DEBUG is on — deliberately, because a SECRET_KEY leak would otherwise
+    expose every tenant's EGS private key. Tests run with DEBUG=False, so the
+    guard fired and four ZATCA tests failed.
+
+    Weakening the guard to make them pass would be exactly backwards. Instead
+    the suite provisions its own key:
+
+      · generated per run and held only in memory — nothing is written to a
+        file, committed, or shared between runs;
+      · a *real* key, so the tests exercise the production branch of `_fernet()`
+        rather than the DEBUG fallback that production never reaches.
+
+    If this fixture is ever removed, the ZATCA tests should fail again. That is
+    the correct behaviour, not a regression to paper over.
+    """
+    from cryptography.fernet import Fernet
+
+    if not getattr(settings, "ZATCA_FERNET_KEY", ""):
+        settings.ZATCA_FERNET_KEY = Fernet.generate_key().decode()
+    if not getattr(settings, "FIELD_ENCRYPTION_KEY", ""):
+        settings.FIELD_ENCRYPTION_KEY = Fernet.generate_key().decode()
+    yield
+
+
 # ─── Test Database Configuration ──────────────────────────────────────────────
+
+
+def activate_trial(organization):
+    """Give `organization` an active free trial, through the real service.
+
+    An active subscription became a precondition for the authenticated app, so
+    tests written before that answer 402 or redirect to /billing/plans/ — they
+    end up measuring the billing gate rather than whatever they were written to
+    check. This is the one-line fix, and it deliberately goes through
+    SubscriptionService rather than inserting an OrganizationSubscription row:
+    a hand-built fixture drifts from what activation actually produces (frozen
+    limits, frozen price, trial-used flag) and then passes while production
+    fails.
+
+    Not autouse: some tests exist precisely to prove the gate fires, and
+    handing every organisation a subscription would silently disarm them.
+    """
+    from io import StringIO
+
+    from django.core.management import call_command
+
+    from apps.billing.services.subscription_service import SubscriptionService
+
+    call_command("seed_billing_plans", stdout=StringIO())
+    return SubscriptionService().create_free_trial(organization)
+
+
+@pytest.fixture
+def active_subscription(organization):
+    """Request this when a test needs to get past SubscriptionRequiredMiddleware.
+
+    Explicit rather than autouse: tests that assert the gate FIRES (402 on the
+    API, redirect to /billing/plans/ on HTML) are as important as the ones that
+    need to get past it, and blanket-subscribing every organisation would
+    disarm them without a word.
+    """
+    return activate_trial(organization)
+
+
+@pytest.fixture
+def org(organization):
+    """Alias for `organization`.
+
+    Six test modules already define a local `org` fixture, and two more
+    (`test_ias7_cashflow`, `test_duplicate_detector_tenant_isolation`) request
+    one that was never defined anywhere — thirteen tests erroring on "fixture
+    'org' not found" rather than on anything about the code.
+
+    Defining it here rather than renaming the call sites: `org` is the name
+    this codebase reaches for, and a module-local fixture still wins over this
+    one, so the modules that build a specific organisation keep theirs.
+    """
+    return organization
+
+
+@pytest.fixture
+def user(admin_user):
+    """Alias for `admin_user` — see `org` above for the same reasoning.
+
+    Deliberately the admin: every call site requesting a bare `user` passes it
+    to a service as the acting principal (`IAS7CashFlowService(org, user)`),
+    where a role-restricted account would fail on authorisation rather than on
+    what the test is checking. A test that cares about roles asks for
+    `auditor_user` or `junior_auditor` by name.
+    """
+    return admin_user
 
 # ─── Organizations & Authentication ──────────────────────────────────────────
 

@@ -188,12 +188,29 @@ class DocumentReportPDFView(APIView):
             safe_title = (report.title or "report").replace(" ", "_")[:60]
             response["Content-Disposition"] = _attachment_disposition(f"{safe_title}.pdf")
             return response
-        except OSError as exc:
-            logger.warning("WeasyPrint OSError (missing system libs) for document report %s: %s", pk, exc)
-            return Response(
-                {"error": _("PDF libraries are not configured on the server. Use the /html/ endpoint to view the report.")},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        except (ModuleNotFoundError, OSError) as exc:
+            # Serve the HTML instead of a 503, matching /reports/<id>/pdf/ and
+            # /reports/invoice-audit/<id>/pdf/. Three PDF endpoints answered the
+            # same failure three different ways, so a client could not write one
+            # branch that handled all of them.
+            #
+            # HTML with 200 was chosen over 503-everywhere because the report
+            # itself is fine — only the renderer is missing — and a browser can
+            # print it. The response is made impossible to mistake for a PDF by
+            # three things together: content type, the .html filename, and the
+            # X-Report-PDF-Fallback header for an API client that only checks
+            # the status code.
+            logger.warning(
+                "WeasyPrint unavailable (%s) for document report %s — serving HTML fallback: %s",
+                type(exc).__name__, pk, exc,
             )
+            from apps.reports.views import _attachment_disposition
+
+            safe_title = (report.title or "report").replace(" ", "_")[:60]
+            response = HttpResponse(html_str, content_type="text/html; charset=utf-8")
+            response["Content-Disposition"] = _attachment_disposition(f"{safe_title}.html")
+            response["X-Report-PDF-Fallback"] = "html"
+            return response
         except Exception as exc:
             logger.error("PDF generation failed for document report %s: %s", pk, exc)
             return Response(

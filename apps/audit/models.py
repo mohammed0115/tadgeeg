@@ -216,9 +216,31 @@ class AuditFinding(models.Model):
         CRITICAL = "critical", "Critical"
 
     class Status(models.TextChoices):
+        """Workflow state: what is being *done* about this finding."""
+
         OPEN = "open", "Open"
         RESOLVED = "resolved", "Resolved"
         IGNORED = "ignored", "Ignored"
+
+    class Verdict(models.TextChoices):
+        """Was the *rule* right? Deliberately not the same axis as Status.
+
+        `IGNORED` answers "are we acting on this", and it was carrying two
+        incompatible meanings: "the rule is correct and we accept the risk"
+        and "the rule is wrong". Those are opposite facts about the engine,
+        and collapsing them makes the data useless for measuring precision —
+        every dismissal looks like a false positive, so the measured accuracy
+        of a rule can only ever fall.
+
+        This axis answers only "was the finding true", and nothing about it
+        implies a workflow action. A TRUE_POSITIVE may still be ignored; a
+        FALSE_POSITIVE may still have been resolved by someone tidying up.
+        """
+
+        UNREVIEWED = "unreviewed", "Not yet judged"
+        TRUE_POSITIVE = "true_positive", "Correct — a real issue"
+        FALSE_POSITIVE = "false_positive", "Wrong — the rule misfired"
+        UNCERTAIN = "uncertain", "Cannot tell"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     organization = models.ForeignKey(
@@ -281,6 +303,33 @@ class AuditFinding(models.Model):
     last_detected_at = models.DateTimeField(auto_now=True)
     resolved_at = models.DateTimeField(null=True, blank=True)
 
+    # ── Feedback loop ───────────────────────────────────────────────────
+    # The auditor's judgement on whether the engine was right. This is the
+    # only place the product learns whether a rule works: without it, rule
+    # thresholds can only be tuned by guesswork and no accuracy figure can be
+    # defended. See .ai-workspace/31-remediation-plan.md §1.1.
+    verdict = models.CharField(
+        max_length=20,
+        choices=Verdict.choices,
+        default=Verdict.UNREVIEWED,
+        db_index=True,
+    )
+    verdict_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="judged_audit_findings",
+    )
+    verdict_at = models.DateTimeField(null=True, blank=True)
+    verdict_note = models.TextField(
+        blank=True,
+        help_text=(
+            "Why. A false-positive verdict without a reason tells whoever "
+            "fixes the rule nothing about what to change."
+        ),
+    )
+
     class Meta:
         db_table = "audit_findings"
         ordering = ["-last_detected_at"]
@@ -288,6 +337,11 @@ class AuditFinding(models.Model):
             models.Index(fields=["organization", "status", "severity"]),
             models.Index(fields=["audit_session", "status"]),
             models.Index(fields=["invoice", "rule_code"]),
+            # Per-rule precision is the query this data exists to answer, and
+            # it groups by rule_code and filters by verdict across a whole
+            # tenant. Without this it is a full scan of audit_findings.
+            models.Index(fields=["organization", "rule_code", "verdict"],
+                         name="finding_rule_verdict_idx"),
         ]
 
     def __str__(self):
@@ -771,3 +825,49 @@ class WPAttachment(models.Model):
 
     def __str__(self) -> str:
         return f"{self.filename} on {self.paper_id}"
+
+
+class StandardPassage(models.Model):
+    """One citable passage from a standard, ingested by an operator.
+
+    Deliberately platform-wide rather than per-organisation: ZATCA's executive
+    regulation is the same document for every tenant, and duplicating it per
+    organisation would mean a correction has to be applied N times.
+
+    `source_uri` is required in spirit — a citation whose provenance nobody can
+    check is the problem this table exists to solve, not a field to leave
+    blank. It is `blank=True` only so an ingest can record where it could not
+    determine one, which the retriever surfaces rather than hides.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    standard = models.CharField(
+        max_length=32, db_index=True,
+        help_text="ZATCA-ER, IAS-7, ISA-315, SOCPA-… — the short code used in citations.",
+    )
+    reference = models.CharField(
+        max_length=64, blank=True,
+        help_text="المادة 53 · §15 · para 12 — the unit a reader can look up.",
+    )
+    text = models.TextField()
+    source_uri = models.URLField(
+        blank=True,
+        help_text="Where this text was taken from, so a citation can be verified.",
+    )
+    language = models.CharField(max_length=8, default="ar")
+    ingested_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "audit_standard_passages"
+        ordering = ["standard", "reference"]
+        indexes = [models.Index(fields=["standard", "reference"])]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["standard", "reference"],
+                name="unique_passage_per_standard_reference",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.standard} — {self.reference or '(no reference)'}"

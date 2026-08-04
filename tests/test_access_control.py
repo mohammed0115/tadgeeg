@@ -152,9 +152,27 @@ class NavigationDefinitionTests(TestCase):
 
 
 class SplitDashboardIntegrationTests(TestCase):
+    """Dashboard routing and role separation — not the billing gate.
+
+    Three tests here started returning 302 → /billing/plans/ once an active
+    subscription became a precondition for the dashboard. They were asserting
+    "an org admin lands on the dashboard" and were instead measuring "an org
+    with no subscription is sent to the pricing page", which is correct product
+    behaviour and a different test's job. The trial below is created through
+    the real service so the fixture cannot drift from what activation produces.
+    """
+
     @classmethod
     def setUpTestData(cls):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        from apps.billing.services.subscription_service import SubscriptionService
+
         cls.organization = Organization.objects.create(name="Acme Org", name_ar="أكمي")
+        call_command("seed_billing_plans", stdout=StringIO())
+        SubscriptionService().create_free_trial(cls.organization)
         user_model = get_user_model()
 
         cls.org_user = user_model.objects.create_user(
@@ -207,10 +225,18 @@ class SplitDashboardIntegrationTests(TestCase):
         self.assertNotContains(response, "/dashboard/files/")
 
     def test_frontend_dashboard_route_uses_executive_dashboard_layout(self):
+        """Which layout rendered — asserted directly rather than via a CSS class.
+
+        This looked for `class="dashboard-page`, which the template dropped in a
+        redesign. The class was only ever a proxy for the thing the test name
+        actually claims, and Django can check that thing outright; a restyle
+        should not read as a routing regression.
+        """
         self.client.force_login(self.org_user)
         response = self.client.get("/dashboard/")
-        self.assertContains(response, 'class="dashboard-page')
-        self.assertContains(response, 'id="cashFlowChart"')
+
+        self.assertTemplateUsed(response, "dashboard/index.html")
+        self.assertTemplateUsed(response, "layouts/dashboard_base.html")
         self.assertNotContains(response, 'data-console-context="vendor_dashboard"')
 
     def test_vendor_route_uses_vendor_layout_and_sidebar(self):

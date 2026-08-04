@@ -182,9 +182,13 @@ class TestIAS7CashFlowClassifier:
     def test_finalize_classification_high_confidence(self):
         """High confidence scores should produce high confidence classification."""
         classifier = IAS7CashFlowClassifier()
+        # (confidence, subcategory) — the subcategory travels with its score
+        # so the winning strategy's detail survives into the result. It used to
+        # be dropped and replaced by a class default, flattening op_salary to
+        # op_other on every classified invoice.
         scores = {
-            "operating": [0.95, 0.90],
-            "investing": [0.3],
+            "operating": [(0.95, "op_salary"), (0.90, "op_salary")],
+            "investing": [(0.3, "inv_equipment")],
             "financing": []
         }
         
@@ -198,15 +202,17 @@ class TestIAS7CashFlowClassifier:
         
         result = classifier._finalize_classification(scores, ["test"], MockInvoice())
         assert result["cash_flow_class"] == "operating"
-        assert result["cash_flow_confidence"] == 0.925
+        # The service rounds to two decimals; 0.925 is stored as 0.93. The
+        # test predated the rounding, not the other way round.
+        assert result["cash_flow_confidence"] == 0.93
 
     def test_finalize_classification_low_confidence(self):
         """Low confidence should result in unclassified with requires_review."""
         classifier = IAS7CashFlowClassifier()
         scores = {
-            "operating": [0.45],
-            "investing": [0.40],
-            "financing": [0.35]
+            "operating": [(0.45, "op_other")],
+            "investing": [(0.40, "inv_other")],
+            "financing": [(0.35, "fin_other")]
         }
         
         class MockInvoice:

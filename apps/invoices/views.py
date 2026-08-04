@@ -545,6 +545,26 @@ class InvoiceDetailView(generics.RetrieveUpdateDestroyAPIView):
             except Exception:
                 cross_links = {}
 
+            # Manual review: per field, what OCR read, what normalisation made
+            # of it, what the model extracted, and what a human corrected it
+            # to. The payload builder and the POST endpoint below both already
+            # existed; only the panel was missing from the page, so an auditor
+            # could not fix a misread field at all.
+            #
+            # Segregation of duties is resolved HERE rather than only on
+            # submit: the uploader gets the comparison read-only instead of a
+            # button that 403s after they have typed their corrections.
+            from apps.invoices.services.sod_service import (
+                SegregationOfDutiesError,
+                assert_can_review,
+            )
+
+            try:
+                assert_can_review(invoice, request.user)
+                review_blocked_reason = ""
+            except SegregationOfDutiesError as exc:
+                review_blocked_reason = exc.user_message
+
             return render(
                 request._request,
                 "invoices/detail_premium.html",
@@ -555,6 +575,8 @@ class InvoiceDetailView(generics.RetrieveUpdateDestroyAPIView):
                     invoice_display=_build_invoice_display(invoice),
                     audit_trail=audit_trail,
                     cross_links=cross_links,
+                    review=_build_review_payload(invoice),
+                    review_blocked_reason=review_blocked_reason,
                 ),
             )
 
@@ -681,10 +703,24 @@ class InvoiceApproveView(APIView):
             )
 
             if has_blocking and not is_override:
+                # Two different refusals used to share one message. An invoice
+                # that has never been audited was reported as having "critical
+                # audit failures", alongside blocking_count: 0 — telling the
+                # approver to go and fix findings that do not exist, when the
+                # actual next step is to run the audit. Both still block; only
+                # one of them is about findings.
+                if risk is None:
+                    return Response({
+                        "error": "لا يمكن الاعتماد — لم يُجرَ تدقيق لهذه الفاتورة بعد.",
+                        "error_en": "Approval blocked — this invoice has not been audited yet.",
+                        "code": "not_audited",
+                        "blocking_count": 0,
+                    }, status=403)
                 return Response({
                     "error": "لا يمكن الاعتماد — يوجد أخطاء حرجة تمنع الاعتماد.",
                     "error_en": "Approval blocked — critical audit failures exist.",
-                    "blocking_count": risk.blocking_failures if risk is not None else 0,
+                    "code": "blocking_failures",
+                    "blocking_count": risk.blocking_failures,
                 }, status=403)
 
             if is_override:

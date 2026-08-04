@@ -464,7 +464,13 @@ class TestAuthenticationIntegration(APITestCase):
                 
                 # Access protected endpoint
                 response = self.client.get("/api/v1/invoices/")
-                self.assertIn(response.status_code, [200, 400, 404])  # Accept various but not 401
+                # 402 is included deliberately: this test checks that the
+                # access token AUTHENTICATES, and 402 (Payment Required, from
+                # SubscriptionRequiredMiddleware) can only be reached after
+                # authentication succeeds. 401 is still the failure this
+                # asserts against.
+                self.assertIn(response.status_code, [200, 400, 402, 404])
+                self.assertNotEqual(response.status_code, 401)
         
         # 3. Logout (if endpoint exists)
         logout_response = self.client.post("/api/v1/auth/logout/", {}, format="json")

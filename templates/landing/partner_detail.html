@@ -94,25 +94,25 @@ custom properties because landing pages sit outside the Tailwind build.
 
   <div class="wrap">
     <div class="crumb">
-      <a href="/partners/">{% trans "Our Partners" %}</a> / <bdi>{{ partner_public.company_name }}</bdi>
+      <a href="/partners/">{% trans "Our Partners" %}</a> / <bdi>{{ partner_public.display_name }}</bdi>
     </div>
 
     <div class="head">
       <div class="logo-box">
         {% if partner_public.logo_url %}
-          <img src="{{ partner_public.logo_url }}" alt="{{ partner_public.company_name }}">
+          <img src="{{ partner_public.logo_url }}" alt="{{ partner_public.display_name }}">
         {% else %}
-          <span class="initials">{{ partner_public.company_name|slice:":2"|upper }}</span>
+          <span class="initials">{{ partner_public.display_name|slice:":2"|upper }}</span>
         {% endif %}
       </div>
       <div>
         <span class="badge">{{ partner.get_partner_tier_display|default:partner.get_partner_type_display|upper }}</span>
-        <h1 class="bidi-auto">{{ partner_public.company_name }}</h1>
+        <h1 class="bidi-auto">{{ partner_public.display_name }}</h1>
         <div class="meta">
           {% if partner_public.country_name %}{{ partner_public.country_name }} · {% endif %}
           {{ partner.get_partner_type_display }}
         </div>
-        <p class="bidi-auto" style="color:var(--text-muted);margin:12px 0 16px">{{ partner_public.short_description }}</p>
+        <p class="bidi-auto" style="color:var(--text-muted);margin:12px 0 16px">{{ partner_public.display_short_description }}</p>
         {% if partner_public.website %}
         <a href="{{ partner_public.website }}" class="btn-primary" target="_blank" rel="noopener noreferrer">
           {% trans "Visit website" %}
@@ -122,10 +122,10 @@ custom properties because landing pages sit outside the Tailwind build.
       </div>
     </div>
 
-    {% if partner_public.long_description %}
+    {% if partner_public.display_long_description %}
     <div class="body">
       <h2>{% trans "About the partner" %}</h2>
-      <p class="bidi-auto">{{ partner_public.long_description }}</p>
+      <p class="bidi-auto">{{ partner_public.display_long_description }}</p>
     </div>
     {% endif %}
   </div>

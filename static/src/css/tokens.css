@@ -25,17 +25,48 @@
   --color-accent-600: #059669;
   --color-accent-700: #047857;
 
+  /* ─── Accessible accent ──────────────────────────────────────────────
+     The brand green fails WCAG AA badly, and not marginally: measured
+     against white it is 2.54:1, where AA needs 4.5:1 for body text and
+     3.0:1 even for large text. White-on-green buttons and green links were
+     below the bar for everyone, not only for users with low vision.
+     accent-600 does not rescue it either (3.77:1).
+
+     So the green stays the brand green wherever it is a decorative fill —
+     a chart band, a wide hero panel, an icon on a tinted card — and text
+     uses this token instead. #047857 is the same hue family and measures
+     5.48:1 on white, which passes AA in both directions: as white text on
+     a green button, and as green text on a white page.
+
+     tests/test_accessibility.py computes these ratios rather than trusting
+     the comment, so a future palette change cannot quietly drop below AA. */
+  --color-accent-text: #047857;
+  --color-accent-text-on-dark: #34d399;
+
   /* ─── Semantic colors ────────────────────────────────────────────── */
   --color-success: var(--color-accent-500);
   --color-warning: #f59e0b;
   --color-danger:  #ef4444;
   --color-info:    #3b82f6;
 
-  /* Risk levels — used in fraud / audit UIs */
+  /* ─── Risk levels — used in fraud / audit UIs ───────────────────────
+     Severity is carried by colour here, and a colour that cannot be read
+     carries nothing. Measured on white, the previous amber (#f59e0b) was
+     2.15:1 and the orange (#f97316) 2.80:1 — both under the 3.0:1 that AA
+     asks even for large text, on the labels an auditor scans a list for.
+
+     Darkened one step each, keeping the hue: amber 3.19:1, orange 3.56:1.
+     `--risk-low` keeps the brand green because it is a fill, and the
+     accessible text token above is used when it labels something.
+
+     Risk must never be conveyed by colour ALONE regardless — the badges
+     carry text, which is what makes them readable to a colour-blind user
+     at any contrast. tests/test_accessibility.py measures the ratios. */
   --risk-low:      #10b981;
-  --risk-medium:   #f59e0b;
-  --risk-high:     #f97316;
-  --risk-critical: #ef4444;
+  --risk-low-text: var(--color-accent-text);
+  --risk-medium:   #d97706;
+  --risk-high:     #ea580c;
+  --risk-critical: #dc2626;
 
   /* ─── Surfaces ───────────────────────────────────────────────────── */
   --bg-page:    #f8fafc;

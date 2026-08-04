@@ -21,7 +21,13 @@ For non-trivial cell rendering, render the <table> directly using the
 `data-table` and `table-wrap` classes — this partial is only the basic
 shape.
 {% endcomment %}
-{% load i18n %}
+{% comment %}
+`ui_tags` as well as `i18n`: this file uses `|dict_get` on row 38, and an
+included template does NOT inherit the {% load %} tags of whatever included it.
+Django raises TemplateSyntaxError "Invalid filter: 'dict_get'" at render time —
+so the failure is a 500 on any page using this component, not a blank cell.
+{% endcomment %}
+{% load i18n ui_tags %}
 <div class="table-wrap" role="region" aria-label="{{ aria_label|default:_('Data table') }}" tabindex="0">
   <table class="data-table">
     <thead>

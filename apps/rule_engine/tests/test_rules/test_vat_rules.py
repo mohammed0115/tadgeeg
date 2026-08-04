@@ -136,7 +136,8 @@ class TestVATNumberFormatRule:
         self.rule = VATNumberFormatRule()
 
     def test_pass_valid_sa_vat_number(self):
-        doc = make_doc(tax_id="300012345678901")  # 15 digits, starts with 3
+        # ZATCA TRN: 15 digits that must start AND end with 3.
+        doc = make_doc(tax_id="300012345678903")  # 15 digits, starts+ends with 3
         result = self.rule.execute(doc)
         assert result.status == RuleStatus.PASS
 

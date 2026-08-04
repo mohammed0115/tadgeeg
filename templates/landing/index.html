@@ -1359,14 +1359,21 @@
           </button>
         </div>
 
+        {% comment %}
+        Counts, not performance percentages. 139 rule classes and 6 ERP
+        connectors are countable in the repository; "98% accuracy" was not
+        measured anywhere and is a contractual risk in front of an enterprise
+        buyer. Restore an accuracy figure only from an approved
+        AIValidationRun — see .ai-workspace/31-remediation-plan.md §1.2.
+        {% endcomment %}
         <div class="hero-stats">
           <div>
-            <div class="stat-value">95%</div>
-            <div class="stat-label">{% trans "Automation rate" %}</div>
+            <div class="stat-value">+130</div>
+            <div class="stat-label">{% trans "Automated audit rules" %}</div>
           </div>
           <div>
-            <div class="stat-value">98%</div>
-            <div class="stat-label">{% trans "Extraction accuracy" %}</div>
+            <div class="stat-value">6</div>
+            <div class="stat-label">{% trans "ERP integrations" %}</div>
           </div>
         </div>
       </div>
@@ -1650,32 +1657,55 @@
               <path d="M22 11l-9 11L4 13l9-11"/>
             </svg>
           </div>
-          <h3 class="feature-title">{% trans "95% Automation" %}</h3>
-          <p class="feature-desc">{% trans "Fully automated workflow for review and audit, minimizing human intervention." %}</p>
+          {% comment %}
+          This card replaced "95% Automation" — an unsourced performance claim.
+          The title deliberately does NOT repeat "Workflow Automation" from the
+          ten-card grid above; two cards with near-identical names on one page
+          read as a mistake. The distinguishing claim here is population
+          coverage (every entry, not a sample), which is a design property of
+          the engine and checkable, unlike a percentage.
+
+          NOTE: this older four-card grid and the ten-card grid above both
+          render, so the page shows "Fraud Detection" twice. That predates this
+          change and removing a marketing section is not a technical call —
+          recorded in .ai-workspace/31-remediation-plan.md.
+          {% endcomment %}
+          <h3 class="feature-title">{% trans "Every entry, not a sample" %}</h3>
+          <p class="feature-desc">{% trans "Automated review and audit across the full population, keeping the auditor's judgement on the exceptions." %}</p>
+        </div>
+
+        {% comment %}
+        "Fraud Detection" and "Smart Reports" were removed from this section:
+        both already appear in the ten-card grid above (the second as "Smart
+        Insights & Reports"), so the page listed the same capability twice and
+        read as a mistake.
+
+        What is left is the claim this section can make that the grid above
+        cannot — population coverage — plus the two below it. If the section
+        ever shrinks to a single card it should be folded into #features
+        entirely rather than padded back out with repeats.
+        {% endcomment %}
+
+        <div class="feature-card reveal">
+          <div class="feature-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <path d="M9 12l2 2 4-4"/>
+            </svg>
+          </div>
+          <h3 class="feature-title">{% trans "Evidence you can defend" %}</h3>
+          <p class="feature-desc">{% trans "Every finding names the rule, the field and the expected value, and every judgement is recorded against a person in a tamper-evident log." %}</p>
         </div>
 
         <div class="feature-card reveal">
           <div class="feature-icon">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-              <line x1="12" y1="9" x2="12" y2="13"/>
-              <line x1="12" y1="17" x2="12.01" y2="17"/>
+              <path d="M3 3v18h18"/>
+              <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
             </svg>
           </div>
-          <h3 class="feature-title">{% trans "Fraud Detection" %}</h3>
-          <p class="feature-desc">{% trans "Over 10 specialized algorithms to instantly detect fraud indicators and suspicious transactions." %}</p>
-        </div>
-
-        <div class="feature-card reveal">
-          <div class="feature-icon">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="20" x2="12" y2="10"/>
-              <line x1="18" y1="20" x2="18" y2="4"/>
-              <line x1="6" y1="20" x2="6" y2="16"/>
-            </svg>
-          </div>
-          <h3 class="feature-title">{% trans "Smart Reports" %}</h3>
-          <p class="feature-desc">{% trans "Generate comprehensive reports compliant with international standards in one click." %}</p>
+          <h3 class="feature-title">{% trans "Direction, not just a snapshot" %}</h3>
+          <p class="feature-desc">{% trans "Which rules and which vendors are deteriorating, with the months behind the trend shown alongside it." %}</p>
         </div>
       </div>
     </div>
@@ -1773,11 +1803,23 @@
   <footer class="footer">
     <div class="container">
       <div class="footer-content">
-        <div class="footer-brand">
-          {% if LANGUAGE_CODE == 'ar' %}
-            © كل الحقوق محفوظة من شركة <a href="https://gscompany.sa/" target="_blank" rel="noopener">احصل الحصل</a> 2026
-          {% else %}
-            © All rights reserved <a href="https://gscompany.sa/" target="_blank" rel="noopener">GSCompany</a> 2026
+        {% comment %}
+        The operating entity, from settings rather than typed here. Three
+        things were wrong with the hardcoded version:
+          · the Arabic read «احصل الحصل» — a typo in the company's own name,
+            on every visit to the public site;
+          · the year was frozen at 2026 and would silently go stale;
+          · neither string matched settings.COMPANY_NAME / COMPANY_NAME_AR, so
+            changing the legal name in one place changed nothing here.
+        {% endcomment %}
+        <div class="footer-brand" dir="auto" style="unicode-bidi:plaintext;">
+          © {% trans "All rights reserved" %} —
+          <a href="https://gscompany.sa/" target="_blank" rel="noopener">{{ company_display_name }}</a>
+          {% now "Y" %}
+          {% if company_cr %}
+            <span style="font-weight:400;font-size:12px;opacity:.75;">
+              · {% trans "CR" %} {{ company_cr }}
+            </span>
           {% endif %}
         </div>
         <div class="footer-right">

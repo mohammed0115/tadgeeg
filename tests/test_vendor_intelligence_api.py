@@ -66,7 +66,7 @@ def test_vendor_detail_endpoint_respects_tenant_isolation(authenticated_client, 
 
 
 @pytest.mark.django_db
-def test_vendor_dashboard_page_renders_new_intelligence_columns(web_client, auditor_user, organization):
+def test_vendor_dashboard_page_renders_new_intelligence_columns(web_client, auditor_user, organization, active_subscription):
     VendorProfile.objects.create(
         organization=organization,
         vendor_name="Dashboard Vendor",
@@ -76,6 +76,9 @@ def test_vendor_dashboard_page_renders_new_intelligence_columns(web_client, audi
         transaction_frequency_30d=4.0,
     )
 
+    # Arabic: the assertions below accept either language, but the page must
+    # be rendered in one of them consistently rather than half-translated.
+    web_client.cookies["django_language"] = "ar"
     web_client.force_login(auditor_user)
     response = web_client.get("/vendors/")
 

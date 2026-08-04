@@ -81,6 +81,9 @@
           <th>{% trans "Invoices" %}</th>
           <th>{% trans "Purchase Orders" %}</th>
           <th>{% trans "Total Amount" %}</th>
+          <th>{% trans "Risk Score" %}</th>
+          <th>{% trans "Frequency" %}</th>
+          <th>{% trans "Compliance" %}</th>
           <th>{% trans "Last Activity" %}</th>
           <th>{% trans "Status" %}</th>
         </tr>
@@ -99,6 +102,43 @@
             <td><span style="font-family:monospace;font-weight:700;">{{ v.invoice_count }}</span></td>
             <td><span style="font-family:monospace;font-weight:700;">{{ v.po_count }}</span></td>
             <td><span style="font-family:monospace;font-weight:700;">{{ v.total_amount|floatformat:2 }}</span> SAR</td>
+            {% comment %}
+            Vendor risk on the LIST, not only on the detail page. The score is
+            computed and stored on VendorProfile; showing it only after the
+            user has already picked a vendor is no help in picking one.
+
+            An unscored vendor renders "—", never 0: no profile means nobody
+            has assessed this vendor, which is a different fact from "assessed
+            and found low-risk" — and it is precisely the vendor an auditor
+            should look at.
+            {% endcomment %}
+            <td>
+              {% if v.risk_score is not None %}
+                <span class="badge {% if v.risk_tier == 'blocked' or v.risk_tier == 'high' %}badge-danger{% elif v.risk_tier == 'medium' %}badge-warning{% else %}badge-success{% endif %}"
+                      title="{% trans 'Risk tier' %}: {{ v.risk_tier|default:'—' }}">
+                  {{ v.risk_score|floatformat:0 }}<span style="opacity:.7;font-weight:400;"> / 100</span>
+                </span>
+              {% else %}
+                <span class="text-muted" title="{% trans 'This vendor has not been assessed yet' %}">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if v.frequency_30d is not None %}
+                <span style="font-family:monospace;">{{ v.frequency_30d|floatformat:1 }}</span>
+                <span class="text-muted" style="font-size:11px;">/ {% trans "30d" %}</span>
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if v.compliance_issues is None %}
+                <span class="text-muted">—</span>
+              {% elif v.compliance_issues %}
+                <span class="badge badge-warning">{{ v.compliance_issues }} {% trans "issues" %}</span>
+              {% else %}
+                <span class="badge badge-success">{% trans "Clear" %}</span>
+              {% endif %}
+            </td>
             <td class="text-muted">{{ v.last_activity|date:"Y-m-d"|default:"—" }}</td>
             <td>
               {% if v.is_verified %}
@@ -112,7 +152,7 @@
           </tr>
           {% endfor %}
         {% else %}
-          <tr><td colspan="7">
+          <tr><td colspan="10">
             <div class="empty-state">
               <div class="empty-state-icon">
                 <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>

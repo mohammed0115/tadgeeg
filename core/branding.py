@@ -48,6 +48,10 @@ def get_branding_context(language: str | None = None) -> dict:
         "company_name": company_name,
         "company_name_ar": company_name_ar,
         "company_display_name": company_display_name,
+        # Empty unless COMPANY_CR is set — see settings_canonical.py. Publishing
+        # a commercial registration number is a decision; rendering "CR: " with
+        # nothing after it would be worse than omitting the line.
+        "company_cr": getattr(settings, "COMPANY_CR", ""),
         "product_tagline": product_tagline,
         "product_tagline_ar": product_tagline_ar,
         "product_tagline_en": product_tagline_en,

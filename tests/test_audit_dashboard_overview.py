@@ -35,7 +35,7 @@ def test_dashboard_overview_returns_rule_group_metrics(authenticated_client, inv
 
 
 @pytest.mark.django_db
-def test_dashboard_data_endpoints_support_session_auth(web_client, auditor_user, invoice):
+def test_dashboard_data_endpoints_support_session_auth(web_client, auditor_user, invoice, active_subscription):
     web_client.force_login(auditor_user)
 
     overview = web_client.get("/api/v1/audit/dashboard/overview/")

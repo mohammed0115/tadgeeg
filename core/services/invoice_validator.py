@@ -160,42 +160,57 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
     # INV-001: invoice number
     ok = bool(invoice.invoice_number and invoice.invoice_number.strip())
     results["INV-001"] = _rule(ok, RULES["INV-001"],
-                               "رقم الفاتورة موجود" if ok else "رقم الفاتورة مفقود")
+                               "رقم الفاتورة موجود" if ok else "رقم الفاتورة مفقود",
+                               field="invoice_number", actual=invoice.invoice_number or "",
+                               expected="قيمة غير فارغة")
     _record(ok, "INV-001", passed, failed)
 
     # INV-002: date
     ok = invoice.invoice_date is not None
     results["INV-002"] = _rule(ok, RULES["INV-002"],
-                               f"التاريخ: {invoice.invoice_date}" if ok else "تاريخ الفاتورة مفقود")
+                               f"التاريخ: {invoice.invoice_date}" if ok else "تاريخ الفاتورة مفقود",
+                               field="invoice_date", actual=str(invoice.invoice_date or ""),
+                               expected="تاريخ صالح")
     _record(ok, "INV-002", passed, failed)
 
     # INV-003: vendor name
     ok = bool(invoice.vendor_name and invoice.vendor_name.strip())
     results["INV-003"] = _rule(ok, RULES["INV-003"],
-                               f"المورد: {invoice.vendor_name}" if ok else "اسم المورد مفقود")
+                               f"المورد: {invoice.vendor_name}" if ok else "اسم المورد مفقود",
+                               field="vendor_name", actual=invoice.vendor_name or "",
+                               expected="قيمة غير فارغة")
     _record(ok, "INV-003", passed, failed)
 
     # INV-004: vendor VAT number
     ok = bool(invoice.vendor_vat_number and invoice.vendor_vat_number.strip())
     results["INV-004"] = _rule(ok, RULES["INV-004"],
-                               f"الرقم الضريبي: {invoice.vendor_vat_number}" if ok else "الرقم الضريبي للمورد مفقود")
+                               f"الرقم الضريبي: {invoice.vendor_vat_number}" if ok else "الرقم الضريبي للمورد مفقود",
+                               field="vendor_vat_number", actual=invoice.vendor_vat_number or "",
+                               expected="رقم ضريبي من 15 خانة")
     _record(ok, "INV-004", passed, failed)
 
     # INV-005: total amount field exists
     ok = invoice.total_amount is not None
-    results["INV-005"] = _rule(ok, RULES["INV-005"], "حقل المبلغ الإجمالي موجود" if ok else "حقل المبلغ الإجمالي مفقود")
+    results["INV-005"] = _rule(ok, RULES["INV-005"],
+                               "حقل المبلغ الإجمالي موجود" if ok else "حقل المبلغ الإجمالي مفقود",
+                               field="total_amount", actual=str(invoice.total_amount or ""),
+                               expected="قيمة موجودة")
     _record(ok, "INV-005", passed, failed)
 
     # INV-006: currency
     ok = bool(invoice.currency and invoice.currency.strip())
     results["INV-006"] = _rule(ok, RULES["INV-006"],
-                               f"العملة: {invoice.currency}" if ok else "العملة غير محددة")
+                               f"العملة: {invoice.currency}" if ok else "العملة غير محددة",
+                               field="currency", actual=invoice.currency or "",
+                               expected="رمز عملة (مثل SAR)")
     _record(ok, "INV-006", passed, failed)
 
     # INV-007: total > 0
     ok = float(invoice.total_amount or 0) > 0
     results["INV-007"] = _rule(ok, RULES["INV-007"],
-                               f"الإجمالي = {invoice.total_amount}" if ok else f"الإجمالي = {invoice.total_amount} (يجب أن يكون أكبر من صفر)")
+                               f"الإجمالي = {invoice.total_amount}" if ok else f"الإجمالي = {invoice.total_amount} (يجب أن يكون أكبر من صفر)",
+                               field="total_amount", actual=str(invoice.total_amount or 0),
+                               expected="أكبر من صفر")
     _record(ok, "INV-007", passed, failed)
 
     # INV-008: VAT without base
@@ -203,7 +218,9 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
     sub = float(invoice.subtotal or 0)
     ok = not (vat > 0 and sub == 0)  # True means NO violation
     results["INV-008"] = _rule(ok, RULES["INV-008"],
-                               "الضريبة مرتبطة بالمجموع الفرعي بشكل صحيح" if ok else "الضريبة موجودة لكن المجموع الفرعي صفر")
+                               "الضريبة مرتبطة بالمجموع الفرعي بشكل صحيح" if ok else "الضريبة موجودة لكن المجموع الفرعي صفر",
+                               field="subtotal", actual=f"subtotal={sub}, vat={vat}",
+                               expected="مجموع فرعي أكبر من صفر متى وُجدت ضريبة")
     _record(ok, "INV-008", passed, failed)
 
     # ─── Group 2: Duplicate Detection ────────────────────────────────────────
@@ -290,7 +307,9 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
     ok = abs(actual_rate - expected_rate) < 0.5
     results["VAT-001"] = _rule(ok, RULES["VAT-001"],
                                f"نسبة الضريبة {actual_rate}% ✓" if ok else
-                               f"نسبة الضريبة {actual_rate}% (المتوقع {expected_rate}%)")
+                               f"نسبة الضريبة {actual_rate}% (المتوقع {expected_rate}%)",
+                               field="vat_rate", actual=actual_rate,
+                               expected=f"{expected_rate}% (±0.5)")
     _record(ok, "VAT-001", passed, failed)
 
     # VAT-002: vat_amount = subtotal × rate
@@ -302,7 +321,10 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
     else:
         ok = float(invoice.vat_amount or 0) == 0
         msg = "لا ضريبة على مجموع فرعي صفري — صحيح" if ok else "الضريبة موجودة لكن المجموع الفرعي صفر"
-    results["VAT-002"] = _rule(ok, RULES["VAT-002"], msg)
+    results["VAT-002"] = _rule(ok, RULES["VAT-002"], msg,
+                               field="vat_amount", actual=float(invoice.vat_amount or 0),
+                               expected=(f"{expected_vat} (= {sub} × {invoice.vat_rate or 0}%)"
+                                         if sub > 0 else "صفر، لأن المجموع الفرعي صفر"))
     _record(ok, "VAT-002", passed, failed)
 
     # VAT-003: subtotal + vat = total
@@ -311,13 +333,17 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
     ok = abs(total - expected_total) < 1.0
     results["VAT-003"] = _rule(ok, RULES["VAT-003"],
                                "المجموع الفرعي + الضريبة = الإجمالي ✓" if ok else
-                               f"المجموع({sub}) + الضريبة({invoice.vat_amount}) = {expected_total} ≠ الإجمالي({total})")
+                               f"المجموع({sub}) + الضريبة({invoice.vat_amount}) = {expected_total} ≠ الإجمالي({total})",
+                               field="total_amount", actual=total,
+                               expected=f"{expected_total} (= {sub} + {invoice.vat_amount or 0} − {invoice.discount or 0})")
     _record(ok, "VAT-003", passed, failed)
 
     # VAT-004: VAT number present
     ok = bool(invoice.vendor_vat_number and invoice.vendor_vat_number.strip())
     results["VAT-004"] = _rule(ok, RULES["VAT-004"],
-                               f"الرقم الضريبي: {invoice.vendor_vat_number}" if ok else "الرقم الضريبي للمورد مفقود")
+                               f"الرقم الضريبي: {invoice.vendor_vat_number}" if ok else "الرقم الضريبي للمورد مفقود",
+                               field="vendor_vat_number", actual=invoice.vendor_vat_number or "",
+                               expected="رقم ضريبي غير فارغ")
     _record(ok, "VAT-004", passed, failed)
 
     # VAT-005: QR code (ZATCA FATOORAH compliance)
@@ -329,7 +355,10 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
     else:
         msg = "رمز QR موجود وصالح ✓"
     results["VAT-005"] = _rule(ok, RULES["VAT-005"], msg,
-                               severity="high" if not ok else "info")
+                               severity="high" if not ok else "info",
+                               field="qr_code_valid",
+                               actual=f"has_qr={invoice.has_qr_code}, valid={invoice.qr_code_valid}",
+                               expected="رمز QR موجود ومُتحقَّق منه")
     _record(ok, "VAT-005", passed, failed)
 
     # ─── Group 4: Anomaly Detection ──────────────────────────────────────────
@@ -519,13 +548,39 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
     }
 
 
-def _rule(passed: bool, description: str, message: str, severity: str = "high") -> dict:
-    return {
+def _rule(passed: bool, description: str, message: str, severity: str = "high",
+          *, field: str = "", actual=None, expected: str = "") -> dict:
+    """One rule outcome, with machine-readable evidence when the caller has it.
+
+    `message` is Arabic prose for a human — "الإجمالي = 0 (يجب أن يكون أكبر من
+    صفر)". That reads well and is useless to everything else: a UI cannot
+    highlight the offending field from it, `rule_precision` cannot group
+    misfires by field, and an auditor cannot be shown *why* the engine decided
+    this without reading a sentence per finding.
+
+    So the three parts of a judgement are also carried separately:
+      · `field`    — the invoice attribute the rule looked at
+      · `actual`   — what it found there
+      · `expected` — what would have passed, in words
+
+    Absent keys rather than nulls: a caller that has no structured evidence
+    should produce a result that says so, not one claiming `actual=None` — the
+    same "unmeasured is not zero" distinction the quota and precision code
+    keeps. Consumers use `.get("field")`.
+    """
+    result = {
         "passed": passed,
         "description": description,
         "message": message,
         "severity": severity if not passed else "info",
     }
+    if field:
+        result["field"] = field
+    if actual is not None:
+        result["actual"] = actual
+    if expected:
+        result["expected"] = expected
+    return result
 
 
 def _record(ok: bool, code: str, passed: list, failed: list):

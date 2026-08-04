@@ -76,11 +76,35 @@ def test_csr_contains_required_subject_and_oids():
 
 
 def test_fernet_round_trip(settings):
-    settings.ZATCA_FERNET_KEY = ""  # use the SECRET_KEY-derived fallback
+    """Encryption round-trips with a real, dedicated key.
+
+    This used to clear ZATCA_FERNET_KEY and rely on the SECRET_KEY-derived
+    fallback. That fallback is now DEBUG-only on purpose — deriving an EGS key
+    from SECRET_KEY means one SECRET_KEY leak exposes every tenant's private
+    key — so with DEBUG=False the old test could only have passed by the guard
+    not existing. The three tests here pin all three behaviours instead.
+    """
+    from cryptography.fernet import Fernet
+
+    settings.ZATCA_FERNET_KEY = Fernet.generate_key().decode()
     plaintext = b"super-secret-private-key"
     enc = cryp.encrypt_secret(plaintext)
     assert enc != plaintext
     assert cryp.decrypt_secret(enc) == plaintext
+
+
+def test_production_refuses_to_derive_the_egs_key_from_secret_key(settings):
+    """THE security property. Silence here would be a quiet downgrade."""
+    settings.ZATCA_FERNET_KEY = ""
+    settings.DEBUG = False
+    with pytest.raises(RuntimeError, match="SEPARATE from SECRET_KEY"):
+        cryp.encrypt_secret(b"x")
+
+
+def test_development_may_still_derive_a_key_so_local_setup_needs_no_config(settings):
+    settings.ZATCA_FERNET_KEY = ""
+    settings.DEBUG = True
+    assert cryp.decrypt_secret(cryp.encrypt_secret(b"x")) == b"x"
 
 
 def test_canonicalise_yields_stable_bytes():

@@ -75,6 +75,10 @@ services:
       - ./env/live.env
     environment:
       - REDIS_URL=redis://redis:6379/0
+      # No statement timeout for workers: an audit run legitimately reads for
+      # minutes. The 30s default exists to protect gunicorn workers, which
+      # celery is not. See core/utils/database.py.
+      - DB_STATEMENT_TIMEOUT_MS=0
     depends_on:
       db_live:
         condition: service_healthy
@@ -142,6 +146,7 @@ services:
       - ./env/dev.env
     environment:
       - REDIS_URL=redis://redis:6379/1
+      - DB_STATEMENT_TIMEOUT_MS=0  # see celery_live
     depends_on:
       db_dev:
         condition: service_healthy

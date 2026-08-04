@@ -979,6 +979,14 @@ class ReportPDFView(APIView):
         # HTML fallback: browser can use Ctrl+P → Save as PDF
         response = HttpResponse(html_str, content_type="text/html; charset=utf-8")
         response["Content-Disposition"] = _attachment_disposition(f"{safe_title}.html")
+        # The content type and the .html filename already tell a browser the
+        # truth. An API client that only checks `status == 200` would not
+        # notice, and would write HTML into a file it calls report.pdf — which
+        # then gets attached to a workpaper. This header is the unambiguous
+        # signal for that caller.
+        # Same header name InvoiceAuditReportPDFView already uses — one signal,
+        # not two, so a client checks one thing across every PDF endpoint.
+        response["X-Report-PDF-Fallback"] = "html"
         return response
 
 

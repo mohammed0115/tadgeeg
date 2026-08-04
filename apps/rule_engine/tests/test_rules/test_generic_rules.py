@@ -69,11 +69,12 @@ class TestDocumentDateRule:
         result = self.rule.execute(doc)
         assert result.status == RuleStatus.PASS
 
-    def test_pass_future_date_present(self):
-        # Rule only checks presence, not future-date logic
+    def test_fail_future_date(self):
+        # The rule rejects future document dates — a document date cannot be
+        # in the future (GEN-H02 checks both presence and validity).
         doc = make_doc(document_date=date.today() + timedelta(days=5))
         result = self.rule.execute(doc)
-        assert result.status == RuleStatus.PASS
+        assert result.status == RuleStatus.FAIL
 
     def test_fail_missing_date(self):
         doc = make_doc(document_date=None)

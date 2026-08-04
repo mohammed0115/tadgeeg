@@ -17,8 +17,12 @@ from . import views_report as vrep
 from . import views_member as vmem
 from . import views_rule_builder as rb
 from . import views_trial_balance as tb
+from . import views_finding_feedback as vff
 
 urlpatterns = [
+    # Feedback loop — the only place the engine learns whether it was right.
+    path("findings/<uuid:pk>/verdict/", vff.FindingVerdictView.as_view(), name="finding-verdict"),
+    path("rule-precision/", vff.RulePrecisionView.as_view(), name="rule-precision"),
     # TADGEEG-FIN-AUDIT-1B — Trial Balance upload/list/detail + account mapping.
     path("trial-balance/imports/", tb.TrialBalanceImportListCreateView.as_view(), name="tb-import-list"),
     path("trial-balance/imports/<uuid:pk>/", tb.TrialBalanceImportDetailView.as_view(), name="tb-import-detail"),

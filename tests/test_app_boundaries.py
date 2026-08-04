@@ -48,6 +48,12 @@ NOT_DJANGO_APPS = {
     "system_monitoring": "views only, no models",
     "organization_users": "views only, no models",
     "organization_admin": "views only, no models",
+
+    # A Facade over apps.audit / apps.auditing / apps.audit_engine, not a
+    # Django app: it holds a shared vocabulary and the adapters between the
+    # engines, and deliberately re-exports no models. Installing it would
+    # imply it owns tables, which is the opposite of the point.
+    "audit_platform": "facade over the three audit apps — vocabulary only, no models",
 }
 
 

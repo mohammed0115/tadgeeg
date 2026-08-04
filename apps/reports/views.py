@@ -46,10 +46,82 @@ def _attachment_disposition(filename: str) -> str:
     return f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{quote(filename)}"
 
 
+#: Networks a report is never allowed to fetch from. Link-local first: on any
+#: cloud host 169.254.169.254 serves instance credentials to whoever asks, and
+#: "whoever asks" includes a PDF renderer resolving a URL it found in the HTML.
+_BLOCKED_NETWORKS = (
+    "127.0.0.0/8", "::1/128",              # loopback — the app's own admin
+    "169.254.0.0/16", "fe80::/10",         # link-local — cloud metadata
+    "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7",  # private
+    "0.0.0.0/8", "100.64.0.0/10",          # this-network, CGNAT
+)
+
+
+def _safe_url_fetcher(url: str):
+    """WeasyPrint fetcher that refuses internal addresses.
+
+    A report is rendered from tenant data — vendor names, descriptions and
+    fields that arrived through OCR of an uploaded document. If any of that
+    ever reaches an `<img src>`, a `url()`, or an `@import`, WeasyPrint will
+    resolve it *from the server*, inside the network, with whatever the server
+    can reach. That is a server-side request forgery whose trigger is uploading
+    an invoice, and the payoff on a cloud host is instance credentials.
+
+    WeasyPrint 68.1 had a CSS-injection variant of exactly this
+    (PYSEC-2026-3412, PoC pointed at 169.254.169.254). Upgrading closes that
+    one. This closes the category: no matter which parser bug or which template
+    change opens a path, the fetch itself is refused.
+
+    DNS is resolved before the decision, because a name that looks external can
+    point anywhere — `metadata.attacker.com` resolving to 169.254.169.254 is
+    the standard bypass for a string-matching blocklist.
+    """
+    import ipaddress
+    import socket
+    from urllib.parse import urlsplit
+
+    from weasyprint import default_url_fetcher
+
+    parts = urlsplit(url)
+
+    # data: and file-less inline URIs carry no network request.
+    if parts.scheme in ("data", ""):
+        return default_url_fetcher(url)
+
+    if parts.scheme not in ("http", "https"):
+        raise ValueError(f"Refusing to fetch a {parts.scheme!r} URL while rendering a report.")
+
+    host = parts.hostname or ""
+    try:
+        resolved = {info[4][0] for info in socket.getaddrinfo(host, None)}
+    except (socket.gaierror, UnicodeError) as exc:
+        raise ValueError(f"Refusing to fetch {host!r}: {exc}") from exc
+
+    blocked = [ipaddress.ip_network(network) for network in _BLOCKED_NETWORKS]
+    for address in resolved:
+        ip = ipaddress.ip_address(address)
+        if any(ip in network for network in blocked):
+            logger.warning(
+                "report render refused an internal URL: host=%s resolved=%s", host, address,
+            )
+            raise ValueError(
+                f"Refusing to fetch an internal address ({address}) while rendering a report."
+            )
+
+    return default_url_fetcher(url)
+
+
 def _render_report_pdf_bytes(html_str: str, base_url: str) -> bytes:
     from weasyprint import HTML as WP_HTML
 
-    return WP_HTML(string=html_str, base_url=base_url).write_pdf()
+    return WP_HTML(
+        string=html_str,
+        base_url=base_url,
+        url_fetcher=_safe_url_fetcher,
+        # Already the default; stated so a future edit has to argue with the
+        # comment. Presentational hints are what made PYSEC-2026-3412 exploitable.
+        media_type="print",
+    ).write_pdf(presentational_hints=False)
 
 
 def _render_report_pdf_cached(report_id, language: str, html_str: str, base_url: str) -> bytes:

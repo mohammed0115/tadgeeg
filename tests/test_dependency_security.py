@@ -34,6 +34,16 @@ MINIMUM_SAFE = {
     "idna": (3, 15),             # PYSEC-2026-215
     "msgpack": (1, 2, 1),        # GHSA-6v7p-g79w-8964
     "cryptography": (48, 0, 1),  # GHSA-537c-gmf6-5ccf
+    # click.edit() command injection. Transitive via celery and the function is
+    # not called here, so the exposure was theoretical — pinned anyway, because
+    # "we do not call it" is a claim about today's code.
+    "click": (8, 3, 3),          # PYSEC-2026-2132
+    # requests.utils.extract_zipped_paths() predictable temp filename.
+    "requests": (2, 33, 0),      # PYSEC-2026-2275
+    # CSS injection -> SSRF while rendering a report. The published PoC points
+    # at 169.254.169.254; see tests/test_pdf_ssrf.py for the defence in depth
+    # that holds even if a future parser bug reopens the path.
+    "weasyprint": (69, 0),       # PYSEC-2026-3412
 }
 
 

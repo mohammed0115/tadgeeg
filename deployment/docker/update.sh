@@ -258,7 +258,17 @@ for svc in $(web_services_for_target "$TARGET"); do
   for _ in $(seq 1 120); do
     case "$svc" in
       celery*)
-        compose exec -T "$svc" sh -c 'pgrep -f "celery.*worker" >/dev/null' 2>/dev/null \
+        # `pgrep -f "celery.*worker"` was the check, and it could never pass:
+        # python:3.12-slim ships without procps, so pgrep does not exist in the
+        # image. Every deploy waited the full ten minutes and then declared a
+        # worker dead that had logged "celery@… ready" minutes earlier.
+        #
+        # `inspect ping` is the better signal anyway, not merely a working one.
+        # A process existing proves nothing: a worker that cannot reach Redis,
+        # or is stuck importing, still shows up in a process list. A pong came
+        # back over the broker, which is the thing that has to work.
+        compose exec -T "$svc" celery -A finai_backend inspect ping --timeout 5 2>/dev/null \
+          | grep -q "pong" \
           && { ready=1; printf ' ready\n'; break; } ;;
       *)
         compose exec -T "$svc" sh -c \
@@ -282,6 +292,13 @@ for svc in $(web_services_for_target "$TARGET"); do
     compose logs --tail=40 "$svc" || true
     exit 1
   }
+
+  # The migration checks below query the DATABASE, and web + celery share one.
+  # Running them again against the worker asks the same question of the same
+  # database and costs a minute per deploy for an answer already given.
+  case "$svc" in
+    celery*) ok "$svc: ready (migrations verified via its web counterpart)"; continue ;;
+  esac
 
   # showmigrations --plan marks unapplied ones with "[ ]".
   UNAPPLIED="$(compose exec -T "$svc" python manage.py showmigrations --plan 2>/dev/null \

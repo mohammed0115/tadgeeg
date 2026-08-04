@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 urlpatterns = [
+    path("live/", views.LiveMetricsView.as_view(), name="live-metrics"),
     path("detect-anomalies/", views.AnomalyDetectionView.as_view(), name="detect-anomalies"),
     path("anomalies/detect/", views.AnomalyDetectionView.as_view(), name="anomaly-detect"),
     path("fraud/score/", views.FraudScoringView.as_view(), name="fraud-score"),

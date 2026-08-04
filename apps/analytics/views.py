@@ -681,3 +681,31 @@ class IndustryBenchmarkView(APIView):
             },
             "available_industries": {k: v["label"] for k, v in self.BENCHMARKS.items()},
         })
+
+
+class LiveMetricsView(APIView):
+    """GET /api/v1/analytics/live/ — operational counters for the caller's org.
+
+    Polled, not pushed. The WebSocket stack in this project cannot run —
+    production serves WSGI — so a socket-shaped API would be a promise the
+    deployment cannot keep. See apps/analytics/live_metrics.py.
+
+    `?fresh=1` bypasses the cache. For a human clicking refresh, not for the
+    poller: caching is what keeps this endpoint from becoming a load test
+    against the tenant's own database.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        organization = getattr(request.user, "organization", None)
+        if organization is None:
+            return Response(
+                {"detail": "User is not attached to an organization."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from apps.analytics.live_metrics import get_live_metrics
+
+        use_cache = request.query_params.get("fresh") != "1"
+        return Response(get_live_metrics(organization, use_cache=use_cache).as_dict())

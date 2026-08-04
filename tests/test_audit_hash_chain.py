@@ -243,8 +243,12 @@ def test_backfill_is_deterministic(db, invoice, user):
     head1 = rep1.head_hash
 
     # Wipe + rebuild.
+    # chain_position=None, not 0. An unchained row now has no position at all:
+    # 0 was a value, so N unchained rows in a partition were N copies of
+    # (partition, 0) and collided on the unique constraint that makes a fork
+    # impossible. NULL is the one "unset" a unique index ignores.
     InvoiceAuditEvent.objects.all().update(
-        previous_hash="", event_hash="", chain_position=0,
+        previous_hash="", event_hash="", chain_position=None, chain_partition="",
     )
     call_command("backfill_audit_chain", verbosity=0)
 

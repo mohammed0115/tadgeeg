@@ -236,10 +236,18 @@ class JournalEntry(HashChainMixin):
                 name="ledger_je_unique_idempotency_per_org",
                 condition=models.Q(idempotency_key__gt=""),
             ),
+            # Fork prevention — see HashChainMixin's docstring.
+            models.UniqueConstraint(
+                fields=["chain_partition", "chain_position"],
+                name="uniq_chain_position_journalentry",
+            ),
         ]
         indexes = [
             models.Index(fields=["organization", "entry_date", "status"]),
             models.Index(fields=["organization", "source", "source_object_id"]),
+            # Serves the chain-head lookup.
+            models.Index(fields=["chain_partition", "chain_position"],
+                         name="journalentry_chain_idx"),
         ]
 
     def __str__(self) -> str:

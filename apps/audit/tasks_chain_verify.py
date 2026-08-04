@@ -25,26 +25,37 @@ logger = logging.getLogger("audit.chain_verify")
 
 
 def _chained_models():
-    """Concrete subclasses of HashChainMixin to verify."""
-    # Lazy imports — avoid hard imports at module load so an app missing
-    # in a deployment doesn't break Celery worker startup.
-    models = []
-    try:
-        from apps.invoices.models import InvoiceAuditEvent
-        models.append(InvoiceAuditEvent)
-    except Exception:                       # pragma: no cover
-        pass
-    try:
-        from apps.ledger.models import JournalEntry
-        models.append(JournalEntry)
-    except Exception:                       # pragma: no cover
-        pass
-    try:
-        from apps.audit.models import WorkingPaper
-        models.append(WorkingPaper)
-    except Exception:                       # pragma: no cover
-        pass
-    return models
+    """Every concrete subclass of HashChainMixin, discovered rather than listed.
+
+    This used to be a hand-maintained list of three imports, and it drifted
+    exactly as hand-maintained lists do: when AuditLog and ActivityLog moved
+    onto the chain, the migration that rebuilt them described itself as
+    establishing "a verifiable baseline from this migration forward" — and the
+    job that does the verifying never looked at them. The customer-facing
+    integrity page had auto-discovered subclasses all along, so a break would
+    have been shown to an auditor while raising no alert at all.
+
+    Discovery keeps the two in step by construction. A model joining the chain
+    is now verified because it joined, not because someone also remembered to
+    edit this file.
+    """
+    from apps.audit.integrity import HashChainMixin
+
+    discovered: list[type] = []
+    seen: set[type] = set()
+    stack = list(HashChainMixin.__subclasses__())
+
+    while stack:
+        cls = stack.pop()
+        if cls in seen:
+            continue
+        seen.add(cls)
+        stack.extend(cls.__subclasses__())
+        if getattr(cls._meta, "abstract", False):
+            continue
+        discovered.append(cls)
+
+    return sorted(discovered, key=lambda c: c.__name__)
 
 
 @shared_task(name="audit.verify_chains_nightly")

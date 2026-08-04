@@ -611,6 +611,17 @@ class InvoiceAuditEvent(HashChainMixin):
         ordering = ["-timestamp"]
         indexes = [
             models.Index(fields=["invoice", "chain_position"]),
+            # Serves the chain-head lookup, which now filters on the frozen
+            # partition instead of joining through invoice__organization_id.
+            models.Index(fields=["chain_partition", "chain_position"],
+                         name="invauditevent_chain_idx"),
+        ]
+        constraints = [
+            # Fork prevention — see HashChainMixin's docstring.
+            models.UniqueConstraint(
+                fields=["chain_partition", "chain_position"],
+                name="uniq_chain_position_invoiceauditevent",
+            ),
         ]
 
     def __str__(self):

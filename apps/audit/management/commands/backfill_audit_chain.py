@@ -95,19 +95,28 @@ class Command(BaseCommand):
                     skipped += 1
                     continue
 
+                # Freeze the partition and any model snapshot first — both are
+                # inside the hash material, and the partition is what the
+                # unique constraint and every later lookup filter on. Omitting
+                # it leaves every tenant's rows in partition "", which collides
+                # on the constraint and makes verification find nothing.
+                row.chain_partition = str(org_id or "")
+                row._freeze_chain_snapshot()
                 row.previous_hash  = previous_hash
                 row.chain_position = position
                 event_hash = row.compute_hash(previous_hash)
                 row.event_hash = event_hash
+                row._after_chain_assigned()
 
                 if not dry_run:
                     # Bypass the pre_save signal — it would refuse to set a
                     # hash on a row that already has a pk + zero-length hash.
-                    Model.objects.filter(pk=row.pk).update(
-                        previous_hash=row.previous_hash,
-                        event_hash=row.event_hash,
-                        chain_position=row.chain_position,
-                    )
+                    # Written from _chain_written_fields() rather than a hand
+                    # list so a new chain column cannot be forgotten here.
+                    Model.objects.filter(pk=row.pk).update(**{
+                        name: getattr(row, name)
+                        for name in Model._chain_written_fields()
+                    })
 
                 previous_hash = event_hash
                 position += 1

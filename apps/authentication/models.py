@@ -408,6 +408,16 @@ class AuditLog(HashChainMixin):
     # New code should read event_hash.
     chain_hash = models.CharField(max_length=64, blank=True, db_index=True)
 
+    # Actor id frozen at write time.
+    #
+    # `user` is on_delete=SET_NULL, and the hash commits to who acted. Deleting
+    # a user therefore rewrote the hashed payload of every row they appear in
+    # and made a routine, legitimate operation look like tampering. An audit
+    # trail has to outlive its actors, so the id is copied here at chain time
+    # and the payload reads this instead of the FK.
+    chain_actor = models.CharField(max_length=64, blank=True, default="",
+                                   help_text="user id frozen at write time; survives user deletion")
+
     class Meta:
         db_table = "audit_logs"
         ordering = ["-timestamp"]
@@ -415,6 +425,20 @@ class AuditLog(HashChainMixin):
             models.Index(fields=["user", "timestamp"]),
             models.Index(fields=["organization", "timestamp"]),
             models.Index(fields=["action"]),
+            # Serves the chain-head lookup (partition + max position). Without
+            # it that query filtered on one column and sorted on another, so
+            # MySQL filesorted the whole partition on every single append.
+            models.Index(fields=["chain_partition", "chain_position"],
+                         name="auditlog_chain_idx"),
+        ]
+        constraints = [
+            # This is the fork prevention — see HashChainMixin's docstring.
+            # Declared per concrete model because these classes define their
+            # own Meta and so do not inherit the abstract parent's.
+            models.UniqueConstraint(
+                fields=["chain_partition", "chain_position"],
+                name="uniq_chain_position_auditlog",
+            ),
         ]
 
     def save(self, *args, **kwargs):
@@ -437,22 +461,29 @@ class AuditLog(HashChainMixin):
                 )
             return super().save(*args, **kwargs)
 
-        # Insert path — chaining is HashChainMixin's pre_save signal, which
-        # holds the row lock. Doing it here would run outside that lock and
-        # reintroduce the fork.
-        result = super().save(*args, **kwargs)
-        if self.event_hash and self.chain_hash != self.event_hash:
-            # Mirror for existing readers. update() rather than save() so the
-            # append-only guard above does not reject its own bookkeeping.
-            AuditLog.objects.filter(pk=self.pk).update(chain_hash=self.event_hash)
-            self.chain_hash = self.event_hash
-        return result
+        # Insert path — chaining belongs to HashChainMixin, which assigns the
+        # fields in pre_save and retries the insert if another writer took the
+        # position first. `chain_hash` is populated there too, via
+        # _after_chain_assigned, so it lands in the same INSERT.
+        return super().save(*args, **kwargs)
 
     # ── HashChainMixin contract ────────────────────────────────────────────
 
     @classmethod
     def _chain_org_filter_key(cls) -> str:
         return "organization_id"
+
+    @classmethod
+    def _chain_requires_all_rows(cls) -> bool:
+        """Every audit row must be chained — there is no legitimate unchained
+        one, so an unchained row is a bug or an attempt to hide an entry."""
+        return True
+
+    def _freeze_chain_snapshot(self) -> None:
+        self.chain_actor = str(self.user_id or "")
+
+    def _after_chain_assigned(self) -> None:
+        self.chain_hash = self.event_hash
 
     def _chain_organization_id(self):
         """Entries with no organisation share one platform-level chain.
@@ -466,15 +497,21 @@ class AuditLog(HashChainMixin):
     def _chain_payload(self) -> dict:
         """The immutable snapshot the hash commits to.
 
-        Same fields the previous implementation committed to, so the meaning of
-        "tampered" does not change — only how the chain is built. `timestamp`
-        stays out for the reason documented on InvoiceAuditEvent: auto_now_add
-        fires after the chain signal, so it is None at hashing time.
+        Every value here must be immutable for the life of the row, or a
+        routine operation elsewhere silently invalidates the hash. That is why
+        the actor and organisation are read from the frozen `chain_actor` and
+        `chain_partition` columns rather than from the FKs: both FKs are
+        on_delete=SET_NULL, so deleting a user or a tenant used to rewrite the
+        hashed payload and report tampering that never happened.
+
+        `timestamp` stays out for the reason documented on InvoiceAuditEvent:
+        auto_now_add fires after the chain signal, so it is None at hashing
+        time.
         """
         return {
             "action": self.action,
-            "user_id": str(self.user_id) if self.user_id else None,
-            "organization_id": str(self.organization_id) if self.organization_id else None,
+            "user_id": self.chain_actor or None,
+            "organization_id": self.chain_partition or None,
             "resource_type": self.resource_type,
             "resource_id": self.resource_id,
             "details": self.details,

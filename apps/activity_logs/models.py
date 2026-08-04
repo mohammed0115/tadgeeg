@@ -1,5 +1,3 @@
-import hashlib
-import json
 import uuid
 
 from django.conf import settings
@@ -72,10 +70,22 @@ class ActivityLog(HashChainMixin):
     created_at = models.DateTimeField(auto_now_add=True)
 
     # Tamper-evidence comes from HashChainMixin: previous_hash, event_hash and
-    # chain_position. The hand-rolled `chain_hash` that used to live here
-    # ordered by created_at and took no lock, so two writes in the same
-    # microsecond both chained off the same predecessor and forked the chain
-    # without raising. See tests/test_audit_trail_integrity.py.
+    # chain_position. The hand-rolled chain that used to live here ordered by
+    # created_at and took no lock, so two writes in the same microsecond both
+    # chained off the same predecessor and forked the chain without raising.
+    # See tests/test_audit_trail_integrity.py.
+    #
+    # `chain_hash` is kept as a read-only mirror of `event_hash`, matching
+    # AuditLog. Dropping it would have destroyed the only tamper-evidence
+    # every pre-existing row has — see activity_logs/0004's docstring.
+    # New code should read event_hash.
+    chain_hash = models.CharField(max_length=64, blank=True, db_index=True)
+
+    # Actor id frozen at write time — `user` is on_delete=SET_NULL and the hash
+    # commits to who acted, so reading the FK made deleting a user look like
+    # tampering. See AuditLog.chain_actor.
+    chain_actor = models.CharField(max_length=64, blank=True, default="",
+                                   help_text="user id frozen at write time; survives user deletion")
 
     class Meta:
         ordering = ["-created_at"]
@@ -84,6 +94,15 @@ class ActivityLog(HashChainMixin):
             models.Index(fields=["user", "created_at"]),
             models.Index(fields=["action"]),
             models.Index(fields=["entity_type", "entity_id"]),
+            # Serves the chain-head lookup; see AuditLog for why.
+            models.Index(fields=["chain_partition", "chain_position"],
+                         name="activitylog_chain_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["chain_partition", "chain_position"],
+                name="uniq_chain_position_activitylog",
+            ),
         ]
 
     # ── Append-only enforcement ────────────────────────────────────────
@@ -93,8 +112,9 @@ class ActivityLog(HashChainMixin):
                 "ActivityLog rows are append-only — save() on an existing "
                 "row is forbidden."
             )
-        # Chain assignment is the mixin's pre_save signal, not ours. Doing it
-        # here would run outside its lock.
+        # Chain assignment belongs to the mixin, not here — doing it inline
+        # would run outside the mixin's insert-retry envelope. `chain_hash` is
+        # populated there too, so it lands in the same INSERT.
         return super().save(*args, **kwargs)
 
     # ── HashChainMixin contract ────────────────────────────────────────
@@ -103,11 +123,26 @@ class ActivityLog(HashChainMixin):
     def _chain_org_filter_key(cls) -> str:
         return "organization_id"
 
+    @classmethod
+    def _chain_requires_all_rows(cls) -> bool:
+        """Append-only: there is no legitimate unchained activity row."""
+        return True
+
     def _chain_organization_id(self):
         return self.organization_id
 
+    def _freeze_chain_snapshot(self) -> None:
+        self.chain_actor = str(self.user_id or "")
+
+    def _after_chain_assigned(self) -> None:
+        self.chain_hash = self.event_hash
+
     def _chain_payload(self) -> dict:
         """The immutable snapshot the hash commits to.
+
+        `org` and `user` read the frozen `chain_partition` / `chain_actor`
+        columns rather than the FKs — both are on_delete=SET_NULL, so deleting
+        a tenant or a user would otherwise rewrite a hashed payload.
 
         `created_at` is excluded deliberately: auto_now_add populates it in the
         field-level pre_save, which fires AFTER the chain signal, so the value
@@ -115,8 +150,8 @@ class ActivityLog(HashChainMixin):
         see InvoiceAuditEvent._chain_payload for the same reasoning.
         """
         return {
-            "org":         str(self.organization_id or ""),
-            "user":        str(self.user_id or ""),
+            "org":         self.chain_partition,
+            "user":        self.chain_actor,
             "action":      self.action,
             "entity_type": self.entity_type,
             "entity_id":   self.entity_id,
@@ -129,13 +164,20 @@ class ActivityLog(HashChainMixin):
 
 
 # ─── Chain of Custody — Evidence access log ─────────────────────────────────
-class EvidenceAccess(models.Model):
+class EvidenceAccess(HashChainMixin):
     """Every read/download/copy of a piece of evidence.
 
     Required by ISA 230 §A6 and standard forensic-audit practice. A
     forensic auditor must be able to answer "who touched this evidence
     between upload and trial". Backed by the same append-only +
-    hash-chain pattern as ActivityLog.
+    hash-chain pattern as ActivityLog — genuinely so, now.
+
+    This model kept its own hand-rolled chain when ActivityLog and AuditLog
+    moved onto HashChainMixin, and inherited the two defects that change was
+    made to remove: no serialisation between concurrent appends, and ordering
+    by `created_at`, which ties. The guard test written to prevent exactly this
+    could not see it — it skipped any models.py mentioning HashChainMixin, and
+    this class shares a file with ActivityLog.
     """
 
     class Action(models.TextChoices):
@@ -171,9 +213,16 @@ class EvidenceAccess(models.Model):
     metadata    = models.JSONField(default=dict, blank=True)
     created_at  = models.DateTimeField(auto_now_add=True, db_index=True)
 
-    # Hash chain — per organization, like ActivityLog.
-    previous_hash = models.CharField(max_length=64, blank=True, db_index=True)
-    chain_hash    = models.CharField(max_length=64, blank=True, db_index=True)
+    # Tamper-evidence comes from HashChainMixin: previous_hash, event_hash,
+    # chain_position and chain_partition. `chain_hash` stays as a read-only
+    # mirror of event_hash so pre-existing rows and any exporter keep working.
+    chain_hash = models.CharField(max_length=64, blank=True, db_index=True)
+
+    # Actor id frozen at write time — `user` is on_delete=SET_NULL. For a
+    # chain-of-custody record this matters more than anywhere else: "who
+    # touched this evidence" must survive that person leaving the firm.
+    chain_actor = models.CharField(max_length=64, blank=True, default="",
+                                   help_text="user id frozen at write time; survives user deletion")
 
     class Meta:
         db_table = "evidence_access"
@@ -182,6 +231,14 @@ class EvidenceAccess(models.Model):
             models.Index(fields=("organization", "created_at")),
             models.Index(fields=("evidence_kind", "evidence_id")),
             models.Index(fields=("user", "created_at")),
+            models.Index(fields=["chain_partition", "chain_position"],
+                         name="evidenceaccess_chain_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["chain_partition", "chain_position"],
+                name="uniq_chain_position_evidenceaccess",
+            ),
         ]
 
     def save(self, *args, **kwargs):
@@ -189,21 +246,39 @@ class EvidenceAccess(models.Model):
             raise ValueError(
                 "EvidenceAccess rows are append-only — modification is forbidden."
             )
-        if not self.chain_hash:
-            prev = (
-                EvidenceAccess.objects
-                .filter(organization=self.organization)
-                .order_by("-created_at")
-                .first()
-            )
-            self.previous_hash = prev.chain_hash if prev else ""
-            self.chain_hash = self._compute_chain_hash()
+        # `chain_hash` is populated by _after_chain_assigned before the insert,
+        # so the mirror is part of the same statement.
         return super().save(*args, **kwargs)
 
-    def _payload(self) -> dict:
+    # ── HashChainMixin contract ────────────────────────────────────────
+
+    @classmethod
+    def _chain_org_filter_key(cls) -> str:
+        return "organization_id"
+
+    @classmethod
+    def _chain_requires_all_rows(cls) -> bool:
+        """A chain of custody with an unchained link is not a chain."""
+        return True
+
+    def _chain_organization_id(self):
+        return self.organization_id
+
+    def _freeze_chain_snapshot(self) -> None:
+        self.chain_actor = str(self.user_id or "")
+
+    def _after_chain_assigned(self) -> None:
+        self.chain_hash = self.event_hash
+
+    def _chain_payload(self) -> dict:
+        """The immutable snapshot the hash commits to.
+
+        `created_at` is excluded for the reason documented on ActivityLog:
+        auto_now_add fires after the chain signal, so it is still None here.
+        """
         return {
-            "org":  str(self.organization_id or ""),
-            "user": str(self.user_id or ""),
+            "org":  self.chain_partition,
+            "user": self.chain_actor,
             "kind": self.evidence_kind,
             "evid": self.evidence_id,
             "sha":  self.evidence_sha,
@@ -213,9 +288,3 @@ class EvidenceAccess(models.Model):
             "case": self.case_id,
             "meta": self.metadata or {},
         }
-
-    def _compute_chain_hash(self) -> str:
-        body = json.dumps(self._payload(), sort_keys=True,
-                          separators=(",", ":"), default=str).encode("utf-8")
-        material = (self.previous_hash + "|").encode("utf-8") + body
-        return hashlib.sha256(material).hexdigest()

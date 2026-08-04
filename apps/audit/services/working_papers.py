@@ -186,12 +186,16 @@ def partner_sign(
     paper.partner_notes = notes
     paper.locked_at = now
 
-    # Saving with status=LOCKED makes _should_chain_now() return True;
-    # the pre_save signal then computes and stores the chain hash.
+    # Saving with status=LOCKED makes _should_chain_now() return True; the
+    # pre_save signal then computes and stores the chain hash.
+    #
+    # The chain columns are deliberately NOT listed here. HashChainMixin.save()
+    # adds whatever it is about to write, because listing them by hand is a
+    # trap: this call used to name previous_hash/event_hash/chain_position
+    # explicitly, and when chain_partition joined them every locked paper was
+    # saved with an empty partition.
     paper.save(update_fields=["status", "partner_signed_by", "partner_signed_at",
-                              "partner_notes", "locked_at",
-                              "previous_hash", "event_hash", "chain_position",
-                              "updated_at"])
+                              "partner_notes", "locked_at", "updated_at"])
 
     WPSignature.objects.create(
         paper=paper, user=user,

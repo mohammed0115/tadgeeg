@@ -227,7 +227,12 @@ class ActivityLogChainTests(TestCase):
             entity_id="abc",
         )
         self.assertEqual(len(log.chain_hash), 64)
-        self.assertEqual(log.previous_hash, "")
+        # The head of a chain is GENESIS_HASH, not "". The old hand-rolled
+        # implementation used an empty string, which is indistinguishable from
+        # "this row was never chained" — the sentinel had to become explicit
+        # when ActivityLog moved onto HashChainMixin.
+        from apps.audit.integrity import GENESIS_HASH
+        self.assertEqual(log.previous_hash, GENESIS_HASH)
 
     def test_chain_links_consecutive_rows(self):
         from apps.activity_logs.models import ActivityLog

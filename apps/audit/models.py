@@ -705,10 +705,21 @@ class WorkingPaper(HashChainMixin):
                 fields=["organization", "reference"],
                 name="wp_unique_reference_per_org",
             ),
+            # Fork prevention — see HashChainMixin's docstring. Draft papers
+            # are unchained and carry chain_position NULL, which does not
+            # participate in a unique index, so this constrains only the
+            # papers that have actually been locked.
+            models.UniqueConstraint(
+                fields=["chain_partition", "chain_position"],
+                name="uniq_chain_position_workingpaper",
+            ),
         ]
         indexes = [
             models.Index(fields=["organization", "status"]),
             models.Index(fields=["organization", "paper_type"]),
+            # Serves the chain-head lookup.
+            models.Index(fields=["chain_partition", "chain_position"],
+                         name="workingpaper_chain_idx"),
         ]
 
     def __str__(self) -> str:
@@ -871,3 +882,97 @@ class StandardPassage(models.Model):
 
     def __str__(self):
         return f"{self.standard} — {self.reference or '(no reference)'}"
+
+
+class ChainCheckpoint(HashChainMixin):
+    """A signed anchor for a chain prefix that has been legitimately retired.
+
+    Retention and tamper-evidence pull in opposite directions, and nothing
+    reconciled them. AuditLog rows must be purged after their seven-year
+    window; `verify_chain` walks from the genesis hash and reports the first
+    gap. So the first time the retention job ran, it would have reported
+    tampering across the whole purged prefix — permanently, and correctly by
+    its own rules, for an operation the policy requires.
+
+    Deleting the rows quietly and hoping nobody verifies is not an answer, and
+    neither is keeping them forever. A checkpoint records what was removed
+    before it is removed: the position it ran to, the `event_hash` at that
+    point, and how many rows went. Verification then starts from the
+    checkpoint instead of from genesis, so the surviving chain still links back
+    to something that commits to the retired prefix.
+
+    The checkpoints are themselves chained — this inherits HashChainMixin — so
+    forging one to disguise a deletion means forging its chain too, and the
+    nightly verifier walks them like any other chain because it discovers
+    subclasses rather than listing them.
+    """
+
+    class Reason(models.TextChoices):
+        RETENTION = "retention", "Retention window expired"
+        MIGRATION = "migration", "Chain rebuilt by migration"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
+    target_model     = models.CharField(max_length=64, db_index=True,
+                                        help_text="Model whose prefix was retired, e.g. 'AuditLog'")
+    target_partition = models.CharField(max_length=64, blank=True, db_index=True,
+                                        help_text="chain_partition of the retired prefix")
+    up_to_position   = models.PositiveBigIntegerField(
+        help_text="Last chain_position covered by this checkpoint")
+    head_hash        = models.CharField(max_length=64,
+                                        help_text="event_hash of the last retired row")
+    rows_removed     = models.PositiveBigIntegerField(default=0)
+    reason           = models.CharField(max_length=16, choices=Reason.choices,
+                                        default=Reason.RETENTION)
+    created_at       = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        db_table = "audit_chain_checkpoints"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["target_model", "target_partition", "up_to_position"],
+                         name="chaincheckpoint_target_idx"),
+            models.Index(fields=["chain_partition", "chain_position"],
+                         name="chaincheckpoint_chain_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["chain_partition", "chain_position"],
+                name="uniq_chain_position_chaincheckpoint",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return (f"{self.target_model}[{self.target_partition or 'platform'}] "
+                f"≤{self.up_to_position} ({self.rows_removed} rows)")
+
+    # ── HashChainMixin contract ──────────────────────────────────────────────
+
+    @classmethod
+    def _chain_org_filter_key(cls) -> str:
+        return "target_partition"
+
+    @classmethod
+    def _chain_requires_all_rows(cls) -> bool:
+        return True
+
+    def _chain_organization_id(self):
+        # Checkpoints live in the chain of the tenant whose rows they retire,
+        # so a tenant's evidence — rows and anchors alike — stays self-contained.
+        return self.target_partition or None
+
+    def _chain_payload(self) -> dict:
+        return {
+            "target_model":     self.target_model,
+            "target_partition": self.target_partition,
+            "up_to_position":   self.up_to_position,
+            "head_hash":        self.head_hash,
+            "rows_removed":     self.rows_removed,
+            "reason":           self.reason,
+        }
+
+    def delete(self, *args, **kwargs):
+        raise ValueError(
+            "ChainCheckpoint rows cannot be deleted — deleting the record of a "
+            "retired prefix is indistinguishable from hiding one."
+        )

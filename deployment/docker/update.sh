@@ -23,7 +23,22 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
 TARGET="${1:-live}"
-BRANCH="${BRANCH:-main}"
+
+# Branch: the second argument, else $BRANCH, else whatever is checked out, else
+# main. It used to default to main unconditionally, so
+#
+#     git checkout my-branch && bash update.sh dev
+#
+# fetched main and `git reset --hard origin/main` — which does not merely
+# ignore your branch, it MOVES the local branch ref you are standing on to
+# main's commit. The deploy then reported success having shipped main. That is
+# how this deploy silently shipped the wrong code a moment ago.
+#
+# Defaulting to the current branch makes the obvious sequence do the obvious
+# thing; `bash update.sh dev main` or BRANCH=main still forces main.
+CURRENT_BRANCH="$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
+[ "$CURRENT_BRANCH" = "HEAD" ] && CURRENT_BRANCH=main   # detached
+BRANCH="${2:-${BRANCH:-$CURRENT_BRANCH}}"
 
 log() { printf '\n\033[1;34m[%s] %s\033[0m\n' "$(date '+%H:%M:%S')" "$1"; }
 ok()  { printf '\033[1;32m  ✓ %s\033[0m\n' "$1"; }
@@ -90,10 +105,26 @@ for env_file in "$SCRIPT_DIR"/env/*.env; do
 done
 shopt -u nullglob
 
-git fetch origin "$BRANCH"
+if ! git fetch origin "$BRANCH"; then
+  err "Branch '$BRANCH' not found on origin."
+  echo "    Push it first, or pass the branch: bash update.sh $TARGET <branch>"
+  exit 1
+fi
+
+# Say what is about to be discarded. `reset --hard` is silent about local
+# commits, and a deploy is exactly when someone discovers a hotfix only ever
+# existed on the server.
+BEHIND_BY=$(git rev-list --count "origin/$BRANCH..HEAD" 2>/dev/null || echo 0)
+if [ "$BEHIND_BY" -gt 0 ]; then
+  err "$BEHIND_BY local commit(s) on this checkout are NOT on origin/$BRANCH."
+  git log --oneline "origin/$BRANCH..HEAD" | sed 's/^/      /'
+  echo "    reset --hard would discard them. Push or stash them, then re-run."
+  exit 1
+fi
+
 git reset --hard "origin/$BRANCH"
 COMMIT=$(git log -1 --format="%h — %s (%ar)")
-ok "HEAD: $COMMIT"
+ok "HEAD: $COMMIT  [$BRANCH]"
 
 # Restore env files in case the reset removed or modified them.
 for backup in "$ENV_BACKUP_DIR"/*.env; do

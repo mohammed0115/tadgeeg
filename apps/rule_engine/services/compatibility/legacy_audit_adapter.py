@@ -110,32 +110,159 @@ class LegacyAuditEngineAdapter:
 
 
 class AuditRunResult:
+    """Wrapper around ``AuditRun`` that satisfies the legacy ``AuditReport`` contract.
+
+    **Why this exists and why it was incomplete.** Two independent callers read a
+    report object, and they read different fields:
+
+      * ``apps/audit/tasks.py``      — risk_score, risk_level, escalate
+      * ``core/services/pipeline.py`` — the three above PLUS total_rules,
+        passed_count, failed_count, skipped_count, error_count,
+        processing_time_ms, summary, rule_results
+
+    This class was written against the first caller and labelled a "drop-in
+    replacement". It was not one: substituting it into ``pipeline.py`` raised
+    ``AttributeError`` on seven fields. The docstring claimed Liskov
+    substitutability and the code did not provide it.
+
+    The contract is now enforced by ``tests/test_adapter_contract.py``, which
+    walks every field every caller reads. If a caller starts reading an eighth
+    field, that test fails before production does.
+
+    **Naming.** ``passed_rules`` (the AuditRun column name) and ``passed_count``
+    (the legacy AuditReport attribute name) are BOTH exposed and hold the same
+    value. Renaming either one breaks a working caller, and an alias costs
+    nothing.
     """
-    Thin wrapper around AuditRun that satisfies the AuditReport interface
-    expected by legacy callers.
-    """
+
+    #: Statuses in ``AuditResult.status`` that count as a pass. Kept explicit
+    #: rather than derived, because ``apps.rule_engine`` and ``apps.audit`` use
+    #: different casings for the same words — see apps/audit_platform/status.py.
+    _PASSED_STATUSES = ("pass", "passed")
 
     def __init__(self, audit_run):
         self._run = audit_run
-        self.risk_score   = float(audit_run.risk_score or 0)
-        self.risk_level   = audit_run.risk_level or "low"
-        self.escalate     = audit_run.blocks_approval or audit_run.requires_manual_review
+
+        # ── Original fields — unchanged, read by apps/audit/tasks.py ─────────
+        self.risk_score = float(audit_run.risk_score or 0)
+        self.risk_level = audit_run.risk_level or "low"
+        self.escalate = bool(
+            audit_run.blocks_approval or audit_run.requires_manual_review
+        )
         self.passed_rules = audit_run.passed_rules
         self.failed_rules = audit_run.failed_rules
         self.warning_rules = audit_run.warning_rules
         self.audit_run_id = str(audit_run.id)
 
+        # ── Added: counts read by core/services/pipeline.py ─────────────────
+        # AuditRun already stores all of these. Nothing is computed or guessed.
+        self.total_rules = audit_run.total_rules
+        self.passed_count = audit_run.passed_rules
+        self.failed_count = audit_run.failed_rules
+        self.skipped_count = audit_run.skipped_rules
+        self.error_count = audit_run.error_rules
+        self.warning_count = audit_run.warning_rules
+
+        # ── Added: timing ───────────────────────────────────────────────────
+        self.processing_time_ms = self._resolve_processing_ms(audit_run)
+
+        # ── Added: summary ──────────────────────────────────────────────────
+        self.summary = (
+            f"{audit_run.failed_rules} failed, "
+            f"{audit_run.warning_rules} warning, "
+            f"{audit_run.passed_rules} passed "
+            f"of {audit_run.total_rules} rules "
+            f"(risk {self.risk_score:.1f} / {self.risk_level})"
+        )
+
+        # ── Added: per-rule results ─────────────────────────────────────────
+        # Lazy: pipeline.py iterates report.rule_results, but tasks.py never
+        # touches it. Loading the rows eagerly would add a query to a caller
+        # that has no use for them.
+        self._rule_results = None
+
+    # ── rule_results ────────────────────────────────────────────────────────
+
+    @property
+    def rule_results(self):
+        """Per-rule results shaped like the legacy ``RuleResult`` objects.
+
+        ``_serialise_audit_report`` in core/services/pipeline.py reads
+        ``r.rule_id``, ``r.rule_name``, ``r.severity``, ``r.result``,
+        ``r.explanation`` and ``r.details`` off each item, and calls
+        ``.value`` on severity/result when present. Plain strings are returned,
+        so the ``hasattr(..., "value")`` branch falls through to ``str()`` —
+        which is what it is there for.
+        """
+        if self._rule_results is None:
+            self._rule_results = [
+                _LegacyRuleResultView(row)
+                for row in self._run.results.all().order_by("executed_at", "rule_code")
+            ]
+        return self._rule_results
+
+    # ── helpers ─────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _resolve_processing_ms(audit_run) -> int:
+        """Milliseconds the run took.
+
+        Preferred source is the V2 metadata sidecar's ``stage_timings``; falls
+        back to ``completed_at - started_at``; returns 0 when neither is
+        available. Returns 0 rather than None because pipeline.py writes this
+        straight into a JSON payload the UI renders — ``None`` there shows as an
+        empty duration, which reads as "instant" rather than "unknown".
+        """
+        try:
+            meta = getattr(audit_run, "v2_metadata", None)
+            timings = getattr(meta, "stage_timings", None) if meta else None
+            if isinstance(timings, dict) and timings:
+                total = sum(
+                    float(v) for v in timings.values()
+                    if isinstance(v, (int, float))
+                )
+                if total > 0:
+                    return int(round(total))
+        except Exception:  # noqa: BLE001 — a timing figure must never break a run
+            pass
+
+        started = getattr(audit_run, "started_at", None)
+        completed = getattr(audit_run, "completed_at", None)
+        if started and completed:
+            return int(round((completed - started).total_seconds() * 1000))
+        return 0
+
     @classmethod
     def from_audit_run(cls, audit_run) -> "AuditRunResult":
         return cls(audit_run)
 
-    # Legacy consumers check report.escalate, report.risk_level, report.risk_score
     def __repr__(self) -> str:
         return (
             f"AuditRunResult(run={self.audit_run_id} "
             f"risk={self.risk_score} level={self.risk_level} "
-            f"escalate={self.escalate})"
+            f"escalate={self.escalate} "
+            f"rules={self.failed_count}F/{self.total_rules}T)"
         )
+
+
+class _LegacyRuleResultView:
+    """Read-only view of an ``AuditResult`` row in the legacy ``RuleResult`` shape.
+
+    Deliberately not the model: a caller handed the row could save it, mutate
+    it, or follow a relation this adapter never meant to expose — and then the
+    adapter is a suggestion rather than a boundary. Same reasoning as the frozen
+    result in apps/rule_engine/services/audit_facade.py.
+    """
+
+    __slots__ = ("rule_id", "rule_name", "severity", "result", "explanation", "details")
+
+    def __init__(self, row):
+        self.rule_id = row.rule_code
+        self.rule_name = row.rule_code          # AuditResult stores no display name
+        self.severity = row.applied_severity
+        self.result = row.status
+        self.explanation = row.explanation or ""
+        self.details = row.raw_output or {}
 
 
 # ── Adapter 2: apps.auditing.services.audit_processing_service ────────────────

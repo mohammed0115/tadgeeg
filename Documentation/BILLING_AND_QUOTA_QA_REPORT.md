@@ -1,7 +1,7 @@
 # Billing & Quota — QA Review Report
 
 **Scope:** End-to-end review of the Tadgeeg subscription / payment /
-quota stack delivered in Stages 1–8 of the `Docs/payment/` roadmap.
+quota stack delivered in Stages 1–8 of the `Documentation/payment/` roadmap.
 
 **Review type:** Gap analysis only — no new features added in this
 pass. Findings classified as **Passed** / **Partially Passed** /
@@ -50,7 +50,7 @@ apps.invoices`. Per-module breakdown:
 
 ## 2. Passed Tests (by area)
 
-The 15 review areas spec'd in `Docs/payment/00.md §9` and the tests
+The 15 review areas spec'd in `Documentation/payment/00.md §9` and the tests
 that cover each.
 
 ### 2.1 Billing Core — ✅ Passed
@@ -555,5 +555,5 @@ pre-launch — without it, expired subscriptions linger.
 
 - Stage commits: `8ac1167`, `e4491e8`, `c286c7a`, `5605ee2`, `b26b753`, `a2114b4`, `f4db390`, `acd8308`
 - Prior payments commits: `ff0959a` (initial), `a609e35` (production hardening)
-- Spec: `Docs/payment/00.md`, `Docs/payment/first.md`
+- Spec: `Documentation/payment/00.md`, `Documentation/payment/first.md`
 - Deployment runbook: `apps/payments/DEPLOYMENT.md`

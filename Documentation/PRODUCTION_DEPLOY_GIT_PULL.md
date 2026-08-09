@@ -277,7 +277,7 @@ bash deployment/docker/deploy.sh logs web_live
 
 ## 9) مراجع داخل المشروع
 
-- الدليل العام: `Docs/DEPLOYMENT_GUIDE.md`
+- الدليل العام: `Documentation/DEPLOYMENT_GUIDE.md`
 - إعداد Docker متعدد البيئات: `deployment/docker/README.md`
 - تشغيل الخدمات: `deployment/docker/deploy.sh`
 - ملف compose: `deployment/docker/docker-compose.yml`

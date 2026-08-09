@@ -431,7 +431,7 @@ class FileUploadView(APIView):
 2. الـ Middleware
 3. الـ Settings
 4. Tests للـ rate limiting
-5. انظر `Docs/RATE_LIMITING_IMPLEMENTATION.md` للمرجع
+5. انظر `Documentation/RATE_LIMITING_IMPLEMENTATION.md` للمرجع
 ```
 
 ---

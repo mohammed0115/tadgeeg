@@ -7,7 +7,7 @@
 ## 🎯 Prompt 8.1 — فهم الـ 30 Audit Rules الموجودة
 
 ```
-في مشروع Tadgeeg AI، الملف `Docs/SYSTEM_AUDIT_RULES_VALIDATION.json` يحتوي على 
+في مشروع Tadgeeg AI، الملف `Documentation/SYSTEM_AUDIT_RULES_VALIDATION.json` يحتوي على 
 30 قاعدة تدقيق رسمية. الـ apps/invoices/ يطبّقها.
 
 المطلوب: قم بمراجعة شاملة للقواعد الـ 30 وأعد تنظيمها في 6 فئات:

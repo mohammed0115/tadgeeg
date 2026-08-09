@@ -5,7 +5,7 @@
 `.dockerignore` was thin (16 lines). The Docker build context included:
 
 - `Dataset/` (~23 MB of Arabic-named test invoices/PDFs/images, some with paths long enough to break extraction on POSIX filesystems with NAME_MAX=255)
-- `Docs/` (~1.9 MB of operator/developer markdown)
+- `Documentation/` (~1.9 MB of operator/developer markdown)
 - `htmlcov/` (~48 MB of pytest-cov HTML reports)
 - `.coverage`, `.pytest_cache/`, `.mypy_cache/`, `.ruff_cache/`
 - Loose test fixtures at the repo root (`*.zip`, `*.pdf`, `*.xlsx`, `*.csv`)
@@ -28,7 +28,7 @@ Build context size matters because:
 - **Local DB / runtime:** `*.sqlite3`, `*.sqlite3-journal`.
 - **Volume-mounted dirs (don't bake into image):** `media`, `staticfiles`, `logs`, `node_modules`.
 - **Heavy test fixtures:** `Dataset/`, loose `*.zip`/`*.pdf`/`*.xlsx`/`*.csv` at the repo root, `outputbase.txt`, `*.har`, `*.pcap`.
-- **Docs:** `Docs/`, `docs/` excluded from runtime image. `README.md` is at the repo root and stays.
+- **Docs:** `Documentation/`, `docs/` excluded from runtime image. `README.md` is at the repo root and stays.
 - **Coverage:** `htmlcov/`, `.coverage`, `.pytest_cache/`.
 - **Docker overrides:** `docker-compose.override.yml`, `docker-compose.local.yml`.
 - **OS junk:** `.DS_Store`, `Thumbs.db`, swap files.
@@ -58,10 +58,10 @@ $ du -sh Dataset Docs htmlcov
 ## What still requires human attention
 
 - The `requirements.lock.txt` file IS shipped to the image (correctly — `pip install -r` needs it). A future Tier-3 follow-up should switch the Dockerfile to use the lock file instead of the loose `requirements.txt` (separate PR).
-- If any deploy script or CI step previously assumed `Docs/` would be inside the running container (e.g., for serving operator docs from a routes), that will now break. None observed; verify before merge.
+- If any deploy script or CI step previously assumed `Documentation/` would be inside the running container (e.g., for serving operator docs from a routes), that will now break. None observed; verify before merge.
 - `docker-compose.override.yml` is excluded — if anyone uses it for local-only port mappings, they must keep it untracked / outside the image.
 
 ## Risks / things to watch
 
 - A negation pattern like `!.env.example` only works if it appears AFTER the broader pattern that excludes `.env*`. Verified — the order is correct in this rewrite.
-- `Docs/*` and `Docs` are both listed (belt + braces). On Docker BuildKit either one alone would work; this redundancy is harmless.
+- `Documentation/*` and `Docs` are both listed (belt + braces). On Docker BuildKit either one alone would work; this redundancy is harmless.

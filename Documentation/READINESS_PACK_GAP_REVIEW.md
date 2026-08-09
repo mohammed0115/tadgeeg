@@ -1,6 +1,6 @@
 # Readiness Pack — Gap Review vs. Actual Code
 
-**Source:** [`Docs/tadgeeg_enterprise_readiness_pack/`](tadgeeg_enterprise_readiness_pack/) (10 spec docs + manifest, generated 2026-05-10).
+**Source:** [`Documentation/tadgeeg_enterprise_readiness_pack/`](tadgeeg_enterprise_readiness_pack/) (10 spec docs + manifest, generated 2026-05-10).
 **Method:** Each spec section was matched against the current `main` branch state — including the 24 commits we shipped this session — using `grep`, model inspection, and direct view of route tables. No new code was written for this review.
 
 Legend:
@@ -302,7 +302,7 @@ Ordered by user-visible impact × ease.
    - ~0.5 day. Use Redis Lua INCR; fail-closed in prod.
 
 3. **Document the "AI-augmented vs AI-validated" wording change** in marketing.
-   - 0 code; 1 page in `Docs/`.
+   - 0 code; 1 page in `Documentation/`.
    - Without an AI validation pack, the 98% / 95% claims are exposed.
 
 ### Tier 1 — Pilot → Enterprise gap
@@ -350,7 +350,7 @@ Ordered by user-visible impact × ease.
 ## 4. What this review did NOT do
 
 - Did not write code. Inventory only.
-- Did not ship the spec docs to the deployed image (they're under `Docs/` which `.dockerignore` excludes — correct behavior; specs are operator-facing, not runtime).
+- Did not ship the spec docs to the deployed image (they're under `Documentation/` which `.dockerignore` excludes — correct behavior; specs are operator-facing, not runtime).
 - Did not edit any of the 10 spec docs. They serve as a contract.
 - Did not run the readiness checklist's "tests" — those are the operator's UAT tasks.
 

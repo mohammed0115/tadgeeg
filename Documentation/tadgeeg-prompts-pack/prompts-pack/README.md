@@ -147,8 +147,8 @@ font-family: 'Tajawal', 'Cairo', 'Segoe UI', sans-serif;
 | الـ Landing | `templates/landing/index.html` |
 | الـ Dashboard | `templates/dashboard/index.html` |
 | نماذج الفواتير | `apps/invoices/models.py` |
-| 30 قاعدة تدقيق | `Docs/SYSTEM_AUDIT_RULES_VALIDATION.json` |
-| البنية المعمارية | `Docs/ARCHITECTURE_REVIEW.md` |
+| 30 قاعدة تدقيق | `Documentation/SYSTEM_AUDIT_RULES_VALIDATION.json` |
+| البنية المعمارية | `Documentation/ARCHITECTURE_REVIEW.md` |
 
 ---
 

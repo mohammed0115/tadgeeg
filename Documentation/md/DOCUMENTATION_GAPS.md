@@ -17,7 +17,7 @@
 - ✅ `DESIGN_COMPARISON.md` - Before/after analysis with code samples
 - ✅ `CSS_QUICK_REFERENCE.md` - Component library & copy-paste templates
 
-### Docs Folder (`/Docs/`)
+### Docs Folder (`/Documentation/`)
 - ✅ `30 بند لتدقيق الفواتير.txt` - Invoice audit checklist (Arabic)
 - ✅ `AI_Financial_Auditing_SRS.pdf` - System Requirements Spec
 - ✅ `FinAI_Implementation_Docs.docx` - Implementation guide
@@ -414,7 +414,7 @@ POST /api/v1/auth/token/refresh/
 ## 📝 Suggested File Structure
 
 ```
-Docs/
+Documentation/
 ├── **API/**
 │   ├── AUTHENTICATION.md         [CRITICAL]
 │   ├── ERROR_CODES.md            [CRITICAL]

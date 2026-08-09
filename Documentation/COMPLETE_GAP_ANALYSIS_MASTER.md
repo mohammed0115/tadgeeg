@@ -658,7 +658,7 @@ Target launch: April 26, 2026
 
 ## 📚 10. LINKED DOCUMENTATION
 
-See detailed reports in `/Docs/` folder:
+See detailed reports in `/Documentation/` folder:
 
 - **SYSTEM_AUDIT_RULES_VALIDATION.json** — Complete rule inventory (77 verified, 27 gap)
 - **CODEBASE_EXPLORATION_REPORT.md** — Architecture deep-dive (5K lines)

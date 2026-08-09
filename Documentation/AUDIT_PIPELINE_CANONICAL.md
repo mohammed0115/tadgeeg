@@ -94,7 +94,7 @@ The flag is read at the start of Step 7a in `processor.py`. To roll back: set `U
 |---|---|
 | `apps/invoices/services/processor.py` | Step 7a now gated by `not USE_NEW_RULE_ENGINE`. Step 7b wraps `.delay()` in `transaction.on_commit` + imports the existing `_has_active_run` dedup helper. |
 | `apps/audit/audit_engine.py` | `run_audit()` docstring renamed to **DEPRECATED legacy audit pipeline**; clear pointer to this doc + removal plan. |
-| `Docs/AUDIT_PIPELINE_CANONICAL.md` | This file. |
+| `Documentation/AUDIT_PIPELINE_CANONICAL.md` | This file. |
 
 No model edits. No migrations. No URL changes. No API breaks.
 

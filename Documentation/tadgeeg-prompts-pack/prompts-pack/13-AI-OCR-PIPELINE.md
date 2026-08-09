@@ -177,7 +177,7 @@ def test_extract_english_text(ocr):
 2. Helpers للـ preprocessing
 3. PDF support
 4. Tests
-5. انظر `Docs/OCR_AI_PIPELINE.md` للمرجع
+5. انظر `Documentation/OCR_AI_PIPELINE.md` للمرجع
 ```
 
 ---

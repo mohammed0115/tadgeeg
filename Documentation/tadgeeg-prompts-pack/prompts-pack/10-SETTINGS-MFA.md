@@ -256,7 +256,7 @@ class MFADeviceDeleteView(LoginRequiredMixin, View):
 3. الـ Views (List, Add, Confirm, Delete, Regenerate Recovery)
 4. Service لإرسال security emails عند تغيير MFA
 5. Tests شاملة
-6. انظر `Docs/MFA_TOTP_IMPLEMENTATION_GUIDE.md` للمرجع
+6. انظر `Documentation/MFA_TOTP_IMPLEMENTATION_GUIDE.md` للمرجع
 ```
 
 ---

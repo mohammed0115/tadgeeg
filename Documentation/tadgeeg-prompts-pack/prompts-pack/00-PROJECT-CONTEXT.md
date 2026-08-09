@@ -160,7 +160,7 @@ tadgeeg-main/
 │   ├── entrypoint.sh
 │   └── nginx/
 │
-├── Docs/                          # التوثيق
+├── Documentation/                          # التوثيق
 │   ├── ARCHITECTURE_REVIEW.md
 │   ├── API_REFERENCE.md
 │   ├── SYSTEM_AUDIT_RULES_VALIDATION.json  # 30 قاعدة

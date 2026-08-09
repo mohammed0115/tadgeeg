@@ -12,7 +12,7 @@ The platform shipped to this audit had a strong rule-engine vision but a brittle
 
 Across **15 commits**, this round:
 
-- **Closed every Tier-0 critical** identified in `Docs/CURRENT_SYSTEM_GAP_FIX_PLAN.md` §12 + §15d (8 items).
+- **Closed every Tier-0 critical** identified in `Documentation/CURRENT_SYSTEM_GAP_FIX_PLAN.md` §12 + §15d (8 items).
 - **Deepened audit rule coverage** from 43 → 83 rules across 5 doc types (Fixed Asset, Bank Statement, VAT Return, Payroll, Expense Report) using IAS 16, SAMA AML, ZATCA Phase 2, Saudi Labor Law, ISA 240/505 references.
 - **Built two AI augmentations:** report-level LLM narrative synthesis (one cheap call per report) and a per-document `ai_summary` backfill command.
 - Did **not** delete any code without a deprecation comment, did **not** rename any tables, did **not** introduce backwards-incompatible API changes.
@@ -37,7 +37,7 @@ The system is **closer to production-ready** but not finished. See §10 for what
 | Audit rule depth (existing types) | AST 9, BNK 9, VATR 8, PAY 9, EXP 8 = **43 rules**. | AST 17, BNK 17, VATR 16, PAY 17, EXP 16 = **83 rules**. +93%. |
 | Audit rule coverage (multi-doc adapter) | `total_amount=0.00` for every PO/Bank/Fixed-Asset/etc. summary (adapter never aggregated). 8 doc types had AI insights surfaced (`_AI_DOC_MAP` only). | Real totals per type. 21 doc types surface AI insights — derived from `_SPECS` so it can never drift. |
 | Report narrative | Hardcoded Arabic copy regardless of doc type. | Either rule-based deterministic narrative OR (when `OPENAI_API_KEY` set) a Big4-style synthesized narrative grounded in the same findings register. Falls back automatically. |
-| `.dockerignore` | 16 lines. Built ~70 MB of `Dataset/` + `Docs/` + `htmlcov/` into every image. | 75 lines, grouped, with `!.env.example` negation. |
+| `.dockerignore` | 16 lines. Built ~70 MB of `Dataset/` + `Documentation/` + `htmlcov/` into every image. | 75 lines, grouped, with `!.env.example` negation. |
 
 ---
 
@@ -64,7 +64,7 @@ Mapped to §12 of `CURRENT_SYSTEM_GAP_FIX_PLAN.md` and §15d additions:
 
 | Risk | Severity | Likelihood now | Notes |
 |---|---|---|---|
-| Inherited DB still on legacy `audit_sessions` schema | High (one-time) | Per env | Operators must run `scripts/manual_schema_repair.py --i-have-a-backup` once. Documented in `Docs/PHASE_3_ENTRYPOINT_SAFETY_FIX.md`. |
+| Inherited DB still on legacy `audit_sessions` schema | High (one-time) | Per env | Operators must run `scripts/manual_schema_repair.py --i-have-a-backup` once. Documented in `Documentation/PHASE_3_ENTRYPOINT_SAFETY_FIX.md`. |
 | 236 catalog rules are stubs | Medium | Certain | They no longer crash. `validate_rule_catalog` reports them as work-in-flight. |
 | Login enumeration / TOTP replay / mfa_secret plaintext | High (security) | Certain | NOT addressed in this round. Tracked as V1–V4 in §15b of plan. |
 | ZATCA crypto uses RSA-2048 + RSA-PSS instead of ECC P-256 + ECDSA | Critical (compliance) | Certain | NOT addressed. Tracked as V5–V6. Production ZATCA Phase 2 submissions WILL fail. |
@@ -161,7 +161,7 @@ This round did not add new automated tests (deferred to Phase 12). What WAS veri
 
 - `python manage.py check` — clean across all changes.
 - `python manage.py makemigrations --check` — same pre-existing migration drift on `apps.rule_engine` as before; nothing regressed.
-- Smoke tests embedded in `Docs/PHASE_*.md` reports:
+- Smoke tests embedded in `Documentation/PHASE_*.md` reports:
   - Settings: `testserver` does NOT leak in `DEBUG=False` mode with explicit ALLOWED_HOSTS.
   - CatalogStubRule: imports, subclasses `AuditRuleBase`, returns `SKIPPED` non-blocking.
   - `validate_rule_catalog`: 236 stubs surfaced; `--allow-stubs` exits clean.
@@ -179,7 +179,7 @@ In priority order:
 ### P0 (security / compliance)
 
 1. **ZATCA Phase 2 crypto.** `apps/zatca/crypto.py` uses RSA-2048 + PSS — production ZATCA mandates ECC P-256 + ECDSA. Submissions WILL fail. Replace `rsa.generate_private_key` → `ec.generate_private_key(ec.SECP256R1())`. Replace PSS sign → `ec.ECDSA(hashes.SHA256())`. Make `lxml` a hard dependency (no UTF-8 fallback in `canonicalise_xml`). Make `_fernet()` raise rather than fall back to `SECRET_KEY` derivation in production.
-2. **Login enumeration + TOTP replay + mfa_secret encryption.** Items V1–V4 of `Docs/CURRENT_SYSTEM_GAP_FIX_PLAN.md` §15b.
+2. **Login enumeration + TOTP replay + mfa_secret encryption.** Items V1–V4 of `Documentation/CURRENT_SYSTEM_GAP_FIX_PLAN.md` §15b.
 3. **Rate limiter atomicity.** Replace `cache.get`/`cache.set` with a Redis Lua script. Switch to fail-closed (5xx) on Redis outage in prod. Add per-login throttle (5/min/IP).
 
 ### P1 (audit pipeline coherence)
@@ -206,7 +206,7 @@ In priority order:
 ## 11. Commits in this round
 
 ```
-3a30f93 chore(docker): tighten .dockerignore — exclude Dataset/Docs/htmlcov/etc
+3a30f93 chore(docker): tighten .dockerignore — exclude Dataset/Documentation/htmlcov/etc
 c4d5152 fix(security): zip_validator no longer self-defeats; sandbox OpenAI prompt
 55bb92c feat(rule_engine): safe CatalogStubRule + validate_rule_catalog CI command
 8e01d29 fix(security): make financial-document media private + tighten upload limits
@@ -223,4 +223,4 @@ ad2d180 feat(reports): expand AI insights coverage to all typed doc models
 e810b70 fix(reports): aggregate total_amount across all doc-type audit paths
 ```
 
-Per-phase reports live in `Docs/PHASE_*.md`.
+Per-phase reports live in `Documentation/PHASE_*.md`.

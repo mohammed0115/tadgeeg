@@ -340,13 +340,13 @@ Ordered by **risk × ease**: highest-risk items first; within each tier, easier 
 | 13 | File-validation scanner integration (clamav side-car or scanner service); per-file states `clean / infected / scan_failed / quarantined`. | 11 |
 | 14 | Tests: app registry health, upload→audit single-trigger, tenant isolation, private media, bulk 100 rows, ZIP mixed, Celery idempotency. Walk `cov-fail-under` 45 → 55 → 60 → 70. | 12 |
 | 15 | Localization sweep on templates + reports (PDF/Excel/HTML); replace hardcoded `dir="rtl"` and inline strings. | 13 |
-| 16 | `.dockerignore` cleanup — exclude `Dataset/`, `Docs/`, `htmlcov/`, `.coverage`, `*.sqlite3`, etc. | 14 |
+| 16 | `.dockerignore` cleanup — exclude `Dataset/`, `Documentation/`, `htmlcov/`, `.coverage`, `*.sqlite3`, etc. | 14 |
 
 ### Final deliverable
 
 | # | Item |
 |---|---|
-| 17 | `Docs/TADGEEG_PRODUCTION_READINESS_REPORT.md` — Before/After, Risk Register, Coverage Matrices, Deployment Checklist. |
+| 17 | `Documentation/TADGEEG_PRODUCTION_READINESS_REPORT.md` — Before/After, Risk Register, Coverage Matrices, Deployment Checklist. |
 
 ---
 

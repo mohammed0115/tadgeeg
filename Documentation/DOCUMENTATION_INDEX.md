@@ -313,7 +313,7 @@
 
 ## 💾 WHERE TO FIND FILES
 
-### **In `/Docs/` (This Folder)**
+### **In `/Documentation/` (This Folder)**
 - COMPLETE_GAP_ANALYSIS_MASTER.md ← START HERE
 - CODEBASE_EXPLORATION_REPORT.md
 - SYSTEM_AUDIT_RULES_VALIDATION.json
@@ -359,4 +359,4 @@
 ---
 
 **End of Documentation Index**  
-*All documents in `/Docs/` folder are current and maintained.*
+*All documents in `/Documentation/` folder are current and maintained.*

@@ -516,7 +516,7 @@ class GDPRService:
 2. الـ GDPR service
 3. أمثلة على استخدامها
 4. Tests
-5. انظر `Docs/GDPR_HARD_DELETE_IMPLEMENTATION.md` للمرجع
+5. انظر `Documentation/GDPR_HARD_DELETE_IMPLEMENTATION.md` للمرجع
 ```
 
 ---

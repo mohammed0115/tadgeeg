@@ -1,6 +1,6 @@
 """Stage 8 tests — admin actions + management commands + reports.
 
-Covers the 5 spec test cases from Docs/payment/00.md §8:
+Covers the 5 spec test cases from Documentation/payment/00.md §8:
   1. expire_subscriptions flips expired ones
   2. expire_subscriptions does NOT change non-expired
   3. remaining_invoices correct in admin display

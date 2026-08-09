@@ -1,6 +1,6 @@
 """Stage 2 tests.
 
-Covers the 8 cases listed in Docs/payment/00.md section 2:
+Covers the 8 cases listed in Documentation/payment/00.md section 2:
   1. After registration, user is redirected to /billing/plans/.
   2. User without subscription cannot reach the dashboard.
   3. User can reach /billing/plans/.

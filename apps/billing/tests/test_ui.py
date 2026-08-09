@@ -1,6 +1,6 @@
 """Stage 7 — Billing UI tests.
 
-Covers the 8 checks from Docs/payment/00.md §7:
+Covers the 8 checks from Documentation/payment/00.md §7:
   1. Plans page shows the 4 plans.
   2. Prices come from the DB (Plan model), not hardcoded HTML.
   3. free_trial is shown as free.

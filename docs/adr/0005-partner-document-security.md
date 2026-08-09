@@ -29,7 +29,7 @@ passes it. `apps/partners/uploads.py` rejects an unrecognised header outright.
 ### 2. Private storage, outside `MEDIA_ROOT`
 
 The existing private-media approach gates `/media/(documents|invoices|batches)`
-at nginx (`Docs/PHASE_4_PRIVATE_MEDIA_SECURITY_FIX.md`). That works in a correct
+at nginx (`Documentation/PHASE_4_PRIVATE_MEDIA_SECURITY_FIX.md`). That works in a correct
 deployment but depends on web-server configuration, and is absent under
 `runserver` and in tests.
 

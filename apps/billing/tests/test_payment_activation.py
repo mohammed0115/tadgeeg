@@ -1,6 +1,6 @@
 """Stage 4 tests — Payment → Subscription Activation.
 
-Covers the 10 cases from Docs/payment/00.md §4:
+Covers the 10 cases from Documentation/payment/00.md §4:
   1. starter selection creates pending_payment
   2. business selection creates pending_payment
   3. professional selection creates pending_payment

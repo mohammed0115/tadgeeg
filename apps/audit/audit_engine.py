@@ -482,7 +482,7 @@ def run_audit(
 
     The canonical audit pipeline is now ``apps.rule_engine.tasks.audit_tasks
     .run_audit_task`` driven by ``AuditPipeline`` in
-    ``apps.rule_engine.executors``. See Docs/AUDIT_PIPELINE_CANONICAL.md.
+    ``apps.rule_engine.executors``. See Documentation/AUDIT_PIPELINE_CANONICAL.md.
 
     This function is no longer called from production upload paths when
     ``settings.USE_NEW_RULE_ENGINE`` is True (the default). It remains as

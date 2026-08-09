@@ -1,6 +1,6 @@
 """
 HTTP endpoints for BulkUploadJob — spec'd in
-Docs/tadgeeg_enterprise_readiness_pack/API_AND_ERP_INTEGRATION_CONTRACTS.md §8.
+Documentation/tadgeeg_enterprise_readiness_pack/API_AND_ERP_INTEGRATION_CONTRACTS.md §8.
 
   POST /api/v1/documents/bulk-upload-jobs/
         body: multipart `file` + optional `document_type` form field

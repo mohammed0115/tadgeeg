@@ -1,6 +1,6 @@
 """Stage 5 — Quota Enforcement on the Audit Pipeline.
 
-Covers the 12 cases from Docs/payment/00.md §5:
+Covers the 12 cases from Documentation/payment/00.md §5:
 
   1. audit succeeds when quota is available
   2. reserve increases reserved_invoices

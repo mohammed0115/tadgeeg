@@ -210,6 +210,15 @@ LOCAL_APPS = [
 ALLOWED_RULE_MODULES = ["apps.rule_engine.rules"]
 USE_NEW_RULE_ENGINE = True  # Feature flag: False = old AuditEngine, True = new AuditPipeline
 
+# أي جيل من الأنبوب يحكم على المستند. كان يأتي من افتراضي مخبوء داخل
+# pipeline/v2/compat.py، بينما توثيق ذلك الملف يعلن أن تبديل النسخة
+# «يحتاج تغيير إعداد فقط» — والإعداد لم يكن معرَّفًا. قيمة معرَّفة صراحةً
+# أفضل من افتراضي مخبوء: أول من يقرأ الإعدادات يرى ما يعمل.
+#   "v2"     — الأنبوب المرحلي (الافتراضي)
+#   "v1"     — تراجع فوري بلا نشر
+#   "shadow" — v2 أساسيًا و v1 في الخلفية للمقارنة
+AUDIT_ENGINE_VERSION = os.environ.get("AUDIT_ENGINE_VERSION", "v2")
+
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 # ─── Middleware ───────────────────────────────────────────────────────────────
@@ -342,7 +351,7 @@ MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 # arrive from unauthenticated strangers and must never be reachable by URL.
 #
 # The existing private-media approach gates /media/(documents|invoices|batches)
-# at nginx (Docs/PHASE_4_PRIVATE_MEDIA_SECURITY_FIX.md). That protects real
+# at nginx (Documentation/PHASE_4_PRIVATE_MEDIA_SECURITY_FIX.md). That protects real
 # deployments but depends on web-server config being correct, and it is absent
 # in tests and in `runserver`. Keeping these files out of the web root entirely
 # means no server configuration can expose them.

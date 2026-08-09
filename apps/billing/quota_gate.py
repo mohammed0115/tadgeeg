@@ -134,9 +134,23 @@ def run_audit_with_quota(
       gate refuses with ``QuotaExceeded("rerun_confirmation_required")``.
       First-time runs (no prior consume) ignore both flags.
     """
-    from apps.rule_engine.pipeline.v2.compat import (
-        run_audit_compat as _original,
-    )
+    # Read the original off the wrapper; do NOT re-import it here.
+    #
+    # install_gate() replaces compat.run_audit_compat with _gated and stashes
+    # the real function on _gated._original. This import runs at CALL time,
+    # which is after that replacement, so `run_audit_compat` resolves to _gated
+    # itself and the chain becomes _gated -> run_audit_with_quota -> _gated,
+    # without end. Every call through the patched entry point raised
+    # RecursionError; the function the gate had carefully saved was never read.
+    #
+    # getattr with a fallback covers both states: gate installed (attribute
+    # present, holds the true original) and gate not installed (attribute
+    # absent, the module already holds the true original).
+    from apps.rule_engine.pipeline.v2 import compat as _compat_mod
+
+    _original = getattr(_compat_mod.run_audit_compat, "_original", None)
+    if _original is None:
+        _original = _compat_mod.run_audit_compat
 
     # Document + org are looked up at the start so a missing row fails
     # before we touch the quota table.

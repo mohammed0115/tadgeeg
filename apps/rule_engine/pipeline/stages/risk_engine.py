@@ -302,8 +302,22 @@ def _apply_adjustment(risk_data: dict, adjustment: float, reasons: list) -> dict
     risk_data.setdefault("modifier_reasons", []).extend(reasons)
     # Recalculate derived flags
     risk_data["requires_manual_review"] = new_score >= 50
-    if not risk_data.get("blocks_approval"):
-        risk_data["blocks_approval"] = new_score >= 75
+    # Blocking stays attributable to a named rule.
+    #
+    # The base engine (risk/risk_engine.py) sets blocks_approval in exactly
+    # three places, and all three are rule failures: a rule marked
+    # blocks_approval that failed (:890), a critical-severity failure (:926),
+    # and triggers_critical_override (:802). There is no score threshold
+    # anywhere in it — `grep -c ">= 75"` returns 0.
+    #
+    # This line added a fourth path that blocked on the total. It could
+    # therefore produce a blocked document with no failing rule to point at,
+    # and the auditor who has to justify the refusal has nothing to cite.
+    # A modifier is a ranking signal, not a finding.
+    #
+    # What still works: risk_score and risk_level continue to move, so risk
+    # ordering keeps improving, and requires_manual_review still fires on
+    # score — review is not a block. CTO decision, shipment 5 §1, option (a).
     return risk_data
 
 

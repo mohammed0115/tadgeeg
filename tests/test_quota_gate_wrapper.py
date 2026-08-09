@@ -75,9 +75,10 @@ def test_calling_the_patched_entrypoint_does_not_recurse(gate_installed, monkeyp
         lambda d, o: (object(), object()),
     )
     monkeypatch.setattr(quota_gate, "_already_billed", lambda org, doc: False)
-    monkeypatch.setattr(
-        compat_mod.run_audit_compat, "_original", _fake_pipeline, raising=False,
-    )
+    # Inject at the gate's own record of the original. Patching
+    # compat.run_audit_compat instead would replace the wrapper itself, and the
+    # call would never enter the gate — which is the thing under test.
+    monkeypatch.setattr(quota_gate, "_ORIGINAL_RUN_AUDIT", _fake_pipeline)
 
     compat_mod.run_audit_compat(
         document_id="d", document_type="sales_invoice", organization_id="o",
@@ -174,11 +175,8 @@ def test_quota_is_consumed_exactly_once(monkeypatch):
     )
     monkeypatch.setattr(quota_gate, "_already_billed", lambda org, doc: False)
 
-    import apps.rule_engine.pipeline.v2.compat as compat_mod
     quota_gate.install_gate()
-    monkeypatch.setattr(
-        compat_mod.run_audit_compat, "_original", _fake_pipeline, raising=False,
-    )
+    monkeypatch.setattr(quota_gate, "_ORIGINAL_RUN_AUDIT", _fake_pipeline)
 
     quota_gate.run_audit_with_quota(
         document_id="d", document_type="sales_invoice", organization_id="o",

@@ -134,23 +134,33 @@ def run_audit_with_quota(
       gate refuses with ``QuotaExceeded("rerun_confirmation_required")``.
       First-time runs (no prior consume) ignore both flags.
     """
-    # Read the original off the wrapper; do NOT re-import it here.
+    # Resolve the pipeline to call. Do NOT re-import run_audit_compat here.
     #
-    # install_gate() replaces compat.run_audit_compat with _gated and stashes
-    # the real function on _gated._original. This import runs at CALL time,
-    # which is after that replacement, so `run_audit_compat` resolves to _gated
+    # install_gate() replaces compat.run_audit_compat with _gated. An import at
+    # CALL time runs after that replacement, so the name resolves to _gated
     # itself and the chain becomes _gated -> run_audit_with_quota -> _gated,
     # without end. Every call through the patched entry point raised
-    # RecursionError; the function the gate had carefully saved was never read.
+    # RecursionError, and the function the gate had saved was never read.
     #
-    # getattr with a fallback covers both states: gate installed (attribute
-    # present, holds the true original) and gate not installed (attribute
-    # absent, the module already holds the true original).
+    # The wrapper is identified by IDENTITY, not by asking it what it is. An
+    # earlier version used getattr(entry, "_original", None) with a fallback,
+    # which broke five existing tests: they inject a fake pipeline with
+    # mock.patch on this attribute, and a MagicMock answers getattr for every
+    # name — so the fallback never fired and the gate called mock._original()
+    # instead of the mock. Identity is the one question a mock cannot answer
+    # wrongly.
     from apps.rule_engine.pipeline.v2 import compat as _compat_mod
 
-    _original = getattr(_compat_mod.run_audit_compat, "_original", None)
-    if _original is None:
-        _original = _compat_mod.run_audit_compat
+    _entry = _compat_mod.run_audit_compat
+    if _entry is _GATED_WRAPPER:
+        # Production: the module attribute is our own wrapper. Calling it would
+        # re-enter this function forever, so call what it displaced.
+        _original = _ORIGINAL_RUN_AUDIT
+    else:
+        # Not our wrapper — either the gate is not installed, or a caller has
+        # substituted the entry point deliberately (the existing tests inject a
+        # fake pipeline this way). Honour whatever is there.
+        _original = _entry
 
     # Document + org are looked up at the start so a missing row fails
     # before we touch the quota table.
@@ -248,6 +258,16 @@ def run_audit_with_quota(
 # ─── monkey-patch install ────────────────────────────────────────────────────
 _INSTALLED = False
 
+#: The wrapper install_gate() puts on the compat module, and the function it
+#: displaced. Held here rather than read back off the module attribute, because
+#: that attribute is the one thing that cannot be trusted to identify itself:
+#: tests replace it with a MagicMock, and a MagicMock answers getattr for any
+#: name at all — so `getattr(entry, "_original", None)` returns a child mock
+#: instead of None and the fallback never fires. An identity check against the
+#: wrapper stored here is unambiguous for every case.
+_GATED_WRAPPER = None
+_ORIGINAL_RUN_AUDIT = None
+
 
 def install_gate() -> None:
     """Replace ``apps.rule_engine.pipeline.v2.compat.run_audit_compat``
@@ -277,5 +297,10 @@ def install_gate() -> None:
     _gated._billing_gated = True               # type: ignore[attr-defined]
     _gated._original = original                # type: ignore[attr-defined]
     compat_mod.run_audit_compat = _gated
+    # Recorded module-side too: run_audit_with_quota identifies the wrapper by
+    # identity against _GATED_WRAPPER, which no mock can imitate.
+    global _GATED_WRAPPER, _ORIGINAL_RUN_AUDIT
+    _GATED_WRAPPER = _gated
+    _ORIGINAL_RUN_AUDIT = original
     _INSTALLED = True
     logger.info("[quota_gate] installed around run_audit_compat")

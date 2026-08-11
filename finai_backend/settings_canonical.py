@@ -376,8 +376,35 @@ PARTNER_APPLICATION_DEDUPE_MINUTES = int(
 )
 (BASE_DIR / "static").mkdir(parents=True, exist_ok=True)
 
+# ─── Storage backends ─────────────────────────────────────────────────────────
+# STORAGES replaces STATICFILES_STORAGE and DEFAULT_FILE_STORAGE, which Django
+# removed in 5.1. The removal is silent: the old names are simply ignored, so
+# nothing raises and nothing logs. Two things would have stopped working
+# without a single error —
+#
+#   · hashed, compressed static files (whitenoise) in production, and
+#   · the S3 backend for media, which means financial documents would be
+#     written to the container's local disk instead of the private bucket the
+#     SECURITY CONTRACT below requires. That is a data-location change with no
+#     symptom until someone goes looking for a file.
+#
+# Defined here as the defaults, then narrowed by the same two conditions that
+# governed the old settings — the upgrade must not change WHEN S3 or whitenoise
+# is used, only how the choice is spelled. The shape is copied from
+# finai_backend/settings/test.py, which was already on the new pattern.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
 if not DEBUG:
-    STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    STORAGES["staticfiles"]["BACKEND"] = (
+        "whitenoise.storage.CompressedManifestStaticFilesStorage"
+    )
 
 # ─── Upload limits (explicit) ─────────────────────────────────────────────────
 # Don't rely on Django's built-in defaults silently — making these explicit
@@ -402,7 +429,10 @@ DATA_UPLOAD_MAX_NUMBER_FIELDS = int(os.environ.get("DATA_UPLOAD_MAX_NUMBER_FIELD
 # `instance.file.url` in a public template.
 _AWS_BUCKET = os.environ.get("AWS_STORAGE_BUCKET_NAME", "")
 if _AWS_BUCKET:
-    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+    # Same condition as before — presence of a bucket name. Only the setting
+    # name changed; DEFAULT_FILE_STORAGE is ignored by Django 5.1+, which would
+    # have sent these files to local disk without complaint.
+    STORAGES["default"]["BACKEND"] = "storages.backends.s3boto3.S3Boto3Storage"
     AWS_STORAGE_BUCKET_NAME = _AWS_BUCKET
     AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID", "")
     AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY", "")

@@ -36,7 +36,12 @@ SECURE_HSTS_PRELOAD = True
 SECURE_SSL_REDIRECT = True
 
 # ── Static files ──────────────────────────────────────────────────────────────
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+# STATICFILES_STORAGE was removed in Django 5.1 and is ignored, not rejected.
+# base.py already selects whitenoise whenever DEBUG is false; this restates it
+# for the production module, which sets DEBUG = False explicitly above.
+STORAGES["staticfiles"]["BACKEND"] = (  # noqa: F405 — from settings.base import *
+    "whitenoise.storage.CompressedManifestStaticFilesStorage"
+)
 
 # ── Logging — production: WARNING level for Django, INFO for app ──────────────
 LOGGING["root"]["level"] = "WARNING"  # type: ignore[index]

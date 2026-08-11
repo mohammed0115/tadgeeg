@@ -315,13 +315,13 @@ class JournalLine(models.Model):
         ordering = ["entry", "line_number"]
         constraints = [
             models.CheckConstraint(
-                check=models.Q(debit__gte=0) & models.Q(credit__gte=0),
+                condition=models.Q(debit__gte=0) & models.Q(credit__gte=0),
                 name="ledger_line_non_negative",
             ),
             models.CheckConstraint(
                 # Exactly one of debit/credit must be > 0.
-                check=(models.Q(debit__gt=0, credit=0)
-                       | models.Q(debit=0, credit__gt=0)),
+                condition=(models.Q(debit__gt=0, credit=0)
+                           | models.Q(debit=0, credit__gt=0)),
                 name="ledger_line_one_side_only",
             ),
         ]
@@ -396,7 +396,7 @@ class AccountingPeriod(models.Model):
                 name="ledger_period_unique_per_org",
             ),
             models.CheckConstraint(
-                check=models.Q(end_date__gte=models.F("start_date")),
+                condition=models.Q(end_date__gte=models.F("start_date")),
                 name="ledger_period_dates_ordered",
             ),
         ]

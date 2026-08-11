@@ -159,6 +159,7 @@ def _save_canonical_invoice(invoice: Invoice) -> None:
             document_type="invoice",
             typed_model_name="Invoice",
             typed_object_id=invoice.id,
+            organization=invoice.organization,
         )
     except Exception as exc:
         logger.warning("[canonical] invoice save failed for %s: %s", invoice.id, exc)

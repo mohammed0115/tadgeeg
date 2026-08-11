@@ -191,3 +191,141 @@ def test_this_guard_can_fail(two_orgs):
         )
     assert DocumentCanonicalData.objects.filter(
         organization__isnull=True, pk=unowned.pk).exists()
+
+
+# ── The write path: rows must arrive with an owner ──────────────────────────
+
+@pytest.mark.django_db
+def test_new_rows_are_written_with_an_owner(two_orgs):
+    """The output of this shipment: no new row lands without a tenant.
+
+    The column arrived in documents/0013, but the only writer did not set it,
+    so every row created after the backfill was NULL again. This is the check
+    that the bleeding stopped.
+    """
+    from core.services.canonical_mapper import CanonicalMapper
+
+    alpha, _beta = two_orgs
+    typed_id = uuid.uuid4()
+
+    row = CanonicalMapper().save_canonical(
+        raw_data={"total_amount": 100},
+        document_type="purchase_order",
+        typed_model_name="PurchaseOrder",
+        typed_object_id=typed_id,
+        organization=alpha,
+    )
+
+    row.refresh_from_db()
+    assert row.organization_id == alpha.pk
+
+
+@pytest.mark.django_db
+def test_saving_without_an_organization_fails_loudly(two_orgs):
+    """None is refused, and nothing is written.
+
+    An optional argument would let a future call site produce ownerless rows in
+    silence — which is how the 1,003 already in the table came to exist.
+    """
+    from apps.documents.canonical_models import DocumentCanonicalData
+    from core.services.canonical_mapper import CanonicalMapper
+
+    typed_id = uuid.uuid4()
+    before = DocumentCanonicalData.objects.count()
+
+    with pytest.raises(ValueError, match="requires an organization"):
+        CanonicalMapper().save_canonical(
+            raw_data={"total_amount": 1},
+            document_type="purchase_order",
+            typed_model_name="PurchaseOrder",
+            typed_object_id=typed_id,
+            organization=None,
+        )
+
+    assert DocumentCanonicalData.objects.count() == before, (
+        "a row was written despite the refusal"
+    )
+    assert not DocumentCanonicalData.objects.filter(
+        typed_object_id=typed_id).exists()
+
+
+@pytest.mark.django_db
+def test_the_argument_is_required_not_optional(two_orgs):
+    """Positional and required, so omitting it cannot compile away silently."""
+    import inspect
+
+    from core.services.canonical_mapper import CanonicalMapper
+
+    parameter = inspect.signature(CanonicalMapper.save_canonical).parameters["organization"]
+    assert parameter.default is inspect.Parameter.empty, (
+        "organization has a default — a call site can omit it and write an "
+        "ownerless row without anyone noticing"
+    )
+
+
+@pytest.mark.django_db
+def test_updating_an_ownerless_row_assigns_its_owner(two_orgs):
+    """The 1,003 shrink as they are touched, with no second migration.
+
+    A row the backfill could not resolve acquires its owner the next time the
+    document is reprocessed, because organization is written on the update path
+    and named in update_fields.
+    """
+    from apps.documents.canonical_models import DocumentCanonicalData
+    from core.services.canonical_mapper import CanonicalMapper
+
+    alpha, _beta = two_orgs
+    typed_id = uuid.uuid4()
+
+    stale = DocumentCanonicalData.objects.create(
+        organization=None,
+        document_type="purchase_order",
+        typed_model_name="PurchaseOrder",
+        typed_object_id=typed_id,
+        canonical_data={"total": 1},
+    )
+    assert stale.organization_id is None
+
+    CanonicalMapper().save_canonical(
+        raw_data={"total_amount": 250},
+        document_type="purchase_order",
+        typed_model_name="PurchaseOrder",
+        typed_object_id=typed_id,
+        organization=alpha,
+    )
+
+    stale.refresh_from_db()
+    assert stale.organization_id == alpha.pk, (
+        "an existing ownerless row was updated without gaining its owner — "
+        "check that organization is in update_fields"
+    )
+    assert stale.version == 2, "the update path did not run"
+
+
+@pytest.mark.django_db
+def test_this_guard_can_fail_on_the_write_path(two_orgs):
+    """Reproduce the pre-fix writer and confirm the guard sees the difference.
+
+    Real rows, real queries: the old writer is reproduced by creating the row
+    the way it used to be created, rather than by mocking a manager into
+    agreeing.
+    """
+    from apps.documents.canonical_models import DocumentCanonicalData
+
+    alpha, _beta = two_orgs
+
+    # What save_canonical did before this shipment: no organization at all.
+    old_style = DocumentCanonicalData.objects.create(
+        document_type="purchase_order",
+        typed_model_name="PurchaseOrder",
+        typed_object_id=uuid.uuid4(),
+        canonical_data={"total": 1},
+    )
+    assert old_style.organization_id is None, (
+        "the model now forces an owner, so this guard no longer reproduces "
+        "the pre-fix behaviour and the tests above prove less than they claim"
+    )
+    assert old_style.pk not in set(
+        DocumentCanonicalData.objects.filter(organization=alpha)
+        .values_list("pk", flat=True)
+    )

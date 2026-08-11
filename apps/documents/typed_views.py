@@ -825,7 +825,8 @@ def _extract_records_from_pandas(file_path: str, ext: str, doc_type: str) -> lis
 
 # ── Canonical data persistence ────────────────────────────────────────────────
 
-def _save_canonical(ai_data: dict, doc_type: str, model_name: str, object_id) -> None:
+def _save_canonical(ai_data: dict, doc_type: str, model_name: str, object_id,
+                    organization) -> None:
     """
     Persist a DocumentCanonicalData record for any typed document.
     Called immediately after _create_typed_record. Never raises — failure is
@@ -838,6 +839,7 @@ def _save_canonical(ai_data: dict, doc_type: str, model_name: str, object_id) ->
             document_type   = doc_type,
             typed_model_name= model_name,
             typed_object_id = object_id,
+            organization    = organization,
         )
     except Exception as exc:
         logger.warning("[canonical] save failed for %s/%s: %s", doc_type, object_id, exc)
@@ -990,7 +992,8 @@ def _finalize_multi_record_inline(records: list, base_doc, doc_type: str, org, u
                     doc_for_record.delete()  # roll back the orphan child Document
                 continue
 
-            _save_canonical(rec_clean, doc_type, typed_obj.__class__.__name__, typed_obj.id)
+            _save_canonical(rec_clean, doc_type, typed_obj.__class__.__name__,
+                            typed_obj.id, org)
             try:
                 val_result = _apply_validation_to_typed(typed_obj, rec_clean, doc_type)
                 final_risk = val_result.get("final_risk", "low")
@@ -1141,7 +1144,8 @@ def _process_typed_document(file_obj, filename: str, doc_type: str, org, user, r
 
     # ── 4. Create typed model ───────────────────────────────────────────────
     typed_obj = _create_typed_record(doc_type, ai_data, base_doc, org, user)
-    _save_canonical(ai_data, doc_type, typed_obj.__class__.__name__, typed_obj.id)
+    _save_canonical(ai_data, doc_type, typed_obj.__class__.__name__,
+                    typed_obj.id, org)
 
     # ── 5. Validation + finalisation ────────────────────────────────────────
     val_result = _apply_validation_to_typed(typed_obj, ai_data, doc_type)

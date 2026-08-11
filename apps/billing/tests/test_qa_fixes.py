@@ -63,12 +63,20 @@ class ForceRerunConfirmationTests(TestCase):
             file=SimpleUploadedFile("t.pdf", b"%PDF-1.4 stub"),
             original_filename="t.pdf", file_size=14, mime_type="application/pdf",
         )
+        # The typed record the gate is addressed by. `document_id` on this path
+        # means the typed record's key; self.doc stays the Document because the
+        # usage ledger keys on it and the assertions below read it that way.
+        from apps.documents.typed_models import PurchaseOrder
+        self.po = PurchaseOrder.objects.create(
+            document=self.doc, organization=self.org,
+            po_number=f"PO-{str(self.doc.pk)[:8]}",
+        )
 
     def _fake_run(self, status="completed"):
         from apps.rule_engine.models import AuditRun
         return AuditRun.objects.create(
-            organization=self.org, document_type="sales_invoice",
-            document_id=self.doc.id,
+            organization=self.org, document_type="purchase_order",
+            document_id=self.po.id,
             status=AuditRun.Status.COMPLETED if status == "completed" else AuditRun.Status.FAILED,
         )
 
@@ -78,8 +86,8 @@ class ForceRerunConfirmationTests(TestCase):
             return_value=self._fake_run(),
         ):
             return run_audit_with_quota(
-                document_id=str(self.doc.id),
-                document_type="sales_invoice",
+                document_id=str(self.po.id),
+                document_type="purchase_order",
                 organization_id=str(self.org.id),
                 force_rerun=force_rerun,
                 force_rerun_confirmed=force_rerun_confirmed,

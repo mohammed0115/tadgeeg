@@ -72,7 +72,9 @@ def test_calling_the_patched_entrypoint_does_not_recurse(gate_installed, monkeyp
     monkeypatch.setattr(quota_gate, "QuotaService", _Svc)
     monkeypatch.setattr(
         quota_gate, "_resolve_document_and_org",
-        lambda d, o: (object(), object()),
+        # Three parameters: the resolver takes document_type now, because
+        # document_id alone cannot say which typed model owns the key.
+        lambda d, o, t: (object(), object()),
     )
     monkeypatch.setattr(quota_gate, "_already_billed", lambda org, doc: False)
     # Inject at the gate's own record of the original. Patching
@@ -171,7 +173,9 @@ def test_quota_is_consumed_exactly_once(monkeypatch):
     monkeypatch.setattr(quota_gate, "QuotaService", _Svc)
     monkeypatch.setattr(
         quota_gate, "_resolve_document_and_org",
-        lambda d, o: (object(), object()),
+        # Three parameters: the resolver takes document_type now, because
+        # document_id alone cannot say which typed model owns the key.
+        lambda d, o, t: (object(), object()),
     )
     monkeypatch.setattr(quota_gate, "_already_billed", lambda org, doc: False)
 

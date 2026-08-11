@@ -80,13 +80,14 @@ TENANT_NEUTRAL = {
 #: Models that carry tenant data but have neither an organization column nor a
 #: foreign key that reaches one. Each is an isolation gap, recorded so it is
 #: argued about rather than forgotten. This set must only shrink.
-KNOWN_ISOLATION_GAPS = {
-    "documents.DocumentCanonicalData": (
-        "holds extracted content for a typed record but points at it with "
-        "`typed_model_name` + `typed_object_id` — a generic pointer, not a "
-        "relation. Nothing in the schema ties a row to a tenant, so no join "
-        "and no cascade protects it."
-    ),
+KNOWN_ISOLATION_GAPS: dict[str, str] = {
+    # Empty, and the test below holds it there.
+    #
+    # documents.DocumentCanonicalData was the one entry. It carried tenant
+    # content while pointing at its parent with typed_model_name +
+    # typed_object_id, a generic pointer no join can follow, so isolation
+    # depended on each caller resolving the parent first. It has an
+    # organization column now, with a cascade behind it.
 }
 
 
@@ -185,10 +186,11 @@ def test_declared_neutral_models_really_have_no_tenant_path():
 
 def test_known_isolation_gaps_do_not_grow():
     """The gap list is a ceiling. It may fall; it may not rise."""
-    assert len(KNOWN_ISOLATION_GAPS) <= 1, (
-        f"{len(KNOWN_ISOLATION_GAPS)} isolation gaps are recorded. This list "
-        f"exists to be emptied, not extended — a new entry means a model was "
-        f"added carrying tenant data with nothing tying it to a tenant."
+    assert not KNOWN_ISOLATION_GAPS, (
+        f"{len(KNOWN_ISOLATION_GAPS)} isolation gap(s) recorded: "
+        f"{sorted(KNOWN_ISOLATION_GAPS)}. The list reached zero and stays "
+        f"there — an entry means a model now carries tenant data with nothing "
+        f"tying it to a tenant, which is a decision, not an oversight."
     )
 
 
@@ -197,17 +199,23 @@ def test_known_isolation_gaps_do_not_grow():
 def test_nullable_organization_is_recorded_not_discovered_later():
     """A nullable organization is a row that no tenant filter returns.
 
-    Nine models allow it today. Several are deliberate — User before it joins an
+    Ten models allow it. Several are deliberate — User before it joins an
     organisation, AuditLog for platform-level actions — so this pins the count
-    rather than forbidding the pattern. A tenth appearing is a decision someone
-    should have to make on purpose.
+    rather than forbidding the pattern.
+
+    The tenth is DocumentCanonicalData, raised here on purpose and not by
+    lowering a bar to get green: 1,003 of its 2,830 rows name a parent that no
+    longer exists, so no organisation can be derived for them. NOT NULL would
+    require inventing an owner or deleting audit content. The column is staged
+    nullable until those rows are decided on, and narrowing it is a later
+    shipment that will bring this ceiling back to nine.
     """
     nullable = sorted(
         _label(m) for m in _project_models()
         for f in m._meta.fields
         if f.name == "organization" and f.null
     )
-    assert len(nullable) <= 9, (
+    assert len(nullable) <= 10, (
         f"{len(nullable)} models now allow organization=NULL:\n  "
         + "\n  ".join(nullable)
         + "\nRows with no organisation are invisible to every tenant query. "

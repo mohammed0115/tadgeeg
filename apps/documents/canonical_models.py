@@ -110,6 +110,26 @@ class DocumentCanonicalData(models.Model):
     typed_model_name = models.CharField(max_length=100)
     typed_object_id  = models.UUIDField(db_index=True)
 
+    # The owning tenant, stated rather than inferred.
+    #
+    # This row is tenant data — extracted content read during audits and
+    # reports — but it reached its parent through `typed_model_name` +
+    # `typed_object_id`, a generic pointer the ORM cannot traverse. So there was
+    # no join, no cascade, and no way to filter by organisation except by
+    # remembering to look the parent up first. Two call sites did remember;
+    # nothing obliged a third.
+    #
+    # `null=True` is staged, not permanent. The table holds rows whose parent
+    # no longer exists, and those cannot be assigned an organisation by any
+    # means — see the backfill in migration 0035. Narrowing to NOT NULL is a
+    # later shipment, once those rows have been decided on.
+    organization = models.ForeignKey(
+        "authentication.Organization",
+        on_delete=models.CASCADE,
+        related_name="canonical_documents",
+        null=True, blank=True, db_index=True,
+    )
+
     # Full canonical field set: {field_code: value_or_null}
     canonical_data = models.JSONField(default=dict)
 
@@ -136,6 +156,10 @@ class DocumentCanonicalData(models.Model):
         indexes = [
             models.Index(fields=["document_type"]),
             models.Index(fields=["typed_object_id"]),
+            # The shape every tenant-scoped read takes: this organisation's
+            # row for this object.
+            models.Index(fields=["organization", "typed_object_id"],
+                         name="canonicaldata_org_object_idx"),
         ]
         verbose_name = "Document Canonical Data"
         verbose_name_plural = "Document Canonical Data"

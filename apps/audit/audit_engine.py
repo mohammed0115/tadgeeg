@@ -274,14 +274,42 @@ class AuditEngine:
             invoice_id,
         )
 
+        doc_type = (document.get("document_type") or "other").lower()
+
         for rule_class in self.rule_classes:
             rule = rule_class()
             try:
-                result = rule.evaluate(
-                    document=document,
-                    organization_id=self.organization_id,
-                    context=context,
-                )
+                # Ask before evaluating.
+                #
+                # `AuditRule.is_applicable` has existed in base_rule.py since
+                # the rules were written, and this loop never called it. Four
+                # rules called it on themselves and fourteen did not, so the
+                # gate was a convention rather than a mechanism — and R017 and
+                # R018 were demanding ZATCA QR codes and invoice fields from
+                # contracts, cash vouchers and customer statements.
+                #
+                # Asking here, once, makes the declaration binding. Rules that
+                # still call it on themselves are unaffected: they will find it
+                # true and carry on.
+                #
+                # A rule that does not apply is RECORDED, not dropped. The
+                # vocabulary in apps/audit_platform/status.py separates
+                # "nothing to find" from "we could not look" precisely because
+                # a rule that vanishes without trace tells an auditor nothing
+                # about whether it ran. `_skip` writes the reason into
+                # `explanation`, and `_build_report` counts SKIPPED in
+                # `total_rules` and in neither `passed` nor `failed`.
+                if not rule.is_applicable(document):
+                    result = rule._skip(
+                        f"Not applicable to document type '{doc_type}' "
+                        f"(rule declares: {', '.join(sorted(rule.applies_to))})"
+                    )
+                else:
+                    result = rule.evaluate(
+                        document=document,
+                        organization_id=self.organization_id,
+                        context=context,
+                    )
                 result.document_id = invoice_id
             except Exception as exc:
                 result = rule._error(exc)

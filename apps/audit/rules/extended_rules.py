@@ -51,6 +51,9 @@ class ThreeWayMatchRule(AuditRule):
     rule_id = "R007"
     rule_name = "Three-Way Match (PO ↔ GRN ↔ Invoice)"
     severity = Severity.HIGH
+    # The match is performed ON the invoice, against its PO and GRN. Nothing
+    # else in the vocabulary is the third leg of a three-way match.
+    applies_to = {"invoice"}
     description = "Verify the invoice matches its purchase order and goods-receipt note."
 
     def evaluate(self, document, organization_id=None, context=None):
@@ -165,6 +168,11 @@ class RoundNumberAnomalyRule(AuditRule):
     rule_id = "R010"
     rule_name = "Round-Number Anomaly"
     severity = Severity.LOW
+    # "real invoices usually have decimals" is the whole premise, and it is
+    # false for the others: a contract worth 50,000 or a payroll run of
+    # 120,000 is round because round is what it is, not because someone
+    # typed it.
+    applies_to = {"invoice", "receipt", "expense_report"}
     description = "Detects unusually round invoice totals that bypass typical rounding."
 
     def evaluate(self, document, organization_id=None, context=None):
@@ -244,6 +252,10 @@ class NegativeAmountRule(AuditRule):
     rule_id = "R012"
     rule_name = "Negative Amount Detection"
     severity = Severity.HIGH
+    # Its own description says "credit notes are a separate document type".
+    # A bank statement is the counter-example: debits are negative by
+    # definition, and flagging them is flagging arithmetic.
+    applies_to = {"invoice", "purchase_order", "receipt", "expense_report"}
     description = "Invoice amounts should be positive — credit notes are a separate document type."
 
     def evaluate(self, document, organization_id=None, context=None):
@@ -268,6 +280,9 @@ class DueDateValidityRule(AuditRule):
     rule_id = "R013"
     rule_name = "Due-Date Validity"
     severity = Severity.MEDIUM
+    # "Net 365" is payment-terms language. A due date on a bank statement or
+    # a VAT return is a different concept and should not be judged by it.
+    applies_to = {"invoice", "purchase_order"}
     description = "Due date should be after the invoice date and within reasonable terms (Net 365)."
 
     def evaluate(self, document, organization_id=None, context=None):
@@ -330,6 +345,9 @@ class VendorApprovalRule(AuditRule):
     rule_id = "R015"
     rule_name = "Vendor Approval Status"
     severity = Severity.HIGH
+    # Same scope VendorRiskRule (R006) already declares for the same reason:
+    # these are the types where a counterparty is a vendor being paid.
+    applies_to = {"invoice", "purchase_order", "receipt", "expense_report"}
     description = "Invoices from vendors flagged 'blocked' or 'unapproved' must not be processed."
 
     def evaluate(self, document, organization_id=None, context=None):
@@ -400,6 +418,12 @@ class ZatcaQRPresenceRule(AuditRule):
     rule_id = "R017"
     rule_name = "ZATCA QR Code Presence"
     severity = Severity.HIGH
+    # ZATCA Phase 2 mandates the TLV QR on tax invoices and on simplified
+    # tax invoices — which is what `receipt` is here. It mandates nothing
+    # about contracts or bank statements, and this rule was failing those 26
+    # times in 34 documents.
+    # The SAR/SA default logic below is NOT touched by this shipment.
+    applies_to = {"invoice", "receipt"}
     description = "ZATCA Phase 2 simplified-tax invoices must carry a TLV-encoded QR code."
 
     # ZATCA Phase 2 (e-invoicing integration) mandate enforcement began on
@@ -444,6 +468,11 @@ class MandatoryFieldsRule(AuditRule):
     rule_id = "R018"
     rule_name = "Mandatory Tax-Invoice Fields"
     severity = Severity.HIGH
+    # REQUIRED_ALIASES below is a list of invoice fields — invoice_number,
+    # invoice_date, vendor_name, total, currency. Demanding them from a
+    # customer statement is demanding it be an invoice. Same scope as R017:
+    # both derive from the ZATCA tax-invoice definition.
+    applies_to = {"invoice", "receipt"}
     description = (
         "ZATCA + ISA 500 require: invoice number, invoice date, vendor name, "
         "vendor TRN (for taxable supplies), totals, currency."

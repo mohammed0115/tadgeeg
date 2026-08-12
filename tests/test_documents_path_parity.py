@@ -413,3 +413,235 @@ def test_this_guard_can_fail():
         "الجسر ما زال يشكو من invoice_id رغم تمريره — "
         "فاختبار الرفض أعلاه لا يقيس ما يدّعيه"
     )
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# ٦. بوّابة النوع المركزية — المرحلة ٢ج
+#
+# `AuditRule.is_applicable` كانت موجودة في `base_rule.py` منذ كُتبت القواعد،
+# وحلقة `AuditEngine.evaluate` **لم تستدعِها إطلاقًا**. أربع قواعد استدعتها
+# على أنفسها وأربع عشرة لم تفعل — فكانت البوّابة عُرفًا لا آليّة، و`R017`
+# يطلب رمز ZATCA من عقد و`R018` يطلب حقول فاتورة من كشف عميل.
+#
+# العيب لم يكن أن القواعد نسيت، بل أن `evaluate` لا تسأل.
+# ═════════════════════════════════════════════════════════════════════════════
+
+#: قواعد عامّة بقصد — ولكلٍّ سببها. القائمة سقف: قاعدة جديدة بلا `applies_to`
+#: ولا مدخل هنا تُسقِط `test_every_registered_rule_declares_or_declines_a_scope`.
+_DELIBERATELY_UNSCOPED: dict[str, str] = {
+    "R003": (
+        "مُوَعّاة بالنوع داخليًّا — `REQUIRED_FIELDS_BY_TYPE` تختار الحقول "
+        "المطلوبة لكل نوع، فبوّابة خارجية تُسكِتها حيث يجب أن تعمل بقائمة أخرى."
+    ),
+    "R005": (
+        "تعلن `applies_to = set()` صراحةً مع تعليق «All document types». "
+        "صلاحية التواريخ لا تخصّ نوعًا."
+    ),
+    "R008": (
+        "عملة صالحة مطلوبة من أي مستند مالي — والقاعدة تفشل عند غيابها، "
+        "وهو حكم صحيح على كل نوع."
+    ),
+    "R009": (
+        "تتخطّى نفسها حين لا يوجد `vat_rate`. وأي مستند يحمل نسبة ضريبة "
+        "يجب أن تكون نسبة سعودية صالحة."
+    ),
+    "R011": (
+        "تتخطّى نفسها حين لا توجد `line_items`. ومجموع السطور = المجموع "
+        "الفرعي حساب لا يخصّ نوعًا."
+    ),
+    "R014": (
+        "تتخطّى نفسها حين لا يوجد رقم ضريبي. وصيغة TRN السعودي واحدة "
+        "أيًّا كان المستند الذي يحملها."
+    ),
+    "R016": (
+        "خانتان عشريتان حدّ على المبالغ النقدية نفسها لا على نوع المستند."
+    ),
+}
+
+
+def _registered_rules():
+    from apps.audit.audit_engine import REGISTERED_RULES
+    return REGISTERED_RULES
+
+
+@pytest.mark.django_db
+def test_the_engine_asks_before_it_evaluates():
+    """قاعدة لا تنطبق ⇒ `evaluate` لا تُنادى، والنتيجة `SKIPPED` بسبب.
+
+    لا `MagicMock`: صنف حقيقي يرفع لو نُودي، فالإثبات أن الحلقة لم تنادِه
+    هو ألّا يُرفع شيء. كائن مُقلَّد يجيب عن أي سمة فيخترع نجاحًا — وهو ما
+    أخفى عيب بوابة الحصّة خلف `getattr`.
+    """
+    from apps.audit.audit_engine import AuditEngine
+    from apps.audit.rules.base_rule import AuditRule, RuleStatus, Severity
+
+    class NeverForContracts(AuditRule):
+        rule_id = "RTEST"
+        rule_name = "Test rule"
+        severity = Severity.HIGH
+        applies_to = {"invoice"}
+
+        def evaluate(self, document, organization_id=None, context=None):
+            raise AssertionError(
+                "evaluate() نُوديت على نوع لا تنطبق عليه القاعدة — "
+                "الفحص المركزي في audit_engine.py لا يعمل"
+            )
+
+    report = AuditEngine(organization_id=None, rules=[NeverForContracts]).evaluate(
+        document={"document_type": "bank_statement", "total_amount": 100},
+    )
+
+    assert len(report.rule_results) == 1, "القاعدة أُسقِطت بلا أثر"
+    result = report.rule_results[0]
+    assert result.result == RuleStatus.SKIPPED
+    assert "bank_statement" in result.explanation, (
+        f"السبب لا يذكر النوع: {result.explanation!r}"
+    )
+    assert "invoice" in result.explanation, (
+        "السبب لا يذكر النطاق الذي تعلنه القاعدة"
+    )
+
+
+@pytest.mark.django_db
+def test_an_applicable_rule_is_still_evaluated():
+    """البوّابة تفتح كما تُغلق — وإلّا فهي كتم لا انتقاء."""
+    from apps.audit.audit_engine import AuditEngine
+    from apps.audit.rules.base_rule import AuditRule, RuleStatus, Severity
+
+    class OnlyForInvoices(AuditRule):
+        rule_id = "RTEST2"
+        rule_name = "Test rule 2"
+        severity = Severity.LOW
+        applies_to = {"invoice"}
+
+        def evaluate(self, document, organization_id=None, context=None):
+            return self._fail(explanation="ran")
+
+    report = AuditEngine(organization_id=None, rules=[OnlyForInvoices]).evaluate(
+        document={"document_type": "invoice"},
+    )
+    assert report.rule_results[0].result == RuleStatus.FAILED
+    assert report.rule_results[0].explanation == "ran"
+
+
+def test_every_registered_rule_declares_or_declines_a_scope():
+    """كل قاعدة إمّا تُعلن نطاقها أو تُدرَج عامّة **بسبب مكتوب**.
+
+    هذا يمنع القاعدة التاسعة عشرة من الدخول بلا قرار نطاق — وهو بالضبط ما
+    حدث لـ`extended_rules.py`: اثنتا عشرة قاعدة دخلت والنمط قائم، ولا واحدة
+    منها أعلنت شيئًا.
+    """
+    undeclared = [
+        rc.rule_id for rc in _registered_rules()
+        if not rc.applies_to and rc.rule_id not in _DELIBERATELY_UNSCOPED
+    ]
+    assert not undeclared, (
+        f"قواعد بلا `applies_to` وبلا سبب مسجَّل: {sorted(undeclared)}\n"
+        "أعلِن نطاقها، أو أضِفها إلى _DELIBERATELY_UNSCOPED بسبب يُقرأ. "
+        "نطاق مُخمَّن أسوأ من غيابه — الغياب يُبقي الحال، والخطأ يُسكت "
+        "قاعدة يجب أن تعمل."
+    )
+
+
+def test_the_unscoped_list_has_no_stale_entries():
+    """سقف أعلى من الواقع يشتري صامتًا مكانًا لعودة التراجع."""
+    registered = {rc.rule_id for rc in _registered_rules()}
+    scoped = {rc.rule_id for rc in _registered_rules() if rc.applies_to}
+
+    unknown = set(_DELIBERATELY_UNSCOPED) - registered
+    assert not unknown, f"مدخلات لقواعد غير مسجَّلة: {sorted(unknown)}"
+
+    now_scoped = set(_DELIBERATELY_UNSCOPED) & scoped
+    assert not now_scoped, (
+        f"{sorted(now_scoped)} صارت تُعلن نطاقًا — احذفها من "
+        "_DELIBERATELY_UNSCOPED"
+    )
+
+
+def test_every_reason_is_a_reason():
+    """«عامة» ليست سببًا. عتبة طول تمنع كلمة واحدة تمرّ كتبرير."""
+    thin = {rid: r for rid, r in _DELIBERATELY_UNSCOPED.items()
+            if len(r.split()) < 8}
+    assert not thin, (
+        f"أسباب أقصر من أن تكون أسبابًا: {sorted(thin)}\n"
+        "اكتب لماذا القاعدة تنطبق على كل نوع، لا أنها كذلك."
+    )
+
+
+@pytest.mark.django_db
+def test_not_applicable_is_not_counted_as_passed():
+    """العدّادات لا تُجمّل: غير المنطبقة ليست ناجحة ولا فاشلة."""
+    from apps.audit.audit_engine import AuditEngine
+    from apps.audit.rules.base_rule import AuditRule, Severity
+
+    class Gated(AuditRule):
+        rule_id = "RTEST3"
+        rule_name = "Gated"
+        severity = Severity.HIGH
+        applies_to = {"invoice"}
+
+        def evaluate(self, document, organization_id=None, context=None):
+            return self._fail(explanation="should not run")
+
+    class Ungated(AuditRule):
+        rule_id = "RTEST4"
+        rule_name = "Ungated"
+        severity = Severity.LOW
+
+        def evaluate(self, document, organization_id=None, context=None):
+            return self._pass()
+
+    report = AuditEngine(organization_id=None, rules=[Gated, Ungated]).evaluate(
+        document={"document_type": "payroll"},
+    )
+
+    assert report.total_rules == 2, "المتخطّاة اختفت من المقام"
+    assert report.passed_rules == 1
+    assert report.failed_rules == 0
+    assert report.skipped_rules == 1
+    assert report.risk_score == 0, "قاعدة لم تُنفَّذ أسهمت في الدرجة"
+
+
+@pytest.mark.django_db
+def test_this_guard_can_fail():
+    """احجب الفحص المركزي بترقيع، وتأكّد أن الحارس الأول يراه.
+
+    الترقيع في الاختبار لا في الملف: `is_applicable` تُجعل ترجع True دائمًا،
+    فتعود الحلقة إلى سلوكها قبل هذه الشحنة.
+    """
+    from apps.audit.audit_engine import AuditEngine
+    from apps.audit.rules.base_rule import AuditRule, RuleStatus, Severity
+
+    ran = []
+
+    class NeverForContracts(AuditRule):
+        rule_id = "RTEST5"
+        rule_name = "Test rule 5"
+        severity = Severity.HIGH
+        applies_to = {"invoice"}
+
+        def evaluate(self, document, organization_id=None, context=None):
+            ran.append(document.get("document_type"))
+            return self._fail(explanation="ran anyway")
+
+    doc = {"document_type": "contract"}
+
+    # البوّابة تعمل: لا تنفيذ، ونتيجة SKIPPED.
+    report = AuditEngine(organization_id=None, rules=[NeverForContracts]).evaluate(
+        document=doc)
+    assert ran == []
+    assert report.rule_results[0].result == RuleStatus.SKIPPED
+
+    # البوّابة محجوبة: العيب يعود بالضبط.
+    original = AuditRule.is_applicable
+    try:
+        AuditRule.is_applicable = lambda self, document: True
+        report = AuditEngine(organization_id=None, rules=[NeverForContracts]).evaluate(
+            document=doc)
+    finally:
+        AuditRule.is_applicable = original
+
+    assert ran == ["contract"], (
+        "حجب الفحص لم يُعِد العيب — فالاختبار الأول لا يقيس البوّابة"
+    )
+    assert report.rule_results[0].result == RuleStatus.FAILED

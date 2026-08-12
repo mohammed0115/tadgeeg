@@ -142,7 +142,27 @@ class NormalizationService:
             "extraction_method": self._clean_text(
                 payload.get("extraction_method") or payload.get("_extraction_method") or payload.get("method") or "unknown"
             ),
-            "document_type": self._clean_text(payload.get("document_type", "invoice")) or "invoice",
+            # "unknown", not "invoice" — and note the two lines it sits between,
+            # which already say "unknown" for exactly this situation.
+            #
+            # This is the one field that decides WHICH RULES ARE APPLIED. A
+            # guess here is not a cosmetic default: it made 17 of 34 measured
+            # documents into invoices, and R017 then demanded a ZATCA QR code
+            # from a contract and R018 demanded invoice fields from a customer
+            # statement. Every one of those is a false finding presented to an
+            # auditor.
+            #
+            # Worse, document_classifier.py read this guess back and returned it
+            # as a *structural determination at 0.90 confidence* — so the guess
+            # was laundered into a measurement. See
+            # docs/CLASSIFICATION_MEASUREMENT.md.
+            #
+            # "unknown" is not a Document.DocumentType choice, and it does not
+            # need to be: _persist_result routes it through
+            # type_map.get(ai_type, "other"), which stores "other". The value
+            # exists to say "nobody determined this", which is true, and which
+            # "invoice" was not.
+            "document_type": self._clean_text(payload.get("document_type", "unknown")) or "unknown",
             "language": self._clean_text(payload.get("language", "unknown")) or "unknown",
         }
 

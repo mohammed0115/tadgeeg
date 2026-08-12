@@ -20,6 +20,11 @@ from typing import Optional
 
 logger = logging.getLogger("finai")
 
+#: Values that mean "nobody determined this", written by normalization.py when
+#: no parser produced a type. They are not document types and must never be
+#: certified as one — see _classify_structural.
+_UNDETERMINED = frozenset({"unknown", "", None})
+
 DOCUMENT_TYPES = [
     "invoice",
     "purchase_order",
@@ -135,9 +140,27 @@ class DocumentClassifier:
         if not structured:
             return None
 
-        # Explicit type field already set by parser/AI
+        # Explicit type field already set by parser/AI.
+        #
+        # This branch certifies a value at 0.90 as a *structural determination*.
+        # That claim is only honest when something upstream actually determined
+        # it. It was not: normalization.py defaulted the field to "invoice", and
+        # this branch read that default back and stamped it 0.90 — 17 of 34
+        # measured documents, every one of them by this path, none of them by
+        # keyword or by AI. A guess entered the system and left it a
+        # measurement.
+        #
+        # The sentinels below are what "nobody determined this" looks like, and
+        # they are refused here rather than certified. Refusing lets the value
+        # fall through to the keyword and AI branches, which are the parts of
+        # this method that actually look at the document.
+        #
+        # "unknown" is already outside DOCUMENT_TYPES, so it would fall through
+        # anyway. It is named explicitly so that adding it to that list later
+        # cannot silently re-open this hole.
         dtype = structured.get("document_type", "")
-        if dtype and dtype in DOCUMENT_TYPES and dtype != "other":
+        if (dtype and dtype not in _UNDETERMINED
+                and dtype in DOCUMENT_TYPES and dtype != "other"):
             return {"document_type": dtype, "confidence": 0.90, "method": "structural"}
 
         # Presence of line_items → invoice or purchase order

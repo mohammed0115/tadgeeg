@@ -298,9 +298,28 @@ def _persist_result(doc, result: dict):
             "bank_statement": "bank_statement",
             "receipt":        "receipt",
             "expense_report": "expense_report",
+            # Detected, then discarded: the classifier distinguishes payroll and
+            # Document.DocumentType has no choice for it, so the distinction is
+            # lost here. Adding a choice needs a migration, which is outside
+            # this shipment. Recorded in docs/EXECUTION_TRACKER.md as
+            # deviation 74 rather than quietly accepted.
             "payroll":        "other",
             "vat_return":     "tax_document",
         }
+        if ai_type not in type_map:
+            # "unknown" arrives here whenever no parser determined a type — the
+            # normal case, not an error — and so does any value a future
+            # classifier starts returning. Both land on "other", which is
+            # correct and lossless for the first and lossy for the second. Log
+            # it so the second is visible: a widening classifier that nobody
+            # noticed is how a document type goes unaudited.
+            #
+            # Logged, never raised. A new classifier value must not stop an
+            # upload.
+            logger.info(
+                "[Pipeline] document_type %r is not in type_map — storing "
+                "'other' for document %s", ai_type, doc.pk,
+            )
         doc.document_type = type_map.get(ai_type, "other")
 
     doc.save(update_fields=[

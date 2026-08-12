@@ -139,6 +139,52 @@ class AuditReport:
     processing_time_ms: int = 0
     summary: str = ""
 
+    # ── The `*_count` aliases, and why both names exist ─────────────────────
+    #
+    # `core/services/pipeline.py::_serialise_audit_report` reads eleven names
+    # off a report. Seven of them are the fields above. The other four it
+    # spells `passed_count`, `failed_count`, `skipped_count`, `error_count` —
+    # and this class spelled them `*_rules`.
+    #
+    # The result was an AttributeError on the first of them, raised AFTER the
+    # engine had finished its work, and caught by Stage 3's blanket
+    # `except Exception`. Two things were lost with it and neither left a
+    # symptom: the serialised report, and the risk escalation on the lines
+    # below the failing call — so a document the engine scored critical was
+    # persisted at whatever Stage 2 had said, and marked completed rather than
+    # needing review.
+    #
+    # The `*_count` spelling is the contract, not this class's preference:
+    # `AuditRunResult` in
+    # apps/rule_engine/services/compatibility/legacy_audit_adapter.py exposes
+    # exactly these four names for exactly this caller. Whichever engine the
+    # documents path routes to, the serialiser must find them.
+    #
+    # Aliases rather than a rename: `passed_rules` and its siblings are read
+    # elsewhere, and renaming a field that works to fix one that does not is
+    # how a caller breaks silently. An alias costs nothing — the same choice
+    # AuditRunResult made.
+    #
+    # The names are not maintained by hand:
+    # tests/test_documents_path_parity.py extracts them from the serialiser
+    # with `ast` and fails if a twelfth appears.
+
+    @property
+    def passed_count(self) -> int:
+        return self.passed_rules
+
+    @property
+    def failed_count(self) -> int:
+        return self.failed_rules
+
+    @property
+    def skipped_count(self) -> int:
+        return self.skipped_rules
+
+    @property
+    def error_count(self) -> int:
+        return self.error_rules
+
     @property
     def failed_results(self) -> list[RuleResult]:
         return [r for r in self.rule_results if r.result == RuleStatus.FAILED]

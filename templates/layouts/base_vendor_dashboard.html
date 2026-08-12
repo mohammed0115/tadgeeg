@@ -26,6 +26,12 @@
             vendor: {
               50: "#eff6ff",
               100: "#dbeafe",
+              // 200 was missing while `dark:text-vendor-200` is used on this
+              // page and in partials/vendor_topbar.html. Tailwind's browser
+              // compiler raised CssSyntaxError on that ruleset and stopped, so
+              // every dark-mode style after it was lost. The rest of this scale
+              // is Tailwind's `blue`; 200 is blue-200.
+              200: "#bfdbfe",
               400: "#60a5fa",
               500: "#3b82f6",
               600: "#2563eb",

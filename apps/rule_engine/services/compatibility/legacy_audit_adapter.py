@@ -97,6 +97,54 @@ class LegacyAuditEngineAdapter:
         )
         return AuditRunResult.from_audit_run(audit_run)
 
+    def evaluate_document(self, document_id, context: Optional[dict] = None):
+        """Audit a `documents.Document` by resolving its typed record first.
+
+        `evaluate()` above cannot do this and is deliberately left alone: it
+        takes an `invoice_id`, forwards it as `document_id`, and pins
+        `document_type="sales_invoice"`. That contract is correct for the
+        invoices path, which is live, and this method does not touch it.
+
+        What it does instead: `core.document_resolution.resolve()` turns a
+        Document into `(typed_record, document_type)` — the pair
+        `run_audit_compat` actually needs — using Django's own reverse
+        relations and the normalizer registry rather than a written map.
+
+        Raises `UnresolvedDocument` when a Document carries no typed record.
+        That is louder than the behaviour it replaces, and deliberately: the
+        old path produced an AuditRun over an empty document and recorded it as
+        a completed audit.
+
+        Returns the same `AuditRunResult` as `evaluate()` — the seven-field
+        contract added in shipment 1 and covered by
+        tests/test_adapter_contract.py.
+
+        **Temporary by plan.** This bridge is removed together with
+        `apps.audit.audit_engine`; until then a second entry point here is the
+        only change that leaves the invoices path untouched.
+        """
+        if not self.organization_id:
+            raise ValueError("LegacyAuditEngineAdapter requires organization_id")
+
+        from core.document_resolution import resolve
+        from apps.documents.models import Document
+        from apps.rule_engine.pipeline.v2.compat import run_audit_compat
+
+        document = (
+            document_id
+            if isinstance(document_id, Document)
+            else Document.objects.get(pk=document_id)
+        )
+        typed_record, document_type = resolve(document)
+
+        audit_run = run_audit_compat(
+            document_id=str(typed_record.pk),
+            document_type=document_type,
+            organization_id=self.organization_id,
+            triggered_by="legacy_adapter",
+        )
+        return AuditRunResult.from_audit_run(audit_run)
+
     def save_audit_issues(self, report, invoice=None, created_by=None):
         """
         No-op stub — AuditPipelineV2 persists findings directly.

@@ -186,6 +186,7 @@ def process_single_file(
     batch=None,
     request=None,
     audit_session=None,
+    structured_payload: dict | None = None,
 ) -> dict:
     """
     Full invoice processing pipeline — wrapped in a single atomic transaction.
@@ -211,7 +212,7 @@ def process_single_file(
                     findings_summary, status, processing_ms.
     On failure returns: invoice_id (if created), filename, success=False, error.
     """
-    from core.services.document_engine import DocumentEngine
+    from core.services.document_engine import DocumentEngine, IngestionResult
     from core.services.financial_ai_engine import FinancialAIEngine
     from apps.audit.audit_engine import run_audit
 
@@ -241,6 +242,26 @@ def process_single_file(
             mime_type=getattr(file_obj, "content_type", "") or "",
             extracted_data={"file_hash": file_hash},
         )
+
+        # The rule engine addresses this record by Invoice.pk, while billing is
+        # intentionally keyed to Document.  Persist one explicit, same-file
+        # Document bridge at creation time so audit retries cannot bypass quota
+        # or guess a different id space later.
+        from apps.documents.models import Document
+        audit_document = Document.objects.create(
+            organization=org,
+            uploaded_by=user,
+            audit_session=audit_session,
+            file=invoice.file.name,
+            original_filename=filename,
+            file_size=len(file_data),
+            file_sha256=file_hash,
+            mime_type=getattr(file_obj, "content_type", "") or _guess_mime(ext),
+            document_type=Document.DocumentType.INVOICE,
+        )
+        invoice.audit_document = audit_document
+        invoice.save(update_fields=["audit_document", "updated_at"])
+
         # Deferred to on_commit: the InvoiceAuditEvent hash-chain takes a
         # SELECT … FOR UPDATE on the org's chain head. Recording it inline would
         # hold that row lock for the whole ~17s upload (AI calls included) and
@@ -255,8 +276,26 @@ def process_single_file(
         file_path = invoice.file.path
 
         # ── Step 3: Document engine ───────────────────────────────────────────
-        doc_engine = DocumentEngine(use_ai=True)
-        ingestion = doc_engine.ingest(file_path)
+        if structured_payload is not None:
+            # A row was already parsed by iter_structured_records.  Sending its
+            # JSON serialization back through the generic extractor made it
+            # rediscover fragments of field names (for example `oice`) instead
+            # of using the authoritative CSV values.  Preserve the source file
+            # for audit evidence, but pass the normalized row directly.
+            ingestion = IngestionResult(
+                success=True,
+                file_path=file_path,
+                file_name=filename,
+                mime_type="application/json",
+                raw_text=json.dumps(structured_payload, ensure_ascii=False),
+                structured=dict(structured_payload),
+                normalized=dict(structured_payload),
+                metadata={"ocr_confidence": 100.0, "structured_row": True},
+                extraction_method="structured_row",
+            )
+        else:
+            doc_engine = DocumentEngine(use_ai=True)
+            ingestion = doc_engine.ingest(file_path)
         if audit_session:
             AuditSessionService.advance_to_normalizing(audit_session)
 
@@ -291,15 +330,20 @@ def process_single_file(
             img_for_ai = file_path
 
         try:
-            from core.services.ai_budget import org_context
-            # Savepoint: the budget guard writes to the DB-backed cache, so a DB
+            if structured_payload is not None:
+                # CSV/Excel/JSON values are already structured input.  AI vision
+                # on their synthetic JSON file is both lossy and unnecessary.
+                ai_data = {}
+            else:
+                from core.services.ai_budget import org_context
+                # Savepoint: the budget guard writes to the DB-backed cache, so a DB
             # failure here must not poison the outer transaction — otherwise the
             # next query (invoice.save() below) raises the generic
             # "can't execute queries until the end of the 'atomic' block" and
             # masks the real error.
-            with transaction.atomic():
-                with org_context(org.id if org else None):
-                    ai_data = extract_invoice_with_ai(img_for_ai, raw_text)
+                with transaction.atomic():
+                    with org_context(org.id if org else None):
+                        ai_data = extract_invoice_with_ai(img_for_ai, raw_text)
         except Exception as exc:
             logger.warning("OpenAI extraction failed for %s: %s", filename, exc)
             from core.services.invoice_ai_service import _fallback_extraction
@@ -435,7 +479,7 @@ def process_single_file(
     #      back-to-back when the signal layer also dispatches.
     def _dispatch_v2():
         try:
-            from apps.rule_engine.tasks.audit_tasks import run_audit_task
+            from apps.rule_engine.tasks.audit_tasks_v2 import run_audit_compat_task
             # Mirror the idempotency guard the post_save signal uses, so a
             # path that goes Upload → Invoice.save() → signal AND processor
             # doesn't double-trigger.
@@ -448,7 +492,7 @@ def process_single_file(
                     doc_id_s,
                 )
                 return
-            run_audit_task.delay(
+            run_audit_compat_task.delay(
                 document_id=doc_id_s,
                 document_type="sales_invoice",
                 organization_id=org_id_s,
@@ -600,7 +644,10 @@ def process_structured_rows_chunk(
         file_like.content_type = "application/json"
 
         try:
-            result = process_single_file(file_like, row_name, org, user, batch, request, audit_session)
+            result = process_single_file(
+                file_like, row_name, org, user, batch, request, audit_session,
+                structured_payload=payload,
+            )
         except Exception as exc:
             logger.error("Structured row %s failed: %s", row_name, exc)
             result = {"success": False, "error": str(exc)}

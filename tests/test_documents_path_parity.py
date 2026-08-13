@@ -40,23 +40,18 @@ import pytest
 # ١. الشرط الحاجب الأول — الجسر يرفض شكل استدعاء مسار المستندات
 # ═════════════════════════════════════════════════════════════════════════════
 
-def test_the_documents_path_calls_evaluate_without_invoice_id():
-    """موضع الاستدعاء يُقرأ من المصدر لا يُكتب بيدي.
+def test_the_documents_path_calls_the_typed_document_adapter():
+    """المسار العام لا يستدعي محرك قاموس AuditEngine بعد الآن.
 
-    لو مرّر أحدهم `invoice_id` لاحقًا، هذا الاختبار يسقط — وهو الوقت الذي
-    تُعاد فيه البوابة.
+    لا يملك Document العام مفتاح نموذج نوعي؛ المحوّل يحلّ تلك العلاقة أولاً
+    ثم يمرر المفتاح والنوع الصحيحين إلى بوابة التوافق.
     """
     import core.services.pipeline as pipeline_module
 
     source = inspect.getsource(pipeline_module.run_full_pipeline_for_file)
-    call_start = source.index("audit_engine.evaluate(")
-    call = source[call_start:source.index(")", call_start)]
-
-    assert "invoice_id" not in call, (
-        "مسار المستندات صار يمرّر invoice_id — الشرط الحاجب الأول تغيّر.\n"
-        f"الاستدعاء الآن: {call!r}\n"
-        "أعِد قياس البوابة قبل التبديل."
-    )
+    assert "audit_engine.evaluate(" not in source
+    assert "LegacyAuditEngineAdapter" in source
+    assert "audit_engine.evaluate_document(document_id=document_id" in source
 
 
 def test_the_adapter_requires_invoice_id_and_so_refuses_that_call():
@@ -296,17 +291,40 @@ def test_the_document_path_produces_a_result(tmp_path, settings, offline_ai):
 
     from apps.authentication.models import Organization
     from apps.documents.models import Document, DocumentAnalysisResult
+    from apps.documents.typed_models import PurchaseOrder
     from core.services.pipeline import run_full_pipeline
 
     settings.MEDIA_ROOT = str(tmp_path)
 
     payload = b"invoice_number,vendor_name,total_amount\nPO-1,Acme,1150\n"
     org = Organization.objects.create(name="Pipeline Org", name_ar="أنبوب")
+    # The canonical compatibility entry point enforces billing.  Give this
+    # official-path test the same usable subscription a real upload requires.
+    from io import StringIO
+    from django.core.management import call_command
+    from apps.billing.choices import PlanCode
+    from apps.billing.models import Plan
+    from apps.billing.services.subscription_service import SubscriptionService
+
+    call_command("seed_billing_plans", stdout=StringIO())
+    pending = SubscriptionService().create_pending_paid_subscription(
+        org, Plan.objects.get(code=PlanCode.STARTER)
+    )
+    SubscriptionService().activate_subscription(pending)
+
     doc = Document.objects.create(
         organization=org,
         document_type="purchase_order",
         file=ContentFile(payload, name="po.csv"),
         file_size=len(payload),        # NOT NULL — الرفع الحقيقي يضبطه
+    )
+    # A persisted Document is audited through the typed record that owns it;
+    # a naked Document would have no normalizer and must fail loudly instead.
+    PurchaseOrder.objects.create(
+        document=doc,
+        organization=org,
+        po_number="PO-1",
+        vendor_name="Acme",
     )
 
     result = run_full_pipeline(str(doc.id))

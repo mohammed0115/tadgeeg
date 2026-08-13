@@ -200,7 +200,9 @@ def run_full_pipeline_for_file(
 
     # ── Stage 3: Audit Rule Engine ────────────────────────────────────────────
     try:
-        from apps.audit.audit_engine import AuditEngine
+        from apps.rule_engine.services.compatibility.legacy_audit_adapter import (
+            LegacyAuditEngineAdapter,
+        )
 
         doc_dict = analysis.to_dict() if analysis else summary["ingestion"].get("normalized", {})
 
@@ -219,11 +221,15 @@ def run_full_pipeline_for_file(
             },
         }
 
-        audit_engine = AuditEngine(organization_id=organization_id)
-        report = audit_engine.evaluate(
-            document=doc_dict,
-            context=context,
-        )
+        if not document_id:
+            # Stand-alone file processing has no persistent typed record, so no
+            # V2 normalizer or quota identity exists.  Refuse the audit stage
+            # explicitly rather than evaluating a dictionary with AuditEngine
+            # and writing an incompatible legacy result.
+            raise ValueError("Stage 3 requires a persisted Document id")
+
+        audit_engine = LegacyAuditEngineAdapter(organization_id=organization_id)
+        report = audit_engine.evaluate_document(document_id=document_id, context=context)
 
         # Serialise AuditReport to JSON-safe dict
         audit_dict = _serialise_audit_report(report)

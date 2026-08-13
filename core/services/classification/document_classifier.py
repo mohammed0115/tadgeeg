@@ -217,8 +217,18 @@ class DocumentClassifier:
 
         best_type = max(scores, key=scores.get)
         best_score = scores[best_type]
-        total = sum(scores.values())
-        confidence = round(min(best_score / max(total, 1), 1.0), 3)
+        ranked_scores = sorted((score for score in scores.values() if score), reverse=True)
+        second_score = ranked_scores[1] if len(ranked_scores) > 1 else 0
+
+        # Confidence must represent both *how much* evidence we saw and how
+        # clearly it identifies one type.  `best / total` measured only share:
+        # one weak receipt keyword became 1.0 while six invoice signals plus
+        # three competing signals became 0.667.  Blend absolute support (six
+        # keyword points is sufficient saturation) with the winner/runner-up
+        # margin so scarcity is never mistaken for certainty.
+        absolute_support = min(1.0, best_score / 6)
+        discrimination = best_score / max(best_score + second_score, 1)
+        confidence = round(0.5 * absolute_support + 0.5 * discrimination, 3)
 
         return {
             "document_type": best_type,

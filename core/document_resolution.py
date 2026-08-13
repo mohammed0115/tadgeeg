@@ -135,6 +135,10 @@ def typed_accessors() -> tuple[tuple[str, str], ...]:
         if field.auto_created
         and not field.concrete
         and field.one_to_one
+        # Invoice.audit_document is a billing identity bridge, not a typed
+        # documents-app record.  Resolving it here would make a generic
+        # Document appear to be a sales invoice and select the wrong rules.
+        and field.related_model._meta.app_label == "documents"
         and field.related_model.__name__ in known
     )
 

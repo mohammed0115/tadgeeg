@@ -22,9 +22,11 @@ def run_audit_task(self, document_id: str, document_type: str, organization_id: 
     """
     logger.info(f"[Celery] Starting audit: doc={document_id}, type={document_type}, org={organization_id}")
     try:
-        from apps.rule_engine.executors.audit_pipeline import AuditPipeline
-        pipeline = AuditPipeline()
-        audit_run = pipeline.run(
+        # Legacy task name, canonical boundary.  Keeping the task preserves
+        # queued-message compatibility while ensuring quota and engine-version
+        # selection apply to every ordinary invocation.
+        from apps.rule_engine.pipeline.v2.compat import run_audit_compat
+        audit_run = run_audit_compat(
             document_id=document_id,
             document_type=document_type,
             organization_id=organization_id,
@@ -49,9 +51,10 @@ def run_shadow_audit_task(document_id: str, document_type: str, organization_id:
     Results are stored but not surfaced in UI.
     """
     try:
-        from apps.rule_engine.executors.audit_pipeline import AuditPipeline
-        pipeline = AuditPipeline()
-        audit_run = pipeline.run(
+        # Shadow intentionally runs V1, but V1 remains imported only by the
+        # compatibility boundary.  This task must not become a second bypass.
+        from apps.rule_engine.pipeline.v2.compat import _run_v1
+        audit_run = _run_v1(
             document_id=document_id,
             document_type=document_type,
             organization_id=organization_id,

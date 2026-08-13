@@ -242,3 +242,189 @@ def test_this_guard_can_fail(monkeypatch):
         "الفرع البنيوي لم يعد يُصادق على «invoice» — فاختبار المُصادقة "
         "أعلاه لا يقيس ما يدّعيه"
     )
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# ٥. الفرع الميت يُظهر فشله · وصيغة الثقة تُقاس — المرحلة ٢و
+#
+# قياس على الكوربوس الحقيقي (28 بصمة فريدة في 1,853 مستندًا — راجع
+# docs/CONFIDENCE_FORMULA_MEASUREMENT.md):
+#
+#   · `_classify_ai` كان يبتلع 401 ويُعيد {"other", 0.0} — فيبدو «لم يعرف»
+#     وهو «لم يُسأل». خمسة من خمسة، وثانية مفوترة لكل مستند.
+#   · وصيغة الثقة `best/total` **حصّة لا تمييز**: فاتورة صريحة تُسجّل
+#     invoice:6 مقابل bank_statement:3 فتُعطي 0.667 وتسقط، ومستند بضربة
+#     كلمة واحدة يُعطي 1.0 ويعبر.
+# ═════════════════════════════════════════════════════════════════════════════
+
+def test_a_dead_ai_branch_is_not_reported_as_an_answer(monkeypatch):
+    """فشل مصادقة ⇒ المُعاد يميّز «لم يعمل» عن «لم يعرف» · ولا استثناء.
+
+    الـstub يرفع ما يرفعه المزوّد فعلًا. ولا `MagicMock`: كائن مُقلَّد يجيب
+    عن أي سمة فيخترع نجاحًا — وهو ما أخفى عيب بوابة الحصّة خلف `getattr`.
+    """
+    import core.services.ai.openai_extractor as extractor
+    from core.services.classification.document_classifier import DocumentClassifier
+
+    def raises_401(raw_text, *a, **k):
+        raise RuntimeError("Error code: 401 - invalid_api_key")
+
+    monkeypatch.setattr(extractor, "classify_document", raises_401)
+
+    out = DocumentClassifier()._classify_ai("SuperStore INVOICE # 29381")
+
+    assert out is not None, "الفرع أعاد None — والمستدعي لا يعرف السبب"
+    assert out["ai_unavailable"] is True, (
+        "فشل المصادقة يُقدَّم كإجابة: %r" % (out,)
+    )
+    assert "401" in out["ai_error"]
+    assert out["confidence"] == 0.0
+
+
+def test_a_swallowed_failure_is_also_marked_unavailable(monkeypatch):
+    """`classify_document` يبتلع أعطاله داخليًّا ويُعيد الشكل نفسه.
+
+    فثقة صفر بلا سبب هي ما يبدو عليه فشل مبتلَع — وهو ما رأيناه فعلًا على
+    خمسة مستندات: `{"document_type":"other","confidence":0.0,"reason":""}`.
+    """
+    import core.services.ai.openai_extractor as extractor
+    from core.services.classification.document_classifier import DocumentClassifier
+
+    monkeypatch.setattr(
+        extractor, "classify_document",
+        lambda raw_text, *a, **k: {"document_type": "other",
+                                   "confidence": 0.0, "reason": ""},
+    )
+
+    out = DocumentClassifier()._classify_ai("some text")
+    assert out["ai_unavailable"] is True
+
+
+def test_a_real_ai_answer_is_not_marked_unavailable(monkeypatch):
+    """التمييز يفتح كما يُغلق — إجابة حقيقية لا تُوسَم بالتعطّل."""
+    import core.services.ai.openai_extractor as extractor
+    from core.services.classification.document_classifier import DocumentClassifier
+
+    monkeypatch.setattr(
+        extractor, "classify_document",
+        lambda raw_text, *a, **k: {"document_type": "bank_statement",
+                                   "confidence": 0.88,
+                                   "reason": "opening and closing balances"},
+    )
+
+    out = DocumentClassifier()._classify_ai("statement text")
+    assert out["ai_unavailable"] is False
+    assert out["document_type"] == "bank_statement"
+    assert out["method"] == "ai"
+
+
+def test_a_dead_ai_branch_does_not_stop_classification(monkeypatch):
+    """فشل التصنيف لا يجوز أن يُسقط رفعًا — `classify` تمضي إلى الاحتياطي."""
+    import core.services.ai.openai_extractor as extractor
+    from core.services.classification.document_classifier import DocumentClassifier
+
+    def raises(raw_text, *a, **k):
+        raise RuntimeError("Error code: 401 - invalid_api_key")
+
+    monkeypatch.setattr(extractor, "classify_document", raises)
+
+    out = DocumentClassifier().classify(
+        raw_text="invoice due date purchase order receipt payroll bank statement",
+        structured={}, use_ai=True,
+    )
+    assert out["document_type"]  # لم يُرفع استثناء، وهناك ناتج
+
+
+# ── 🔴 حارس نمط · يفشل الآن عن قصد ────────────────────────────────────────────
+
+#: درجات مقيسة من ملفّين حقيقيّين في الكوربوس، لا سلاسل مصطنعة.
+#: النسخة الأولى من هذين الاختبارين استعملت نصوصًا كتبتُها، فأعطت
+#: `receipt:6` بدل `receipt:2` — أي أنها لم تكن «شحيحة» أصلًا، فأشبعت
+#: المكوّن المطلق في الصيغة البديلة وقلبت النتيجة. الأرقام أدناه من
+#: `docs/CONFIDENCE_FORMULA_MEASUREMENT.md` §١.
+_RICH = {"invoice": 6, "bank_statement": 3}   # invoice_Cindy_Chapman_29381.pdf
+_THIN = {"receipt": 2}                        # receipt_voucher.csv
+
+
+def _current_confidence(scores: dict) -> float:
+    """الصيغة كما يحسبها `_classify_keywords` اليوم — ويُثبَت ذلك أدناه."""
+    live = {k: v for k, v in scores.items() if v}
+    best = max(live.values())
+    total = sum(live.values())
+    return round(min(best / max(total, 1), 1.0), 3)
+
+
+def _candidate_d(scores: dict) -> float:
+    """المرشّح D: نصفٌ قوة مطلقة ونصفٌ تمييز."""
+    ranked = sorted((v for v in scores.values() if v), reverse=True)
+    best = ranked[0]
+    second = ranked[1] if len(ranked) > 1 else 0
+    return 0.5 * min(1.0, best / 6) + 0.5 * (best / max(best + second, 1))
+
+
+def test_the_inline_formula_is_the_production_formula():
+    """الأداة تُثبَت قبل أن يُبنى عليها حكم.
+
+    أربع أدوات قياس في هذا المستودع أعطت أرقامًا واثقة عن سؤال آخر.
+    """
+    from core.services.classification.document_classifier import DocumentClassifier
+
+    kw = DocumentClassifier()._classify_keywords(
+        "SuperStore INVOICE # 29381 bill to due date payment terms balance", {})
+
+    assert kw is not None
+    assert _current_confidence(kw["scores"]) == kw["confidence"], (
+        f"الصيغة المُضمَّنة تخالف الإنتاج: {_current_confidence(kw['scores'])} "
+        f"مقابل {kw['confidence']}"
+    )
+
+
+def test_confidence_rewards_discrimination_not_scarcity():
+    """🔴 **هذا الاختبار يفشل اليوم، وفشله هو المخرَج.**
+
+    `_classify_keywords` يحسب `confidence = best_score / total`. وهي **حصّة
+    لا تمييز**، على درجتين مقيستين من ملفّين حقيقيّين:
+
+      · فاتورة `SuperStore` — invoice:6 · bank_statement:3 ⇒ 6/9 = 0.667
+      · سند قبض شحيح       — receipt:2 وحدها              ⇒ 2/2 = 1.000
+
+    فالأولى — والنموذج فيها واثق تمامًا، ضعف الثاني — تسقط دون العتبة،
+    والثانية — ضربة كلمة واحدة — تعبرها بثقة كاملة. **الصيغة تعاقب الأدلة
+    الكثيرة وتكافئ الشحيحة.**
+
+    وليس عيبًا نظريًّا: بسببه فقدت تلك الفاتورة خمس قواعد تنطبق عليها في
+    المرحلة ٢هـ، فتُوقّفت الشحنة وتُراجع عنها.
+
+    **لا يُصلَح بخفض العتبة** — العتبة حكم، وخفضها إسكات لها. ولا بتعديل
+    الصيغة هنا: البدائل الأربعة مقيسة في
+    `docs/CONFIDENCE_FORMULA_MEASUREMENT.md` §٣ والاختيار قرار معماري.
+
+    موعد الإصلاح: الشحنة التالية، بعد اختيار الصيغة.
+    """
+    assert _RICH["invoice"] > _THIN["receipt"], "العيّنة لا تمثّل ما تدّعيه"
+
+    assert _current_confidence(_RICH) >= _current_confidence(_THIN), (
+        f"مستند بأدلة أكثر {_RICH} ثقته {_current_confidence(_RICH)} وأقلّ من "
+        f"مستند بدليل واحد {_THIN} ثقته {_current_confidence(_THIN)} — "
+        "الصيغة حصّة لا تمييز.\n"
+        "الإصلاح في الشحنة التالية بعد اختيار الصيغة؛ لا تُخفَّض العتبة "
+        "ولا يُوضَع xfail على هذا الاختبار."
+    )
+
+
+def test_this_guard_can_fail():
+    """⚠️ يُبقي فشل الحارس أعلاه مقروءًا: الصيغة البديلة تقلب الحكم.
+
+    فإن لم تقلبه، فالاختبار الفاشل أعلاه يقيس عيّنة لا صيغة.
+    """
+    assert _current_confidence(_RICH) < _current_confidence(_THIN), (
+        "الصيغة الحالية لم تعد تعاقب الأدلة الكثيرة — أُصلحت، فاحذف "
+        "الاختبار الفاشل أعلاه بدل إبقائه"
+    )
+    assert _candidate_d(_RICH) > _candidate_d(_THIN), (
+        f"المرشّح D لا يقلب الترتيب: {_candidate_d(_RICH)} مقابل "
+        f"{_candidate_d(_THIN)} — فالاختبار الفاشل أعلاه لا يقيس الصيغة"
+    )
+    assert _candidate_d(_RICH) >= 0.70 > _candidate_d(_THIN), (
+        "المرشّح D لا يفصلهما عند العتبة 0.70"
+    )

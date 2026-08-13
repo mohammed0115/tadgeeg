@@ -230,12 +230,54 @@ class DocumentClassifier:
     # ── AI classifier ─────────────────────────────────────────────────────────
 
     def _classify_ai(self, raw_text: str) -> Optional[dict]:
-        """Delegate to OpenAI extractor for classification."""
+        """Delegate to OpenAI extractor for classification.
+
+        **"We don't know" is not "we couldn't look."** That distinction is the
+        one apps/audit_platform/status.py exists to keep, and this method was
+        losing it: when the API key is rejected, `classify_document` swallows
+        the 401 and returns `{"document_type": "other", "confidence": 0.0}` —
+        indistinguishable from a model that read the document and had no
+        opinion. Measured on this machine: five of five documents, ~1 second of
+        billed latency each, and every one reported as an answer.
+
+        So the branch now says which of the two happened. `ai_unavailable`
+        marks a call that did not complete; a caller reading it knows the AI
+        was never consulted, rather than believing it was consulted and found
+        nothing.
+
+        Never raises. A classifier that cannot reach its provider must not stop
+        an upload — the document still gets the heuristics and, failing those,
+        an honest "undetermined".
+        """
         try:
             from core.services.ai.openai_extractor import classify_document
             result = classify_document(raw_text)
-            result["method"] = "ai"
-            return result
         except Exception as exc:
-            logger.warning("[Classifier] AI classification failed: %s", exc)
-            return None
+            logger.error(
+                "[Classifier] AI classification could not run: %s: %s — "
+                "the document was NOT classified by AI, and this is not the "
+                "same as the AI finding nothing.",
+                type(exc).__name__, exc,
+            )
+            return {"document_type": "other", "confidence": 0.0,
+                    "method": "ai", "ai_unavailable": True,
+                    "ai_error": f"{type(exc).__name__}: {exc}"}
+
+        # The call returned, but `classify_document` maps every internal
+        # failure — auth, network, unparseable body — onto this same shape, so
+        # a returned dict is not proof the model answered. An empty reason with
+        # zero confidence is what a swallowed failure looks like.
+        if not result or (float(result.get("confidence", 0.0)) == 0.0
+                          and not str(result.get("reason", "")).strip()):
+            logger.error(
+                "[Classifier] AI returned no classification and no reason — "
+                "treating as unavailable, not as 'no opinion'. Check the "
+                "provider credentials and the log above for the HTTP status."
+            )
+            return {"document_type": "other", "confidence": 0.0,
+                    "method": "ai", "ai_unavailable": True,
+                    "ai_error": "empty response"}
+
+        result["method"] = "ai"
+        result["ai_unavailable"] = False
+        return result

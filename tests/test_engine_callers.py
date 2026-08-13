@@ -60,17 +60,23 @@ _LEGACY_ENGINE_ALLOWED = (
 #: يُحذف مدخل عند تحويله إلى `run_audit_compat` — بالترتيب في الخطوة ٦ب.
 _V1_DIRECT_CALLERS: dict[str, str] = {
     "apps/rule_engine/tasks/audit_tasks.py": (
-        "مسار الفواتير. الأخطر والأعلى حركة. يُحوَّل آخِرًا — الخطوة ٦ب البند ٤."
-    ),
-    "apps/rule_engine/api/views.py": (
-        "واجهة API لإعادة التدقيق. تعطي المدقق نسخة محرّك مختلفة عن الرفع "
-        "التلقائي. الخطوة ٦ب البند ٣."
+        "مسار الفواتير. الأخطر والأعلى حركة. يُحوَّل آخِرًا — الخطوة ٦ب."
     ),
     "apps/reports/services/gaap_service.py": (
-        "توليد تقرير GAAP. الخطوة ٦ب البند ٢."
+        "فرع `persist=True` **بلا مستدعٍ واحد في المستودع**: الخمسة الذين "
+        "ينادون `evaluate_gaap_rules_for_invoice` كلهم على الافتراضي "
+        "`persist=False`، وثلاثة منهم يستوردون دالة أخرى بالاسم نفسه من "
+        "`apps/auditing/accounting_rules/services.py` لا تملك المعامل أصلًا. "
+        "⇒ كود ميت **يُحذف لا يُحوَّل** — وتحويله يُبقي في هذا السقف مدخلًا "
+        "يُقرأ لاحقًا كأنه مسار حيّ. بند مسجَّل."
     ),
     "apps/rule_engine/management/commands/bootstrap_readiness_window.py": (
-        "أمر إداري، لا مسار مستخدم. الأقل خطرًا — الخطوة ٦ب البند ١."
+        "**ليس مستدعي تدقيق.** يستعمل الأنبوب كصندوق أدوات: يستخرج "
+        "`selector` و`aggregator`، وينادي ثلاثة أعضاء خاصّة "
+        "(`_execute_single_rule` · `_count_statuses` · `_upsert_risk_summary`)، "
+        "ويبني `AuditRun` بنفسه على حمولة اصطناعية لا يقابلها صفّ. "
+        "`run_audit_compat` يتوقّع مفتاح سجل مُطبوع، فلا بديل هنا. "
+        "**لا يُحوَّل ولا يُحذف من السقف** — هو فعلًا يستورد V1."
     ),
 }
 

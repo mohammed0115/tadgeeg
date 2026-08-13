@@ -56,8 +56,14 @@ commit `8102cf1` تخطّى أي `models.py` يحتوي السلسلة `"HashCha
   يعملان معًا على كل فاتورة.
 - `apps/audit/audit_engine.py` يوثّق نفسه بأنه «no longer called» — **وهو حيّ
   على مسار المستندات** عبر `core/services/pipeline.py`.
-- `AUDIT_ENGINE_VERSION` **غير معرَّف** في الإعدادات، بينما `compat.py` يعلن
-  أن تبديل النسخة «يحتاج تغيير إعداد فقط».
+- `AUDIT_ENGINE_VERSION` **معرَّف** — `settings_canonical.py:220` =
+  `os.environ.get("AUDIT_ENGINE_VERSION", "v2")`. (كان غير معرَّف حين كُتب هذا
+  الملف؛ صُحّح 2026-08-13.) **ووجوده لا يعني أنه يعمل**: تشغيل كامل لمسار
+  الفواتير من `POST /api/v1/invoices/upload/` سجّل `AuditPipeline starting`
+  و`engine_version = 2.0` — أي **V1** — والمفتاح على `"v2"`. فادّعاء `compat.py`
+  أن تبديل النسخة «يحتاج تغيير إعداد فقط» كاذب على المسار الحيّ، لأن
+  `processor.py` ينادي V1 مباشرةً متجاوزًا `run_audit_compat`.
+  التفصيل في `docs/INVOICE_PATH_TRACE.md`.
 - المقياسان **معاكسان**: الرقم المرتفع جيّد في المدقق القديم وسيّئ في المحرك.
   درجة 90 = فاتورة سليمة هنا، وفاتورة حرجة هناك.
 - `CTL-004` و`CTL-04` **رمزان مستقلان**. وكذلك `CTL-005`/`CTL-05` — ومفهوماهما

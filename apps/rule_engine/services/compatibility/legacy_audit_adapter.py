@@ -189,6 +189,48 @@ class AuditRunResult:
     _PASSED_STATUSES = ("pass", "passed")
 
     def __init__(self, audit_run):
+        # Read the saved row, not the object handed back by the pipeline.
+        #
+        # That object is stale BY CONSTRUCTION, not by accident: the pipeline
+        # creates the AuditRun early and its later stages write to the row with
+        # `save(update_fields=…)` and `queryset.update()`. Neither refreshes the
+        # instance the caller is holding, so every field a later stage computes
+        # is still whatever it was at creation.
+        #
+        # Measured on a real run, wrapper against database:
+        #
+        #     total_rules      20   vs   19
+        #     skipped_count    15   vs   14
+        #     risk_score     50.0   vs  100.0
+        #     risk_level     high   vs  critical
+        #
+        # apps/audit/tasks.py reads `escalate` off this object to decide whether
+        # to raise an audit case. On a run the engine marked critical and
+        # blocking, it was reading calm numbers — so the nightly task did not
+        # escalate what it was there to escalate.
+        #
+        # This lives in the wrapper rather than in each caller on purpose:
+        # every entry point that returns an AuditRunResult is fixed by the one
+        # line, and a fifth caller added later cannot reintroduce it.
+        # `_state.adding`, not `pk is None`: AuditRun's primary key is a
+        # UUIDField with `default=uuid4`, so an instance that was never saved
+        # already carries a pk. Testing the pk would send an unsaved run to the
+        # database, miss, and log a warning about a row that was never meant to
+        # exist. `_state.adding` is Django's own answer to "is this row in the
+        # database yet".
+        if not audit_run._state.adding:
+            try:
+                audit_run.refresh_from_db()
+            except Exception as exc:  # noqa: BLE001
+                # A run deleted between execution and wrapping. Reporting a
+                # result is still better than raising inside a wrapper, but it
+                # must not be silent.
+                logger.warning(
+                    "[legacy_adapter] could not refresh AuditRun %s: %s — "
+                    "reading the in-memory object, whose later-stage fields "
+                    "may be stale.", getattr(audit_run, "pk", "?"), exc,
+                )
+
         self._run = audit_run
 
         # ── Original fields — unchanged, read by apps/audit/tasks.py ─────────

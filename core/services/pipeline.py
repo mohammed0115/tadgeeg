@@ -31,6 +31,8 @@ import time
 from decimal import Decimal, InvalidOperation
 from typing import Optional
 
+from apps.audit.reports import AuditReport
+
 logger = logging.getLogger("finai")
 
 # Pipeline version — bump when the scoring logic changes
@@ -438,7 +440,7 @@ def _parse_date(value):
     return None
 
 
-def _serialise_audit_report(report) -> dict:
+def _serialise_audit_report(report: AuditReport) -> dict:
     """Convert AuditReport dataclass to a JSON-serialisable dict."""
     from apps.audit.rules.base_rule import RuleStatus
 

@@ -139,7 +139,7 @@ def test_the_report_satisfies_every_field_the_serialiser_reads():
     `failed_count` · `skipped_count` · `error_count`) لأن الصنف يسمّيها
     `*_rules`، فكان المُسلسِل يرفع `AttributeError` على كل مستند.
     """
-    from apps.audit.audit_engine import AuditReport
+    from apps.audit.reports import AuditReport
 
     report = AuditReport()
     missing = sorted(n for n in _names_the_serialiser_reads()
@@ -154,7 +154,7 @@ def test_the_report_satisfies_every_field_the_serialiser_reads():
 
 def test_the_aliases_return_the_values_they_alias():
     """اسم بديل يُعيد قيمة أخرى أسوأ من اسم مفقود — الأول يُرى، والثاني لا."""
-    from apps.audit.audit_engine import AuditReport
+    from apps.audit.reports import AuditReport
 
     report = AuditReport(total_rules=18, passed_rules=6, failed_rules=3,
                          skipped_rules=8, error_rules=1)
@@ -171,7 +171,7 @@ def test_the_original_names_still_exist():
     مستدعون آخرون يقرأون `passed_rules`؛ وإعادة تسمية حقل يعمل لإصلاح حقل
     لا يعمل هي كيف يُكسَر مستدعٍ بصمت.
     """
-    from apps.audit.audit_engine import AuditReport
+    from apps.audit.reports import AuditReport
 
     report = AuditReport()
     for name in ("passed_rules", "failed_rules", "skipped_rules", "error_rules"):
@@ -187,7 +187,7 @@ def test_serialising_a_report_returns_the_counts_it_computed():
     كائن مُقلَّد يجيب عن أي اسم، فيجعل عطل الاسم غير مرئي تمامًا كما فعل
     `getattr` في بوابة الحصّة.
     """
-    from apps.audit.audit_engine import AuditReport
+    from apps.audit.reports import AuditReport
     from core.services.pipeline import _serialise_audit_report
 
     payload = _serialise_audit_report(
@@ -359,7 +359,7 @@ def test_the_engines_risk_escalation_reaches_the_summary():
     يُشغَّل جسم المرحلة ٣ كما هو مكتوب، بمحرّك يُعيد درجة أعلى مما أنتجته
     المرحلة ٢. لا محاكاة لكائن التقرير: `AuditReport` حقيقي.
     """
-    from apps.audit.audit_engine import AuditReport
+    from apps.audit.reports import AuditReport
     from core.services.pipeline import _serialise_audit_report
 
     summary = {"risk_score": 20, "risk_level": "low", "escalate": False}
@@ -390,7 +390,7 @@ def test_this_guard_can_fail_when_an_alias_is_withdrawn(monkeypatch):
     يجيب عن أي سمة، فيخترع نجاحًا حيث لا نجاح، وهو بالضبط ما أخفى عيب بوابة
     الحصّة خلف `getattr`.
     """
-    from apps.audit.audit_engine import AuditReport
+    from apps.audit.reports import AuditReport
     from core.services.pipeline import _serialise_audit_report
 
     monkeypatch.delattr(AuditReport, "passed_count")
@@ -477,105 +477,6 @@ _DELIBERATELY_UNSCOPED: dict[str, str] = {
 }
 
 
-def _registered_rules():
-    from apps.audit.audit_engine import REGISTERED_RULES
-    return REGISTERED_RULES
-
-
-@pytest.mark.django_db
-def test_the_engine_asks_before_it_evaluates():
-    """قاعدة لا تنطبق ⇒ `evaluate` لا تُنادى، والنتيجة `SKIPPED` بسبب.
-
-    لا `MagicMock`: صنف حقيقي يرفع لو نُودي، فالإثبات أن الحلقة لم تنادِه
-    هو ألّا يُرفع شيء. كائن مُقلَّد يجيب عن أي سمة فيخترع نجاحًا — وهو ما
-    أخفى عيب بوابة الحصّة خلف `getattr`.
-    """
-    from apps.audit.audit_engine import AuditEngine
-    from apps.audit.rules.base_rule import AuditRule, RuleStatus, Severity
-
-    class NeverForContracts(AuditRule):
-        rule_id = "RTEST"
-        rule_name = "Test rule"
-        severity = Severity.HIGH
-        applies_to = {"invoice"}
-
-        def evaluate(self, document, organization_id=None, context=None):
-            raise AssertionError(
-                "evaluate() نُوديت على نوع لا تنطبق عليه القاعدة — "
-                "الفحص المركزي في audit_engine.py لا يعمل"
-            )
-
-    report = AuditEngine(organization_id=None, rules=[NeverForContracts]).evaluate(
-        document={"document_type": "bank_statement", "total_amount": 100},
-    )
-
-    assert len(report.rule_results) == 1, "القاعدة أُسقِطت بلا أثر"
-    result = report.rule_results[0]
-    assert result.result == RuleStatus.SKIPPED
-    assert "bank_statement" in result.explanation, (
-        f"السبب لا يذكر النوع: {result.explanation!r}"
-    )
-    assert "invoice" in result.explanation, (
-        "السبب لا يذكر النطاق الذي تعلنه القاعدة"
-    )
-
-
-@pytest.mark.django_db
-def test_an_applicable_rule_is_still_evaluated():
-    """البوّابة تفتح كما تُغلق — وإلّا فهي كتم لا انتقاء."""
-    from apps.audit.audit_engine import AuditEngine
-    from apps.audit.rules.base_rule import AuditRule, RuleStatus, Severity
-
-    class OnlyForInvoices(AuditRule):
-        rule_id = "RTEST2"
-        rule_name = "Test rule 2"
-        severity = Severity.LOW
-        applies_to = {"invoice"}
-
-        def evaluate(self, document, organization_id=None, context=None):
-            return self._fail(explanation="ran")
-
-    report = AuditEngine(organization_id=None, rules=[OnlyForInvoices]).evaluate(
-        document={"document_type": "invoice"},
-    )
-    assert report.rule_results[0].result == RuleStatus.FAILED
-    assert report.rule_results[0].explanation == "ran"
-
-
-def test_every_registered_rule_declares_or_declines_a_scope():
-    """كل قاعدة إمّا تُعلن نطاقها أو تُدرَج عامّة **بسبب مكتوب**.
-
-    هذا يمنع القاعدة التاسعة عشرة من الدخول بلا قرار نطاق — وهو بالضبط ما
-    حدث لـ`extended_rules.py`: اثنتا عشرة قاعدة دخلت والنمط قائم، ولا واحدة
-    منها أعلنت شيئًا.
-    """
-    undeclared = [
-        rc.rule_id for rc in _registered_rules()
-        if not rc.applies_to and rc.rule_id not in _DELIBERATELY_UNSCOPED
-    ]
-    assert not undeclared, (
-        f"قواعد بلا `applies_to` وبلا سبب مسجَّل: {sorted(undeclared)}\n"
-        "أعلِن نطاقها، أو أضِفها إلى _DELIBERATELY_UNSCOPED بسبب يُقرأ. "
-        "نطاق مُخمَّن أسوأ من غيابه — الغياب يُبقي الحال، والخطأ يُسكت "
-        "قاعدة يجب أن تعمل."
-    )
-
-
-def test_the_unscoped_list_has_no_stale_entries():
-    """سقف أعلى من الواقع يشتري صامتًا مكانًا لعودة التراجع."""
-    registered = {rc.rule_id for rc in _registered_rules()}
-    scoped = {rc.rule_id for rc in _registered_rules() if rc.applies_to}
-
-    unknown = set(_DELIBERATELY_UNSCOPED) - registered
-    assert not unknown, f"مدخلات لقواعد غير مسجَّلة: {sorted(unknown)}"
-
-    now_scoped = set(_DELIBERATELY_UNSCOPED) & scoped
-    assert not now_scoped, (
-        f"{sorted(now_scoped)} صارت تُعلن نطاقًا — احذفها من "
-        "_DELIBERATELY_UNSCOPED"
-    )
-
-
 def test_every_reason_is_a_reason():
     """«عامة» ليست سببًا. عتبة طول تمنع كلمة واحدة تمرّ كتبرير."""
     thin = {rid: r for rid, r in _DELIBERATELY_UNSCOPED.items()
@@ -584,82 +485,3 @@ def test_every_reason_is_a_reason():
         f"أسباب أقصر من أن تكون أسبابًا: {sorted(thin)}\n"
         "اكتب لماذا القاعدة تنطبق على كل نوع، لا أنها كذلك."
     )
-
-
-@pytest.mark.django_db
-def test_not_applicable_is_not_counted_as_passed():
-    """العدّادات لا تُجمّل: غير المنطبقة ليست ناجحة ولا فاشلة."""
-    from apps.audit.audit_engine import AuditEngine
-    from apps.audit.rules.base_rule import AuditRule, Severity
-
-    class Gated(AuditRule):
-        rule_id = "RTEST3"
-        rule_name = "Gated"
-        severity = Severity.HIGH
-        applies_to = {"invoice"}
-
-        def evaluate(self, document, organization_id=None, context=None):
-            return self._fail(explanation="should not run")
-
-    class Ungated(AuditRule):
-        rule_id = "RTEST4"
-        rule_name = "Ungated"
-        severity = Severity.LOW
-
-        def evaluate(self, document, organization_id=None, context=None):
-            return self._pass()
-
-    report = AuditEngine(organization_id=None, rules=[Gated, Ungated]).evaluate(
-        document={"document_type": "payroll"},
-    )
-
-    assert report.total_rules == 2, "المتخطّاة اختفت من المقام"
-    assert report.passed_rules == 1
-    assert report.failed_rules == 0
-    assert report.skipped_rules == 1
-    assert report.risk_score == 0, "قاعدة لم تُنفَّذ أسهمت في الدرجة"
-
-
-@pytest.mark.django_db
-def test_this_guard_can_fail():
-    """احجب الفحص المركزي بترقيع، وتأكّد أن الحارس الأول يراه.
-
-    الترقيع في الاختبار لا في الملف: `is_applicable` تُجعل ترجع True دائمًا،
-    فتعود الحلقة إلى سلوكها قبل هذه الشحنة.
-    """
-    from apps.audit.audit_engine import AuditEngine
-    from apps.audit.rules.base_rule import AuditRule, RuleStatus, Severity
-
-    ran = []
-
-    class NeverForContracts(AuditRule):
-        rule_id = "RTEST5"
-        rule_name = "Test rule 5"
-        severity = Severity.HIGH
-        applies_to = {"invoice"}
-
-        def evaluate(self, document, organization_id=None, context=None):
-            ran.append(document.get("document_type"))
-            return self._fail(explanation="ran anyway")
-
-    doc = {"document_type": "contract"}
-
-    # البوّابة تعمل: لا تنفيذ، ونتيجة SKIPPED.
-    report = AuditEngine(organization_id=None, rules=[NeverForContracts]).evaluate(
-        document=doc)
-    assert ran == []
-    assert report.rule_results[0].result == RuleStatus.SKIPPED
-
-    # البوّابة محجوبة: العيب يعود بالضبط.
-    original = AuditRule.is_applicable
-    try:
-        AuditRule.is_applicable = lambda self, document: True
-        report = AuditEngine(organization_id=None, rules=[NeverForContracts]).evaluate(
-            document=doc)
-    finally:
-        AuditRule.is_applicable = original
-
-    assert ran == ["contract"], (
-        "حجب الفحص لم يُعِد العيب — فالاختبار الأول لا يقيس البوّابة"
-    )
-    assert report.rule_results[0].result == RuleStatus.FAILED

@@ -214,7 +214,6 @@ def process_single_file(
     """
     from core.services.document_engine import DocumentEngine, IngestionResult
     from core.services.financial_ai_engine import FinancialAIEngine
-    from apps.audit.audit_engine import run_audit
 
     start = time.time()
     ext = os.path.splitext(filename)[1].lower()
@@ -450,29 +449,6 @@ def process_single_file(
         country_code = getattr(org, "country", "SA") or "SA"
         ai_engine = FinancialAIEngine(organization_id=org.id, country_code=country_code, use_ai=True)
         analysis = ai_engine.analyse(ingestion)
-
-        # ── Step 7a: Legacy audit engine ──────────────────────────────────────
-        # Canonical audit pipeline is now the V2 rule engine (see Step 7b).
-        # The legacy `run_audit()` sync path is kept ONLY as a rollback escape
-        # hatch: set `USE_NEW_RULE_ENGINE = False` in settings to revert.
-        # When the new engine is on (default in production), this branch is
-        # skipped to avoid the double-trigger that produced duplicate findings.
-        from django.conf import settings as _settings
-        if not getattr(_settings, "USE_NEW_RULE_ENGINE", True):
-            try:
-                # Savepoint: legacy audit persists findings; isolate its failure
-                # so it can't abort the outer invoice-creation transaction.
-                with transaction.atomic():
-                    run_audit(
-                        analysis.to_dict(),
-                        organization_id=org.id,
-                        invoice_id=invoice.id,
-                        persist=True,
-                        invoice=invoice,
-                        created_by=user,
-                    )
-            except Exception as exc:
-                logger.warning("Legacy audit engine failed for %s: %s", filename, exc)
 
     # ── Step 7b: V2 rule engine — canonical audit pipeline ────────────────────
     # Dispatched via Celery so the request returns quickly. Two safety guards:

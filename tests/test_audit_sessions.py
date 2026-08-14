@@ -166,7 +166,6 @@ class AuditSessionUploadTests(TestCase):
     @patch("apps.invoices.views.pdf_to_images", return_value=[])
     @patch("apps.invoices.views.analyze_invoice_risk")
     @patch("apps.invoices.views.ValidationPipelineService.validate_invoice")
-    @patch("apps.audit.audit_engine.run_audit", return_value=None)
     @patch("core.services.financial_ai_engine.FinancialAIEngine.analyse")
     @patch("apps.invoices.views.extract_invoice_with_ai")
     @patch("core.services.document_engine.DocumentEngine.ingest")
@@ -175,7 +174,6 @@ class AuditSessionUploadTests(TestCase):
         mock_ingest,
         mock_extract,
         mock_analyse,
-        _mock_run_audit,
         mock_validation_pipeline,
         mock_ai_risk,
         _mock_pdf,
@@ -221,7 +219,6 @@ class AuditSessionUploadTests(TestCase):
     @patch("apps.invoices.views.pdf_to_images", return_value=[])
     @patch("apps.invoices.views.analyze_invoice_risk")
     @patch("apps.invoices.views.ValidationPipelineService.validate_invoice")
-    @patch("apps.audit.audit_engine.run_audit", return_value=None)
     @patch("core.services.financial_ai_engine.FinancialAIEngine.analyse")
     @patch("apps.invoices.views.extract_invoice_with_ai")
     @patch("core.services.document_engine.DocumentEngine.ingest")
@@ -230,7 +227,6 @@ class AuditSessionUploadTests(TestCase):
         mock_ingest,
         mock_extract,
         mock_analyse,
-        _mock_run_audit,
         mock_validation_pipeline,
         mock_ai_risk,
         _mock_pdf,

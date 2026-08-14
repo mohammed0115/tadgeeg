@@ -1,0 +1,20 @@
+{
+  "target_email": "postdelete-final-audit-engine-delete-reference-v1@example.invalid",
+  "before": {
+    "organizations": 0,
+    "users": 1,
+    "invoices": 0,
+    "documents": 0,
+    "audit_runs": 0,
+    "validations": 0
+  },
+  "deleted_rows": 1,
+  "after": {
+    "organizations": 0,
+    "users": 0,
+    "invoices": 0,
+    "documents": 0,
+    "audit_runs": 0,
+    "validations": 0
+  }
+}

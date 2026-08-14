@@ -1,0 +1,57 @@
+{
+  "scanner": "tests/test_silent_exception_budget.py::_scan semantics",
+  "before_total": 282,
+  "after_total": 271,
+  "decrease": 11,
+  "deleted_scope_silent_handlers": [
+    {
+      "path": "apps/audit/rules/amount_anomaly_rule.py",
+      "line": 123
+    },
+    {
+      "path": "apps/audit/rules/amount_anomaly_rule.py",
+      "line": 140
+    },
+    {
+      "path": "apps/audit/rules/amount_anomaly_rule.py",
+      "line": 154
+    },
+    {
+      "path": "apps/audit/rules/date_validation_rule.py",
+      "line": 141
+    },
+    {
+      "path": "apps/audit/rules/date_validation_rule.py",
+      "line": 187
+    },
+    {
+      "path": "apps/audit/rules/duplicate_invoice_rule.py",
+      "line": 51
+    },
+    {
+      "path": "apps/audit/rules/vat_validation_rule.py",
+      "line": 95
+    },
+    {
+      "path": "apps/audit/rules/vat_validation_rule.py",
+      "line": 53
+    },
+    {
+      "path": "apps/audit/rules/vendor_risk_rule.py",
+      "line": 132
+    },
+    {
+      "path": "apps/audit/rules/vendor_risk_rule.py",
+      "line": 160
+    },
+    {
+      "path": "apps/audit/rules/vendor_risk_rule.py",
+      "line": 189
+    }
+  ],
+  "deleted_scope_count": 11,
+  "before_outside_deleted_scope": 271,
+  "after_outside_deleted_scope": 271,
+  "outside_scope_delta": 0,
+  "all_decrease_is_deleted_scope": true
+}

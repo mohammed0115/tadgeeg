@@ -1,0 +1,8 @@
+{
+  "same_input_sha256": true,
+  "before_database": "/home/ubuntu/tadgeeg-predelete/db_runtime.sqlite3",
+  "after_database": "/home/ubuntu/tadgeeg-predelete/db_runtime.sqlite3",
+  "same_database_file": true,
+  "differences": [],
+  "all_compared_fields_match": true
+}

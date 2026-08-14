@@ -26,24 +26,11 @@ from django.conf import settings
 
 
 # ═════════════════════════════════════════════════════════════════════════════
-# ١. المحرّك القديم AuditEngine — يجب أن يبلغ صفرًا ثم يُحذف الملف
+# ١. المحرّك القديم AuditEngine — حارس غياب الوحدة بعد الحذف
 # ═════════════════════════════════════════════════════════════════════════════
 
-#: كل مستدعٍ إنتاجي لـ`apps.audit.audit_engine` مع سببه.
-#: هذا سقف: يُحذف منه مدخل عند ترحيله، ولا يُضاف إليه مدخل جديد أبدًا.
-#: عند خلوّه ⇒ الخطوة ٥ من docs/UNIFICATION_PLAN.md (حذف الملف) صارت آمنة.
-_LEGACY_ENGINE_CALLERS: dict[str, str] = {
-    "apps/invoices/services/processor.py": (
-        "مخرج طوارئ محميّ بـ USE_NEW_RULE_ENGINE — الاستيراد داخل الفرع "
-        "`if not USE_NEW_RULE_ENGINE`. يبقى حتى تُحذف الراية في الخطوة ٦."
-    ),
-}
-
-#: المسموح لها دائمًا: الجسر يستورد ما يجسره، والملف يستورد نفسه.
-_LEGACY_ENGINE_ALLOWED = (
-    "apps/rule_engine/services/compatibility/legacy_audit_adapter.py",
-    "apps/audit/audit_engine.py",
-)
+_LEGACY_ENGINE_MODULE = "apps.audit.audit_engine"
+_LEGACY_ENGINE_RELATIVE_PATH = Path("apps/audit/audit_engine.py")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -134,32 +121,28 @@ def _actual_callers(module: str, allowed: tuple[str, ...]) -> set[str]:
     return found
 
 
+def _legacy_engine_is_absent(base: Path) -> bool:
+    """هل اختفت وحدة المحرّك القديم فعلاً، لا هل فرغ سقف مستدعيها فقط؟"""
+    return not (base / _LEGACY_ENGINE_RELATIVE_PATH).is_file()
+
+
 # ═════════════════════════════════════════════════════════════════════════════
 # الاختبارات
 # ═════════════════════════════════════════════════════════════════════════════
 
 
-def test_legacy_engine_callers_match_the_recorded_ceiling():
-    """مستدعو `apps.audit.audit_engine` هم المسجّلون بالضبط — لا أكثر.
-
-    مستدعٍ جديد يفشل هذا الاختبار: المحرّك في طريقه إلى الحذف، وإضافة مستدعٍ
-    إليه تعمل في الاتجاه المعاكس.
-    """
-    actual = _actual_callers("apps.audit.audit_engine", _LEGACY_ENGINE_ALLOWED)
-    recorded = set(_LEGACY_ENGINE_CALLERS)
-
-    unrecorded = actual - recorded
-    assert not unrecorded, (
-        f"مستدعون جدد لـ AuditEngine القديم: {sorted(unrecorded)}\n"
-        "هذا المحرّك في طريقه إلى الحذف (docs/UNIFICATION_PLAN.md الخطوة ٥). "
-        "استعمل `run_audit_compat` أو `LegacyAuditEngineAdapter` بدلًا منه."
+def test_legacy_engine_module_is_absent():
+    """بعد التوحيد يجب أن يغيب ملف AuditEngine نفسه، لا أن تخضر قائمة فارغة."""
+    base = Path(settings.BASE_DIR)
+    assert _legacy_engine_is_absent(base), (
+        f"عادت وحدة AuditEngine القديمة: {_LEGACY_ENGINE_RELATIVE_PATH}\n"
+        "إعادة الملف تعيد منظومة حكم رابعة؛ استخدم مسار التوافق بدلاً منها."
     )
 
-    stale = recorded - actual
-    assert not stale, (
-        f"مستدعون مسجّلون ولم يبقوا: {sorted(stale)}\n"
-        "احذفهم من _LEGACY_ENGINE_CALLERS. سقف أعلى من الواقع يشتري صامتًا "
-        "مكانًا لعودة التراجع — وهذا سبب وجود هذا الاختبار."
+    importers = _actual_callers(_LEGACY_ENGINE_MODULE, ())
+    assert not importers, (
+        f"بقي مستوردون لوحدة AuditEngine المحذوفة: {sorted(importers)}\n"
+        "أزل الاستيراد أو حوّله إلى واجهة التوافق."
     )
 
 
@@ -191,10 +174,7 @@ def test_every_recorded_caller_carries_a_reason():
     قائمة استثناءات بلا أسباب تصير قائمة أبدية: لا أحد يعرف أيّ مدخل يمكن
     حذفه. وهذا هو نمط `test_app_boundaries.py` القائم في هذه المجموعة.
     """
-    for name, table in (
-        ("_LEGACY_ENGINE_CALLERS", _LEGACY_ENGINE_CALLERS),
-        ("_V1_DIRECT_CALLERS", _V1_DIRECT_CALLERS),
-    ):
+    for name, table in (("_V1_DIRECT_CALLERS", _V1_DIRECT_CALLERS),):
         for rel, reason in table.items():
             assert reason and len(reason.strip()) > 20, (
                 f"{name}['{rel}'] بلا سبب مفهوم. اكتب لماذا يبقى ومتى يُحذف."
@@ -218,12 +198,14 @@ def test_audit_engine_version_is_defined_explicitly():
 
 
 def test_this_guard_can_fail(tmp_path):
-    """⚠️ إلزامي — يُزرع ملف مخالف ويُتأكَّد من التقاطه.
+    """⚠️ إلزامي — عودة الوحدة أو استيرادها يجب أن تكون قابلة للرصد."""
+    returning_module = tmp_path / _LEGACY_ENGINE_RELATIVE_PATH
+    returning_module.parent.mkdir(parents=True)
+    returning_module.write_text("class AuditEngine: pass\n", encoding="utf-8")
+    assert not _legacy_engine_is_absent(tmp_path), (
+        "حارس الغياب لا يلتقط عودة ملف AuditEngine نفسه."
+    )
 
-    درس commit 3d29066: الحارس السابق تخطّى أي `models.py` يحتوي السلسلة
-    "HashChainMixin"، والـcommit الذي أدخله وضع تلك السلسلة في الملف الوحيد
-    المخالف — فأبلغ عن صفر مخالفات منذ لحظة كتابته.
-    """
     offender = tmp_path / "planted_offender.py"
     offender.write_text(
         "from apps.audit.audit_engine import AuditEngine\n"

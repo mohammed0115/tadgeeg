@@ -497,6 +497,8 @@ def process_single_file(
                 document_type="sales_invoice",
                 organization_id=org_id_s,
                 triggered_by="upload",
+                # Keep upload semantics stable while the V2 rollout is measured.
+                engine_override="v1",
             )
         except Exception as exc:
             logger.warning("Rule engine pipeline trigger failed for %s: %s", filename, exc)

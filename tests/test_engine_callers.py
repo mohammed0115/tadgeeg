@@ -33,10 +33,6 @@ from django.conf import settings
 #: هذا سقف: يُحذف منه مدخل عند ترحيله، ولا يُضاف إليه مدخل جديد أبدًا.
 #: عند خلوّه ⇒ الخطوة ٥ من docs/UNIFICATION_PLAN.md (حذف الملف) صارت آمنة.
 _LEGACY_ENGINE_CALLERS: dict[str, str] = {
-    "core/services/pipeline.py": (
-        "مسار المستندات. الوحيد الذي أفلت من الترحيل الأصلي لأنه لم يكن في "
-        "قائمة Callers اليدوية. يُرحَّل في الخطوة ٤."
-    ),
     "apps/invoices/services/processor.py": (
         "مخرج طوارئ محميّ بـ USE_NEW_RULE_ENGINE — الاستيراد داخل الفرع "
         "`if not USE_NEW_RULE_ENGINE`. يبقى حتى تُحذف الراية في الخطوة ٦."
@@ -55,13 +51,10 @@ _LEGACY_ENGINE_ALLOWED = (
 # ═════════════════════════════════════════════════════════════════════════════
 
 #: مستوردو `executors.audit_pipeline` مباشرةً، أي المتجاوزون لمفتاح
-#: AUDIT_ENGINE_VERSION. أربعة منهم يجعلون ادّعاء compat.py
-#: («only a settings change is required») كاذبًا لنصف النظام.
-#: يُحذف مدخل عند تحويله إلى `run_audit_compat` — بالترتيب في الخطوة ٦ب.
+#: AUDIT_ENGINE_VERSION. لا يبقى هنا إلا استثناء أداة الجاهزية ومسار تقرير
+#: GAAP القديم؛ كل مسار منتج يمر عبر `run_audit_compat`.
+#: يُحذف مدخل عند تحويله أو حذفه، ولا يُضاف مدخل جديد.
 _V1_DIRECT_CALLERS: dict[str, str] = {
-    "apps/rule_engine/tasks/audit_tasks.py": (
-        "مسار الفواتير. الأخطر والأعلى حركة. يُحوَّل آخِرًا — الخطوة ٦ب."
-    ),
     "apps/reports/services/gaap_service.py": (
         "فرع `persist=True` **بلا مستدعٍ واحد في المستودع**: الخمسة الذين "
         "ينادون `evaluate_gaap_rules_for_invoice` كلهم على الافتراضي "

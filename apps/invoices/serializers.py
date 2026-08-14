@@ -5,7 +5,38 @@ from rest_framework import serializers
 from .models import Invoice, InvoiceBatch, InvoiceValidationResult, VendorProfile, InvoiceAuditEvent
 
 
-class InvoiceListSerializer(serializers.ModelSerializer):
+class InvoiceAuditDecisionMixin(serializers.Serializer):
+    """Expose the same approval decision used by InvoiceApproveView.
+
+    Views annotate these values from RiskScoreSummary so list serialization does
+    not create one database query per invoice.  A missing summary is a blocked
+    *not_audited* state, matching the conservative approval gate.
+    """
+    blocks_approval = serializers.SerializerMethodField()
+    blocking_failures = serializers.SerializerMethodField()
+    requires_manual_review = serializers.SerializerMethodField()
+    audit_available = serializers.SerializerMethodField()
+    audit_status = serializers.SerializerMethodField()
+
+    def get_audit_available(self, obj):
+        return bool(getattr(obj, "_audit_summary_present", False))
+
+    def get_blocks_approval(self, obj):
+        return bool(getattr(obj, "_audit_blocks_approval", True))
+
+    def get_blocking_failures(self, obj):
+        return int(getattr(obj, "_audit_blocking_failures", 0) or 0)
+
+    def get_requires_manual_review(self, obj):
+        return bool(getattr(obj, "_audit_requires_manual_review", False))
+
+    def get_audit_status(self, obj):
+        if not self.get_audit_available(obj):
+            return "not_audited"
+        return "blocked" if self.get_blocks_approval(obj) else "clear"
+
+
+class InvoiceListSerializer(InvoiceAuditDecisionMixin, serializers.ModelSerializer):
     """Compact serializer for list views."""
     uploaded_by_name = serializers.CharField(source="uploaded_by.full_name", read_only=True, default="")
     audit_session_id = serializers.UUIDField(read_only=True)
@@ -16,11 +47,13 @@ class InvoiceListSerializer(serializers.ModelSerializer):
             "id", "invoice_number", "invoice_date", "vendor_name", "vendor_vat_number",
             "total_amount", "vat_amount", "currency", "status", "risk_level", "risk_score",
             "is_duplicate", "ocr_confidence", "language", "has_qr_code",
+            "blocks_approval", "blocking_failures", "requires_manual_review",
+            "audit_available", "audit_status",
             "uploaded_by_name", "original_filename", "created_at", "audit_session_id",
         ]
 
 
-class InvoiceDetailSerializer(serializers.ModelSerializer):
+class InvoiceDetailSerializer(InvoiceAuditDecisionMixin, serializers.ModelSerializer):
     """Full serializer including all fields."""
     file = serializers.SerializerMethodField()
     uploaded_by_name = serializers.CharField(source="uploaded_by.full_name", read_only=True, default="")

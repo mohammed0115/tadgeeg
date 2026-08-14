@@ -38,6 +38,7 @@ from core.services.invoice_validator import run_all_rules as core_run_all_rules
 from core.services.normalization import NormalizationService
 from core.services.ocr_service import pdf_to_images
 from core.services.parsers.structured import iter_structured_records, normalize_row
+from apps.invoices.services.audit_decision import with_audit_decision
 from apps.invoices.services.processor import (
     process_single_file as _process_single_file_impl,
     process_structured_rows_chunk as _process_structured_rows_chunk_impl,
@@ -512,7 +513,7 @@ class InvoiceListView(generics.ListAPIView):
                 Q(vendor_name__icontains=v) | Q(invoice_number__icontains=v) |
                 Q(notes__icontains=v) | Q(vendor_vat_number__icontains=v)
             )
-        return qs.order_by("-created_at")
+        return with_audit_decision(qs).order_by("-created_at")
 
 
 class InvoiceDetailView(generics.RetrieveUpdateDestroyAPIView):
@@ -626,13 +627,15 @@ class InvoiceDetailView(generics.RetrieveUpdateDestroyAPIView):
         )
 
     def get_queryset(self):
-        return Invoice.objects.filter(
-            organization=self.request.user.organization,
-            is_deleted=False
-        ).select_related(
-            "validation",
-            "approved_by",
-            "duplicate_of",
+        return with_audit_decision(
+            Invoice.objects.filter(
+                organization=self.request.user.organization,
+                is_deleted=False,
+            ).select_related(
+                "validation",
+                "approved_by",
+                "duplicate_of",
+            )
         )
 
 

@@ -97,6 +97,13 @@ def _typed_model_for(document_type):
     would drift from it, and that class of drift is the root of nearly every
     defect in this repository.
     """
+    # Sales invoices are intentionally a first-class exception: their
+    # normalizer owns an Invoice primary key, not a documents-app typed model.
+    # Invoice.audit_document is the explicit bridge to the billing ledger.
+    if document_type == "sales_invoice":
+        from apps.invoices.models import Invoice
+        return Invoice
+
     import inspect
     import re
 
@@ -185,7 +192,15 @@ def _resolve_document_and_org(document_id, organization_id, document_type):
     # is not worth an assumption about the relation's name. It also assumed
     # every typed model carries `document`, which broke on the one that does
     # not and took eighteen billing tests with it.
-    record = model.objects.get(pk=document_id)
+    record = model.objects.get(pk=document_id, organization_id=organization_id)
+    if document_type == "sales_invoice":
+        document = record.audit_document
+        if document is None:
+            raise UnknownDocumentType(
+                f"sales_invoice {document_id!r} has no audit_document; "
+                "the invoice was created before the quota identity bridge."
+            )
+        return document, org
     return record.document, org
 
 

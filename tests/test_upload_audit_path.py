@@ -239,10 +239,13 @@ def test_every_gated_document_type_resolves_to_a_model(db):
         try:
             model = _typed_model_for(document_type)
         except UnknownDocumentType:
-            # sales_invoice is excluded by routing, not by accident — it is
-            # asserted separately below.
-            if document_type != "sales_invoice":
-                unresolved.append(document_type)
+            unresolved.append(document_type)
+            continue
+        # Sales invoices are normalized by Invoice.pk and deliberately bridge
+        # to Document through Invoice.audit_document for quota accounting.
+        if document_type == "sales_invoice":
+            if model.__name__ != "Invoice":
+                no_document.append((document_type, model.__name__))
             continue
         if not hasattr(model, "document"):
             no_document.append((document_type, model.__name__))
@@ -257,22 +260,35 @@ def test_every_gated_document_type_resolves_to_a_model(db):
     )
 
 
-def test_sales_invoice_is_rejected_by_design(db):
-    """Sales invoices do not reach this gate, and the refusal says why.
+@pytest.mark.django_db
+def test_sales_invoice_resolves_to_its_explicit_quota_document(org_with_quota):
+    """Sales invoices now enter the same quota gate as typed documents.
 
-    No post_save fires for them, and processor.py calls run_audit_task (V1)
-    directly while this gate patches run_audit_compat only. Raising is the
-    correct outcome — not a case to special-case — and the message has to
-    carry that, or the next reader treats it as a bug.
+    The pipeline addresses the Invoice by its own UUID, while UsageLedger is
+    keyed to Document.  The invoice-owned bridge must preserve both meanings
+    without guessing a Document id from the invoice id.
     """
-    from apps.billing.quota_gate import UnknownDocumentType, _typed_model_for
+    from apps.billing.quota_gate import _resolve_document_and_org, _typed_model_for
+    from apps.documents.models import Document
+    from apps.invoices.models import Invoice
 
-    with pytest.raises(UnknownDocumentType) as excinfo:
-        _typed_model_for("sales_invoice")
-
-    message = str(excinfo.value)
-    assert "sales_invoice" in message
-    assert "run_audit_task" in message, (
-        "the refusal does not explain that sales invoices are routed to V1; "
-        "without that, this reads as a defect rather than a decision"
+    document = Document.objects.create(
+        organization=org_with_quota,
+        file="invoices/test.pdf",
+        original_filename="test.pdf",
+        file_size=1,
+        mime_type="application/pdf",
+        document_type=Document.DocumentType.INVOICE,
     )
+    invoice = Invoice.objects.create(
+        organization=org_with_quota,
+        original_filename="test.pdf",
+        audit_document=document,
+    )
+
+    assert _typed_model_for("sales_invoice") is Invoice
+    resolved_document, resolved_org = _resolve_document_and_org(
+        str(invoice.pk), str(org_with_quota.pk), "sales_invoice"
+    )
+    assert resolved_document.pk == document.pk
+    assert resolved_org.pk == org_with_quota.pk

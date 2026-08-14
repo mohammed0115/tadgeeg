@@ -132,26 +132,13 @@ def trigger_audit(request):
     triggered_by = data.get("triggered_by", "manual")
 
     try:
-        # Through run_audit_compat, never by importing a pipeline directly.
-        #
-        # A direct import of AuditPipeline (V1) — or of AuditPipelineV2 —
-        # decides the engine at import time and leaves AUDIT_ENGINE_VERSION
-        # with nothing to switch. That is not theoretical: a full run of the
-        # invoice path logged "AuditPipeline starting" and engine_version = 2.0
-        # while the flag was set to "v2", because processor.py imports V1
-        # directly. compat.py's claim that changing versions "only requires a
-        # settings change" was false for every caller that did this.
-        # See docs/INVOICE_PATH_TRACE.md.
+        # One production boundary for upload, manual re-audit and retry. It
+        # owns V1/V2 selection and, when enabled, the billing reserve/consume
+        # cycle; importing AuditPipeline here bypassed both.
         from apps.rule_engine.pipeline.v2.compat import run_audit_compat
 
-        # engine_override="v1" is TEMPORARY. The point of this shipment is to
-        # remove the direct import so the generation becomes switchable by
-        # configuration rather than by a deploy. Moving to V2 is a separate
-        # decision, taken once for every path — and its measured effect here is
-        # that risk_score reaches 100 where V1 stops at 90 (the one-directional
-        # modifiers, deviations 29/34). risk_level and blocks_approval do not
-        # change. Pinning it keeps this shipment at zero output difference and
-        # leaves the generation switch as its own, visible decision.
+        # engine_override="v1" is temporary. This removes the direct import
+        # while keeping the generation-change decision separate from this merge.
         audit_run = run_audit_compat(
             document_id=document_id,
             document_type=document_type,

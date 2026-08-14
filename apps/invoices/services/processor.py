@@ -441,6 +441,11 @@ def process_single_file(
         invoice.status = Invoice.Status.PROCESSING
         invoice.save()
 
+        # DuplicateDetector receives the extracted payload, not the saved Invoice.
+        # Preserve the current primary key in that payload so it excludes this
+        # newly persisted invoice instead of finding itself as an exact duplicate.
+        ingestion.normalized = {**(ingestion.normalized or {}), "invoice_id": str(invoice.id)}
+
         # ── Step 7: Financial AI engine ───────────────────────────────────────
         country_code = getattr(org, "country", "SA") or "SA"
         ai_engine = FinancialAIEngine(organization_id=org.id, country_code=country_code, use_ai=True)
@@ -497,7 +502,11 @@ def process_single_file(
                 document_type="sales_invoice",
                 organization_id=org_id_s,
                 triggered_by="upload",
-                # Keep upload semantics stable while the V2 rollout is measured.
+                # engine_override="v1" مؤقّت. غرض التحويل إزالة الاستيراد المباشر
+                # حتى يصير الجيل قابلًا للتبديل بإعداد لا بنشر. والانتقال إلى V2
+                # قرار مستقلّ يُتخذ مرة واحدة لكل المسارات — وأثره المقيس:
+                # risk_score يبلغ 100 حيث يقف V1 عند 90 (الانحراف 29/34).
+                # المستوى والحجب لا يتغيّران.
                 engine_override="v1",
             )
         except Exception as exc:

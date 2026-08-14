@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from django.test import TestCase
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 from apps.audit.engagement_models import AuditEngagement
@@ -68,7 +69,7 @@ class ServiceTests(Base):
 
     def test_overdue(self):
         i = ai.create_issue(engagement=self.eng, actor=self.auditor, title="X",
-                            due_date=date.today() - timedelta(days=1))
+                            due_date=timezone.localdate() - timedelta(days=1))
         self.assertTrue(i.is_overdue)
         ai.set_status(issue=i, actor=self.auditor, status=_St.CLOSED)
         self.assertFalse(i.is_overdue)  # closed issues are never overdue

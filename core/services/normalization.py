@@ -166,6 +166,10 @@ class NormalizationService:
             "language": self._clean_text(payload.get("language", "unknown")) or "unknown",
         }
 
+        if normalized["subtotal"] is None and normalized["total_amount"] is not None and normalized["vat_amount"] is not None:
+            normalized["subtotal"] = normalized["total_amount"] - normalized["vat_amount"] + (normalized["discount"] or Decimal("0"))
+            warnings.append("Subtotal inferred from total amount, VAT amount, and discount.")
+
         if not normalized["total_amount"] and normalized["subtotal"] is not None and normalized["vat_amount"] is not None:
             normalized["total_amount"] = normalized["subtotal"] + normalized["vat_amount"] - (normalized["discount"] or Decimal("0"))
 

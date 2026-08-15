@@ -1,0 +1,161 @@
+{
+  "input": "/home/ubuntu/tadgeeg-review-artifacts/cross_format_invoice_fixtures/invoice_cross_format.png",
+  "ingestion_success": true,
+  "ingestion_method": "ocr_fallback",
+  "ingestion_result": {
+    "success": true,
+    "file_name": "invoice_cross_format.png",
+    "mime_type": "image/png",
+    "document_type": "unknown",
+    "raw_text": "TAX INVOICE\n\nInvoice Number: XFMT-2026-001\nVendor: Cross Format Supplier Ltd\nVAT Number: 310123456700003\nInvoice Date: 2026-08-15\nCurrency: SAR\n\nSubtotal: 1000.00\n\nVAT Amount: 150.00\n\nTotal Amount: 1150.00",
+    "structured": {},
+    "normalized": {
+      "vendor_name": "",
+      "vendor_vat_number": "",
+      "invoice_number": "",
+      "invoice_date": null,
+      "due_date": null,
+      "currency": "SAR",
+      "subtotal": null,
+      "vat_amount": null,
+      "vat_rate": null,
+      "discount": null,
+      "total_amount": null,
+      "customer_name": "",
+      "customer_vat_number": "",
+      "payment_method": "",
+      "line_items": [],
+      "has_qr_code": false,
+      "confidence_reasoning": "",
+      "uncertainty_flags": [],
+      "raw_text": "TAX INVOICE\n\nInvoice Number: XFMT-2026-001\nVendor: Cross Format Supplier Ltd\nVAT Number: 310123456700003\nInvoice Date: 2026-08-15\nCurrency: SAR\n\nSubtotal: 1000.00\n\nVAT Amount: 150.00\n\nTotal Amount: 1150.00",
+      "extraction_method": "ocr_fallback",
+      "document_type": "unknown",
+      "language": "unknown",
+      "raw_values": {
+        "vendor_name": "",
+        "vendor_vat_number": "",
+        "invoice_number": "",
+        "invoice_date": null,
+        "due_date": null,
+        "currency": "SAR",
+        "subtotal": null,
+        "vat_amount": null,
+        "vat_rate": null,
+        "discount": null,
+        "total_amount": null,
+        "customer_name": "",
+        "customer_vat_number": "",
+        "payment_method": "",
+        "line_items": [],
+        "has_qr_code": false,
+        "confidence_reasoning": "",
+        "uncertainty_flags": []
+      },
+      "normalization_warnings": [],
+      "aliases_applied": {},
+      "document_number": "",
+      "date": null,
+      "tax_amount": null,
+      "metadata": {
+        "ocr_confidence": 95.08,
+        "page_count": 1,
+        "attempted_strategies": [
+          "vision_ai",
+          "ocr_fallback"
+        ],
+        "strategy_trace": [
+          {
+            "strategy": "vision_ai",
+            "success": false,
+            "method": "openai_vision",
+            "fatal_error": "Vision AI is disabled for this request.",
+            "errors": []
+          },
+          {
+            "strategy": "ocr_fallback",
+            "success": true,
+            "method": "ocr_fallback",
+            "fatal_error": null,
+            "errors": []
+          }
+        ],
+        "winning_strategy": "ocr_fallback"
+      },
+      "source_file": "invoice_cross_format.png"
+    },
+    "page_count": 0,
+    "metadata": {
+      "ocr_confidence": 95.08,
+      "page_count": 1,
+      "attempted_strategies": [
+        "vision_ai",
+        "ocr_fallback"
+      ],
+      "strategy_trace": [
+        {
+          "strategy": "vision_ai",
+          "success": false,
+          "method": "openai_vision",
+          "fatal_error": "Vision AI is disabled for this request.",
+          "errors": []
+        },
+        {
+          "strategy": "ocr_fallback",
+          "success": true,
+          "method": "ocr_fallback",
+          "fatal_error": null,
+          "errors": []
+        }
+      ],
+      "winning_strategy": "ocr_fallback"
+    },
+    "errors": [],
+    "fatal_error": null,
+    "extraction_method": "ocr_fallback",
+    "processing_time_ms": 2543
+  },
+  "raw_text": "TAX INVOICE\n\nInvoice Number: XFMT-2026-001\nVendor: Cross Format Supplier Ltd\nVAT Number: 310123456700003\nInvoice Date: 2026-08-15\nCurrency: SAR\n\nSubtotal: 1000.00\n\nVAT Amount: 150.00\n\nTotal Amount: 1150.00",
+  "fallback": {
+    "invoice_number": "XFMT-2026-001",
+    "invoice_date": "2026-08-15",
+    "due_date": null,
+    "vendor_name": "Cross Format Supplier Ltd",
+    "vendor_name_ar": "",
+    "vendor_vat_number": "310123456700003",
+    "vendor_cr_number": "",
+    "vendor_address": "",
+    "vendor_phone": "",
+    "customer_name": "",
+    "customer_vat_number": "",
+    "currency": "SAR",
+    "subtotal": 1000.0,
+    "vat_rate": 15.0,
+    "vat_amount": 150.0,
+    "discount": 0.0,
+    "total_amount": 1150.0,
+    "line_items": [],
+    "has_qr_code": false,
+    "qr_code_valid": false,
+    "is_handwritten": false,
+    "is_clear": true,
+    "has_alterations": false,
+    "language": "en",
+    "payment_terms": "",
+    "notes": "",
+    "ai_fraud_suspected": false,
+    "ai_fraud_indicators": [],
+    "ai_confidence": 52,
+    "ai_summary": "تم استخراج البيانات عبر OCR المحلي مع تطبيق قواعد تحقق تلقائية. يُنصح بمراجعة الحقول الحساسة قبل الاعتماد النهائي.",
+    "_extraction_method": "tesseract_fallback"
+  },
+  "normalized": {
+    "invoice_number": "XFMT-2026-001",
+    "vendor_name": "Cross Format Supplier Ltd",
+    "invoice_date": "2026-08-15",
+    "subtotal": "1000.0",
+    "vat_amount": "150.0",
+    "total_amount": "1150.0",
+    "currency": "SAR"
+  }
+}

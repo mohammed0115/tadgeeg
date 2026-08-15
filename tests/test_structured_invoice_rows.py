@@ -48,3 +48,30 @@ def test_structured_row_is_forwarded_as_authoritative_payload(monkeypatch):
         "payload": payload,
         "bytes": b'{"invoice_number": "INV-2026-001", "vendor_name": "Example Supplier", "total_amount": "1250.75", "vat_amount": "187.61"}',
     }]
+
+
+def test_single_json_object_is_forwarded_as_one_authoritative_row():
+    import io
+    import json
+
+    from core.services.parsers.structured import iter_structured_records
+
+    payload = {
+        "invoice_number": "INV-JSON-SINGLE-001",
+        "vendor_name": "Single JSON Supplier",
+        "subtotal": 1000.0,
+        "vat_amount": 150.0,
+        "total_amount": 1150.0,
+    }
+    uploaded = io.BytesIO(json.dumps(payload).encode("utf-8"))
+    uploaded.name = "single-invoice.json"
+
+    assert list(iter_structured_records(uploaded, uploaded.name) or []) == [(
+        1,
+        {
+            **payload,
+            "subtotal": "1000.0",
+            "vat_amount": "150.0",
+            "total_amount": "1150.0",
+        },
+    )]

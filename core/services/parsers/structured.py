@@ -165,6 +165,12 @@ def _iter_json_records(json_file) -> Generator[tuple[int, dict], None, None]:
     except Exception:
         return
 
+    if isinstance(data, dict):
+        payload = normalize_row(data)
+        if payload:
+            yield 1, payload
+        return
+
     if not isinstance(data, list):
         return
 

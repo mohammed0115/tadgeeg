@@ -1,0 +1,57 @@
+194 objects imported automatically (use -v 2 for details).
+
+{
+  "db": {
+    "invoice_number": "oice",
+    "vendor_name": "_name\": \"Frontend Integration Supplier\",",
+    "invoice_date": "2015-08-26",
+    "subtotal": "0.00",
+    "vat_amount": "0.00",
+    "total_amount": "0.00",
+    "risk_score": "78.0",
+    "risk_level": "high",
+    "is_duplicate": true,
+    "status": "flagged",
+    "validation_score": "70.59",
+    "rules_passed": 24,
+    "rules_failed": 10,
+    "failed_rule_codes": [
+      "INV-007",
+      "DUP-001",
+      "DUP-002",
+      "DUP-004",
+      "VAT-005",
+      "CTL-001",
+      "CTL-002",
+      "CTL-005",
+      "DOC-001",
+      "DOC-004"
+    ]
+  },
+  "ui_observed": {
+    "invoice_number": "oice",
+    "vendor_name": "_name\": \"Frontend Integration Supplier\",",
+    "invoice_date": "2015-08-26",
+    "subtotal": "—",
+    "vat_amount": "—",
+    "total_amount": "—",
+    "risk_score": "78%",
+    "risk_level": "High Risk",
+    "validation_score": "71%",
+    "rules_passed": 24,
+    "rules_failed": 10,
+    "failed_rule_codes": [
+      "INV-007",
+      "DUP-001",
+      "DUP-002",
+      "DUP-004",
+      "VAT-005",
+      "CTL-001",
+      "CTL-002",
+      "CTL-005",
+      "DOC-001",
+      "DOC-004"
+    ],
+    "blocks_approval": "not displayed / no RiskScoreSummary"
+  }
+}

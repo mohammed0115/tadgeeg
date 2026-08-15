@@ -1,0 +1,11 @@
+[2026-08-15 16:43:31,394] INFO billing.quota_gate [quota_gate] installed around run_audit_compat
+[2026-08-15 16:43:32,085] INFO finai [DocumentEngine] Ingesting invoice_cross_format.pdf | mime=application/pdf | manager=ExtractionManager
+[2026-08-15 16:43:32,085] WARNING finai [Parser] pdfplumber not installed; skipping.
+warning: The `fitz` API is deprecated and will be removed in future. Use `import pymupdf` instead.
+[2026-08-15 16:43:32,915] INFO finai [ExtractionManager] text_layer succeeded for invoice_cross_format.pdf via pdf_text_layer
+[2026-08-15 16:43:32,916] INFO finai [DocumentEngine] SUCCESS invoice_cross_format.pdf | method=pdf_text_layer | 831ms
+[2026-08-15 16:43:32,919] INFO finai [DocumentEngine] Ingesting invoice_cross_format.png | mime=image/png | manager=ExtractionManager
+[2026-08-15 16:43:32,919] WARNING finai [ExtractionManager] vision_ai failed for invoice_cross_format.png: Vision AI is disabled for this request.
+[2026-08-15 16:43:34,987] INFO finai [ExtractionManager] ocr_fallback succeeded for invoice_cross_format.png via ocr_fallback
+[2026-08-15 16:43:34,988] INFO finai [DocumentEngine] SUCCESS invoice_cross_format.png | method=ocr_fallback | 2068ms
+/home/ubuntu/tadgeeg-review-artifacts/four_format_invoice_reader_final.json

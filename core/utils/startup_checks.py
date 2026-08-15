@@ -6,6 +6,12 @@ logger = logging.getLogger("finai")
 
 
 def check_email_configuration():
+    # Test settings deliberately use Django's in-memory mail backend and never
+    # deliver OTPs.  Treating them as production merely because DEBUG=False
+    # makes a clean pytest/CI run depend on fake SMTP environment variables.
+    if getattr(settings, "TESTING", False):
+        return
+
     if getattr(settings, "DEBUG", True):
         if not getattr(settings, "EMAIL_HOST_USER", None):
             logger.warning(

@@ -14,6 +14,9 @@ from finai_backend.settings.base import *  # noqa: F401, F403
 
 # ── Core ──────────────────────────────────────────────────────────────────────
 DEBUG = False  # Tests should behave like production
+# Startup checks must distinguish a production-like behaviour test from a
+# production deployment.  CI has no SMTP credential and uses locmem email.
+TESTING = True
 SECRET_KEY = "test-secret-key-not-for-production-use"  # noqa: S105
 SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = False

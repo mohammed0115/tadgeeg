@@ -1,0 +1,2 @@
+[2026-08-15 11:21:39,531] INFO billing.quota_gate [quota_gate] installed around run_audit_compat
+{'before': {'organization': False, 'users': 1, 'invoices': 0, 'documents': 0, 'audit_runs': 0, 'risk_summaries': 0}, 'after': {'organization': 0, 'users': 0}}

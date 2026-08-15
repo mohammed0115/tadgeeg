@@ -17,6 +17,7 @@ Nothing here writes to ``apps.ledger``, uses AI, or issues an audit opinion.
 from __future__ import annotations
 
 import hashlib
+from datetime import datetime, time, timedelta
 
 from django.db import transaction
 from django.db.models import Avg, Count, F, Max, Q
@@ -385,7 +386,11 @@ def escalate_overdue(*, organization=None, actor=None, notify=True) -> dict:
     Idempotent per day: a request that already has an ``escalated`` event today
     is not escalated again. NEVER changes a request's status.
     """
-    today = timezone.now().date()
+    today = timezone.localdate()
+    day_start = timezone.make_aware(
+        datetime.combine(today, time.min), timezone.get_current_timezone()
+    )
+    day_end = day_start + timedelta(days=1)
     qs = AuditEvidenceRequest.objects.exclude(status__in=list(_R.FINAL_STATUSES)) \
         .filter(due_date__lt=today)
     if organization is not None:
@@ -393,8 +398,13 @@ def escalate_overdue(*, organization=None, actor=None, notify=True) -> dict:
 
     escalated = []
     for req in qs.select_related("assigned_to", "assigned_client_user", "organization"):
+        # Avoid `created_at__date`: SQLite applies its connection timezone to
+        # the extraction and missed the event created moments earlier.
         already = req.events.filter(
-            event_type=_ET.ESCALATED, created_at__date=today).exists()
+            event_type=_ET.ESCALATED,
+            created_at__gte=day_start,
+            created_at__lt=day_end,
+        ).exists()
         if already:
             continue
         _record_event(req, event_type=_ET.ESCALATED, actor=actor,

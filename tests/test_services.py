@@ -16,7 +16,6 @@ import json
 
 from core.services.document_engine import DocumentEngine, IngestionResult
 from core.services.financial_ai_engine import FinancialAIEngine, FinancialAnalysisResult
-from apps.audit.audit_engine import AuditEngine
 from core.services.parsers.pdf_parser import PDFParser
 from core.utils.file_validation import validate_uploaded_file, ValidationError
 from core.services.upload_router import DocumentUploadRouter, UploadRouterResult
@@ -183,67 +182,6 @@ class TestFinancialAIEngine:
         assert isinstance(data_dict["anomaly_explanation"], str)
 
 
-# ─── Audit Engine Tests ──────────────────────────────────────────────────
-
-@pytest.mark.unit
-class TestAuditEngine:
-    """Tests for financial audit rule evaluation"""
-
-    def test_evaluate_returns_audit_report(self):
-        """Should return valid AuditReport"""
-        doc = _make_ai_result().to_dict()
-        engine = AuditEngine()
-        report = engine.evaluate(doc)
-
-        assert report is not None
-        assert hasattr(report, 'rule_results')
-        assert hasattr(report, 'risk_score')
-
-    def test_evaluate_detects_missing_fields(self):
-        """Should flag documents with missing required fields"""
-        # Empty document — many required fields missing
-        doc = FinancialAnalysisResult().to_dict()
-        engine = AuditEngine()
-        report = engine.evaluate(doc)
-
-        assert len(report.failed_results) > 0
-
-    def test_evaluate_calculates_risk_score(self):
-        """Should aggregate risk into single score"""
-        doc = _make_ai_result(
-            confidence=0.5,
-            vendor_name="Unknown",
-            total_amount=Decimal("999999999.00"),
-        ).to_dict()
-        engine = AuditEngine()
-        report = engine.evaluate(doc)
-
-        assert isinstance(report.risk_score, (int, float))
-        assert 0 <= report.risk_score <= 100
-
-    def test_evaluate_passes_low_risk_docs(self):
-        """Should produce a risk score in valid range"""
-        doc = _make_ai_result(
-            confidence=0.98,
-            vendor_name="Known Vendor Inc",
-            total_amount=Decimal("1000.00"),
-        ).to_dict()
-        engine = AuditEngine()
-        report = engine.evaluate(doc)
-
-        # Risk score must be in valid 0-100 range
-        assert 0 <= report.risk_score <= 100
-
-    def test_evaluate_rules_exhaustive(self):
-        """Should run all registered audit rules"""
-        doc = FinancialAnalysisResult().to_dict()
-        engine = AuditEngine()
-        report = engine.evaluate(doc)
-
-        assert len(report.rule_results) >= 0
-        assert hasattr(report, 'summary')
-
-
 # ─── File Validation Tests ──────────────────────────────────────────────────
 
 @pytest.mark.security
@@ -324,10 +262,6 @@ class TestFullPipeline:
         ai_result = engine.analyse(result)
         assert ai_result.document_type is not None
 
-        # Step 3: Audit
-        audit_engine = AuditEngine()
-        audit_report = audit_engine.evaluate(ai_result.to_dict())
-        assert audit_report.risk_score >= 0
 
     @pytest.mark.slow
     def test_pipeline_with_real_files(self):
@@ -570,16 +504,3 @@ class TestPerformance:
         duration = time.time() - start
 
         assert duration < 5.0
-
-    def test_audit_evaluation_is_fast(self):
-        """Should evaluate audit rules quickly"""
-        import time
-
-        doc = FinancialAnalysisResult().to_dict()
-        engine = AuditEngine()
-
-        start = time.time()
-        report = engine.evaluate(doc)
-        duration = time.time() - start
-
-        assert duration < 1.0

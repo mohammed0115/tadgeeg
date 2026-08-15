@@ -1,0 +1,54 @@
+{
+  "label": "predelete",
+  "input_sha256": "fceef1bbba99eb569f6816fa2fb24cc0a7d76e03026046c00779fbe75c4d30ed",
+  "database_name": "/home/ubuntu/tadgeeg-predelete/db_runtime.sqlite3",
+  "response_status": 201,
+  "seven_fields": {
+    "validation_score": 70.59,
+    "rules_failed": [
+      "INV-002",
+      "INV-004",
+      "VAT-004",
+      "VAT-005",
+      "ANO-002",
+      "ANO-006",
+      "CTL-001",
+      "CTL-002",
+      "CTL-005",
+      "DOC-004"
+    ],
+    "is_duplicate": false,
+    "risk_score": 50.0,
+    "risk_level": "high",
+    "blocks_approval": true,
+    "engine_version": "2.0"
+  },
+  "extraction_fields": {
+    "subtotal": 1000.0,
+    "total_amount": 1150.0,
+    "vat_amount": 150.0
+  },
+  "audit_run": {
+    "id": "e41ed274-d6b0-46e1-872c-f6dbd9b23364",
+    "status": "completed",
+    "document_type": "sales_invoice",
+    "failed_rules": 1
+  },
+  "counts_before": {
+    "organizations": 0,
+    "users": 0,
+    "invoices": 0,
+    "documents": 0,
+    "audit_runs": 0,
+    "validations": 0
+  },
+  "counts_after_upload": {
+    "organizations": 1,
+    "users": 1,
+    "invoices": 1,
+    "documents": 1,
+    "audit_runs": 1,
+    "validations": 1
+  },
+  "cleanup_performed": false
+}

@@ -28,6 +28,7 @@ edit cannot quietly add a table scan to something that runs every five seconds.
 from __future__ import annotations
 
 import logging
+from datetime import datetime, time, timedelta
 from dataclasses import asdict, dataclass
 
 from django.core.cache import cache
@@ -96,7 +97,7 @@ def get_live_metrics(organization, *, use_cache: bool = True) -> LiveMetrics:
 
     now = timezone.now()
     day_ago = now - timezone.timedelta(hours=24)
-    today = now.date()
+    today = timezone.localdate()
 
     documents = Document.objects.filter(organization=organization).aggregate(
         pending=Count("id", filter=Q(processing_status="pending")),
@@ -116,8 +117,18 @@ def get_live_metrics(organization, *, use_cache: bool = True) -> LiveMetrics:
                     AuditSession.Status.VALIDATING],
     ).count()
 
+    # `__date` converts timestamps using the database connection timezone and
+    # produced a false zero in SQLite despite an invoice created moments earlier.
+    # Use explicit aware bounds so the dashboard and its test database agree on
+    # the tenant's current application day.
+    day_start = timezone.make_aware(
+        datetime.combine(today, time.min), timezone.get_current_timezone()
+    )
+    day_end = day_start + timedelta(days=1)
     invoices_today = Invoice.objects.filter(
-        organization=organization, created_at__date=today,
+        organization=organization,
+        created_at__gte=day_start,
+        created_at__lt=day_end,
     ).count()
 
     metrics = LiveMetrics(

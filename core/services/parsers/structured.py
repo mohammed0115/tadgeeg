@@ -138,6 +138,17 @@ def _iter_excel_records(spreadsheet_file, ext: str) -> Generator[tuple[int, dict
                     str(h).strip() if h not in (None, "") else f"column_{i + 1}"
                     for i, h in enumerate(headers)
                 ]
+                if [name.casefold() for name in header_names] == ["field", "value"]:
+                    key_value_payload = {}
+                    for row_values in row_iter:
+                        key, value = row_values[:2]
+                        if key not in (None, ""):
+                            key_value_payload[str(key).strip()] = value
+                    payload = normalize_row(key_value_payload)
+                    if payload:
+                        yield 2, payload
+                    continue
+
                 for row_number, row_values in enumerate(row_iter, start=2):
                     payload = normalize_row(dict(zip(header_names, row_values)))
                     if payload:
@@ -163,6 +174,12 @@ def _iter_json_records(json_file) -> Generator[tuple[int, dict], None, None]:
         json_file.seek(0)
         data = json.loads(raw.decode("utf-8", errors="replace").lstrip("\xef\xbb\xbf"))
     except Exception:
+        return
+
+    if isinstance(data, dict):
+        payload = normalize_row(data)
+        if payload:
+            yield 1, payload
         return
 
     if not isinstance(data, list):

@@ -322,13 +322,36 @@ class CanonicalMapper:
         document_type: str,
         typed_model_name: str,
         typed_object_id,
+        organization,
     ):
         """
         Run mapping and persist result as DocumentCanonicalData.
         Idempotent — updates existing record if one exists.
         Dates/Decimals are converted to JSON-safe primitives before storage.
+
+        `organization` is REQUIRED, and positional rather than a keyword with a
+        None default on purpose. DocumentCanonicalData gained an owner column in
+        documents/0013; this function is the only thing that writes the table,
+        so an optional argument here would mean a fourth call site written next
+        year silently produces rows belonging to nobody — which is exactly how
+        the 1,003 unowned rows already in the table came to exist. A required
+        argument makes that a syntax error instead of a data problem discovered
+        later.
+
+        A row that cannot name its tenant is not written. NULL in this column
+        means "no owner could be derived", and only the backfill is entitled to
+        say that.
         """
         from apps.documents.canonical_models import DocumentCanonicalData
+
+        if organization is None:
+            raise ValueError(
+                f"save_canonical requires an organization "
+                f"({typed_model_name} {typed_object_id}). A canonical row with "
+                f"no owner is invisible to every tenant query and cannot be "
+                f"cleaned up when the tenant is deleted."
+            )
+
         canonical   = self._json_safe(self.map(raw_data, document_type))
         safe_raw    = self._json_safe(raw_data)
 
@@ -339,11 +362,19 @@ class CanonicalMapper:
                 "document_type": document_type,
                 "canonical_data": canonical,
                 "raw_ai_output":  safe_raw,
+                "organization":   organization,
             },
         )
         if not created:
             obj.canonical_data = canonical
             obj.raw_ai_output  = safe_raw
             obj.version       += 1
-            obj.save(update_fields=["canonical_data", "raw_ai_output", "version", "updated_at"])
+            # organization is written on update too, so a row left ownerless by
+            # the backfill acquires its owner the next time it is touched. That
+            # is what makes the unowned count fall without a second migration.
+            obj.organization   = organization
+            obj.save(update_fields=[
+                "canonical_data", "raw_ai_output", "version",
+                "organization", "updated_at",
+            ])
         return obj

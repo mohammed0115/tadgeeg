@@ -1,0 +1,316 @@
+=== organization queryset predicates (source lines) ===
+0
+=== MFA/TOTP source locations ===
+apps/activity_logs/migrations/0002_activitylog_chain_hash_activitylog_previous_hash_and_more.py:12:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/ai_safety/migrations/0001_initial.py:14:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0012_alter_auditcase_deleted_at_and_more.py:13:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0013_trialbalanceimport_trialbalancerow_and_more.py:13:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0014_accountmapping_and_more.py:13:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0015_generalledgerimport_generalledgerrow_and_more.py:14:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0016_generalledgerriskfinding.py:14:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0018_generalledgerriskfindingreview.py:12:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0019_auditdifferencesummary_auditdifferenceitem_and_more.py:13:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0020_proposedauditadjustment_auditdifferenceitemresponse.py:13:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0021_auditreadinessworkpaper.py:13:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0022_auditevidencerequest_auditevidenceattachment_and_more.py:15:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0026_auditevidenceattachment_verification_duration_ms_and_more.py:12:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0027_journalanalyticsrun_journalanalyticssummary_and_more.py:13:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0028_auditconfirmationrequest_and_more.py:14:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0029_auditcontroldeficiency_and_more.py:13:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0030_substantivetestitem_and_more.py:14:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0032_engagementplanningrecord.py:12:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0033_assessedrisk_and_more.py:13:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0034_auditprocedure_and_more.py:13:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/migrations/0037_engagementsignoff.py:13:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/audit/services/sampling.py:308:    # between the last two factors.
+apps/auditing/migrations/0007_aivalidationdataset_aivalidationrun_and_more.py:12:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/authentication/admin.py:18:        ("Security", {"fields": ("mfa_enabled", "mfa_secret", "failed_login_attempts", "locked_until", "last_login_ip")}),
+apps/authentication/migrations/0001_initial.py:170:                ("mfa_enabled", models.BooleanField(default=False)),
+apps/authentication/migrations/0001_initial.py:171:                ("mfa_secret", models.CharField(blank=True, max_length=64)),
+apps/authentication/migrations/0007_alter_user_mfa_secret.py:16:            name='mfa_secret',
+apps/authentication/migrations/0008_alter_user_role.py:9:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/authentication/models.py:148:    mfa_enabled = models.BooleanField(default=False)
+apps/authentication/models.py:149:    # mfa_secret holds the user's TOTP base32 secret. The field encrypts the
+apps/authentication/models.py:156:    mfa_secret = EncryptedCharField(max_length=320, blank=True)
+apps/authentication/models.py:161:    # TOTP replay protection: store the counter (Unix-time / 30) of the last
+apps/authentication/models.py:162:    # successfully-verified TOTP code. A second verify within the same
+apps/authentication/serializers.py:46:            "organization", "organization_detail", "mfa_enabled",
+apps/authentication/urls.py:25:    path("mfa/setup/", views.MFASetupView.as_view(), name="mfa-setup"),
+apps/authentication/urls.py:26:    path("mfa/verify/", views.MFAVerifyView.as_view(), name="mfa-verify"),
+apps/authentication/urls.py:27:    path("mfa/login-verify/", views.MFALoginVerifyView.as_view(), name="mfa-login-verify"),  # ✅ PHASE 1
+apps/authentication/urls.py:28:    path("mfa/disable/", views.MFADisableView.as_view(), name="mfa-disable"),
+apps/authentication/views.py:104:def _mfa_pending_payload(user: User, temp_token) -> dict:
+apps/authentication/views.py:108:        "mfa_required": True,
+apps/authentication/views.py:109:        "mfa_method": getattr(user, "mfa_method", "totp"),
+apps/authentication/views.py:112:        "redirect": reverse("frontend:mfa_verify"),
+apps/authentication/views.py:222:        if user.mfa_enabled and user.mfa_secret:
+apps/authentication/views.py:227:                _mfa_pending_payload(user, temp_token),
+apps/authentication/views.py:813:# ── MFA / TOTP Views (NFR-3 gap fix) ─────────────────────────────────────────
+apps/authentication/views.py:817:    GET  → Generate a new TOTP secret and return provisioning URI + QR code data URL.
+apps/authentication/views.py:818:    POST → Verify a TOTP code and activate MFA on the account.
+apps/authentication/views.py:825:            import pyotp, qrcode, io, base64
+apps/authentication/views.py:827:            return Response({"error": _("pyotp / qrcode is not available on the server.")}, status=500)
+apps/authentication/views.py:830:        secret = pyotp.random_base32()
+apps/authentication/views.py:831:        totp = pyotp.TOTP(secret)
+apps/authentication/views.py:843:        request.session["mfa_pending_secret"] = secret
+apps/authentication/views.py:849:            "mfa_enabled": request.user.mfa_enabled,
+apps/authentication/views.py:852:    @extend_schema(tags=["Auth"], summary="Activate MFA with a verified TOTP code")
+apps/authentication/views.py:855:            import pyotp
+apps/authentication/views.py:857:            return Response({"error": _("pyotp is not available on the server.")}, status=500)
+apps/authentication/views.py:860:        secret = request.session.get("mfa_pending_secret") or request.data.get("secret", "")
+apps/authentication/views.py:865:        totp = pyotp.TOTP(secret)
+apps/authentication/views.py:870:        user.mfa_secret = secret
+apps/authentication/views.py:871:        user.mfa_enabled = True
+apps/authentication/views.py:872:        user.save(update_fields=["mfa_secret", "mfa_enabled"])
+apps/authentication/views.py:873:        request.session.pop("mfa_pending_secret", None)
+apps/authentication/views.py:876:                   details={"change": "mfa_enabled"})
+apps/authentication/views.py:883:    POST → Verify a TOTP code for a user who has MFA enabled.
+apps/authentication/views.py:888:    @extend_schema(tags=["Auth"], summary="Verify TOTP code (second factor)")
+apps/authentication/views.py:891:            import pyotp
+apps/authentication/views.py:893:            return Response({"error": _("pyotp is not available.")}, status=500)
+apps/authentication/views.py:896:        if not user.mfa_enabled or not user.mfa_secret:
+apps/authentication/views.py:903:        totp = pyotp.TOTP(user.mfa_secret)
+apps/authentication/views.py:920:        summary="Verify TOTP code during login (issue full tokens)",
+apps/authentication/views.py:925:                "code": {"type": "string", "description": "6-digit TOTP code"}
+apps/authentication/views.py:931:            import pyotp
+apps/authentication/views.py:933:            return Response({"error": _("TOTP service unavailable")}, status=500)
+apps/authentication/views.py:940:                {"error": _("Temporary token and TOTP code are required")},
+apps/authentication/views.py:958:        # hammering TOTP codes after the lockout — bypassing it entirely.
+apps/authentication/views.py:966:        # Verify TOTP code
+apps/authentication/views.py:967:        if not user.mfa_enabled or not user.mfa_secret:
+apps/authentication/views.py:973:        # ── V4: TOTP replay protection ────────────────────────────────────────
+apps/authentication/views.py:974:        # A TOTP code is valid for ~30 s (±valid_window=1 step). Without a
+apps/authentication/views.py:982:        totp = pyotp.TOTP(user.mfa_secret)
+apps/authentication/views.py:1002:                {"error": _("Invalid or expired TOTP code")},
+apps/authentication/views.py:1006:        # MFA successful — atomic clear of counters + record TOTP counter.
+apps/authentication/views.py:1014:                   details={"mfa": "verified"})
+apps/authentication/views.py:1024:    """POST → Verify current TOTP code then disable MFA."""
+apps/authentication/views.py:1027:    @extend_schema(tags=["Auth"], summary="Disable MFA (requires valid TOTP code)")
+apps/authentication/views.py:1030:            import pyotp
+apps/authentication/views.py:1032:            return Response({"error": _("pyotp is not available.")}, status=500)
+apps/authentication/views.py:1035:        if not user.mfa_enabled:
+apps/authentication/views.py:1042:        totp = pyotp.TOTP(user.mfa_secret)
+apps/authentication/views.py:1046:        user.mfa_enabled = False
+apps/authentication/views.py:1047:        user.mfa_secret = ""
+apps/authentication/views.py:1048:        user.save(update_fields=["mfa_enabled", "mfa_secret"])
+apps/authentication/views.py:1051:                   details={"change": "mfa_disabled"})
+apps/billing/middleware.py:56:    "/mfa-login/",
+apps/billing/migrations/0001_initial.py:13:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/erp/migrations/0001_initial.py:16:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/frontend/page_views.py:1970:def mfa_login_verify(request):
+apps/frontend/page_views.py:1980:        import pyotp
+apps/frontend/page_views.py:1993:                {"error": _("Temporary token and 6-digit TOTP code are required")},
+apps/frontend/page_views.py:2008:        # Verify TOTP code
+apps/frontend/page_views.py:2009:        if not user.mfa_enabled or not user.mfa_secret:
+apps/frontend/page_views.py:2015:        totp = pyotp.TOTP(user.mfa_secret)
+apps/frontend/page_views.py:2024:                {"error": _("Invalid or expired TOTP code")},
+apps/frontend/page_views.py:2034:        log_action(request, AuditLog.Action.LOGIN, "user", str(user.id), details={"mfa": "verified"})
+apps/frontend/urls.py:91:    path('mfa-login/verify/', views.mfa_login_verify, name='mfa-login-verify'),  # ✅ PHASE 1: MFA verification endpoint
+apps/invoices/migrations/0014_overriderequest.py:13:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/payments/migrations/0001_initial.py:14:        ('authentication', '0007_alter_user_mfa_secret'),
+apps/platform_admin/migrations/0001_initial.py:15:        ('authentication', '0007_alter_user_mfa_secret'),
+core/utils/encrypted_field.py:4:Use case: MFA TOTP secrets, API tokens, anything that:
+core/utils/encrypted_field.py:6:  • must round-trip as plain text in Python (e.g. pyotp.TOTP() needs the
+core/utils/encrypted_field.py:67:            (settings.SECRET_KEY + ":mfa").encode("utf-8")
+core/utils/encrypted_field.py:86:    # plaintext TOTP secrets are base32 (A-Z, 2-7 only) so they cannot
+core/utils/rate_limit.py:61:LOGIN_PATHS  = {"/api/v1/auth/token/", "/api/v1/auth/login/", "/api/v1/auth/mfa/"}
+=== audit-chain unique/lock locations ===
+apps/activity_logs/migrations/0005_rebuild_activity_log_chains.py:11:every concrete HashChainMixin subclass, so ActivityLog appears on the
+apps/activity_logs/migrations/0005_rebuild_activity_log_chains.py:129:        ("activity_logs", "0004_unify_hash_chain"),
+apps/activity_logs/migrations/0006_chain_partition_and_fork_constraint.py:76:            constraint=models.UniqueConstraint(fields=('chain_partition', 'chain_position'), name='uniq_chain_position_activitylog'),
+apps/activity_logs/migrations/0007_evidence_access_hash_chain.py:3:"""Move EvidenceAccess onto HashChainMixin and re-chain its rows.
+apps/activity_logs/migrations/0007_evidence_access_hash_chain.py:8:skipped any models.py containing the string "HashChainMixin" and this class
+apps/activity_logs/migrations/0007_evidence_access_hash_chain.py:146:            constraint=models.UniqueConstraint(fields=('chain_partition', 'chain_position'), name='uniq_chain_position_evidenceaccess'),
+apps/activity_logs/models.py:6:from apps.audit.integrity import HashChainMixin
+apps/activity_logs/models.py:10:class ActivityLog(HashChainMixin):
+apps/activity_logs/models.py:72:    # Tamper-evidence comes from HashChainMixin: previous_hash, event_hash and
+apps/activity_logs/models.py:102:            models.UniqueConstraint(
+apps/activity_logs/models.py:120:    # ── HashChainMixin contract ────────────────────────────────────────
+apps/activity_logs/models.py:167:class EvidenceAccess(HashChainMixin):
+apps/activity_logs/models.py:176:    moved onto HashChainMixin, and inherited the two defects that change was
+apps/activity_logs/models.py:179:    could not see it — it skipped any models.py mentioning HashChainMixin, and
+apps/activity_logs/models.py:216:    # Tamper-evidence comes from HashChainMixin: previous_hash, event_hash,
+apps/activity_logs/models.py:238:            models.UniqueConstraint(
+apps/activity_logs/models.py:253:    # ── HashChainMixin contract ────────────────────────────────────────
+apps/alerts/migrations/0001_initial.py:73:            constraint=models.UniqueConstraint(fields=('organization', 'name'), name='alert_rule_unique_name_per_org'),
+apps/alerts/models.py:75:            models.UniqueConstraint(fields=["organization", "name"],
+apps/api_mobile/migrations/0001_initial.py:60:            constraint=models.UniqueConstraint(fields=('user', 'device_id'), name='mobile_device_unique_per_user'),
+apps/api_mobile/migrations/0001_initial.py:68:            constraint=models.UniqueConstraint(fields=('user', 'key'), name='mobile_idempotency_unique_per_user'),
+apps/api_mobile/models.py:61:            models.UniqueConstraint(
+apps/api_mobile/models.py:103:            models.UniqueConstraint(
+apps/audit/apps.py:28:        # Wire HashChainMixin pre_save / pre_delete signals.
+apps/audit/assessed_risk_models.py:102:            models.UniqueConstraint(
+apps/audit/confirmation_models.py:95:            models.UniqueConstraint(
+apps/audit/control_deficiency_models.py:103:            models.UniqueConstraint(
+apps/audit/engagement_models.py:139:            models.UniqueConstraint(
+apps/audit/evidence_models.py:153:            models.UniqueConstraint(
+apps/audit/general_ledger_models.py:187:            models.UniqueConstraint(
+apps/audit/integrity.py:5:`HashChainMixin`. Each row carries:
+apps/audit/integrity.py:86:class HashChainMixin(models.Model):
+apps/audit/integrity.py:98:    ``select_for_update`` on the chain head, which did not work and could not:
+apps/audit/integrity.py:110:    So correctness comes from a ``UniqueConstraint`` on
+apps/audit/integrity.py:289:                logger.info("[HashChain] %s lost a position race; retrying",
+apps/audit/integrity.py:359:    # select_for_update here inside its own atomic block, which released the
+apps/audit/integrity.py:364:    # sharing a position, and HashChainMixin.save() retries the loser.
+apps/audit/integrity.py:433:    Imported lazily: ChainCheckpoint is itself a HashChainMixin subclass, so a
+apps/audit/issue_models.py:93:            models.UniqueConstraint(
+apps/audit/journal_analytics_models.py:63:            models.UniqueConstraint(fields=["organization", "rule_code"],
+apps/audit/management/commands/audit_verify_all.py:7:  1. Hash-chain verify across every (HashChainMixin subclass × org).
+apps/audit/management/commands/backfill_audit_chain.py:23:from apps.audit.integrity import GENESIS_HASH, HashChainMixin
+apps/audit/management/commands/backfill_audit_chain.py:41:            self.stderr.write(self.style.WARNING("No HashChainMixin subclasses loaded."))
+apps/audit/management/commands/backfill_audit_chain.py:52:        stack = list(HashChainMixin.__subclasses__())
+apps/audit/member_models.py:56:            models.UniqueConstraint(
+apps/audit/migrations/0010_working_papers.py:97:            constraint=models.UniqueConstraint(fields=('organization', 'reference'), name='wp_unique_reference_per_org'),
+apps/audit/migrations/0012_alter_auditcase_deleted_at_and_more.py:90:            constraint=models.UniqueConstraint(fields=('organization', 'engagement_code'), name='audit_engagement_code_unique_per_org'),
+apps/audit/migrations/0013_trialbalanceimport_trialbalancerow_and_more.py:89:            constraint=models.UniqueConstraint(fields=('import_batch', 'row_number'), name='uniq_tb_row_per_import'),
+apps/audit/migrations/0014_accountmapping_and_more.py:45:            constraint=models.UniqueConstraint(fields=('engagement', 'account_code'), name='uniq_account_mapping_per_engagement'),
+apps/audit/migrations/0015_generalledgerimport_generalledgerrow_and_more.py:100:            constraint=models.UniqueConstraint(fields=('import_batch', 'row_number'), name='uniq_gl_row_per_import'),
+apps/audit/migrations/0023_auditevidencerequest_assigned_client_user_and_more.py:37:            constraint=models.UniqueConstraint(condition=models.Q(('request_number__gt', '')), fields=('organization', 'request_number'), name='uniq_evidence_request_number_per_org'),
+apps/audit/migrations/0027_journalanalyticsrun_journalanalyticssummary_and_more.py:132:            constraint=models.UniqueConstraint(fields=('organization', 'rule_code'), name='uniq_journal_analytics_rule_per_org'),
+apps/audit/migrations/0028_auditconfirmationrequest_and_more.py:53:            constraint=models.UniqueConstraint(condition=models.Q(('request_number__gt', '')), fields=('organization', 'request_number'), name='uniq_confirmation_number_per_org'),
+apps/audit/migrations/0029_auditcontroldeficiency_and_more.py:48:            constraint=models.UniqueConstraint(condition=models.Q(('reference__gt', '')), fields=('organization', 'reference'), name='uniq_deficiency_reference_per_org'),
+apps/audit/migrations/0030_substantivetestitem_and_more.py:49:            constraint=models.UniqueConstraint(condition=models.Q(('reference__gt', '')), fields=('organization', 'reference'), name='uniq_substantive_reference_per_org'),
+apps/audit/migrations/0033_assessedrisk_and_more.py:47:            constraint=models.UniqueConstraint(condition=models.Q(('reference__gt', '')), fields=('organization', 'reference'), name='uniq_assessed_risk_reference_per_org'),
+apps/audit/migrations/0034_auditprocedure_and_more.py:46:            constraint=models.UniqueConstraint(condition=models.Q(('reference__gt', '')), fields=('organization', 'reference'), name='uniq_audit_procedure_reference_per_org'),
+apps/audit/migrations/0038_auditissue_and_more.py:49:            constraint=models.UniqueConstraint(condition=models.Q(('reference__gt', '')), fields=('organization', 'reference'), name='uniq_audit_issue_reference_per_org'),
+apps/audit/migrations/0039_engagementreport_and_more.py:43:            constraint=models.UniqueConstraint(condition=models.Q(('reference__gt', '')), fields=('organization', 'reference'), name='uniq_engagement_report_reference_per_org'),
+apps/audit/migrations/0040_engagementmember_and_more.py:41:            constraint=models.UniqueConstraint(fields=('engagement', 'user', 'role'), name='uniq_engagement_member_role'),
+apps/audit/migrations/0043_standard_passage.py:34:            constraint=models.UniqueConstraint(fields=('standard', 'reference'), name='unique_passage_per_standard_reference'),
+apps/audit/migrations/0044_chain_partition_and_fork_constraint.py:72:            constraint=models.UniqueConstraint(fields=('chain_partition', 'chain_position'), name='uniq_chain_position_workingpaper'),
+apps/audit/migrations/0045_chain_checkpoint.py:38:            constraint=models.UniqueConstraint(fields=('chain_partition', 'chain_position'), name='uniq_chain_position_chaincheckpoint'),
+apps/audit/models.py:5:from apps.audit.integrity import HashChainMixin
+apps/audit/models.py:460:                            AuditCase.objects.select_for_update()
+apps/audit/models.py:604:                    CustomRuleDefinition.objects.select_for_update()
+apps/audit/models.py:627:class WorkingPaper(HashChainMixin):
+apps/audit/models.py:704:            models.UniqueConstraint(
+apps/audit/models.py:708:            # Fork prevention — see HashChainMixin's docstring. Draft papers
+apps/audit/models.py:712:            models.UniqueConstraint(
+apps/audit/models.py:728:    # ── HashChainMixin contract ──────────────────────────────────────────────
+apps/audit/models.py:877:            models.UniqueConstraint(
+apps/audit/models.py:887:class ChainCheckpoint(HashChainMixin):
+apps/audit/models.py:904:    The checkpoints are themselves chained — this inherits HashChainMixin — so
+apps/audit/models.py:939:            models.UniqueConstraint(
+apps/audit/models.py:949:    # ── HashChainMixin contract ──────────────────────────────────────────────
+apps/audit/procedure_models.py:91:            models.UniqueConstraint(
+apps/audit/report_models.py:62:            models.UniqueConstraint(
+apps/audit/services/working_papers.py:17:Once the partner signs, the paper transitions to LOCKED. The HashChainMixin
+apps/audit/services/working_papers.py:192:    # The chain columns are deliberately NOT listed here. HashChainMixin.save()
+apps/audit/signals.py:4:For every model that inherits from `HashChainMixin`, regardless of which app
+apps/audit/signals.py:24:from apps.audit.integrity import HashChainMixin, assign_chain_fields
+apps/audit/signals.py:35:    if not isinstance(instance, HashChainMixin):
+apps/audit/signals.py:76:            logger.error("[HashChain] %s pre_save failed: %s", sender.__name__, exc)
+apps/audit/signals.py:82:    if not isinstance(instance, HashChainMixin):
+apps/audit/signals.py:85:        "[HashChain] DELETE %s pk=%s position=%s — verify_chain() will report "
+apps/audit/signals.py:108:    if not (isinstance(sender, type) and issubclass(sender, HashChainMixin)):
+apps/audit/signals.py:113:    logger.info("[HashChain] Hooked %s.%s", sender.__module__, sender.__name__)
+apps/audit/signals.py:123:    stack = list(HashChainMixin.__subclasses__())
+apps/audit/substantive_test_models.py:85:            models.UniqueConstraint(
+apps/audit/tasks_chain_verify.py:28:    """Every concrete subclass of HashChainMixin, discovered rather than listed.
+apps/audit/tasks_chain_verify.py:42:    from apps.audit.integrity import HashChainMixin
+apps/audit/tasks_chain_verify.py:46:    stack = list(HashChainMixin.__subclasses__())
+apps/audit/tests/test_round_three_uplift.py:233:        # when ActivityLog moved onto HashChainMixin.
+apps/audit/trial_balance_models.py:173:            models.UniqueConstraint(
+apps/audit/trial_balance_models.py:271:            models.UniqueConstraint(
+apps/authentication/migrations/0010_rebuild_audit_log_chains.py:55:    # Historical model — no HashChainMixin methods available here, so the hash
+apps/authentication/migrations/0010_rebuild_audit_log_chains.py:110:            # HashChainMixin.compute_hash: f"{previous_hash}|{payload}|{org_id}"
+apps/authentication/migrations/0010_rebuild_audit_log_chains.py:164:        ("authentication", "0009_unify_hash_chain"),
+apps/authentication/migrations/0011_chain_partition_and_fork_constraint.py:29:    # Matches HashChainMixin.compute_hash's partition string exactly:
+apps/authentication/migrations/0011_chain_partition_and_fork_constraint.py:92:            constraint=models.UniqueConstraint(fields=('chain_partition', 'chain_position'), name='uniq_chain_position_auditlog'),
+apps/authentication/models.py:13:# HashChainMixin lives in apps.audit; apps.audit.integrity imports nothing
+apps/authentication/models.py:15:from apps.audit.integrity import HashChainMixin
+apps/authentication/models.py:358:class AuditLog(HashChainMixin):
+apps/authentication/models.py:393:    # Tamper-evidence comes from HashChainMixin — previous_hash, event_hash and
+apps/authentication/models.py:397:    #   · no select_for_update, so two concurrent writes read the same
+apps/authentication/models.py:435:            # This is the fork prevention — see HashChainMixin's docstring.
+apps/authentication/models.py:438:            models.UniqueConstraint(
+apps/authentication/models.py:464:        # Insert path — chaining belongs to HashChainMixin, which assigns the
+apps/authentication/models.py:470:    # ── HashChainMixin contract ────────────────────────────────────────────
+apps/banking/migrations/0001_initial.py:113:            constraint=models.UniqueConstraint(condition=models.Q(('invoice__isnull', False)), fields=('transaction', 'invoice'), name='bank_recon_unique_pair'),
+apps/banking/migrations/0001_initial.py:125:            constraint=models.UniqueConstraint(fields=('account', 'external_id'), name='bank_tx_unique_per_account'),
+apps/banking/migrations/0001_initial.py:133:            constraint=models.UniqueConstraint(fields=('organization', 'bank_code', 'environment', 'display_name'), name='bank_conn_unique_per_org_env'),
+apps/banking/migrations/0001_initial.py:137:            constraint=models.UniqueConstraint(fields=('connection', 'account_number'), name='bank_acct_unique_per_conn'),
+apps/banking/models.py:80:            models.UniqueConstraint(
+apps/banking/models.py:113:            models.UniqueConstraint(
+apps/banking/models.py:154:            models.UniqueConstraint(
+apps/banking/models.py:214:            models.UniqueConstraint(
+apps/billing/management/commands/dedupe_active_subscriptions.py:6:UniqueConstraint that only works on Postgres/SQLite — MySQL silently ignores
+apps/billing/management/commands/dedupe_active_subscriptions.py:82:                              .select_for_update().get(pk=stale.pk))
+apps/billing/migrations/0002_alter_organizationsubscription_payment_transaction_and_more.py:22:            constraint=models.UniqueConstraint(condition=models.Q(('status__in', ['active', 'trialing'])), fields=('organization',), name='billing_one_usable_sub_per_org'),
+apps/billing/models.py:210:            models.UniqueConstraint(
+apps/billing/receivers.py:7:(idempotency, snapshotting, select_for_update) lives in
+apps/billing/services/quota_service.py:13:``transaction.atomic`` with ``select_for_update`` on the subscription
+apps/billing/services/quota_service.py:179:            .select_for_update()
+apps/billing/services/quota_service.py:267:            .select_for_update()
+apps/billing/services/quota_service.py:324:            .select_for_update()
+apps/billing/services/subscription_service.py:150:            .select_for_update()
+apps/billing/services/subscription_service.py:168:        # The partial UniqueConstraint (billing_one_usable_sub_per_org) only
+apps/billing/services/subscription_service.py:177:            .select_for_update()
+apps/billing/services/subscription_service.py:338:            .select_for_update()
+apps/billing/tests/test_quota_service.py:98:    def test_reserve_uses_select_for_update_on_subscription(self):
+apps/billing/tests/test_quota_service.py:103:        original = QuerySet.select_for_update
+apps/billing/tests/test_quota_service.py:110:        with mock.patch.object(QuerySet, "select_for_update", new=spy):
+apps/billing/tests/test_quota_service.py:115:            "reserve_invoice_audit must take a row lock via select_for_update()",
+apps/documents/bulk_upload_models.py:179:            models.UniqueConstraint(
+apps/documents/migrations/0010_bulkuploadjob_bulkuploaditem_and_more.py:86:            constraint=models.UniqueConstraint(fields=('job', 'row_number'), name='bulk_item_unique_row'),
+apps/documents/services/worm.py:9:F-8) and chain working papers via :class:`HashChainMixin`. This
+apps/erp/migrations/0001_initial.py:133:            constraint=models.UniqueConstraint(fields=('organization', 'provider', 'environment'), name='erp_one_connection_per_org_provider_env'),
+apps/erp/models.py:75:            models.UniqueConstraint(
+apps/frontend/page_views.py:3349:    from apps.audit.integrity import verify_chain, HashChainMixin
+apps/frontend/page_views.py:3359:    # Collect every concrete subclass of HashChainMixin so the page grows
+apps/frontend/page_views.py:3363:    stack = list(HashChainMixin.__subclasses__())
+apps/invoices/migrations/0008_invoice_db_constraints.py:86:            constraint=models.UniqueConstraint(
+apps/invoices/migrations/0011_working_papers.py:110:        ('invoices', '0010_hash_chain_fields'),
+apps/invoices/migrations/0015_invoice_control_risk_invoice_detection_risk_and_more.py:49:            constraint=models.UniqueConstraint(condition=models.Q(('external_id__gt', '')), fields=('organization', 'external_source', 'external_id'), name='invoice_unique_ext_per_org'),
+apps/invoices/migrations/0016_chain_partition_and_fork_constraint.py:74:            constraint=models.UniqueConstraint(fields=('chain_partition', 'chain_position'), name='uniq_chain_position_invoiceauditevent'),
+apps/invoices/models.py:8:from apps.audit.integrity import HashChainMixin
+apps/invoices/models.py:249:            models.UniqueConstraint(
+apps/invoices/models.py:585:class InvoiceAuditEvent(HashChainMixin):
+apps/invoices/models.py:589:    HashChainMixin. After save, ``previous_hash``/``event_hash``/
+apps/invoices/models.py:628:            # Fork prevention — see HashChainMixin's docstring.
+apps/invoices/models.py:629:            models.UniqueConstraint(
+apps/invoices/models.py:638:    # ── HashChainMixin contract ──────────────────────────────────────────────
+apps/invoices/services/multi_approver.py:77:        .select_for_update()
+apps/leads/trial_conversion.py:67:        OrganizationSubscription.objects.select_for_update()
+apps/ledger/migrations/0001_initial.py:127:            constraint=models.UniqueConstraint(fields=('organization', 'entry_number'), name='ledger_je_unique_number_per_org'),
+apps/ledger/migrations/0001_initial.py:131:            constraint=models.UniqueConstraint(condition=models.Q(('idempotency_key__gt', '')), fields=('organization', 'idempotency_key'), name='ledger_je_unique_idempotency_per_org'),
+apps/ledger/migrations/0001_initial.py:139:            constraint=models.UniqueConstraint(fields=('organization', 'from_currency', 'to_currency', 'rate_date'), name='ledger_rate_unique_per_org_pair_date'),
+apps/ledger/migrations/0001_initial.py:151:            constraint=models.UniqueConstraint(fields=('organization', 'code'), name='ledger_account_unique_code_per_org'),
+apps/ledger/migrations/0002_period_close.py:45:            constraint=models.UniqueConstraint(fields=('organization', 'fiscal_year', 'period_number'), name='ledger_period_unique_per_org'),
+apps/ledger/migrations/0004_chain_partition_and_fork_constraint.py:68:            constraint=models.UniqueConstraint(fields=('chain_partition', 'chain_position'), name='uniq_chain_position_journalentry'),
+apps/ledger/models.py:24:  ``JournalEntry`` extends `HashChainMixin` so once posted it joins the
+apps/ledger/models.py:39:from apps.audit.integrity import HashChainMixin
+apps/ledger/models.py:87:            models.UniqueConstraint(
+apps/ledger/models.py:137:            models.UniqueConstraint(
+apps/ledger/models.py:154:class JournalEntry(HashChainMixin):
+apps/ledger/models.py:230:            models.UniqueConstraint(
+apps/ledger/models.py:234:            models.UniqueConstraint(
+apps/ledger/models.py:239:            # Fork prevention — see HashChainMixin's docstring.
+apps/ledger/models.py:240:            models.UniqueConstraint(
+apps/ledger/models.py:256:    # ── HashChainMixin contract ──────────────────────────────────────────────
+apps/ledger/models.py:394:            models.UniqueConstraint(
+apps/ledger/services.py:291:        # Saving with status=POSTED triggers the HashChainMixin pre_save
+apps/payments/migrations/0001_initial.py:99:            constraint=models.UniqueConstraint(fields=('organization', 'provider'), name='payments_provider_config_org_provider_unique'),
+apps/payments/services/payment_service.py:341:                .select_for_update()
+apps/payments/services/payment_service.py:376:                .select_for_update()
+apps/payments/services/payment_service.py:413:                .select_for_update()
+apps/payments/services/payment_service.py:496:                .select_for_update()
+apps/platform_admin/services/crm_operations.py:376:    # billing service is itself atomic + select_for_update; nesting here keeps the
+=== SSRF protection locations ===
+apps/audit/tests/test_enterprise_uplift.py:59:# ─── F-10: SSRF outbound allow-list ─────────────────────────────────────────
+apps/audit/tests/test_enterprise_uplift.py:80:    def test_private_ip_rejected(self):
+apps/payments/gateways/_http.py:4:``http_post`` / ``http_get`` here, so the SSRF-allow-list check runs
+apps/reports/views.py:79:    import ipaddress
+apps/reports/views.py:100:    blocked = [ipaddress.ip_network(network) for network in _BLOCKED_NETWORKS]
+apps/reports/views.py:102:        ip = ipaddress.ip_address(address)
+apps/webhooks/views.py:43:            url=serializer.validated_data["url"],
+core/ai/providers.py:144:        # SSRF guard as any other outbound call.
+core/security/outbound_guard.py:1:"""Outbound HTTP allow-list (F-10) — SSRF mitigation.
+core/security/outbound_guard.py:30:import ipaddress
+core/security/outbound_guard.py:62:def _is_private_ip(host: str) -> bool:
+core/security/outbound_guard.py:64:        ip = ipaddress.ip_address(host)
+core/security/outbound_guard.py:67:    return (ip.is_private or ip.is_loopback or ip.is_link_local
+core/security/outbound_guard.py:87:    if _is_private_ip(host):
+=== lock and audit tool availability ===
+./Dataset/invoice_Trudy Glocke_21435.pdf
+./requirements.lock.txt
+./tests/test_v2_blocking_semantics.py

@@ -97,6 +97,54 @@ class LegacyAuditEngineAdapter:
         )
         return AuditRunResult.from_audit_run(audit_run)
 
+    def evaluate_document(self, document_id, context: Optional[dict] = None):
+        """Audit a `documents.Document` by resolving its typed record first.
+
+        `evaluate()` above cannot do this and is deliberately left alone: it
+        takes an `invoice_id`, forwards it as `document_id`, and pins
+        `document_type="sales_invoice"`. That contract is correct for the
+        invoices path, which is live, and this method does not touch it.
+
+        What it does instead: `core.document_resolution.resolve()` turns a
+        Document into `(typed_record, document_type)` — the pair
+        `run_audit_compat` actually needs — using Django's own reverse
+        relations and the normalizer registry rather than a written map.
+
+        Raises `UnresolvedDocument` when a Document carries no typed record.
+        That is louder than the behaviour it replaces, and deliberately: the
+        old path produced an AuditRun over an empty document and recorded it as
+        a completed audit.
+
+        Returns the same `AuditRunResult` as `evaluate()` — the seven-field
+        contract added in shipment 1 and covered by
+        tests/test_adapter_contract.py.
+
+        **Temporary by plan.** This bridge is removed together with
+        `apps.audit.audit_engine`; until then a second entry point here is the
+        only change that leaves the invoices path untouched.
+        """
+        if not self.organization_id:
+            raise ValueError("LegacyAuditEngineAdapter requires organization_id")
+
+        from core.document_resolution import resolve
+        from apps.documents.models import Document
+        from apps.rule_engine.pipeline.v2.compat import run_audit_compat
+
+        document = (
+            document_id
+            if isinstance(document_id, Document)
+            else Document.objects.get(pk=document_id)
+        )
+        typed_record, document_type = resolve(document)
+
+        audit_run = run_audit_compat(
+            document_id=str(typed_record.pk),
+            document_type=document_type,
+            organization_id=self.organization_id,
+            triggered_by="legacy_adapter",
+        )
+        return AuditRunResult.from_audit_run(audit_run)
+
     def save_audit_issues(self, report, invoice=None, created_by=None):
         """
         No-op stub — AuditPipelineV2 persists findings directly.
@@ -110,32 +158,201 @@ class LegacyAuditEngineAdapter:
 
 
 class AuditRunResult:
-    """
-    Thin wrapper around AuditRun that satisfies the AuditReport interface
-    expected by legacy callers.
+    """Wrapper around ``AuditRun`` that satisfies the legacy ``AuditReport`` contract.
+
+    **Why this exists and why it was incomplete.** Two independent callers read a
+    report object, and they read different fields:
+
+      * ``apps/audit/tasks.py``      — risk_score, risk_level, escalate
+      * ``core/services/pipeline.py`` — the three above PLUS total_rules,
+        passed_count, failed_count, skipped_count, error_count,
+        processing_time_ms, summary, rule_results
+
+    This class was written against the first caller and labelled a "drop-in
+    replacement". It was not one: substituting it into ``pipeline.py`` raised
+    ``AttributeError`` on seven fields. The docstring claimed Liskov
+    substitutability and the code did not provide it.
+
+    The contract is now enforced by ``tests/test_adapter_contract.py``, which
+    walks every field every caller reads. If a caller starts reading an eighth
+    field, that test fails before production does.
+
+    **Naming.** ``passed_rules`` (the AuditRun column name) and ``passed_count``
+    (the legacy AuditReport attribute name) are BOTH exposed and hold the same
+    value. Renaming either one breaks a working caller, and an alias costs
+    nothing.
     """
 
+    #: Statuses in ``AuditResult.status`` that count as a pass. Kept explicit
+    #: rather than derived, because ``apps.rule_engine`` and ``apps.audit`` use
+    #: different casings for the same words — see apps/audit_platform/status.py.
+    _PASSED_STATUSES = ("pass", "passed")
+
     def __init__(self, audit_run):
+        # Read the saved row, not the object handed back by the pipeline.
+        #
+        # That object is stale BY CONSTRUCTION, not by accident: the pipeline
+        # creates the AuditRun early and its later stages write to the row with
+        # `save(update_fields=…)` and `queryset.update()`. Neither refreshes the
+        # instance the caller is holding, so every field a later stage computes
+        # is still whatever it was at creation.
+        #
+        # Measured on a real run, wrapper against database:
+        #
+        #     total_rules      20   vs   19
+        #     skipped_count    15   vs   14
+        #     risk_score     50.0   vs  100.0
+        #     risk_level     high   vs  critical
+        #
+        # apps/audit/tasks.py reads `escalate` off this object to decide whether
+        # to raise an audit case. On a run the engine marked critical and
+        # blocking, it was reading calm numbers — so the nightly task did not
+        # escalate what it was there to escalate.
+        #
+        # This lives in the wrapper rather than in each caller on purpose:
+        # every entry point that returns an AuditRunResult is fixed by the one
+        # line, and a fifth caller added later cannot reintroduce it.
+        # `_state.adding`, not `pk is None`: AuditRun's primary key is a
+        # UUIDField with `default=uuid4`, so an instance that was never saved
+        # already carries a pk. Testing the pk would send an unsaved run to the
+        # database, miss, and log a warning about a row that was never meant to
+        # exist. `_state.adding` is Django's own answer to "is this row in the
+        # database yet".
+        if not audit_run._state.adding:
+            try:
+                audit_run.refresh_from_db()
+            except Exception as exc:  # noqa: BLE001
+                # A run deleted between execution and wrapping. Reporting a
+                # result is still better than raising inside a wrapper, but it
+                # must not be silent.
+                logger.warning(
+                    "[legacy_adapter] could not refresh AuditRun %s: %s — "
+                    "reading the in-memory object, whose later-stage fields "
+                    "may be stale.", getattr(audit_run, "pk", "?"), exc,
+                )
+
         self._run = audit_run
-        self.risk_score   = float(audit_run.risk_score or 0)
-        self.risk_level   = audit_run.risk_level or "low"
-        self.escalate     = audit_run.blocks_approval or audit_run.requires_manual_review
+
+        # ── Original fields — unchanged, read by apps/audit/tasks.py ─────────
+        self.risk_score = float(audit_run.risk_score or 0)
+        self.risk_level = audit_run.risk_level or "low"
+        self.escalate = bool(
+            audit_run.blocks_approval or audit_run.requires_manual_review
+        )
         self.passed_rules = audit_run.passed_rules
         self.failed_rules = audit_run.failed_rules
         self.warning_rules = audit_run.warning_rules
         self.audit_run_id = str(audit_run.id)
 
+        # ── Added: counts read by core/services/pipeline.py ─────────────────
+        # AuditRun already stores all of these. Nothing is computed or guessed.
+        self.total_rules = audit_run.total_rules
+        self.passed_count = audit_run.passed_rules
+        self.failed_count = audit_run.failed_rules
+        self.skipped_count = audit_run.skipped_rules
+        self.error_count = audit_run.error_rules
+        self.warning_count = audit_run.warning_rules
+
+        # ── Added: timing ───────────────────────────────────────────────────
+        self.processing_time_ms = self._resolve_processing_ms(audit_run)
+
+        # ── Added: summary ──────────────────────────────────────────────────
+        self.summary = (
+            f"{audit_run.failed_rules} failed, "
+            f"{audit_run.warning_rules} warning, "
+            f"{audit_run.passed_rules} passed "
+            f"of {audit_run.total_rules} rules "
+            f"(risk {self.risk_score:.1f} / {self.risk_level})"
+        )
+
+        # ── Added: per-rule results ─────────────────────────────────────────
+        # Lazy: pipeline.py iterates report.rule_results, but tasks.py never
+        # touches it. Loading the rows eagerly would add a query to a caller
+        # that has no use for them.
+        self._rule_results = None
+
+    # ── rule_results ────────────────────────────────────────────────────────
+
+    @property
+    def rule_results(self):
+        """Per-rule results shaped like the legacy ``RuleResult`` objects.
+
+        ``_serialise_audit_report`` in core/services/pipeline.py reads
+        ``r.rule_id``, ``r.rule_name``, ``r.severity``, ``r.result``,
+        ``r.explanation`` and ``r.details`` off each item, and calls
+        ``.value`` on severity/result when present. Plain strings are returned,
+        so the ``hasattr(..., "value")`` branch falls through to ``str()`` —
+        which is what it is there for.
+        """
+        if self._rule_results is None:
+            self._rule_results = [
+                _LegacyRuleResultView(row)
+                for row in self._run.results.all().order_by("executed_at", "rule_code")
+            ]
+        return self._rule_results
+
+    # ── helpers ─────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _resolve_processing_ms(audit_run) -> int:
+        """Milliseconds the run took.
+
+        Preferred source is the V2 metadata sidecar's ``stage_timings``; falls
+        back to ``completed_at - started_at``; returns 0 when neither is
+        available. Returns 0 rather than None because pipeline.py writes this
+        straight into a JSON payload the UI renders — ``None`` there shows as an
+        empty duration, which reads as "instant" rather than "unknown".
+        """
+        try:
+            meta = getattr(audit_run, "v2_metadata", None)
+            timings = getattr(meta, "stage_timings", None) if meta else None
+            if isinstance(timings, dict) and timings:
+                total = sum(
+                    float(v) for v in timings.values()
+                    if isinstance(v, (int, float))
+                )
+                if total > 0:
+                    return int(round(total))
+        except Exception:  # noqa: BLE001 — a timing figure must never break a run
+            pass
+
+        started = getattr(audit_run, "started_at", None)
+        completed = getattr(audit_run, "completed_at", None)
+        if started and completed:
+            return int(round((completed - started).total_seconds() * 1000))
+        return 0
+
     @classmethod
     def from_audit_run(cls, audit_run) -> "AuditRunResult":
         return cls(audit_run)
 
-    # Legacy consumers check report.escalate, report.risk_level, report.risk_score
     def __repr__(self) -> str:
         return (
             f"AuditRunResult(run={self.audit_run_id} "
             f"risk={self.risk_score} level={self.risk_level} "
-            f"escalate={self.escalate})"
+            f"escalate={self.escalate} "
+            f"rules={self.failed_count}F/{self.total_rules}T)"
         )
+
+
+class _LegacyRuleResultView:
+    """Read-only view of an ``AuditResult`` row in the legacy ``RuleResult`` shape.
+
+    Deliberately not the model: a caller handed the row could save it, mutate
+    it, or follow a relation this adapter never meant to expose — and then the
+    adapter is a suggestion rather than a boundary. Same reasoning as the frozen
+    result in apps/rule_engine/services/audit_facade.py.
+    """
+
+    __slots__ = ("rule_id", "rule_name", "severity", "result", "explanation", "details")
+
+    def __init__(self, row):
+        self.rule_id = row.rule_code
+        self.rule_name = row.rule_code          # AuditResult stores no display name
+        self.severity = row.applied_severity
+        self.result = row.status
+        self.explanation = row.explanation or ""
+        self.details = row.raw_output or {}
 
 
 # ── Adapter 2: apps.auditing.services.audit_processing_service ────────────────

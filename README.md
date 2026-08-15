@@ -4,7 +4,7 @@
 <div align="center">
 
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)
-![Django](https://img.shields.io/badge/Django-4.2_LTS-092E20?style=flat-square&logo=django&logoColor=white)
+![Django](https://img.shields.io/badge/Django-5.2_LTS-092E20?style=flat-square&logo=django&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?style=flat-square&logo=sqlite&logoColor=white)
 ![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=flat-square&logo=redis&logoColor=white)
 ![OpenAI](https://img.shields.io/badge/GPT--4o-Vision-412991?style=flat-square&logo=openai&logoColor=white)
@@ -23,7 +23,7 @@
 FinAI automates financial document auditing for Saudi Arabia and GCC businesses. Upload invoices (PDF, images, or ZIP batches), and the system:
 
 - **Extracts** all fields using Tesseract OCR + GPT-4o Vision
-- **Validates** against **30 structured rules** (header integrity, VAT 15%, duplicates, anomalies, document quality)
+- **Validates** according to document-specific checks and the configured Rule Engine path (header integrity, VAT, duplicates, anomalies, and document quality)
 - **Scores** each invoice 0–100 and assigns a risk level (Low / Medium / High / Critical)
 - **Detects** duplicates using SHA-256 hashing + business logic
 - **Generates** AI audit narratives in Arabic and English
@@ -35,7 +35,7 @@ FinAI automates financial document auditing for Saudi Arabia and GCC businesses.
 
 | Dashboard | Invoice Detail | Upload |
 |-----------|---------------|--------|
-| KPIs · Charts · Risk distribution | 30-rule breakdown · Audit trail · Approve/Reject | Drag-drop · Batch processing · Per-file results |
+| KPIs · Charts · Risk distribution | Rule results · Audit trail · Approve/Reject | Drag-drop · Batch processing · Per-file results |
 
 ---
 
@@ -43,10 +43,10 @@ FinAI automates financial document auditing for Saudi Arabia and GCC businesses.
 
 | Layer | Technology |
 |---|---|
-| Backend | Django 4.2 + Django REST Framework |
+| Backend | Django 5.2 LTS + Django REST Framework |
 | AI / OCR | OpenAI GPT-4o Vision + Tesseract 5 |
 | Task Queue | Celery 5 + Redis 7 |
-| Database | SQLite 3 (default) |
+| Database | SQLite 3 افتراضياً للتطوير؛ MySQL 8 عند تهيئة `DB_BACKEND=mysql` للنشر |
 | Frontend | Django Templates + Tailwind CSS (CDN) + Alpine.js 3 |
 | Charts | Chart.js 4 |
 | Auth | JWT (simplejwt) + Session |
@@ -85,7 +85,7 @@ SITE_URL=http://localhost:8000
 docker-compose up -d
 ```
 
-This starts: **Django web** · **SQLite** · **Redis** · **Celery worker** · **Celery beat**
+This starts: **Django web** · **Redis** · **Celery worker** · **Celery beat**. SQLite is a local file by default, not a separate container service.
 
 ### 3. Initialize database
 
@@ -113,7 +113,7 @@ By default, the app uses the SQLite file `db_runtime.sqlite3`. Override it with 
 finai_backend/
 ├── apps/
 │   ├── authentication/     # Users, orgs, JWT, 7 roles
-│   ├── invoices/           # Core module — models, 30-rule engine, API
+│   ├── invoices/           # Core module — models, upload processing, API
 │   ├── documents/          # Generic document store + OCR tasks
 │   ├── transactions/       # Journal entries, bank transactions
 │   ├── audit/              # Audit cases (CASE-YYYY-NNNN)
@@ -123,7 +123,7 @@ finai_backend/
 │   └── frontend/           # Django template views (Web UI)
 ├── core/
 │   └── services/
-│       ├── invoice_validator.py    # ← 30 validation rules
+│       ├── invoice_validator.py    # document validation helpers
 │       ├── invoice_ai_service.py   # GPT-4o extraction
 │       ├── ai_service.py           # Analytics + report narratives
 │       └── ocr_service.py          # Tesseract wrapper
@@ -135,21 +135,20 @@ finai_backend/
 
 ---
 
-## The 30 Validation Rules
+## Validation rules and result labels
 
-Every invoice is scored against 30 rules across 6 groups:
+لا توجد في الشيفرة الحالية «30 قاعدة» موحدة لكل فاتورة. المسارات تختلف بحسب نوع المستند وبحسب تعريفات Rule Engine المهيأة؛ يعدّ مسح AST **124** معرف `rule_code` فريداً في `apps/rule_engine/rules/`، فيما يحتوي `core/services/doc_validators/doc_validators.py` على **101** نداء بناء قاعدة عبر أنواع مستندات متعددة. لذلك لا ينبغي قراءة الجدول التالي كعداد تشغيل موحد أو كضمان أن كل قاعدة تنفذ على كل رفع.
 
-| Group | Code | Rules | Focus |
-|-------|------|-------|-------|
-| Invoice Header | `INV-001–008` | 8 | Number, date, vendor, VAT number, totals |
-| Duplicate Detection | `DUP-001–005` | 5 | SHA-256 hash, same vendor/amount/date |
-| VAT Validation | `VAT-001–005` | 5 | 15% rate, math correctness, ZATCA QR |
-| Anomaly Detection | `ANO-001–006` | 6 | Statistical outliers, new vendors, volume spikes |
-| Financial Controls | `CTL-001–006` | 6 | Cost centre, account code, budget, approval |
-| Document Quality | `DOC-001–004` | 4 | OCR confidence, tampering, QR presence |
+| Group | Code family | Count status | Focus |
+|-------|-------------|--------------|-------|
+| Invoice Header | `INV-*` | يعتمد على مسار المستند | Number, date, vendor, VAT number, totals |
+| Duplicate Detection | `DUP-*` | يعتمد على مسار المستند | SHA-256 hash, same vendor/amount/date |
+| VAT Validation | `VAT-*` | يعتمد على مسار المستند | 15% rate, math correctness, ZATCA QR |
+| Anomaly Detection | `ANO-*` | يعتمد على مسار المستند | Statistical outliers, new vendors, volume spikes |
+| Financial Controls | `CTL-001–006` | ستة رموز مميزة في المصدر | Cost centre, account code, budget, approval |
+| Document Quality | `DOC-*` | يعتمد على مسار المستند | OCR confidence, tampering, QR presence |
 
-**Validation score** = weighted sum (critical rules worth 25 pts, high 15, medium 8, low 3).  
-**Risk level**: ≥85 → Low · ≥70 → Medium · ≥50 → High · <50 → Critical
+لا يعلن README صيغة أوزان عامة: حساب `validation_score` مرتبط بالمسار المنفذ. في `doc_validators`، تصنيف مستوى الخطر هو: ≥85 منخفض، ≥70 متوسط، ≥50 مرتفع، وأقل من 50 حرج؛ ولا يعمم ذلك على محرك المخاطر أو قرار الاعتماد الآخر.
 
 ---
 
@@ -168,9 +167,9 @@ POST   /auth/token/refresh/         → Refresh access token
 # Invoices
 POST   /invoices/upload/            → Upload files (PDF/image/ZIP) + auto-validate
 GET    /invoices/                   → List with filters: status, risk_level, is_duplicate
-GET    /invoices/{id}/              → Detail + 30-rule breakdown + audit trail
+GET    /invoices/{id}/              → Detail + rule results + audit trail
 POST   /invoices/{id}/approve/      → Approve or reject  {action, reason}
-POST   /invoices/{id}/revalidate/   → Re-run all 30 rules
+POST   /invoices/{id}/revalidate/   → Re-run the configured audit path
 GET    /invoices/reports/spend/     → Monthly spend trend + vendor analysis
 GET    /invoices/reports/risk/      → High-risk invoice report
 GET    /invoices/reports/duplicates/→ Duplicate report
@@ -197,10 +196,10 @@ Full Swagger docs at `/api/docs/`
 | Page | URL | Features |
 |------|-----|---------|
 | Login | `/login/` | JWT auth · dark animated background |
-| Dashboard | `/dashboard/` | 5 KPIs · spend chart · risk donut · flagged list · vendor bars · 30-rule ring chart |
+| Dashboard | `/dashboard/` | KPIs · spend chart · risk donut · flagged list · vendor bars · rule-result summary |
 | Upload | `/invoices/upload/` | Drag-drop · multi-file · ZIP · per-file rule results |
 | Invoice List | `/invoices/` | 6 filters · search · pagination · quick approve |
-| Invoice Detail | `/invoices/<id>/` | 30-rule breakdown with group tabs · audit trail · approve/reject modal |
+| Invoice Detail | `/invoices/<id>/` | Rule-result breakdown with group tabs · audit trail · approve/reject modal |
 | Batches | `/invoices/batches/` | Upload history with status |
 | Reports | `/reports/` | 4 one-click AI report types · report viewer modal |
 | Vendors | `/vendors/` | Risk-tiered table · spend bars · new vendor badges |
@@ -241,8 +240,11 @@ Full Swagger docs at `/api/docs/`
 | `SECRET_KEY` | ✅ | — | Django secret key (50 chars) |
 | `OPENAI_API_KEY` | ✅ | — | GPT-4o API key |
 | `SITE_URL` | ✅ | `http://localhost:8000` | Base URL used in emails and links |
-| `POSTGRES_DB` | No | `finai_db` | Database name |
-| `POSTGRES_USER` | No | `finai_user` | Database user |
+| `DB_BACKEND` | No | `sqlite` | `sqlite` للتطوير المحلي أو `mysql` للنشر |
+| `DB_NAME` | عند MySQL | — | اسم قاعدة MySQL 8 |
+| `DB_USER` | عند MySQL | — | مستخدم قاعدة MySQL 8 |
+| `DB_PASSWORD` | عند MySQL | — | كلمة مرور قاعدة MySQL 8 |
+| `DB_HOST` / `DB_PORT` | عند MySQL | `127.0.0.1` / `3306` | مضيف ومنفذ MySQL 8 |
 | `REDIS_URL` | No | `redis://redis:6379/0` | Redis connection |
 | `DEBUG` | No | `False` | Enable debug mode |
 | `ALLOWED_HOSTS` | No | `localhost` | Comma-separated hosts |
@@ -273,7 +275,7 @@ Eight Excel files with 5,000 records each and embedded audit anomalies are inclu
 - [ ] ZATCA Fatoora Phase 2 API integration
 - [ ] Rate limiting per organisation
 - [ ] Email notifications (SendGrid / SES)
-- [ ] Unit test suite (pytest + factory-boy)
+- [x] Pytest suite: 4,035 tests collected in the measured `claude` baseline
 - [ ] React Native mobile app
 - [ ] Custom rule builder UI
 - [ ] Non-invoice document auditing (payroll, bank statements)

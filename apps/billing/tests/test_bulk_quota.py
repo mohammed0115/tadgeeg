@@ -1,6 +1,6 @@
 """Stage 6 tests — Bulk Upload Quota Control.
 
-Covers the 10 cases from Docs/payment/00.md §6:
+Covers the 10 cases from Documentation/payment/00.md §6:
 
   1. bulk upload within limit works
   2. bulk upload > limit returns QUOTA_NOT_ENOUGH

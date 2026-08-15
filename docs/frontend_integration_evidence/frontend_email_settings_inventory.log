@@ -1,0 +1,14 @@
+finai_backend/settings/production.py:56:_email_user = os.environ.get("EMAIL_HOST_USER", "")
+finai_backend/settings/production.py:57:_email_pass = os.environ.get("EMAIL_HOST_PASSWORD", "")
+finai_backend/settings/production.py:61:        "EMAIL_HOST_USER / EMAIL_HOST_PASSWORD not set — emails will use console backend",
+finai_backend/settings/test.py:67:EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+finai_backend/settings_canonical.py:628:_email_user = os.environ.get("EMAIL_HOST_USER", "")
+finai_backend/settings_canonical.py:629:_email_pass = os.environ.get("EMAIL_HOST_PASSWORD", "")
+finai_backend/settings_canonical.py:633:    EMAIL_BACKEND = os.environ.get(
+finai_backend/settings_canonical.py:634:        "EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend"
+finai_backend/settings_canonical.py:637:    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+finai_backend/settings_canonical.py:639:EMAIL_HOST          = os.environ.get("EMAIL_HOST", "smtp.gmail.com")
+finai_backend/settings_canonical.py:640:EMAIL_PORT          = int(os.environ.get("EMAIL_PORT", "587"))
+finai_backend/settings_canonical.py:641:EMAIL_HOST_USER     = _email_user
+finai_backend/settings_canonical.py:642:EMAIL_HOST_PASSWORD = _email_pass
+finai_backend/settings_canonical.py:643:EMAIL_USE_TLS       = os.environ.get("EMAIL_USE_TLS", "True") == "True"

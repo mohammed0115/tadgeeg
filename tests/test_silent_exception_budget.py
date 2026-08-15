@@ -30,10 +30,12 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 
-#: Measured on 2026-08-02, after the ISA 320/530 materiality and sampling
-#: handlers in page_views.py were given `logger.exception` calls. Lowering this
-#: number is the only permitted direction.
-SILENT_HANDLER_BUDGET = 284
+#: Measured after AuditEngine deletion. The AST scanner found 11 fewer silent
+#: handlers than the pre-delete tree (282 -> 271), all inside deleted legacy
+#: rule modules; the remaining code's count was unchanged. This 284 -> 273
+#: reduction records that deletion rather than creating new budget headroom.
+#: Lowering this number is the only permitted direction.
+SILENT_HANDLER_BUDGET = 273
 
 _BROAD = {"Exception", "BaseException"}
 _HANDLED = ("'exception'", "'error'", "'warning'", "'critical'",

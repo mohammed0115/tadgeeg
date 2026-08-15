@@ -222,15 +222,6 @@ class TestInvoiceUploadAPI:
             status.HTTP_202_ACCEPTED
         ]
     
-    def test_invoice_upload_runs_all_30_rules(self, authenticated_client, mocker):
-        """Should apply all 30 audit rules"""
-        mock_audit = mocker.patch('apps.audit.audit_engine.AuditEngine.evaluate')
-        mock_audit.return_value = Mock(issues=[])
-        
-        with patch('apps.invoices.views.InvoiceUploadView.post'):
-            # Verify that audit engine would be called
-            pass
-
 
 # ─── Invoice Approval Tests ───────────────────────────────────────────────
 

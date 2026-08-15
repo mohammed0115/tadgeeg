@@ -31,6 +31,8 @@ import time
 from decimal import Decimal, InvalidOperation
 from typing import Optional
 
+from apps.audit.reports import AuditReport
+
 logger = logging.getLogger("finai")
 
 # Pipeline version — bump when the scoring logic changes
@@ -200,7 +202,9 @@ def run_full_pipeline_for_file(
 
     # ── Stage 3: Audit Rule Engine ────────────────────────────────────────────
     try:
-        from apps.audit.audit_engine import AuditEngine
+        from apps.rule_engine.services.compatibility.legacy_audit_adapter import (
+            LegacyAuditEngineAdapter,
+        )
 
         doc_dict = analysis.to_dict() if analysis else summary["ingestion"].get("normalized", {})
 
@@ -219,11 +223,15 @@ def run_full_pipeline_for_file(
             },
         }
 
-        audit_engine = AuditEngine(organization_id=organization_id)
-        report = audit_engine.evaluate(
-            document=doc_dict,
-            context=context,
-        )
+        if not document_id:
+            # Stand-alone file processing has no persistent typed record, so no
+            # V2 normalizer or quota identity exists.  Refuse the audit stage
+            # explicitly rather than evaluating a dictionary with AuditEngine
+            # and writing an incompatible legacy result.
+            raise ValueError("Stage 3 requires a persisted Document id")
+
+        audit_engine = LegacyAuditEngineAdapter(organization_id=organization_id)
+        report = audit_engine.evaluate_document(document_id=document_id, context=context)
 
         # Serialise AuditReport to JSON-safe dict
         audit_dict = _serialise_audit_report(report)
@@ -298,9 +306,28 @@ def _persist_result(doc, result: dict):
             "bank_statement": "bank_statement",
             "receipt":        "receipt",
             "expense_report": "expense_report",
+            # Detected, then discarded: the classifier distinguishes payroll and
+            # Document.DocumentType has no choice for it, so the distinction is
+            # lost here. Adding a choice needs a migration, which is outside
+            # this shipment. Recorded in docs/EXECUTION_TRACKER.md as
+            # deviation 74 rather than quietly accepted.
             "payroll":        "other",
             "vat_return":     "tax_document",
         }
+        if ai_type not in type_map:
+            # "unknown" arrives here whenever no parser determined a type — the
+            # normal case, not an error — and so does any value a future
+            # classifier starts returning. Both land on "other", which is
+            # correct and lossless for the first and lossy for the second. Log
+            # it so the second is visible: a widening classifier that nobody
+            # noticed is how a document type goes unaudited.
+            #
+            # Logged, never raised. A new classifier value must not stop an
+            # upload.
+            logger.info(
+                "[Pipeline] document_type %r is not in type_map — storing "
+                "'other' for document %s", ai_type, doc.pk,
+            )
         doc.document_type = type_map.get(ai_type, "other")
 
     doc.save(update_fields=[
@@ -413,7 +440,7 @@ def _parse_date(value):
     return None
 
 
-def _serialise_audit_report(report) -> dict:
+def _serialise_audit_report(report: AuditReport) -> dict:
     """Convert AuditReport dataclass to a JSON-serialisable dict."""
     from apps.audit.rules.base_rule import RuleStatus
 

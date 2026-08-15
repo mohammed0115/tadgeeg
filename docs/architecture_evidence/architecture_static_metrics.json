@@ -1,0 +1,1167 @@
+{
+  "django_apps_with_apps_py": {
+    "count": 37,
+    "names": [
+      "activity_logs",
+      "ai_safety",
+      "alerts",
+      "api_mobile",
+      "assistant",
+      "audit",
+      "audit_engine",
+      "auditing",
+      "authentication",
+      "banking",
+      "billing",
+      "cms",
+      "core_engine",
+      "data_export",
+      "documents",
+      "erp",
+      "file_management",
+      "jobs",
+      "leads",
+      "ledger",
+      "notifications",
+      "organization_admin",
+      "organization_settings",
+      "organization_users",
+      "partners",
+      "payments",
+      "platform_admin",
+      "platform_management",
+      "procurement",
+      "reports",
+      "rule_engine",
+      "storage_management",
+      "streaming",
+      "system_monitoring",
+      "vendor_dashboard",
+      "webhooks",
+      "zatca"
+    ]
+  },
+  "django_requirement_entries": [
+    "Django==5.2.*",
+    "djangorestframework>=3.15",
+    "djangorestframework-simplejwt>=5.3",
+    "django-cors-headers>=4.3",
+    "django-filter>=23.5",
+    "django-countries>=7.6          # ISO 3166-1 country data + Arabic labels for lead capture",
+    "django-storages[s3]>=1.14  # S3 / cloud media storage (NFR-2)"
+  ],
+  "lockfiles": [],
+  "manual_organization_filter_assignments": 2743,
+  "models": {
+    "count": 167,
+    "records": [
+      {
+        "file": "core/mixins.py",
+        "name": "SoftDeleteModel",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/ai_safety/models.py",
+        "name": "AICostEvent",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/alerts/models.py",
+        "name": "AlertRule",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/alerts/models.py",
+        "name": "AlertEvent",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/analytics/models.py",
+        "name": "NLQueryHistory",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/analytics/models.py",
+        "name": "BenchmarkParticipation",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/api_mobile/models.py",
+        "name": "MobileDevice",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/api_mobile/models.py",
+        "name": "IdempotencyKey",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/audit/assessed_risk_models.py",
+        "name": "AssessedRisk",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/audit_difference_models.py",
+        "name": "AuditDifferenceSummary",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/audit_difference_models.py",
+        "name": "AuditDifferenceItem",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/audit_difference_models.py",
+        "name": "AuditDifferenceItemResponse",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/audit_difference_models.py",
+        "name": "ProposedAuditAdjustment",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/audit_readiness_models.py",
+        "name": "AuditReadinessWorkpaper",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/confirmation_models.py",
+        "name": "AuditConfirmationRequest",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/control_deficiency_models.py",
+        "name": "AuditControlDeficiency",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/engagement_models.py",
+        "name": "AuditEngagement",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/evidence_models.py",
+        "name": "AuditEvidenceRequest",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/evidence_models.py",
+        "name": "AuditEvidenceAttachment",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/evidence_models.py",
+        "name": "AuditEvidenceRequestEvent",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/evidence_models.py",
+        "name": "AuditEvidenceRetentionPolicy",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/general_ledger_models.py",
+        "name": "GeneralLedgerImport",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/general_ledger_models.py",
+        "name": "GeneralLedgerRow",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/general_ledger_models.py",
+        "name": "GeneralLedgerRiskFinding",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/general_ledger_models.py",
+        "name": "GeneralLedgerRiskFindingReview",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/integrity.py",
+        "name": "HashChainMixin",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/audit/issue_models.py",
+        "name": "AuditIssue",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/journal_analytics_models.py",
+        "name": "JournalAnalyticsRule",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/journal_analytics_models.py",
+        "name": "JournalAnalyticsRun",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/journal_analytics_models.py",
+        "name": "JournalAnalyticsResult",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/journal_analytics_models.py",
+        "name": "JournalAnalyticsSummary",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/member_models.py",
+        "name": "EngagementMember",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/models.py",
+        "name": "AuditFinding",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/models.py",
+        "name": "AuditCase",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/models.py",
+        "name": "CaseComment",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/audit/models.py",
+        "name": "CustomRuleDefinition",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/models.py",
+        "name": "WPSignature",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/audit/models.py",
+        "name": "WPAttachment",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/audit/models.py",
+        "name": "StandardPassage",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/audit/planning_record_models.py",
+        "name": "EngagementPlanningRecord",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/procedure_models.py",
+        "name": "AuditProcedure",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/report_models.py",
+        "name": "EngagementReport",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/signoff_models.py",
+        "name": "EngagementSignoff",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/substantive_test_models.py",
+        "name": "SubstantiveTestItem",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/trial_balance_models.py",
+        "name": "TrialBalanceImport",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/trial_balance_models.py",
+        "name": "TrialBalanceRow",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit/trial_balance_models.py",
+        "name": "AccountMapping",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit_engine/models.py",
+        "name": "AuditJob",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/audit_engine/models.py",
+        "name": "AuditResult",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/audit_engine/models.py",
+        "name": "AuditIssue",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/audit_engine/models.py",
+        "name": "AIAnalysisLog",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/auditing/models.py",
+        "name": "AuditDocument",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/auditing/models.py",
+        "name": "AuditFinding",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/auditing/models.py",
+        "name": "AccountingRuleEvaluation",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/auditing/models.py",
+        "name": "AIValidationDataset",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/auditing/models.py",
+        "name": "AIValidationRun",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/authentication/models.py",
+        "name": "EmailOTPVerification",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/authentication/models.py",
+        "name": "Organization",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/authentication/models.py",
+        "name": "OrganizationSettings",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/banking/models.py",
+        "name": "BankConnection",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/banking/models.py",
+        "name": "BankAccount",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/banking/models.py",
+        "name": "BankTransaction",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/banking/models.py",
+        "name": "Reconciliation",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/billing/models.py",
+        "name": "Plan",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/billing/models.py",
+        "name": "OrganizationSubscription",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/billing/models.py",
+        "name": "UsageLedger",
+        "organization_fields": [
+          "organization",
+          "subscription"
+        ]
+      },
+      {
+        "file": "apps/billing/models.py",
+        "name": "Addon",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/billing/models.py",
+        "name": "SubscriptionAddon",
+        "organization_fields": [
+          "subscription"
+        ]
+      },
+      {
+        "file": "apps/billing/models.py",
+        "name": "BillingPolicy",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/cms/models.py",
+        "name": "PlatformSetting",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/cms/models.py",
+        "name": "MediaAsset",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/cms/models.py",
+        "name": "HomepageContent",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/cms/models.py",
+        "name": "IntroVideo",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/cms/models.py",
+        "name": "AboutSection",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/cms/models.py",
+        "name": "CoreValue",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/cms/models.py",
+        "name": "CompetitiveAdvantage",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/cms/models.py",
+        "name": "Service",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/cms/models.py",
+        "name": "PricingPlan",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/cms/models.py",
+        "name": "PricingFeature",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/cms/models.py",
+        "name": "FAQCategory",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/cms/models.py",
+        "name": "FAQItem",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/cms/models.py",
+        "name": "SEOSetting",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/cms/models.py",
+        "name": "CMSPage",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/cms/models.py",
+        "name": "CMSBlock",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/compliance/models.py",
+        "name": "ComplianceRule",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/compliance/models.py",
+        "name": "ComplianceViolation",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/documents/bulk_upload_models.py",
+        "name": "BulkUploadJob",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/documents/bulk_upload_models.py",
+        "name": "BulkUploadItem",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/documents/canonical_models.py",
+        "name": "CanonicalFieldDefinition",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/documents/canonical_models.py",
+        "name": "DocumentTypeFieldMapping",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/documents/canonical_models.py",
+        "name": "DocumentCanonicalData",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/documents/models.py",
+        "name": "Document",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/documents/models.py",
+        "name": "ExtractedData",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/documents/models.py",
+        "name": "DocumentPageResult",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/documents/models.py",
+        "name": "DocumentAnalysisResult",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/documents/typed_models.py",
+        "name": "AuditMixin",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/documents/typed_models.py",
+        "name": "PurchaseOrderValidation",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/documents/typed_models.py",
+        "name": "BankStatementValidation",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/documents/typed_models.py",
+        "name": "PayrollValidation",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/documents/typed_models.py",
+        "name": "ExpenseReportValidation",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/documents/typed_models.py",
+        "name": "VATReturnValidation",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/documents/typed_models.py",
+        "name": "FixedAssetValidation",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/documents/typed_models.py",
+        "name": "SalesReceiptValidation",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/erp/models.py",
+        "name": "ERPConnection",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/erp/models.py",
+        "name": "SyncRun",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/erp/models.py",
+        "name": "SyncRecord",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/erp/models.py",
+        "name": "ReconciliationDiff",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/file_management/models.py",
+        "name": "Folder",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/file_management/models.py",
+        "name": "FileVersion",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/file_management/models.py",
+        "name": "AuditFileProfile",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/invoices/models.py",
+        "name": "InvoiceBatch",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/invoices/models.py",
+        "name": "InvoiceValidationResult",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/invoices/models.py",
+        "name": "VendorProfile",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/invoices/models.py",
+        "name": "OverrideRequest",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/jobs/models.py",
+        "name": "JobPost",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/jobs/models.py",
+        "name": "JobApplication",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/leads/models.py",
+        "name": "ContactLead",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/leads/models.py",
+        "name": "LeadNote",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/leads/models.py",
+        "name": "TrialLeadProfile",
+        "organization_fields": [
+          "country",
+          "sector"
+        ]
+      },
+      {
+        "file": "apps/ledger/models.py",
+        "name": "Account",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/ledger/models.py",
+        "name": "ExchangeRate",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/ledger/models.py",
+        "name": "JournalLine",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/ledger/models.py",
+        "name": "AccountingPeriod",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/notifications/models.py",
+        "name": "Notification",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/partners/models.py",
+        "name": "Partner",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/partners/models.py",
+        "name": "PartnerApplication",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/partners/models.py",
+        "name": "PartnerApplicationAttachment",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/partners/models.py",
+        "name": "PartnerApplicationNote",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/payments/models.py",
+        "name": "PaymentTransaction",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/payments/models.py",
+        "name": "PaymentLog",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/payments/models.py",
+        "name": "FailedWebhookEvent",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/platform_admin/models.py",
+        "name": "SupportTicket",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/platform_admin/models.py",
+        "name": "TicketMessage",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/platform_admin/models.py",
+        "name": "CustomerNote",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/platform_admin/models.py",
+        "name": "CustomerActivity",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/procurement/models.py",
+        "name": "PurchaseRequisition",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/procurement/models.py",
+        "name": "PRLine",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/procurement/models.py",
+        "name": "PRApproval",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/procurement/models.py",
+        "name": "ThreeWayMatchResult",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/reports/models.py",
+        "name": "Report",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/storage_management/models.py",
+        "name": "StorageProvider",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/storage_management/models.py",
+        "name": "StorageConfig",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/storage_management/models.py",
+        "name": "OrganizationStoragePolicy",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/storage_management/models.py",
+        "name": "StoragePolicy",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/storage_management/models.py",
+        "name": "AuditFile",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/storage_management/models.py",
+        "name": "FileStorageMapping",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/storage_management/models.py",
+        "name": "StorageActivityLog",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/streaming/models.py",
+        "name": "AnomalyHit",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/streaming/models.py",
+        "name": "StreamProcessingLog",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/transactions/models.py",
+        "name": "Transaction",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/transactions/models.py",
+        "name": "JournalEntry",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/webhooks/models.py",
+        "name": "WebhookEndpoint",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/webhooks/models.py",
+        "name": "WebhookDelivery",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/zatca/models.py",
+        "name": "EGSDevice",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/zatca/models.py",
+        "name": "InvoiceSubmission",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/zatca/models.py",
+        "name": "RejectionCode",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/rule_engine/models/audit_execution.py",
+        "name": "AuditRun",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/rule_engine/models/audit_execution.py",
+        "name": "AuditResult",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/rule_engine/models/audit_execution.py",
+        "name": "AuditEvidence",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/rule_engine/models/audit_run_v2.py",
+        "name": "AuditRunV2Metadata",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/rule_engine/models/cross_document.py",
+        "name": "CrossDocumentLink",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/rule_engine/models/review.py",
+        "name": "ManualReviewDecision",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/rule_engine/models/risk.py",
+        "name": "RiskScoreSummary",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/rule_engine/models/rule_assignment.py",
+        "name": "RuleAssignment",
+        "organization_fields": [
+          "organization"
+        ]
+      },
+      {
+        "file": "apps/rule_engine/models/rule_definition.py",
+        "name": "RuleDefinition",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/rule_engine/models/rule_definition.py",
+        "name": "RuleDefinitionTranslation",
+        "organization_fields": []
+      },
+      {
+        "file": "apps/rule_engine/models/rule_field_dependency.py",
+        "name": "RuleFieldDependency",
+        "organization_fields": []
+      }
+    ],
+    "with_organization": 87,
+    "without_organization": 80
+  },
+  "page_views": {
+    "exists": true,
+    "function_count": 154,
+    "lines": 5869,
+    "longest_function": {
+      "end": 4487,
+      "lines": 487,
+      "name": "invoice_audit_report",
+      "start": 4001
+    }
+  },
+  "project": "/home/ubuntu/tadgeeg-delete",
+  "requirement_entries": 38,
+  "requirements_files": [
+    "requirements.txt"
+  ],
+  "route_files": [
+    "apps/activity_logs/urls.py",
+    "apps/alerts/urls.py",
+    "apps/analytics/urls.py",
+    "apps/api_mobile/urls.py",
+    "apps/assistant/urls.py",
+    "apps/audit/urls.py",
+    "apps/audit_engine/urls.py",
+    "apps/auditing/urls.py",
+    "apps/authentication/urls.py",
+    "apps/banking/urls.py",
+    "apps/billing/urls.py",
+    "apps/cms/urls.py",
+    "apps/compliance/urls.py",
+    "apps/data_export/urls.py",
+    "apps/documents/urls.py",
+    "apps/file_management/urls.py",
+    "apps/frontend/urls.py",
+    "apps/invoices/urls.py",
+    "apps/jobs/urls.py",
+    "apps/leads/urls.py",
+    "apps/ledger/urls.py",
+    "apps/notifications/urls.py",
+    "apps/organization_admin/urls.py",
+    "apps/partners/urls.py",
+    "apps/payments/urls.py",
+    "apps/platform_admin/urls.py",
+    "apps/platform_management/urls.py",
+    "apps/procurement/urls.py",
+    "apps/reports/urls.py",
+    "apps/rule_engine/api/urls.py",
+    "apps/storage_management/urls.py",
+    "apps/transactions/urls.py",
+    "apps/vendor_dashboard/urls.py",
+    "apps/webhooks/urls.py",
+    "apps/zatca/urls.py",
+    "finai_backend/urls.py"
+  ],
+  "silent_broad_handlers_approximation": 213,
+  "unpinned_requirement_entries": [
+    "PyMuPDF>=1.23           # PDF to image conversion",
+    "asgiref>=3.7            # core/websocket.py — ships with Django today, but this",
+    "boto3>=1.34             # AWS SDK required by django-storages S3",
+    "celery>=5.3",
+    "channels-redis>=4.2.0",
+    "channels>=4.2.0",
+    "chardet>=5.2            # core/services/structured_parsers.py — encoding",
+    "cryptography>=48.0.1    # Fernet for payment/banking/ZATCA secrets at rest.",
+    "django-cors-headers>=4.3",
+    "django-countries>=7.6          # ISO 3166-1 country data + Arabic labels for lead capture",
+    "django-filter>=23.5",
+    "django-storages[s3]>=1.14  # S3 / cloud media storage (NFR-2)",
+    "djangorestframework-simplejwt>=5.3",
+    "djangorestframework>=3.15",
+    "drf-spectacular>=0.27",
+    "google-auth>=2.35.0",
+    "gunicorn>=21.0",
+    "mysqlclient>=2.2",
+    "numpy>=1.25",
+    "openai>=1.35",
+    "openpyxl>=3.1           # Excel (.xlsx) export",
+    "pandas>=2.0",
+    "pillow>=10.4.0",
+    "psycopg2-binary>=2.9    # Optional PostgreSQL adapter for non-SQLite deployments",
+    "pyotp>=2.9              # TOTP / MFA support",
+    "pytesseract>=0.3.10",
+    "python-dotenv>=1.0",
+    "pyzbar",
+    "qrcode>=8.0",
+    "redis>=5.0",
+    "requests>=2.33.0        # PYSEC-2026-2275",
+    "scikit-learn>=1.3       # Statistical ML models",
+    "scipy>=1.11             # chi-square goodness-of-fit for Benford analysis",
+    "sentry-sdk>=1.45          # Error tracking and performance monitoring",
+    "weasyprint>=69.0",
+    "whitenoise>=6.6         # Static file serving",
+    "xlrd>=2.0               # Excel (.xls) legacy format support"
+  ]
+}

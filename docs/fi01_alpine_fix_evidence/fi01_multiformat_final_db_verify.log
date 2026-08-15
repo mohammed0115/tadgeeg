@@ -1,0 +1,7 @@
+[2026-08-15 20:48:39,441] INFO billing.quota_gate [quota_gate] installed around run_audit_compat
+{
+  "invoice_audit_event_count": 0,
+  "partitions": [],
+  "reports": [],
+  "checkpoints": []
+}

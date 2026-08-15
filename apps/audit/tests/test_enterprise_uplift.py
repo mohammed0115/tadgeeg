@@ -2,7 +2,7 @@
 + ISA 540 + ISA 570 + risk matrix).
 
 Each test maps to one Finding number from
-``Docs/ENTERPRISE_AUDIT_REVIEW.md§15``.
+``Documentation/ENTERPRISE_AUDIT_REVIEW.md§15``.
 """
 from decimal import Decimal
 from io import StringIO

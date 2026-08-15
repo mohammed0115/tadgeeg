@@ -106,7 +106,7 @@ class AuditIssue(models.Model):
     @property
     def is_overdue(self) -> bool:
         return bool(self.due_date and self.is_open
-                    and self.due_date < timezone.now().date())
+                    and self.due_date < timezone.localdate())
 
     def clean(self):
         if self.engagement_id and self.organization_id:

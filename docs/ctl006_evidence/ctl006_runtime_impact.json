@@ -1,0 +1,10 @@
+{
+  "database": "/home/ubuntu/tadgeeg-predelete/db_runtime.sqlite3",
+  "invoice_count": 0,
+  "ctl006_failed_count": 0,
+  "ctl006_passed_count": 0,
+  "rule_denominator": 34,
+  "per_failure_score_delta": 2.9412,
+  "all_failures_have_no_audit_event": true,
+  "failures": []
+}

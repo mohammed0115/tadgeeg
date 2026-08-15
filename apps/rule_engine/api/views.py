@@ -132,13 +132,19 @@ def trigger_audit(request):
     triggered_by = data.get("triggered_by", "manual")
 
     try:
-        from apps.rule_engine.executors.audit_pipeline import AuditPipeline
-        pipeline = AuditPipeline()
-        audit_run = pipeline.run(
+        # One production boundary for upload, manual re-audit and retry. It
+        # owns V1/V2 selection and, when enabled, the billing reserve/consume
+        # cycle; importing AuditPipeline here bypassed both.
+        from apps.rule_engine.pipeline.v2.compat import run_audit_compat
+
+        # engine_override="v1" is temporary. This removes the direct import
+        # while keeping the generation-change decision separate from this merge.
+        audit_run = run_audit_compat(
             document_id=document_id,
             document_type=document_type,
             organization_id=str(org.id),
             triggered_by=triggered_by,
+            engine_override="v1",
         )
         return Response(
             AuditRunSummarySerializer(audit_run).data,

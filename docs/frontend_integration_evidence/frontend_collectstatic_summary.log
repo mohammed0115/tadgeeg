@@ -1,0 +1,5 @@
+[2026-08-15 11:02:24,198] INFO billing.quota_gate [quota_gate] installed around run_audit_compat
+
+434 static files copied to '/home/ubuntu/tadgeeg-delete/staticfiles', 1116 post-processed.
+=== manifest ===
+./staticfiles/staticfiles.json

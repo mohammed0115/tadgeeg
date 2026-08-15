@@ -49,6 +49,14 @@ class Invoice(SoftDeleteModel):
     uploaded_by       = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name="uploaded_invoices")
     audit_session     = models.ForeignKey("audit.AuditSession", on_delete=models.SET_NULL, null=True, blank=True, related_name="invoices")
     batch             = models.ForeignKey("InvoiceBatch", on_delete=models.SET_NULL, null=True, blank=True, related_name="invoices")
+    # Canonical billing/audit identity for this invoice.  The rule engine audits
+    # invoices by Invoice.pk, whereas quota accounting is keyed to Document.
+    # Keeping the bridge explicit prevents the invoice upload path from
+    # bypassing quota or inventing a second id space at audit time.
+    audit_document    = models.OneToOneField(
+        "documents.Document", on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="+",
+    )
 
     # Source file
     file              = models.FileField(upload_to="invoices/%Y/%m/", null=True, blank=True)

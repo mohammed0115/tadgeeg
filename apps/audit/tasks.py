@@ -114,9 +114,17 @@ def audit_high_risk_documents(self):
         try:
             doc_dict = ar.analysis_data or {}
             engine = LegacyAuditEngineAdapter(organization_id=doc.organization_id)
-            report = engine.evaluate(
-                document=doc_dict,
-                invoice_id=doc.pk,
+            # `invoice_id=doc.pk` used to be passed here. `doc.pk` is a Document
+            # key and the adapter forwards it as `document_id` with
+            # `document_type="sales_invoice"`, which the normalizer looks up in
+            # `invoices.Invoice`. The two key spaces do not intersect — measured
+            # across 500 keys, zero overlap — so the lookup missed every time,
+            # the normalizer returned an EMPTY NormalizedDocument rather than
+            # raising, and this task recorded an AuditRun for a document it had
+            # not read. `document=doc_dict` was ignored by the adapter
+            # throughout.
+            report = engine.evaluate_document(
+                document_id=doc.pk,
                 context={},
             )
 

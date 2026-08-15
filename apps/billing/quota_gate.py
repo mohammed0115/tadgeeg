@@ -79,15 +79,129 @@ class QuotaExceeded(Exception):
 
 
 # ─── document → org resolver ─────────────────────────────────────────────────
-def _resolve_document_and_org(document_id, organization_id):
+class UnknownDocumentType(Exception):
+    """Raised when no normalizer is registered for a document type.
+
+    Named separately from a missing record so the caller can tell "billing does
+    not know this type" apart from "the record is gone" — the docstring below
+    promises billing never swallows either, and a shared exception would blur
+    which one happened.
+    """
+
+
+def _typed_model_for(document_type):
+    """The model whose primary key `document_id` refers to, for this type.
+
+    Read out of the normalizer registry — the same registry the pipeline
+    dispatches on — so the two cannot disagree. A second map maintained here
+    would drift from it, and that class of drift is the root of nearly every
+    defect in this repository.
+    """
+    # Sales invoices are intentionally a first-class exception: their
+    # normalizer owns an Invoice primary key, not a documents-app typed model.
+    # Invoice.audit_document is the explicit bridge to the billing ledger.
+    if document_type == "sales_invoice":
+        from apps.invoices.models import Invoice
+        return Invoice
+
+    import inspect
+    import re
+
+    from django.apps import apps as django_apps
+
+    from apps.rule_engine.normalizers import DocumentNormalizerFactory
+
+    registry = (getattr(DocumentNormalizerFactory, "_registry", None)
+                or getattr(DocumentNormalizerFactory, "registry", None) or {})
+    normalizer = registry.get(document_type)
+    if normalizer is None:
+        raise UnknownDocumentType(
+            f"No normalizer registered for document_type={document_type!r}; "
+            f"billing cannot resolve which model owns this id."
+        )
+
+    source = inspect.getsource(normalizer.normalize)
+    match = re.search(r"([A-Z][A-Za-z0-9_]+)\.objects\.", source)
+    if not match:
+        raise UnknownDocumentType(
+            f"Normalizer for {document_type!r} does not resolve a model by id; "
+            f"billing cannot determine the owning model."
+        )
+
+    # Scoped to the `documents` app, not searched across every installed model.
+    #
+    # Three different models are named JournalEntry — in documents, transactions
+    # and ledger. A global search by class name returned whichever the registry
+    # happened to yield first, which is how this function was handed a model
+    # with no `document` field and broke eighteen billing tests.
+    #
+    # The class name is read from the normalizer rather than derived from the
+    # document type, because the two do not correspond: expense -> ExpenseReport,
+    # grn -> GoodsReceiptNote, payment -> PaymentVoucher, payroll -> PayrollSheet,
+    # tax_return -> VATReturn. Deriving "".join(p.capitalize() ...) resolves 15
+    # of 21 types and would have raised UnknownDocumentType for five that have
+    # perfectly good models — reinstating the same outage for those five.
+    try:
+        return django_apps.get_model("documents", match.group(1))
+    except LookupError:
+        raise UnknownDocumentType(
+            f"{document_type!r} maps to model {match.group(1)!r}, which is not "
+            f"in the documents app, so it carries no Document to bill against. "
+            f"Sales invoices are the known case: no post_save fires for them and "
+            f"processor.py calls run_audit_task (V1) directly, while this gate "
+            f"patches run_audit_compat only — they never reach here. Raising is "
+            f"the correct outcome, not a case to special-case."
+        ) from None
+
+
+def _resolve_document_and_org(document_id, organization_id, document_type):
     """Look up the Document + Organization rows from the ids the pipeline
     was called with. Errors propagate to the caller — billing should
-    never silently swallow a missing document."""
-    from apps.documents.models import Document
+    never silently swallow a missing document.
+
+    `document_id` IS THE TYPED RECORD'S PRIMARY KEY, not a Document row id.
+
+    That is what every other component on this path means by it. Each
+    normalizer resolves it that way — `PurchaseOrder.objects.get(id=document_id)`
+    and the same in all 21 of them — and documents/signals.py:137 passes
+    `str(instance.pk)` from the typed instance that fired the signal.
+
+    This function read it as a Document primary key. The two are different id
+    spaces: AuditMixin gives each typed record its own UUID and a OneToOne
+    `document` pointing at the Document row. Measured on 500 rows each of
+    PurchaseOrder and FixedAsset, id == document_id in zero of them. So every
+    upload of the eleven typed document types raised Document.DoesNotExist here
+    and no audit ever ran for them. The failure was invisible until the
+    recursion in this same module was fixed, because that raised first.
+
+    The typed model comes from the normalizer registry rather than a second
+    hand-written map. A map written here would drift from the one the pipeline
+    actually dispatches on, and hand-maintained lists are the root of nearly
+    every defect this codebase has produced.
+
+    One explicit path, no fallback: trying Document first and retreating to the
+    typed record would leave nobody able to say which meaning is authoritative,
+    which is the ambiguity that caused this.
+    """
     from apps.authentication.models import Organization
+
     org = Organization.objects.get(pk=organization_id)
-    doc = Document.objects.get(pk=document_id, organization=org)
-    return doc, org
+
+    model = _typed_model_for(document_type)
+    # No select_related: the gate fetches exactly one row, so saving one query
+    # is not worth an assumption about the relation's name. It also assumed
+    # every typed model carries `document`, which broke on the one that does
+    # not and took eighteen billing tests with it.
+    record = model.objects.get(pk=document_id, organization_id=organization_id)
+    if document_type == "sales_invoice":
+        document = record.audit_document
+        if document is None:
+            raise UnknownDocumentType(
+                f"sales_invoice {document_id!r} has no audit_document; "
+                "the invoice was created before the quota identity bridge."
+            )
+        return document, org
+    return record.document, org
 
 
 def _already_billed(organization, document) -> bool:
@@ -134,13 +248,37 @@ def run_audit_with_quota(
       gate refuses with ``QuotaExceeded("rerun_confirmation_required")``.
       First-time runs (no prior consume) ignore both flags.
     """
-    from apps.rule_engine.pipeline.v2.compat import (
-        run_audit_compat as _original,
-    )
+    # Resolve the pipeline to call. Do NOT re-import run_audit_compat here.
+    #
+    # install_gate() replaces compat.run_audit_compat with _gated. An import at
+    # CALL time runs after that replacement, so the name resolves to _gated
+    # itself and the chain becomes _gated -> run_audit_with_quota -> _gated,
+    # without end. Every call through the patched entry point raised
+    # RecursionError, and the function the gate had saved was never read.
+    #
+    # The wrapper is identified by IDENTITY, not by asking it what it is. An
+    # earlier version used getattr(entry, "_original", None) with a fallback,
+    # which broke five existing tests: they inject a fake pipeline with
+    # mock.patch on this attribute, and a MagicMock answers getattr for every
+    # name — so the fallback never fired and the gate called mock._original()
+    # instead of the mock. Identity is the one question a mock cannot answer
+    # wrongly.
+    from apps.rule_engine.pipeline.v2 import compat as _compat_mod
+
+    _entry = _compat_mod.run_audit_compat
+    if _entry is _GATED_WRAPPER:
+        # Production: the module attribute is our own wrapper. Calling it would
+        # re-enter this function forever, so call what it displaced.
+        _original = _ORIGINAL_RUN_AUDIT
+    else:
+        # Not our wrapper — either the gate is not installed, or a caller has
+        # substituted the entry point deliberately (the existing tests inject a
+        # fake pipeline this way). Honour whatever is there.
+        _original = _entry
 
     # Document + org are looked up at the start so a missing row fails
     # before we touch the quota table.
-    doc, org = _resolve_document_and_org(document_id, organization_id)
+    doc, org = _resolve_document_and_org(document_id, organization_id, document_type)
     svc = QuotaService()
 
     already_billed = _already_billed(org, doc)
@@ -234,6 +372,16 @@ def run_audit_with_quota(
 # ─── monkey-patch install ────────────────────────────────────────────────────
 _INSTALLED = False
 
+#: The wrapper install_gate() puts on the compat module, and the function it
+#: displaced. Held here rather than read back off the module attribute, because
+#: that attribute is the one thing that cannot be trusted to identify itself:
+#: tests replace it with a MagicMock, and a MagicMock answers getattr for any
+#: name at all — so `getattr(entry, "_original", None)` returns a child mock
+#: instead of None and the fallback never fires. An identity check against the
+#: wrapper stored here is unambiguous for every case.
+_GATED_WRAPPER = None
+_ORIGINAL_RUN_AUDIT = None
+
 
 def install_gate() -> None:
     """Replace ``apps.rule_engine.pipeline.v2.compat.run_audit_compat``
@@ -263,5 +411,10 @@ def install_gate() -> None:
     _gated._billing_gated = True               # type: ignore[attr-defined]
     _gated._original = original                # type: ignore[attr-defined]
     compat_mod.run_audit_compat = _gated
+    # Recorded module-side too: run_audit_with_quota identifies the wrapper by
+    # identity against _GATED_WRAPPER, which no mock can imitate.
+    global _GATED_WRAPPER, _ORIGINAL_RUN_AUDIT
+    _GATED_WRAPPER = _gated
+    _ORIGINAL_RUN_AUDIT = original
     _INSTALLED = True
     logger.info("[quota_gate] installed around run_audit_compat")

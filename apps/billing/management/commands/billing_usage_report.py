@@ -1,6 +1,6 @@
 """Internal billing report.
 
-Computes the 10 metrics from Docs/payment/00.md §8 and prints them as
+Computes the 10 metrics from Documentation/payment/00.md §8 and prints them as
 either a formatted table (default) or CSV (``--csv``). Run from a
 cron, an ops shell, or pipe to a file for spreadsheet review.
 

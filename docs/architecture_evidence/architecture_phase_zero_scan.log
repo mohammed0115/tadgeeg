@@ -1,0 +1,9 @@
+=== status ===
+=== local head ===
+[33mccee0b5[m refactor: consolidate governance engines from five to three
+=== fetch and remote head ===
+[33mccee0b5[m refactor: consolidate governance engines from five to three
+=== collection tail ===
+Coverage HTML written to dir htmlcov
+FAIL Required test coverage of 45% not reached. Total coverage: 28.58%
+4035 tests collected in 50.25s

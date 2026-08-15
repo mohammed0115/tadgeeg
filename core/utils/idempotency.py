@@ -2,7 +2,7 @@
 Idempotency-Key middleware.
 
 Implements the contract from
-``Docs/tadgeeg_enterprise_readiness_pack/API_AND_ERP_INTEGRATION_CONTRACTS.md`` §14:
+``Documentation/tadgeeg_enterprise_readiness_pack/API_AND_ERP_INTEGRATION_CONTRACTS.md`` §14:
 
   Same key + same payload  → same response (replayed from cache).
   Same key + different payload → 409 Conflict.

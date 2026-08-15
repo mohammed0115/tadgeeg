@@ -1,0 +1,800 @@
+{
+  "json": {
+    "filename": "invoice_cross_format.json",
+    "ingestion": {
+      "success": true,
+      "file_name": "invoice_cross_format.json",
+      "mime_type": "application/json",
+      "document_type": "unknown",
+      "raw_text": "{\n  \"document_type\": \"invoice\",\n  \"invoice_number\": \"XFMT-2026-001\",\n  \"vendor_name\": \"Cross Format Supplier Ltd\",\n  \"vendor_vat_number\": \"310123456700003\",\n  \"invoice_date\": \"2026-08-15\",\n  \"currency\": \"SAR\",\n  \"subtotal\": 1000.0,\n  \"vat_amount\": 150.0,\n  \"total_amount\": 1150.0,\n  \"vat_rate\": 15.0\n}",
+      "structured": {
+        "records": [
+          {
+            "invoice_number": "XFMT-2026-001",
+            "vendor_name": "Cross Format Supplier Ltd",
+            "date": "2026-08-15",
+            "total_amount": 1150.0,
+            "tax_amount": 150.0,
+            "currency": "SAR",
+            "_raw_document_type": "invoice",
+            "_raw_vendor_vat_number": "310123456700003",
+            "_raw_invoice_date": "2026-08-15",
+            "_raw_subtotal": 1000.0,
+            "_raw_vat_amount": 150.0,
+            "_raw_vat_rate": 15.0
+          }
+        ],
+        "record_count": 1,
+        "format": "single_object",
+        "invoice_number": "XFMT-2026-001",
+        "vendor_name": "Cross Format Supplier Ltd",
+        "date": "2026-08-15",
+        "total_amount": 1150.0,
+        "tax_amount": 150.0,
+        "currency": "SAR",
+        "_raw_document_type": "invoice",
+        "_raw_vendor_vat_number": "310123456700003",
+        "_raw_invoice_date": "2026-08-15",
+        "_raw_subtotal": 1000.0,
+        "_raw_vat_amount": 150.0,
+        "_raw_vat_rate": 15.0
+      },
+      "normalized": {
+        "vendor_name": "Cross Format Supplier Ltd",
+        "vendor_vat_number": "",
+        "invoice_number": "XFMT-2026-001",
+        "invoice_date": "2026-08-15",
+        "due_date": null,
+        "currency": "SAR",
+        "subtotal": "1000.0",
+        "vat_amount": "150.0",
+        "vat_rate": "15.00",
+        "discount": null,
+        "total_amount": "1150.0",
+        "customer_name": "",
+        "customer_vat_number": "",
+        "payment_method": "",
+        "line_items": [],
+        "has_qr_code": false,
+        "confidence_reasoning": "",
+        "uncertainty_flags": [],
+        "raw_text": "{\n  \"document_type\": \"invoice\",\n  \"invoice_number\": \"XFMT-2026-001\",\n  \"vendor_name\": \"Cross Format Supplier Ltd\",\n  \"vendor_vat_number\": \"310123456700003\",\n  \"invoice_date\": \"2026-08-15\",\n  \"currency\": \"SAR\",\n  \"subtotal\": 1000.0,\n  \"vat_amount\": 150.0,\n  \"total_amount\": 1150.0,\n  \"vat_rate\": 15.0\n}",
+        "extraction_method": "json",
+        "document_type": "unknown",
+        "language": "unknown",
+        "raw_values": {
+          "vendor_name": "Cross Format Supplier Ltd",
+          "vendor_vat_number": "",
+          "invoice_number": "XFMT-2026-001",
+          "invoice_date": "2026-08-15",
+          "due_date": null,
+          "currency": "SAR",
+          "subtotal": null,
+          "vat_amount": 150.0,
+          "vat_rate": null,
+          "discount": null,
+          "total_amount": 1150.0,
+          "customer_name": "",
+          "customer_vat_number": "",
+          "payment_method": "",
+          "line_items": [],
+          "has_qr_code": false,
+          "confidence_reasoning": "",
+          "uncertainty_flags": []
+        },
+        "normalization_warnings": [
+          "Subtotal inferred from total amount, VAT amount, and discount."
+        ],
+        "aliases_applied": {
+          "vendor_name": "vendor_name",
+          "invoice_number": "invoice_number",
+          "invoice_date": "date",
+          "currency": "currency",
+          "vat_amount": "tax_amount",
+          "total_amount": "total_amount"
+        },
+        "document_number": "XFMT-2026-001",
+        "date": "2026-08-15",
+        "tax_amount": "150.0",
+        "metadata": {
+          "json_type": "object",
+          "attempted_strategies": [
+            "structured"
+          ],
+          "strategy_trace": [
+            {
+              "strategy": "structured",
+              "success": true,
+              "method": "json",
+              "fatal_error": null,
+              "errors": []
+            }
+          ],
+          "winning_strategy": "structured"
+        },
+        "source_file": "invoice_cross_format.json"
+      },
+      "page_count": 0,
+      "metadata": {
+        "json_type": "object",
+        "attempted_strategies": [
+          "structured"
+        ],
+        "strategy_trace": [
+          {
+            "strategy": "structured",
+            "success": true,
+            "method": "json",
+            "fatal_error": null,
+            "errors": []
+          }
+        ],
+        "winning_strategy": "structured"
+      },
+      "errors": [],
+      "fatal_error": null,
+      "extraction_method": "json",
+      "processing_time_ms": 4
+    },
+    "structured_selected": {
+      "invoice_number": "XFMT-2026-001",
+      "document_number": null,
+      "vendor_name": "Cross Format Supplier Ltd",
+      "vendor_vat_number": null,
+      "date": "2026-08-15",
+      "invoice_date": null,
+      "subtotal": null,
+      "tax_amount": 150.0,
+      "vat_amount": null,
+      "total_amount": 1150.0,
+      "currency": "SAR"
+    },
+    "normalised_selected": {
+      "invoice_number": "XFMT-2026-001",
+      "document_number": "XFMT-2026-001",
+      "vendor_name": "Cross Format Supplier Ltd",
+      "vendor_vat_number": "",
+      "date": "2026-08-15",
+      "invoice_date": "2026-08-15",
+      "subtotal": "1000.0",
+      "tax_amount": "150.0",
+      "vat_amount": "150.0",
+      "total_amount": "1150.0",
+      "currency": "SAR"
+    },
+    "analysis": {
+      "document_type": "invoice",
+      "classification_confidence": 0.75,
+      "classification_method": "keyword",
+      "vendor_name": "Cross Format Supplier Ltd",
+      "vendor_name_ar": "",
+      "vendor_vat_number": "",
+      "document_number": "XFMT-2026-001",
+      "date": "2026-08-15",
+      "due_date": null,
+      "currency": "SAR",
+      "subtotal": 1000.0,
+      "vat_rate": 15.0,
+      "tax_amount": 150.0,
+      "discount": 0.0,
+      "total_amount": 1150.0,
+      "line_items": [],
+      "payment_terms": "",
+      "notes": "",
+      "language": "unknown",
+      "extraction_tier": "parser_fallback",
+      "extraction_confidence": 0.0,
+      "duplicate_score": 0.0,
+      "is_duplicate": false,
+      "duplicate_reasons": [],
+      "matched_document_ids": [],
+      "fraud_score": 0.15,
+      "fraud_patterns": [
+        "Vendor VAT number missing on invoice above 1,000 SAR",
+        "Invoice total 1,150 is a suspiciously round number"
+      ],
+      "requires_review": false,
+      "anomaly_score": 0.0,
+      "anomaly_explanation": "No statistically significant anomalies detected for this document.",
+      "anomaly_findings": [],
+      "anomaly_methods": [],
+      "compliance_score": 0.74,
+      "vat_valid": false,
+      "missing_fields": [
+        "vendor_vat_number"
+      ],
+      "compliance_issues": [
+        "Vendor VAT registration number is missing",
+        "Customer VAT number required for B2B invoices above 1000.0 SAR"
+      ],
+      "compliance_violations": [
+        {
+          "code": "C04",
+          "message": "Vendor VAT registration number is missing",
+          "severity": "critical",
+          "field": "vendor_vat_number",
+          "check": "C04_vat_number_format"
+        },
+        {
+          "code": "C10",
+          "message": "Customer VAT number required for B2B invoices above 1000.0 SAR",
+          "severity": "high",
+          "field": "customer_vat_number",
+          "check": "C10_customer_vat"
+        }
+      ],
+      "risk_score": 10,
+      "risk_level": "low",
+      "risk_factors": [
+        "Vendor VAT number missing on invoice above 1,000 SAR",
+        "Invoice total 1,150 is a suspiciously round number",
+        "Vendor VAT registration number is missing",
+        "Customer VAT number required for B2B invoices above 1000.0 SAR"
+      ],
+      "escalate": false,
+      "source_file": "invoice_cross_format.json",
+      "processing_errors": [],
+      "processing_time_ms": 841
+    }
+  },
+  "pdf": {
+    "filename": "invoice_cross_format.pdf",
+    "ingestion": {
+      "success": true,
+      "file_name": "invoice_cross_format.pdf",
+      "mime_type": "application/pdf",
+      "document_type": "unknown",
+      "raw_text": "TAX INVOICE\nInvoice Number: XFMT-2026-001\nVendor: Cross Format Supplier Ltd\nVAT Number: 310123456700003\nInvoice Date: 2026-08-15\nCurrency: SAR\nSubtotal: 1000.00\nVAT Amount: 150.00\nTotal Amount: 1150.00",
+      "structured": {},
+      "normalized": {
+        "vendor_name": "",
+        "vendor_vat_number": "",
+        "invoice_number": "",
+        "invoice_date": null,
+        "due_date": null,
+        "currency": "SAR",
+        "subtotal": null,
+        "vat_amount": null,
+        "vat_rate": null,
+        "discount": null,
+        "total_amount": null,
+        "customer_name": "",
+        "customer_vat_number": "",
+        "payment_method": "",
+        "line_items": [],
+        "has_qr_code": false,
+        "confidence_reasoning": "",
+        "uncertainty_flags": [],
+        "raw_text": "TAX INVOICE\nInvoice Number: XFMT-2026-001\nVendor: Cross Format Supplier Ltd\nVAT Number: 310123456700003\nInvoice Date: 2026-08-15\nCurrency: SAR\nSubtotal: 1000.00\nVAT Amount: 150.00\nTotal Amount: 1150.00",
+        "extraction_method": "pdf_text_layer",
+        "document_type": "unknown",
+        "language": "unknown",
+        "raw_values": {
+          "vendor_name": "",
+          "vendor_vat_number": "",
+          "invoice_number": "",
+          "invoice_date": null,
+          "due_date": null,
+          "currency": "SAR",
+          "subtotal": null,
+          "vat_amount": null,
+          "vat_rate": null,
+          "discount": null,
+          "total_amount": null,
+          "customer_name": "",
+          "customer_vat_number": "",
+          "payment_method": "",
+          "line_items": [],
+          "has_qr_code": false,
+          "confidence_reasoning": "",
+          "uncertainty_flags": []
+        },
+        "normalization_warnings": [],
+        "aliases_applied": {},
+        "document_number": "",
+        "date": null,
+        "tax_amount": null,
+        "metadata": {
+          "page_count": 1,
+          "total_chars": 202,
+          "source": "text_layer",
+          "attempted_strategies": [
+            "text_layer"
+          ],
+          "strategy_trace": [
+            {
+              "strategy": "text_layer",
+              "success": true,
+              "method": "pdf_text_layer",
+              "fatal_error": null,
+              "errors": [
+                "pdfplumber not installed; skipping."
+              ]
+            }
+          ],
+          "winning_strategy": "text_layer"
+        },
+        "source_file": "invoice_cross_format.pdf"
+      },
+      "page_count": 1,
+      "metadata": {
+        "page_count": 1,
+        "total_chars": 202,
+        "source": "text_layer",
+        "attempted_strategies": [
+          "text_layer"
+        ],
+        "strategy_trace": [
+          {
+            "strategy": "text_layer",
+            "success": true,
+            "method": "pdf_text_layer",
+            "fatal_error": null,
+            "errors": [
+              "pdfplumber not installed; skipping."
+            ]
+          }
+        ],
+        "winning_strategy": "text_layer"
+      },
+      "errors": [
+        "pdfplumber not installed; skipping."
+      ],
+      "fatal_error": null,
+      "extraction_method": "pdf_text_layer",
+      "processing_time_ms": 805
+    },
+    "structured_selected": {
+      "invoice_number": null,
+      "document_number": null,
+      "vendor_name": null,
+      "vendor_vat_number": null,
+      "date": null,
+      "invoice_date": null,
+      "subtotal": null,
+      "tax_amount": null,
+      "vat_amount": null,
+      "total_amount": null,
+      "currency": null
+    },
+    "normalised_selected": {
+      "invoice_number": "",
+      "document_number": "",
+      "vendor_name": "",
+      "vendor_vat_number": "",
+      "date": null,
+      "invoice_date": null,
+      "subtotal": null,
+      "tax_amount": null,
+      "vat_amount": null,
+      "total_amount": null,
+      "currency": "SAR"
+    },
+    "analysis": {
+      "document_type": "invoice",
+      "classification_confidence": 1.0,
+      "classification_method": "keyword",
+      "vendor_name": "Cross Format Supplier Ltd",
+      "vendor_name_ar": "",
+      "vendor_vat_number": "310123456700003",
+      "document_number": "Invoice",
+      "date": "2026-08-15",
+      "due_date": null,
+      "currency": "SAR",
+      "subtotal": 0.0,
+      "vat_rate": 15.0,
+      "tax_amount": 0.0,
+      "discount": 0.0,
+      "total_amount": 1150.0,
+      "line_items": [],
+      "payment_terms": "",
+      "notes": "",
+      "language": "unknown",
+      "extraction_tier": "regex",
+      "extraction_confidence": 0.0,
+      "duplicate_score": 0.0,
+      "is_duplicate": false,
+      "duplicate_reasons": [],
+      "matched_document_ids": [],
+      "fraud_score": 0.1,
+      "fraud_patterns": [
+        "Invoice total 1,150 is a suspiciously round number"
+      ],
+      "requires_review": false,
+      "anomaly_score": 0.0,
+      "anomaly_explanation": "No statistically significant anomalies detected for this document.",
+      "anomaly_findings": [],
+      "anomaly_methods": [],
+      "compliance_score": 0.9189,
+      "vat_valid": true,
+      "missing_fields": [],
+      "compliance_issues": [
+        "Customer VAT number required for B2B invoices above 1000.0 SAR"
+      ],
+      "compliance_violations": [
+        {
+          "code": "C10",
+          "message": "Customer VAT number required for B2B invoices above 1000.0 SAR",
+          "severity": "high",
+          "field": "customer_vat_number",
+          "check": "C10_customer_vat"
+        }
+      ],
+      "risk_score": 5,
+      "risk_level": "low",
+      "risk_factors": [
+        "Invoice total 1,150 is a suspiciously round number"
+      ],
+      "escalate": false,
+      "source_file": "invoice_cross_format.pdf",
+      "processing_errors": [],
+      "processing_time_ms": 752
+    }
+  },
+  "png": {
+    "filename": "invoice_cross_format.png",
+    "ingestion": {
+      "success": false,
+      "file_name": "invoice_cross_format.png",
+      "mime_type": "image/png",
+      "document_type": "other",
+      "raw_text": "",
+      "structured": {},
+      "normalized": {},
+      "page_count": 0,
+      "metadata": {
+        "attempted_strategies": [
+          "vision_ai",
+          "ocr_fallback"
+        ],
+        "strategy_trace": [
+          {
+            "strategy": "vision_ai",
+            "success": false,
+            "method": "openai_vision",
+            "fatal_error": "Vision AI is disabled for this request.",
+            "errors": []
+          },
+          {
+            "strategy": "ocr_fallback",
+            "success": false,
+            "method": "ocr_fallback",
+            "fatal_error": "OCR fallback produced no readable text.",
+            "errors": [
+              "Tesseract fallback failed: /usr/bin/tesseract is not installed or it's not in your PATH. See README file for more information."
+            ]
+          }
+        ]
+      },
+      "errors": [
+        "Tesseract fallback failed: /usr/bin/tesseract is not installed or it's not in your PATH. See README file for more information."
+      ],
+      "fatal_error": "All configured extraction strategies failed.",
+      "extraction_method": "extraction_failed",
+      "processing_time_ms": 1761
+    },
+    "structured_selected": {
+      "invoice_number": null,
+      "document_number": null,
+      "vendor_name": null,
+      "vendor_vat_number": null,
+      "date": null,
+      "invoice_date": null,
+      "subtotal": null,
+      "tax_amount": null,
+      "vat_amount": null,
+      "total_amount": null,
+      "currency": null
+    },
+    "normalised_selected": {
+      "invoice_number": null,
+      "document_number": null,
+      "vendor_name": null,
+      "vendor_vat_number": null,
+      "date": null,
+      "invoice_date": null,
+      "subtotal": null,
+      "tax_amount": null,
+      "vat_amount": null,
+      "total_amount": null,
+      "currency": null
+    },
+    "analysis": {
+      "document_type": "other",
+      "classification_confidence": 0.0,
+      "classification_method": "unknown",
+      "vendor_name": "",
+      "vendor_name_ar": "",
+      "vendor_vat_number": "",
+      "document_number": "",
+      "date": null,
+      "due_date": null,
+      "currency": "SAR",
+      "subtotal": 0.0,
+      "vat_rate": 15.0,
+      "tax_amount": 0.0,
+      "discount": 0.0,
+      "total_amount": 0.0,
+      "line_items": [],
+      "payment_terms": "",
+      "notes": "",
+      "language": "unknown",
+      "extraction_tier": "none",
+      "extraction_confidence": 0.0,
+      "duplicate_score": 0.0,
+      "is_duplicate": false,
+      "duplicate_reasons": [],
+      "matched_document_ids": [],
+      "fraud_score": 0.0,
+      "fraud_patterns": [],
+      "requires_review": false,
+      "anomaly_score": 0.0,
+      "anomaly_explanation": "",
+      "anomaly_findings": [],
+      "anomaly_methods": [],
+      "compliance_score": 0.0,
+      "vat_valid": false,
+      "missing_fields": [],
+      "compliance_issues": [],
+      "compliance_violations": [],
+      "risk_score": 60,
+      "risk_level": "high",
+      "risk_factors": [],
+      "escalate": false,
+      "source_file": "invoice_cross_format.png",
+      "processing_errors": [
+        "Ingestion failed: All configured extraction strategies failed."
+      ],
+      "processing_time_ms": 0
+    }
+  },
+  "xlsx": {
+    "filename": "invoice_cross_format.xlsx",
+    "ingestion": {
+      "success": true,
+      "file_name": "invoice_cross_format.xlsx",
+      "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "document_type": "unknown",
+      "raw_text": "=== Sheet: Invoice ===\n\n            Field                      date\n    document_type                   invoice\n   invoice_number             XFMT-2026-001\n      vendor_name Cross Format Supplier Ltd\nvendor_vat_number           310123456700003\n     invoice_date                2026-08-15\n         currency                       SAR\n         subtotal                      1000\n       vat_amount                       150\n     total_amount                      1150\n         vat_rate                        15",
+      "structured": {
+        "records": [
+          {
+            "Field": "document_type",
+            "date": "invoice",
+            "_sheet": "Invoice"
+          },
+          {
+            "Field": "invoice_number",
+            "date": "XFMT-2026-001",
+            "_sheet": "Invoice"
+          },
+          {
+            "Field": "vendor_name",
+            "date": "Cross Format Supplier Ltd",
+            "_sheet": "Invoice"
+          },
+          {
+            "Field": "vendor_vat_number",
+            "date": "310123456700003",
+            "_sheet": "Invoice"
+          },
+          {
+            "Field": "invoice_date",
+            "date": "2026-08-15",
+            "_sheet": "Invoice"
+          },
+          {
+            "Field": "currency",
+            "date": "SAR",
+            "_sheet": "Invoice"
+          },
+          {
+            "Field": "subtotal",
+            "date": "1000",
+            "_sheet": "Invoice"
+          },
+          {
+            "Field": "vat_amount",
+            "date": "150",
+            "_sheet": "Invoice"
+          },
+          {
+            "Field": "total_amount",
+            "date": "1150",
+            "_sheet": "Invoice"
+          },
+          {
+            "Field": "vat_rate",
+            "date": "15",
+            "_sheet": "Invoice"
+          }
+        ],
+        "sheet_count": 1,
+        "record_count": 10
+      },
+      "normalized": {
+        "vendor_name": "",
+        "vendor_vat_number": "",
+        "invoice_number": "",
+        "invoice_date": null,
+        "due_date": null,
+        "currency": "SAR",
+        "subtotal": null,
+        "vat_amount": null,
+        "vat_rate": null,
+        "discount": null,
+        "total_amount": null,
+        "customer_name": "",
+        "customer_vat_number": "",
+        "payment_method": "",
+        "line_items": [],
+        "has_qr_code": false,
+        "confidence_reasoning": "",
+        "uncertainty_flags": [],
+        "raw_text": "=== Sheet: Invoice ===\n\n            Field                      date\n    document_type                   invoice\n   invoice_number             XFMT-2026-001\n      vendor_name Cross Format Supplier Ltd\nvendor_vat_number           310123456700003\n     invoice_date                2026-08-15\n         currency                       SAR\n         subtotal                      1000\n       vat_amount                       150\n     total_amount                      1150\n         vat_rate                        15",
+        "extraction_method": "excel",
+        "document_type": "unknown",
+        "language": "unknown",
+        "raw_values": {
+          "vendor_name": "",
+          "vendor_vat_number": "",
+          "invoice_number": "",
+          "invoice_date": "invoice",
+          "due_date": null,
+          "currency": "SAR",
+          "subtotal": null,
+          "vat_amount": null,
+          "vat_rate": null,
+          "discount": null,
+          "total_amount": null,
+          "customer_name": "",
+          "customer_vat_number": "",
+          "payment_method": "",
+          "line_items": [],
+          "has_qr_code": false,
+          "confidence_reasoning": "",
+          "uncertainty_flags": []
+        },
+        "normalization_warnings": [
+          "Could not normalize invoice_date: 'invoice'."
+        ],
+        "aliases_applied": {
+          "invoice_date": "date"
+        },
+        "document_number": "",
+        "date": null,
+        "tax_amount": null,
+        "metadata": {
+          "sheet_names": [
+            "Invoice"
+          ],
+          "record_count": 10,
+          "attempted_strategies": [
+            "structured"
+          ],
+          "strategy_trace": [
+            {
+              "strategy": "structured",
+              "success": true,
+              "method": "excel",
+              "fatal_error": null,
+              "errors": []
+            }
+          ],
+          "winning_strategy": "structured"
+        },
+        "source_file": "invoice_cross_format.xlsx"
+      },
+      "page_count": 0,
+      "metadata": {
+        "sheet_names": [
+          "Invoice"
+        ],
+        "record_count": 10,
+        "attempted_strategies": [
+          "structured"
+        ],
+        "strategy_trace": [
+          {
+            "strategy": "structured",
+            "success": true,
+            "method": "excel",
+            "fatal_error": null,
+            "errors": []
+          }
+        ],
+        "winning_strategy": "structured"
+      },
+      "errors": [],
+      "fatal_error": null,
+      "extraction_method": "excel",
+      "processing_time_ms": 264
+    },
+    "structured_selected": {
+      "invoice_number": null,
+      "document_number": null,
+      "vendor_name": null,
+      "vendor_vat_number": null,
+      "date": null,
+      "invoice_date": null,
+      "subtotal": null,
+      "tax_amount": null,
+      "vat_amount": null,
+      "total_amount": null,
+      "currency": null
+    },
+    "normalised_selected": {
+      "invoice_number": "",
+      "document_number": "",
+      "vendor_name": "",
+      "vendor_vat_number": "",
+      "date": null,
+      "invoice_date": null,
+      "subtotal": null,
+      "tax_amount": null,
+      "vat_amount": null,
+      "total_amount": null,
+      "currency": "SAR"
+    },
+    "analysis": {
+      "document_type": "invoice",
+      "classification_confidence": 0.75,
+      "classification_method": "keyword",
+      "vendor_name": "Ltd",
+      "vendor_name_ar": "",
+      "vendor_vat_number": "310123456700003",
+      "document_number": "oice",
+      "date": "2026-08-15",
+      "due_date": null,
+      "currency": "SAR",
+      "subtotal": 0.0,
+      "vat_rate": 15.0,
+      "tax_amount": 0.0,
+      "discount": 0.0,
+      "total_amount": 1150.0,
+      "line_items": [],
+      "payment_terms": "",
+      "notes": "",
+      "language": "unknown",
+      "extraction_tier": "regex",
+      "extraction_confidence": 0.0,
+      "duplicate_score": 0.0,
+      "is_duplicate": false,
+      "duplicate_reasons": [],
+      "matched_document_ids": [],
+      "fraud_score": 0.1,
+      "fraud_patterns": [
+        "Invoice total 1,150 is a suspiciously round number"
+      ],
+      "requires_review": false,
+      "anomaly_score": 0.0,
+      "anomaly_explanation": "No statistically significant anomalies detected for this document.",
+      "anomaly_findings": [],
+      "anomaly_methods": [],
+      "compliance_score": 0.9189,
+      "vat_valid": true,
+      "missing_fields": [],
+      "compliance_issues": [
+        "Customer VAT number required for B2B invoices above 1000.0 SAR"
+      ],
+      "compliance_violations": [
+        {
+          "code": "C10",
+          "message": "Customer VAT number required for B2B invoices above 1000.0 SAR",
+          "severity": "high",
+          "field": "customer_vat_number",
+          "check": "C10_customer_vat"
+        }
+      ],
+      "risk_score": 5,
+      "risk_level": "low",
+      "risk_factors": [
+        "Invoice total 1,150 is a suspiciously round number"
+      ],
+      "escalate": false,
+      "source_file": "invoice_cross_format.xlsx",
+      "processing_errors": [],
+      "processing_time_ms": 704
+    }
+  }
+}

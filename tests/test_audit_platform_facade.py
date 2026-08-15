@@ -26,22 +26,6 @@ from apps.audit_platform import (
 
 # ── The defect, pinned ───────────────────────────────────────────────────────
 
-def test_the_two_engines_genuinely_disagree():
-    """Not a story about the past — assert it, so the shape stays visible."""
-    from apps.audit.rules.base_rule import RuleStatus as EngineB
-    from apps.auditing.accounting_rules.enums import RuleStatus as EngineA
-
-    assert EngineA is not EngineB
-    assert EngineA.PASSED != EngineB.PASSED, (
-        "the two RuleStatus enums now agree — if they were unified, this facade "
-        "can be simplified; if they were made to compare equal by accident, that "
-        "is worse than the original problem"
-    )
-    assert not hasattr(EngineB, "WARNING"), (
-        "apps.audit gained WARNING — _AUDIT_ENGINE needs the mapping"
-    )
-
-
 def test_both_engines_land_on_the_same_canonical_value():
     """The point of the facade in one line."""
     from apps.audit.rules.base_rule import RuleStatus as EngineB
@@ -61,15 +45,6 @@ def test_both_engines_land_on_the_same_canonical_value():
 ])
 def test_auditing_values_translate(value, expected):
     assert from_auditing_status(value) is expected
-
-
-@pytest.mark.parametrize("value,expected", [
-    ("PASSED", RuleOutcome.PASSED),
-    ("ERROR", RuleOutcome.ERRORED),
-    ("SKIPPED", RuleOutcome.SKIPPED),
-])
-def test_audit_engine_values_translate(value, expected):
-    assert from_audit_engine_status(value) is expected
 
 
 def test_raw_strings_from_the_database_are_accepted():

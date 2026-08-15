@@ -1,6 +1,6 @@
 """Stage 5 — Quota Enforcement on the Audit Pipeline.
 
-Covers the 12 cases from Docs/payment/00.md §5:
+Covers the 12 cases from Documentation/payment/00.md §5:
 
   1. audit succeeds when quota is available
   2. reserve increases reserved_invoices
@@ -40,6 +40,26 @@ from apps.billing.services.subscription_service import SubscriptionService
 from apps.billing.tests._factories import make_org, make_user
 
 
+def _make_typed(document):
+    """The typed record the pipeline is actually addressed by.
+
+    `document_id` on this path means the TYPED record's primary key, not a
+    Document row id — that is what every normalizer resolves and what
+    documents/signals.py passes. These tests predate that being settled and
+    handed the gate a Document id with document_type="purchase_order".
+
+    Only the arrangement changes. Every assertion below is about billing —
+    reserve, consume, release, 402, tenant isolation — and none of them is
+    about which document type was used to trigger it. `self.doc` stays the
+    Document because the ledger keys on it.
+    """
+    from apps.documents.typed_models import PurchaseOrder
+    return PurchaseOrder.objects.create(
+        document=document, organization=document.organization,
+        po_number=f"PO-{str(document.pk)[:8]}",
+    )
+
+
 def _make_document(organization, filename="t.pdf"):
     from apps.documents.models import Document
     return Document.objects.create(
@@ -58,7 +78,7 @@ def _make_audit_run(*, organization, document, status=None):
     from apps.rule_engine.models import AuditRun
     return AuditRun.objects.create(
         organization=organization,
-        document_type="sales_invoice",
+        document_type="purchase_order",
         document_id=document.id,
         status=status or AuditRun.Status.COMPLETED,
     )
@@ -76,6 +96,7 @@ class QuotaGateBasicsTests(TestCase):
         sub = SubscriptionService().create_pending_paid_subscription(self.org, plan)
         self.sub = SubscriptionService().activate_subscription(sub)
         self.doc = _make_document(self.org)
+        self.po = _make_typed(self.doc)
 
     def _fake_pipeline(self, status="completed"):
         from apps.rule_engine.models import AuditRun
@@ -96,8 +117,8 @@ class QuotaGateBasicsTests(TestCase):
         patch, run = self._fake_pipeline("completed")
         with patch:
             result = run_audit_with_quota(
-                document_id=str(self.doc.id),
-                document_type="sales_invoice",
+                document_id=str(self.po.id),
+                document_type="purchase_order",
                 organization_id=str(self.org.id),
                 triggered_by="upload",
             )
@@ -125,8 +146,8 @@ class QuotaGateBasicsTests(TestCase):
         ):
             with self.assertRaises(RuntimeError):
                 run_audit_with_quota(
-                    document_id=str(self.doc.id),
-                    document_type="sales_invoice",
+                    document_id=str(self.po.id),
+                    document_type="purchase_order",
                     organization_id=str(self.org.id),
                 )
         self.sub.refresh_from_db()
@@ -143,8 +164,8 @@ class QuotaGateBasicsTests(TestCase):
         patch, _ = self._fake_pipeline("failed")
         with patch:
             run_audit_with_quota(
-                document_id=str(self.doc.id),
-                document_type="sales_invoice",
+                document_id=str(self.po.id),
+                document_type="purchase_order",
                 organization_id=str(self.org.id),
             )
         self.sub.refresh_from_db()
@@ -164,12 +185,13 @@ class QuotaGateBlocksTests(TestCase):
         self.org  = make_org()
         self.user = make_user(organization=self.org)
         self.doc  = _make_document(self.org)
+        self.po  = _make_typed(self.doc)
 
     def test_no_subscription_blocks_audit(self):
         with self.assertRaises(QuotaExceeded) as cm:
             run_audit_with_quota(
-                document_id=str(self.doc.id),
-                document_type="sales_invoice",
+                document_id=str(self.po.id),
+                document_type="purchase_order",
                 organization_id=str(self.org.id),
             )
         self.assertEqual(cm.exception.reason, "no_subscription")
@@ -183,8 +205,8 @@ class QuotaGateBlocksTests(TestCase):
         )
         with self.assertRaises(QuotaExceeded) as cm:
             run_audit_with_quota(
-                document_id=str(self.doc.id),
-                document_type="sales_invoice",
+                document_id=str(self.po.id),
+                document_type="purchase_order",
                 organization_id=str(self.org.id),
             )
         self.assertEqual(cm.exception.reason, "subscription_expired")
@@ -198,8 +220,8 @@ class QuotaGateBlocksTests(TestCase):
 
         with self.assertRaises(QuotaExceeded) as cm:
             run_audit_with_quota(
-                document_id=str(self.doc.id),
-                document_type="sales_invoice",
+                document_id=str(self.po.id),
+                document_type="purchase_order",
                 organization_id=str(self.org.id),
             )
         self.assertEqual(cm.exception.reason, "quota_exceeded")
@@ -221,6 +243,7 @@ class QuotaGateIdempotencyTests(TestCase):
         sub = SubscriptionService().create_pending_paid_subscription(self.org, plan)
         self.sub = SubscriptionService().activate_subscription(sub)
         self.doc = _make_document(self.org)
+        self.po = _make_typed(self.doc)
 
     def _run_once(self):
         from apps.rule_engine.models import AuditRun
@@ -233,8 +256,8 @@ class QuotaGateIdempotencyTests(TestCase):
             return_value=run,
         ):
             return run_audit_with_quota(
-                document_id=str(self.doc.id),
-                document_type="sales_invoice",
+                document_id=str(self.po.id),
+                document_type="purchase_order",
                 organization_id=str(self.org.id),
             )
 
@@ -269,8 +292,8 @@ class QuotaGateIdempotencyTests(TestCase):
         ):
             with self.assertRaises(RuntimeError):
                 run_audit_with_quota(
-                    document_id=str(self.doc.id),
-                    document_type="sales_invoice",
+                    document_id=str(self.po.id),
+                    document_type="purchase_order",
                     organization_id=str(self.org.id),
                 )
         # Retry succeeds.
@@ -295,6 +318,7 @@ class TenantIsolationTests(TestCase):
         self.sub_a = SubscriptionService().activate_subscription(sub_a)
         self.sub_b = SubscriptionService().activate_subscription(sub_b)
         self.doc_a = _make_document(self.org_a, "a.pdf")
+        self.po_a = _make_typed(self.doc_a)
 
     def test_audit_for_org_a_does_not_touch_org_b_counter(self):
         from apps.rule_engine.models import AuditRun
@@ -307,8 +331,8 @@ class TenantIsolationTests(TestCase):
             return_value=run,
         ):
             run_audit_with_quota(
-                document_id=str(self.doc_a.id),
-                document_type="sales_invoice",
+                document_id=str(self.po_a.id),
+                document_type="purchase_order",
                 organization_id=str(self.org_a.id),
             )
         self.sub_a.refresh_from_db()
@@ -332,6 +356,7 @@ class LedgerCompletenessTests(TestCase):
 
     def test_full_lifecycle_creates_reserve_then_consume(self):
         doc = _make_document(self.org, "lifecycle.pdf")
+        po = _make_typed(doc)
         from apps.rule_engine.models import AuditRun
         run = _make_audit_run(
             organization=self.org, document=doc,
@@ -342,8 +367,8 @@ class LedgerCompletenessTests(TestCase):
             return_value=run,
         ):
             run_audit_with_quota(
-                document_id=str(doc.id),
-                document_type="sales_invoice",
+                document_id=str(po.id),
+                document_type="purchase_order",
                 organization_id=str(self.org.id),
             )
         entries = list(
@@ -354,14 +379,15 @@ class LedgerCompletenessTests(TestCase):
 
     def test_pipeline_failure_creates_reserve_then_release(self):
         doc = _make_document(self.org, "failed.pdf")
+        po = _make_typed(doc)
         with mock.patch(
             "apps.rule_engine.pipeline.v2.compat.run_audit_compat",
             side_effect=ValueError("boom"),
         ):
             with self.assertRaises(ValueError):
                 run_audit_with_quota(
-                    document_id=str(doc.id),
-                    document_type="sales_invoice",
+                    document_id=str(po.id),
+                    document_type="purchase_order",
                     organization_id=str(self.org.id),
                 )
         entries = list(

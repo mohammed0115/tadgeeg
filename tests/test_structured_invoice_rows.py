@@ -75,3 +75,35 @@ def test_single_json_object_is_forwarded_as_one_authoritative_row():
             "total_amount": "1150.0",
         },
     )]
+
+
+
+def test_xlsx_field_value_sheet_is_forwarded_as_one_authoritative_row(tmp_path):
+    from openpyxl import Workbook
+
+    from core.services.parsers.structured import iter_structured_records
+
+    path = tmp_path / "key-value-invoice.xlsx"
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(["Field", "Value"])
+    sheet.append(["invoice_number", "INV-XLSX-KV-001"])
+    sheet.append(["vendor_name", "Key Value Supplier"])
+    sheet.append(["subtotal", 1000.0])
+    sheet.append(["vat_amount", 150.0])
+    sheet.append(["total_amount", 1150.0])
+    workbook.save(path)
+
+    with path.open("rb") as uploaded:
+        rows = list(iter_structured_records(uploaded, path.name) or [])
+
+    assert rows == [(
+        2,
+        {
+            "invoice_number": "INV-XLSX-KV-001",
+            "vendor_name": "Key Value Supplier",
+            "subtotal": "1000",
+            "vat_amount": "150",
+            "total_amount": "1150",
+        },
+    )]

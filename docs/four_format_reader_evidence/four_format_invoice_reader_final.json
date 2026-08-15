@@ -1,0 +1,90 @@
+{
+  "expected": {
+    "invoice_number": "XFMT-2026-001",
+    "vendor_name": "Cross Format Supplier Ltd",
+    "vendor_vat_number": "310123456700003",
+    "invoice_date": "2026-08-15",
+    "currency": "SAR",
+    "subtotal": "1000.0",
+    "vat_amount": "150.0",
+    "total_amount": "1150.0"
+  },
+  "results": {
+    "json": {
+      "success": true,
+      "path": "structured_upload",
+      "row_count": 1,
+      "fields": {
+        "invoice_number": "XFMT-2026-001",
+        "vendor_name": "Cross Format Supplier Ltd",
+        "vendor_vat_number": "310123456700003",
+        "invoice_date": "2026-08-15",
+        "currency": "SAR",
+        "subtotal": "1000.0",
+        "vat_amount": "150.0",
+        "total_amount": "1150.0"
+      }
+    },
+    "xlsx": {
+      "success": true,
+      "path": "structured_upload",
+      "row_count": 1,
+      "fields": {
+        "invoice_number": "XFMT-2026-001",
+        "vendor_name": "Cross Format Supplier Ltd",
+        "vendor_vat_number": "310123456700003",
+        "invoice_date": "2026-08-15",
+        "currency": "SAR",
+        "subtotal": "1000",
+        "vat_amount": "150",
+        "total_amount": "1150"
+      }
+    },
+    "pdf": {
+      "success": true,
+      "path": "pdf_text_layer",
+      "fields": {
+        "invoice_number": "XFMT-2026-001",
+        "vendor_name": "Cross Format Supplier Ltd",
+        "vendor_vat_number": "310123456700003",
+        "invoice_date": "2026-08-15",
+        "currency": "SAR",
+        "subtotal": "1000.0",
+        "vat_amount": "150.0",
+        "total_amount": "1150.0"
+      }
+    },
+    "png": {
+      "success": true,
+      "path": "ocr_fallback",
+      "fields": {
+        "invoice_number": "XFMT-2026-001",
+        "vendor_name": "Cross Format Supplier Ltd",
+        "vendor_vat_number": "310123456700003",
+        "invoice_date": "2026-08-15",
+        "currency": "SAR",
+        "subtotal": "1000.0",
+        "vat_amount": "150.0",
+        "total_amount": "1150.0"
+      }
+    }
+  },
+  "comparison": {
+    "json": {
+      "matches_all_fields": true,
+      "mismatches": {}
+    },
+    "xlsx": {
+      "matches_all_fields": true,
+      "mismatches": {}
+    },
+    "pdf": {
+      "matches_all_fields": true,
+      "mismatches": {}
+    },
+    "png": {
+      "matches_all_fields": true,
+      "mismatches": {}
+    }
+  }
+}

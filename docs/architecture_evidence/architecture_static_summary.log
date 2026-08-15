@@ -1,0 +1,59 @@
+=== page_views locations ===
+./apps/frontend/page_views.py
+=== metric summary ===
+{
+  "django_apps_with_apps_py": {
+    "count": 37,
+    "names": [
+      "activity_logs",
+      "ai_safety",
+      "alerts",
+      "api_mobile",
+      "assistant",
+      "audit",
+      "audit_engine",
+      "auditing",
+      "authentication",
+      "banking",
+      "billing",
+      "cms",
+      "core_engine",
+      "data_export",
+      "documents",
+      "erp",
+      "file_management",
+      "jobs",
+      "leads",
+      "ledger",
+      "notifications",
+      "organization_admin",
+      "organization_settings",
+      "organization_users",
+      "partners",
+      "payments",
+      "platform_admin",
+      "platform_management",
+      "procurement",
+      "reports",
+      "rule_engine",
+      "storage_management",
+      "streaming",
+      "system_monitoring",
+      "vendor_dashboard",
+      "webhooks",
+      "zatca"
+    ]
+  },
+  "models": {
+    "count": 167,
+    "with_organization": 87,
+    "without_organization": 80
+  },
+  "requirement_entries": 38,
+  "lockfiles": [],
+  "requirements_files": [
+    "requirements.txt"
+  ],
+  "silent_broad_handlers_approximation": 213,
+  "manual_organization_filter_assignments": 2743
+}

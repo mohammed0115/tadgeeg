@@ -1,0 +1,187 @@
+=== blocks_approval source locations ===
+138
+apps/invoices/serializers.py:15:    blocks_approval = serializers.SerializerMethodField()
+apps/invoices/serializers.py:24:    def get_blocks_approval(self, obj):
+apps/invoices/serializers.py:25:        return bool(getattr(obj, "_audit_blocks_approval", True))
+apps/invoices/serializers.py:36:        return "blocked" if self.get_blocks_approval(obj) else "clear"
+apps/invoices/serializers.py:50:            "blocks_approval", "blocking_failures", "requires_manual_review",
+apps/invoices/services/audit_decision.py:29:        _audit_blocks_approval=Coalesce(
+apps/invoices/services/audit_decision.py:30:            Subquery(summaries.values("blocks_approval")[:1]),
+apps/invoices/views.py:688:                has_blocking = risk.blocks_approval
+apps/invoices/views.py:1371:                        if risk.blocks_approval:
+apps/rule_engine/admin.py:24:        "default_severity", "is_active", "is_system_rule", "blocks_approval",
+apps/rule_engine/admin.py:38:            "blocks_approval", "requires_cross_document",
+apps/rule_engine/admin.py:53:        "status", "effective_severity", "effective_blocks_approval",
+apps/rule_engine/admin.py:64:    def effective_blocks_approval(self, obj):
+apps/rule_engine/admin.py:65:        return obj.effective_blocks_approval
+apps/rule_engine/admin.py:66:    effective_blocks_approval.short_description = "Blocks Approval"
+apps/rule_engine/admin.py:67:    effective_blocks_approval.boolean = True
+apps/rule_engine/admin.py:88:        "total_rules", "failed_rules", "blocks_approval",
+apps/rule_engine/admin.py:91:    list_filter = ["status", "document_type", "risk_level", "blocks_approval"]
+apps/rule_engine/admin.py:121:        "risk_contribution", "blocks_approval", "execution_time_ms", "executed_at",
+apps/rule_engine/admin.py:123:    list_filter = ["status", "applied_severity", "blocks_approval"]
+apps/rule_engine/admin.py:138:        "blocking_failures", "blocks_approval", "requires_manual_review", "last_calculated_at",
+apps/rule_engine/admin.py:140:    list_filter = ["risk_level", "blocks_approval", "requires_manual_review", "document_type"]
+apps/rule_engine/catalog/document_rules.py:25:        "blocks_approval":   True,
+apps/rule_engine/catalog/document_rules.py:106:        "blocks_approval":   blocks,
+apps/rule_engine/executors/audit_pipeline.py:104:            audit_run.blocks_approval = risk_data["blocks_approval"]
+apps/rule_engine/executors/audit_pipeline.py:142:            blocks_approval=assignment.effective_blocks_approval,
+apps/rule_engine/executors/audit_pipeline.py:251:                        status="fail", blocks_approval=True
+apps/rule_engine/executors/audit_pipeline.py:257:                    "blocks_approval": risk_data["blocks_approval"],
+apps/rule_engine/management/commands/bootstrap_readiness_window.py:204:            run.blocks_approval = risk_data["blocks_approval"]
+apps/rule_engine/management/commands/generate_golden_master.py:128:                "blocks_approval": bool(run.blocks_approval),
+apps/rule_engine/management/commands/seed_document_audit_rules.py:109:                    "blocks_approval":      bool(r.get("blocks_approval", False)),
+apps/rule_engine/management/commands/seed_document_audit_rules.py:163:                    "blocks_approval_override": (
+apps/rule_engine/management/commands/seed_document_audit_rules.py:164:                        bool(r["blocks_approval"]) if r.get("blocks_approval") else None
+apps/rule_engine/management/commands/seed_gaap_rule_definitions.py:28:# Each tuple: (rule_code, category, rule_type, default_severity, blocks_approval,
+apps/rule_engine/management/commands/seed_gaap_rule_definitions.py:169:                rule_code, category, rule_type, severity, blocks_approval,
+apps/rule_engine/management/commands/seed_gaap_rule_definitions.py:180:                "blocks_approval":    blocks_approval,
+apps/rule_engine/management/commands/seed_rule_assignments.py:14:#              blocks_approval, requires_cross_document, implementation_class,
+apps/rule_engine/management/commands/seed_rule_assignments.py:949:# Format: (rule_code, document_type, applicability, blocks_approval_override)
+apps/rule_engine/management/commands/seed_rule_assignments.py:950:# blocks_approval_override=None means use rule default
+apps/rule_engine/management/commands/seed_rule_assignments.py:1226:                    "blocks_approval": blocks,
+apps/rule_engine/management/commands/seed_rule_assignments.py:1282:                    "blocks_approval_override": blocks_override,
+apps/rule_engine/migrations/0001_initial.py:51:                ('blocks_approval', models.BooleanField(default=False)),
+apps/rule_engine/migrations/0001_initial.py:82:                ('blocks_approval', models.BooleanField(default=False)),
+apps/rule_engine/migrations/0001_initial.py:142:                ('blocking_failures', models.PositiveSmallIntegerField(default=0, help_text='Number of failures on rules marked blocks_approval.')),
+apps/rule_engine/migrations/0001_initial.py:144:                ('blocks_approval', models.BooleanField(default=False)),
+apps/rule_engine/migrations/0001_initial.py:167:                ('blocks_approval_override', models.BooleanField(blank=True, help_text='When set, overrides RuleDefinition.blocks_approval for this assignment.', null=True)),
+apps/rule_engine/migrations/0001_initial.py:189:                ('blocks_approval', models.BooleanField(default=False, help_text='When True a failure on this rule prevents document approval.')),
+apps/rule_engine/migrations/0001_initial.py:323:            index=models.Index(fields=['blocks_approval'], name='re_risk_blocks_approval_idx'),
+apps/rule_engine/migrations/0003_seed_gaap_rules.py:18:        "blocks_approval": True,
+apps/rule_engine/migrations/0003_seed_gaap_rules.py:32:        "blocks_approval": True,
+apps/rule_engine/migrations/0003_seed_gaap_rules.py:46:        "blocks_approval": True,
+apps/rule_engine/migrations/0003_seed_gaap_rules.py:60:        "blocks_approval": False,
+apps/rule_engine/migrations/0003_seed_gaap_rules.py:74:        "blocks_approval": True,
+apps/rule_engine/migrations/0003_seed_gaap_rules.py:88:        "blocks_approval": False,
+apps/rule_engine/migrations/0003_seed_gaap_rules.py:102:        "blocks_approval": False,
+apps/rule_engine/migrations/0003_seed_gaap_rules.py:116:        "blocks_approval": False,
+apps/rule_engine/migrations/0003_seed_gaap_rules.py:158:                    "blocks_approval_override": None,
+apps/rule_engine/migrations/0006_backfill_audit_cases.py:99:                    "blocks_approval": case.severity == "critical",
+apps/rule_engine/migrations/0006_backfill_audit_cases.py:126:                blocks_approval=case.severity == "critical",
+apps/rule_engine/models/audit_execution.py:79:    blocks_approval = models.BooleanField(default=False)
+apps/rule_engine/models/audit_execution.py:155:    blocks_approval = models.BooleanField(default=False)
+apps/rule_engine/models/risk.py:72:        help_text="Number of failures on rules marked blocks_approval.",
+apps/rule_engine/models/risk.py:77:    blocks_approval = models.BooleanField(default=False)
+apps/rule_engine/models/risk.py:108:                fields=["blocks_approval"],
+apps/rule_engine/models/risk.py:109:                name="re_risk_blocks_approval_idx",
+apps/rule_engine/models/rule_assignment.py:71:    - ``blocks_approval_override`` replaces the rule's flag.
+apps/rule_engine/models/rule_assignment.py:136:    blocks_approval_override = models.BooleanField(
+apps/rule_engine/models/rule_assignment.py:140:            "When set, overrides RuleDefinition.blocks_approval for this assignment."
+apps/rule_engine/models/rule_assignment.py:185:    def effective_blocks_approval(self) -> bool:
+apps/rule_engine/models/rule_assignment.py:187:        if self.blocks_approval_override is not None:
+apps/rule_engine/models/rule_assignment.py:188:            return self.blocks_approval_override
+apps/rule_engine/models/rule_assignment.py:189:        return self.rule.blocks_approval
+apps/rule_engine/models/rule_definition.py:76:    blocks_approval = models.BooleanField(
+apps/rule_engine/pipeline/stages/ai_engine.py:208:    if risk.get("blocks_approval"):
+apps/rule_engine/pipeline/stages/decision_engine.py:62:            and getattr(r, "blocks_approval", False)
+apps/rule_engine/pipeline/stages/risk_engine.py:238:            "[risk_engine] score=%.1f level=%s blocks_approval=%s manual_review=%s",
+apps/rule_engine/pipeline/stages/risk_engine.py:241:            risk_data.get("blocks_approval", False),
+apps/rule_engine/pipeline/stages/risk_engine.py:254:            audit_run.blocks_approval = risk_data.get("blocks_approval", False)
+apps/rule_engine/pipeline/stages/risk_engine.py:257:                "requires_manual_review", "blocks_approval",
+apps/rule_engine/pipeline/stages/risk_engine.py:278:                        and getattr(r, "blocks_approval", False)
+apps/rule_engine/pipeline/stages/risk_engine.py:285:                    "blocks_approval": risk_data.get("blocks_approval", False),
+apps/rule_engine/pipeline/stages/risk_engine.py:307:    # The base engine (risk/risk_engine.py) sets blocks_approval in exactly
+apps/rule_engine/pipeline/stages/risk_engine.py:309:    # blocks_approval that failed (:890), a critical-severity failure (:926),
+apps/rule_engine/pipeline/stages/rule_engine.py:102:            blocks_approval=assignment.effective_blocks_approval,
+apps/rule_engine/pipeline/stages/rule_engine.py:139:            result.blocks_approval = bool(
+apps/rule_engine/pipeline/stages/rule_engine.py:140:                result.blocks_approval or getattr(rule_result, "is_blocking", False)
+apps/rule_engine/risk/risk_engine.py:26:  3. BlockingRuleFailOverride           → force minimum HIGH + blocks_approval
+apps/rule_engine/risk/risk_engine.py:42:    print(result.blocks_approval)                  # False
+apps/rule_engine/risk/risk_engine.py:183:    blocks_approval:       bool
+apps/rule_engine/risk/risk_engine.py:205:            "blocks_approval":       self.blocks_approval,
+apps/rule_engine/risk/risk_engine.py:802:        result.blocks_approval = True
+apps/rule_engine/risk/risk_engine.py:874:    Any rule marked blocks_approval=True that fails forces minimum HIGH
+apps/rule_engine/risk/risk_engine.py:875:    and sets blocks_approval=True on the result.
+apps/rule_engine/risk/risk_engine.py:884:            and getattr(r, "blocks_approval", False)
+apps/rule_engine/risk/risk_engine.py:890:        result.blocks_approval = True
+apps/rule_engine/risk/risk_engine.py:899:        msg_en = f"OVERRIDE [{self.NAME}]: Blocking rule failure(s) [{codes}] → blocks_approval=True, minimum HIGH."
+apps/rule_engine/risk/risk_engine.py:900:        msg_ar = f"تجاوز [{self.NAME}]: فشل في قواعد حجب الموافقة [{codes}] → blocks_approval=True، الحد الأدنى HIGH."
+apps/rule_engine/risk/risk_engine.py:926:        result.blocks_approval = True
+apps/rule_engine/risk/risk_engine.py:1069:            blocks_approval=False,
+apps/rule_engine/risk/risk_engine.py:1179:        "blocks_approval", "explanation", "explanation_ar",
+apps/rule_engine/risk/risk_engine.py:1243:        print(f"  Blocks:    {result.blocks_approval}")
+apps/rule_engine/serializers/audit_run_serializers.py:27:            "default_severity", "blocks_approval",
+apps/rule_engine/serializers/audit_run_serializers.py:83:            "risk_contribution", "blocks_approval",
+apps/rule_engine/serializers/audit_run_serializers.py:127:            "blocks_approval", "requires_manual_review",
+apps/rule_engine/serializers/audit_run_serializers.py:134:        return list(obj.results.filter(status="fail", blocks_approval=True).values_list("rule_code", flat=True))
+apps/rule_engine/serializers/audit_run_serializers.py:174:            "requires_manual_review", "blocks_approval",
+apps/rule_engine/services/compatibility/legacy_audit_adapter.py:240:            audit_run.blocks_approval or audit_run.requires_manual_review
+apps/rule_engine/tests/test_risk_engine.py:14:    blocks_approval=False,
+apps/rule_engine/tests/test_risk_engine.py:23:        blocks_approval=blocks_approval,
+apps/rule_engine/tests/test_risk_engine.py:88:    assert risk_data["blocks_approval"] is True
+=== literal six / fixed-format candidate locations ===
+apps/rule_engine/api/urls.py:14:    # Canonical data endpoints (Day 6)
+apps/rule_engine/executors/audit_pipeline.py:106:            # Step 6: Upsert RiskScoreSummary
+apps/rule_engine/management/commands/seed_canonical_fields.py:25:    ("source_filename",   "Source Filename",   "اسم الملف",         "string",  "identity",       ["*"],    True,  False, True,  False, 6),
+apps/rule_engine/management/commands/seed_canonical_fields.py:40:    ("employee_id",       "Employee ID",       "رقم الموظف",        "string",  "counterparty",   ["payroll","expense_report"],                                        False, True,  True,  True,  6),
+apps/rule_engine/management/commands/seed_canonical_fields.py:50:    ("net_amount",        "Net Amount",        "الصافي",            "decimal", "financial",      ["*"],    True,  True,  True,  True,  6),
+apps/rule_engine/management/commands/seed_canonical_fields.py:62:    ("approval_status",   "Approval Status",   "حالة الاعتماد",     "string",  "compliance",     ["purchase_order","expense_report"],                                 False, True,  True,  True,  6),
+apps/rule_engine/management/commands/seed_canonical_fields.py:71:    ("payment_date",      "Payment Date",      "تاريخ الدفع",       "date",    "timeline",       ["payroll","tax_declaration","vat_return"],                          False, False, True,  True,  6),
+apps/rule_engine/management/commands/seed_canonical_fields.py:81:    ("depreciation_method","Depreciation Method","طريقة الإهلاك",   "string",  "classification", ["fixed_asset"],                                                     False, True,  True,  True,  6),
+apps/rule_engine/management/commands/seed_canonical_fields.py:89:    ("employee_count",    "Employee Count",    "عدد الموظفين",      "integer", "hr_payroll",     ["payroll"],                                                         False, True,  True,  True,  6),
+apps/rule_engine/migrations/0001_initial.py:50:                ('risk_contribution', models.DecimalField(decimal_places=2, default=0, max_digits=6)),
+apps/rule_engine/models/audit_execution.py:151:        max_digits=6,
+apps/rule_engine/models/audit_run_v2.py:43:    # ── Stage 6 output (DecisionEngineStage) ──────────────────────────────
+apps/rule_engine/normalizers/phase2_normalizers.py:214:# ── 6. General Ledger ─────────────────────────────────────────────────────────
+apps/rule_engine/pipeline/stages/decision_engine.py:2:DecisionEngineStage — Stage 6 (final) of AuditPipeline V2.
+apps/rule_engine/pipeline/stages/decision_engine.py:25:  6. All clear                 → approve (auto)
+apps/rule_engine/pipeline/stages/decision_engine.py:145:        # ── Priority 6: Clean pass ────────────────────────────────────────
+apps/rule_engine/pipeline/v2/context.py:62:    # ── Stage 6: DecisionEngineStage ────────────────────────────────────────────
+apps/rule_engine/pipeline/v2/pipeline.py:12:  6. DecisionEngineStage      (BaseStage     — failure logged)
+apps/rule_engine/risk/risk_engine.py:120:    off_hours_end:   int = 6                    # 6 AM
+apps/rule_engine/risk/risk_engine.py:1020:            comp.weighted_score = round(comp.raw_score * comp.weight, 6)
+apps/rule_engine/tasks/audit_tasks_v2.py:6:run_audit_v2_task       Primary V2 task — full 6-stage pipeline.
+apps/invoices/models.py:81:    currency          = models.CharField(max_length=3, choices=Currency.choices, blank=True)   # Rule 5 / 6
+apps/invoices/views.py:1317:            "Group 6 — Document Quality": {k: v for k, v in RULES.items() if k.startswith("DOC")},
+core/services/classification/document_classifier.py:229:        absolute_support = min(1.0, best_score / 6)
+core/services/doc_ai_service.py:12:  6. Field confidence scores
+core/services/financial_ai_engine.py:14:  Step 6 — Compliance Validation
+core/services/financial_ai_engine.py:258:        # ── Step 6: Compliance Validation ─────────────────────────────────────
+core/services/invoice_validator.py:9:  Group 4 — Anomaly Detection            (6 rules)
+core/services/invoice_validator.py:10:  Group 5 — Financial Controls           (6 rules)
+core/services/invoice_validator.py:11:  Group 6 — Document Quality             (4 rules)
+core/services/scoring/risk_engine.py:155:        # ── 6. Explainable anomaly signal ─────────────────────────────────────
+=== distinct CTL codes in current source ===
+39
+apps/invoices/migrations/0007_validation_result_json_schema.py:CTL-001
+apps/invoices/migrations/0007_validation_result_json_schema.py:CTL-002
+apps/invoices/migrations/0007_validation_result_json_schema.py:CTL-003
+apps/invoices/migrations/0007_validation_result_json_schema.py:CTL-004
+apps/invoices/migrations/0007_validation_result_json_schema.py:CTL-005
+apps/invoices/migrations/0007_validation_result_json_schema.py:CTL-006
+apps/invoices/models.py:CTL-001
+apps/invoices/models.py:CTL-002
+apps/invoices/views.py:CTL-004
+apps/invoices/views.py:CTL-005
+apps/reports/services/findings_service.py:CTL-001
+apps/reports/services/findings_service.py:CTL-002
+apps/reports/services/findings_service.py:CTL-003
+apps/reports/services/findings_service.py:CTL-004
+apps/reports/services/findings_service.py:CTL-005
+apps/reports/services/findings_service.py:CTL-006
+apps/reports/services/invoice_audit_service.py:CTL-001
+apps/reports/services/invoice_audit_service.py:CTL-002
+apps/reports/services/invoice_audit_service.py:CTL-003
+apps/reports/services/invoice_audit_service.py:CTL-004
+apps/reports/services/invoice_audit_service.py:CTL-005
+apps/reports/services/invoice_audit_service.py:CTL-006
+apps/reports/services/report_data_service.py:CTL-001
+apps/reports/services/report_data_service.py:CTL-002
+apps/reports/services/report_data_service.py:CTL-003
+apps/rule_engine/management/commands/seed_rule_assignments.py:CTL-003
+apps/rule_engine/management/commands/seed_rule_assignments.py:CTL-004
+apps/rule_engine/management/commands/seed_rule_assignments.py:CTL-005
+apps/rule_engine/management/commands/seed_rule_assignments.py:CTL-006
+apps/rule_engine/rules/invoice/control_rules.py:CTL-003
+apps/rule_engine/rules/invoice/control_rules.py:CTL-004
+apps/rule_engine/rules/invoice/control_rules.py:CTL-005
+apps/rule_engine/rules/invoice/control_rules.py:CTL-006
+core/services/invoice_validator.py:CTL-001
+core/services/invoice_validator.py:CTL-002
+core/services/invoice_validator.py:CTL-003
+core/services/invoice_validator.py:CTL-004
+core/services/invoice_validator.py:CTL-005
+core/services/invoice_validator.py:CTL-006
+=== CSP setting declarations ===
+7

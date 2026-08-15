@@ -1,0 +1,27 @@
+=== validator rule construction calls ===
+101
+=== candidate Rule classes by source ===
+137
+=== journal analytics locations ===
+./apps/audit/journal_analytics_models.py
+./apps/audit/migrations/0027_journalanalyticsrun_journalanalyticssummary_and_more.py
+./apps/audit/services/journal_analytics.py
+./apps/audit/tests/test_journal_analytics.py
+./apps/audit/views_journal_analytics.py
+./apps/frontend/journal_analytics_views.py
+./apps/frontend/tests/test_journal_analytics_pages.py
+=== V1/V2 pipeline entrypoints ===
+apps/rule_engine/pipeline/__init__.py
+apps/rule_engine/pipeline/stages/__init__.py
+apps/rule_engine/pipeline/stages/ai_engine.py
+apps/rule_engine/pipeline/stages/base.py
+apps/rule_engine/pipeline/stages/context_builder.py
+apps/rule_engine/pipeline/stages/decision_engine.py
+apps/rule_engine/pipeline/stages/normalizer.py
+apps/rule_engine/pipeline/stages/risk_engine.py
+apps/rule_engine/pipeline/stages/rule_engine.py
+apps/rule_engine/pipeline/stages/three_way_match_stage.py
+apps/rule_engine/pipeline/v2/__init__.py
+apps/rule_engine/pipeline/v2/compat.py
+apps/rule_engine/pipeline/v2/context.py
+apps/rule_engine/pipeline/v2/pipeline.py

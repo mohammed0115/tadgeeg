@@ -1,0 +1,627 @@
+{
+  "assignments": 124,
+  "distinct_codes": 124,
+  "duplicate_codes": [],
+  "records": [
+    {
+      "code": "AI-R01",
+      "class": "LowOCRConfidenceRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/ai_risk/ai_risk_rules.py"
+    },
+    {
+      "code": "AI-R02",
+      "class": "HandwrittenDocumentRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/ai_risk/ai_risk_rules.py"
+    },
+    {
+      "code": "AI-R03",
+      "class": "DocumentAlterationRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/ai_risk/ai_risk_rules.py"
+    },
+    {
+      "code": "AI-R04",
+      "class": "DocumentClarityRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/ai_risk/ai_risk_rules.py"
+    },
+    {
+      "code": "AI-R05",
+      "class": "BenfordsLawRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/ai_risk/ai_risk_rules.py"
+    },
+    {
+      "code": "AI-R06",
+      "class": "HighRiskScoreRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/ai_risk/ai_risk_rules.py"
+    },
+    {
+      "code": "AI-R07",
+      "class": "EmptyAIExtractionRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/ai_risk/ai_risk_rules.py"
+    },
+    {
+      "code": "AI-R08",
+      "class": "DuplicateContentFingerprintRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/ai_risk/ai_risk_rules.py"
+    },
+    {
+      "code": "BNK-M01",
+      "class": "BalanceReconciliationRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/bank_statement/balance_reconciliation_rule.py"
+    },
+    {
+      "code": "BNK-M06",
+      "class": "DuplicateTransactionRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/bank_statement/balance_reconciliation_rule.py"
+    },
+    {
+      "code": "BNK-M08",
+      "class": "IBANFormatRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/bank_statement/balance_reconciliation_rule.py"
+    },
+    {
+      "code": "BNK-M07",
+      "class": "StructuringDetectionRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/bank_statement/balance_reconciliation_rule.py"
+    },
+    {
+      "code": "BNK-M02",
+      "class": "BenfordsLawBankRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/bank_statement/balance_reconciliation_rule.py"
+    },
+    {
+      "code": "BNK-M03",
+      "class": "RoundAmountClusterRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/bank_statement/balance_reconciliation_rule.py"
+    },
+    {
+      "code": "BNK-M04",
+      "class": "WeekendTransactionRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/bank_statement/balance_reconciliation_rule.py"
+    },
+    {
+      "code": "BNK-M05",
+      "class": "LateNightTransactionRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/bank_statement/balance_reconciliation_rule.py"
+    },
+    {
+      "code": "CDR-01",
+      "class": "InvoicePOMatchRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/cross_document/invoice_po_match_rule.py"
+    },
+    {
+      "code": "CDR-03",
+      "class": "PayrollBankReconciliationRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/cross_document/invoice_po_match_rule.py"
+    },
+    {
+      "code": "CDR-02",
+      "class": "ThreeWayMatchRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/cross_document/three_way_match_rule.py"
+    },
+    {
+      "code": "EXP-M01",
+      "class": "MissingReceiptRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/expense/expense_rules.py"
+    },
+    {
+      "code": "EXP-M02",
+      "class": "ExpensePolicyLimitRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/expense/expense_rules.py"
+    },
+    {
+      "code": "EXP-M07",
+      "class": "SelfApprovalRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/expense/expense_rules.py"
+    },
+    {
+      "code": "EXP-M09",
+      "class": "ExpenseTotalMatchRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/expense/expense_rules.py"
+    },
+    {
+      "code": "EXP-M03",
+      "class": "DuplicateExpenseClaimRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/expense/expense_rules.py"
+    },
+    {
+      "code": "EXP-M04",
+      "class": "ExpenseSubmissionDeadlineRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/expense/expense_rules.py"
+    },
+    {
+      "code": "EXP-M05",
+      "class": "SplitTransactionRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/expense/expense_rules.py"
+    },
+    {
+      "code": "AST-M01",
+      "class": "DepreciationCalculationRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/fixed_asset/fixed_asset_rules.py"
+    },
+    {
+      "code": "AST-M02",
+      "class": "NegativeBookValueRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/fixed_asset/fixed_asset_rules.py"
+    },
+    {
+      "code": "AST-M04",
+      "class": "DuplicateAssetIDRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/fixed_asset/fixed_asset_rules.py"
+    },
+    {
+      "code": "CATALOG-STUB",
+      "class": "CatalogStubRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/generic/catalog_stub.py"
+    },
+    {
+      "code": "GEN-H06",
+      "class": "CurrencyRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/generic/currency_rule.py"
+    },
+    {
+      "code": "GEN-H02",
+      "class": "DocumentDateRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/generic/document_date_rule.py"
+    },
+    {
+      "code": "GEN-H01",
+      "class": "DocumentNumberRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/generic/document_number_rule.py"
+    },
+    {
+      "code": "DUP-04",
+      "class": "DuplicateFileHashRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/generic/duplicate_file_hash_rule.py"
+    },
+    {
+      "code": "GEN-H05",
+      "class": "TotalAmountPresentRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/generic/total_amount_rule.py"
+    },
+    {
+      "code": "GEN-H07",
+      "class": "TotalGreaterZeroRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/generic/total_greater_zero_rule.py"
+    },
+    {
+      "code": "CTL-04",
+      "class": "NoEditAfterApprovalRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/generic/workflow_rules.py"
+    },
+    {
+      "code": "CTL-05",
+      "class": "HasApproverRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/generic/workflow_rules.py"
+    },
+    {
+      "code": "CTL-06",
+      "class": "HasAuditTrailRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/generic/workflow_rules.py"
+    },
+    {
+      "code": "CTL-01",
+      "class": "CostCenterRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/generic/workflow_rules.py"
+    },
+    {
+      "code": "GRN-M01",
+      "class": "GRNNumberPresentRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/grn/grn_rules.py"
+    },
+    {
+      "code": "GRN-M02",
+      "class": "GRNDatePresentRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/grn/grn_rules.py"
+    },
+    {
+      "code": "GRN-M03",
+      "class": "GRNLinkedToPORule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/grn/grn_rules.py"
+    },
+    {
+      "code": "GRN-M04",
+      "class": "GRNQuantityMatchRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/grn/grn_rules.py"
+    },
+    {
+      "code": "GRN-M05",
+      "class": "GRNRejectionRateRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/grn/grn_rules.py"
+    },
+    {
+      "code": "GRN-M06",
+      "class": "GRNPriceDeviationRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/grn/grn_rules.py"
+    },
+    {
+      "code": "GRN-M07",
+      "class": "GRNDeliveryOverdueRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/grn/grn_rules.py"
+    },
+    {
+      "code": "GRN-M08",
+      "class": "GRNQualityInspectionRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/grn/grn_rules.py"
+    },
+    {
+      "code": "GRN-M09",
+      "class": "GRNInvoiceAmountMatchRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/grn/grn_rules.py"
+    },
+    {
+      "code": "GRN-M10",
+      "class": "GRNApproverPresentRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/grn/grn_rules.py"
+    },
+    {
+      "code": "ANO-002",
+      "class": "NewVendorRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/anomaly_rules.py"
+    },
+    {
+      "code": "ANO-003",
+      "class": "RoundNumberRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/anomaly_rules.py"
+    },
+    {
+      "code": "CTL-003",
+      "class": "BudgetThresholdRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/control_rules.py"
+    },
+    {
+      "code": "CTL-004",
+      "class": "PostApprovalLockRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/control_rules.py"
+    },
+    {
+      "code": "CTL-005",
+      "class": "SegregationOfDutiesRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/control_rules.py"
+    },
+    {
+      "code": "CTL-006",
+      "class": "AuditTrailCompletenessRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/control_rules.py"
+    },
+    {
+      "code": "DOC-001",
+      "class": "LowOCRConfidenceRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/document_quality_rules.py"
+    },
+    {
+      "code": "DOC-002",
+      "class": "HandwrittenDocumentRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/document_quality_rules.py"
+    },
+    {
+      "code": "DOC-003",
+      "class": "DocumentAlterationRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/document_quality_rules.py"
+    },
+    {
+      "code": "DUP-01",
+      "class": "DuplicateDocumentNumberRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/duplicate_invoice_rule.py"
+    },
+    {
+      "code": "DUP-02",
+      "class": "DuplicateInvoiceRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/duplicate_invoice_rule.py"
+    },
+    {
+      "code": "ANO-01",
+      "class": "AmountAnomalyRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/duplicate_invoice_rule.py"
+    },
+    {
+      "code": "IFRS-15",
+      "class": "RevenueRecognitionTimingRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/ifrs_rules.py"
+    },
+    {
+      "code": "IFRS-2",
+      "class": "ExpenseMatchingRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/ifrs_rules.py"
+    },
+    {
+      "code": "IFRS-1",
+      "class": "GoingConcernIndicatorRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/ifrs_rules.py"
+    },
+    {
+      "code": "IFRS-MAT",
+      "class": "MaterialityThresholdRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/ifrs_rules.py"
+    },
+    {
+      "code": "IFRS-FX",
+      "class": "CurrencyConsistencyRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/ifrs_rules.py"
+    },
+    {
+      "code": "VAT-03",
+      "class": "VATReverseChargeRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/invoice_mandatory_rules.py"
+    },
+    {
+      "code": "INV-M01",
+      "class": "InvoiceVendorNameRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/invoice_mandatory_rules.py"
+    },
+    {
+      "code": "INV-M02",
+      "class": "InvoiceVendorVATRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/invoice_mandatory_rules.py"
+    },
+    {
+      "code": "INV-M03",
+      "class": "InvoiceDueDateRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/invoice_mandatory_rules.py"
+    },
+    {
+      "code": "INV-M04",
+      "class": "InvoiceLineItemsPresenceRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/invoice_mandatory_rules.py"
+    },
+    {
+      "code": "INV-M05",
+      "class": "InvoiceLineItemTotalRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/invoice_mandatory_rules.py"
+    },
+    {
+      "code": "INV-M06",
+      "class": "InvoiceSequenceGapRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/invoice_mandatory_rules.py"
+    },
+    {
+      "code": "IFRS-CON",
+      "class": "ConsolidationBalanceRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/period_close_rules.py"
+    },
+    {
+      "code": "IFRS-DEF",
+      "class": "DeferredRevenueRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/period_close_rules.py"
+    },
+    {
+      "code": "IFRS-ACC",
+      "class": "AccrualCutOffRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/period_close_rules.py"
+    },
+    {
+      "code": "IFRS-LSE",
+      "class": "LeaseClassificationRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/period_close_rules.py"
+    },
+    {
+      "code": "SOCPA-200",
+      "class": "AuditorIndependenceRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/socpa_rules.py"
+    },
+    {
+      "code": "SOCPA-500",
+      "class": "SufficientEvidenceRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/socpa_rules.py"
+    },
+    {
+      "code": "SOCPA-450",
+      "class": "MaterialMisstatementRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/socpa_rules.py"
+    },
+    {
+      "code": "SOCPA-700",
+      "class": "AuditOpinionBasisRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/socpa_rules.py"
+    },
+    {
+      "code": "VAT-02",
+      "class": "VATCalculationRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/vat_calculation_rule.py"
+    },
+    {
+      "code": "VAT-01",
+      "class": "VATRateRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/vat_calculation_rule.py"
+    },
+    {
+      "code": "VAT-04",
+      "class": "VATNumberFormatRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/vat_calculation_rule.py"
+    },
+    {
+      "code": "VAT-05",
+      "class": "ZATCAQRCodeRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/vat_calculation_rule.py"
+    },
+    {
+      "code": "ZATCA-P2",
+      "class": "ZATCAPhase2ConformanceRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/zatca_phase2_rule.py"
+    },
+    {
+      "code": "ZATCA-P3",
+      "class": "ZATCAPIHChainRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/invoice/zatca_pih_chain_rule.py"
+    },
+    {
+      "code": "PMT-M01",
+      "class": "PaymentNumberPresentRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/payment/payment_rules.py"
+    },
+    {
+      "code": "PMT-M02",
+      "class": "PaymentDatePresentRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/payment/payment_rules.py"
+    },
+    {
+      "code": "PMT-M03",
+      "class": "PaymentLinkedToInvoiceRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/payment/payment_rules.py"
+    },
+    {
+      "code": "PMT-M04",
+      "class": "DuplicatePaymentRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/payment/payment_rules.py"
+    },
+    {
+      "code": "PMT-M05",
+      "class": "PaymentApprovalRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/payment/payment_rules.py"
+    },
+    {
+      "code": "PMT-M06",
+      "class": "PaymentExceedsThresholdRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/payment/payment_rules.py"
+    },
+    {
+      "code": "PMT-M07",
+      "class": "PaymentIBANFormatRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/payment/payment_rules.py"
+    },
+    {
+      "code": "PMT-M08",
+      "class": "AdvancePaymentClearanceRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/payment/payment_rules.py"
+    },
+    {
+      "code": "PMT-M09",
+      "class": "LatePaymentRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/payment/payment_rules.py"
+    },
+    {
+      "code": "PMT-M10",
+      "class": "PaymentAmountMatchRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/payment/payment_rules.py"
+    },
+    {
+      "code": "PAY-M04",
+      "class": "NetSalaryArithmeticRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/payroll/net_salary_arithmetic_rule.py"
+    },
+    {
+      "code": "PAY-M03",
+      "class": "GOSICalculationRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/payroll/net_salary_arithmetic_rule.py"
+    },
+    {
+      "code": "PAY-M01",
+      "class": "GhostEmployeeRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/payroll/net_salary_arithmetic_rule.py"
+    },
+    {
+      "code": "PAY-M11",
+      "class": "DuplicateEmployeeIDRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/payroll/net_salary_arithmetic_rule.py"
+    },
+    {
+      "code": "PAY-M02",
+      "class": "SalarySpikeRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/payroll/net_salary_arithmetic_rule.py"
+    },
+    {
+      "code": "PAY-M05",
+      "class": "EmployeeCountConsistencyRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/payroll/net_salary_arithmetic_rule.py"
+    },
+    {
+      "code": "PAY-M06",
+      "class": "PayrollPeriodOverlapRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/payroll/net_salary_arithmetic_rule.py"
+    },
+    {
+      "code": "PO-M01",
+      "class": "POBudgetAvailabilityRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/purchase_order/po_mandatory_rules.py"
+    },
+    {
+      "code": "PO-M02",
+      "class": "POAuthorizationLevelRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/purchase_order/po_mandatory_rules.py"
+    },
+    {
+      "code": "PO-M03",
+      "class": "POThreeQuotationsRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/purchase_order/po_mandatory_rules.py"
+    },
+    {
+      "code": "PO-M04",
+      "class": "POSplittingRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/purchase_order/po_mandatory_rules.py"
+    },
+    {
+      "code": "PO-M05",
+      "class": "PODeliveryDateRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/purchase_order/po_mandatory_rules.py"
+    },
+    {
+      "code": "PO-M07",
+      "class": "POCompletenessRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/purchase_order/po_mandatory_rules.py"
+    },
+    {
+      "code": "PO-M08",
+      "class": "RetroactivePORule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/purchase_order/retroactive_po_rule.py"
+    },
+    {
+      "code": "PO-M06",
+      "class": "VendorApprovedListRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/purchase_order/retroactive_po_rule.py"
+    },
+    {
+      "code": "REC-M01",
+      "class": "QRCodeContentRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/sales_receipt/sales_receipt_rules.py"
+    },
+    {
+      "code": "REC-M03",
+      "class": "CashReceiptLimitRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/sales_receipt/sales_receipt_rules.py"
+    },
+    {
+      "code": "SEC-M01",
+      "class": "SelfApprovalSecurityRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/security/security_rules.py"
+    },
+    {
+      "code": "SEC-M02",
+      "class": "HighValueDualAuthorizationRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/security/security_rules.py"
+    },
+    {
+      "code": "SEC-M03",
+      "class": "BlockedVendorRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/security/security_rules.py"
+    },
+    {
+      "code": "SEC-M04",
+      "class": "WeekendSubmissionRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/security/security_rules.py"
+    },
+    {
+      "code": "SEC-M05",
+      "class": "EditAfterApprovalRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/security/security_rules.py"
+    },
+    {
+      "code": "SEC-M06",
+      "class": "AuditTrailCompletenessRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/security/security_rules.py"
+    },
+    {
+      "code": "TAX-M01",
+      "class": "NetVATArithmeticRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/tax_return/tax_return_rules.py"
+    },
+    {
+      "code": "TAX-M02",
+      "class": "LateFilingRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/tax_return/tax_return_rules.py"
+    },
+    {
+      "code": "TAX-M08",
+      "class": "ZATCAReferenceRule",
+      "file": "/home/ubuntu/tadgeeg-delete/apps/rule_engine/rules/tax_return/tax_return_rules.py"
+    }
+  ]
+}

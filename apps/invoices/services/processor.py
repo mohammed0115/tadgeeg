@@ -80,6 +80,31 @@ def _get_chunk_task():
     return _chunk_task
 
 
+def _is_present_extraction_value(value) -> bool:
+    """Return whether *value* is an extracted value, not an empty placeholder.
+
+    Zero and ``False`` are values: a fallback must not rewrite a parser's
+    explicit conclusion merely because it is numerically or logically false.
+    """
+    return value is not None and value != "" and value != [] and value != {}
+
+
+def _merge_extraction_payloads(*sources: dict | None) -> dict:
+    """Merge extraction sources by filling gaps, never overwriting a value.
+
+    Parser output is passed first and is authoritative. AI output, including
+    a regex fallback after an AI failure, may supplement a missing field but
+    cannot replace a field the parser already extracted.
+    """
+    merged: dict = {}
+    for source in sources:
+        for key, value in (source or {}).items():
+            if key not in merged or not _is_present_extraction_value(merged[key]):
+                if _is_present_extraction_value(value):
+                    merged[key] = value
+    return merged
+
+
 # ── File-type helper ──────────────────────────────────────────────────────────
 
 def _guess_mime(ext: str) -> str:
@@ -350,19 +375,21 @@ def process_single_file(
 
         # ── Step 6: Normalisation ─────────────────────────────────────────────
         normalized_ingestion = ingestion.normalized or {}
+        extraction_payload = _merge_extraction_payloads(
+            ingestion.structured,
+            normalized_ingestion,
+            ai_data,
+        )
+        extraction_payload.update({
+            "raw_text": raw_text,
+            "extraction_method": ingestion.extraction_method,
+            "language": (
+                extraction_payload.get("language")
+                or ingestion.metadata.get("language", "unknown")
+            ),
+        })
         normalization = _normalizer.normalize(
-            {
-                **normalized_ingestion,
-                **(ingestion.structured or {}),
-                **(ai_data or {}),
-                "raw_text": raw_text,
-                "extraction_method": ingestion.extraction_method,
-                "language": (
-                    ai_data.get("language")
-                    or normalized_ingestion.get("language")
-                    or ingestion.metadata.get("language", "unknown")
-                ),
-            },
+            extraction_payload,
             default_currency=getattr(org, "currency", "SAR") or "SAR",
         )
         normalized = normalization.normalized_data

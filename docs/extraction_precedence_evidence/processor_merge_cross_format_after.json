@@ -1,0 +1,138 @@
+{
+  "json": {
+    "ingestion_success": true,
+    "ingestion_method": "json",
+    "selected_parser": {
+      "invoice_number": "XFMT-2026-001",
+      "vendor_name": "Cross Format Supplier Ltd",
+      "vendor_vat_number": "",
+      "invoice_date": "2026-08-15",
+      "currency": "SAR",
+      "subtotal": "1000.0",
+      "vat_amount": "150.0",
+      "total_amount": "1150.0"
+    },
+    "selected_fallback": {
+      "invoice_number": "oice",
+      "vendor_name": "_name\": \"Cross Format Supplier Ltd\",",
+      "vendor_vat_number": "310123456700003",
+      "invoice_date": "26-08-15",
+      "currency": "SAR",
+      "subtotal": 0.0,
+      "vat_amount": 0.0,
+      "total_amount": 0.0
+    },
+    "selected_after_merge": {
+      "invoice_number": "XFMT-2026-001",
+      "vendor_name": "Cross Format Supplier Ltd",
+      "vendor_vat_number": "310123456700003",
+      "invoice_date": "2026-08-15",
+      "currency": "SAR",
+      "subtotal": "1000.0",
+      "vat_amount": "150.0",
+      "total_amount": "1150.0"
+    }
+  },
+  "pdf": {
+    "ingestion_success": true,
+    "ingestion_method": "pdf_text_layer",
+    "selected_parser": {
+      "invoice_number": "",
+      "vendor_name": "",
+      "vendor_vat_number": "",
+      "invoice_date": null,
+      "currency": "SAR",
+      "subtotal": null,
+      "vat_amount": null,
+      "total_amount": null
+    },
+    "selected_fallback": {
+      "invoice_number": "Invoice",
+      "vendor_name": "Cross Format Supplier Ltd",
+      "vendor_vat_number": "310123456700003",
+      "invoice_date": "2026-08-15",
+      "currency": "SAR",
+      "subtotal": 1000.0,
+      "vat_amount": 150.0,
+      "total_amount": 1150.0
+    },
+    "selected_after_merge": {
+      "invoice_number": "Invoice",
+      "vendor_name": "Cross Format Supplier Ltd",
+      "vendor_vat_number": "310123456700003",
+      "invoice_date": "2026-08-15",
+      "currency": "SAR",
+      "subtotal": "1000.0",
+      "vat_amount": "150.0",
+      "total_amount": "1150.0"
+    }
+  },
+  "png": {
+    "ingestion_success": false,
+    "ingestion_method": "extraction_failed",
+    "selected_parser": {
+      "invoice_number": null,
+      "vendor_name": null,
+      "vendor_vat_number": null,
+      "invoice_date": null,
+      "currency": null,
+      "subtotal": null,
+      "vat_amount": null,
+      "total_amount": null
+    },
+    "selected_fallback": {
+      "invoice_number": "",
+      "vendor_name": "",
+      "vendor_vat_number": "",
+      "invoice_date": null,
+      "currency": "SAR",
+      "subtotal": 0.0,
+      "vat_amount": 0.0,
+      "total_amount": 0.0
+    },
+    "selected_after_merge": {
+      "invoice_number": "",
+      "vendor_name": "",
+      "vendor_vat_number": "",
+      "invoice_date": null,
+      "currency": "SAR",
+      "subtotal": "0.0",
+      "vat_amount": "0.0",
+      "total_amount": "0.0"
+    }
+  },
+  "xlsx": {
+    "ingestion_success": true,
+    "ingestion_method": "excel",
+    "selected_parser": {
+      "invoice_number": "",
+      "vendor_name": "",
+      "vendor_vat_number": "",
+      "invoice_date": null,
+      "currency": "SAR",
+      "subtotal": null,
+      "vat_amount": null,
+      "total_amount": null
+    },
+    "selected_fallback": {
+      "invoice_number": "oice",
+      "vendor_name": "_name Cross Format Supplier Ltd",
+      "vendor_vat_number": "310123456700003",
+      "invoice_date": "2026-08-15",
+      "currency": "SAR",
+      "subtotal": 1000.0,
+      "vat_amount": 0.0,
+      "total_amount": 0.0
+    },
+    "selected_after_merge": {
+      "invoice_number": "oice",
+      "vendor_name": "_name Cross Format Supplier Ltd",
+      "vendor_vat_number": "310123456700003",
+      "invoice_date": "2026-08-15",
+      "currency": "SAR",
+      "subtotal": "1000.0",
+      "vat_amount": "0.0",
+      "total_amount": "1000.0"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+=== git status ===
+=== local head ===
+[33m12a5e96[m docs: add measured architecture baseline
+=== remote head ===
+[33m12a5e96[m docs: add measured architecture baseline
+=== test collection ===
+Coverage HTML written to dir htmlcov
+FAIL Required test coverage of 45% not reached. Total coverage: 28.58%
+4035 tests collected in 28.32s
+=== DEBUG=False runtime setting ===
+[2026-08-15 11:02:10,130] INFO billing.quota_gate [quota_gate] installed around run_audit_compat
+194 objects imported automatically (use -v 2 for details).
+
+DEBUG : False
+static: CompressedManifestStaticFilesStorage

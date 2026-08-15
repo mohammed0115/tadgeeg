@@ -1,0 +1,22 @@
+194 objects imported automatically (use -v 2 for details).
+
+{
+  "documents": [
+    {
+      "id": "821b4756-a41d-435f-aa55-f0018c4c8303",
+      "original_filename": "frontend_ui_invoice.json",
+      "document_type": "invoice",
+      "processing_status": "pending",
+      "created_at": "2026-08-15 08:13:58.602746+00:00"
+    },
+    {
+      "id": "41855c27-8903-4bb1-a8e0-8d2a141fde5d",
+      "original_filename": "frontend_ui_invoice.json",
+      "document_type": "invoice",
+      "processing_status": "pending",
+      "created_at": "2026-08-15 08:13:57.063611+00:00"
+    }
+  ],
+  "audit_runs": [],
+  "risk_summaries": []
+}

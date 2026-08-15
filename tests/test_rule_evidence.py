@@ -109,3 +109,32 @@ def test_the_human_message_is_kept_alongside_the_structured_evidence(invoice, or
     details = run_all_rules(invoice, organization)["rule_details"]["VAT-003"]
     assert details["message"]
     assert details["description"]
+
+
+@pytest.mark.django_db
+def test_ctl006_fails_when_an_invoice_has_no_audit_trail(invoice, organization):
+    """The validator must use the recorded event relation, not a literal pass."""
+    details = run_all_rules(invoice, organization)
+
+    assert details["rule_details"]["CTL-006"]["passed"] is False
+    assert details["rule_details"]["CTL-006"]["message"] == "لا يوجد سجل تدقيق للفواتير"
+    assert "CTL-006" in details["failed_rule_codes"]
+
+
+@pytest.mark.django_db
+def test_ctl006_passes_when_an_invoice_has_a_real_audit_event(invoice, organization, admin_user):
+    """A persisted audit event is the positive evidence consumed by CTL-006."""
+    from apps.invoices.models import InvoiceAuditEvent
+
+    InvoiceAuditEvent.objects.create(
+        invoice=invoice,
+        user=admin_user,
+        event_type=InvoiceAuditEvent.EventType.UPLOADED,
+        description="Uploaded for CTL-006 guard",
+    )
+
+    details = run_all_rules(invoice, organization)
+
+    assert details["rule_details"]["CTL-006"]["passed"] is True
+    assert details["rule_details"]["CTL-006"]["message"] == "سجل التدقيق موجود للفواتير"
+    assert "CTL-006" not in details["failed_rule_codes"]

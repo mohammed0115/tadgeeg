@@ -496,8 +496,12 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
 
     # CTL-006: audit trail exists
     has_trail = invoice.audit_events.exists() if invoice.pk else False
-    results["CTL-006"] = _rule(True, RULES["CTL-006"], "سجل التدقيق يُحفظ تلقائياً")
-    _record(True, "CTL-006", passed, failed)
+    results["CTL-006"] = _rule(
+        has_trail,
+        RULES["CTL-006"],
+        "سجل التدقيق موجود للفواتير" if has_trail else "لا يوجد سجل تدقيق للفواتير",
+    )
+    _record(has_trail, "CTL-006", passed, failed)
 
     # ─── Group 6: Document Quality ───────────────────────────────────────────
 

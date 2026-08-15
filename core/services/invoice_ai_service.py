@@ -349,7 +349,7 @@ def _fallback_extraction(raw_text: str) -> dict:
 
     invoice_number = _find_first_match(
         [
-            r"(?:invoice\s*(?:no\.?|number|#)?|inv\s*#?|رقم\s*الفاتورة|فاتورة\s*رقم|رقم\s*المرجع)\s*[:#-]?\s*([A-Z0-9\-/]{3,})",
+            r"(?im)^\s*(?:invoice\s*(?:no\.?|number|#)|inv\s*#|رقم\s*الفاتورة|فاتورة\s*رقم|رقم\s*المرجع)\s*[:#-]?\s*([A-Z0-9][A-Z0-9\-/]{2,})\b",
         ],
         normalized_text,
     )

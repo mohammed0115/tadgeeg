@@ -91,3 +91,22 @@ def test_xlsx_row_values_survive_a_failed_text_fallback(tmp_path):
     assert normalized["subtotal"] == 1000.0
     assert normalized["vat_amount"] == 150.0
     assert normalized["total_amount"] == 1150.0
+
+
+
+def test_pdf_text_fallback_uses_the_invoice_number_label_not_the_document_title():
+    fallback = _fallback_extraction(
+        """TAX INVOICE
+Invoice Number: INV-PDF-2026-001
+Invoice Date: 2026-08-15
+Vendor: PDF Supplier Ltd
+Subtotal: 1000.00 SAR
+VAT Amount: 150.00 SAR
+Grand Total: 1150.00 SAR
+"""
+    )
+
+    assert fallback["invoice_number"] == "INV-PDF-2026-001"
+    assert fallback["subtotal"] == 1000.0
+    assert fallback["vat_amount"] == 150.0
+    assert fallback["total_amount"] == 1150.0

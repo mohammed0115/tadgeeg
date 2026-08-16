@@ -1748,17 +1748,21 @@ msgid ""
 "Segregation of Duties: the user who uploaded an invoice cannot %(action)s "
 "it. A different user must perform this step."
 msgstr ""
+"فصل المهام: من رفع الفاتورة لا يمكنه %(action)s. يجب أن ينفّذ هذه الخطوة "
+"مستخدم آخر."
 
 #: apps/invoices/services/sod_service.py:62
 msgid ""
 "Segregation of Duties: the reviewer of an invoice cannot also approve it. A "
 "different user must approve."
 msgstr ""
+"فصل المهام: من راجع الفاتورة لا يمكنه اعتمادها أيضاً. يجب أن يعتمدها مستخدم "
+"آخر."
 
 #: apps/invoices/services/sod_service.py:65
 #, python-format
 msgid "Segregation of Duties violated for action: %(action)s"
-msgstr ""
+msgstr "مخالفة فصل المهام في الإجراء: %(action)s"
 
 #: apps/invoices/views.py:137
 #: templates/reports/document_audit_report.html:1134
@@ -3165,6 +3169,7 @@ msgid ""
 "Segregation of Duties: the user who created this record cannot also "
 "%(stage)s it."
 msgstr ""
+"فصل المهام: من أنشأ هذا السجل لا يمكنه %(stage)s أيضاً."
 
 #: core/audit/sod.py:53
 msgid "Segregation of Duties: the reviewer cannot also approve."

@@ -148,26 +148,35 @@ for env_file in "$SCRIPT_DIR"/env/*.env; do
 done
 shopt -u nullglob
 
-if ! git fetch origin "$BRANCH"; then
-  err "Branch '$BRANCH' not found on origin."
-  echo "    Push it first, or pass the branch: bash update.sh $TARGET <branch>"
+# A production release must resolve to an immutable tag commit. Branch names
+# remain supported for dev/test, but a tag is fetched and reset exactly once.
+if git ls-remote --exit-code --tags origin "refs/tags/$BRANCH" >/dev/null 2>&1; then
+  git fetch --no-tags origin "refs/tags/$BRANCH:refs/tags/$BRANCH"
+  RELEASE_REF="refs/tags/$BRANCH^{commit}"
+  RELEASE_LABEL="tag:$BRANCH"
+elif git fetch origin "$BRANCH"; then
+  RELEASE_REF="origin/$BRANCH"
+  RELEASE_LABEL="branch:$BRANCH"
+else
+  err "No branch or tag named '$BRANCH' found on origin."
+  echo "    Push it first, or pass a branch/tag: bash update.sh $TARGET <ref>"
   exit 1
 fi
 
 # Say what is about to be discarded. `reset --hard` is silent about local
 # commits, and a deploy is exactly when someone discovers a hotfix only ever
 # existed on the server.
-BEHIND_BY=$(git rev-list --count "origin/$BRANCH..HEAD" 2>/dev/null || echo 0)
+BEHIND_BY=$(git rev-list --count "$RELEASE_REF..HEAD" 2>/dev/null || echo 0)
 if [ "$BEHIND_BY" -gt 0 ]; then
-  err "$BEHIND_BY local commit(s) on this checkout are NOT on origin/$BRANCH."
-  git log --oneline "origin/$BRANCH..HEAD" | sed 's/^/      /'
+  err "$BEHIND_BY local commit(s) on this checkout are not on $RELEASE_LABEL."
+  git log --oneline "$RELEASE_REF..HEAD" | sed 's/^/      /'
   echo "    reset --hard would discard them. Push or stash them, then re-run."
   exit 1
 fi
 
-git reset --hard "origin/$BRANCH"
+git reset --hard "$RELEASE_REF"
 COMMIT=$(git log -1 --format="%h — %s (%ar)")
-ok "HEAD: $COMMIT  [$BRANCH]"
+ok "HEAD: $COMMIT  [$RELEASE_LABEL]"
 
 # Restore env files in case the reset removed or modified them.
 for backup in "$ENV_BACKUP_DIR"/*.env; do

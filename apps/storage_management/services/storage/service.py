@@ -442,13 +442,13 @@ class StorageService:
             )
 
     def _compute_checksum(self, file_obj: IO) -> str:
-        """Compute MD5 checksum of the file content."""
-        md5 = hashlib.md5()
+        """Compute a collision-resistant SHA-256 checksum of file content."""
+        digest = hashlib.sha256()
         file_obj.seek(0)
         for chunk in iter(lambda: file_obj.read(8192), b""):
-            md5.update(chunk)
+            digest.update(chunk)
         file_obj.seek(0)
-        return md5.hexdigest()
+        return digest.hexdigest()
 
     def _log(
         self,

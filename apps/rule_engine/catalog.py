@@ -301,7 +301,7 @@ def _infer_doc_types(rule_identifier: str) -> list[str]:
 
 
 def _stable_code_number(seed: str) -> int:
-    digest = hashlib.md5(seed.encode("utf-8")).hexdigest()
+    digest = hashlib.sha256(seed.encode("utf-8")).hexdigest()
     return (int(digest[:8], 16) % 900) + 100
 
 

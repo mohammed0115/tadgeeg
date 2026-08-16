@@ -12,11 +12,16 @@ import requests
 from core.security.outbound_guard import assert_outbound_allowed
 
 
+DEFAULT_TIMEOUT_SECONDS = 10
+
+
 def http_post(url, **kwargs):
     assert_outbound_allowed(url)
-    return requests.post(url, **kwargs)
+    timeout = kwargs.pop("timeout", DEFAULT_TIMEOUT_SECONDS)
+    return requests.post(url, timeout=timeout, **kwargs)
 
 
 def http_get(url, **kwargs):
     assert_outbound_allowed(url)
-    return requests.get(url, **kwargs)
+    timeout = kwargs.pop("timeout", DEFAULT_TIMEOUT_SECONDS)
+    return requests.get(url, timeout=timeout, **kwargs)

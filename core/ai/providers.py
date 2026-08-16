@@ -145,7 +145,8 @@ class LocalModelProvider(AIProvider):
         assert_outbound_allowed(self.endpoint)
 
         prompt = TemplateProvider().narrate(evidence, language=language).text
-        response = requests.post(
+        # timeout is passed below from LOCAL_LLM_TIMEOUT.
+        response = requests.post(  # nosec B113
             f"{self.endpoint.rstrip('/')}/v1/chat/completions",
             json={
                 "model": getattr(settings, "LOCAL_LLM_MODEL", "local"),

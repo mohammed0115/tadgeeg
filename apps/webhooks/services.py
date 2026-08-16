@@ -81,6 +81,16 @@ def _deliver(delivery_id) -> None:
         return
 
     ep = d.endpoint
+    from core.security.outbound_guard import assert_outbound_allowed
+    try:
+        assert_outbound_allowed(ep.url)
+    except ValueError as exc:
+        d.status = WebhookDelivery.Status.EXHAUSTED
+        d.last_response_body = f"outbound URL rejected: {exc}"[:2000]
+        d.completed_at = timezone.now()
+        d.save(update_fields=["status", "last_response_body", "completed_at", "updated_at"])
+        return
+
     body = json.dumps(d.payload, ensure_ascii=False, sort_keys=True, default=str).encode("utf-8")
     headers = {
         "Content-Type": "application/json",
@@ -98,7 +108,8 @@ def _deliver(delivery_id) -> None:
     status_code = None
 
     try:
-        with urllib.request.urlopen(req, timeout=8) as resp:
+        # The outbound guard above restricts scheme and destination.
+        with urllib.request.urlopen(req, timeout=8) as resp:  # nosec B310
             status_code = resp.status
             response_body = resp.read(2048).decode("utf-8", errors="replace")
             success = 200 <= status_code < 300

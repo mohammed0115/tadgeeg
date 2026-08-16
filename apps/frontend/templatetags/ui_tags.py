@@ -16,7 +16,7 @@ from pathlib import Path
 
 from django import template
 from django.conf import settings
-from django.utils.safestring import mark_safe
+from django.utils.html import format_html
 
 register = template.Library()
 logger = logging.getLogger("frontend.ui_tags")
@@ -107,4 +107,4 @@ def csp_nonce_meta(context):
     nonce = getattr(request, "csp_nonce", "") if request else ""
     if not nonce:
         return ""
-    return mark_safe(f'<meta name="csp-nonce" content="{nonce}">')
+    return format_html('<meta name="csp-nonce" content="{}">', nonce)

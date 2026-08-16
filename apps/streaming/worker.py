@@ -51,6 +51,7 @@ def handle_event(event: bus.Event,
         "ok":         True,
     }
     hit_count = 0
+    failure = None
 
     try:
         hits = det.evaluate_all(event, detectors)
@@ -69,6 +70,7 @@ def handle_event(event: bus.Event,
         logger.exception("[worker] event handler crashed: %s", exc)
         log_kwargs["ok"] = False
         log_kwargs["error_message"] = str(exc)[:240]
+        failure = exc
 
     latency_ms = int((time.monotonic() - started) * 1000)
     log_kwargs["latency_ms"] = latency_ms
@@ -78,6 +80,9 @@ def handle_event(event: bus.Event,
         StreamProcessingLog.objects.create(**log_kwargs)
     except Exception as exc:
         logger.warning("[worker] log row write failed: %s", exc)
+
+    if failure is not None:
+        raise failure
 
     return {
         "processed":  1,
@@ -96,28 +101,23 @@ def _persist_hit(hit: det.AnomalyHit) -> None:
     of whether channel delivery succeeded.
     """
     from apps.streaming.models import AnomalyHit as Hit
-    saved = None
-    try:
-        saved = Hit.objects.create(
-            organization_id=hit.organization_id,
-            detector=hit.detector,
-            severity=hit.severity,
-            invoice_id=hit.invoice_id,
-            vendor_name=hit.vendor_name,
-            explanation=hit.explanation,
-            details=hit.details,
-            occurred_at=timezone.now(),
-        )
-    except Exception as exc:
-        logger.warning("[worker] AnomalyHit persist failed: %s", exc)
+    saved = Hit.objects.create(
+        organization_id=hit.organization_id,
+        detector=hit.detector,
+        severity=hit.severity,
+        invoice_id=hit.invoice_id,
+        vendor_name=hit.vendor_name,
+        explanation=hit.explanation,
+        details=hit.details,
+        occurred_at=timezone.now(),
+    )
 
-    # Phase 3.2 — fan out to alert channels.
-    if saved is not None:
-        try:
-            from apps.alerts.dispatcher import dispatch_for_anomaly
-            dispatch_for_anomaly(saved)
-        except Exception as exc:
-            logger.warning("[worker] alert dispatch failed: %s", exc)
+    # Alerting remains a downstream best-effort concern; persistence does not.
+    try:
+        from apps.alerts.dispatcher import dispatch_for_anomaly
+        dispatch_for_anomaly(saved)
+    except Exception as exc:
+        logger.warning("[worker] alert dispatch failed: %s", exc)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

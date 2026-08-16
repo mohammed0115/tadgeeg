@@ -46,6 +46,48 @@ err() { printf '\033[1;31m  ✗ %s\033[0m\n' "$1"; }
 
 compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
 
+backup_live_database() {
+  # Migrations are writers. A deploy must never mutate the live schema without
+  # a restorable, point-in-time dump created before code or containers change.
+  case "$TARGET" in
+    live|all) ;;
+    *) return 0 ;;
+  esac
+
+  local backup_root="$PROJECT_ROOT/backups/mysql/live"
+  local stamp dump_tmp dump_gz checksum
+  stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+  dump_tmp="$backup_root/tadgeeg-live-${stamp}.sql"
+  dump_gz="${dump_tmp}.gz"
+  checksum="${dump_gz}.sha256"
+
+  if ! compose ps --status running --services 2>/dev/null | grep -qx "db_live"; then
+    err "db_live is not running; cannot create the mandatory pre-migration backup."
+    exit 1
+  fi
+
+  umask 077
+  mkdir -p "$backup_root"
+  log "Creating pre-migration MySQL backup ..."
+  if ! compose exec -T db_live sh -c \
+    'exec mysqldump --single-transaction --routines --events --hex-blob -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' \
+    > "$dump_tmp"; then
+    rm -f "$dump_tmp"
+    err "Pre-migration database backup failed; deployment aborted."
+    exit 1
+  fi
+
+  if [ ! -s "$dump_tmp" ]; then
+    rm -f "$dump_tmp"
+    err "Pre-migration database backup was empty; deployment aborted."
+    exit 1
+  fi
+
+  gzip -f "$dump_tmp"
+  sha256sum "$dump_gz" > "$checksum"
+  ok "Pre-migration backup: $dump_gz"
+}
+
 # Which env files a target needs. Referenced by the pre-flight checks below.
 envs_for_target() {
   case "$1" in
@@ -88,9 +130,10 @@ echo ""
 
 START_TIME=$(date +%s)
 
-# ── 1. Git pull ────────────────────────────────────────────────────────────────
-log "1/4  Pulling latest code from origin/$BRANCH ..."
+# ── 1. Database backup + Git pull ─────────────────────────────────────────────
+log "1/4  Backing up live data and pulling latest code from origin/$BRANCH ..."
 cd "$PROJECT_ROOT"
+backup_live_database
 
 # Safety net: preserve env files across the git reset. They are gitignored
 # today, but git reset --hard would still wipe them if a future commit ever

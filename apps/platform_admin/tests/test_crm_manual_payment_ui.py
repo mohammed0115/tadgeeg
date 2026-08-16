@@ -192,10 +192,11 @@ def test_add_with_usable_subscription_no_write(client, finance_user, organizatio
 
 
 # ══ Confirm view ══════════════════════════════════════════════════════════════
-def test_confirm_marks_paid_and_activates(client, finance_user, organization):
+def test_confirm_marks_paid_and_activates(client, finance_user, organization, django_capture_on_commit_callbacks):
     payment = _pending_manual(finance_user, organization)
     client.force_login(finance_user)
-    resp = client.post(_confirm_url(organization, payment), {"reason": "received"})
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = client.post(_confirm_url(organization, payment), {"reason": "received"})
     assert resp.status_code == 302
     payment.refresh_from_db()
     assert payment.status == PaymentStatus.PAID

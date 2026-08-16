@@ -29,6 +29,7 @@ from typing import Optional
 from django.db import models, transaction
 from django.utils import timezone
 
+from apps.authentication.models import Organization
 from apps.ledger.models import (
     Account, ExchangeRate, JournalEntry, JournalLine,
 )
@@ -200,6 +201,11 @@ def post_entry(*,
       • a line has both debit and credit (or neither)
       • totals don't balance after FX conversion
     """
+    # Serialize numbering and idempotent posting per organization. The
+    # JournalEntry uniqueness constraint remains the final backstop, while this
+    # lock prevents two writers from calculating the same next sequence number.
+    organization = Organization.objects.select_for_update().get(pk=organization.pk)
+
     # Idempotency check — a repeat call with the same key returns the
     # original entry instead of creating a duplicate.
     if idempotency_key:

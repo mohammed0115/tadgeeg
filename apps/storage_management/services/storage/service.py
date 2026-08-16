@@ -5,6 +5,7 @@ backend I/O, model persistence, and activity logging.
 import hashlib
 import logging
 import os
+import subprocess
 from typing import IO, Optional
 
 from apps.storage_management.exceptions import (
@@ -218,6 +219,26 @@ class StorageService:
                     f"MIME type '{mime}' is not permitted. "
                     f"Allowed: {', '.join(policy.allowed_mime_types)}."
                 )
+
+        if policy.antivirus_scan_enabled:
+            self._scan_antivirus(file_obj)
+
+    def _scan_antivirus(self, file_obj: IO) -> None:
+        """Fail closed when a policy requires antivirus scanning."""
+        try:
+            file_obj.seek(0)
+            scan = subprocess.run(
+                ["clamscan", "--no-summary", "-"],
+                input=file_obj.read(), capture_output=True, check=False, timeout=60,
+            )
+            file_obj.seek(0)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise StorageValidationError("Antivirus scan is required but unavailable.") from exc
+        if scan.returncode == 0:
+            return
+        if scan.returncode == 1:
+            raise StorageValidationError("Uploaded file failed antivirus scanning.")
+        raise StorageValidationError("Antivirus scan could not complete safely.")
 
     # ------------------------------------------------------------------
     # Delete

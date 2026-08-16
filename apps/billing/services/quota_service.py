@@ -20,6 +20,7 @@ import logging
 from typing import Optional
 
 from django.db import transaction
+from django.db.models import Sum
 from django.utils import timezone
 
 from apps.billing.choices import (
@@ -152,33 +153,23 @@ class QuotaService:
         if sub is None:
             raise NoActiveSubscription("No active subscription for this organization.")
 
-        # Idempotency: skip if there's already a reserve for this document
-        # that hasn't been consumed or released.
-        if document is not None:
-            already = UsageLedger.objects.filter(
-                organization=organization,
-                document=document,
-                action=UsageAction.RESERVE,
-            ).exists()
-            consumed_or_released = UsageLedger.objects.filter(
-                organization=organization,
-                document=document,
-                action__in=(UsageAction.CONSUME, UsageAction.RELEASE),
-            ).exists()
-            if already and not consumed_or_released:
-                return (
-                    UsageLedger.objects
-                    .filter(organization=organization, document=document,
-                            action=UsageAction.RESERVE)
-                    .order_by("-created_at")
-                    .first()
-                )
-
         locked = (
             OrganizationSubscription.objects
             .select_for_update()
             .get(pk=sub.pk)
         )
+        # Re-check after acquiring the subscription lock: concurrent callers
+        # must see the first committed reservation before they update counters.
+        if document is not None:
+            existing = (UsageLedger.objects.filter(
+                organization=organization, document=document, action=UsageAction.RESERVE,
+            ).order_by("-created_at").first())
+            settled = UsageLedger.objects.filter(
+                organization=organization, document=document,
+                action__in=(UsageAction.CONSUME, UsageAction.RELEASE),
+            ).exists()
+            if existing is not None and not settled:
+                return existing
 
         # This is the row-locked write path and the decisive one: can_audit is
         # advisory, this is what actually refuses. It therefore has to read the
@@ -268,8 +259,17 @@ class QuotaService:
             .get(pk=sub.pk)
         )
 
-        # Decrement reserved (clamped at 0 so a stray double-consume
-        # doesn't underflow the unsigned column), increment used.
+        if document is not None:
+            reserved = UsageLedger.objects.filter(
+                organization=organization, document=document, action=UsageAction.RESERVE,
+            ).aggregate(total=Sum("quantity"))["total"] or 0
+            settled = UsageLedger.objects.filter(
+                organization=organization, document=document,
+                action__in=(UsageAction.CONSUME, UsageAction.RELEASE),
+            ).aggregate(total=Sum("quantity"))["total"] or 0
+            if reserved - settled < quantity:
+                raise QuotaError("Cannot consume quota without a matching reservation.")
+
         locked.reserved_invoices = max(0, locked.reserved_invoices - quantity)
         locked.used_invoices    += quantity
         locked.save(update_fields=["reserved_invoices", "used_invoices", "updated_at"])
@@ -315,9 +315,17 @@ class QuotaService:
                     .first()
                 )
 
-        sub = self.get_active_subscription(organization)
+        reserve = None
+        if document is not None:
+            reserve = (UsageLedger.objects.filter(
+                organization=organization, document=document, action=UsageAction.RESERVE,
+            ).order_by("-created_at").first())
+            if reserve is None:
+                raise QuotaError("Cannot release quota without a matching reservation.")
+
+        sub = reserve.subscription if reserve is not None else self.get_active_subscription(organization)
         if sub is None:
-            raise NoActiveSubscription("Cannot release — no active subscription.")
+            raise NoActiveSubscription("Cannot release — no active subscription or reservation.")
 
         locked = (
             OrganizationSubscription.objects

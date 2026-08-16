@@ -463,6 +463,12 @@ def process_bulk_upload_job(self, job_id: str) -> dict:
 
     except Exception as exc:
         logger.exception("[Bulk] Job %s failed: %s", job_id, exc)
+        if self.request.retries < self.max_retries:
+            job.status = BulkUploadJob.Status.PENDING
+            job.summary = {**(job.summary or {}), "last_retry_error": str(exc)[:500]}
+            job.save(update_fields=["status", "summary"])
+            raise self.retry(exc=exc)
+
         job.status = BulkUploadJob.Status.FAILED
         job.summary = {**(job.summary or {}), "error": str(exc)[:500]}
         job.finished_at = _tz.now()

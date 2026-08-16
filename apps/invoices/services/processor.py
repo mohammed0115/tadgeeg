@@ -29,9 +29,10 @@ import io
 import json
 import logging
 import os
+import re
 import time
 import zipfile
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.core.files.base import ContentFile
 from django.db import transaction
@@ -103,6 +104,133 @@ def _merge_extraction_payloads(*sources: dict | None) -> dict:
                 if _is_present_extraction_value(value):
                     merged[key] = value
     return merged
+
+
+# ── Amount corroboration ──────────────────────────────────────────────────────
+
+_MONEY_FIELDS = ("subtotal", "vat_amount", "total_amount", "discount")
+
+
+def _as_decimal(value):
+    """Return *value* as a Decimal, or None when it is not a number."""
+    try:
+        return Decimal(str(value).replace(",", "").strip())
+    except (InvalidOperation, AttributeError, TypeError, ValueError):
+        return None
+
+
+def _amount_appears_in_text(value, text: str) -> bool:
+    """True when *value* occurs in *text* as a standalone figure.
+
+    The digit boundary is the whole point. A truncated candidate is a substring
+    of the correct one — `44,213,841.50` sits inside `844,213,841.50` — so a
+    plain `in` test corroborates both and decides nothing.
+    """
+    amount = _as_decimal(value)
+    if amount is None:
+        return False
+
+    forms: set[str] = set()
+    for places in (2, 1, 0):
+        quantized = amount.quantize(Decimal(1).scaleb(-places))
+        forms.add(f"{quantized:f}")
+        forms.add(f"{quantized:,f}")
+
+    return any(
+        re.search(rf"(?<![\d.,]){re.escape(form)}(?![\d])", text)
+        for form in forms
+    )
+
+
+def _line_item_amount(item: dict):
+    """The amount of a line item, under whichever key its producer used."""
+    if not isinstance(item, dict):
+        return None
+    return item.get("total") or item.get("amount") or item.get("line_total")
+
+
+def _prefer_text_corroborated_line_items(payload: dict, sources, raw_text: str) -> dict:
+    """Choose the line-item table the document actually supports.
+
+    Extractors produced two different tables for the same purchase order: one of
+    four rows, two of whose amounts appear nowhere in the document, and one of
+    five rows every amount of which is printed on it. The merge took the first,
+    so the reviewer saw a table containing two invented figures and never saw a
+    line worth 453,551,960.
+
+    Counting corroborated amounts settles it without trusting either producer.
+    On a tie nothing changes, so single-source structured rows are untouched.
+    """
+    if not raw_text:
+        return payload
+
+    candidates = []
+    for source in sources:
+        items = (source or {}).get("line_items")
+        if isinstance(items, list) and items:
+            candidates.append(items)
+    if len(candidates) < 2:
+        return payload
+
+    def score(items):
+        return sum(
+            1 for item in items
+            if _amount_appears_in_text(_line_item_amount(item), raw_text)
+        )
+
+    best = max(candidates, key=score)
+    if score(best) > score(payload.get("line_items") or []):
+        logger.info(
+            "[Extraction] line_items: chose the %d-row table (%d/%d amounts "
+            "corroborated) over the %d-row table",
+            len(best), score(best), len(best),
+            len(payload.get("line_items") or []),
+        )
+        payload["line_items"] = best
+    return payload
+
+
+def _prefer_text_corroborated_amounts(payload: dict, sources, raw_text: str) -> dict:
+    """Let the document settle disagreements between extractors about money.
+
+    Extractors disagree in ways that are invisible downstream: one read a purchase
+    order's total as `844,213,841.50` and another as `44,213,841.50`, and the merge
+    took whichever source came first. Both are plausible numbers; only one is
+    printed on the document. Where the sources disagree and exactly one candidate
+    appears verbatim in the extracted text, that candidate wins.
+
+    Deliberately conservative. With fewer than two distinct candidates there is no
+    disagreement to settle, so structured CSV/Excel rows — which carry a single
+    authoritative value — are never touched.
+    """
+    if not raw_text:
+        return payload
+
+    for field_name in _MONEY_FIELDS:
+        candidates = [
+            (source or {}).get(field_name)
+            for source in sources
+            if _is_present_extraction_value((source or {}).get(field_name))
+        ]
+        distinct = {d for d in (_as_decimal(c) for c in candidates) if d is not None}
+        if len(distinct) < 2:
+            continue
+
+        corroborated = {
+            d for d in distinct if _amount_appears_in_text(d, raw_text)
+        }
+        if len(corroborated) == 1:
+            chosen = corroborated.pop()
+            if _as_decimal(payload.get(field_name)) != chosen:
+                logger.info(
+                    "[Extraction] %s: sources disagreed %s; document corroborates %s",
+                    field_name,
+                    sorted(str(d) for d in distinct),
+                    chosen,
+                )
+            payload[field_name] = chosen
+
+    return payload
 
 
 # ── File-type helper ──────────────────────────────────────────────────────────
@@ -380,6 +508,13 @@ def process_single_file(
             normalized_ingestion,
             ai_data,
         )
+        _extraction_sources = (ingestion.structured, normalized_ingestion, ai_data)
+        extraction_payload = _prefer_text_corroborated_amounts(
+            extraction_payload, _extraction_sources, raw_text,
+        )
+        extraction_payload = _prefer_text_corroborated_line_items(
+            extraction_payload, _extraction_sources, raw_text,
+        )
         extraction_payload.update({
             "raw_text": raw_text,
             "extraction_method": ingestion.extraction_method,
@@ -460,6 +595,14 @@ def process_single_file(
         invoice.ai_summary        = str(ai_data.get("ai_summary", ""))
         invoice.extracted_data    = {
             **ai_data,
+            # The reviewer and the rule engine must read the same table. These had
+            # drifted apart: invoice.line_items held the normalized list while
+            # extracted_data kept the raw AI list, so a purchase order showed four
+            # rows on screen and carried five into the audit — one line worth
+            # 453,551,960 was invisible to the approver. The raw list stays under
+            # an underscore key as evidence, but it is no longer a second answer.
+            "line_items": invoice.line_items,
+            "_ai_line_items": ai_data.get("line_items", []),
             "file_hash": file_hash,
             "_extraction_method": ingestion.extraction_method,
             "normalized": serialized_normalized,

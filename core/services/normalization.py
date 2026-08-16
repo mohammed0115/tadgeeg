@@ -274,6 +274,12 @@ class NormalizationService:
                     "quantity": quantity,
                     "unit_price": unit_price,
                     "amount": amount,
+                    # `total` is an alias of `amount`, not a second value. Consumers
+                    # arrived split: this normalizer canonicalised to `amount` while
+                    # templates/invoices/detail.html read `total` and rendered an
+                    # em dash on every row. Emitting both keeps either caller
+                    # correct; renaming would have broken the one that worked.
+                    "total": amount,
                 }
             )
         return items

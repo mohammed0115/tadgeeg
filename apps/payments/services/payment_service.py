@@ -22,7 +22,7 @@ from apps.payments.choices import (
 )
 from apps.payments.gateways.base import GatewayError
 from apps.payments.gateways.factory import get_payment_gateway
-from apps.payments.models import PaymentLog, PaymentTransaction
+from apps.payments.models import PaymentLog, PaymentRefund, PaymentTransaction
 from apps.payments.pricing import (
     PriceMismatchError,
     PriceResolutionError,
@@ -328,45 +328,47 @@ class PaymentService:
     # ------------------------------------------------ state transitions
 
     def mark_paid(self, txn: PaymentTransaction, payload: Optional[dict] = None) -> bool:
-        """Set status=paid and run the business action.
+        """Confirm an eligible payment and durably queue its business action.
 
-        Returns True if the transition happened, False if the txn was
-        already paid (so callers can short-circuit business actions on
-        duplicate webhooks)."""
-        # Re-read under a row lock to make this idempotent under
-        # concurrent webhook deliveries.
+        A confirmed payment never transitions out of a terminal non-paid state.
+        The entitlement action is represented by persistent fields and dispatched
+        after commit, so a broker/signal failure cannot make the financial state
+        disappear silently.
+        """
         with db_transaction.atomic():
-            locked = (
-                PaymentTransaction.objects
-                .select_for_update()
-                .get(pk=txn.pk)
-            )
+            locked = PaymentTransaction.objects.select_for_update().get(pk=txn.pk)
             if locked.status == PaymentStatus.PAID:
                 PaymentLog.objects.create(
                     transaction=locked, event_type="paid_duplicate",
                     status_before=locked.status, status_after=locked.status,
-                    message="Duplicate paid event ignored",
+                    message="Duplicate paid event ignored", payload=payload or {},
+                )
+                return False
+            if locked.status in TERMINAL_STATUSES:
+                PaymentLog.objects.create(
+                    transaction=locked, event_type="paid_rejected_terminal",
+                    status_before=locked.status, status_after=locked.status,
+                    message="Paid event rejected for terminal payment state",
                     payload=payload or {},
                 )
                 return False
+
             prior = locked.status
-            locked.status  = PaymentStatus.PAID
+            locked.status = PaymentStatus.PAID
             locked.paid_at = timezone.now()
-            locked.save(update_fields=["status", "paid_at", "updated_at"])
+            locked.business_action_status = "pending"
+            locked.business_action_error = ""
+            locked.save(update_fields=[
+                "status", "paid_at", "business_action_status", "business_action_error", "updated_at",
+            ])
             PaymentLog.objects.create(
                 transaction=locked, event_type="paid",
                 status_before=prior, status_after=locked.status,
-                message="Payment confirmed",
-                payload=payload or {},
+                message="Payment confirmed; business action queued", payload=payload or {},
             )
-            # Mutate the caller's instance to reflect new state.
-            txn.status  = locked.status
+            txn.status = locked.status
             txn.paid_at = locked.paid_at
-
-        try:
-            self._run_business_action(txn, payload or {})
-        except Exception:  # business actions must never undo the paid state
-            logger.exception("Business action for txn %s raised", txn.pk)
+            db_transaction.on_commit(lambda: _dispatch_business_action(str(locked.pk)))
         return True
 
     def mark_failed(self, txn: PaymentTransaction, *, reason: str, payload: Optional[dict] = None) -> bool:
@@ -462,55 +464,65 @@ class PaymentService:
     # --------------------------------------------------------- refund
 
     def refund(self, txn: PaymentTransaction, *, amount: Optional[Decimal] = None) -> PaymentTransaction:
-        """Issue a (partial or full) refund through the original gateway.
-
-        Refunds are only valid for transactions that have actually been
-        paid. ``amount=None`` issues a full refund.
-        """
-        if txn.status != PaymentStatus.PAID:
-            raise PaymentValidationError(
-                f"Only paid transactions can be refunded (current: {txn.status})"
-            )
-        if amount is not None:
-            amount = _coerce_amount(amount)
-            if amount <= 0 or amount > txn.amount:
+        """Reserve and issue a refund without allowing cumulative over-refunds."""
+        with db_transaction.atomic():
+            locked = PaymentTransaction.objects.select_for_update().get(pk=txn.pk)
+            if locked.status not in (PaymentStatus.PAID, PaymentStatus.PARTIALLY_REFUNDED):
                 raise PaymentValidationError(
-                    "Refund amount must be > 0 and <= the original amount."
+                    f"Only paid transactions can be refunded (current: {locked.status})"
                 )
+            remaining = Decimal(locked.amount) - Decimal(locked.refunded_amount)
+            requested = remaining if amount is None else _coerce_amount(amount)
+            if requested <= 0 or requested > remaining:
+                raise PaymentValidationError(
+                    "Refund amount must be > 0 and cannot exceed the unrefunded amount."
+                )
+            refund = PaymentRefund.objects.create(transaction=locked, amount=requested)
+            locked.refunded_amount = Decimal(locked.refunded_amount) + requested
+            locked.save(update_fields=["refunded_amount", "updated_at"])
 
-        gateway = get_payment_gateway(txn.provider)
+        gateway = get_payment_gateway(locked.provider)
         try:
-            response = gateway.refund_payment(txn, amount=amount)
+            response = gateway.refund_payment(locked, amount=requested)
         except GatewayError as exc:
-            PaymentLog.objects.create(
-                transaction=txn,
-                event_type="refund_failed",
-                status_before=txn.status, status_after=txn.status,
-                message=str(exc)[:512], payload={},
-            )
+            with db_transaction.atomic():
+                current = PaymentTransaction.objects.select_for_update().get(pk=txn.pk)
+                pending = PaymentRefund.objects.select_for_update().get(pk=refund.pk)
+                if pending.status == PaymentRefund.Status.PENDING:
+                    pending.status = PaymentRefund.Status.FAILED
+                    pending.failure_reason = str(exc)[:512]
+                    pending.save(update_fields=["status", "failure_reason", "updated_at"])
+                    current.refunded_amount = max(Decimal("0.00"), Decimal(current.refunded_amount) - requested)
+                    current.save(update_fields=["refunded_amount", "updated_at"])
+                    PaymentLog.objects.create(
+                        transaction=current, event_type="refund_failed",
+                        status_before=current.status, status_after=current.status,
+                        message=str(exc)[:512], payload={},
+                    )
             raise
 
         with db_transaction.atomic():
-            locked = (
-                PaymentTransaction.objects
-                .select_for_update()
-                .get(pk=txn.pk)
+            current = PaymentTransaction.objects.select_for_update().get(pk=txn.pk)
+            pending = PaymentRefund.objects.select_for_update().get(pk=refund.pk)
+            pending.status = PaymentRefund.Status.SUCCEEDED
+            pending.provider_refund_id = response.provider_payment_id or response.provider_reference or ""
+            pending.raw_response = response.as_dict()
+            pending.save(update_fields=["status", "provider_refund_id", "raw_response", "updated_at"])
+            prior = current.status
+            current.status = (
+                PaymentStatus.REFUNDED
+                if Decimal(current.refunded_amount) >= Decimal(current.amount)
+                else PaymentStatus.PARTIALLY_REFUNDED
             )
-            prior = locked.status
-            full = amount is None or Decimal(amount) >= Decimal(locked.amount)
-            locked.status = (
-                PaymentStatus.REFUNDED if full else PaymentStatus.PARTIALLY_REFUNDED
-            )
-            locked.save(update_fields=["status", "updated_at"])
+            current.save(update_fields=["status", "updated_at"])
             PaymentLog.objects.create(
-                transaction=locked,
-                event_type="refunded" if full else "partially_refunded",
-                status_before=prior,
-                status_after=locked.status,
-                message=f"Refund of {amount if amount is not None else locked.amount} issued",
-                payload=response.as_dict(),
+                transaction=current,
+                event_type="refunded" if current.status == PaymentStatus.REFUNDED else "partially_refunded",
+                status_before=prior, status_after=current.status,
+                message=f"Refund of {requested} issued", payload=response.as_dict(),
             )
-            txn.status = locked.status
+            txn.status = current.status
+            txn.refunded_amount = current.refunded_amount
         return txn
 
     # -------------------------------------------------- business hook
@@ -523,6 +535,15 @@ class PaymentService:
         signal handlers listen for ``PaymentLog`` ``paid`` events)."""
         from apps.payments.signals import payment_paid
         payment_paid.send(sender=PaymentTransaction, transaction=txn, payload=payload)
+
+
+def _dispatch_business_action(transaction_id: str) -> None:
+    """Enqueue after commit; pending state remains durable if broker dispatch fails."""
+    try:
+        from apps.payments.tasks import process_payment_business_action
+        process_payment_business_action.delay(transaction_id)
+    except Exception:  # noqa: BLE001 - reconciler can retry the persistent action
+        logger.exception("Unable to dispatch payment business action for %s", transaction_id)
 
 
 # ----------------------------------------------------------- helpers

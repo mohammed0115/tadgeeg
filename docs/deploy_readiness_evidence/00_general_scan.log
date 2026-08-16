@@ -1,0 +1,10 @@
+== git status --short ==
+== git log --oneline -1 ==
+[33m26e7d86[m docs: record claude to main merge gate
+== git fetch origin ==
+== git log --oneline origin/main -1 ==
+[33m26e7d86[m docs: record claude to main merge gate
+== pytest collect tail ==
+Coverage HTML written to dir htmlcov
+FAIL Required test coverage of 45% not reached. Total coverage: 28.57%
+4048 tests collected in 49.95s

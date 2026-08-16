@@ -1,0 +1,174 @@
+== docker availability ==
+bash: docker: command not found
+bash: docker: command not found
+== Dockerfile dependency sources and OCR packages ==
+-- Dockerfile
+14:    tesseract-ocr \
+15:    tesseract-ocr-ara \
+16:    tesseract-ocr-eng \
+29:COPY requirements.txt ./
+32:    pip install -r requirements.txt
+54:ENTRYPOINT ["/entrypoint.sh"]
+56:CMD ["gunicorn", "finai_backend.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "--access-logfile", "-", "--error-logfile", "-"]
+-- Dockerfile.optimized
+24:COPY requirements.txt .
+27:RUN pip install --user --no-cache-dir -r requirements.txt
+74:    CMD curl -f http://localhost:8000/health/live/ || exit 1
+83:CMD ["gunicorn", \
+== compose build/dockerfile wiring and runtime commands ==
+-- docker-compose.yml
+7:    command:
+22:    command: ["redis-server", "--save", "60", "1", "--loglevel", "warning"]
+32:  web:
+35:      dockerfile: Dockerfile
+51:    command: >
+70:      dockerfile: Dockerfile
+86:    command: >
+99:      dockerfile: Dockerfile
+115:    command: >
+-- deployment/docker/docker-compose.yml
+9:    command: redis-server --save 60 1 --loglevel warning
+24:    command:
+36:  web_live:
+39:      dockerfile: Dockerfile
+50:    command: >
+69:  celery_live:
+72:      dockerfile: Dockerfile
+87:    command: celery -A finai_backend worker --loglevel=info --concurrency=2
+99:    command:
+111:  web_dev:
+114:      dockerfile: Dockerfile
+125:    command: >
+140:  celery_dev:
+143:      dockerfile: Dockerfile
+155:    command: celery -A finai_backend worker --loglevel=info --concurrency=2
+167:    command:
+179:  web_test:
+182:      dockerfile: Dockerfile
+193:    command: >
+== environment key sets only ==
+-- deployment/config/dev.env
+ALLOWED_HOSTS
+BACKEND_DIR
+BRANCH
+DB_HOST
+DB_NAME
+DB_PORT
+DB_USER
+DEBUG
+DJANGO_ENV
+DJANGO_SETTINGS_MODULE
+DOCKER_COMPOSE_FILE
+DOCKER_PROJECT_NAME
+DOMAIN_ALL
+DOMAIN_MAIN
+DOMAIN_WWW
+ENV_LABEL
+ENV_NAME
+GUNICORN_MAX_REQUESTS
+GUNICORN_TIMEOUT
+GUNICORN_WORKERS
+LOG_DIR
+MEDIA_ROOT
+NGINX_ENABLED_FILE
+NGINX_SITE_FILE
+NGINX_SITE_NAME
+PORT_GUNICORN_INTERNAL
+PROJECT_ROOT
+REDIS_URL
+REPO_URL
+SERVER_IP
+SERVICE_NAME
+SOCKET
+SSL_EMAIL
+STATIC_ROOT
+USE_SSL
+VENV_DIR
+WEB_ROOT
+-- deployment/config/live.env
+ALLOWED_HOSTS
+BACKEND_DIR
+BRANCH
+DB_HOST
+DB_NAME
+DB_PORT
+DB_USER
+DEBUG
+DJANGO_ENV
+DJANGO_SETTINGS_MODULE
+DOCKER_COMPOSE_FILE
+DOCKER_PROJECT_NAME
+DOMAIN_ALL
+DOMAIN_MAIN
+DOMAIN_WWW
+ENV_LABEL
+ENV_NAME
+GUNICORN_MAX_REQUESTS
+GUNICORN_TIMEOUT
+GUNICORN_WORKERS
+LOG_DIR
+MEDIA_ROOT
+NGINX_ENABLED_FILE
+NGINX_SITE_FILE
+NGINX_SITE_NAME
+PORT_GUNICORN_INTERNAL
+PROJECT_ROOT
+REDIS_URL
+REPO_URL
+SERVER_IP
+SERVICE_NAME
+SOCKET
+SSL_EMAIL
+STATIC_ROOT
+USE_SSL
+VENV_DIR
+WEB_ROOT
+-- deployment/config/test.env
+ALLOWED_HOSTS
+BACKEND_DIR
+BRANCH
+DB_HOST
+DB_NAME
+DB_PORT
+DB_USER
+DEBUG
+DJANGO_ENV
+DJANGO_SETTINGS_MODULE
+DOCKER_COMPOSE_FILE
+DOCKER_PROJECT_NAME
+DOMAIN_ALL
+DOMAIN_MAIN
+DOMAIN_WWW
+ENV_LABEL
+ENV_NAME
+GUNICORN_MAX_REQUESTS
+GUNICORN_TIMEOUT
+GUNICORN_WORKERS
+LOG_DIR
+MEDIA_ROOT
+NGINX_ENABLED_FILE
+NGINX_SITE_FILE
+NGINX_SITE_NAME
+PORT_GUNICORN_INTERNAL
+PROJECT_ROOT
+REDIS_URL
+REPO_URL
+SERVER_IP
+SERVICE_NAME
+SOCKET
+SSL_EMAIL
+STATIC_ROOT
+USE_SSL
+VENV_DIR
+WEB_ROOT
+== key differences: dev vs live ==
+== key differences: dev vs test ==
+== requested key presence only ==
+AUDIT_ENGINE_VERSION: dev.env=absent live.env=absent test.env=absent
+DEBUG: dev.env=present live.env=present test.env=present
+ALLOWED_HOSTS: dev.env=present live.env=present test.env=present
+DB_BACKEND: dev.env=absent live.env=absent test.env=absent
+DB_ENGINE: dev.env=absent live.env=absent test.env=absent
+DB_NAME: dev.env=present live.env=present test.env=present
+DB_HOST: dev.env=present live.env=present test.env=present
+DB_PORT: dev.env=present live.env=present test.env=present

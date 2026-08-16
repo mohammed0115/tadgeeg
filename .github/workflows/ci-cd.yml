@@ -323,7 +323,7 @@ jobs:
           ssh-keyscan -H $PROD_HOST >> ~/.ssh/known_hosts
           
           ssh -i ~/.ssh/deploy_key $PROD_USER@$PROD_HOST \
-            "cd /apps/tadgeeg && git pull origin main && docker-compose up -d"
+            "cd /apps/tadgeeg && bash deployment/docker/update.sh live $GITHUB_REF_NAME"
       
       - name: Run production health checks
         env:

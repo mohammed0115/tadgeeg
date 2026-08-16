@@ -81,6 +81,9 @@ class WebhookDelivery(models.Model):
         WebhookEndpoint, on_delete=models.CASCADE, related_name="deliveries",
     )
     event_type = models.CharField(max_length=64, choices=_EVENT_CHOICES)
+    # Nullable keeps historical deliveries valid; new emits populate a stable
+    # SHA-256 event key and are unique per subscribed endpoint.
+    event_key = models.CharField(max_length=64, null=True, blank=True)
     payload = models.JSONField(default=dict)
     signature = models.CharField(max_length=128, blank=True)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING, db_index=True)
@@ -97,4 +100,7 @@ class WebhookDelivery(models.Model):
         indexes = [
             models.Index(fields=["endpoint", "created_at"]),
             models.Index(fields=["status", "next_retry_at"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=["endpoint", "event_key"], name="unique_webhook_endpoint_event"),
         ]

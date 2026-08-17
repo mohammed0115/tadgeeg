@@ -83,10 +83,18 @@ class AuditJobViewSet(ModelViewSet):
         file_id = serializer.validated_data["file_id"]
         audit_type = serializer.validated_data["audit_type"]
 
-        audit_file = get_object_or_404(AuditFile, id=file_id)
+        # Scope the file to the caller's organisation. Unscoped, a user could pass
+        # another company's file_id and have an AuditJob created against it — and
+        # the fallback below would then have filed that job under the caller's own
+        # organisation, so the cross-tenant read left no trace on the job record.
+        # Staff may legitimately belong to no organisation, and keep global reach.
+        caller_org = getattr(request.user, "organization", None)
+        if caller_org is not None:
+            audit_file = get_object_or_404(AuditFile, id=file_id, organization=caller_org)
+        else:
+            audit_file = get_object_or_404(AuditFile, id=file_id)
 
-        # Resolve organisation — staff may belong to no org; use the file's org then
-        organisation = getattr(request.user, "organization", None) or audit_file.organization
+        organisation = caller_org or audit_file.organization
 
         job = AuditJob.objects.create(
             organization=organisation,

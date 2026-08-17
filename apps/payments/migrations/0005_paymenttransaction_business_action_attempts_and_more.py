@@ -62,7 +62,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "provider_refund_id",
-                    models.CharField(blank=True, default="", max_length=128),
+                    models.CharField(blank=True, default=None, max_length=128, null=True),
                 ),
                 ("raw_response", models.JSONField(blank=True, default=dict)),
                 (
@@ -90,7 +90,6 @@ class Migration(migrations.Migration):
                 ],
                 "constraints": [
                     models.UniqueConstraint(
-                        condition=models.Q(("provider_refund_id__gt", "")),
                         fields=("transaction", "provider_refund_id"),
                         name="uniq_provider_refund_per_transaction",
                     )

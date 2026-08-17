@@ -124,7 +124,9 @@ class PaymentRefund(models.Model):
     )
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
-    provider_refund_id = models.CharField(max_length=128, blank=True, default="")
+    # NULL permits multiple pending refunds before the provider assigns an id;
+    # MySQL then enforces the unique pair as soon as a provider id exists.
+    provider_refund_id = models.CharField(max_length=128, null=True, blank=True, default=None)
     raw_response = models.JSONField(default=dict, blank=True)
     failure_reason = models.CharField(max_length=512, blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)
@@ -135,7 +137,6 @@ class PaymentRefund(models.Model):
         constraints = [
             models.UniqueConstraint(
                 fields=["transaction", "provider_refund_id"],
-                condition=models.Q(provider_refund_id__gt=""),
                 name="uniq_provider_refund_per_transaction",
             ),
         ]

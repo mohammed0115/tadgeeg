@@ -505,7 +505,7 @@ class PaymentService:
             current = PaymentTransaction.objects.select_for_update().get(pk=txn.pk)
             pending = PaymentRefund.objects.select_for_update().get(pk=refund.pk)
             pending.status = PaymentRefund.Status.SUCCEEDED
-            pending.provider_refund_id = response.provider_payment_id or response.provider_reference or ""
+            pending.provider_refund_id = response.provider_payment_id or response.provider_reference or None
             pending.raw_response = response.as_dict()
             pending.save(update_fields=["status", "provider_refund_id", "raw_response", "updated_at"])
             prior = current.status

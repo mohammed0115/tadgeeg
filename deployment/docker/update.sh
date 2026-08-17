@@ -88,6 +88,64 @@ backup_live_database() {
   ok "Pre-migration backup: $dump_gz"
 }
 
+assert_no_unique_constraint_violations() {
+  # A pending AddConstraint(UniqueConstraint) is applied to rows that already
+  # exist, so duplicates make the migration fail. That failure does not merely
+  # stop the deploy: migrate runs inside entrypoint.sh under `set -e`, so the
+  # container exits, `restart: unless-stopped` restarts it, and it fails again.
+  # The site goes down in a crash loop and the backup taken moments earlier can
+  # only be used by taking the site down further to restore it.
+  #
+  # Checking is cheap and reading is free, so the gate lives here rather than in
+  # a runbook step somebody has to remember on the day.
+  case "$TARGET" in
+    live|all) ;;
+    *) return 0 ;;
+  esac
+
+  if ! compose ps --status running --services 2>/dev/null | grep -qx "db_live"; then
+    err "db_live is not running; cannot check constraints before migrating."
+    exit 1
+  fi
+
+  # table | column list | constraint being added
+  # A missing table is not a violation: the constraint ships with the migration
+  # that creates the table, so it is applied to an empty one.
+  set -- \
+    "storage_management_filestoragemapping|file_id, version_number|uniq_storage_mapping_version_per_file"
+
+  log "Checking for rows that would violate a pending unique constraint ..."
+  local failed=0
+  for spec in "$@"; do
+    local table cols name rows
+    table="${spec%%|*}"
+    cols="$(printf '%s' "$spec" | cut -d'|' -f2)"
+    name="${spec##*|}"
+
+    rows="$(compose exec -T db_live sh -c \
+      "exec mysql -N -B -uroot -p\"\$MYSQL_ROOT_PASSWORD\" \"\$MYSQL_DATABASE\" -e \
+       \"SELECT COUNT(*) FROM (SELECT 1 FROM ${table} GROUP BY ${cols} HAVING COUNT(*) > 1) d;\"" \
+      2>/dev/null | tr -d '[:space:]')"
+
+    if [ -z "$rows" ]; then
+      ok "$name: table absent or not yet created — constraint will apply to an empty table"
+    elif [ "$rows" = "0" ]; then
+      ok "$name: no duplicate ($cols)"
+    else
+      err "$name: $rows duplicate group(s) on ($cols) in $table"
+      err "  The migration would fail at container boot and crash-loop the service."
+      err "  Resolve the duplicates first — which row survives is a data decision."
+      err "  SELECT $cols, COUNT(*) FROM $table GROUP BY $cols HAVING COUNT(*) > 1;"
+      failed=1
+    fi
+  done
+
+  if [ "$failed" -ne 0 ]; then
+    err "Deployment aborted before any code or container changed."
+    exit 1
+  fi
+}
+
 # Which env files a target needs. Referenced by the pre-flight checks below.
 envs_for_target() {
   case "$1" in
@@ -130,9 +188,13 @@ echo ""
 
 START_TIME=$(date +%s)
 
-# ── 1. Database backup + Git pull ─────────────────────────────────────────────
-log "1/4  Backing up live data and pulling latest code from origin/$BRANCH ..."
+# ── 1. Constraint pre-flight + Database backup + Git pull ────────────────────
+log "1/4  Checking constraints, backing up live data, pulling latest code from origin/$BRANCH ..."
 cd "$PROJECT_ROOT"
+# Read-only, and first: a violation aborts before the dump is written, before
+# the git reset, and before any container is touched. The backup that follows
+# protects the migration; this protects against needing to use it.
+assert_no_unique_constraint_violations
 backup_live_database
 
 # Safety net: preserve env files across the git reset. They are gitignored

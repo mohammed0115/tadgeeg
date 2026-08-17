@@ -164,33 +164,35 @@ DNS problem: NXDOMAIN looking up A for www.test.tadgeeg.com
 
 ---
 
-## فحص قبْلي: قيود التفرّد الجديدة
+## قيود التفرّد — الفحص داخل السكربت، لا خطوة تتذكّرها
 
-**قبل أي نشر يحمل هجرة `AddConstraint(UniqueConstraint(...))`.** الهجرة تُطبَّق على
-بيانات قائمة، فإن حوت تكرارًا فشلت — و`migrate` يعمل داخل `entrypoint.sh` تحت
-`set -e`، أي أن الفشل **يقتل الحاوية عند الإقلاع** فتدخل حلقة إعادة تشغيل بسبب
-`restart: unless-stopped`. لا يتوقّف النشر فحسب، بل ينزل الموقع.
+هجرة `AddConstraint(UniqueConstraint(...))` تُطبَّق على **بيانات قائمة**، فإن حوت
+تكرارًا فشلت. و`migrate` يعمل داخل `entrypoint.sh` تحت `set -e`، فالفشل **يقتل
+الحاوية عند الإقلاع**، و`restart: unless-stopped` يُعيدها فتفشل ثانيةً: **حلقة
+إقلاع والموقع نازل**. والنسخة الاحتياطية المأخوذة قبل دقيقة لا تُستعمل إلا بإنزال
+الموقع أكثر لاستعادتها.
 
-```bash
-# قراءة فقط — لا يعدّل شيئًا
-docker compose -f deployment/docker/docker-compose.yml exec -T db_live \
-  mysql -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "
-SELECT file_id, version_number, COUNT(*) AS n
-FROM storage_management_filestoragemapping
-GROUP BY file_id, version_number HAVING n > 1;"
+لذلك `update.sh live` يُنفّذ `assert_no_unique_constraint_violations` **قبل**
+النسخة الاحتياطية و**قبل** `git reset` و**قبل** لمس أي حاوية. النشر يتوقّف من
+تلقائه ولا شيء يكون قد تغيّر. لا خطوة يدوية هنا.
+
+عند اكتشاف تكرار يطبع السكربت الاستعلام نفسه لتفحصه:
+
+```sql
+SELECT file_id, version_number, COUNT(*) FROM storage_management_filestoragemapping
+GROUP BY file_id, version_number HAVING COUNT(*) > 1;
 ```
 
-**صفر صفوف ⇒ انشر. أي صفّ ⇒ توقّف** — أي نسخة تبقى قرار بيانات لا قرار نشر.
+**أي نسخة تبقى قرار بيانات لا قرار نشر** — لذلك يتوقّف السكربت ولا يُصلح.
 
-قيد `webhooks.unique_webhook_endpoint_event` لا يحتاج هذا الفحص: `event_key` يُضاف
-حقلًا جديدًا `null=True`، وكل الصفوف القائمة تصير `NULL`، وفهرس التفرّد في MySQL
-يسمح بـ`NULL` متعدد.
+**عند إضافة قيد تفرّد جديد:** أضف سطرًا إلى قائمة `set --` داخل الدالة بالصيغة
+`جدول|أعمدة|اسم القيد`. وقيد على **عمود أُضيف حديثًا `null=True`** لا يحتاج سطرًا:
+كل الصفوف القائمة تصير `NULL`، وفهرس التفرّد في MySQL يسمح بـ`NULL` متعدد — وهذا
+سبب غياب `webhooks.unique_webhook_endpoint_event` عن القائمة، وهو مُثبَّت باختبار.
 
 ## ترتيب النشر الآمن
 
 ```bash
-# 0. الفحص القبْلي أعلاه إن كانت الدفعة تحمل قيد تفرّد
-
 # 1. نسخة احتياطية (قاعدة البيانات + مستندات الشركاء)
 bash deployment/docker/backup.sh live
 

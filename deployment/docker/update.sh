@@ -43,6 +43,7 @@ BRANCH="${2:-${BRANCH:-$CURRENT_BRANCH}}"
 log() { printf '\n\033[1;34m[%s] %s\033[0m\n' "$(date '+%H:%M:%S')" "$1"; }
 ok()  { printf '\033[1;32m  ✓ %s\033[0m\n' "$1"; }
 err() { printf '\033[1;31m  ✗ %s\033[0m\n' "$1"; }
+warn(){ printf '\033[1;33m  ! %s\033[0m\n' "$1"; }
 
 compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
 
@@ -165,6 +166,75 @@ web_services_for_target() {
     all)  echo "web_live celery_live web_dev web_test" ;;
     *)    err "Unknown target: $1 (live|dev|test|all)"; exit 1 ;;
   esac
+}
+
+assert_service_actually_serves() {
+  # Step 4 was called "Health check" and checked nothing: it printed `compose ps`
+  # and twenty log lines, then declared "✅ Update COMPLETE" unconditionally. A
+  # container can be `running` while gunicorn returns 500 on every request, and
+  # this script would still finish green. The HTTP verification lived only in
+  # redeploy.sh and in a manual runbook step — which is the same category of
+  # problem as the constraint check that used to live there.
+  #
+  # Two signals, deliberately weighted differently.
+  #
+  # The gate is: does the app serve a page. That is what a user experiences and
+  # it is the only thing worth blocking a deploy on.
+  #
+  # /health/ is reported but does NOT gate, because it aggregates components of
+  # unequal importance and returns 503 if ANY is degraded. Measured on this host:
+  # {"status":"unhealthy","database":"healthy","redis":"degraded"} — the site
+  # serves perfectly, the cache is merely absent. Gating on that would fail every
+  # deploy over a degraded cache and teach everyone to ignore the gate. A degraded
+  # database is different, and is treated as fatal.
+  local svc code health
+  for svc in $(web_services_for_target "$TARGET"); do
+    case "$svc" in celery*) continue ;; esac
+
+    code="$(compose exec -T "$svc" python -c \
+      'import urllib.request,sys
+try:
+    with urllib.request.urlopen("http://127.0.0.1:8000/", timeout=15) as r: print(r.status)
+except urllib.error.HTTPError as e: print(e.code)
+except Exception: print("000")' 2>/dev/null | tr -d '[:space:]')"
+
+    case "$code" in
+      200|301|302)
+        ok "$svc: serves / with HTTP $code" ;;
+      *)
+        err "$svc: / returned '${code:-no response}' — the container runs but the app does not serve."
+        err "  A deploy that ends here would report success while the site is broken."
+        compose logs --tail=40 "$svc" || true
+        exit 1 ;;
+    esac
+
+    health="$(compose exec -T "$svc" python -c \
+      'import urllib.request,sys
+try:
+    with urllib.request.urlopen("http://127.0.0.1:8000/health/", timeout=15) as r: sys.stdout.write(r.read().decode())
+except urllib.error.HTTPError as e: sys.stdout.write(e.read().decode())
+except Exception: sys.stdout.write("")' 2>/dev/null)"
+
+    if [ -z "$health" ]; then
+      warn "$svc: /health/ did not answer — components unverified (not fatal; / serves)"
+      continue
+    fi
+
+    # A degraded database is fatal even though the homepage rendered: it may be
+    # served from cache, and every write is about to fail.
+    if printf '%s' "$health" | grep -q '"database": *"\(unhealthy\|degraded\)"'; then
+      err "$svc: /health/ reports the DATABASE degraded."
+      err "  $health"
+      exit 1
+    fi
+
+    if printf '%s' "$health" | grep -q '"status": *"unhealthy"'; then
+      warn "$svc: /health/ reports a degraded component. The site serves; investigate."
+      warn "  $health"
+    else
+      ok "$svc: /health/ reports healthy"
+    fi
+  done
 }
 
 all_services_for_target() {
@@ -438,12 +508,18 @@ for svc in $(web_services_for_target "$TARGET"); do
 done
 
 # ── 4. Health check ───────────────────────────────────────────────────────────
-log "4/4  Waiting for services to become healthy ..."
+log "4/4  Verifying the application actually serves ..."
+
+# This is a gate, not a printout. It exits non-zero if the app does not respond,
+# so "✅ Update COMPLETE" below can only be reached by a deploy that works.
+assert_service_actually_serves
 
 compose ps
 echo ""
 
-# Check web container logs for errors
+# Logs are shown for context AFTER the gate has passed — never as a substitute
+# for it. Printing twenty lines and calling that a health check is how a broken
+# deploy used to finish green.
 for svc in $WEB_SERVICES; do
   echo "── Last 20 lines from $svc ──"
   compose logs --tail=20 "$svc" 2>&1 || true

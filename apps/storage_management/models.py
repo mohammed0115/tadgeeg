@@ -211,6 +211,12 @@ class FileStorageMapping(models.Model):
         ordering = ["-version_number"]
         verbose_name = "File Storage Mapping"
         verbose_name_plural = "File Storage Mappings"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["file", "version_number"],
+                name="uniq_storage_mapping_version_per_file",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.file.original_name} → {self.storage_provider.name}"

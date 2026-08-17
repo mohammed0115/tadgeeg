@@ -278,7 +278,8 @@
                 <td>{{ item.description|default:"—" }}</td>
                 <td class="font-mono">{{ item.quantity|default:"—" }}</td>
                 <td class="font-mono">{{ item.unit_price|floatformat:2|default:"—" }}</td>
-                <td class="font-mono font-bold">{{ item.total|floatformat:2|default:"—" }}</td>
+                {# `amount` is the canonical key emitted by NormalizationService. #}
+                <td class="font-mono font-bold">{{ item.amount|floatformat:2|default:"—" }}</td>
               </tr>
               {% endfor %}
             </tbody>

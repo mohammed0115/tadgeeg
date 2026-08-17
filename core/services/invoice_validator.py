@@ -14,7 +14,7 @@ Rule Groups:
 import hashlib
 import logging
 from datetime import date, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from typing import Optional
 
 logger = logging.getLogger("finai")
@@ -34,6 +34,8 @@ RULES_AR = {
     "INV-006": "يجب أن تحتوي الفاتورة على العملة",
     "INV-007": "يجب أن يكون المبلغ الإجمالي أكبر من صفر",
     "INV-008": "لا يمكن وجود ضريبة القيمة المضافة بدون مبلغ أساسي (المجموع الفرعي)",
+    "INV-009": "يجب أن يساوي حاصل ضرب الكمية في سعر الوحدة إجمالي السطر",
+    "INV-010": "يجب أن يساوي مجموع أسطر البنود المجموع الفرعي للفاتورة",
     # Group 2 – Duplicate
     "DUP-001": "رقم الفاتورة موجود مسبقاً لهذا المورد",
     "DUP-002": "نفس المورد ونفس رقم الفاتورة مسجّل مسبقاً",
@@ -77,6 +79,8 @@ RULES_EN = {
     "INV-006": "Invoice must contain a currency",
     "INV-007": "Total amount must be greater than zero",
     "INV-008": "VAT cannot exist without a base amount (subtotal)",
+    "INV-009": "Quantity x unit price must equal the line total",
+    "INV-010": "Line item totals must sum to the invoice subtotal",
     # Group 2 – Duplicate
     "DUP-001": "Invoice number already exists for this vendor",
     "DUP-002": "Same vendor with the same invoice number is already recorded",
@@ -222,6 +226,74 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
                                field="subtotal", actual=f"subtotal={sub}, vat={vat}",
                                expected="مجموع فرعي أكبر من صفر متى وُجدت ضريبة")
     _record(ok, "INV-008", passed, failed)
+
+    # INV-009 / INV-010: the invoice must add up.
+    #
+    # Nothing in this validator checked the arithmetic of an extracted invoice.
+    # A purchase order reached 71% carrying a line table whose quantity x price
+    # matched the line total on one row out of five, and two amounts that appear
+    # nowhere on the document. Both defects are one multiplication and one sum
+    # away from being caught.
+    #
+    # Both rules are skipped when there are no line items to check: an invoice
+    # with no extracted table is judged by INV-005/INV-007, not condemned here
+    # for a table it never had.
+    items = invoice.line_items if isinstance(invoice.line_items, list) else []
+
+    def _num(value):
+        try:
+            return Decimal(str(value).replace(",", "").strip())
+        except (InvalidOperation, AttributeError, TypeError, ValueError):
+            return None
+
+    priced = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        qty = _num(item.get("quantity"))
+        price = _num(item.get("unit_price"))
+        line_total = _num(item.get("amount") if item.get("amount") is not None else item.get("total"))
+        if qty is not None and price is not None and line_total is not None:
+            priced.append((item.get("description", ""), qty, price, line_total))
+
+    # INV-009: quantity x unit price = line total, per row.
+    if priced:
+        mismatched = [
+            (desc, qty * price, line_total)
+            for desc, qty, price, line_total in priced
+            if abs((qty * price) - line_total) > Decimal("1")
+        ]
+        ok = not mismatched
+        msg = (
+            "حساب كل سطر صحيح ✓" if ok else
+            "أسطر لا يطابق فيها الكمية × السعر الإجمالي: " + "، ".join(
+                f"{d or 'بند'} (المتوقع {e:,.2f} والمسجل {a:,.2f})" for d, e, a in mismatched[:3]
+            )
+        )
+    else:
+        ok, msg = True, "لا توجد بنود مسعّرة للفحص"
+    results["INV-009"] = _rule(ok, RULES["INV-009"], msg,
+                               severity="high" if not ok else "info",
+                               field="line_items", actual=len(priced),
+                               expected="الكمية × السعر = إجمالي السطر")
+    _record(ok, "INV-009", passed, failed)
+
+    # INV-010: the line totals must sum to the subtotal.
+    line_sum = sum((line_total for _d, _q, _p, line_total in priced), Decimal("0"))
+    if priced and sub > 0:
+        difference = abs(line_sum - Decimal(str(sub)))
+        ok = difference <= Decimal("1")
+        msg = (
+            f"مجموع البنود {line_sum:,.2f} يطابق المجموع الفرعي ✓" if ok else
+            f"مجموع البنود {line_sum:,.2f} لا يطابق المجموع الفرعي {sub:,.2f} (الفرق {difference:,.2f})"
+        )
+    else:
+        ok, msg = True, "لا يمكن المطابقة: لا بنود مسعّرة أو لا مجموع فرعي"
+    results["INV-010"] = _rule(ok, RULES["INV-010"], msg,
+                               severity="high" if not ok else "info",
+                               field="subtotal", actual=float(line_sum),
+                               expected=f"{sub}")
+    _record(ok, "INV-010", passed, failed)
 
     # ─── Group 2: Duplicate Detection ────────────────────────────────────────
 

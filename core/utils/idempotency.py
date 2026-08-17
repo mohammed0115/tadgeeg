@@ -64,7 +64,7 @@ def _scope_id(request) -> str:
     org = getattr(user, "organization", None)
     if org is not None:
         return f"org:{org.id}"
-    return "ip:" + (request.META.get("REMOTE_ADDR") or "0.0.0.0")
+    return "ip:" + (request.META.get("REMOTE_ADDR") or "unknown")
 
 
 class IdempotencyMiddleware:

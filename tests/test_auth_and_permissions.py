@@ -326,8 +326,8 @@ class TestPasswordChange:
         client.force_authenticate(user=user)
         response = client.post("/api/v1/auth/me/change-password/", {
             "old_password": "OldPass1!",
-            "new_password": "NewPass1!",
-            "new_password_confirm": "NewPass1!",
+            "new_password": "A1!New-Password-2026",
+            "new_password_confirm": "A1!New-Password-2026",
         }, format="json")
         assert response.status_code in (
             status.HTTP_200_OK,
@@ -339,8 +339,8 @@ class TestPasswordChange:
         client.force_authenticate(user=user)
         response = client.post("/api/v1/auth/me/change-password/", {
             "old_password": "WrongOld1!",
-            "new_password": "NewPass1!",
-            "new_password_confirm": "NewPass1!",
+            "new_password": "A1!New-Password-2026",
+            "new_password_confirm": "A1!New-Password-2026",
         }, format="json")
         assert response.status_code == status.HTTP_400_BAD_REQUEST
 
@@ -358,8 +358,8 @@ class TestPasswordChange:
         client = APIClient()
         response = client.post("/api/v1/auth/me/change-password/", {
             "old_password": "OldPass1!",
-            "new_password": "NewPass1!",
-            "new_password_confirm": "NewPass1!",
+            "new_password": "A1!New-Password-2026",
+            "new_password_confirm": "A1!New-Password-2026",
         }, format="json")
         assert response.status_code in (
             status.HTTP_401_UNAUTHORIZED,

@@ -7,6 +7,7 @@ import time
 from typing import IO, Optional
 
 from apps.storage_management.exceptions import (
+    StorageConfigurationError,
     StorageConnectionError,
     StorageNotFoundError,
     StorageUploadError,
@@ -104,6 +105,8 @@ class S3StorageBackend(BaseStorageBackend):
             self._handle_client_error(exc, operation="open")
 
     def generate_download_url(self, path: str, expires_in: int = 300) -> str:
+        # Do not permit callers to create effectively permanent bearer URLs.
+        expires_in = max(1, min(int(expires_in), 300))
         client = self._get_client()
         try:
             url = client.generate_presigned_url(

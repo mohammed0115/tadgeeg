@@ -2,7 +2,6 @@
 
 from django.contrib import admin
 from django.utils.html import format_html
-from django.utils.safestring import mark_safe
 
 from .models import AuditDocument, AuditFinding
 
@@ -97,11 +96,7 @@ class AuditDocumentAdmin(TenantAwareModelAdmin):
 
     def overall_confidence_display(self, obj):
         if obj.overall_confidence is None:
-            # format_html() with no interpolation arguments is deprecated in
-            # Django 5.0 and removed in 6.0. There is nothing to interpolate
-            # here — the markup is a constant — so mark_safe is what this line
-            # always meant.
-            return mark_safe('<span style="color:#6b7280">—</span>')
+            return format_html('<span style="color:{}">—</span>', "#6b7280")
         val = obj.overall_confidence
         pct = round(val * 100, 1) if val <= 1.0 else round(val, 1)
         color = "#10b981" if pct >= 75 else "#f59e0b" if pct >= 40 else "#ef4444"

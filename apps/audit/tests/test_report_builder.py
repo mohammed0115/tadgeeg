@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from unittest.mock import patch
 
 from django.test import TestCase
 from rest_framework.test import APIClient
@@ -11,6 +12,8 @@ from apps.audit.report_models import EngagementReport
 from apps.audit.services import assessed_risk as ar
 from apps.audit.services import audit_issue as ai
 from apps.audit.services import report_builder as rb
+from apps.audit.services import signoff
+from apps.audit.signoff_models import EngagementSignoff
 from apps.authentication.models import Organization, User
 
 _St = EngagementReport.Status
@@ -62,14 +65,50 @@ class ServiceTests(Base):
             "does not state whether the financial statements present fairly", ""))
         self.assertIn("does not constitute an audit opinion", c["disclaimer"])
 
-    def test_lifecycle_and_finalize(self):
+    def test_lifecycle_requires_independent_review_and_partner_signoffs(self):
+        reviewer = _auditor(self.org, "reviewer@e.com")
+        partner = _auditor(self.org, "partner@e.com")
         rep = rb.create_report(engagement=self.eng, actor=self.auditor)
+
+        with self.assertRaises(rb.ReportBuilderError):
+            rb.set_status(report=rep, actor=self.auditor, status=_St.FINAL)
+
         rb.set_status(report=rep, actor=self.auditor, status=_St.IN_REVIEW)
-        self.assertIsNone(rep.finalized_at)
+        with self.assertRaises(rb.ReportBuilderError):
+            rb.set_status(report=rep, actor=self.auditor, status=_St.FINAL)
+
+        signoff.sign(
+            engagement=self.eng, actor=reviewer, artifact_type="engagement_report",
+            artifact_id=rep.id, role=EngagementSignoff.Role.REVIEWER,
+        )
+        signoff.sign(
+            engagement=self.eng, actor=partner, artifact_type="engagement_report",
+            artifact_id=rep.id, role=EngagementSignoff.Role.PARTNER,
+        )
         rb.set_status(report=rep, actor=self.auditor, status=_St.FINAL)
         self.assertIsNotNone(rep.finalized_at)
+
+        with self.assertRaises(rb.ReportBuilderError):
+            rb.set_status(report=rep, actor=self.auditor, status=_St.ARCHIVED)
         with self.assertRaises(rb.ReportBuilderError):
             rb.set_status(report=rep, actor=self.auditor, status="nope")
+
+    def test_finalize_rejects_same_person_as_reviewer_and_partner(self):
+        reviewer = _auditor(self.org, "reviewer@e.com")
+        rep = rb.create_report(engagement=self.eng, actor=self.auditor)
+        rb.set_status(report=rep, actor=self.auditor, status=_St.IN_REVIEW)
+        for role in (EngagementSignoff.Role.REVIEWER, EngagementSignoff.Role.PARTNER):
+            signoff.sign(
+                engagement=self.eng, actor=reviewer, artifact_type="engagement_report",
+                artifact_id=rep.id, role=role,
+            )
+        with self.assertRaises(rb.ReportBuilderError):
+            rb.set_status(report=rep, actor=self.auditor, status=_St.FINAL)
+
+    def test_build_content_fails_when_a_required_source_fails(self):
+        with patch("apps.audit.services.findings_register.summary", side_effect=RuntimeError("db unavailable")):
+            with self.assertRaises(rb.ReportBuilderError):
+                rb.create_report(engagement=self.eng, actor=self.auditor)
 
     def test_new_version(self):
         rep = rb.create_report(engagement=self.eng, actor=self.auditor)
@@ -89,6 +128,19 @@ class ApiTests(Base):
         rid = resp.json()["id"]
         self.assertEqual(len(self.api.get(
             f"/api/v1/audit/engagements/{self.eng.id}/reports/").json()), 1)
+        r = self.api.post(f"/api/v1/audit/reports/{rid}/", {"status": "in_review"}, format="json")
+        self.assertEqual(r.status_code, 200)
+        rep = EngagementReport.objects.get(pk=rid)
+        reviewer = _auditor(self.org, "api-reviewer@e.com")
+        partner = _auditor(self.org, "api-partner@e.com")
+        signoff.sign(
+            engagement=self.eng, actor=reviewer, artifact_type="engagement_report",
+            artifact_id=rep.id, role=EngagementSignoff.Role.REVIEWER,
+        )
+        signoff.sign(
+            engagement=self.eng, actor=partner, artifact_type="engagement_report",
+            artifact_id=rep.id, role=EngagementSignoff.Role.PARTNER,
+        )
         r = self.api.post(f"/api/v1/audit/reports/{rid}/", {"status": "final"}, format="json")
         self.assertEqual(r.status_code, 200)
         self.assertEqual(r.json()["status"], "final")

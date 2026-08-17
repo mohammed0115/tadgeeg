@@ -32,6 +32,7 @@ def activate_subscription_after_payment(sender, transaction, payload, **kwargs):
         logger.exception(
             "Could not activate subscription after payment %s", transaction.pk,
         )
+        raise
 
 
 @receiver(payment_failed)

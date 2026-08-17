@@ -141,11 +141,12 @@ def test_add_no_secrets_in_audit_or_activity(organization, finance_user):
 
 
 # ══ Confirm ═══════════════════════════════════════════════════════════════════
-def test_confirm_activates_subscription(organization, finance_user):
+def test_confirm_activates_subscription(organization, finance_user, django_capture_on_commit_callbacks):
     payment = _add(finance_user, organization)
-    ops.crm_confirm_manual_payment(
-        actor=finance_user, organization=organization, payment=payment, reason="received",
-    )
+    with django_capture_on_commit_callbacks(execute=True):
+        ops.crm_confirm_manual_payment(
+            actor=finance_user, organization=organization, payment=payment, reason="received",
+        )
     payment.refresh_from_db()
     assert payment.status == PaymentStatus.PAID
     sub = OrganizationSubscription.objects.get(id=payment.reference_id)

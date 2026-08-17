@@ -17,6 +17,8 @@ from apps.audit.member_models import EngagementMember
 from apps.audit.report_models import EngagementReport
 from apps.audit.services import audit_issue as ai
 from apps.audit.services import report_builder as rb
+from apps.audit.services import signoff
+from apps.audit.signoff_models import EngagementSignoff
 from apps.authentication.models import Organization, User
 from apps.billing.choices import PlanCode
 from apps.billing.models import Plan
@@ -158,6 +160,15 @@ class ReportsTests(_Base, TestCase):
 
     def test_finalize(self):
         rep = rb.create_report(engagement=self.eng, actor=self.auditor)
+        reviewer = _auditor(self.org, email="report-reviewer@e.com")
+        partner = _auditor(self.org, email="report-partner@e.com")
+        self.client.post(self._url(), {
+            "engagement": str(self.eng.id), "action": "set_status",
+            "report": str(rep.id), "status": "in_review"})
+        for actor, role in ((reviewer, EngagementSignoff.Role.REVIEWER),
+                            (partner, EngagementSignoff.Role.PARTNER)):
+            signoff.sign(engagement=self.eng, actor=actor,
+                         artifact_type="engagement_report", artifact_id=rep.id, role=role)
         self.client.post(self._url(), {
             "engagement": str(self.eng.id), "action": "set_status",
             "report": str(rep.id), "status": "final"})

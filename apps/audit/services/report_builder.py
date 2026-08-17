@@ -27,25 +27,34 @@ class ReportBuilderError(Exception):
 
 
 def build_content(engagement) -> dict:
-    """Assemble the report body from the linked engagement data (facts only)."""
+    """Assemble a complete report body from the linked engagement data.
+
+    A missing source is not represented as an empty section: an auditor cannot
+    distinguish an actual zero from a failed query in that form.  The caller
+    must resolve the source failure before it can create or version a report.
+    """
     org = engagement.organization
     from apps.audit.services import assessed_risk as ar
     from apps.audit.services import audit_procedure as ap
     from apps.audit.services import audit_issue as ai
     from apps.audit.services import findings_register as fr
 
-    def _safe(fn, default):
+    def _required(section, fn):
         try:
             return fn()
-        except Exception:  # noqa: BLE001 - a report section must never 500
-            return default
+        except Exception as exc:  # noqa: BLE001 - preserve the source cause
+            raise ReportBuilderError(
+                f"Unable to assemble required report section: {section}."
+            ) from exc
 
-    risks = _safe(lambda: ar.summary(organization=org, engagement=engagement), {})
-    procedures = _safe(lambda: ap.summary(organization=org, engagement=engagement), {})
-    findings = _safe(lambda: fr.summary(organization=org, engagement=engagement), {})
-    issues = _safe(lambda: ai.summary(organization=org, engagement=engagement), {})
-    finding_rows = _safe(
-        lambda: fr.list_findings(organization=org, engagement=engagement, limit=200), [])
+    risks = _required("assessed_risks", lambda: ar.summary(organization=org, engagement=engagement))
+    procedures = _required("procedures", lambda: ap.summary(organization=org, engagement=engagement))
+    findings = _required("findings", lambda: fr.summary(organization=org, engagement=engagement))
+    issues = _required("issues", lambda: ai.summary(organization=org, engagement=engagement))
+    finding_rows = _required(
+        "findings_detail",
+        lambda: fr.list_findings(organization=org, engagement=engagement, limit=200),
+    )
 
     content = {
         "engagement_code": engagement.engagement_code,
@@ -115,12 +124,56 @@ def new_version(*, report, actor) -> EngagementReport:
     return obj
 
 
+_ALLOWED_TRANSITIONS = {
+    _St.DRAFT: {_St.IN_REVIEW},
+    _St.IN_REVIEW: {_St.DRAFT, _St.FINAL},
+    _St.FINAL: set(),
+    _St.ARCHIVED: set(),
+}
+
+
+def _require_final_signoffs(report) -> None:
+    """Require independent review and partner approval before finalization."""
+    from apps.audit.services import signoff
+    from apps.audit.signoff_models import EngagementSignoff
+
+    artifact_type = "engagement_report"
+    artifact_id = str(report.pk)
+    required_roles = (EngagementSignoff.Role.REVIEWER, EngagementSignoff.Role.PARTNER)
+    rows = signoff.signoffs_for(
+        engagement=report.engagement,
+        artifact_type=artifact_type,
+        artifact_id=artifact_id,
+    )
+    signers = {
+        row.role: row.signed_by_id
+        for row in rows
+        if row.role in required_roles and row.signed_by_id is not None
+    }
+    missing = [role.value for role in required_roles if role not in signers]
+    if missing:
+        raise ReportBuilderError(
+            "Cannot finalize report without required sign-offs: " + ", ".join(missing)
+        )
+    if signers[EngagementSignoff.Role.REVIEWER] == signers[EngagementSignoff.Role.PARTNER]:
+        raise ReportBuilderError("Reviewer and partner sign-offs must be independent.")
+
+
 def set_status(*, report, actor, status) -> EngagementReport:
     if status not in _VALID_STATUS:
         raise ReportBuilderError(f"invalid status: {status!r}")
+    if status == report.status:
+        return report
+    if status not in _ALLOWED_TRANSITIONS[report.status]:
+        raise ReportBuilderError(
+            f"invalid report transition: {report.status!r} -> {status!r}"
+        )
+    if status == _St.FINAL:
+        _require_final_signoffs(report)
+
     report.status = status
     fields = ["status", "updated_at"]
-    if status == _St.FINAL and report.finalized_at is None:
+    if status == _St.FINAL:
         report.finalized_at = timezone.now()
         fields.append("finalized_at")
     report.save(update_fields=fields)

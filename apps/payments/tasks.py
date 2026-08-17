@@ -14,6 +14,7 @@ import logging
 from datetime import timedelta
 
 from celery import shared_task
+from django.db import transaction
 from django.utils import timezone
 
 from apps.payments.choices import PaymentStatus
@@ -37,6 +38,67 @@ _NON_TERMINAL = (
 DEFAULT_GRACE_MINUTES = 30
 # Don't keep polling forever — after a few hours, mark as expired.
 EXPIRY_HOURS = 24
+
+
+@shared_task(bind=True, name="payments.process_payment_business_action", max_retries=5)
+def process_payment_business_action(self, transaction_id: str) -> dict:
+    """Run a paid transaction's entitlement action from durable state."""
+    with transaction.atomic():
+        txn = PaymentTransaction.objects.select_for_update().get(pk=transaction_id)
+        if txn.status != PaymentStatus.PAID:
+            return {"transaction_id": transaction_id, "skipped": "not_paid"}
+        if txn.business_action_status == "completed":
+            return {"transaction_id": transaction_id, "skipped": "completed"}
+        txn.business_action_status = "processing"
+        txn.business_action_attempts += 1
+        txn.save(update_fields=["business_action_status", "business_action_attempts", "updated_at"])
+
+    try:
+        PaymentService()._run_business_action(txn, {})
+    except Exception as exc:  # noqa: BLE001 - persist and retry domain failures
+        with transaction.atomic():
+            current = PaymentTransaction.objects.select_for_update().get(pk=transaction_id)
+            current.business_action_status = "pending"
+            current.business_action_error = str(exc)[:512]
+            current.save(update_fields=["business_action_status", "business_action_error", "updated_at"])
+            PaymentLog.objects.create(
+                transaction=current,
+                event_type="business_action_failed",
+                status_before=current.status,
+                status_after=current.status,
+                message=current.business_action_error,
+                payload={"attempt": current.business_action_attempts},
+            )
+        raise self.retry(exc=exc, countdown=min(300, 2 ** self.request.retries))
+
+    with transaction.atomic():
+        current = PaymentTransaction.objects.select_for_update().get(pk=transaction_id)
+        current.business_action_status = "completed"
+        current.business_action_error = ""
+        current.save(update_fields=["business_action_status", "business_action_error", "updated_at"])
+        PaymentLog.objects.create(
+            transaction=current,
+            event_type="business_action_completed",
+            status_before=current.status,
+            status_after=current.status,
+            message="Post-payment business action completed",
+            payload={"attempt": current.business_action_attempts},
+        )
+    return {"transaction_id": transaction_id, "completed": True}
+
+
+@shared_task(name="payments.reconcile_payment_business_actions")
+def reconcile_payment_business_actions(batch_size: int = 100) -> dict:
+    """Re-dispatch durable actions left pending by broker or worker failures."""
+    transaction_ids = list(
+        PaymentTransaction.objects.filter(
+            status=PaymentStatus.PAID,
+            business_action_status__in=("pending", "processing"),
+        ).order_by("updated_at").values_list("pk", flat=True)[:batch_size]
+    )
+    for transaction_id in transaction_ids:
+        process_payment_business_action.delay(str(transaction_id))
+    return {"dispatched": len(transaction_ids)}
 
 
 @shared_task(name="payments.reconcile_stale_payments")

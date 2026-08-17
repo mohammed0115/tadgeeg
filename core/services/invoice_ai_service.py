@@ -203,6 +203,12 @@ def analyze_invoice_risk(invoice_data: dict, vendor_history: dict = None) -> dic
     if not settings.OPENAI_API_KEY:
         return {"overall_risk_score": 0, "risk_level": "unknown", "error": "OpenAI not configured"}
 
+    from core.services import ai_budget
+    try:
+        ai_budget.guard_current(projected_tokens=2000)
+    except ai_budget.BudgetExceeded:
+        return {"overall_risk_score": 0, "risk_level": "unknown", "error": "AI budget exceeded"}
+
     try:
         from openai import OpenAI
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
@@ -229,7 +235,10 @@ Vendor historical context:
             temperature=0,
         )
 
-        return json.loads(response.choices[0].message.content)
+        data = json.loads(response.choices[0].message.content)
+        data["_tokens_used"] = response.usage.total_tokens
+        ai_budget.charge_current(int(response.usage.total_tokens))
+        return data
 
     except Exception as e:
         logger.error(f"AI risk analysis failed: {e}")

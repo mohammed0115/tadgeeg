@@ -5,7 +5,10 @@ backend I/O, model persistence, and activity logging.
 import hashlib
 import logging
 import os
+import subprocess
 from typing import IO, Optional
+
+from django.db import transaction
 
 from apps.storage_management.exceptions import (
     StorageNotFoundError,
@@ -124,21 +127,30 @@ class StorageService:
             )
             raise StorageUploadError(f"Backend save failed: {exc}") from exc
 
-        # 9. Create FileStorageMapping
-        FileStorageMapping.objects.create(
-            file=audit_file,
-            storage_provider=provider,
-            storage_path=stored_path,
-            storage_bucket=getattr(backend, "bucket", ""),
-            version_number=1,
-            checksum=checksum,
-            file_size=file_size,
-            content_type=mime,
-        )
-
-        # 10. Update AuditFile to STORED
-        audit_file.status = AuditFile.Status.STORED
-        audit_file.save(update_fields=["status", "updated_at"])
+        # 9. Persist mapping and final status atomically. If database work
+        # fails after the external write, delete the object to avoid an orphan.
+        try:
+            with transaction.atomic():
+                FileStorageMapping.objects.create(
+                    file=audit_file,
+                    storage_provider=provider,
+                    storage_path=stored_path,
+                    storage_bucket=getattr(backend, "bucket", ""),
+                    version_number=1,
+                    checksum=checksum,
+                    file_size=file_size,
+                    content_type=mime,
+                )
+                audit_file.status = AuditFile.Status.STORED
+                audit_file.save(update_fields=["status", "updated_at"])
+        except Exception as exc:
+            try:
+                backend.delete(stored_path)
+            except Exception:
+                logger.exception("Failed to compensate orphaned storage object %s", stored_path)
+            audit_file.status = AuditFile.Status.FAILED
+            audit_file.save(update_fields=["status", "updated_at"])
+            raise StorageUploadError(f"Metadata persistence failed: {exc}") from exc
 
         # 11. Log success
         self._log(
@@ -218,6 +230,26 @@ class StorageService:
                     f"MIME type '{mime}' is not permitted. "
                     f"Allowed: {', '.join(policy.allowed_mime_types)}."
                 )
+
+        if policy.antivirus_scan_enabled:
+            self._scan_antivirus(file_obj)
+
+    def _scan_antivirus(self, file_obj: IO) -> None:
+        """Fail closed when a policy requires antivirus scanning."""
+        try:
+            file_obj.seek(0)
+            scan = subprocess.run(
+                ["clamscan", "--no-summary", "-"],
+                input=file_obj.read(), capture_output=True, check=False, timeout=60,
+            )
+            file_obj.seek(0)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise StorageValidationError("Antivirus scan is required but unavailable.") from exc
+        if scan.returncode == 0:
+            return
+        if scan.returncode == 1:
+            raise StorageValidationError("Uploaded file failed antivirus scanning.")
+        raise StorageValidationError("Antivirus scan could not complete safely.")
 
     # ------------------------------------------------------------------
     # Delete
@@ -421,13 +453,13 @@ class StorageService:
             )
 
     def _compute_checksum(self, file_obj: IO) -> str:
-        """Compute MD5 checksum of the file content."""
-        md5 = hashlib.md5()
+        """Compute a collision-resistant SHA-256 checksum of file content."""
+        digest = hashlib.sha256()
         file_obj.seek(0)
         for chunk in iter(lambda: file_obj.read(8192), b""):
-            md5.update(chunk)
+            digest.update(chunk)
         file_obj.seek(0)
-        return md5.hexdigest()
+        return digest.hexdigest()
 
     def _log(
         self,

@@ -22,31 +22,47 @@ import django.db.models.deletion
 def backfill_organization(apps, schema_editor):
     """Resolve each row's tenant through the parent it names.
 
-    The lookup goes through django_apps rather than a hand-written map: the
-    same class of map, written once in the billing gate, is what sent this
-    codebase looking for the wrong JournalEntry.
+    The lookup goes through a registry rather than a hand-written map: the same
+    class of map, written once in the billing gate, is what sent this codebase
+    looking for the wrong JournalEntry.
 
-    `Invoice` is resolved from apps.invoices, not documents — 24 rows name it,
-    and scoping the lookup to a single app would silently leave them behind
-    while reporting success.
+    It must be the registry this function is handed, never `django.apps.apps`.
+    The handed one describes the models as the database has them at this point
+    in the plan; the live one describes them as they are defined today. Asking
+    the live one cost two environments a crash loop:
+
+        MySQLdb.OperationalError:
+            (1054, "Unknown column 'invoices.audit_document_id' in 'field list'")
+
+    `audit_document_id` arrives in `invoices.0017_invoice_audit_document`, and
+    that migration lists this one as a dependency — so it can only run later,
+    and the column is absent here by construction, not by accident. The live
+    `Invoice` names it in every SELECT it builds. `AddField` above had already
+    committed by then (MySQL does not roll DDL back), so each restart replayed
+    it and died on 1060 instead, hiding the real error.
+
+    `Invoice` is resolved from apps.invoices, not documents — rows name it, and
+    scoping the lookup to a single app would silently leave them behind while
+    reporting success. Whatever cannot be resolved is named in the output below
+    rather than folded into a count.
     """
-    from django.apps import apps as django_apps
-
     Canonical = apps.get_model("documents", "DocumentCanonicalData")
 
     resolved = orphaned = unresolvable_model = 0
+    unresolved_names = set()
     batch, BATCH = [], 500
 
     for row in Canonical.objects.all().iterator(chunk_size=BATCH):
         model = None
         for app_label in ("documents", "invoices"):
             try:
-                model = django_apps.get_model(app_label, row.typed_model_name)
+                model = apps.get_model(app_label, row.typed_model_name)
                 break
             except LookupError:
                 continue
         if model is None:
             unresolvable_model += 1
+            unresolved_names.add(row.typed_model_name)
             continue
 
         parent = model.objects.filter(pk=row.typed_object_id).first()
@@ -75,6 +91,10 @@ def backfill_organization(apps, schema_editor):
         f"left_null_parent_missing={orphaned} "
         f"left_null_model_unknown={unresolvable_model}"
     )
+    if unresolved_names:
+        # A name this registry cannot resolve is a row silently left NULL. It
+        # is printed, not counted, so it cannot be read as "nothing to see".
+        print(f"[0013] unresolved typed_model_name: {sorted(unresolved_names)}")
 
 
 

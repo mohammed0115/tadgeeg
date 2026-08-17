@@ -67,7 +67,34 @@ fi
 # applied when its tables already exist (safe when an app was just added to
 # INSTALLED_APPS but its tables pre-exist from a legacy state). Prevents both
 # "table doesn't exist" (fresh) and "table already exists" (legacy) on deploy.
-python manage.py migrate --noinput --fake-initial
+#
+# Gated to the web container for the same reason as the catalogue seeding below,
+# but with far worse consequences if left ungated. web_live and celery_live both
+# build from this image and both wait on `db_live: service_healthy`, so they were
+# released together and ran `migrate` at the same instant. DDL in MySQL is not
+# transactional — it auto-commits — so a race between two migrate processes can
+# leave a half-applied migration that no rollback undoes and only manual repair
+# clears.
+#
+# Matched by EXCLUSION, exactly as the seeding gate is: the web services start as
+#   sh -c "gunicorn finai_backend.wsgi:application ..."
+# so $1 is `sh`, not `gunicorn`. An allow-list would have matched nothing and
+# skipped migrations in every container while appearing to work.
+#
+# Migrations stay in the entrypoint rather than moving to a separate deploy step
+# on purpose. An operator who forgets a manual `migrate` gets a running site on
+# an unmigrated schema, which is the worse failure: this repository has already
+# shipped a branch whose new column was missing at runtime, and every upload
+# broke on "table invoices has no column named audit_document_id" while the test
+# suite stayed green.
+case "${1:-}" in
+  celery)
+    echo "Skipping migrate in the celery worker (the web container owns migrations)."
+    ;;
+  *)
+    python manage.py migrate --noinput --fake-initial
+    ;;
+esac
 
 # compilemessages is NOT optional and must not be swallowed.
 #

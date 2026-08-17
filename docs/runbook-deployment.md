@@ -164,9 +164,33 @@ DNS problem: NXDOMAIN looking up A for www.test.tadgeeg.com
 
 ---
 
+## فحص قبْلي: قيود التفرّد الجديدة
+
+**قبل أي نشر يحمل هجرة `AddConstraint(UniqueConstraint(...))`.** الهجرة تُطبَّق على
+بيانات قائمة، فإن حوت تكرارًا فشلت — و`migrate` يعمل داخل `entrypoint.sh` تحت
+`set -e`، أي أن الفشل **يقتل الحاوية عند الإقلاع** فتدخل حلقة إعادة تشغيل بسبب
+`restart: unless-stopped`. لا يتوقّف النشر فحسب، بل ينزل الموقع.
+
+```bash
+# قراءة فقط — لا يعدّل شيئًا
+docker compose -f deployment/docker/docker-compose.yml exec -T db_live \
+  mysql -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" -e "
+SELECT file_id, version_number, COUNT(*) AS n
+FROM storage_management_filestoragemapping
+GROUP BY file_id, version_number HAVING n > 1;"
+```
+
+**صفر صفوف ⇒ انشر. أي صفّ ⇒ توقّف** — أي نسخة تبقى قرار بيانات لا قرار نشر.
+
+قيد `webhooks.unique_webhook_endpoint_event` لا يحتاج هذا الفحص: `event_key` يُضاف
+حقلًا جديدًا `null=True`، وكل الصفوف القائمة تصير `NULL`، وفهرس التفرّد في MySQL
+يسمح بـ`NULL` متعدد.
+
 ## ترتيب النشر الآمن
 
 ```bash
+# 0. الفحص القبْلي أعلاه إن كانت الدفعة تحمل قيد تفرّد
+
 # 1. نسخة احتياطية (قاعدة البيانات + مستندات الشركاء)
 bash deployment/docker/backup.sh live
 

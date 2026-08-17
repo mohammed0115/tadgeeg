@@ -431,8 +431,12 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
         msg = "لم تُقَس: لا مجموع فرعي ولا ضريبة"
     results["VAT-002"] = _rule(ok, RULES["VAT-002"], msg,
                                field="vat_amount", actual=float(invoice.vat_amount or 0),
+                               # expected_vat is computed only when sub > 0, so the
+                               # conditional must never touch it otherwise — a NameError
+                               # here is a whole-audit crash, not a wrong number.
                                expected=(f"{expected_vat} (= {sub} × {invoice.vat_rate or 0}%)"
-                                         if expected_vat is not None else "لا أساس للحساب"))
+                                         if expected_vat is not None
+                                         else "صفر، لأن المجموع الفرعي صفر"))
     _record(ok, "VAT-002", passed, failed, not_applicable)
 
     # VAT-003: subtotal + vat = total

@@ -127,6 +127,14 @@ def test_both_rules_are_counted_in_the_score(organization, admin_user):
     ])
     r = run_all_rules(inv, organization, file_hash="")
     assert r["total_rules"] == TOTAL_RULES
-    assert r["rules_passed"] + r["rules_failed"] == TOTAL_RULES
+    # Every rule lands in exactly one of the three buckets. This assertion used to
+    # read passed + failed == TOTAL_RULES, which encoded the two-state world that
+    # existed before NOT_APPLICABLE: a rule with nothing to measure was forced to
+    # call itself a pass. The invariant is stronger now, not weaker — nothing may
+    # go uncounted.
+    assert (
+        r["rules_passed"] + r["rules_failed"] + r["rules_not_applicable"]
+    ) == TOTAL_RULES
+    assert r["rules_applicable"] == TOTAL_RULES - r["rules_not_applicable"]
     assert "INV-009" in r["failed_rule_codes"]
     assert "INV-010" in r["failed_rule_codes"]

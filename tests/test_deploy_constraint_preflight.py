@@ -165,3 +165,59 @@ def test_a_constraint_on_a_newly_added_nullable_column_needs_no_check():
     assert "unique_webhook_endpoint_event" not in _function_source(), (
         "covering it would be harmless but misleading: NULLs never collide"
     )
+
+
+class TestRehearsalDumpDetection:
+    """The rehearsal must not reject a directory that holds a real dump.
+
+    `ls a b` exits non-zero when EITHER operand is missing, so the first version
+    of this check — `ls "$DIR"/*.sql "$DIR"/*.sql.gz` — rejected a directory
+    containing a perfectly good db.sql.gz merely because no plain .sql sat beside
+    it. It stopped a real rehearsal with "the copy is incomplete", which is the
+    worst kind of guard: one that blocks correct work and sends you looking for a
+    problem that is not there.
+    """
+
+    REHEARSE_SH = (
+        Path(__file__).resolve().parents[1] / "deployment" / "docker" / "rehearse_migrations.sh"
+    )
+
+    def _detect(self, tmp_path, filenames):
+        """Run the real detection loop lifted from the script."""
+        for name in filenames:
+            (tmp_path / name).touch()
+        text = self.REHEARSE_SH.read_text(encoding="utf-8")
+        match = re.search(r"(  dump_found=0\n.*?dump_found\" -eq 1 \])", text, re.S)
+        assert match, "the dump detection loop is gone from rehearse_migrations.sh"
+        snippet = match.group(1).replace('|| \\\n', '|| ')
+        harness = f'SRC_DIR="{tmp_path}"\n{snippet} && echo FOUND || echo MISSING\n'
+        out = subprocess.run(
+            ["bash", "-c", harness], capture_output=True, text=True, timeout=30
+        ).stdout
+        return "FOUND" in out
+
+    def test_a_gzipped_dump_alone_is_accepted(self, tmp_path):
+        """The exact case that was wrongly rejected: backup.sh writes db.sql.gz."""
+        assert self._detect(tmp_path, ["db.sql.gz", "MANIFEST.txt"]) is True
+
+    def test_a_plain_dump_alone_is_accepted(self, tmp_path):
+        assert self._detect(tmp_path, ["db.sql"]) is True
+
+    def test_both_together_are_accepted(self, tmp_path):
+        assert self._detect(tmp_path, ["db.sql", "db.sql.gz"]) is True
+
+    def test_a_directory_with_no_dump_is_still_rejected(self, tmp_path):
+        """The guard must keep catching a truncated copy — that was its purpose."""
+        assert self._detect(tmp_path, ["MANIFEST.txt"]) is False
+
+    def test_the_original_ls_form_produced_the_false_alarm(self, tmp_path):
+        """Plant the defect and show it rejecting a valid backup directory."""
+        (tmp_path / "db.sql.gz").touch()
+        broken = subprocess.run(
+            ["bash", "-c", f'ls "{tmp_path}"/*.sql "{tmp_path}"/*.sql.gz >/dev/null 2>&1'],
+            capture_output=True, text=True, timeout=30,
+        )
+        assert broken.returncode != 0, (
+            "if this ever passes, `ls` stopped failing on a missing operand and "
+            "the original bug would not have occurred"
+        )

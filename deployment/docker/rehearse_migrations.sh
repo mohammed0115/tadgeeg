@@ -146,9 +146,18 @@ if [ -n "$FROM_DIR" ]; then
   SRC_DIR="$FROM_DIR"
   # A directory that scp truncated restores a partial database and the whole
   # rehearsal then measures the wrong thing. Insist on seeing a dump in it.
-  if ! ls "$SRC_DIR"/*.sql "$SRC_DIR"/*.sql.gz >/dev/null 2>&1; then
+  #
+  # Test each candidate separately. `ls a b` exits non-zero when EITHER operand
+  # is missing, so `ls *.sql *.sql.gz` rejected a directory holding a perfectly
+  # good db.sql.gz merely because no plain .sql sat beside it — a false alarm
+  # that stopped a real rehearsal. An unmatched glob stays literal, so -e is the
+  # honest test.
+  dump_found=0
+  for candidate in "$SRC_DIR"/*.sql "$SRC_DIR"/*.sql.gz; do
+    [ -e "$candidate" ] && { dump_found=1; break; }
+  done
+  [ "$dump_found" -eq 1 ] || \
     die "no .sql or .sql.gz in $SRC_DIR — the copy is incomplete or the wrong directory."
-  fi
   ok "backup contents look complete: $(ls -1 "$SRC_DIR" | tr '\n' ' ')"
 else
   log "1/6  Backing up $SOURCE on this host (database + private_media)"

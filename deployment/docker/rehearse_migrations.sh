@@ -191,25 +191,49 @@ log "3/6  Building and starting db_dev + web_dev (no nginx)"
 # so nothing races it.
 compose up -d --build db_dev web_dev 2>&1 | tee -a "$RUN_LOG"
 
-printf '  waiting for web_dev '
+# 30 minutes, not 10.
+#
+# The entrypoint's last act is gunicorn binding port 8000, and before that it
+# runs the whole migration batch, compilemessages over a 3,000-line catalogue,
+# collectstatic across 434 files, and three seed commands. update.sh has carried
+# a comment since 2026-08-01 saying this is "minutes on a multi-phase deploy, not
+# seconds"; a first rehearsal on restored data is the slowest case there is. A
+# ten-minute ceiling turned that into "web_dev never became ready", which reads
+# as a failed migration and is not one.
+#
+# Elapsed time is printed each minute so a long wait stays legible instead of
+# looking like a hang.
+WAIT_SECONDS=1800
+printf '  waiting for web_dev (up to %d minutes) ' $((WAIT_SECONDS / 60))
 ready=0
-for _ in $(seq 1 120); do
+waited=0
+while [ "$waited" -lt "$WAIT_SECONDS" ]; do
   if compose exec -T web_dev sh -c \
       'python -c "import socket,sys; s=socket.socket(); sys.exit(s.connect_ex((\"127.0.0.1\",8000)))"' \
       >/dev/null 2>&1; then
-    ready=1; printf ' ready\n'; break
+    ready=1; printf ' ready after %dm%02ds\n' $((waited / 60)) $((waited % 60)); break
   fi
+  # A container that exited is never going to become ready, and that is the
+  # signal worth having: it is exactly what a failed migration looks like.
   if ! running web_dev; then
     printf '\n'
     err "web_dev exited while starting — this is what a failed migration looks like."
     compose logs --tail=60 web_dev 2>&1 | tee -a "$RUN_LOG"
     die "web_dev did not survive startup. The migration batch is NOT safe to deploy."
   fi
-  printf '.'; sleep 5
+  sleep 5
+  waited=$((waited + 5))
+  if [ $((waited % 60)) -eq 0 ]; then printf '%dm' $((waited / 60)); else printf '.'; fi
 done
 [ "$ready" -eq 1 ] || {
+  printf '\n'
+  err "web_dev did not bind port 8000 within $((WAIT_SECONDS / 60)) minutes."
+  err "  The container is still RUNNING, so this is a slow start, not a failed"
+  err "  migration — a failure would have exited the container and been reported"
+  err "  above. Check what it is doing before re-running anything:"
+  err "    docker compose -f $COMPOSE_FILE logs -f web_dev"
   compose logs --tail=60 web_dev 2>&1 | tee -a "$RUN_LOG"
-  die "web_dev never became ready."
+  die "Timed out waiting for web_dev."
 }
 ok "web_dev is serving"
 

@@ -24,6 +24,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fonts-dejavu-core \
     fonts-noto-core \
     poppler-utils \
+    # pyzbar is a ctypes binding, so pip installing it is not enough: without
+    # the native library its import raises and core/services/qr_scanner.py
+    # disables QR scanning entirely. Every invoice then fails DOC-004 and
+    # VAT-005 — the two ZATCA e-invoicing rules — regardless of the document.
+    # The logged advice ("Run: pip install pyzbar") points at the wrong layer.
+    libzbar0 \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt ./

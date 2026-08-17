@@ -234,6 +234,30 @@ class FinancialAIEngine:
 
         self._apply_extraction(result, extracted)
 
+        # Carry the identity of the document being scored into whichever payload
+        # won above.
+        #
+        # DuplicateDetector._self_id() reads document_id/invoice_id/id/pk so it can
+        # .exclude() the row it is scoring — otherwise the row matches itself on
+        # file hash and on vendor+amount+date. The caller attaches that id to
+        # ingestion_result.normalized (see apps/invoices/services/processor.py,
+        # "Preserve the current primary key in that payload"). But `normalized` is
+        # only consulted above when extraction returns nothing. Whenever the AI
+        # tier succeeded, `extracted` was the AI's own dict, which carries no id,
+        # and every AI-extracted invoice was reported as a duplicate of itself:
+        # dup=1.00 on a single invoice in an empty database.
+        #
+        # The guard therefore worked only while the AI was unavailable. It is
+        # restored here against the payload that is actually handed to the
+        # detector, not against the one that happened to be the fallback.
+        _identity_keys = ("document_id", "invoice_id", "id", "pk")
+        if not any(extracted.get(k) for k in _identity_keys):
+            _source = ingestion_result.normalized or {}
+            for _key in _identity_keys:
+                if _source.get(_key):
+                    extracted = {**extracted, _key: _source[_key]}
+                    break
+
         # ── Step 3: Duplicate Detection ────────────────────────────────────────
         try:
             self._step_duplicate(result, extracted)

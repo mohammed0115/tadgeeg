@@ -156,6 +156,7 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
     results = {}
     failed = []
     passed = []
+    not_applicable = []
 
     org = organization or invoice.organization
 
@@ -193,13 +194,24 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
                                expected="رقم ضريبي من 15 خانة")
     _record(ok, "INV-004", passed, failed)
 
-    # INV-005: total amount field exists
-    ok = invoice.total_amount is not None
-    results["INV-005"] = _rule(ok, RULES["INV-005"],
-                               "حقل المبلغ الإجمالي موجود" if ok else "حقل المبلغ الإجمالي مفقود",
+    # INV-005: total amount field exists.
+    #
+    # `total_amount is not None` could never be false: the column defaults to 0
+    # (apps/invoices/models.py), so the rule passed on every invoice ever scored,
+    # including ones from which no amount was extracted at all. The presence of a
+    # positive total is INV-007's job; this rule's only honest remaining answer on
+    # an invoice with no monetary evidence is that it did not measure one.
+    _inv005_total = float(invoice.total_amount or 0)
+    if _inv005_total == 0 and float(invoice.subtotal or 0) == 0:
+        ok = None
+        msg = "لم تُقَس: لم يُستخرَج أي مبلغ"
+    else:
+        ok = invoice.total_amount is not None
+        msg = "حقل المبلغ الإجمالي موجود" if ok else "حقل المبلغ الإجمالي مفقود"
+    results["INV-005"] = _rule(ok, RULES["INV-005"], msg,
                                field="total_amount", actual=str(invoice.total_amount or ""),
                                expected="قيمة موجودة")
-    _record(ok, "INV-005", passed, failed)
+    _record(ok, "INV-005", passed, failed, not_applicable)
 
     # INV-006: currency
     ok = bool(invoice.currency and invoice.currency.strip())
@@ -372,43 +384,75 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
     # ─── Group 3: VAT Validation ─────────────────────────────────────────────
 
     # VAT-001: rate = 15% for SA
+    #
+    # invoice.vat_rate defaults to 15 (apps/invoices/models.py), and the expected
+    # rate is also 15, so an invoice from which no rate was ever extracted used to
+    # compare the default against the constant and pass. Measured on the runtime
+    # database: vat_rate held a single distinct value, 15, across all 71 invoices —
+    # the rule had never once discriminated, and reported
+    # "نسبة الضريبة 15.0% ✓" on a US-dollar invoice with no VAT line at all.
+    #
+    # The 15% constant is untouched — it is a sacred invariant. What changed is
+    # that the rule now declines to judge when there is no monetary basis to
+    # apply a rate to.
     expected_rate = 15.0
     if org and org.vat_rate:
         expected_rate = float(org.vat_rate)
     actual_rate = float(invoice.vat_rate or 0)
-    ok = abs(actual_rate - expected_rate) < 0.5
-    results["VAT-001"] = _rule(ok, RULES["VAT-001"],
-                               f"نسبة الضريبة {actual_rate}% ✓" if ok else
-                               f"نسبة الضريبة {actual_rate}% (المتوقع {expected_rate}%)",
+    total_for_basis = float(invoice.total_amount or 0)
+    has_monetary_basis = sub > 0 or vat > 0 or total_for_basis > 0
+    if not has_monetary_basis:
+        ok = None
+        msg = "لم تُقَس: لا يوجد أساس نقدي تُطبَّق عليه نسبة ضريبة"
+    else:
+        ok = abs(actual_rate - expected_rate) < 0.5
+        msg = (f"نسبة الضريبة {actual_rate}% ✓" if ok else
+               f"نسبة الضريبة {actual_rate}% (المتوقع {expected_rate}%)")
+    results["VAT-001"] = _rule(ok, RULES["VAT-001"], msg,
                                field="vat_rate", actual=actual_rate,
                                expected=f"{expected_rate}% (±0.5)")
-    _record(ok, "VAT-001", passed, failed)
+    _record(ok, "VAT-001", passed, failed, not_applicable)
 
     # VAT-002: vat_amount = subtotal × rate
+    expected_vat = None
     if sub > 0:
         expected_vat = round(sub * float(invoice.vat_rate or 0) / 100, 2)
         ok = abs(float(invoice.vat_amount or 0) - expected_vat) < 1.0
         msg = f"الضريبة {invoice.vat_amount} تطابق المتوقع {expected_vat} ✓" if ok else \
               f"الضريبة {invoice.vat_amount} لا تطابق المتوقع {expected_vat}"
+    elif vat > 0:
+        # VAT recorded against no base is a genuine violation, not an absence.
+        ok = False
+        msg = "الضريبة موجودة لكن المجموع الفرعي صفر"
     else:
-        ok = float(invoice.vat_amount or 0) == 0
-        msg = "لا ضريبة على مجموع فرعي صفري — صحيح" if ok else "الضريبة موجودة لكن المجموع الفرعي صفر"
+        # The old else-branch returned ok=True here — a pass on an invoice that
+        # carried neither a base nor a tax. The guard existed but did not abstain.
+        ok = None
+        msg = "لم تُقَس: لا مجموع فرعي ولا ضريبة"
     results["VAT-002"] = _rule(ok, RULES["VAT-002"], msg,
                                field="vat_amount", actual=float(invoice.vat_amount or 0),
                                expected=(f"{expected_vat} (= {sub} × {invoice.vat_rate or 0}%)"
-                                         if sub > 0 else "صفر، لأن المجموع الفرعي صفر"))
-    _record(ok, "VAT-002", passed, failed)
+                                         if expected_vat is not None else "لا أساس للحساب"))
+    _record(ok, "VAT-002", passed, failed, not_applicable)
 
     # VAT-003: subtotal + vat = total
+    #
+    # On an invoice where nothing was extracted this computed 0 + 0 − 0 == 0 and
+    # announced "المجموع الفرعي + الضريبة = الإجمالي ✓" — arithmetic consistency
+    # asserted over absent data.
     total = float(invoice.total_amount or 0)
     expected_total = round(sub + float(invoice.vat_amount or 0) - float(invoice.discount or 0), 2)
-    ok = abs(total - expected_total) < 1.0
-    results["VAT-003"] = _rule(ok, RULES["VAT-003"],
-                               "المجموع الفرعي + الضريبة = الإجمالي ✓" if ok else
-                               f"المجموع({sub}) + الضريبة({invoice.vat_amount}) = {expected_total} ≠ الإجمالي({total})",
+    if sub == 0 and vat == 0 and total == 0:
+        ok = None
+        msg = "لم تُقَس: لا مبالغ مستخرَجة للمطابقة"
+    else:
+        ok = abs(total - expected_total) < 1.0
+        msg = ("المجموع الفرعي + الضريبة = الإجمالي ✓" if ok else
+               f"المجموع({sub}) + الضريبة({invoice.vat_amount}) = {expected_total} ≠ الإجمالي({total})")
+    results["VAT-003"] = _rule(ok, RULES["VAT-003"], msg,
                                field="total_amount", actual=total,
                                expected=f"{expected_total} (= {sub} + {invoice.vat_amount or 0} − {invoice.discount or 0})")
-    _record(ok, "VAT-003", passed, failed)
+    _record(ok, "VAT-003", passed, failed, not_applicable)
 
     # VAT-004: VAT number present
     ok = bool(invoice.vendor_vat_number and invoice.vendor_vat_number.strip())
@@ -546,10 +590,16 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
                                f"رمز الحساب: {invoice.account_code}" if ok else "لم يُعيَّن رمز محاسبي")
     _record(ok, "CTL-002", passed, failed)
 
-    # CTL-003: within budget (simplified — pass if no budget set)
-    ok = True   # Budget integration requires external budget data; default pass
-    results["CTL-003"] = _rule(ok, RULES["CTL-003"], "فحص الميزانية: لم يُضبط أي بيانات ميزانية (يُوصى بالمراجعة اليدوية)")
-    _record(ok, "CTL-003", passed, failed)
+    # CTL-003: within budget.
+    #
+    # There is no budget integration, so this was a literal `ok = True` whose own
+    # message admitted no budget data existed — a rule that announced compliance
+    # with a control it had never performed. It now abstains, which is what "no
+    # budget data" actually means.
+    ok = None
+    results["CTL-003"] = _rule(ok, RULES["CTL-003"],
+                               "لم تُقَس: لا تكامل مع بيانات الميزانية (يُوصى بالمراجعة اليدوية)")
+    _record(ok, "CTL-003", passed, failed, not_applicable)
 
     # CTL-004: no edit after approval
     ok = not (invoice.status == "approved" and invoice.updated_at > invoice.approved_at) \
@@ -610,15 +660,25 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
     # ─── Compute summary ─────────────────────────────────────────────────────
     n_passed = len(passed)
     n_failed = len(failed)
-    score = round(n_passed / TOTAL_RULES * 100, 2)
+    n_not_applicable = len(not_applicable)
+
+    # The denominator is the rules that actually examined something. Scoring a
+    # not-applicable rule as a pass was how an invoice with no VAT line reported
+    # "نسبة الضريبة 15.0% ✓"; scoring it as a failure would condemn an invoice
+    # for a field it never carried. Neither belongs in the fraction.
+    n_applicable = TOTAL_RULES - n_not_applicable
+    score = round(n_passed / n_applicable * 100, 2) if n_applicable else 0.0
 
     return {
         "total_rules": TOTAL_RULES,
+        "rules_applicable": n_applicable,
         "rules_passed": n_passed,
         "rules_failed": n_failed,
+        "rules_not_applicable": n_not_applicable,
         "validation_score": score,
         "passed_rule_codes": passed,
         "failed_rule_codes": failed,
+        "not_applicable_rule_codes": not_applicable,
         "rule_details": results,
         "risk_level": _score_to_risk(score, failed),
     }
@@ -643,12 +703,21 @@ def _rule(passed: bool, description: str, message: str, severity: str = "high",
     should produce a result that says so, not one claiming `actual=None` — the
     same "unmeasured is not zero" distinction the quota and precision code
     keeps. Consumers use `.get("field")`.
+
+    ``passed=None`` is the third state: NOT APPLICABLE. A rule that had nothing
+    to measure must not report PASS. Several used to: VAT-001 compared the model
+    default vat_rate of 15 against an expected 15 and so passed on 71 of 71
+    invoices without ever discriminating, and CTL-003 was a literal ``ok = True``.
+    "No evidence" and "evidence checked and sound" are different audit
+    judgements, and a tick cannot be allowed to mean both.
     """
+    applicable = passed is not None
     result = {
-        "passed": passed,
+        "passed": bool(passed) if applicable else False,
+        "applicable": applicable,
         "description": description,
         "message": message,
-        "severity": severity if not passed else "info",
+        "severity": "info" if (passed or not applicable) else severity,
     }
     if field:
         result["field"] = field
@@ -659,7 +728,17 @@ def _rule(passed: bool, description: str, message: str, severity: str = "high",
     return result
 
 
-def _record(ok: bool, code: str, passed: list, failed: list):
+def _record(ok, code: str, passed: list, failed: list, not_applicable: list | None = None):
+    """Tally a rule outcome. ``ok=None`` means the rule had nothing to measure.
+
+    A not-applicable rule belongs in neither counter. Counting it as a pass
+    inflates the score with unexamined fields; counting it as a failure
+    condemns an invoice for data it never carried.
+    """
+    if ok is None:
+        if not_applicable is not None:
+            not_applicable.append(code)
+        return
     if ok:
         passed.append(code)
     else:

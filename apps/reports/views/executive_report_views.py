@@ -72,8 +72,9 @@ class ExecutiveReportDetailView(APIView):
         try:
             # جلب بيانات المستند من قاعدة البيانات
             audit_data_dict = self._fetch_document_audit_data(
-                document_type, 
-                document_id
+                document_type,
+                document_id,
+                organization=getattr(request.user, "organization", None),
             )
             
             # تحويل البيانات
@@ -102,17 +103,26 @@ class ExecutiveReportDetailView(APIView):
                 "message": str(e)
             }, status=400)
     
-    def _fetch_document_audit_data(self, document_type, document_id):
+    def _fetch_document_audit_data(self, document_type, document_id, organization=None):
         """
         جلب بيانات التدقيق من قاعدة البيانات
         تختلف حسب نوع المستند
+
+        ``organization`` scopes the lookup. It is not optional in spirit: without
+        it this method returned another company's invoice number, totals and
+        audit scores to any authenticated caller. The view is not routed today,
+        so that was latent rather than exploitable — but the filter belongs here,
+        not in whichever URLconf eventually wires it up.
         """
         from apps.invoices.models import Invoice
         from apps.documents.models import Document  # Assuming exists
-        
+
         if document_type == "invoice":
             try:
-                invoice = Invoice.objects.get(id=document_id)
+                scoped = Invoice.objects.all()
+                if organization is not None:
+                    scoped = scoped.filter(organization=organization)
+                invoice = scoped.get(id=document_id)
                 return {
                     "document_type": "invoice",
                     "document_id": str(invoice.id),

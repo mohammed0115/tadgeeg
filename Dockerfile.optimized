@@ -47,7 +47,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     shared-mime-info \
     fonts-dejavu-core \
     fonts-noto-core \
+    # Native library behind the pyzbar binding; without it QR scanning is
+    # disabled and every invoice fails DOC-004 and VAT-005. See Dockerfile.
+    libzbar0 \
     && rm -rf /var/lib/apt/lists/*
+# NOTE: this runtime stage still has no tesseract-ocr, no tesseract-ocr-ara and
+# no poppler-utils, so an image built from this file cannot OCR at all. Nothing
+# builds it today — docker-compose.yml uses ./Dockerfile for every service — so
+# the gap is recorded here rather than filled blind.
 
 WORKDIR /app
 

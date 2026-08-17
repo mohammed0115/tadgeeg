@@ -1,0 +1,36 @@
+== tracked exact paths ==
+NOT_TRACKED deployment/deploy.sh
+TRACKED deployment/docker/deploy.sh
+TRACKED deployment/deploy_finish.sh
+TRACKED deployment/refresh.sh
+TRACKED deployment/live_deployment.sh
+NOT_TRACKED deployment/redeploy.sh
+== local filesystem existence ==
+ABSENT deployment/deploy.sh
+EXISTS deployment/docker/deploy.sh
+== ignore rule if any for exact test path ==
+== paths resembling deploy scripts in tracked tree ==
+deployment/00_env_check.sh
+deployment/01_git_sync.sh
+deployment/02_system_setup.sh
+deployment/03_ocr_setup.sh
+deployment/04_gunicorn_service.sh
+deployment/05_nginx_setup.sh
+deployment/06_ssl_setup.sh
+deployment/07_monitoring.sh
+deployment/08_notifications.sh
+deployment/deploy_finish.sh
+deployment/docker/backup.sh
+deployment/docker/bootstrap_server.sh
+deployment/docker/deploy.sh
+deployment/docker/diagnose.sh
+deployment/docker/enable_https.sh
+deployment/docker/redeploy.sh
+deployment/docker/render_nginx_config.sh
+deployment/docker/renew_certs.sh
+deployment/docker/update.sh
+deployment/git_.sh
+deployment/live_deployment.sh
+deployment/refresh.sh
+deployment/server_init.sh
+deployment/setup_server.sh

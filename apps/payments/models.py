@@ -72,6 +72,18 @@ class PaymentTransaction(models.Model):
     paid_at       = models.DateTimeField(null=True, blank=True)
     failed_reason = models.CharField(max_length=512, blank=True, default="")
 
+    # Durable state for the post-payment entitlement action. A confirmed
+    # payment must never rely on an in-memory signal alone to activate what
+    # the customer purchased.
+    business_action_status = models.CharField(max_length=16, default="pending")
+    business_action_attempts = models.PositiveIntegerField(default=0)
+    business_action_error = models.CharField(max_length=512, blank=True, default="")
+
+    # Reserved/succeeded refund value. It is updated while the payment row is
+    # locked before a provider call, so concurrent partial refunds cannot
+    # exceed the original payment.
+    refunded_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+
     # Forensic context for hardened endpoints.
     request_ip   = models.GenericIPAddressField(null=True, blank=True)
     user_agent   = models.CharField(max_length=512, blank=True, default="")
@@ -98,6 +110,37 @@ class PaymentTransaction(models.Model):
     @property
     def is_paid(self):
         return self.status == PaymentStatus.PAID
+
+
+class PaymentRefund(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        SUCCEEDED = "succeeded", "Succeeded"
+        FAILED = "failed", "Failed"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    transaction = models.ForeignKey(
+        PaymentTransaction, on_delete=models.PROTECT, related_name="refunds",
+    )
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    # NULL permits multiple pending refunds before the provider assigns an id;
+    # MySQL then enforces the unique pair as soon as a provider id exists.
+    provider_refund_id = models.CharField(max_length=128, null=True, blank=True, default=None)
+    raw_response = models.JSONField(default=dict, blank=True)
+    failure_reason = models.CharField(max_length=512, blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["transaction", "provider_refund_id"],
+                name="uniq_provider_refund_per_transaction",
+            ),
+        ]
+        indexes = [models.Index(fields=["transaction", "status"])]
 
 
 class PaymentLog(models.Model):

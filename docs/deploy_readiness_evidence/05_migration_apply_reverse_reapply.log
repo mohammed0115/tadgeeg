@@ -1,0 +1,180 @@
+== database ==
+/home/ubuntu/tadgeeg-review-artifacts/deploy_readiness_migration_cycle.sqlite3
+== phase A: apply all ==
+Traceback (most recent call last):
+  File "/home/ubuntu/tadgeeg-main-merge/manage.py", line 21, in <module>
+    main()
+  File "/home/ubuntu/tadgeeg-main-merge/manage.py", line 17, in main
+    execute_from_command_line(sys.argv)
+  File "/usr/local/lib/python3.12/dist-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+    utility.execute()
+  File "/usr/local/lib/python3.12/dist-packages/django/core/management/__init__.py", line 416, in execute
+    django.setup()
+  File "/usr/local/lib/python3.12/dist-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/usr/local/lib/python3.12/dist-packages/django/apps/registry.py", line 124, in populate
+    app_config.ready()
+  File "/home/ubuntu/tadgeeg-main-merge/apps/authentication/apps.py", line 16, in ready
+    check_email_configuration()
+  File "/home/ubuntu/tadgeeg-main-merge/core/utils/startup_checks.py", line 26, in check_email_configuration
+    raise ImproperlyConfigured(
+django.core.exceptions.ImproperlyConfigured: Production email not configured. Missing: EMAIL_HOST_USER, EMAIL_HOST_PASSWORD. OTP delivery will fail. Set these in .env immediately.
+Sentry is attempting to send 2 pending events
+Waiting up to 2 seconds
+Press Ctrl-C to quit
+== state after apply ==
+Traceback (most recent call last):
+  File "/home/ubuntu/tadgeeg-main-merge/manage.py", line 21, in <module>
+    main()
+  File "/home/ubuntu/tadgeeg-main-merge/manage.py", line 17, in main
+    execute_from_command_line(sys.argv)
+  File "/usr/local/lib/python3.12/dist-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+    utility.execute()
+  File "/usr/local/lib/python3.12/dist-packages/django/core/management/__init__.py", line 416, in execute
+    django.setup()
+  File "/usr/local/lib/python3.12/dist-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/usr/local/lib/python3.12/dist-packages/django/apps/registry.py", line 124, in populate
+    app_config.ready()
+  File "/home/ubuntu/tadgeeg-main-merge/apps/authentication/apps.py", line 16, in ready
+    check_email_configuration()
+  File "/home/ubuntu/tadgeeg-main-merge/core/utils/startup_checks.py", line 26, in check_email_configuration
+    raise ImproperlyConfigured(
+django.core.exceptions.ImproperlyConfigured: Production email not configured. Missing: EMAIL_HOST_USER, EMAIL_HOST_PASSWORD. OTP delivery will fail. Set these in .env immediately.
+Sentry is attempting to send 2 pending events
+Waiting up to 2 seconds
+Press Ctrl-C to quit
+== phase B1: reverse invoices to 0016 ==
+Traceback (most recent call last):
+  File "/home/ubuntu/tadgeeg-main-merge/manage.py", line 21, in <module>
+    main()
+  File "/home/ubuntu/tadgeeg-main-merge/manage.py", line 17, in main
+    execute_from_command_line(sys.argv)
+  File "/usr/local/lib/python3.12/dist-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+    utility.execute()
+  File "/usr/local/lib/python3.12/dist-packages/django/core/management/__init__.py", line 416, in execute
+    django.setup()
+  File "/usr/local/lib/python3.12/dist-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/usr/local/lib/python3.12/dist-packages/django/apps/registry.py", line 124, in populate
+    app_config.ready()
+  File "/home/ubuntu/tadgeeg-main-merge/apps/authentication/apps.py", line 16, in ready
+    check_email_configuration()
+  File "/home/ubuntu/tadgeeg-main-merge/core/utils/startup_checks.py", line 26, in check_email_configuration
+    raise ImproperlyConfigured(
+django.core.exceptions.ImproperlyConfigured: Production email not configured. Missing: EMAIL_HOST_USER, EMAIL_HOST_PASSWORD. OTP delivery will fail. Set these in .env immediately.
+Sentry is attempting to send 2 pending events
+Waiting up to 2 seconds
+Press Ctrl-C to quit
+== state after invoice reverse ==
+Traceback (most recent call last):
+  File "/home/ubuntu/tadgeeg-main-merge/manage.py", line 21, in <module>
+    main()
+  File "/home/ubuntu/tadgeeg-main-merge/manage.py", line 17, in main
+    execute_from_command_line(sys.argv)
+  File "/usr/local/lib/python3.12/dist-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+    utility.execute()
+  File "/usr/local/lib/python3.12/dist-packages/django/core/management/__init__.py", line 416, in execute
+    django.setup()
+  File "/usr/local/lib/python3.12/dist-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/usr/local/lib/python3.12/dist-packages/django/apps/registry.py", line 124, in populate
+    app_config.ready()
+  File "/home/ubuntu/tadgeeg-main-merge/apps/authentication/apps.py", line 16, in ready
+    check_email_configuration()
+  File "/home/ubuntu/tadgeeg-main-merge/core/utils/startup_checks.py", line 26, in check_email_configuration
+    raise ImproperlyConfigured(
+django.core.exceptions.ImproperlyConfigured: Production email not configured. Missing: EMAIL_HOST_USER, EMAIL_HOST_PASSWORD. OTP delivery will fail. Set these in .env immediately.
+Sentry is attempting to send 2 pending events
+Waiting up to 2 seconds
+Press Ctrl-C to quit
+== phase B2: reverse documents to 0012 ==
+Traceback (most recent call last):
+  File "/home/ubuntu/tadgeeg-main-merge/manage.py", line 21, in <module>
+    main()
+  File "/home/ubuntu/tadgeeg-main-merge/manage.py", line 17, in main
+    execute_from_command_line(sys.argv)
+  File "/usr/local/lib/python3.12/dist-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+    utility.execute()
+  File "/usr/local/lib/python3.12/dist-packages/django/core/management/__init__.py", line 416, in execute
+    django.setup()
+  File "/usr/local/lib/python3.12/dist-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/usr/local/lib/python3.12/dist-packages/django/apps/registry.py", line 124, in populate
+    app_config.ready()
+  File "/home/ubuntu/tadgeeg-main-merge/apps/authentication/apps.py", line 16, in ready
+    check_email_configuration()
+  File "/home/ubuntu/tadgeeg-main-merge/core/utils/startup_checks.py", line 26, in check_email_configuration
+    raise ImproperlyConfigured(
+django.core.exceptions.ImproperlyConfigured: Production email not configured. Missing: EMAIL_HOST_USER, EMAIL_HOST_PASSWORD. OTP delivery will fail. Set these in .env immediately.
+Sentry is attempting to send 2 pending events
+Waiting up to 2 seconds
+Press Ctrl-C to quit
+== state after full batch reverse ==
+Traceback (most recent call last):
+  File "/home/ubuntu/tadgeeg-main-merge/manage.py", line 21, in <module>
+    main()
+  File "/home/ubuntu/tadgeeg-main-merge/manage.py", line 17, in main
+    execute_from_command_line(sys.argv)
+  File "/usr/local/lib/python3.12/dist-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+    utility.execute()
+  File "/usr/local/lib/python3.12/dist-packages/django/core/management/__init__.py", line 416, in execute
+    django.setup()
+  File "/usr/local/lib/python3.12/dist-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/usr/local/lib/python3.12/dist-packages/django/apps/registry.py", line 124, in populate
+    app_config.ready()
+  File "/home/ubuntu/tadgeeg-main-merge/apps/authentication/apps.py", line 16, in ready
+    check_email_configuration()
+  File "/home/ubuntu/tadgeeg-main-merge/core/utils/startup_checks.py", line 26, in check_email_configuration
+    raise ImproperlyConfigured(
+django.core.exceptions.ImproperlyConfigured: Production email not configured. Missing: EMAIL_HOST_USER, EMAIL_HOST_PASSWORD. OTP delivery will fail. Set these in .env immediately.
+Sentry is attempting to send 2 pending events
+Waiting up to 2 seconds
+Press Ctrl-C to quit
+== phase C: apply all again ==
+Traceback (most recent call last):
+  File "/home/ubuntu/tadgeeg-main-merge/manage.py", line 21, in <module>
+    main()
+  File "/home/ubuntu/tadgeeg-main-merge/manage.py", line 17, in main
+    execute_from_command_line(sys.argv)
+  File "/usr/local/lib/python3.12/dist-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+    utility.execute()
+  File "/usr/local/lib/python3.12/dist-packages/django/core/management/__init__.py", line 416, in execute
+    django.setup()
+  File "/usr/local/lib/python3.12/dist-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/usr/local/lib/python3.12/dist-packages/django/apps/registry.py", line 124, in populate
+    app_config.ready()
+  File "/home/ubuntu/tadgeeg-main-merge/apps/authentication/apps.py", line 16, in ready
+    check_email_configuration()
+  File "/home/ubuntu/tadgeeg-main-merge/core/utils/startup_checks.py", line 26, in check_email_configuration
+    raise ImproperlyConfigured(
+django.core.exceptions.ImproperlyConfigured: Production email not configured. Missing: EMAIL_HOST_USER, EMAIL_HOST_PASSWORD. OTP delivery will fail. Set these in .env immediately.
+Sentry is attempting to send 2 pending events
+Waiting up to 2 seconds
+Press Ctrl-C to quit
+== state after reapply ==
+Traceback (most recent call last):
+  File "/home/ubuntu/tadgeeg-main-merge/manage.py", line 21, in <module>
+    main()
+  File "/home/ubuntu/tadgeeg-main-merge/manage.py", line 17, in main
+    execute_from_command_line(sys.argv)
+  File "/usr/local/lib/python3.12/dist-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+    utility.execute()
+  File "/usr/local/lib/python3.12/dist-packages/django/core/management/__init__.py", line 416, in execute
+    django.setup()
+  File "/usr/local/lib/python3.12/dist-packages/django/__init__.py", line 24, in setup
+    apps.populate(settings.INSTALLED_APPS)
+  File "/usr/local/lib/python3.12/dist-packages/django/apps/registry.py", line 124, in populate
+    app_config.ready()
+  File "/home/ubuntu/tadgeeg-main-merge/apps/authentication/apps.py", line 16, in ready
+    check_email_configuration()
+  File "/home/ubuntu/tadgeeg-main-merge/core/utils/startup_checks.py", line 26, in check_email_configuration
+    raise ImproperlyConfigured(
+django.core.exceptions.ImproperlyConfigured: Production email not configured. Missing: EMAIL_HOST_USER, EMAIL_HOST_PASSWORD. OTP delivery will fail. Set these in .env immediately.
+Sentry is attempting to send 2 pending events
+Waiting up to 2 seconds
+Press Ctrl-C to quit
+== database metadata ==
+ls: cannot access '/home/ubuntu/tadgeeg-review-artifacts/deploy_readiness_migration_cycle.sqlite3': No such file or directory

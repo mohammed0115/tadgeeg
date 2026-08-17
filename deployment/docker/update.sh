@@ -46,6 +46,48 @@ err() { printf '\033[1;31m  ✗ %s\033[0m\n' "$1"; }
 
 compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
 
+backup_live_database() {
+  # Migrations are writers. A deploy must never mutate the live schema without
+  # a restorable, point-in-time dump created before code or containers change.
+  case "$TARGET" in
+    live|all) ;;
+    *) return 0 ;;
+  esac
+
+  local backup_root="$PROJECT_ROOT/backups/mysql/live"
+  local stamp dump_tmp dump_gz checksum
+  stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+  dump_tmp="$backup_root/tadgeeg-live-${stamp}.sql"
+  dump_gz="${dump_tmp}.gz"
+  checksum="${dump_gz}.sha256"
+
+  if ! compose ps --status running --services 2>/dev/null | grep -qx "db_live"; then
+    err "db_live is not running; cannot create the mandatory pre-migration backup."
+    exit 1
+  fi
+
+  umask 077
+  mkdir -p "$backup_root"
+  log "Creating pre-migration MySQL backup ..."
+  if ! compose exec -T db_live sh -c \
+    'exec mysqldump --single-transaction --routines --events --hex-blob -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' \
+    > "$dump_tmp"; then
+    rm -f "$dump_tmp"
+    err "Pre-migration database backup failed; deployment aborted."
+    exit 1
+  fi
+
+  if [ ! -s "$dump_tmp" ]; then
+    rm -f "$dump_tmp"
+    err "Pre-migration database backup was empty; deployment aborted."
+    exit 1
+  fi
+
+  gzip -f "$dump_tmp"
+  sha256sum "$dump_gz" > "$checksum"
+  ok "Pre-migration backup: $dump_gz"
+}
+
 # Which env files a target needs. Referenced by the pre-flight checks below.
 envs_for_target() {
   case "$1" in
@@ -88,9 +130,10 @@ echo ""
 
 START_TIME=$(date +%s)
 
-# ── 1. Git pull ────────────────────────────────────────────────────────────────
-log "1/4  Pulling latest code from origin/$BRANCH ..."
+# ── 1. Database backup + Git pull ─────────────────────────────────────────────
+log "1/4  Backing up live data and pulling latest code from origin/$BRANCH ..."
 cd "$PROJECT_ROOT"
+backup_live_database
 
 # Safety net: preserve env files across the git reset. They are gitignored
 # today, but git reset --hard would still wipe them if a future commit ever
@@ -105,26 +148,35 @@ for env_file in "$SCRIPT_DIR"/env/*.env; do
 done
 shopt -u nullglob
 
-if ! git fetch origin "$BRANCH"; then
-  err "Branch '$BRANCH' not found on origin."
-  echo "    Push it first, or pass the branch: bash update.sh $TARGET <branch>"
+# A production release must resolve to an immutable tag commit. Branch names
+# remain supported for dev/test, but a tag is fetched and reset exactly once.
+if git ls-remote --exit-code --tags origin "refs/tags/$BRANCH" >/dev/null 2>&1; then
+  git fetch --no-tags origin "refs/tags/$BRANCH:refs/tags/$BRANCH"
+  RELEASE_REF="refs/tags/$BRANCH^{commit}"
+  RELEASE_LABEL="tag:$BRANCH"
+elif git fetch origin "$BRANCH"; then
+  RELEASE_REF="origin/$BRANCH"
+  RELEASE_LABEL="branch:$BRANCH"
+else
+  err "No branch or tag named '$BRANCH' found on origin."
+  echo "    Push it first, or pass a branch/tag: bash update.sh $TARGET <ref>"
   exit 1
 fi
 
 # Say what is about to be discarded. `reset --hard` is silent about local
 # commits, and a deploy is exactly when someone discovers a hotfix only ever
 # existed on the server.
-BEHIND_BY=$(git rev-list --count "origin/$BRANCH..HEAD" 2>/dev/null || echo 0)
+BEHIND_BY=$(git rev-list --count "$RELEASE_REF..HEAD" 2>/dev/null || echo 0)
 if [ "$BEHIND_BY" -gt 0 ]; then
-  err "$BEHIND_BY local commit(s) on this checkout are NOT on origin/$BRANCH."
-  git log --oneline "origin/$BRANCH..HEAD" | sed 's/^/      /'
+  err "$BEHIND_BY local commit(s) on this checkout are not on $RELEASE_LABEL."
+  git log --oneline "$RELEASE_REF..HEAD" | sed 's/^/      /'
   echo "    reset --hard would discard them. Push or stash them, then re-run."
   exit 1
 fi
 
-git reset --hard "origin/$BRANCH"
+git reset --hard "$RELEASE_REF"
 COMMIT=$(git log -1 --format="%h — %s (%ar)")
-ok "HEAD: $COMMIT  [$BRANCH]"
+ok "HEAD: $COMMIT  [$RELEASE_LABEL]"
 
 # Restore env files in case the reset removed or modified them.
 for backup in "$ENV_BACKUP_DIR"/*.env; do

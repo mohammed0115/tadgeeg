@@ -44,24 +44,16 @@ _REQUIRED_UBL_FIELDS = [
 
 
 def _parse(xml_source: bytes | str):
-    """Best-effort parse — returns lxml Element or None. lxml is preferred but
-    we fall back to stdlib so the module works in environments without lxml."""
+    """Parse untrusted UBL XML with a hardened lxml parser, or fail closed."""
     try:
         from lxml import etree
         if isinstance(xml_source, str):
             xml_source = xml_source.encode("utf-8")
-        # disable XXE / external-entity attacks
         parser = etree.XMLParser(resolve_entities=False, no_network=True)
         return etree.fromstring(xml_source, parser=parser)
-    except Exception:
-        try:
-            import xml.etree.ElementTree as _ET
-            if isinstance(xml_source, bytes):
-                xml_source = xml_source.decode("utf-8", errors="replace")
-            return _ET.fromstring(xml_source)
-        except Exception as exc:
-            logger.debug("[zatca-p2] XML parse failed: %s", exc)
-            return None
+    except Exception as exc:
+        logger.debug("[zatca-p2] secure XML parse failed: %s", exc)
+        return None
 
 
 def is_ubl_invoice(xml_source: bytes | str) -> bool:

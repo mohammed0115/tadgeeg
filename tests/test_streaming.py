@@ -284,3 +284,25 @@ def test_metrics_aggregates_throughput_and_errors(db):
     assert 19 <= m["error_rate_pct"] <= 21   # 20% with rounding
     assert m["avg_latency_ms"] > 0
     assert m["p95_latency_ms"] > 0
+
+
+def test_worker_raises_when_anomaly_persistence_fails(db, org):
+    """A persistence failure must reach the bus so it can retry or DLQ."""
+    from unittest.mock import patch
+    from apps.streaming import bus, worker
+    from apps.streaming.detectors import AnomalyHit
+
+    event = bus.Event(
+        type="invoice.uploaded",
+        payload={"invoice_id": "failed-hit", "vendor_name": "FailureCo"},
+        organization_id=str(org.id),
+    )
+    hit = AnomalyHit(
+        organization_id=str(org.id), detector="test", severity="high",
+        invoice_id="failed-hit", vendor_name="FailureCo", explanation="test", details={},
+    )
+    with patch("apps.streaming.worker.det.evaluate_all", return_value=[hit]), patch(
+        "apps.streaming.worker._persist_hit", side_effect=RuntimeError("database unavailable")
+    ):
+        with pytest.raises(RuntimeError, match="database unavailable"):
+            worker.handle_event(event)

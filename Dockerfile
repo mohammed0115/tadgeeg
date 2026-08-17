@@ -26,10 +26,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt ./
+COPY requirements.lock.txt ./
 
 RUN python -m pip install --upgrade pip setuptools wheel && \
-    pip install -r requirements.txt
+    pip install --require-hashes -r requirements.lock.txt
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

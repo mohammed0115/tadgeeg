@@ -1,0 +1,376 @@
+== database ==
+/home/ubuntu/tadgeeg-review-artifacts/deploy_readiness_migration_cycle.sqlite3
+== phase A: apply all ==
+EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:31:13,872] WARNING finai EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:31:13,874] WARNING finai EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:31:13,879] INFO billing.quota_gate [quota_gate] installed around run_audit_compat
+Operations to perform:
+  Apply all migrations: activity_logs, admin, ai_safety, alerts, analytics, api_mobile, audit, audit_engine, auditing, auth, authentication, banking, billing, cms, compliance, contenttypes, documents, erp, file_management, invoices, leads, ledger, notifications, partners, payments, platform_admin, procurement, reports, rule_engine, sessions, storage_management, streaming, token_blacklist, transactions, webhooks, zatca
+Running migrations:
+  Applying contenttypes.0001_initial... OK
+  Applying contenttypes.0002_remove_content_type_name... OK
+  Applying auth.0001_initial... OK
+  Applying auth.0002_alter_permission_name_max_length... OK
+  Applying auth.0003_alter_user_email_max_length... OK
+  Applying auth.0004_alter_user_username_opts... OK
+  Applying auth.0005_alter_user_last_login_null... OK
+  Applying auth.0006_require_contenttypes_0002... OK
+  Applying auth.0007_alter_validators_add_error_messages... OK
+  Applying auth.0008_alter_user_username_max_length... OK
+  Applying auth.0009_alter_user_last_name_max_length... OK
+  Applying auth.0010_alter_group_name_max_length... OK
+  Applying auth.0011_update_proxy_permissions... OK
+  Applying auth.0012_alter_user_first_name_max_length... OK
+  Applying authentication.0001_initial... OK
+  Applying authentication.0002_add_org_settings... OK
+  Applying authentication.0003_user_email_verified_at_emailotpverification... OK
+  Applying authentication.0004_auditlog_retain_until... OK
+  Applying authentication.0005_auditlog_chain_hash_auditlog_previous_hash... OK
+  Applying authentication.0006_user_last_totp_counter... OK
+  Applying authentication.0007_alter_user_mfa_secret... OK
+  Applying activity_logs.0001_initial... OK
+  Applying activity_logs.0002_activitylog_chain_hash_activitylog_previous_hash_and_more... OK
+  Applying activity_logs.0003_alter_activitylog_action... OK
+  Applying activity_logs.0004_unify_hash_chain... OK
+  Applying activity_logs.0005_rebuild_activity_log_chains... OK
+  Applying activity_logs.0006_chain_partition_and_fork_constraint... OK
+  Applying activity_logs.0007_evidence_access_hash_chain... OK
+  Applying admin.0001_initial... OK
+  Applying admin.0002_logentry_remove_auto_add... OK
+  Applying admin.0003_logentry_add_action_flag_choices... OK
+  Applying ai_safety.0001_initial... OK
+  Applying alerts.0001_initial... OK
+  Applying authentication.0008_alter_user_role... OK
+  Applying analytics.0001_initial... OK
+  Applying analytics.0002_initial... OK
+  Applying analytics.0003_benchmark_participation... OK
+  Applying api_mobile.0001_initial... OK
+  Applying documents.0001_initial... OK
+  Applying documents.0002_add_document_analysis_result... OK
+  Applying invoices.0001_initial... OK
+  Applying transactions.0001_initial... OK
+  Applying audit.0001_initial... OK
+  Applying audit.0002_initial... OK
+  Applying audit.0003_auditcase_invoice... OK
+  Applying audit.0004_auditsession... OK
+  Applying documents.0003_document_audit_session... OK
+  Applying documents.0004_alter_bankstatement_document_and_more... OK
+  Applying documents.0005_canonical_schema... OK
+  Applying documents.0006_grn_payment_models... OK
+  Applying documents.0007_supplierstatement_salesorder_receiptvoucher_and_more... OK
+  Applying documents.0008_journalentry... OK
+  Applying documents.0009_bankstatement_ai_recommendations_ar_and_more... OK
+  Applying documents.0010_bulkuploadjob_bulkuploaditem_and_more... OK
+  Applying documents.0011_bulkuploadjob_allowed_items_and_more... OK
+  Applying documents.0012_document_file_sha256... OK
+  Applying ledger.0001_initial... OK
+  Applying ledger.0002_period_close... OK
+  Applying ledger.0003_journalentry_posted_by... OK
+  Applying invoices.0002_invoice_audit_session_invoicebatch_audit_session... OK
+  Applying invoices.0003_add_missing_fields... OK
+  Applying invoices.0004_alter_invoice_cash_flow_class_and_more... OK
+  Applying invoices.0005_vendor_intelligence_fields... OK
+  Applying invoices.0006_vendor_profile_indexes... OK
+  Applying invoices.0007_validation_result_json_schema... OK
+  Applying invoices.0008_invoice_db_constraints... OK
+  Applying invoices.0009_partial_indexes_active_invoices... OK
+  Applying invoices.0010_hash_chain_fields... OK
+  Applying invoices.0011_working_papers... OK
+  Applying audit.0005_auditfinding... OK
+  Applying audit.0006_rename_audit_findi_organiz_716be4_idx_audit_findi_organiz_dafce2_idx_and_more... OK
+  Applying audit.0007_customruledefinition... OK
+  Applying audit.0008_alter_customruledefinition_condition_params... OK
+  Applying audit.0009_add_is_deleted_to_auditcase... OK
+  Applying audit.0010_working_papers... OK
+  Applying audit.0011_custom_rule_dsl... OK
+  Applying audit.0012_alter_auditcase_deleted_at_and_more... OK
+  Applying audit.0013_trialbalanceimport_trialbalancerow_and_more... OK
+  Applying audit.0014_accountmapping_and_more... OK
+  Applying audit.0015_generalledgerimport_generalledgerrow_and_more... OK
+  Applying audit.0016_generalledgerriskfinding... OK
+  Applying audit.0017_generalledgerriskfinding_amount_to_overall_materiality_ratio_and_more... OK
+  Applying audit.0018_generalledgerriskfindingreview... OK
+  Applying audit.0019_auditdifferencesummary_auditdifferenceitem_and_more... OK
+  Applying audit.0020_proposedauditadjustment_auditdifferenceitemresponse... OK
+  Applying audit.0021_auditreadinessworkpaper... OK
+  Applying audit.0022_auditevidencerequest_auditevidenceattachment_and_more... OK
+  Applying audit.0023_auditevidencerequest_assigned_client_user_and_more... OK
+  Applying audit.0024_alter_auditevidencerequestevent_event_type... OK
+  Applying audit.0025_auditevidenceattachment_last_verification_ok_and_more... OK
+  Applying audit.0026_auditevidenceattachment_verification_duration_ms_and_more... OK
+  Applying audit.0027_journalanalyticsrun_journalanalyticssummary_and_more... OK
+  Applying audit.0028_auditconfirmationrequest_and_more... OK
+  Applying audit.0029_auditcontroldeficiency_and_more... OK
+  Applying audit.0030_substantivetestitem_and_more... OK
+  Applying audit.0031_auditevidencerequest_confirmation_request_and_more... OK
+  Applying audit.0032_engagementplanningrecord... OK
+  Applying audit.0033_assessedrisk_and_more... OK
+  Applying audit.0034_auditprocedure_and_more... OK
+  Applying audit.0035_auditevidencerequest_procedure... OK
+  Applying audit.0036_auditcontroldeficiency_assessed_risk_and_more... OK
+  Applying audit.0037_engagementsignoff... OK
+  Applying audit.0038_auditissue_and_more... OK
+  Applying audit.0039_engagementreport_and_more... OK
+  Applying audit.0040_engagementmember_and_more... OK
+  Applying audit.0041_auditissue_source_id_auditissue_source_type... OK
+  Applying audit.0042_finding_verdict... OK
+  Applying audit.0043_standard_passage... OK
+  Applying audit.0044_chain_partition_and_fork_constraint... OK
+  Applying audit.0045_chain_checkpoint... OK
+  Applying storage_management.0001_initial... OK
+  Applying audit_engine.0001_initial... OK
+  Applying audit_engine.0002_rename_audit_engin_organiz_idx_audit_engin_organiz_2af5ea_idx_and_more... OK
+  Applying reports.0001_initial... OK
+  Applying auditing.0001_initial... OK
+  Applying auditing.0002_alter_auditdocument_options_and_more... OK
+  Applying auditing.0003_add_critical_risk_level... OK
+  Applying auditing.0004_add_critical_severity_fix_ordering... OK
+  Applying auditing.0005_accountingruleevaluation... OK
+  Applying auditing.0006_alter_auditdocument_detected_doc_type_and_more... OK
+  Applying auditing.0007_aivalidationdataset_aivalidationrun_and_more... OK
+  Applying authentication.0009_unify_hash_chain... OK
+  Applying authentication.0010_rebuild_audit_log_chains... OK
+  Applying authentication.0011_chain_partition_and_fork_constraint... OK
+  Applying banking.0001_initial... OK
+  Applying payments.0001_initial... OK
+  Applying payments.0002_alter_paymentproviderconfig_secret_key_and_more... OK
+  Applying payments.0003_delete_paymentproviderconfig... OK
+  Applying rule_engine.0001_initial... OK
+  Applying rule_engine.0002_canonical_schema... OK
+  Applying rule_engine.0003_seed_gaap_rules... OK
+  Applying rule_engine.0004_alter_ruleassignment_document_type... OK
+  Applying rule_engine.0005_audit_run_v2_metadata... OK
+  Applying rule_engine.0006_backfill_audit_cases...[0006_backfill] Backfilled 0 AuditCase records -> AuditRun + AuditResult
+ OK
+  Applying rule_engine.0007_alter_auditrunv2metadata_decision_and_more... OK
+  Applying billing.0001_initial... OK
+  Applying billing.0002_alter_organizationsubscription_payment_transaction_and_more... OK
+  Applying billing.0003_organizationsubscription_user_limit_and_more... OK
+  Applying billing.0004_alter_plan_code... OK
+  Applying billing.0005_price_snapshot... OK
+  Applying billing.0006_addons... OK
+  Applying billing.0007_billing_policy... OK
+  Applying cms.0001_initial... OK
+  Applying compliance.0001_initial... OK
+  Applying compliance.0002_complianceviolation_invoice... OK
+  Applying documents.0013_canonical_data_organization...
+[0013] canonical rows: assigned=0 left_null_parent_missing=0 left_null_model_unknown=0
+ OK
+  Applying erp.0001_initial... OK
+  Applying file_management.0001_initial... OK
+  Applying invoices.0012_invoice_ai_recommendations_ar_and_more... OK
+  Applying invoices.0013_invoice_reviewed_at_invoice_reviewed_by... OK
+  Applying invoices.0014_overriderequest... OK
+  Applying invoices.0015_invoice_control_risk_invoice_detection_risk_and_more... OK
+  Applying invoices.0016_chain_partition_and_fork_constraint... OK
+  Applying invoices.0017_invoice_audit_document...[2026-08-16 10:32:52,023] INFO apps.invoices.migrations.0017_invoice_audit_document 0017 invoice audit-document backfill: total=0 filled=0 left_null_no_candidate=0 left_null_ambiguous=0
+ OK
+  Applying invoices.0018_invoice_audit_document_backfill...[2026-08-16 10:32:52,486] INFO apps.invoices.migrations.0017_invoice_audit_document 0017 invoice audit-document backfill: total=0 filled=0 left_null_no_candidate=0 left_null_ambiguous=0
+ OK
+  Applying leads.0001_initial... OK
+  Applying leads.0002_trialleadprofile... OK
+  Applying leads.0003_alter_trialleadprofile_country... OK
+  Applying ledger.0004_chain_partition_and_fork_constraint... OK
+  Applying notifications.0001_initial... OK
+  Applying partners.0001_initial... OK
+  Applying partners.0002_partnerapplication_partnerapplicationnote_and_more... OK
+  Applying partners.0003_alter_partnerapplicationattachment_file... OK
+  Applying partners.0004_partner_arabic_name... OK
+  Applying partners.0005_partner_bilingual_descriptions... OK
+  Applying payments.0004_alter_paymenttransaction_provider... OK
+  Applying platform_admin.0001_initial... OK
+  Applying platform_admin.0002_alter_customeractivity_activity_type... OK
+  Applying procurement.0001_initial... OK
+  Applying sessions.0001_initial... OK
+  Applying streaming.0001_initial... OK
+  Applying token_blacklist.0001_initial... OK
+  Applying token_blacklist.0002_outstandingtoken_jti_hex... OK
+  Applying token_blacklist.0003_auto_20171017_2007... OK
+  Applying token_blacklist.0004_auto_20171017_2013... OK
+  Applying token_blacklist.0005_remove_outstandingtoken_jti... OK
+  Applying token_blacklist.0006_auto_20171017_2113... OK
+  Applying token_blacklist.0007_auto_20171017_2214... OK
+  Applying token_blacklist.0008_migrate_to_bigautofield... OK
+  Applying token_blacklist.0010_fix_migrate_to_bigautofield... OK
+  Applying token_blacklist.0011_linearizes_history... OK
+  Applying token_blacklist.0012_alter_outstandingtoken_user... OK
+  Applying token_blacklist.0013_alter_blacklistedtoken_options_and_more... OK
+  Applying webhooks.0001_initial... OK
+  Applying zatca.0001_initial... OK
+== state after apply ==
+EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:15,030] WARNING finai EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:15,033] WARNING finai EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:15,038] INFO billing.quota_gate [quota_gate] installed around run_audit_compat
+documents
+ [X] 0001_initial
+ [X] 0002_add_document_analysis_result
+ [X] 0003_document_audit_session
+ [X] 0004_alter_bankstatement_document_and_more
+ [X] 0005_canonical_schema
+ [X] 0006_grn_payment_models
+ [X] 0007_supplierstatement_salesorder_receiptvoucher_and_more
+ [X] 0008_journalentry
+ [X] 0009_bankstatement_ai_recommendations_ar_and_more
+ [X] 0010_bulkuploadjob_bulkuploaditem_and_more
+ [X] 0011_bulkuploadjob_allowed_items_and_more
+ [X] 0012_document_file_sha256
+ [X] 0013_canonical_data_organization
+invoices
+ [X] 0001_initial
+ [X] 0002_invoice_audit_session_invoicebatch_audit_session
+ [X] 0003_add_missing_fields
+ [X] 0004_alter_invoice_cash_flow_class_and_more
+ [X] 0005_vendor_intelligence_fields
+ [X] 0006_vendor_profile_indexes
+ [X] 0007_validation_result_json_schema
+ [X] 0008_invoice_db_constraints
+ [X] 0009_partial_indexes_active_invoices
+ [X] 0010_hash_chain_fields
+ [X] 0011_working_papers
+ [X] 0012_invoice_ai_recommendations_ar_and_more
+ [X] 0013_invoice_reviewed_at_invoice_reviewed_by
+ [X] 0014_overriderequest
+ [X] 0015_invoice_control_risk_invoice_detection_risk_and_more
+ [X] 0016_chain_partition_and_fork_constraint
+ [X] 0017_invoice_audit_document
+ [X] 0018_invoice_audit_document_backfill
+== phase B1: reverse invoices to 0016 ==
+EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:19,005] WARNING finai EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:19,006] WARNING finai EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:19,011] INFO billing.quota_gate [quota_gate] installed around run_audit_compat
+Operations to perform:
+  Target specific migration: 0016_chain_partition_and_fork_constraint, from invoices
+Running migrations:
+  Rendering model states... DONE
+  Unapplying invoices.0018_invoice_audit_document_backfill... OK
+  Unapplying invoices.0017_invoice_audit_document... OK
+== state after invoice reverse ==
+EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:24,829] WARNING finai EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:24,831] WARNING finai EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:24,835] INFO billing.quota_gate [quota_gate] installed around run_audit_compat
+invoices
+ [X] 0001_initial
+ [X] 0002_invoice_audit_session_invoicebatch_audit_session
+ [X] 0003_add_missing_fields
+ [X] 0004_alter_invoice_cash_flow_class_and_more
+ [X] 0005_vendor_intelligence_fields
+ [X] 0006_vendor_profile_indexes
+ [X] 0007_validation_result_json_schema
+ [X] 0008_invoice_db_constraints
+ [X] 0009_partial_indexes_active_invoices
+ [X] 0010_hash_chain_fields
+ [X] 0011_working_papers
+ [X] 0012_invoice_ai_recommendations_ar_and_more
+ [X] 0013_invoice_reviewed_at_invoice_reviewed_by
+ [X] 0014_overriderequest
+ [X] 0015_invoice_control_risk_invoice_detection_risk_and_more
+ [X] 0016_chain_partition_and_fork_constraint
+ [ ] 0017_invoice_audit_document
+ [ ] 0018_invoice_audit_document_backfill
+== phase B2: reverse documents to 0012 ==
+EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:28,754] WARNING finai EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:28,755] WARNING finai EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:28,760] INFO billing.quota_gate [quota_gate] installed around run_audit_compat
+Operations to perform:
+  Target specific migration: 0012_document_file_sha256, from documents
+Running migrations:
+  Rendering model states... DONE
+  Unapplying documents.0013_canonical_data_organization... OK
+== state after full batch reverse ==
+EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:35,119] WARNING finai EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:35,121] WARNING finai EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:35,125] INFO billing.quota_gate [quota_gate] installed around run_audit_compat
+documents
+ [X] 0001_initial
+ [X] 0002_add_document_analysis_result
+ [X] 0003_document_audit_session
+ [X] 0004_alter_bankstatement_document_and_more
+ [X] 0005_canonical_schema
+ [X] 0006_grn_payment_models
+ [X] 0007_supplierstatement_salesorder_receiptvoucher_and_more
+ [X] 0008_journalentry
+ [X] 0009_bankstatement_ai_recommendations_ar_and_more
+ [X] 0010_bulkuploadjob_bulkuploaditem_and_more
+ [X] 0011_bulkuploadjob_allowed_items_and_more
+ [X] 0012_document_file_sha256
+ [ ] 0013_canonical_data_organization
+invoices
+ [X] 0001_initial
+ [X] 0002_invoice_audit_session_invoicebatch_audit_session
+ [X] 0003_add_missing_fields
+ [X] 0004_alter_invoice_cash_flow_class_and_more
+ [X] 0005_vendor_intelligence_fields
+ [X] 0006_vendor_profile_indexes
+ [X] 0007_validation_result_json_schema
+ [X] 0008_invoice_db_constraints
+ [X] 0009_partial_indexes_active_invoices
+ [X] 0010_hash_chain_fields
+ [X] 0011_working_papers
+ [X] 0012_invoice_ai_recommendations_ar_and_more
+ [X] 0013_invoice_reviewed_at_invoice_reviewed_by
+ [X] 0014_overriderequest
+ [X] 0015_invoice_control_risk_invoice_detection_risk_and_more
+ [X] 0016_chain_partition_and_fork_constraint
+ [ ] 0017_invoice_audit_document
+ [ ] 0018_invoice_audit_document_backfill
+== phase C: apply all again ==
+EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:39,172] WARNING finai EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:39,174] WARNING finai EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:39,178] INFO billing.quota_gate [quota_gate] installed around run_audit_compat
+Operations to perform:
+  Apply all migrations: activity_logs, admin, ai_safety, alerts, analytics, api_mobile, audit, audit_engine, auditing, auth, authentication, banking, billing, cms, compliance, contenttypes, documents, erp, file_management, invoices, leads, ledger, notifications, partners, payments, platform_admin, procurement, reports, rule_engine, sessions, storage_management, streaming, token_blacklist, transactions, webhooks, zatca
+Running migrations:
+  Applying documents.0013_canonical_data_organization...
+[0013] canonical rows: assigned=0 left_null_parent_missing=0 left_null_model_unknown=0
+ OK
+  Applying invoices.0017_invoice_audit_document...[2026-08-16 10:33:41,819] INFO apps.invoices.migrations.0017_invoice_audit_document 0017 invoice audit-document backfill: total=0 filled=0 left_null_no_candidate=0 left_null_ambiguous=0
+ OK
+  Applying invoices.0018_invoice_audit_document_backfill...[2026-08-16 10:33:42,078] INFO apps.invoices.migrations.0017_invoice_audit_document 0017 invoice audit-document backfill: total=0 filled=0 left_null_no_candidate=0 left_null_ambiguous=0
+ OK
+== state after reapply ==
+EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:45,552] WARNING finai EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:45,554] WARNING finai EMAIL_HOST_USER not set — OTP emails will print to console only. Set EMAIL_HOST_USER and EMAIL_HOST_PASSWORD in .env for real delivery.
+[2026-08-16 10:33:45,558] INFO billing.quota_gate [quota_gate] installed around run_audit_compat
+documents
+ [X] 0001_initial
+ [X] 0002_add_document_analysis_result
+ [X] 0003_document_audit_session
+ [X] 0004_alter_bankstatement_document_and_more
+ [X] 0005_canonical_schema
+ [X] 0006_grn_payment_models
+ [X] 0007_supplierstatement_salesorder_receiptvoucher_and_more
+ [X] 0008_journalentry
+ [X] 0009_bankstatement_ai_recommendations_ar_and_more
+ [X] 0010_bulkuploadjob_bulkuploaditem_and_more
+ [X] 0011_bulkuploadjob_allowed_items_and_more
+ [X] 0012_document_file_sha256
+ [X] 0013_canonical_data_organization
+invoices
+ [X] 0001_initial
+ [X] 0002_invoice_audit_session_invoicebatch_audit_session
+ [X] 0003_add_missing_fields
+ [X] 0004_alter_invoice_cash_flow_class_and_more
+ [X] 0005_vendor_intelligence_fields
+ [X] 0006_vendor_profile_indexes
+ [X] 0007_validation_result_json_schema
+ [X] 0008_invoice_db_constraints
+ [X] 0009_partial_indexes_active_invoices
+ [X] 0010_hash_chain_fields
+ [X] 0011_working_papers
+ [X] 0012_invoice_ai_recommendations_ar_and_more
+ [X] 0013_invoice_reviewed_at_invoice_reviewed_by
+ [X] 0014_overriderequest
+ [X] 0015_invoice_control_risk_invoice_detection_risk_and_more
+ [X] 0016_chain_partition_and_fork_constraint
+ [X] 0017_invoice_audit_document
+ [X] 0018_invoice_audit_document_backfill
+== database metadata ==
+-rw-r--r-- 1 ubuntu ubuntu 6.5M Aug 16 07:33 /home/ubuntu/tadgeeg-review-artifacts/deploy_readiness_migration_cycle.sqlite3

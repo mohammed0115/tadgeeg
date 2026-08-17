@@ -21,11 +21,10 @@ from __future__ import annotations
 import csv
 import io
 import json
-import os
-import tempfile
 import uuid
 import zipfile
 from datetime import timedelta
+from pathlib import Path
 
 from django.conf import settings
 from django.http import FileResponse
@@ -198,9 +197,9 @@ class DataExportRequestView(APIView):
         # Estimate row count to choose sync vs async.
         invoice_count = Invoice.objects.filter(organization=org).count()
         job_id = uuid.uuid4().hex
-        export_dir = os.path.join(getattr(settings, "MEDIA_ROOT", "/tmp"), "exports")
-        os.makedirs(export_dir, exist_ok=True)
-        output_path = os.path.join(export_dir, f"export_{org.id}_{job_id}.zip")
+        export_dir = Path(settings.MEDIA_ROOT) / "exports"
+        export_dir.mkdir(parents=True, exist_ok=True)
+        output_path = export_dir / f"export_{org.id}_{job_id}.zip"
 
         if invoice_count <= self.SOFT_CAP:
             counts = _build_zip(org, output_path)
@@ -231,9 +230,9 @@ class DataExportDownloadView(APIView):
         org = request.user.organization
         if not org:
             return Response({"error": "no organization"}, status=400)
-        export_dir = os.path.join(getattr(settings, "MEDIA_ROOT", "/tmp"), "exports")
-        path = os.path.join(export_dir, f"export_{org.id}_{job_id}.zip")
-        if not os.path.exists(path):
+        export_dir = Path(settings.MEDIA_ROOT) / "exports"
+        path = export_dir / f"export_{org.id}_{job_id}.zip"
+        if not path.exists():
             return Response({
                 "status": "processing_or_unknown",
                 "note": "File not yet ready. Poll again in a few seconds.",

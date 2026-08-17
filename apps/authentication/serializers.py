@@ -4,6 +4,8 @@ from datetime import timedelta
 from django.db import transaction
 
 from django.contrib.auth import authenticate
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
@@ -146,6 +148,10 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         if attrs["password"] != attrs.pop("password_confirm"):
             raise serializers.ValidationError({"password": _("Passwords do not match.")})
+        try:
+            validate_password(attrs["password"])
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"password": list(exc.messages)}) from exc
         return attrs
 
     def validate_phone(self, value):
@@ -282,6 +288,10 @@ class ChangePasswordSerializer(serializers.Serializer):
     def validate(self, attrs):
         if attrs["new_password"] != attrs["new_password_confirm"]:
             raise serializers.ValidationError({"new_password": _("Passwords do not match.")})
+        try:
+            validate_password(attrs["new_password"], self.context["request"].user)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError({"new_password": list(exc.messages)}) from exc
         return attrs
 
     def validate_old_password(self, value):

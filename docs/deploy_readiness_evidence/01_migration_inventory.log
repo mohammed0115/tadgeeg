@@ -1,0 +1,47 @@
+== unapplied migration count ==
+185
+== makemigrations check ==
+No changes detected
+== first unapplied contexts ==
+activity_logs
+ [ ] 0001_initial
+ [ ] 0002_activitylog_chain_hash_activitylog_previous_hash_and_more
+ [ ] 0003_alter_activitylog_action
+ [ ] 0004_unify_hash_chain
+ [ ] 0005_rebuild_activity_log_chains
+ [ ] 0006_chain_partition_and_fork_constraint
+ [ ] 0007_evidence_access_hash_chain
+admin
+ [ ] 0001_initial
+ [ ] 0002_logentry_remove_auto_add
+ [ ] 0003_logentry_add_action_flag_choices
+ai_safety
+ [ ] 0001_initial
+alerts
+ [ ] 0001_initial
+analytics
+ [ ] 0001_initial
+ [ ] 0002_initial
+ [ ] 0003_benchmark_participation
+== total migration files ==
+156
+== migrations added 3d29066..26e7d86 ==
+apps/invoices/migrations/0018_invoice_audit_document_backfill.py
+
+apps/invoices/migrations/0017_invoice_audit_document.py
+
+apps/documents/migrations/0013_canonical_data_organization.py
+
+== test database settings references ==
+finai_backend/settings/base.py:20:    DATABASES,
+finai_backend/settings/test.py:33:_test_db_backend = os.environ.get("TEST_DB_BACKEND", "sqlite")
+finai_backend/settings/test.py:36:    DATABASES = {
+finai_backend/settings/test.py:47:    DATABASES = {
+finai_backend/settings/test.py:49:            "ENGINE": "django.db.backends.sqlite3",
+finai_backend/settings_canonical.py:309:DATABASES = {"default": _default_database}
+finai_backend/settings/base.py:20:    DATABASES,
+finai_backend/settings/test.py:33:_test_db_backend = os.environ.get("TEST_DB_BACKEND", "sqlite")
+finai_backend/settings/test.py:36:    DATABASES = {
+finai_backend/settings/test.py:47:    DATABASES = {
+finai_backend/settings/test.py:49:            "ENGINE": "django.db.backends.sqlite3",
+finai_backend/settings_canonical.py:309:DATABASES = {"default": _default_database}

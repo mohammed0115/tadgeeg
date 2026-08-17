@@ -1,0 +1,244 @@
+== update.sh lines 1-120 ==
+     1	#!/usr/bin/env bash
+     2	# ============================================================
+     3	# Tadgeeg — Live Server Update Script
+     4	# Usage:
+     5	#   bash deployment/docker/update.sh           # update live only
+     6	#   bash deployment/docker/update.sh all       # update live + dev + test
+     7	#   bash deployment/docker/update.sh live      # update live only
+     8	#   bash deployment/docker/update.sh dev       # update dev only
+     9	#   bash deployment/docker/update.sh test      # update test only
+    10	#
+    11	# What it does:
+    12	#   1. git pull latest code from origin/main
+    13	#   2. Rebuild Docker image(s)
+    14	#   3. Restart container(s) — entrypoint.sh auto-runs:
+    15	#      - migrate --noinput
+    16	#      - compilemessages
+    17	#      - collectstatic --noinput --clear
+    18	#   4. Show running containers and tail logs
+    19	# ============================================================
+    20	set -Eeuo pipefail
+    21
+    22	SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    23	PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+    24	COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
+    25	TARGET="${1:-live}"
+    26
+    27	# Branch: the second argument, else $BRANCH, else whatever is checked out, else
+    28	# main. It used to default to main unconditionally, so
+    29	#
+    30	#     git checkout my-branch && bash update.sh dev
+    31	#
+    32	# fetched main and `git reset --hard origin/main` — which does not merely
+    33	# ignore your branch, it MOVES the local branch ref you are standing on to
+    34	# main's commit. The deploy then reported success having shipped main. That is
+    35	# how this deploy silently shipped the wrong code a moment ago.
+    36	#
+    37	# Defaulting to the current branch makes the obvious sequence do the obvious
+    38	# thing; `bash update.sh dev main` or BRANCH=main still forces main.
+    39	CURRENT_BRANCH="$(git -C "$PROJECT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo main)"
+    40	[ "$CURRENT_BRANCH" = "HEAD" ] && CURRENT_BRANCH=main   # detached
+    41	BRANCH="${2:-${BRANCH:-$CURRENT_BRANCH}}"
+    42
+    43	log() { printf '\n\033[1;34m[%s] %s\033[0m\n' "$(date '+%H:%M:%S')" "$1"; }
+    44	ok()  { printf '\033[1;32m  ✓ %s\033[0m\n' "$1"; }
+    45	err() { printf '\033[1;31m  ✗ %s\033[0m\n' "$1"; }
+    46
+    47	compose() { docker compose -f "$COMPOSE_FILE" "$@"; }
+    48
+    49	# Which env files a target needs. Referenced by the pre-flight checks below.
+    50	envs_for_target() {
+    51	  case "$1" in
+    52	    live) echo "live" ;;
+    53	    dev)  echo "dev" ;;
+    54	    test) echo "test" ;;
+    55	    all)  echo "live dev test" ;;
+    56	    *)    echo "live" ;;
+    57	  esac
+    58	}
+    59
+    60	web_services_for_target() {
+    61	  case "$1" in
+    62	    live) echo "web_live celery_live" ;;
+    63	    dev)  echo "web_dev" ;;
+    64	    test) echo "web_test" ;;
+    65	    all)  echo "web_live celery_live web_dev web_test" ;;
+    66	    *)    err "Unknown target: $1 (live|dev|test|all)"; exit 1 ;;
+    67	  esac
+    68	}
+    69
+    70	all_services_for_target() {
+    71	  case "$1" in
+    72	    live) echo "redis db_live web_live celery_live nginx" ;;
+    73	    dev)  echo "redis db_dev web_dev nginx" ;;
+    74	    test) echo "redis db_test web_test nginx" ;;
+    75	    all)  echo "redis db_live web_live celery_live db_dev web_dev db_test web_test nginx" ;;
+    76	    *)    err "Unknown target: $1"; exit 1 ;;
+    77	  esac
+    78	}
+    79
+    80	echo ""
+    81	echo "╔══════════════════════════════════════════════╗"
+    82	echo "║       Tadgeeg Live Server Update             ║"
+    83	echo "╚══════════════════════════════════════════════╝"
+    84	echo "  Target  : $TARGET"
+    85	echo "  Branch  : $BRANCH"
+    86	echo "  Project : $PROJECT_ROOT"
+    87	echo ""
+    88
+    89	START_TIME=$(date +%s)
+    90
+    91	# ── 1. Git pull ────────────────────────────────────────────────────────────────
+    92	log "1/4  Pulling latest code from origin/$BRANCH ..."
+    93	cd "$PROJECT_ROOT"
+    94
+    95	# Safety net: preserve env files across the git reset. They are gitignored
+    96	# today, but git reset --hard would still wipe them if a future commit ever
+    97	# accidentally tracks them. Snapshot to a temp dir and restore byte-for-byte
+    98	# after the reset so secrets survive every redeploy.
+    99	ENV_BACKUP_DIR="$(mktemp -d -t finai-env-backup-XXXXXX)"
+   100	trap 'rm -rf "$ENV_BACKUP_DIR"' EXIT
+   101	shopt -s nullglob
+   102	for env_file in "$SCRIPT_DIR"/env/*.env; do
+   103	  cp -p "$env_file" "$ENV_BACKUP_DIR/$(basename "$env_file")"
+   104	  ok "Backed up $(basename "$env_file")"
+   105	done
+   106	shopt -u nullglob
+   107
+   108	if ! git fetch origin "$BRANCH"; then
+   109	  err "Branch '$BRANCH' not found on origin."
+   110	  echo "    Push it first, or pass the branch: bash update.sh $TARGET <branch>"
+   111	  exit 1
+   112	fi
+   113
+   114	# Say what is about to be discarded. `reset --hard` is silent about local
+   115	# commits, and a deploy is exactly when someone discovers a hotfix only ever
+   116	# existed on the server.
+   117	BEHIND_BY=$(git rev-list --count "origin/$BRANCH..HEAD" 2>/dev/null || echo 0)
+   118	if [ "$BEHIND_BY" -gt 0 ]; then
+   119	  err "$BEHIND_BY local commit(s) on this checkout are NOT on origin/$BRANCH."
+   120	  git log --oneline "origin/$BRANCH..HEAD" | sed 's/^/      /'
+== update.sh lines 239-390 ==
+   239	# ── 3b. Migrations — verify, do not assume ───────────────────────────────────
+   240	# The entrypoint runs `migrate` at container start. If it FAILED, the container
+   241	# exits and the site is down; if it was skipped, every query against a new
+   242	# column throws and the billing context processor swallows it into a silently
+   243	# missing menu. Neither is acceptable to discover from a user report.
+   244	log "3b/4  Verifying migrations ..."
+   245
+   246	for svc in $(web_services_for_target "$TARGET"); do
+   247	  # Wait for the entrypoint to FINISH, not merely for the container to exist.
+   248	  #
+   249	  # `python -c "import django"` was the wrong signal: `compose exec` starts a
+   250	  # NEW process, which succeeds the moment the container runs — while the
+   251	  # entrypoint is still applying migrations. That reported "40 unapplied
+   252	  # migrations" for migrations that were being applied at that exact moment.
+   253	  #
+   254	  # The honest signal is the entrypoint's last act: gunicorn binding port 8000.
+   255	  # celery has no port, so it waits for its own process instead.
+   256	  printf '  waiting for %s ' "$svc"
+   257	  ready=0
+   258	  for _ in $(seq 1 120); do
+   259	    case "$svc" in
+   260	      celery*)
+   261	        # `pgrep -f "celery.*worker"` was the check, and it could never pass:
+   262	        # python:3.12-slim ships without procps, so pgrep does not exist in the
+   263	        # image. Every deploy waited the full ten minutes and then declared a
+   264	        # worker dead that had logged "celery@… ready" minutes earlier.
+   265	        #
+   266	        # `inspect ping` is the better signal anyway, not merely a working one.
+   267	        # A process existing proves nothing: a worker that cannot reach Redis,
+   268	        # or is stuck importing, still shows up in a process list. A pong came
+   269	        # back over the broker, which is the thing that has to work.
+   270	        compose exec -T "$svc" celery -A finai_backend inspect ping --timeout 5 2>/dev/null \
+   271	          | grep -q "pong" \
+   272	          && { ready=1; printf ' ready\n'; break; } ;;
+   273	      *)
+   274	        compose exec -T "$svc" sh -c \
+   275	          'python -c "import socket,sys; s=socket.socket(); sys.exit(s.connect_ex((\"127.0.0.1\",8000)))"' \
+   276	          >/dev/null 2>&1 \
+   277	          && { ready=1; printf ' ready\n'; break; } ;;
+   278	    esac
+   279	    # A container that exited is never going to become ready.
+   280	    if ! compose ps --status running --services 2>/dev/null | grep -q "^${svc}$"; then
+   281	      printf '\n'
+   282	      err "$svc stopped while starting. Last 40 log lines:"
+   283	      compose logs --tail=40 "$svc" || true
+   284	      exit 1
+   285	    fi
+   286	    printf '.'
+   287	    sleep 5
+   288	  done
+   289	  [ "$ready" -eq 1 ] || {
+   290	    printf '\n'
+   291	    err "$svc never became ready. Last 40 log lines:"
+   292	    compose logs --tail=40 "$svc" || true
+   293	    exit 1
+   294	  }
+   295
+   296	  # The migration checks below query the DATABASE, and web + celery share one.
+   297	  # Running them again against the worker asks the same question of the same
+   298	  # database and costs a minute per deploy for an answer already given.
+   299	  case "$svc" in
+   300	    celery*) ok "$svc: ready (migrations verified via its web counterpart)"; continue ;;
+   301	  esac
+   302
+   303	  # showmigrations --plan marks unapplied ones with "[ ]".
+   304	  UNAPPLIED="$(compose exec -T "$svc" python manage.py showmigrations --plan 2>/dev/null \
+   305	                | grep -c '^\[ \]' || true)"
+   306	  if [ "${UNAPPLIED:-0}" -gt 0 ]; then
+   307	    err "$svc has $UNAPPLIED UNAPPLIED migration(s) — the database is behind the code."
+   308	    compose exec -T "$svc" python manage.py showmigrations --plan 2>/dev/null \
+   309	      | grep '^\[ \]' | head -20 || true
+   310	    echo
+   311	    echo "    شغّلها يدويًا ثم تحقّق:"
+   312	    echo "      docker compose -f $COMPOSE_FILE exec $svc python manage.py migrate"
+   313	    exit 1
+   314	  fi
+   315	  ok "$svc: all migrations applied"
+   316
+   317	  # A model change with no migration file is the mirror image of the same
+   318	  # problem, and just as invisible until a query fails.
+   319	  if ! compose exec -T "$svc" python manage.py makemigrations --check --dry-run >/dev/null 2>&1; then
+   320	    err "$svc: model changes exist with no migration file. Run makemigrations."
+   321	    exit 1
+   322	  fi
+   323	  ok "$svc: no missing migration files"
+   324	done
+   325
+   326	# ── 4. Health check ───────────────────────────────────────────────────────────
+   327	log "4/4  Waiting for services to become healthy ..."
+   328
+   329	compose ps
+   330	echo ""
+   331
+   332	# Check web container logs for errors
+   333	for svc in $WEB_SERVICES; do
+   334	  echo "── Last 20 lines from $svc ──"
+   335	  compose logs --tail=20 "$svc" 2>&1 || true
+   336	  echo ""
+   337	done
+   338
+   339	END_TIME=$(date +%s)
+   340	ELAPSED=$((END_TIME - START_TIME))
+   341
+   342	echo ""
+   343	echo "╔══════════════════════════════════════════════╗"
+   344	echo "║  ✅ Update COMPLETE                           ║"
+   345	echo "╚══════════════════════════════════════════════╝"
+   346	echo "  Target  : $TARGET"
+   347	echo "  Commit  : $COMMIT"
+   348	echo "  Duration: ${ELAPSED}s"
+   349	echo ""
+   350	echo "  Useful commands:"
+   351	echo "  bash deployment/docker/deploy.sh logs web_live   # follow logs"
+   352	echo "  bash deployment/docker/deploy.sh ps              # container status"
+   353	echo "  docker compose -f deployment/docker/docker-compose.yml exec web_live python manage.py shell"
+== backup-related tracked references in live path ==
+deployment/docker/update.sh:99:ENV_BACKUP_DIR="$(mktemp -d -t finai-env-backup-XXXXXX)"
+deployment/docker/update.sh:130:for backup in "$ENV_BACKUP_DIR"/*.env; do
+deployment/docker/update.sh:131:  [ -e "$backup" ] || continue
+deployment/docker/update.sh:132:  cp -p "$backup" "$SCRIPT_DIR/env/$(basename "$backup")"
+deployment/docker/update.sh:133:  ok "Restored $(basename "$backup")"
+docker/entrypoint.sh:16:# taking a backup. Auto-running destructive SQL on every container

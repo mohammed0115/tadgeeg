@@ -109,7 +109,7 @@ def _mfa_pending_payload(user: User, temp_token) -> dict:
         "mfa_method": getattr(user, "mfa_method", "totp"),
         "user_id": user.id,
         "user_email": user.email,
-        "redirect": reverse("frontend:mfa_verify"),
+        "redirect": reverse("frontend:mfa-login-verify"),
         "message": _("Please enter your 6-digit authenticator code to complete login"),
         "expires_in_seconds": 300,  # 5 minutes
     }
@@ -689,6 +689,13 @@ class GoogleLoginView(APIView):
             payload["is_new"] = is_new
             return Response(payload, status=status.HTTP_202_ACCEPTED)
 
+        if user.mfa_enabled and user.mfa_secret:
+            temp_token = RefreshToken.for_user(user)
+            temp_token.set_exp(lifetime=timedelta(minutes=5))
+            payload = _mfa_pending_payload(user, temp_token)
+            payload["is_new"] = is_new
+            return Response(payload, status=status.HTTP_202_ACCEPTED)
+
         log_action(request, AuditLog.Action.LOGIN, "user", str(user.id), {"provider": "google"})
         payload = _verified_login_payload(request, user)
         payload["is_new"] = is_new
@@ -726,6 +733,13 @@ class EmailOTPVerifyView(APIView):
             )
 
         log_action(request, AuditLog.Action.USER_UPDATED, "user", str(user.id), {"email_verified": True})
+        if user.mfa_enabled and user.mfa_secret:
+            temp_token = RefreshToken.for_user(user)
+            temp_token.set_exp(lifetime=timedelta(minutes=5))
+            payload = _mfa_pending_payload(user, temp_token)
+            payload["message"] = _("Email verified successfully. Complete MFA to finish login.")
+            return Response(payload, status=status.HTTP_202_ACCEPTED)
+
         log_action(request, AuditLog.Action.LOGIN, "user", str(user.id), {"provider": "email_otp"})
         payload = _verified_login_payload(request, user)
         payload["message"] = _("Email verified successfully.")

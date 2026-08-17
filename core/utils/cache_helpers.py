@@ -20,7 +20,7 @@ def build_cache_key(prefix, **kwargs):
         # Returns: 'doc_list:a7f3c9e2d1b4f6a8'
     """
     key_data = json.dumps(kwargs, sort_keys=True, default=str)
-    hash_val = hashlib.md5(key_data.encode()).hexdigest()
+    hash_val = hashlib.sha256(key_data.encode()).hexdigest()
     return f"{prefix}:{hash_val}"
 
 

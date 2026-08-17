@@ -131,7 +131,8 @@ class WebhookActivatesSubscriptionTests(TestCase):
         self.sub.save(update_fields=["payment_transaction"])
 
     def test_paid_webhook_activates_the_subscription(self):
-        PaymentService().mark_paid(self.txn, payload={"id": "pay_act_1", "status": "paid"})
+        with self.captureOnCommitCallbacks(execute=True):
+            PaymentService().mark_paid(self.txn, payload={"id": "pay_act_1", "status": "paid"})
         self.sub.refresh_from_db()
         self.assertEqual(self.sub.status, SubscriptionStatus.ACTIVE)
         self.assertIsNotNone(self.sub.starts_at)
@@ -140,7 +141,8 @@ class WebhookActivatesSubscriptionTests(TestCase):
         self.assertEqual(self.sub.invoice_limit, 100)
 
     def test_repeated_paid_webhook_does_not_reactivate(self):
-        PaymentService().mark_paid(self.txn, payload={})
+        with self.captureOnCommitCallbacks(execute=True):
+            PaymentService().mark_paid(self.txn, payload={})
         self.sub.refresh_from_db()
         starts_first = self.sub.starts_at
         ends_first   = self.sub.ends_at

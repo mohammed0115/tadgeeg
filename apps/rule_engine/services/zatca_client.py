@@ -67,6 +67,8 @@ class ZATCAClient:
     def _request(self, path: str, payload: dict | None = None,
                  method: str = "POST", extra_headers: dict | None = None) -> dict:
         url = self.base_url.rstrip("/") + "/" + path.lstrip("/")
+        from core.security.outbound_guard import assert_outbound_allowed
+        assert_outbound_allowed(url)
         body = json.dumps(payload or {}).encode("utf-8") if payload is not None else None
         headers = {
             "Accept": "application/json",
@@ -78,7 +80,8 @@ class ZATCAClient:
         }
         req = _req.Request(url, data=body, headers=headers, method=method)
         try:
-            with _req.urlopen(req, timeout=self.timeout) as resp:
+            # The outbound guard above restricts scheme and destination.
+            with _req.urlopen(req, timeout=self.timeout) as resp:  # nosec B310
                 raw = resp.read()
                 try:
                     return {"ok": True, "status": resp.status, "data": json.loads(raw)}

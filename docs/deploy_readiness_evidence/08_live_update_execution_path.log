@@ -1,0 +1,161 @@
+    80	echo ""
+    81	echo "╔══════════════════════════════════════════════╗"
+    82	echo "║       Tadgeeg Live Server Update             ║"
+    83	echo "╚══════════════════════════════════════════════╝"
+    84	echo "  Target  : $TARGET"
+    85	echo "  Branch  : $BRANCH"
+    86	echo "  Project : $PROJECT_ROOT"
+    87	echo ""
+    88
+    89	START_TIME=$(date +%s)
+    90
+    91	# ── 1. Git pull ────────────────────────────────────────────────────────────────
+    92	log "1/4  Pulling latest code from origin/$BRANCH ..."
+    93	cd "$PROJECT_ROOT"
+    94
+    95	# Safety net: preserve env files across the git reset. They are gitignored
+    96	# today, but git reset --hard would still wipe them if a future commit ever
+    97	# accidentally tracks them. Snapshot to a temp dir and restore byte-for-byte
+    98	# after the reset so secrets survive every redeploy.
+    99	ENV_BACKUP_DIR="$(mktemp -d -t finai-env-backup-XXXXXX)"
+   100	trap 'rm -rf "$ENV_BACKUP_DIR"' EXIT
+   101	shopt -s nullglob
+   102	for env_file in "$SCRIPT_DIR"/env/*.env; do
+   103	  cp -p "$env_file" "$ENV_BACKUP_DIR/$(basename "$env_file")"
+   104	  ok "Backed up $(basename "$env_file")"
+   105	done
+   106	shopt -u nullglob
+   107
+   108	if ! git fetch origin "$BRANCH"; then
+   109	  err "Branch '$BRANCH' not found on origin."
+   110	  echo "    Push it first, or pass the branch: bash update.sh $TARGET <branch>"
+   111	  exit 1
+   112	fi
+   113
+   114	# Say what is about to be discarded. `reset --hard` is silent about local
+   115	# commits, and a deploy is exactly when someone discovers a hotfix only ever
+   116	# existed on the server.
+   117	BEHIND_BY=$(git rev-list --count "origin/$BRANCH..HEAD" 2>/dev/null || echo 0)
+   118	if [ "$BEHIND_BY" -gt 0 ]; then
+   119	  err "$BEHIND_BY local commit(s) on this checkout are NOT on origin/$BRANCH."
+   120	  git log --oneline "origin/$BRANCH..HEAD" | sed 's/^/      /'
+   121	  echo "    reset --hard would discard them. Push or stash them, then re-run."
+   122	  exit 1
+   123	fi
+   124
+   125	git reset --hard "origin/$BRANCH"
+   126	COMMIT=$(git log -1 --format="%h — %s (%ar)")
+   127	ok "HEAD: $COMMIT  [$BRANCH]"
+   128
+   129	# Restore env files in case the reset removed or modified them.
+   130	for backup in "$ENV_BACKUP_DIR"/*.env; do
+   131	  [ -e "$backup" ] || continue
+   132	  cp -p "$backup" "$SCRIPT_DIR/env/$(basename "$backup")"
+   133	  ok "Restored $(basename "$backup")"
+   134	done
+   135
+   136	# ── 2. Ensure env files and nginx config exist ────────────────────────────────
+   137	log "2/4  Preparing runtime directories and config ..."
+   138	mkdir -p "$SCRIPT_DIR/nginx/generated" "$SCRIPT_DIR/certbot/www" "$SCRIPT_DIR/certbot/conf"
+   139
+   140	for env_name in live dev test; do
+   141	  target_file="$SCRIPT_DIR/env/${env_name}.env"
+   142	  example_file="$SCRIPT_DIR/env/${env_name}.env.example"
+   143	  if [ ! -f "$target_file" ]; then
+   144	    cp "$example_file" "$target_file"
+   145	    ok "Created env file: $target_file"
+   146	  fi
+   147	done
+   148
+   149	# Always re-render from the template, in whichever mode is already in force.
+   150	# This previously ran only when the generated file was missing — and it is
+   151	# committed, so it never ran and template edits never reached the server.
+   152	# The mode is detected, not assumed: rendering http over a live HTTPS site
+   153	# would downgrade it.
+   154	NGINX_MODE="http"
+   155	if [ -f "$SCRIPT_DIR/nginx/generated/default.conf" ] \
+   156	   && grep -q "listen 443" "$SCRIPT_DIR/nginx/generated/default.conf"; then
+   157	  NGINX_MODE="https"
+   158	fi
+   159	bash "$SCRIPT_DIR/render_nginx_config.sh" "$NGINX_MODE"
+   160	ok "Rendered nginx config from template (mode: $NGINX_MODE)"
+   161
+   162	# ── 2b. Guards that would otherwise fail AFTER the containers start ──────────
+   163	# Everything below was learned from a real outage: a root-owned volume made
+   164	# Django raise PermissionError at import, gunicorn never bound, and nginx
+   165	# served 502 for an hour while the entrypoint printed "Database unavailable".
+   166	log "2b/4  Pre-flight checks ..."
+   167
+   168	# (a) required env keys — an env file created before these phases passes the
+   169	#     "file exists" check while silently missing keys, and the app then falls
+   170	#     back to a default. For PARTNER_DOCS_ROOT that default is inside the
+   171	#     container, on no volume, so uploads die on the next rebuild.
+   172	REQUIRED_KEYS="PARTNER_DOCS_ROOT PARTNER_DOC_MAX_FILE_MB PARTNER_DOC_MAX_TOTAL_MB
+   173	PARTNER_DOC_MAX_FILES PARTNER_APPLICATION_DEDUPE_MINUTES
+   174	THROTTLE_PARTNER_APPLICATION THROTTLE_PUBLIC_CONTACT THROTTLE_PRICING_CALCULATOR"
+   175
+   176	for env_name in $(envs_for_target "$TARGET"); do
+   177	  env_file="$SCRIPT_DIR/env/${env_name}.env"
+   178	  for key in $REQUIRED_KEYS; do
+   179	    if ! grep -qE "^[[:space:]]*${key}=" "$env_file"; then
+   180	      err "Missing key '${key}' in ${env_file}"
+   181	      echo "    انسخه من ${env_name}.env.example ثم أعد المحاولة."
+   182	      exit 1
+   183	    fi
+   184	  done
+   185	  docs_root="$(grep -E "^[[:space:]]*PARTNER_DOCS_ROOT=" "$env_file" | tail -1 | cut -d= -f2-)"
+   186	  case "$docs_root" in
+   187	    */media/*|/app/media*)
+   188	      err "PARTNER_DOCS_ROOT is inside the PUBLIC media root: $docs_root"
+   189	      echo "    nginx يخدم /media/ علنًا — سجل تجاري لطرف ثالث سيصبح قابلًا للتنزيل."
+   190	      exit 1 ;;
+   191	  esac
+   192	done
+   193	ok "Env keys present, PARTNER_DOCS_ROOT outside the media root"
+   194
+   195	# (b) volume ownership. Docker creates a NEW named volume owned by root; the
+   196	#     container runs as www-data. Django creates MEDIA_ROOT and
+   197	#     PARTNER_DOCS_ROOT at import, so a root-owned volume stops the app before
+   198	#     it can report anything useful. Idempotent — safe on every deploy.
+   199	for svc in $(web_services_for_target "$TARGET"); do
+   200	  if compose ps --status running --services 2>/dev/null | grep -q "^${svc}$"; then
+   201	    compose exec -T -u root "$svc" \
+   202	      sh -c 'chown -R www-data:www-data /app/private_media /app/media /app/staticfiles /app/logs 2>/dev/null' \
+   203	      >/dev/null 2>&1 || true
+   204	  fi
+   205	done
+   206	ok "Volume ownership normalised (www-data)"
+   207
+   208	# ── 3. Build + restart ────────────────────────────────────────────────────────
+   209	log "3/4  Building and restarting containers for [$TARGET] ..."
+   210	WEB_SERVICES=$(web_services_for_target "$TARGET")
+   211	ALL_SERVICES=$(all_services_for_target "$TARGET")
+   212
+   213	# Build updated web image(s) — no cache bust needed, code is COPY'd in
+   214	compose build --pull $WEB_SERVICES
+   215	ok "Build complete"
+   216
+   217	# Start/restart all relevant services
+   218	compose up -d $ALL_SERVICES
+   219	ok "Containers restarted"
+   220
+   221	# A volume created for the FIRST time during the `up` above is root-owned and
+   222	# the container is already failing on it. Fix and restart once — this is the
+   223	# exact failure that took production down.
+   224	sleep 5
+   225	for svc in $(web_services_for_target "$TARGET"); do
+   226	  if compose logs --tail=20 "$svc" 2>/dev/null | grep -q "Permission denied"; then
+   227	    err "$svc cannot write to a mounted volume — fixing ownership and restarting"
+   228	    compose exec -T -u root "$svc" \
+   229	      sh -c 'chown -R www-data:www-data /app/private_media /app/media /app/staticfiles /app/logs' \
+   230	      >/dev/null 2>&1 \
+   231	      || compose run --rm -u root "$svc" \
+   232	           chown -R www-data:www-data /app/private_media /app/media /app/staticfiles /app/logs \
+   233	           >/dev/null 2>&1 || true
+   234	    compose up -d "$svc"
+   235	    ok "$svc restarted after ownership fix"
+   236	  fi
+   237	done
+   238
+   239	# ── 3b. Migrations — verify, do not assume ───────────────────────────────────
+   240	# The entrypoint runs `migrate` at container start. If it FAILED, the container

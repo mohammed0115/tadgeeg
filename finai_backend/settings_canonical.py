@@ -645,6 +645,13 @@ DEFAULT_FROM_EMAIL  = os.environ.get("DEFAULT_FROM_EMAIL", _email_user or "norep
 SITE_URL            = os.environ.get("SITE_URL", f"https://tadgeeg.com" if not DEBUG else "http://localhost:8000")
 WASSLA_EMAIL_ASYNC_ENABLED = os.environ.get("WASSLA_EMAIL_ASYNC_ENABLED", "False") == "True"
 
+# WhatsApp stays unavailable until Meta credentials and approved templates are
+# provided.  No fallback to arbitrary free-form messages is permitted.
+WHATSAPP_ACCESS_TOKEN = os.environ.get("WHATSAPP_ACCESS_TOKEN", "")
+WHATSAPP_PHONE_NUMBER_ID = os.environ.get("WHATSAPP_PHONE_NUMBER_ID", "")
+WHATSAPP_GRAPH_VERSION = os.environ.get("WHATSAPP_GRAPH_VERSION", "v20.0")
+WHATSAPP_TIMEOUT = int(os.environ.get("WHATSAPP_TIMEOUT", "10"))
+
 from celery.schedules import crontab
 
 CELERY_BEAT_SCHEDULE = {

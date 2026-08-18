@@ -70,6 +70,9 @@ class SubscriptionService:
             ends_at=now + timedelta(days=plan.duration_days),
             invoice_limit=plan.invoice_limit,
             user_limit=plan.user_limit,
+            retention_months_snapshot=plan.retention_months,
+            backup_frequency_snapshot=plan.backup_frequency,
+            feature_tiers_snapshot=plan.feature_tiers,
             price_at_purchase=plan.price,
             currency_at_purchase=(plan.currency or "SAR").upper(),
             used_invoices=0,
@@ -125,6 +128,9 @@ class SubscriptionService:
             # Both limits are frozen at creation time. NULL = unlimited.
             invoice_limit=plan.invoice_limit,
             user_limit=plan.user_limit,
+            retention_months_snapshot=plan.retention_months,
+            backup_frequency_snapshot=plan.backup_frequency,
+            feature_tiers_snapshot=plan.feature_tiers,
             # …and so is the price, so a later catalogue edit cannot change
             # what this customer is charged.
             price_at_purchase=(
@@ -190,6 +196,9 @@ class SubscriptionService:
         locked.ends_at           = now + timedelta(days=plan.duration_days)
         locked.invoice_limit     = plan.invoice_limit
         locked.user_limit        = plan.user_limit
+        locked.retention_months_snapshot = plan.retention_months
+        locked.backup_frequency_snapshot = plan.backup_frequency
+        locked.feature_tiers_snapshot = plan.feature_tiers
         # Price is deliberately NOT re-read from the plan here. Limits are
         # re-snapshotted at activation because the customer receives the
         # current allowance, but the amount was agreed when the subscription
@@ -203,8 +212,9 @@ class SubscriptionService:
         locked.reserved_invoices = 0
         locked.save(update_fields=[
             "status", "starts_at", "ends_at",
-            "invoice_limit", "user_limit", "used_invoices", "reserved_invoices",
-            "price_at_purchase", "currency_at_purchase",
+            "invoice_limit", "user_limit", "retention_months_snapshot",
+            "backup_frequency_snapshot", "feature_tiers_snapshot",
+            "used_invoices", "reserved_invoices", "price_at_purchase", "currency_at_purchase",
             "updated_at",
         ])
 

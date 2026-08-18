@@ -41,7 +41,30 @@ class RuleResult:
                 self.legacy_rule_code = identifier
             self.rule_code = entry.rule_code
             self.is_blocking = bool(self.is_blocking or entry.is_blocking)
-        except Exception:
+        except ImportError:
+            import logging
+            # The catalogue module is shadowed by a package of the same
+            # name, deliberately — see the header of apps/rule_engine/catalog.py
+            # and docs/CATALOG_SHADOW_IMPACT.md. Expected, so warned once and
+            # not raised: seven call sites in four apps take this path for every
+            # rule, and raising would stop a product that works today.
+            if not globals().get("_CATALOG_SHADOW_WARNED"):
+                globals()["_CATALOG_SHADOW_WARNED"] = True
+                logging.getLogger(__name__).warning(
+                    "rule catalogue unavailable (apps/rule_engine/catalog.py is "
+                    "shadowed by the package of the same name); catalog_code "
+                    "falls back to the raw rule code"
+                )
+            if not self.catalog_code:
+                self.catalog_code = self.rule_code
+        except Exception as exc:
+            import logging
+            # Anything that is not the shadowing is unexpected, and used to be
+            # indistinguishable from it: one `except Exception` answered both.
+            logging.getLogger(__name__).error(
+                "rule catalogue lookup failed for %s: %s: %s",
+                identifier, type(exc).__name__, exc,
+            )
             if not self.catalog_code:
                 self.catalog_code = self.rule_code
 

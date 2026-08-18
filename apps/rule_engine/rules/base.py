@@ -77,7 +77,28 @@ class RuleResult:
             if not self.legacy_rule_code:
                 self.legacy_rule_code = identifier
             self.is_blocking = bool(self.is_blocking or entry.is_blocking)
-        except Exception:
+        except ImportError:
+            # The catalogue module is shadowed by a package of the same
+            # name, deliberately — see the header of apps/rule_engine/catalog.py
+            # and docs/CATALOG_SHADOW_IMPACT.md. Expected, so warned once and
+            # not raised: seven call sites in four apps take this path for every
+            # rule, and raising would stop a product that works today.
+            if not globals().get("_CATALOG_SHADOW_WARNED"):
+                globals()["_CATALOG_SHADOW_WARNED"] = True
+                logger.warning(
+                    "rule catalogue unavailable (apps/rule_engine/catalog.py is "
+                    "shadowed by the package of the same name); catalog_code "
+                    "falls back to the raw rule code"
+                )
+            if not self.catalog_code:
+                self.catalog_code = self.rule_code
+        except Exception as exc:
+            # Anything that is not the shadowing is unexpected, and used to be
+            # indistinguishable from it: one `except Exception` answered both.
+            logger.error(
+                "rule catalogue lookup failed for %s: %s: %s",
+                identifier, type(exc).__name__, exc,
+            )
             if not self.catalog_code:
                 self.catalog_code = self.rule_code
 
@@ -209,7 +230,28 @@ class AuditRuleBase(abc.ABC):
             )
             cls.catalog_code = entry.rule_code
             cls.is_blocking = entry.is_blocking
-        except Exception:
+        except ImportError:
+            # The catalogue module is shadowed by a package of the same
+            # name, deliberately — see the header of apps/rule_engine/catalog.py
+            # and docs/CATALOG_SHADOW_IMPACT.md. Expected, so warned once and
+            # not raised: seven call sites in four apps take this path for every
+            # rule, and raising would stop a product that works today.
+            if not globals().get("_CATALOG_SHADOW_WARNED"):
+                globals()["_CATALOG_SHADOW_WARNED"] = True
+                logger.warning(
+                    "rule catalogue unavailable (apps/rule_engine/catalog.py is "
+                    "shadowed by the package of the same name); catalog_code "
+                    "falls back to the raw rule code"
+                )
+            cls.catalog_code = identifier
+            cls.is_blocking = str(getattr(cls, "default_severity", "")).lower() == "critical"
+        except Exception as exc:
+            # Anything that is not the shadowing is unexpected, and used to be
+            # indistinguishable from it: one `except Exception` answered both.
+            logger.error(
+                "rule catalogue lookup failed for %s: %s: %s",
+                identifier, type(exc).__name__, exc,
+            )
             cls.catalog_code = identifier
             cls.is_blocking = str(getattr(cls, "default_severity", "")).lower() == "critical"
 

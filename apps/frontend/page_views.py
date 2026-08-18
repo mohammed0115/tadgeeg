@@ -3797,7 +3797,28 @@ def _failed_rules_with_invoice_refs(top_failed_rules, validations):
                 return getattr(resolve_rule_catalog_metadata(c), "severity", "") or ""
             except Exception:
                 return ""
-    except Exception:
+    except ImportError:
+        # Shadowed on purpose — see the header of apps/rule_engine/catalog.py
+        # and docs/CATALOG_SHADOW_IMPACT.md. Warned once, never raised: this
+        # runs on a dashboard page and the fallback below is the correct answer
+        # while the catalogue stays disconnected.
+        if not globals().get("_CATALOG_SHADOW_WARNED"):
+            globals()["_CATALOG_SHADOW_WARNED"] = True
+            logger.warning(
+                "rule catalogue unavailable (apps/rule_engine/catalog.py is "
+                "shadowed by the package of the same name); rule severity is "
+                "not resolved on this page"
+            )
+
+        def _catalog_severity(c):  # noqa: E306
+            return ""
+    except Exception as exc:
+        # Not the shadowing. Previously the same branch answered both.
+        logger.error(
+            "rule catalogue import failed unexpectedly: %s: %s",
+            type(exc).__name__, exc,
+        )
+
         def _catalog_severity(c):  # noqa: E306
             return ""
 

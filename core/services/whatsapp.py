@@ -66,7 +66,8 @@ def send_template(*, to: str, template: WhatsAppTemplate) -> dict:
             "components": list(template.components),
         },
     }
-    response = requests.post(
+    # The timeout is explicit below; its value remains deployment-configurable.
+    response = requests.post(  # nosec B113
         url,
         json=payload,
         headers={"Authorization": f"Bearer {token}"},

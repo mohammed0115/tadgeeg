@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import document_views as dv
+from . import executive_report_views as ev
 from . import invoice_report_views as iv
 
 urlpatterns = [
@@ -69,6 +70,14 @@ urlpatterns = [
     path("executive/<uuid:pk>/pdf/", dv.ExecutiveReportPDFView.as_view(), name="executive-report-pdf"),
     # GET: view executive report as HTML
     path("executive/<uuid:pk>/html/", dv.ExecutiveReportHTMLView.as_view(), name="executive-report-html"),
+    # GET: executive report for one document, rather than for the organization.
+    # Placed after the `executive/...` routes above: <str:document_type> matches
+    # any single segment, and putting it first would have it swallow them.
+    path(
+        "<str:document_type>/<uuid:document_id>/executive-report/",
+        ev.ExecutiveReportDetailView.as_view(),
+        name="document-executive-report",
+    ),
 
     # ── Dashboard Config Endpoints ────────────────────────────────────────────
     # GET: widget config for a report type/document type

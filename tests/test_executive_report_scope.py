@@ -239,3 +239,107 @@ def test_only_the_patched_version_leaks(orphan_user, invoice_b):
         ExecutiveReportDetailView()._fetch_document_audit_data(
             "invoice", str(invoice_b.id), organization=None
         )
+
+
+# ── The routing, and what it must not disturb ────────────────────────────────
+
+
+def test_the_endpoint_is_routed():
+    from django.urls import resolve, reverse
+
+    url = reverse(
+        "document-executive-report",
+        kwargs={"document_type": "invoice", "document_id": uuid.uuid4()},
+    )
+    assert resolve(url).func.view_class is ExecutiveReportDetailView
+
+
+def test_the_new_route_does_not_swallow_the_organization_level_ones():
+    """`<str:document_type>` matches any single segment, including "executive".
+
+    Ordering is what keeps the four routes above it reachable. Asserted by
+    resolving them, not by reading the file — the order is only correct in
+    effect, and only the resolver can say so.
+    """
+    from django.urls import resolve, reverse
+
+    pk = uuid.uuid4()
+    for name, kwargs in (
+        ("executive-report-generate", {}),
+        ("executive-report-latest", {}),
+        ("executive-report-pdf", {"pk": pk}),
+        ("executive-report-html", {"pk": pk}),
+    ):
+        url = reverse(name, kwargs=kwargs)
+        assert resolve(url).view_name == name, (
+            f"{name} is now being answered by something else — the new "
+            f"catch-all route is ordered ahead of it"
+        )
+
+
+@pytest.fixture
+def subscribed_org_a(org_a):
+    """org_a with a real free trial, so the request reaches the view.
+
+    SubscriptionRequiredMiddleware answers 402 before any view runs. Without
+    this the cross-tenant test measured the billing gate and reported a pass it
+    had not earned — it never got far enough to find out what the scope filter
+    does. Through the same helper conftest uses, and therefore through
+    SubscriptionService rather than a hand-built row.
+    """
+    from tests.conftest import activate_trial
+
+    activate_trial(org_a)
+    return org_a
+
+
+@pytest.mark.django_db
+def test_over_http_another_tenants_invoice_is_404(
+    client, user_a, invoice_b, subscribed_org_a
+):
+    """Through the resolver and the middleware, not by calling the view object."""
+    from django.urls import reverse
+
+    client.force_login(user_a)
+    response = client.get(
+        reverse(
+            "document-executive-report",
+            kwargs={"document_type": "invoice", "document_id": invoice_b.id},
+        )
+    )
+
+    assert response.status_code == 404
+    assert b"INV-SECRET-B" not in response.content
+
+
+@pytest.mark.django_db
+def test_over_http_a_caller_without_an_organization_is_403(
+    client, orphan_user, invoice_b
+):
+    from django.urls import reverse
+
+    client.force_login(orphan_user)
+    response = client.get(
+        reverse(
+            "document-executive-report",
+            kwargs={"document_type": "invoice", "document_id": invoice_b.id},
+        )
+    )
+
+    assert response.status_code == 403
+    assert b"INV-SECRET-B" not in response.content
+
+
+@pytest.mark.django_db
+def test_over_http_an_anonymous_caller_never_reaches_the_data(client, invoice_b):
+    from django.urls import reverse
+
+    response = client.get(
+        reverse(
+            "document-executive-report",
+            kwargs={"document_type": "invoice", "document_id": invoice_b.id},
+        )
+    )
+
+    assert response.status_code in (401, 403)
+    assert b"INV-SECRET-B" not in response.content

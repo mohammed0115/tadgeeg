@@ -684,6 +684,11 @@ CELERY_BEAT_SCHEDULE = {
         # See apps/audit/tasks_chain_verify.py.
         "schedule": crontab(hour=3, minute=30),
     },
+    "billing-report-retention-candidates": {
+        "task": "billing.report_retention_candidates",
+        # 03:45 — only reports eligible evidence; never archives or deletes.
+        "schedule": crontab(hour=3, minute=45),
+    },
 }
 
 # ─── OpenAI ───────────────────────────────────────────────────────────────────

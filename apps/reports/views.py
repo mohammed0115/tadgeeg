@@ -15,6 +15,7 @@ from django.db.models import Sum, Count, Avg, Q, Max, Min
 from django.db.models.functions import TruncMonth
 from core.services.ai_service import generate_audit_narrative
 from apps.billing.ai_access import ai_access_response_or_none
+from apps.billing.services.features import feature_decision
 from apps.authentication.permissions import IsSeniorAuditorOrAbove
 from apps.transactions.models import Transaction
 from apps.audit.models import AuditCase
@@ -25,6 +26,31 @@ from apps.reports.services.report_data_service import ReportDataService
 from .models import Report
 
 logger = logging.getLogger("finai")
+
+
+REPORT_TYPE_TIER = {
+    "executive_summary": "basic",
+    "invoice_audit": "advanced",
+    "detailed_findings": "advanced",
+    "compliance": "professional",
+    "risk_assessment": "professional",
+    "vendor_analysis": "professional",
+    "spend_analysis": "professional",
+}
+
+
+def _report_capability_response(organization, report_type: str):
+    required_tier = REPORT_TYPE_TIER.get(report_type)
+    if required_tier is None:
+        return Response({"error": "Unsupported report type."}, status=400)
+    decision = feature_decision(organization, "reports", minimum_tier=required_tier)
+    if decision.enabled:
+        return None
+    return Response(
+        {"error": "This report type is not included in the active package.",
+         "code": "report_tier_required", "required_tier": required_tier},
+        status=403,
+    )
 
 
 def _attachment_disposition(filename: str) -> str:
@@ -674,6 +700,9 @@ class GenerateAuditReportView(APIView):
             return Response({"error": "No organization."}, status=400)
 
         report_type       = request.data.get("report_type", "executive_summary")
+        denied = _report_capability_response(org, report_type)
+        if denied is not None:
+            return denied
         date_from         = request.data.get("date_from")
         date_to           = request.data.get("date_to") or str(date.today())
         language          = request.data.get("language", "en")

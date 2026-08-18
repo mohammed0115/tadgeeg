@@ -17,6 +17,17 @@ class FeatureUnavailable(PermissionError):
     """Raised when an organisation's active package does not include a feature."""
 
 
+TIER_ORDER = {
+    "reports": ("basic", "advanced", "professional", "executive", "custom"),
+    "dashboard": ("basic", "advanced", "interactive", "executive"),
+    "fraud_detection": ("basic", "advanced", "professional"),
+    "permissions": ("basic", "advanced", "full"),
+    "report_customization": ("none", "basic", "advanced", "full"),
+    "approvals": ("single", "multi"),
+    "api": ("read", "full"),
+}
+
+
 @dataclass(frozen=True)
 class CapabilityDecision:
     feature: str
@@ -68,7 +79,11 @@ def feature_decision(organization, feature: str, *, minimum_tier: str | None = N
     value = capabilities.get(feature)
     enabled = bool(value)
     if minimum_tier is not None:
-        enabled = value == minimum_tier
+        tiers = TIER_ORDER.get(feature, ())
+        try:
+            enabled = tiers.index(value) >= tiers.index(minimum_tier)
+        except ValueError:
+            enabled = False
     source = "subscription_snapshot" if subscription.feature_tiers_snapshot is not None else "legacy_plan_policy"
     return CapabilityDecision(feature, value if isinstance(value, str) else None, enabled, source)
 

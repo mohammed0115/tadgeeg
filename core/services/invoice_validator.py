@@ -156,6 +156,7 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
     results = {}
     failed = []
     passed = []
+    not_applicable = []
 
     org = organization or invoice.organization
 
@@ -384,31 +385,53 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
                                expected=f"{expected_rate}% (±0.5)")
     _record(ok, "VAT-001", passed, failed)
 
-    # VAT-002: vat_amount = subtotal × rate
-    if sub > 0:
-        expected_vat = round(sub * float(invoice.vat_rate or 0) / 100, 2)
-        ok = abs(float(invoice.vat_amount or 0) - expected_vat) < 1.0
+    # VAT-002: vat_amount = subtotal × rate. Missing amounts are not a pass.
+    if invoice.subtotal is None or invoice.vat_amount is None or invoice.vat_rate is None:
+        results["VAT-002"] = _not_applicable(
+            RULES["VAT-002"],
+            "لا يمكن قياس مبلغ الضريبة لغياب المجموع الفرعي أو المبلغ أو النسبة",
+            field="vat_amount",
+        )
+        not_applicable.append("VAT-002")
+    elif sub > 0:
+        expected_vat = round(sub * float(invoice.vat_rate) / 100, 2)
+        ok = abs(float(invoice.vat_amount) - expected_vat) < 1.0
         msg = f"الضريبة {invoice.vat_amount} تطابق المتوقع {expected_vat} ✓" if ok else \
               f"الضريبة {invoice.vat_amount} لا تطابق المتوقع {expected_vat}"
+        results["VAT-002"] = _rule(ok, RULES["VAT-002"], msg,
+                                   field="vat_amount", actual=float(invoice.vat_amount),
+                                   expected=f"{expected_vat} (= {sub} × {invoice.vat_rate}%)")
+        _record(ok, "VAT-002", passed, failed)
     else:
-        ok = float(invoice.vat_amount or 0) == 0
-        msg = "لا ضريبة على مجموع فرعي صفري — صحيح" if ok else "الضريبة موجودة لكن المجموع الفرعي صفر"
-    results["VAT-002"] = _rule(ok, RULES["VAT-002"], msg,
-                               field="vat_amount", actual=float(invoice.vat_amount or 0),
-                               expected=(f"{expected_vat} (= {sub} × {invoice.vat_rate or 0}%)"
-                                         if sub > 0 else "صفر، لأن المجموع الفرعي صفر"))
-    _record(ok, "VAT-002", passed, failed)
+        ok = float(invoice.vat_amount) == 0
+        results["VAT-002"] = _rule(
+            ok,
+            RULES["VAT-002"],
+            "لا ضريبة على مجموع فرعي صفري — صحيح" if ok else "الضريبة موجودة لكن المجموع الفرعي صفر",
+            field="vat_amount",
+            actual=float(invoice.vat_amount),
+            expected="صفر، لأن المجموع الفرعي صفر",
+        )
+        _record(ok, "VAT-002", passed, failed)
 
-    # VAT-003: subtotal + vat = total
-    total = float(invoice.total_amount or 0)
-    expected_total = round(sub + float(invoice.vat_amount or 0) - float(invoice.discount or 0), 2)
-    ok = abs(total - expected_total) < 1.0
-    results["VAT-003"] = _rule(ok, RULES["VAT-003"],
-                               "المجموع الفرعي + الضريبة = الإجمالي ✓" if ok else
-                               f"المجموع({sub}) + الضريبة({invoice.vat_amount}) = {expected_total} ≠ الإجمالي({total})",
-                               field="total_amount", actual=total,
-                               expected=f"{expected_total} (= {sub} + {invoice.vat_amount or 0} − {invoice.discount or 0})")
-    _record(ok, "VAT-003", passed, failed)
+    # VAT-003: subtotal + vat = total. Do not validate three absent values as zero.
+    if invoice.subtotal is None or invoice.vat_amount is None or invoice.total_amount is None:
+        results["VAT-003"] = _not_applicable(
+            RULES["VAT-003"],
+            "لا يمكن قياس الإجمالي لغياب المجموع الفرعي أو الضريبة أو الإجمالي",
+            field="total_amount",
+        )
+        not_applicable.append("VAT-003")
+    else:
+        total = float(invoice.total_amount)
+        expected_total = round(sub + float(invoice.vat_amount) - float(invoice.discount or 0), 2)
+        ok = abs(total - expected_total) < 1.0
+        results["VAT-003"] = _rule(ok, RULES["VAT-003"],
+                                   "المجموع الفرعي + الضريبة = الإجمالي ✓" if ok else
+                                   f"المجموع({sub}) + الضريبة({invoice.vat_amount}) = {expected_total} ≠ الإجمالي({total})",
+                                   field="total_amount", actual=total,
+                                   expected=f"{expected_total} (= {sub} + {invoice.vat_amount} − {invoice.discount or 0})")
+        _record(ok, "VAT-003", passed, failed)
 
     # VAT-004: VAT number present
     ok = bool(invoice.vendor_vat_number and invoice.vendor_vat_number.strip())
@@ -546,10 +569,12 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
                                f"رمز الحساب: {invoice.account_code}" if ok else "لم يُعيَّن رمز محاسبي")
     _record(ok, "CTL-002", passed, failed)
 
-    # CTL-003: within budget (simplified — pass if no budget set)
-    ok = True   # Budget integration requires external budget data; default pass
-    results["CTL-003"] = _rule(ok, RULES["CTL-003"], "فحص الميزانية: لم يُضبط أي بيانات ميزانية (يُوصى بالمراجعة اليدوية)")
-    _record(ok, "CTL-003", passed, failed)
+    # CTL-003: budget integration is not configured; record the absence honestly.
+    results["CTL-003"] = _not_applicable(
+        RULES["CTL-003"],
+        "لا يمكن قياس الميزانية لعدم وجود بيانات ميزانية مرتبطة بالفاتورة",
+    )
+    not_applicable.append("CTL-003")
 
     # CTL-004: no edit after approval
     ok = not (invoice.status == "approved" and invoice.updated_at > invoice.approved_at) \
@@ -610,10 +635,15 @@ def run_all_rules(invoice, organization=None, file_hash: str = None) -> dict:
     # ─── Compute summary ─────────────────────────────────────────────────────
     n_passed = len(passed)
     n_failed = len(failed)
-    score = round(n_passed / TOTAL_RULES * 100, 2)
+    n_not_applicable = len(not_applicable)
+    measured_rules = n_passed + n_failed
+    score = round(n_passed / measured_rules * 100, 2) if measured_rules else 0.0
 
     return {
         "total_rules": TOTAL_RULES,
+        "measured_rules": measured_rules,
+        "rules_not_applicable": n_not_applicable,
+        "not_applicable_rule_codes": not_applicable,
         "rules_passed": n_passed,
         "rules_failed": n_failed,
         "validation_score": score,
@@ -656,6 +686,20 @@ def _rule(passed: bool, description: str, message: str, severity: str = "high",
         result["actual"] = actual
     if expected:
         result["expected"] = expected
+    return result
+
+
+def _not_applicable(description: str, message: str, *, field: str = "") -> dict:
+    """A rule had insufficient relevant data, so it must not affect the score."""
+    result = {
+        "passed": None,
+        "status": "not_applicable",
+        "description": description,
+        "message": message,
+        "severity": "info",
+    }
+    if field:
+        result["field"] = field
     return result
 
 

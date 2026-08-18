@@ -390,7 +390,7 @@ class InvoiceValidationResult(models.Model):
         default=list,
         help_text=(
             "List of per-rule result dicts: "
-            "[{rule_code, rule_name, group, severity, passed, detail}, ...]"
+            "[{rule_code, rule_name, group, severity, status, passed, detail}, ...]"
         ),
     )
 
@@ -398,8 +398,10 @@ class InvoiceValidationResult(models.Model):
     total_rules      = models.PositiveSmallIntegerField(default=0)
     rules_passed     = models.PositiveSmallIntegerField(default=0)
     rules_failed     = models.PositiveSmallIntegerField(default=0)
-    validation_score = models.FloatField(default=0.0)         # 0-100
+    rules_not_applicable = models.PositiveSmallIntegerField(default=0)
+    validation_score = models.FloatField(default=0.0)         # 0-100, measured rules only
     failed_rule_codes = models.JSONField(default=list)         # ["INV-001", ...]
+    not_applicable_rule_codes = models.JSONField(default=list)
     validation_details = models.JSONField(default=dict)        # legacy extra detail blob
     validated_at     = models.DateTimeField(auto_now=True)
 
@@ -418,7 +420,10 @@ class InvoiceValidationResult(models.Model):
         return False
 
     def _rule_failed(self, code: str) -> bool:
-        return not self._rule_passed(code)
+        for r in (self.rule_results or []):
+            if r.get("rule_code") == code:
+                return r.get("passed") is False
+        return False
 
     @property
     def has_invoice_number(self):    return self._rule_passed("INV-001")

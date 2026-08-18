@@ -127,6 +127,9 @@ def test_both_rules_are_counted_in_the_score(organization, admin_user):
     ])
     r = run_all_rules(inv, organization, file_hash="")
     assert r["total_rules"] == TOTAL_RULES
-    assert r["rules_passed"] + r["rules_failed"] == TOTAL_RULES
+    assert r["rules_passed"] + r["rules_failed"] == r["measured_rules"]
+    assert r["measured_rules"] + r["rules_not_applicable"] == TOTAL_RULES
+    assert "CTL-003" in r["not_applicable_rule_codes"]
+    assert r["rule_details"]["CTL-003"]["passed"] is None
     assert "INV-009" in r["failed_rule_codes"]
     assert "INV-010" in r["failed_rule_codes"]

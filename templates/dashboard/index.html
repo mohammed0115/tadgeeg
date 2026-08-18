@@ -212,8 +212,8 @@ Shows the org's current plan, usage, and remaining quota. The
     <div class="stat-card-sub">{% trans "Average OCR confidence" %}</div>
   </div>
 
-  {# Fraud analysis is tenant-audited internally; this customer-facing drill-down
-     is deliberately shown only when the active package includes the tier. #}
+  {% comment %}Fraud analysis is tenant-audited internally; this customer-facing drill-down
+     is deliberately shown only when the active package includes the tier.{% endcomment %}
   {% if fraud_detection_enabled %}
   <a href="{% url 'frontend:invoices' %}?status=flagged"
      class="stat-card {% if kpis.fraud_alerts == 0 %}green{% elif kpis.fraud_alerts < 5 %}amber{% else %}red{% endif %}"

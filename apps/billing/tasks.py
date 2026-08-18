@@ -96,3 +96,13 @@ def detect_counter_drift(*, auto_correct: bool = False) -> dict:
     summary = {"checked": checked, "drifted": drifted, "corrected": corrected}
     logger.info("detect_counter_drift finished: %s", summary)
     return summary
+
+
+@shared_task(name="billing.report_retention_candidates")
+def report_retention_candidates() -> dict:
+    """Nightly non-destructive retention visibility by active package."""
+    from apps.billing.services.retention import retention_due_summary
+
+    summary = retention_due_summary()
+    logger.info("retention candidate summary: %s", summary)
+    return summary

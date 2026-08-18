@@ -2124,6 +2124,14 @@ def dashboard(request):
         ))
 
     payload = _build_dashboard_payload(org, now)
+    # Fraud analysis may still run internally for audit evidence, but its
+    # customer-facing dashboard signal is a package capability.  Do not show a
+    # partial counter as though the organisation bought fraud detection.
+    from apps.billing.services.features import feature_decision
+    fraud_enabled = feature_decision(org, "fraud_detection", minimum_tier="advanced").enabled
+    payload["fraud_detection_enabled"] = fraud_enabled
+    if not fraud_enabled:
+        payload["kpis"] = {**payload["kpis"], "fraud_alerts": None}
     # 60 s feels right: KPIs aren't real-time-critical and a fresh upload
     # already invalidates downstream report caches separately.
     cache.set(cache_key, payload, 60)

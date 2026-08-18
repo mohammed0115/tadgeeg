@@ -41,3 +41,10 @@ class FeatureEntitlementTests(TestCase):
         decision = feature_decision(org, "whatsapp")
         assert decision.enabled is True
         assert decision.source == "subscription_snapshot"
+
+    def test_fraud_detection_tier_is_ordered(self):
+        starter, _ = self._activate(PlanCode.STARTER)
+        professional, _ = self._activate(PlanCode.PROFESSIONAL)
+
+        assert feature_decision(starter, "fraud_detection", minimum_tier="advanced").enabled is False
+        assert feature_decision(professional, "fraud_detection", minimum_tier="advanced").enabled is True

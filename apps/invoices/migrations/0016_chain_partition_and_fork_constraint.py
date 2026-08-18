@@ -40,6 +40,12 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('invoices', '0015_invoice_control_risk_invoice_detection_risk_and_more'),
+        # The rebuild must precede the constraint, for the reason
+        # activity_logs and authentication were each given a rebuild before
+        # theirs: rows written under a forkable chain hold colliding
+        # positions, and AddConstraint below fails on the first one it meets.
+        # Measured on production data — see 0015a's docstring.
+        ('invoices', '0015a_rebuild_invoice_audit_chains'),
     ]
 
     operations = [

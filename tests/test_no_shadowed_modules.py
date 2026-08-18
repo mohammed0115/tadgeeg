@@ -30,6 +30,9 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 SCANNED = ("apps", "tests", "core")
 
+#: A shadowed module is tolerated only if it declares the decision itself.
+DECISION_MARKER = "محجوب عمدًا"
+
 
 def _shadowed(roots) -> list[str]:
     """Every `X.py` that has a sibling directory `X/`, in either direction.
@@ -48,8 +51,18 @@ def _shadowed(roots) -> list[str]:
             if "__pycache__" in module.parts:
                 continue
             twin = module.with_suffix("")
-            if twin.is_dir():
-                found.append(str(module.relative_to(ROOT)))
+            if not twin.is_dir():
+                continue
+            # A collision is allowed only when the shadowed file says, in
+            # itself, that it is shadowed on purpose. Computed rather than
+            # listed: a hand-written exception list is what let this repository
+            # ship a guard that reported zero from the day it was written.
+            # apps/rule_engine/catalog.py carries that marker and the decision
+            # behind it — docs/CATALOG_SHADOW_IMPACT.md.
+            head = module.read_text(encoding="utf-8", errors="replace")[:2000]
+            if DECISION_MARKER in head:
+                continue
+            found.append(str(module.relative_to(ROOT)))
     return sorted(found)
 
 
@@ -112,3 +125,29 @@ def test_the_file_this_guard_was_written_for_is_importable(module_name):
 
     module = importlib.import_module(f"apps.reports.{module_name}")
     assert hasattr(module, "ExecutiveReportDetailView")
+
+
+def test_a_collision_without_the_decision_marker_is_still_reported(tmp_path):
+    """The exemption is earned by the file, not granted by a list."""
+    app = tmp_path / "apps" / "silent"
+    app.mkdir(parents=True)
+    (app / "thing.py").write_text("# no decision recorded\n", encoding="utf-8")
+    (app / "thing").mkdir()
+
+    marked = tmp_path / "apps" / "declared"
+    marked.mkdir(parents=True)
+    (marked / "thing.py").write_text(
+        f"# هذا الملف {DECISION_MARKER} بحزمة تحمل الاسم نفسه\n", encoding="utf-8"
+    )
+    (marked / "thing").mkdir()
+
+    global ROOT
+    original, ROOT = ROOT, tmp_path
+    try:
+        found = _shadowed(["apps"])
+    finally:
+        ROOT = original
+
+    assert found == ["apps/silent/thing.py"], (
+        "the marker must exempt only the file that carries it"
+    )

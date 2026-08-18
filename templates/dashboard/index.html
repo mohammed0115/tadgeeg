@@ -212,7 +212,9 @@ Shows the org's current plan, usage, and remaining quota. The
     <div class="stat-card-sub">{% trans "Average OCR confidence" %}</div>
   </div>
 
-  {# Drill-down: clicking the Fraud card filters /invoices/?status=flagged #}
+  {# Fraud analysis is tenant-audited internally; this customer-facing drill-down
+     is deliberately shown only when the active package includes the tier. #}
+  {% if fraud_detection_enabled %}
   <a href="{% url 'frontend:invoices' %}?status=flagged"
      class="stat-card {% if kpis.fraud_alerts == 0 %}green{% elif kpis.fraud_alerts < 5 %}amber{% else %}red{% endif %}"
      style="text-decoration:none; color:inherit; cursor:pointer;">
@@ -228,6 +230,17 @@ Shows the org's current plan, usage, and remaining quota. The
     <div class="stat-card-value">{{ kpis.fraud_alerts|default:0 }}</div>
     <div class="stat-card-sub">{{ kpis.high_risk_count|default:0 }} {% trans "high-risk invoices" %}</div>
   </a>
+  {% else %}
+  <div class="stat-card" style="opacity:.72; cursor:default;">
+    <span class="stat-card-trend">{% trans "Package" %}</span>
+    <div class="stat-card-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6l-8-4z"/></svg>
+    </div>
+    <div class="stat-card-label">{% trans "Fraud / High-Risk" %}</div>
+    <div class="stat-card-value">—</div>
+    <div class="stat-card-sub">{% trans "Available in advanced packages" %}</div>
+  </div>
+  {% endif %}
 
   {# Drill-down: clicking Compliance opens flagged invoices (those failing QR) #}
   <a href="{% url 'frontend:invoices' %}?compliance=qr_invalid"

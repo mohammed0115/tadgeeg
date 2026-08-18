@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.utils.translation import get_language
-from ..services.executive_ai_report_service import (
+from .services.executive_ai_report_service import (
     ExecutiveAIReportGenerator,
     create_audit_data_from_dict
 )

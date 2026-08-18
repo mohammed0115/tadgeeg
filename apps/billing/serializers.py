@@ -10,7 +10,8 @@ class PlanSerializer(serializers.ModelSerializer):
         fields = (
             "code", "name_ar", "name_en",
             "description_ar", "description_en",
-            "invoice_limit", "user_limit", "is_custom_quote",
+            "invoice_limit", "user_limit", "retention_months", "backup_frequency",
+            "feature_tiers", "is_custom_quote",
             "price", "currency", "duration_days",
             "is_free", "is_trial",
         )
@@ -31,7 +32,8 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         fields = (
             "id", "plan", "status",
             "starts_at", "ends_at",
-            "invoice_limit", "user_limit", "used_invoices", "reserved_invoices",
-            "remaining_invoices",
+            "invoice_limit", "user_limit", "retention_months_snapshot",
+            "backup_frequency_snapshot", "feature_tiers_snapshot", "used_invoices",
+            "reserved_invoices", "remaining_invoices",
         )
         read_only_fields = fields

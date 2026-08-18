@@ -60,6 +60,18 @@ class Plan(models.Model):
         null=True, blank=True,
         help_text="Seats (active users in the organisation). NULL = unlimited.",
     )
+    retention_months = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text="Document retention period. NULL = retention negotiated separately.",
+    )
+    backup_frequency = models.CharField(
+        max_length=16, default="none",
+        help_text="Operational backup cadence included by this plan (none, weekly, daily).",
+    )
+    feature_tiers = models.JSONField(
+        default=dict, blank=True,
+        help_text="Central package capabilities and tier values exposed by billing services.",
+    )
     # company_limit is deliberately ABSENT. See docs/adr/0006-plan-limit-dimensions.md:
     # one OrganizationSubscription FKs to exactly one Organization and a unique
     # constraint enforces one usable subscription per organisation, so "one
@@ -150,6 +162,9 @@ class OrganizationSubscription(models.Model):
     # mechanism that guarantees it. NULL = unlimited, same convention as Plan.
     invoice_limit      = models.PositiveIntegerField(null=True, blank=True, default=0)
     user_limit         = models.PositiveIntegerField(null=True, blank=True, default=None)
+    retention_months_snapshot = models.PositiveSmallIntegerField(null=True, blank=True, default=None)
+    backup_frequency_snapshot = models.CharField(max_length=16, blank=True, default="")
+    feature_tiers_snapshot = models.JSONField(null=True, blank=True, default=None)
     used_invoices      = models.PositiveIntegerField(default=0)
     reserved_invoices  = models.PositiveIntegerField(default=0)
 

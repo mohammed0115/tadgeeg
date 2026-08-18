@@ -28,6 +28,21 @@ from apps.billing.choices import PlanCode
 from apps.billing.models import Plan
 
 
+# One commercial policy, consumed by the entitlement service and public API.
+# Values express the contractual tier rather than a view-specific permission.
+PACKAGE_POLICY = {
+    PlanCode.FREE_TRIAL: {"retention_months": 3, "backup_frequency": "none", "feature_tiers": {"reports": "basic", "dashboard": "basic", "fraud_detection": "basic", "permissions": "basic", "approvals": "single", "report_customization": "none", "whatsapp": False, "api": False, "erp": False, "white_label": False}},
+    PlanCode.STARTER: {"retention_months": 3, "backup_frequency": "weekly", "feature_tiers": {"reports": "basic", "dashboard": "basic", "fraud_detection": "basic", "permissions": "basic", "approvals": "single", "report_customization": "none", "whatsapp": False, "api": False, "erp": False, "white_label": False}},
+    PlanCode.BASIC: {"retention_months": 12, "backup_frequency": "weekly", "feature_tiers": {"reports": "advanced", "dashboard": "advanced", "fraud_detection": "advanced", "permissions": "advanced", "approvals": "single", "report_customization": "basic", "whatsapp": False, "api": False, "erp": False, "white_label": False}},
+    PlanCode.BUSINESS: {"retention_months": 24, "backup_frequency": "daily", "feature_tiers": {"reports": "professional", "dashboard": "interactive", "fraud_detection": "advanced", "permissions": "advanced", "approvals": "single", "report_customization": "basic", "whatsapp": False, "api": False, "erp": False, "white_label": False}},
+    PlanCode.PROFESSIONAL: {"retention_months": 36, "backup_frequency": "daily", "feature_tiers": {"reports": "executive", "dashboard": "executive", "fraud_detection": "professional", "permissions": "full", "approvals": "single", "report_customization": "advanced", "whatsapp": True, "api": "read", "erp": False, "white_label": False}},
+    PlanCode.ENTERPRISE: {"retention_months": 60, "backup_frequency": "daily", "feature_tiers": {"reports": "custom", "dashboard": "executive", "fraud_detection": "professional", "permissions": "full", "approvals": "multi", "report_customization": "full", "whatsapp": True, "api": "full", "erp": True, "white_label": True}},
+    PlanCode.ACCOUNTING_PARTNER: {"retention_months": 24, "backup_frequency": "daily", "feature_tiers": {"reports": "professional", "dashboard": "interactive", "fraud_detection": "advanced", "permissions": "advanced", "approvals": "single", "report_customization": "advanced", "whatsapp": False, "api": "read", "erp": False, "white_label": False}},
+    PlanCode.ACCOUNTING_PROFESSIONAL: {"retention_months": 36, "backup_frequency": "daily", "feature_tiers": {"reports": "executive", "dashboard": "executive", "fraud_detection": "professional", "permissions": "full", "approvals": "multi", "report_customization": "advanced", "whatsapp": True, "api": "read", "erp": True, "white_label": False}},
+    PlanCode.ACCOUNTING_ENTERPRISE: {"retention_months": 60, "backup_frequency": "daily", "feature_tiers": {"reports": "custom", "dashboard": "executive", "fraud_detection": "professional", "permissions": "full", "approvals": "multi", "report_customization": "full", "whatsapp": True, "api": "full", "erp": True, "white_label": True}},
+}
+
+
 PLANS = [
     # ── Business plans (§H) ──────────────────────────────────────────────
     {
@@ -186,6 +201,7 @@ class Command(BaseCommand):
             defaults = {k: v for k, v in spec.items() if k != "code"}
             defaults["currency"]  = "SAR"
             defaults["is_active"] = True
+            defaults.update(PACKAGE_POLICY[spec["code"]])
             _, was_created = Plan.objects.update_or_create(
                 code=spec["code"], defaults=defaults,
             )

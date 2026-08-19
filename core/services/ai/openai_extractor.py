@@ -23,6 +23,8 @@ from typing import Optional
 
 from django.conf import settings
 
+from core.ai.openai_client import OpenAI
+
 logger = logging.getLogger("finai")
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -113,7 +115,6 @@ def _get_client():
     api_key = getattr(settings, "OPENAI_API_KEY", None)
     if not api_key:
         raise ValueError("OPENAI_API_KEY is not set in settings.")
-    from openai import OpenAI
     return OpenAI(api_key=api_key, timeout=60.0)
 
 

@@ -33,7 +33,7 @@ from apps.audit.integrity import GENESIS_HASH, verify_chain
 from apps.authentication.models import Organization, User
 from apps.invoices.models import Invoice, InvoiceAuditEvent
 
-MIGRATION = "apps.invoices.migrations.0015a_rebuild_invoice_audit_chains"
+MIGRATION = "apps.invoices.migrations.0016_chain_partition_and_fork_constraint"
 CONSTRAINT_NAME = "uniq_chain_position_invoiceauditevent"
 
 
@@ -305,19 +305,31 @@ def test_the_inlined_genesis_matches_the_live_one():
     assert import_module(MIGRATION).GENESIS_HASH == GENESIS_HASH
 
 
-def test_the_constraint_migration_runs_after_the_rebuild():
-    """Read off the graph, not asserted in prose.
+def test_the_rebuild_runs_before_the_constraint_inside_one_migration():
+    """Read off 0016's own operation list, not off a dependency edge.
 
-    Ordering is the entire fix: 0015a after 0016 would rebuild a chain the
-    constraint had already refused to cover.
+    The rebuild used to be a separate 0015a that 0016 depended on. Any graph
+    edge making it a parent raises InconsistentMigrationHistory on every
+    database that applied 0016 before that file existed, and `run_before`
+    builds the identical edge — Django's loader turns both into
+    `node_map[child].add_parent(...)`. `migrate` runs the consistency check
+    before it would honour `--fake`, so no operator command clears it either.
+
+    Folded into one migration, the ordering is structural: a list cannot be
+    reordered by the graph.
     """
-    from django.db.migrations.loader import MigrationLoader
+    from importlib import import_module
 
-    loader = MigrationLoader(None, ignore_no_migrations=True)
-    constraint_migration = loader.disk_migrations[
-        ("invoices", "0016_chain_partition_and_fork_constraint")
+    operations = import_module(MIGRATION).Migration.operations
+    names = [
+        getattr(op, "code", None).__name__ if hasattr(op, "code")
+        else type(op).__name__
+        for op in operations
     ]
-    assert (
-        "invoices",
-        "0015a_rebuild_invoice_audit_chains",
-    ) in constraint_migration.dependencies
+    assert "rebuild_chains" in names, "the rebuild is gone from 0016"
+    assert names.index("rebuild_chains") < names.index("AddConstraint"), (
+        "the constraint would build over a chain that has not been rebuilt"
+    )
+    assert names.index("freeze_partitions") < names.index("rebuild_chains"), (
+        "the rebuild reads the partition the freeze writes"
+    )

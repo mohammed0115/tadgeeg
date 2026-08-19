@@ -53,6 +53,17 @@ def _shadowed(roots) -> list[str]:
             twin = module.with_suffix("")
             if not twin.is_dir():
                 continue
+            # A directory that holds no importable module shadows nothing. This
+            # guard reported apps/authentication/tests.py against a `tests/`
+            # containing only __pycache__ — build output left behind after the
+            # real file moved — and stopped a rebase on a tree that was correct.
+            # A guard that blocks correct work is the failure mode this file was
+            # written to avoid, not an acceptable cost of catching the real one.
+            if not any(
+                child.suffix == ".py" for child in twin.rglob("*.py")
+                if "__pycache__" not in child.parts
+            ):
+                continue
             # A collision is allowed only when the shadowed file says, in
             # itself, that it is shadowed on purpose. Computed rather than
             # listed: a hand-written exception list is what let this repository
@@ -133,6 +144,7 @@ def test_a_collision_without_the_decision_marker_is_still_reported(tmp_path):
     app.mkdir(parents=True)
     (app / "thing.py").write_text("# no decision recorded\n", encoding="utf-8")
     (app / "thing").mkdir()
+    (app / "thing" / "buried.py").write_text("# unreachable\n", encoding="utf-8")
 
     marked = tmp_path / "apps" / "declared"
     marked.mkdir(parents=True)
@@ -140,6 +152,7 @@ def test_a_collision_without_the_decision_marker_is_still_reported(tmp_path):
         f"# هذا الملف {DECISION_MARKER} بحزمة تحمل الاسم نفسه\n", encoding="utf-8"
     )
     (marked / "thing").mkdir()
+    (marked / "thing" / "buried.py").write_text("# unreachable\n", encoding="utf-8")
 
     global ROOT
     original, ROOT = ROOT, tmp_path
@@ -150,4 +163,43 @@ def test_a_collision_without_the_decision_marker_is_still_reported(tmp_path):
 
     assert found == ["apps/silent/thing.py"], (
         "the marker must exempt only the file that carries it"
+    )
+
+
+def test_a_twin_directory_holding_no_module_is_not_a_collision(tmp_path):
+    """The false positive that stopped a correct rebase.
+
+    `apps/authentication/tests/` held nothing but `__pycache__` after its one
+    real file moved up a level, and this guard called it a collision against
+    `apps/authentication/tests.py`. Nothing was shadowed — there was no module
+    inside to shadow — and the operator lost time on a tree that was right.
+
+    Both shapes are planted: an empty directory, and one holding only build
+    output. Neither may be reported; the collision with a real module beside
+    them still must be.
+    """
+    app = tmp_path / "apps" / "leftovers"
+    app.mkdir(parents=True)
+
+    (app / "tests.py").write_text("# the real tests\n", encoding="utf-8")
+    (app / "tests").mkdir()
+    (app / "tests" / "__pycache__").mkdir()
+    (app / "tests" / "__pycache__" / "old.cpython-312.pyc").write_bytes(b"\x00")
+
+    (app / "empty.py").write_text("# nothing beside it\n", encoding="utf-8")
+    (app / "empty").mkdir()
+
+    (app / "real.py").write_text("# genuinely shadows\n", encoding="utf-8")
+    (app / "real").mkdir()
+    (app / "real" / "buried.py").write_text("# unreachable\n", encoding="utf-8")
+
+    global ROOT
+    original, ROOT = ROOT, tmp_path
+    try:
+        found = _shadowed(["apps"])
+    finally:
+        ROOT = original
+
+    assert found == ["apps/leftovers/real.py"], (
+        "only a directory that actually holds an importable module shadows one"
     )

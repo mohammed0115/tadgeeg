@@ -36,16 +36,131 @@ def unfreeze_partitions(apps, schema_editor):
     InvoiceAuditEvent.objects.filter(chain_position__isnull=True).update(chain_position=0)
     InvoiceAuditEvent.objects.update(chain_partition="")
 
+GENESIS_HASH = "0" * 64
+
+#: Rows re-hashed per bulk_update round-trip.
+BATCH = 1000
+
+
+def rebuild_chains(apps, schema_editor):
+    import hashlib
+    import json
+
+    InvoiceAuditEvent = apps.get_model("invoices", "InvoiceAuditEvent")
+
+    def _json_default(obj):
+        # Mirrors apps/audit/integrity.py::_json_default exactly. A different
+        # fallback produces different bytes for the same row, and the rebuilt
+        # chain would fail the verification it exists to enable.
+        if hasattr(obj, "isoformat"):
+            return obj.isoformat()
+        return str(obj)
+
+    # .order_by() with no arguments is load-bearing, not tidiness.
+    #
+    # InvoiceAuditEvent.Meta.ordering is ["-timestamp"], and it survives onto
+    # the historical model. Django appends ordering columns to the SELECT list
+    # of a DISTINCT query, so without this the query would be distinct over
+    # (organization_id, timestamp) — one row per event, not per organisation —
+    # and the loop below would rebuild each organisation once per event.
+    organisation_ids = list(
+        InvoiceAuditEvent.objects
+        .order_by()
+        .values_list("invoice__organization_id", flat=True)
+        .distinct()
+    )
+
+    rebuilt = 0
+    for organization_id in organisation_ids:
+        rows = (
+            InvoiceAuditEvent.objects
+            .filter(invoice__organization_id=organization_id)
+            # timestamp then pk: timestamps tie — the collisions this migration
+            # exists for are seconds apart — and a tie needs a stable tiebreak
+            # or the rebuild is not reproducible.
+            .order_by("timestamp", "pk")
+            .iterator(chunk_size=BATCH)
+        )
+
+        previous_hash = GENESIS_HASH
+        position = 0
+        batch = []
+
+        for row in rows:
+            position += 1
+            # Mirrors InvoiceAuditEvent._chain_payload(). `timestamp` is absent
+            # from it on purpose — auto_now_add populates the field after the
+            # chain signal runs, so hashing it would make the chain
+            # non-deterministic. pk and chain_position already encode order.
+            payload = {
+                "id":          str(row.id),
+                "invoice_id":  str(row.invoice_id),
+                "user_id":     str(row.user_id) if row.user_id else None,
+                "event_type":  row.event_type,
+                "description": row.description or "",
+                "before_data": row.before_data or {},
+                "after_data":  row.after_data or {},
+                "ip_address":  row.ip_address or "",
+            }
+            serialised = json.dumps(payload, sort_keys=True,
+                                    separators=(",", ":"), default=_json_default)
+            # The partition string, byte-for-byte what compute_hash builds:
+            # assign_chain_fields writes str(_chain_organization_id() or "")
+            # into chain_partition, and 0016's freeze_partitions writes the same
+            # value. This migration runs before that column exists, so it is
+            # derived from the organisation directly — the same string.
+            partition = str(organization_id or "")
+            material = f"{previous_hash}|{serialised}|{partition}".encode("utf-8")
+            event_hash = hashlib.sha256(material).hexdigest()
+
+            row.previous_hash = previous_hash
+            row.event_hash = event_hash
+            row.chain_position = position
+            batch.append(row)
+
+            if len(batch) >= BATCH:
+                InvoiceAuditEvent.objects.bulk_update(
+                    batch, ["previous_hash", "event_hash", "chain_position"]
+                )
+                batch = []
+
+            previous_hash = event_hash
+
+        if batch:
+            InvoiceAuditEvent.objects.bulk_update(
+                batch, ["previous_hash", "event_hash", "chain_position"]
+            )
+        rebuilt += position
+
+    print(
+        f"\n[invoices rebuild] organisations={len(organisation_ids)} "
+        f"events_repositioned={rebuilt}"
+    )
+
+
+def unrebuild(apps, schema_editor):
+    """Reverse: clear every field this migration wrote.
+
+    The pre-rebuild positions are not restored. They were not reconstructible
+    from the rows alone — that is the whole reason this migration exists — and
+    restoring a set of positions with known collisions would only put back the
+    state that stops 0016 applying. Reversing leaves the trail unchained, which
+    is honest about what reversing means.
+
+    `chain_position=0`, not None. Django reverses in reverse dependency order,
+    so 0016 — the migration that makes this column nullable — has already been
+    undone by the time this runs, and writing None into it would fail.
+    """
+    InvoiceAuditEvent = apps.get_model("invoices", "InvoiceAuditEvent")
+    InvoiceAuditEvent.objects.update(
+        previous_hash="", event_hash="", chain_position=0,
+    )
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
         ('invoices', '0015_invoice_control_risk_invoice_detection_risk_and_more'),
-        # The rebuild must precede the constraint, for the reason
-        # activity_logs and authentication were each given a rebuild before
-        # theirs: rows written under a forkable chain hold colliding
-        # positions, and AddConstraint below fails on the first one it meets.
-        # Measured on production data — see 0015a's docstring.
-        ('invoices', '0015a_rebuild_invoice_audit_chains'),
     ]
 
     operations = [
@@ -71,6 +186,13 @@ class Migration(migrations.Migration):
         ),
         # Must run before AddConstraint — see the module docstring.
         migrations.RunPython(freeze_partitions, unfreeze_partitions),
+        # And the rebuild, which used to live in a separate 0015a. It cannot:
+        # any graph edge making it a parent of this migration raises
+        # InconsistentMigrationHistory on every database that applied this one
+        # before that file existed — `run_before` builds the identical edge, and
+        # `migrate` performs the check before it would honour `--fake`. Folding
+        # it in here keeps the ordering guarantee structurally instead.
+        migrations.RunPython(rebuild_chains, unrebuild),
         migrations.AddIndex(
             model_name='invoiceauditevent',
             index=models.Index(fields=['chain_partition', 'chain_position'], name='invauditevent_chain_idx'),

@@ -448,7 +448,10 @@ class ReportWidgetsView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        widgets = get_widgets(report_type, document_type)
+        organization = getattr(request.user, "organization", None)
+        if organization is None:
+            return Response({"error": "Organization membership is required."}, status=status.HTTP_403_FORBIDDEN)
+        widgets = get_widgets(report_type, document_type, organization=organization)
         return Response({"report_type": report_type, "document_type": document_type, "widgets": widgets})
 
 

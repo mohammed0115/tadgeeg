@@ -9,6 +9,8 @@ import logging
 from pathlib import Path
 from django.conf import settings
 
+from core.ai.openai_client import OpenAI
+
 logger = logging.getLogger("finai")
 
 
@@ -114,7 +116,6 @@ def extract_invoice_with_ai(image_path: str, raw_text: str = "") -> dict:
     use_vision = ext in _IMAGE_EXTS
 
     try:
-        from openai import OpenAI
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
         if use_vision:
@@ -176,12 +177,7 @@ def extract_invoice_with_ai(image_path: str, raw_text: str = "") -> dict:
         data = json.loads(response.choices[0].message.content)
         data["_extraction_method"] = method
         data["_tokens_used"] = response.usage.total_tokens
-        # Reconcile actual usage with the org's daily budget so future calls
-        # see accurate consumption (we charged 4000 estimated up front).
-        try:
-            ai_budget.charge_current(int(response.usage.total_tokens))
-        except Exception:
-            pass
+        # The unified gateway already records and charges actual token usage.
         return data
 
     except Exception as e:
@@ -210,7 +206,6 @@ def analyze_invoice_risk(invoice_data: dict, vendor_history: dict = None) -> dic
         return {"overall_risk_score": 0, "risk_level": "unknown", "error": "AI budget exceeded"}
 
     try:
-        from openai import OpenAI
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
         context = ""
@@ -237,7 +232,7 @@ Vendor historical context:
 
         data = json.loads(response.choices[0].message.content)
         data["_tokens_used"] = response.usage.total_tokens
-        ai_budget.charge_current(int(response.usage.total_tokens))
+        # The unified gateway already records and charges actual token usage.
         return data
 
     except Exception as e:

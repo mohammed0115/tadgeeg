@@ -233,6 +233,9 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Legacy AI adapters read this context while all new calls receive their
+    # organization explicitly in core.ai.gateway.
+    "core.ai.middleware.AIOrganizationContextMiddleware",
     # SubscriptionRequiredMiddleware sits right after auth so we can read
     # request.user, but BEFORE rate-limit so a user without a sub gets a
     # clear 402 instead of a misleading 503 if the rate-limiter backend
@@ -696,13 +699,36 @@ CELERY_BEAT_SCHEDULE = {
         # 03:45 — only reports eligible evidence; never archives or deletes.
         "schedule": crontab(hour=3, minute=45),
     },
+    "ai-safety-prune-usage-payloads": {
+        # Diagnostic payloads only; AIUsageRecord remains billing evidence.
+        "task": "ai_safety.prune_usage_payloads",
+        "schedule": crontab(hour=4, minute=0),
+    },
 }
+
+AI_USAGE_PAYLOAD_RETENTION_DAYS = int(
+    os.environ.get("AI_USAGE_PAYLOAD_RETENTION_DAYS", "30")
+)
 
 # ─── OpenAI ───────────────────────────────────────────────────────────────────
 OPENAI_API_KEY    = os.environ.get("OPENAI_API_KEY", "")
 OPENAI_MODEL      = os.environ.get("OPENAI_MODEL", "gpt-4o")
 OPENAI_MAX_TOKENS = int(os.environ.get("OPENAI_MAX_TOKENS", "4096"))
 OPENAI_TIMEOUT    = int(os.environ.get("OPENAI_TIMEOUT", "30"))
+
+# USD per 1M tokens. Defaults are OpenAI's published standard Chat Completions
+# prices reviewed on 2026-08-19; deployment may override them without changing
+# historical AIUsageRecord.estimated_cost values already written.
+AI_USAGE_MODEL_PRICES_PER_MILLION = {
+    "gpt-4o": {
+        "prompt": os.environ.get("AI_USAGE_GPT4O_INPUT_PER_MILLION", "2.50"),
+        "completion": os.environ.get("AI_USAGE_GPT4O_OUTPUT_PER_MILLION", "10.00"),
+    },
+    "gpt-4o-mini": {
+        "prompt": os.environ.get("AI_USAGE_GPT4O_MINI_INPUT_PER_MILLION", "0.15"),
+        "completion": os.environ.get("AI_USAGE_GPT4O_MINI_OUTPUT_PER_MILLION", "0.60"),
+    },
+}
 
 if not DEBUG and not OPENAI_API_KEY:
     import warnings

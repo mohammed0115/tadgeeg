@@ -32,6 +32,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from apps.audit.services import AuditSessionService
 from apps.audit.serializers import AuditFindingSerializer
 from apps.authentication.permissions import IsSeniorAuditorOrAbove, IsOwnOrganization
+from core.permissions import IsOrganizationMember
 from core.services.invoice_ai_service import analyze_invoice_risk, extract_invoice_with_ai
 from core.services.invoice_validator import RULES, TOTAL_RULES, compute_file_hash
 from core.services.invoice_validator import run_all_rules as core_run_all_rules
@@ -469,7 +470,9 @@ def _process_zip(zip_file, org, user, batch, request, audit_session=None) -> tup
 
 class InvoiceListView(generics.ListAPIView):
     serializer_class = InvoiceListSerializer
-    permission_classes = [IsAuthenticated]
+    # Tenant-owned invoices must never be queried with organization=None.
+    # IsOrganizationMember denies that state before get_queryset runs.
+    permission_classes = [IsAuthenticated, IsOrganizationMember]
 
     @extend_schema(
         tags=["Invoices"],

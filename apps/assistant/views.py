@@ -434,10 +434,8 @@ class AssistantChatView(APIView):
                 "fallback": True,
             }, status=200)
 
-        from core.services import ai_budget
         from apps.billing.ai_access import ai_access_response_or_none
         org = getattr(request.user, "organization", None)
-        org_id = getattr(org, "id", None)
         # Unified AI cost guard: subscription validity + suspension + daily token
         # budget, all before any OpenAI spend (not just the old budget-only check).
         blocked = ai_access_response_or_none(org, projected_tokens=1500)
@@ -471,17 +469,18 @@ class AssistantChatView(APIView):
         messages.append({"role": "user", "content": user_payload})
 
         try:
-            from openai import OpenAI
-            client = OpenAI(api_key=settings.OPENAI_API_KEY)
-            resp = client.chat.completions.create(
+            from core.ai.gateway import chat_completion
+
+            resp = chat_completion(
+                organization=org,
+                user=request.user,
+                operation="assistant",
                 model=settings.OPENAI_MODEL,
                 messages=messages,
                 max_tokens=600,
                 temperature=0.2,
             )
             answer = resp.choices[0].message.content.strip()
-            if getattr(resp, "usage", None) and org_id:
-                ai_budget.charge(org_id, int(resp.usage.total_tokens))
 
             # Persist this turn into memory. Store the *bare* user message
             # (without the context JSON) so context is fresh next turn.

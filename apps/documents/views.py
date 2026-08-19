@@ -250,9 +250,31 @@ class DocumentAnalyseView(APIView):
         except Document.DoesNotExist:
             return Response({"error": "Document not found."}, status=404)
 
+        from apps.ai_safety.analysis_requests import admit_analysis_request
+
+        admission = admit_analysis_request(
+            organization=request.user.organization,
+            user=request.user,
+            document_id=doc.id,
+        )
+        if not admission.should_run:
+            return Response(
+                {
+                    "message": "Analysis request is already queued or recently completed.",
+                    "document_id": str(doc.id),
+                    "analysis_request_id": admission.request_id,
+                    "cached": True,
+                },
+                status=202,
+            )
+
         if doc.processing_status == Document.ProcessingStatus.PROCESSING:
             return Response(
-                {"message": "Already processing.", "document_id": str(doc.id)},
+                {
+                    "message": "Already processing.",
+                    "document_id": str(doc.id),
+                    "analysis_request_id": admission.request_id,
+                },
                 status=202,
             )
 
@@ -270,12 +292,14 @@ class DocumentAnalyseView(APIView):
                     "document_id": str(doc.id),
                     "analysis": DocumentAnalysisResultSerializer(analysis).data,
                     "processing_time_ms": pipeline_result.get("processing_time_ms"),
+                    "analysis_request_id": admission.request_id,
                 })
             except DocumentAnalysisResult.DoesNotExist:
                 return Response({
                     "message": "Pipeline ran but no analysis result was saved.",
                     "document_id": str(doc.id),
                     "errors": pipeline_result.get("errors", []),
+                    "analysis_request_id": admission.request_id,
                 }, status=500)
         else:
             # Async path
@@ -286,6 +310,8 @@ class DocumentAnalyseView(APIView):
                     "message": "Analysis queued. Poll GET /api/documents/{pk}/analysis/ for results.",
                     "document_id": str(doc.id),
                     "status": "queued",
+                    "analysis_request_id": admission.request_id,
+                    "cached": False,
                 },
                 status=202,
             )

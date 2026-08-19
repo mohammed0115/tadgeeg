@@ -12,6 +12,8 @@ import logging
 from typing import Optional
 from django.conf import settings
 
+from core.ai.openai_client import OpenAI
+
 logger = logging.getLogger("finai")
 
 
@@ -19,7 +21,6 @@ def _get_client():
     """Get OpenAI client instance."""
     if not settings.OPENAI_API_KEY:
         raise ValueError("OPENAI_API_KEY is not configured.")
-    from openai import OpenAI
     return OpenAI(api_key=settings.OPENAI_API_KEY)
 
 

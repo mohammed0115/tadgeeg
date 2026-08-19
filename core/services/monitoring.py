@@ -117,17 +117,14 @@ class PipelineHealthCheck:
                     elapsed,
                 )
 
-            from openai import OpenAI
-
-            client = OpenAI(api_key=settings.OPENAI_API_KEY)
-            # Make a minimal request to verify connection
-            response = client.models.retrieve(settings.OPENAI_MODEL)
+            # Do not make an unowned provider request from a health check.
+            # Tenant-scoped gateway calls record their own success/failure in
+            # AIUsageRecord; this component reports configuration only.
             elapsed = (time.time() - start) * 1000
-
             return ComponentHealth(
                 "openai_api",
-                HealthStatus.HEALTHY,
-                f"Model {response.id} available",
+                HealthStatus.DEGRADED,
+                "Provider configured; tenant-scoped gateway evidence required",
                 elapsed,
             )
         except Exception as e:

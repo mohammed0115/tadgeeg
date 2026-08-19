@@ -96,15 +96,23 @@ class Command(BaseCommand):
             raise CommandError(
                 "OPENAI_API_KEY not configured. Set it in settings or environment."
             )
-        from openai import OpenAI
-        client = OpenAI(api_key=api_key)
-
-        def translate(text: str, target_lang: str) -> str:
+        def translate(document, text: str, target_lang: str) -> str:
             if not text or not text.strip():
+                return ""
+            organization = getattr(document, "organization", None)
+            if organization is None:
+                self.stderr.write(self.style.WARNING(
+                    f"  skipped unowned {document.__class__.__name__}:{document.pk}"
+                ))
                 return ""
             target_label = "Arabic" if target_lang == "ar" else "English"
             try:
-                resp = client.chat.completions.create(
+                from core.ai.gateway import chat_completion
+
+                resp = chat_completion(
+                    organization=organization,
+                    operation="translation",
+                    document_id=document.pk,
                     model=model_name,
                     messages=[
                         {"role": "system",
@@ -138,8 +146,8 @@ class Command(BaseCommand):
             self.stdout.write(f"  [{key}] missing bilingual columns — skipped (run migrations).")
             return {"skipped": True}
 
-        qs = Model.objects.exclude(ai_summary="").only(
-            "id", "ai_summary", "ai_summary_ar", "ai_summary_en",
+        qs = Model.objects.exclude(ai_summary="").select_related("organization").only(
+            "id", "organization", "ai_summary", "ai_summary_ar", "ai_summary_en",
             "ai_recommendations", "ai_recommendations_ar", "ai_recommendations_en",
         )
         total = qs.count()
@@ -190,7 +198,7 @@ class Command(BaseCommand):
                     if dry_run:
                         stats["summaries_translated"] += 1
                     else:
-                        translated = translate(legacy_summary, target_lang)
+                        translated = translate(doc, legacy_summary, target_lang)
                         if translated:
                             updates[target_field] = translated
                             stats["summaries_translated"] += 1
@@ -214,7 +222,7 @@ class Command(BaseCommand):
                         stats["recs_translated"] += 1
                     else:
                         joined = "\n".join(f"- {r}" for r in legacy_recs)
-                        translated_block = translate(joined, tgt_lang)
+                        translated_block = translate(doc, joined, tgt_lang)
                         if translated_block:
                             translated_items = [
                                 line.lstrip("- •*").strip()

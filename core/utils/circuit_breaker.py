@@ -230,8 +230,8 @@ class ResilientOpenAIWrapper:
         try:
             def _call_openai():
                 from django.conf import settings
-                from openai import OpenAI
-                
+                from core.ai.openai_client import OpenAI
+
                 api_key = getattr(settings, "OPENAI_API_KEY", "")
                 if not api_key:
                     raise ValueError("OPENAI_API_KEY not configured")

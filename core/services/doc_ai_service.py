@@ -44,23 +44,23 @@ _IMAGE_MIME = {
 
 
 def _call_openai(prompt: str, image_path: str, raw_text: str = "") -> dict:
+    # Background ingestion sets this context before any provider work.  Missing
+    # tenant context is a security failure, never permission to make an
+    # unmetered request.
+    from apps.authentication.models import Organization
+    from core.ai.gateway import AIOrganizationRequired, chat_completion
+    from core.services.ai_budget import get_current_org_id
+
+    org_id = get_current_org_id()
+    organization = Organization.objects.filter(pk=org_id).first() if org_id else None
+    if organization is None:
+        logger.warning("Document AI extraction skipped: organization context is required.")
+        return {}
     if not settings.OPENAI_API_KEY:
         logger.warning("OpenAI API key not configured for document extraction.")
         return {}
 
-    # Per-org daily token budget guard. If the org has hit its cap, skip the
-    # API call entirely and return empty (callers already merge with pandas).
-    from core.services import ai_budget
     try:
-        ai_budget.guard_current(projected_tokens=4000)
-    except ai_budget.BudgetExceeded:
-        logger.warning("[ai-budget] doc extraction skipped (budget exceeded)")
-        return {}
-
-    try:
-        from openai import OpenAI
-
-        client = OpenAI(api_key=settings.OPENAI_API_KEY)
         messages = [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
 
         # Add image only for actual image/PDF files — skip structured data files
@@ -84,7 +84,9 @@ def _call_openai(prompt: str, image_path: str, raw_text: str = "") -> dict:
                 "text": f"\n\nExtracted Data:\n{raw_text[:8000]}",
             })
 
-        resp = client.chat.completions.create(
+        resp = chat_completion(
+            organization=organization,
+            operation="extraction",
             model=settings.OPENAI_MODEL,
             messages=messages,
             max_tokens=settings.OPENAI_MAX_TOKENS,
@@ -96,11 +98,10 @@ def _call_openai(prompt: str, image_path: str, raw_text: str = "") -> dict:
         data["_extraction_method"] = "openai_vision"
         if getattr(resp, "usage", None):
             data["_tokens_used"] = resp.usage.total_tokens
-            try:
-                ai_budget.charge_current(int(resp.usage.total_tokens))
-            except Exception:
-                pass
         return data
+    except AIOrganizationRequired:
+        logger.warning("Document AI extraction skipped: organization context is required.")
+        return {}
     except Exception as e:
         logger.warning(f"OpenAI extraction failed: {e}")
         return {}

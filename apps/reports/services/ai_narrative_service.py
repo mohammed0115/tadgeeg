@@ -142,11 +142,13 @@ def build_ai_narrative(
     """
     if not findings_register or not findings_register.get("findings"):
         return None  # nothing to synthesize — caller's deterministic path is fine
-    if organization is not None:
-        from apps.billing.ai_access import ai_access_allowed
-        if not ai_access_allowed(organization, projected_tokens=_MAX_TOKENS):
-            logger.info("ai_narrative_service: AI access denied for org — falling back")
-            return None
+    if organization is None:
+        logger.warning("ai_narrative_service: organization is required; using deterministic narrative")
+        return None
+    from apps.billing.ai_access import ai_access_allowed
+    if not ai_access_allowed(organization, projected_tokens=_MAX_TOKENS):
+        logger.info("ai_narrative_service: AI access denied for org — falling back")
+        return None
     api_key = _api_key()
     if not api_key:
         logger.info("ai_narrative_service: OPENAI_API_KEY not set — skipping synthesis")
@@ -160,9 +162,11 @@ def build_ai_narrative(
         return cached
 
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=api_key)
-        resp = client.chat.completions.create(
+        from core.ai.gateway import chat_completion
+
+        resp = chat_completion(
+            organization=organization,
+            operation="narrative",
             model=_DEFAULT_MODEL,
             messages=[
                 {"role": "system", "content": _SYSTEM_PROMPT},

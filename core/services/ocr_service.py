@@ -15,6 +15,8 @@ from typing import Optional
 
 from django.conf import settings
 
+from core.ai.openai_client import OpenAI
+
 logger = logging.getLogger("finai")
 
 
@@ -224,8 +226,6 @@ def extract_text_openai(image_path: str) -> dict:
                 "is_handwritten": False, "method": "openai_ocr_skipped"}
 
     try:
-        from openai import OpenAI
-
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
         with open(image_path, "rb") as f:
@@ -285,8 +285,6 @@ def enhance_with_openai(image_path: str, document_type: str, raw_text: str = "")
         return {}
 
     try:
-        from openai import OpenAI
-
         client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
         # Encode image to base64

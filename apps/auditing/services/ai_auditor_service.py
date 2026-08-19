@@ -8,6 +8,8 @@ import os
 import re
 
 from django.conf import settings
+
+from core.ai.openai_client import OpenAI
 from django.core.cache import cache
 
 from apps.auditing.prompts.financial_auditor_prompt import (
@@ -145,7 +147,6 @@ class AIAuditorService:
             return None
 
         try:
-            from openai import OpenAI
             self._client = OpenAI(api_key=api_key)
             return self._client
         except ImportError:

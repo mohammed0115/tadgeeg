@@ -736,7 +736,7 @@ EXECUTIVE_WIDGETS: list[dict] = [
 
 # ─── Helper: get widgets for a given report ───────────────────────────────────
 
-def get_widgets(report_type: str, document_type: str | None = None) -> list[dict]:
+def get_widgets(report_type: str, document_type: str | None = None, *, organization=None) -> list[dict]:
     """
     Return the ordered widget list for the given report context.
 
@@ -754,9 +754,20 @@ def get_widgets(report_type: str, document_type: str | None = None) -> list[dict
     else:
         widgets = _GENERIC_WIDGETS
 
+    if organization is not None:
+        from apps.billing.services.features import feature_decision
+        decision = feature_decision(organization, "dashboard")
+        if not decision.enabled:
+            return []
+        allowed_tiers = ("none", "basic", "advanced", "interactive", "custom")
+        current_rank = allowed_tiers.index(decision.tier) if decision.tier in allowed_tiers else 0
+        widgets = [
+            widget for widget in widgets
+            if current_rank >= allowed_tiers.index(widget.get("min_dashboard_tier", "basic"))
+        ]
     return sorted(widgets, key=lambda w: w.get("priority", 99))
 
 
-def get_widget_ids(report_type: str, document_type: str | None = None) -> list[str]:
+def get_widget_ids(report_type: str, document_type: str | None = None, *, organization=None) -> list[str]:
     """Return only the widget IDs in display order."""
-    return [w["id"] for w in get_widgets(report_type, document_type)]
+    return [w["id"] for w in get_widgets(report_type, document_type, organization=organization)]

@@ -5,8 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.api_access.models import OrganizationAPIKey
 from apps.api_access.service import APIAccessError, issue_key, revoke_key
+from apps.api_access.selectors import get_api_key_for_organization, list_safe_api_keys
 
 
 class APIKeyIssueSerializer(serializers.Serializer):
@@ -19,9 +19,7 @@ class APIKeyListCreateView(APIView):
     def get(self, request):
         if not request.user.organization_id:
             return Response({"detail": "Organization membership is required."}, status=403)
-        rows = OrganizationAPIKey.objects.filter(organization=request.user.organization).values(
-            "id", "name", "key_prefix", "scopes", "monthly_limit", "used_this_month", "is_active", "created_at", "revoked_at"
-        )
+        rows = list_safe_api_keys(request.user.organization)
         return Response({"results": list(rows)})
 
     def post(self, request):
@@ -40,7 +38,7 @@ class APIKeyRevokeView(APIView):
     permission_classes = [IsAuthenticated]
 
     def delete(self, request, pk):
-        key = OrganizationAPIKey.objects.filter(pk=pk, organization=request.user.organization).first()
+        key = get_api_key_for_organization(request.user.organization, pk)
         if not key:
             return Response({"detail": "API key not found."}, status=404)
         try:

@@ -79,6 +79,20 @@ class ERPIngestionTests(TestCase):
         from apps.billing.tests._factories import make_org
         from apps.erp.models import ERPConnection
         self.org = make_org()
+        from datetime import timedelta
+        from django.core.management import call_command
+        from django.utils import timezone as django_timezone
+        from apps.billing.choices import PlanCode, SubscriptionStatus
+        from apps.billing.models import OrganizationSubscription, Plan
+        call_command("seed_billing_plans")
+        plan = Plan.objects.get(code=PlanCode.ENTERPRISE)
+        now = django_timezone.now()
+        OrganizationSubscription.objects.create(
+            organization=self.org, plan=plan, status=SubscriptionStatus.ACTIVE,
+            starts_at=now - timedelta(days=1), ends_at=now + timedelta(days=29),
+            invoice_limit=plan.invoice_limit, user_limit=plan.user_limit,
+            feature_tiers_snapshot=plan.feature_tiers,
+        )
         self.conn = ERPConnection.objects.create(
             organization=self.org,
             provider=ERPConnection.Provider.SAP,
@@ -372,6 +386,20 @@ class ReconciliationTests(TestCase):
         from apps.erp.models import ERPConnection
         from apps.invoices.models import Invoice
         self.org = make_org()
+        from datetime import timedelta
+        from django.core.management import call_command
+        from django.utils import timezone as django_timezone
+        from apps.billing.choices import PlanCode, SubscriptionStatus
+        from apps.billing.models import OrganizationSubscription, Plan
+        call_command("seed_billing_plans")
+        plan = Plan.objects.get(code=PlanCode.ENTERPRISE)
+        now = django_timezone.now()
+        OrganizationSubscription.objects.create(
+            organization=self.org, plan=plan, status=SubscriptionStatus.ACTIVE,
+            starts_at=now - timedelta(days=1), ends_at=now + timedelta(days=29),
+            invoice_limit=plan.invoice_limit, user_limit=plan.user_limit,
+            feature_tiers_snapshot=plan.feature_tiers,
+        )
         self.conn = ERPConnection.objects.create(
             organization=self.org,
             provider=ERPConnection.Provider.SAP,

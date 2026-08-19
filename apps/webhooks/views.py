@@ -6,6 +6,8 @@ import secrets
 from rest_framework import generics, serializers, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+
+from apps.billing.services.features import FeatureUnavailable, require_feature
 from rest_framework.views import APIView
 
 from .models import WebhookEndpoint, WebhookDelivery
@@ -25,7 +27,20 @@ class WebhookEndpointSerializer(serializers.ModelSerializer):
         ]
 
 
-class WebhookEndpointListView(generics.ListCreateAPIView):
+class WebhookEntitlementMixin:
+    """Require the enterprise API contract before exposing customer webhooks."""
+
+    def initial(self, request, *args, **kwargs):
+        super().initial(request, *args, **kwargs)
+        if not getattr(request.user, "organization_id", None):
+            self.permission_denied(request, message="Organization membership is required.")
+        try:
+            require_feature(request.user.organization, "api", minimum_tier="full")
+        except FeatureUnavailable:
+            self.permission_denied(request, message="Webhooks require the enterprise API package.")
+
+
+class WebhookEndpointListView(WebhookEntitlementMixin, generics.ListCreateAPIView):
     """GET → list this org's webhook subscriptions.
     POST → create a new subscription (server generates the HMAC secret)."""
     serializer_class = WebhookEndpointSerializer
@@ -53,7 +68,7 @@ class WebhookEndpointListView(generics.ListCreateAPIView):
         return Response(out, status=status.HTTP_201_CREATED)
 
 
-class WebhookEndpointDetailView(generics.RetrieveUpdateDestroyAPIView):
+class WebhookEndpointDetailView(WebhookEntitlementMixin, generics.RetrieveUpdateDestroyAPIView):
     serializer_class = WebhookEndpointSerializer
     permission_classes = [IsAuthenticated]
 
@@ -61,7 +76,7 @@ class WebhookEndpointDetailView(generics.RetrieveUpdateDestroyAPIView):
         return WebhookEndpoint.objects.filter(organization=self.request.user.organization)
 
 
-class WebhookDeliveryListView(generics.ListAPIView):
+class WebhookDeliveryListView(WebhookEntitlementMixin, generics.ListAPIView):
     """Recent dispatch attempts for one endpoint — useful for debugging."""
     permission_classes = [IsAuthenticated]
 
@@ -78,7 +93,7 @@ class WebhookDeliveryListView(generics.ListAPIView):
         return Response({"deliveries": list(rows)})
 
 
-class WebhookTestView(APIView):
+class WebhookTestView(WebhookEntitlementMixin, APIView):
     """Send a synthetic test event so the customer can verify their endpoint."""
     permission_classes = [IsAuthenticated]
 

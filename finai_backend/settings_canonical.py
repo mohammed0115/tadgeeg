@@ -168,6 +168,7 @@ LOCAL_APPS = [
     "apps.notifications",
     "apps.assistant",
     "apps.webhooks",
+    "apps.api_access",
     "apps.data_export",
     "apps.api_mobile",
     "apps.streaming",

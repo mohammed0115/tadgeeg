@@ -22584,3 +22584,35 @@ msgstr "إضافة"
 
 #~ msgid "Δ%"
 #~ msgstr "التغيّر %"
+
+#: templates/platform_admin/crm/customer_detail.html
+msgid "AI Usage"
+msgstr "استخدام الذكاء الاصطناعي"
+
+#: templates/platform_admin/crm/customer_detail.html
+msgid "Requests"
+msgstr "الطلبات"
+
+#: templates/platform_admin/crm/customer_detail.html
+msgid "Prompt tokens"
+msgstr "رموز الإدخال"
+
+#: templates/platform_admin/crm/customer_detail.html
+msgid "Completion tokens"
+msgstr "رموز الإخراج"
+
+#: templates/platform_admin/crm/customer_detail.html
+msgid "Estimated cost (USD)"
+msgstr "التكلفة التقديرية (دولار أمريكي)"
+
+#: templates/platform_admin/crm/customer_detail.html
+msgid "Failure rate"
+msgstr "معدل الفشل"
+
+#: templates/platform_admin/crm/customer_detail.html
+msgid "Operation"
+msgstr "العملية"
+
+#: templates/platform_admin/crm/customer_detail.html
+msgid "No AI usage for this month."
+msgstr "لا يوجد استخدام للذكاء الاصطناعي هذا الشهر."

@@ -35,7 +35,7 @@ REPO = Path(__file__).resolve().parent.parent
 #: rule modules; the remaining code's count was unchanged. This 284 -> 273
 #: reduction records that deletion rather than creating new budget headroom.
 #: Lowering this number is the only permitted direction.
-SILENT_HANDLER_BUDGET = 273
+SILENT_HANDLER_BUDGET = 261
 
 _BROAD = {"Exception", "BaseException"}
 _HANDLED = ("'exception'", "'error'", "'warning'", "'critical'",

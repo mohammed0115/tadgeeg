@@ -57,3 +57,7 @@ private_media/
 # Database dumps and partner-document archives. Real customer data — never in
 # git. See deployment/docker/backup.sh
 deployment/docker/backups/
+
+# نسخ قواعد الإنتاج — لا تُلتزم أبدًا
+live-*/
+*.sql.gz

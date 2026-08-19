@@ -106,3 +106,13 @@ def report_retention_candidates() -> dict:
     summary = retention_due_summary()
     logger.info("retention candidate summary: %s", summary)
     return summary
+
+
+@shared_task(name="billing.archive_due_evidence")
+def archive_due_evidence() -> dict:
+    """Daily non-destructive electronic archive by frozen package retention."""
+    from apps.billing.services.evidence_archiving import archive_due_evidence as _archive
+
+    summary = _archive()
+    logger.info("evidence archive finished: %s", summary)
+    return summary

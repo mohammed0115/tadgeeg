@@ -699,6 +699,12 @@ CELERY_BEAT_SCHEDULE = {
         # 03:45 — only reports eligible evidence; never archives or deletes.
         "schedule": crontab(hour=3, minute=45),
     },
+    "billing-archive-due-evidence": {
+        # 03:55 — after chain verification and candidate reporting. Archives
+        # eligible, non-frozen evidence only; it never deletes bytes or rows.
+        "task": "billing.archive_due_evidence",
+        "schedule": crontab(hour=3, minute=55),
+    },
     "ai-safety-prune-usage-payloads": {
         # Diagnostic payloads only; AIUsageRecord remains billing evidence.
         "task": "ai_safety.prune_usage_payloads",

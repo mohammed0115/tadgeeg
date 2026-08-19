@@ -32,6 +32,7 @@ from typing import Optional
 
 from django.db import transaction
 
+from apps.billing.services.features import require_feature
 from apps.erp.connectors.base import ConnectionConfig, RemoteRecord
 from apps.erp.connectors.registry import get_connector
 from apps.erp.models import ERPConnection, SyncRecord, SyncRun
@@ -64,6 +65,7 @@ def run_ingestion(connection: ERPConnection,
                   kinds=None,
                   triggered_by=None) -> SyncRun:
     """Pull every record from the ERP since the watermark."""
+    require_feature(connection.organization, "erp")
     if connection.status != ERPConnection.Status.ACTIVE:
         raise RuntimeError(
             f"connection {connection.pk} is {connection.status}, refusing to sync"

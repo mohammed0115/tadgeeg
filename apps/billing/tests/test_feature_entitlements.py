@@ -3,8 +3,12 @@ from io import StringIO
 from django.core.management import call_command
 from django.test import TestCase
 
-from apps.billing.choices import PlanCode
-from apps.billing.models import Plan
+from datetime import timedelta
+
+from django.utils import timezone
+
+from apps.billing.choices import PlanCode, SubscriptionStatus
+from apps.billing.models import OrganizationSubscription, Plan
 from apps.billing.services.features import feature_decision
 from apps.billing.services.subscription_service import SubscriptionService
 from apps.billing.tests._factories import make_org
@@ -26,11 +30,27 @@ class FeatureEntitlementTests(TestCase):
         assert feature_decision(org, "whatsapp").enabled is False
         assert feature_decision(org, "api").enabled is False
 
-    def test_professional_includes_whatsapp_but_only_read_api(self):
-        org, _ = self._activate(PlanCode.PROFESSIONAL)
-        assert feature_decision(org, "whatsapp").enabled is True
-        assert feature_decision(org, "api").tier == "read"
-        assert feature_decision(org, "api", minimum_tier="full").enabled is False
+    def test_api_tiers_follow_the_package_matrix(self):
+        business, _ = self._activate(PlanCode.BUSINESS)
+        professional, _ = self._activate(PlanCode.PROFESSIONAL)
+        enterprise = make_org("enterprise-api-org")
+        enterprise_plan = Plan.objects.get(code=PlanCode.ENTERPRISE)
+        now = timezone.now()
+        OrganizationSubscription.objects.create(
+            organization=enterprise,
+            plan=enterprise_plan,
+            status=SubscriptionStatus.ACTIVE,
+            starts_at=now - timedelta(days=1),
+            ends_at=now + timedelta(days=29),
+            invoice_limit=enterprise_plan.invoice_limit,
+            user_limit=enterprise_plan.user_limit,
+        )
+
+        assert feature_decision(business, "api").tier == "limited"
+        assert feature_decision(business, "api", minimum_tier="full").enabled is False
+        assert feature_decision(professional, "whatsapp").enabled is True
+        assert feature_decision(professional, "api").tier == "full"
+        assert feature_decision(enterprise, "api", minimum_tier="full").enabled is True
 
     def test_subscription_keeps_capabilities_it_was_sold(self):
         org, subscription = self._activate(PlanCode.PROFESSIONAL)

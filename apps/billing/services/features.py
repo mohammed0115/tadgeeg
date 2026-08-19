@@ -18,13 +18,15 @@ class FeatureUnavailable(PermissionError):
 
 
 TIER_ORDER = {
-    "reports": ("basic", "advanced", "professional", "executive", "custom"),
-    "dashboard": ("basic", "advanced", "interactive", "executive"),
-    "fraud_detection": ("basic", "advanced", "professional"),
-    "permissions": ("basic", "advanced", "full"),
-    "report_customization": ("none", "basic", "advanced", "full"),
-    "approvals": ("single", "multi"),
-    "api": ("read", "full"),
+    "reports": ("none", "basic", "advanced", "professional", "custom"),
+    "dashboard": ("none", "basic", "advanced", "interactive", "custom"),
+    "fraud_detection": ("none", "basic", "advanced", "professional", "custom"),
+    "permissions": ("none", "basic", "advanced", "full", "unlimited"),
+    "audit_log": ("none", "full"),
+    "report_customization": ("none", "limited", "basic", "advanced", "full"),
+    "approvals": ("none", "single", "multi"),
+    "api": ("none", "limited", "read", "full"),
+    "erp": ("none", "optional", "full"),
 }
 
 
@@ -77,7 +79,7 @@ def feature_decision(organization, feature: str, *, minimum_tier: str | None = N
 
     capabilities = capabilities_for_subscription(subscription)
     value = capabilities.get(feature)
-    enabled = bool(value)
+    enabled = bool(value) and value != "none"
     if minimum_tier is not None:
         tiers = TIER_ORDER.get(feature, ())
         try:

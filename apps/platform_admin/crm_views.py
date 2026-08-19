@@ -34,6 +34,10 @@ from django.shortcuts import redirect, render
 from django.utils.translation import gettext_lazy as _
 
 from apps.platform_admin import selectors
+from apps.platform_admin.services.crm_platform_contact import (
+    PlatformContactSettingMissing,
+    update_whatsapp_business_number,
+)
 from apps.platform_admin.models import (
     CustomerActivity,
     CustomerNote,
@@ -41,9 +45,6 @@ from apps.platform_admin.models import (
 )
 from apps.authentication.models import Organization
 from apps.platform_admin import forms as crm_forms
-from apps.cms.models import PlatformSetting
-from apps.activity_logs.models import ActivityLog
-from apps.activity_logs.service import ActivityLogService
 from apps.platform_admin.permissions import (
     can_manage_financial_crm_data,
     can_manage_platform_contact_settings,
@@ -169,9 +170,7 @@ def crm_dashboard(request):
         recent_tickets=selectors.get_recent_tickets(),
         recent_activities=selectors.get_recent_activities(),
         recent_audits=selectors.get_recent_crm_audits(),
-        whatsapp_business_setting=PlatformSetting.objects.filter(
-            key="whatsapp_business_number"
-        ).first(),
+        whatsapp_business_setting=selectors.get_whatsapp_business_setting(),
         can_manage_platform_contact=can_manage_platform_contact_settings(request.user),
     )
     return render(request, "platform_admin/crm/dashboard.html", ctx)
@@ -180,33 +179,20 @@ def crm_dashboard(request):
 @crm_platform_contact_required()
 def whatsapp_business_number_update(request):
     """Update the public WhatsApp Business contact number, never Meta secrets."""
-    setting = PlatformSetting.objects.filter(key="whatsapp_business_number").first()
-    if setting is None:
-        raise Http404("WhatsApp Business setting is not configured.")
     form = crm_forms.WhatsAppBusinessNumberForm(request.POST)
     if not form.is_valid():
         messages.error(request, "WhatsApp Business number must use E.164 format.")
         return redirect("platform_admin:crm:dashboard")
 
-    previous_value = setting.value
-    next_value = form.cleaned_data["business_number"]
-    if previous_value != next_value:
-        setting.value = next_value
-        setting.updated_by = request.user
-        setting.save(update_fields=["value", "updated_by", "updated_at"])
-        ActivityLogService.log(
-            action=ActivityLog.Action.POLICY_CHANGED,
+    try:
+        changed = update_whatsapp_business_number(
+            number=form.cleaned_data["business_number"],
             user=request.user,
-            entity_type="PlatformSetting",
-            entity_id=str(setting.pk),
-            description="WhatsApp Business public contact number updated.",
-            metadata={
-                "key": setting.key,
-                "old_value": previous_value,
-                "new_value": next_value,
-            },
             request=request,
         )
+    except PlatformContactSettingMissing as exc:
+        raise Http404(str(exc)) from exc
+    if changed:
         messages.success(request, "WhatsApp Business number updated.")
     else:
         messages.info(request, "WhatsApp Business number is unchanged.")

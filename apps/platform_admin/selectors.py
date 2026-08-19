@@ -503,3 +503,11 @@ def get_assignable_crm_staff():
         .distinct()
         .order_by("full_name", "email")
     )
+
+
+
+def get_whatsapp_business_setting():
+    """Return the globally seeded public WhatsApp contact setting, if present."""
+    from apps.cms.models import PlatformSetting
+
+    return PlatformSetting.objects.filter(key="whatsapp_business_number").first()

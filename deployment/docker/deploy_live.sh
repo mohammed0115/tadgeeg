@@ -39,7 +39,7 @@ sql() { printf '%s\n' "$1" | $C exec -T db_live sh -c 'exec mysql -N -B -uroot -
 # ليست echo. الخوادم الثلاثة تحمل نفس docker-compose.yml وفيه web_live على
 # كلٍّ منها، فأمر نشر إنتاج على خادم التدريب لا يفشل ولا يحذّر — يجد منظومة
 # اسمها "live" ويعمل عليها. حدث ذلك في 2026-08-18.
-say "0/7  الخادم"
+say "0/8  الخادم"
 IP="$(hostname -I | awk '{print $1}')"
 [ "$IP" = "$LIVE_IP" ] || die "الخادم الخطأ: $IP — المتوقّع $LIVE_IP"
 ok "$(hostname) · $IP"
@@ -48,7 +48,7 @@ cd "$PROJECT_ROOT"
 # ── 1. مفاتيح البيئة ────────────────────────────────────────────────────────
 # DEBUG=False مع EMAIL_HOST_USER فارغ ⇒ ImproperlyConfigured عند الإقلاع،
 # بعد أن تكون الخدمة قد توقّفت. أسقط خادم التدريب في 2026-08-18.
-say "1/7  مفاتيح البيئة"
+say "1/8  مفاتيح البيئة"
 ENV_FILE="$SCRIPT_DIR/env/live.env"
 [ -f "$ENV_FILE" ] || die "$ENV_FILE غير موجود"
 for key in EMAIL_HOST_USER EMAIL_HOST_PASSWORD SECRET_KEY; do
@@ -58,7 +58,7 @@ for key in EMAIL_HOST_USER EMAIL_HOST_PASSWORD SECRET_KEY; do
 done
 
 # ── 2. الفحص الوقائي — قراءة فقط ────────────────────────────────────────────
-say "2/7  الفحص الوقائي"
+say "2/8  الفحص الوقائي"
 $C ps db_live --status running | grep -q db_live || die "db_live لا يعمل — لا يمكن الفحص"
 
 DUPS="$(sql 'SELECT COUNT(*) FROM (SELECT 1 FROM storage_management_filestoragemapping GROUP BY file_id, version_number HAVING COUNT(*)>1) d;')"
@@ -75,34 +75,53 @@ FORKED="$(sql 'SELECT COUNT(*) FROM (SELECT 1 FROM invoice_audit_events WHERE ch
 EVENTS_BEFORE="$(sql 'SELECT COUNT(*) FROM invoice_audit_events;')"
 ok "سلسلة التدقيق: $FORKED شقًّا · $EVENTS_BEFORE حدثًا"   # الشقوق متوقّعة، 0016 يعالجها
 
-# اتّساق تاريخ الهجرات — الفحص الذي يرفض migrate كليًّا إن فشل
-$C run --rm --entrypoint sh web_live -c 'python manage.py migrate --check' >/dev/null 2>&1 \
-  && ok "لا هجرات معلّقة (لا شيء لينشر؟ تحقّق من الكود)" \
-  || ok "هجرات معلّقة — متوقّع"
+# ── 3. الكود والصورة — قبل خطة الهجرات، وقبل النسخة ────────────────────────
+# البناء لا يمسّ حاوية عاملة ولا قاعدة بيانات، فسحبه إلى هنا مجّاني — ويجعل
+# الفحص التالي يسأل الصورة الجديدة.
+#
+# كان فحص الهجرات في المرحلة 2، قبل البناء، فيسأل الصورة القديمة: أجاب "لا
+# هجرات معلّقة" في نشر 2026-08-19 بينما ثماني هجرات تنتظر. ادّعاء يُقرأ دليلًا
+# ويقيس شيئًا آخر — وهو النمط الذي يطارده هذا المستودع كلّه.
+say "3/8  الكود والصورة"
+git fetch origin
+if [ "$APPLY" -eq 1 ]; then
+  git reset --hard origin/main
+else
+  # الفحص الجافّ لا يغيّر شيئًا — ولا الشجرة. reset --hard يتجاهل تعديلاتك
+  # المحلية، فهو تغيير لا فحص. هنا يُتحقَّق فقط.
+  [ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] \
+    || die "الشجرة ليست على origin/main — اسحبها أوّلًا، أو شغّل --apply"
+fi
+git log -1 --format='  HEAD: %h %s'
+$C build web_live
+ok "الصورة جاهزة · الموقع ما زال يخدم"
+
+# ── 4. خطة الهجرات — من الصورة الجديدة ─────────────────────────────────────
+say "4/8  خطة الهجرات"
+PLAN="$($C run --rm --entrypoint sh web_live -c \
+        'python manage.py showmigrations --plan 2>/dev/null | grep "^\[ \]"' || true)"
+if [ -z "$PLAN" ]; then
+  ok "لا هجرات معلّقة — الكود المنشور يطابق القاعدة"
+else
+  printf '%s\n' "$PLAN" | sed 's/^\[ \]  */  · /'
+  ok "$(printf '%s\n' "$PLAN" | wc -l) هجرة ستُطبَّق"
+fi
 
 if [ "$APPLY" -eq 0 ]; then
   say "فحص فقط. لإجراء النشر: bash $0 --apply"
   exit 0
 fi
 
-# ── 3. النسخة الاحتياطية ────────────────────────────────────────────────────
-say "3/7  النسخة الاحتياطية"
+# ── 5. النسخة الاحتياطية ────────────────────────────────────────────────────
+say "5/8  النسخة الاحتياطية"
 bash "$SCRIPT_DIR/backup.sh" live
 LATEST="$(ls -1dt "$SCRIPT_DIR"/backups/live-* 2>/dev/null | head -1)"
 [ -n "$LATEST" ] && [ -s "$LATEST/db.sql.gz" ] || die "النسخة لم تُكتب"
 ok "$LATEST ($(du -h "$LATEST/db.sql.gz" | cut -f1))"
 warn "انسخها خارج الخادم — نسخة على نفس القرص ليست نسخة"
 
-# ── 4. الكود والصورة — لا تمسّ الحاوية العاملة ──────────────────────────────
-say "4/7  الكود والصورة"
-git fetch origin
-git reset --hard origin/main
-git log -1 --format='  HEAD: %h %s'
-$C build web_live
-ok "الصورة جاهزة · الموقع ما زال يخدم"
-
-# ── 5. الهجرة في حاوية تُرمى — نقطة الفشل الآمنة ────────────────────────────
-say "5/7  الهجرة"
+# ── 6. الهجرة في حاوية تُرمى — نقطة الفشل الآمنة ────────────────────────────
+say "6/8  الهجرة"
 warn "من هنا يبدأ التوقّف المعلن (~3 دقائق مقيسة في 2026-08-18)"
 $C stop web_live celery_live
 LOG=/tmp/live-migrate-$(date +%Y%m%d-%H%M%S).log
@@ -117,7 +136,7 @@ grep -q "Traceback" "$LOG" && die "الهجرة طبعت Traceback رغم نجا
 ok "الهجرة تمّت · $LOG"
 
 # ── 6. نقطة اللاعودة ────────────────────────────────────────────────────────
-say "6/7  إعادة التشغيل"
+say "7/8  إعادة التشغيل"
 $C up -d --no-deps web_live celery_live
 ok "الحاويتان أُقلعتا"
 
@@ -125,7 +144,7 @@ ok "الحاويتان أُقلعتا"
 # الإقلاع أطول من الهجرة: 419 ملفًّا ثابتًا ثم بذر الخطط والإضافات والشركاء.
 # قياس 2026-08-18: الهجرة 46 ثانية، الإقلاع ~دقيقتان. sleep 25 كان يقول "فشل"
 # على نظام سليم.
-say "7/7  التحقّق"
+say "8/8  التحقّق"
 for i in $(seq 1 24); do
   CODE="$(curl -sS -o /dev/null -m 10 -w '%{http_code}' https://tadgeeg.com/ 2>/dev/null || echo 000)"
   printf '  %s  HTTP %s\n' "$(date +%H:%M:%S)" "$CODE"

@@ -68,13 +68,63 @@ def _executed_lines() -> list[str]:
 
 
 def test_nothing_changes_without_apply():
-    """A run with no flag reads and exits before the backup, code or containers."""
+    """Driven, not read: the dry run must invoke nothing that changes state.
+
+    This began as a line-order check — every changing command had to appear
+    after the `exit 0`. That held until the build moved above the dry-run exit
+    so the migration plan could be read from the new image, and then the order
+    heuristic failed on `git reset --hard` while the real question was whether
+    it *runs*. Position is not the property; execution is.
+
+    git, compose, curl and backup.sh are all replaced by recorders.
+    """
+    source = SCRIPT.read_text(encoding="utf-8")
+    body = source[source.index('say "2/8'):source.index('say "5/8')]
+
+    harness = f"""
+set -Eeuo pipefail
+APPLY=0
+SCRIPT_DIR=/nonexistent
+C=compose_stub
+compose_stub() {{ printf 'COMPOSE %s\n' "$*"; }}
+git() {{ printf 'GIT %s\n' "$*"; [ "${{1:-}}" = "rev-parse" ] && echo same; return 0; }}
+sql() {{ echo 0; }}
+say()  {{ :; }}
+ok()   {{ :; }}
+warn() {{ :; }}
+die()  {{ printf 'DIE %s\n' "$1"; exit 1; }}
+{body}
+echo REACHED_APPLY_ONLY_SECTION
+"""
+    result = subprocess.run(["bash", "-c", harness], capture_output=True, text=True, timeout=60)
+
+    assert "GIT reset --hard" not in result.stdout, (
+        "the dry run reset the working tree — it discards local changes, which "
+        "is a change, not a check"
+    )
+    for forbidden in ("COMPOSE stop", "COMPOSE up -d", "backup.sh"):
+        assert forbidden not in result.stdout, f"the dry run ran {forbidden}"
+    assert "REACHED_APPLY_ONLY_SECTION" not in result.stdout, (
+        "the dry run continued past its exit"
+    )
+
+
+def test_the_dry_run_still_builds_so_the_plan_is_real():
+    """The plan has to be read from the new image, or it reports the old one.
+
+    On 2026-08-19 the check ran before the build and answered "no pending
+    migrations" while eight were waiting: it was asking the running image,
+    which carried the previous code.
+    """
     lines = _executed_lines()
+    build = next(i for i, l in enumerate(lines) if "$C build" in l)
+    plan = next(i for i, l in enumerate(lines) if "showmigrations --plan" in l)
     exits = next(i for i, l in enumerate(lines) if l.strip() == "exit 0")
-    for changing in ("backup.sh", "git reset --hard", "$C build", "$C stop", "$C up -d"):
-        first = next((i for i, l in enumerate(lines) if changing in l), None)
-        assert first is not None, f"{changing} is gone from the script"
-        assert first > exits, f"{changing} runs before the dry-run exit"
+
+    assert build < plan < exits, (
+        "the migration plan must be read from a freshly built image, and both "
+        "must happen before the dry run exits"
+    )
 
 
 def test_the_migration_runs_in_a_throwaway_container_before_the_restart():

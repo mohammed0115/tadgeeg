@@ -5,7 +5,7 @@ from __future__ import annotations
 from django.conf import settings
 
 
-def get_branding_context(language: str | None = None) -> dict:
+def get_branding_context(language: str | None = None, *, organization=None) -> dict:
     lang_code = (language or getattr(settings, "LANGUAGE_CODE", "ar") or "ar").split("-")[0]
     is_arabic = lang_code == "ar"
 
@@ -37,6 +37,19 @@ def get_branding_context(language: str | None = None) -> dict:
     product_tagline = product_tagline_ar if is_arabic else product_tagline_en
     product_description = product_description_ar if is_arabic else product_description_en
     company_byline = f"من تطوير {company_name_ar}" if is_arabic else f"By {company_name}"
+    if organization is not None:
+        try:
+            from apps.billing.services.features import require_feature
+            require_feature(organization, "white_label")
+            prefs = getattr(getattr(organization, "settings", None), "branding", {}) or {}
+            product_name = prefs.get("display_name", product_name)
+            company_name = prefs.get("display_name", company_name)
+            company_name_ar = prefs.get("display_name", company_name_ar)
+        except Exception:
+            # Branding is presentation-only: entitlement or lazy-object failures
+            # must never break an authenticated page.
+            pass
+
     company_product_label = (
         f"أحد منتجات {company_name_ar}"
         if is_arabic

@@ -678,3 +678,86 @@ class InvoiceAuditEvent(HashChainMixin):
             "after_data":  self.after_data or {},
             "ip_address":  self.ip_address or "",
         }
+
+
+class ApprovalWorkflow(models.Model):
+    """Tenant-owned sequential approval policy for enterprise subscriptions."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="approval_workflows"
+    )
+    name = models.CharField(max_length=120)
+    minimum_amount = models.DecimalField(max_digits=18, decimal_places=2, default=0)
+    stages = models.JSONField(
+        default=list,
+        help_text="Ordered list of role requirements, e.g. [{\"role\": \"finance_manager\"}].",
+    )
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="created_approval_workflows",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "invoice_approval_workflows"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["organization", "name"], name="uniq_approval_workflow_name_per_org"
+            ),
+        ]
+
+
+class InvoiceApprovalRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+        CANCELED = "canceled", "Canceled"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    invoice = models.OneToOneField(
+        Invoice, on_delete=models.CASCADE, related_name="approval_request"
+    )
+    workflow = models.ForeignKey(
+        ApprovalWorkflow, on_delete=models.PROTECT, related_name="approval_requests"
+    )
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    current_stage = models.PositiveSmallIntegerField(default=0)
+    requested_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="requested_invoice_approvals"
+    )
+    requested_at = models.DateTimeField(auto_now_add=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "invoice_approval_requests"
+        indexes = [models.Index(fields=["workflow", "status"])]
+
+
+class InvoiceApprovalDecision(models.Model):
+    class Decision(models.TextChoices):
+        APPROVED = "approved", "Approved"
+        REJECTED = "rejected", "Rejected"
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    request = models.ForeignKey(
+        InvoiceApprovalRequest, on_delete=models.CASCADE, related_name="decisions"
+    )
+    stage = models.PositiveSmallIntegerField()
+    approver = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, related_name="invoice_approval_decisions"
+    )
+    decision = models.CharField(max_length=16, choices=Decision.choices)
+    reason = models.TextField(blank=True)
+    decided_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "invoice_approval_decisions"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["request", "stage"], name="uniq_invoice_approval_stage"
+            ),
+        ]

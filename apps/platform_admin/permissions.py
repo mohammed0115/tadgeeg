@@ -54,6 +54,9 @@ _ROLE_VIEW_FINANCIAL = frozenset(
 # Managing financial CRM data (future CRM-1F actions): owner, finance only.
 # Platform Admin is intentionally excluded until a later decision.
 _ROLE_MANAGE_FINANCIAL = frozenset({GROUP_PLATFORM_OWNER, GROUP_FINANCE_OFFICER})
+# Global contact identities are platform-level configuration, not tenant billing
+# data. Restrict changes to the two platform administration roles.
+_ROLE_MANAGE_PLATFORM_CONTACT = frozenset({GROUP_PLATFORM_OWNER, GROUP_PLATFORM_ADMIN})
 # Generic write capability (any non-readonly CRM role).
 _ROLE_WRITE = frozenset(
     {GROUP_PLATFORM_OWNER, GROUP_PLATFORM_ADMIN, GROUP_SUPPORT_AGENT, GROUP_FINANCE_OFFICER}
@@ -116,6 +119,11 @@ def can_manage_financial_crm_data(user) -> bool:
 
 def can_perform_crm_write(user) -> bool:
     return _in_any_group(user, _ROLE_WRITE)
+
+
+def can_manage_platform_contact_settings(user) -> bool:
+    """May edit global public contact identity such as WhatsApp Business."""
+    return _in_any_group(user, _ROLE_MANAGE_PLATFORM_CONTACT)
 
 
 def is_readonly_crm_user(user) -> bool:

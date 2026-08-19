@@ -22616,3 +22616,23 @@ msgstr "العملية"
 #: templates/platform_admin/crm/customer_detail.html
 msgid "No AI usage for this month."
 msgstr "لا يوجد استخدام للذكاء الاصطناعي هذا الشهر."
+
+#: templates/platform_admin/crm/dashboard.html
+msgid "WhatsApp Business"
+msgstr "واتساب للأعمال"
+
+#: templates/platform_admin/crm/dashboard.html
+msgid "Public contact number only. This is not the Meta phone-number ID or access token."
+msgstr "رقم اتصال عام فقط. ليس معرف رقم الهاتف في ميتا ولا رمز الوصول."
+
+#: templates/platform_admin/crm/dashboard.html
+msgid "Provider approval still required"
+msgstr "ما زالت موافقة المزوّد مطلوبة"
+
+#: templates/platform_admin/crm/dashboard.html
+msgid "Business number (E.164)"
+msgstr "رقم الأعمال (E.164)"
+
+#: templates/platform_admin/crm/dashboard.html
+msgid "Save number"
+msgstr "حفظ الرقم"

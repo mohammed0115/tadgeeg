@@ -154,3 +154,22 @@ class ManualPaymentAddForm(forms.Form):
         if not text:
             raise forms.ValidationError("A reason is required.")
         return text
+
+
+class WhatsAppBusinessNumberForm(forms.Form):
+    """Global public contact number; never the Meta phone-number ID or token."""
+
+    business_number = forms.CharField(max_length=16, required=False)
+
+    def clean_business_number(self):
+        value = self.cleaned_data["business_number"].strip().replace(" ", "")
+        if not value:
+            return ""
+        from core.services.whatsapp import validate_recipient, WhatsAppUnavailable
+
+        try:
+            return validate_recipient(value)
+        except WhatsAppUnavailable as exc:
+            raise forms.ValidationError(
+                "Use E.164 format, for example +966501234567."
+            ) from exc

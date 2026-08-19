@@ -10,6 +10,26 @@
   <p class="text-sm text-slate-500">{% trans "Manage customers, subscriptions, payments, tickets, and activity." %}</p>
 </div>
 
+{% if can_manage_platform_contact %}
+<section class="platform-card mb-6 p-5">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <h2 class="text-sm font-bold text-slate-900 dark:text-white">{% trans "WhatsApp Business" %}</h2>
+      <p class="mt-1 text-xs text-slate-500">{% trans "Public contact number only. This is not the Meta phone-number ID or access token." %}</p>
+    </div>
+    <span class="badge badge-amber">{% trans "Provider approval still required" %}</span>
+  </div>
+  <form method="post" action="{% url 'platform_admin:crm:whatsapp_business_number_update' %}" class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+    {% csrf_token %}
+    <div class="flex-1">
+      <label class="mb-1 block text-xs font-medium text-slate-500" for="whatsapp-business-number">{% trans "Business number (E.164)" %}</label>
+      <input id="whatsapp-business-number" type="text" name="business_number" maxlength="16" value="{{ whatsapp_business_setting.value|default:'' }}" placeholder="+966501234567" class="input w-full" inputmode="tel" autocomplete="tel">
+    </div>
+    <button type="submit" class="btn-primary">{% trans "Save number" %}</button>
+  </form>
+</section>
+{% endif %}
+
 {% if summary.customers_total == 0 %}
   {# ── Empty state ──────────────────────────────────────────────────────── #}
   <section class="platform-card p-5 text-center">

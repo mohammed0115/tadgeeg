@@ -17,6 +17,8 @@ app_name = "crm"
 
 urlpatterns = [
     path("", views.crm_dashboard, name="dashboard"),
+    # Global public contact configuration — POST-only in the view.
+    path("settings/whatsapp-business-number/", views.whatsapp_business_number_update, name="whatsapp_business_number_update"),
     path("customers/", views.customers_list, name="customers"),
     path("customers/<uuid:org_id>/", views.customer_detail, name="customer_detail"),
     # Financial operations — POST-only

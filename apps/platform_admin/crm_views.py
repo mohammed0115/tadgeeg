@@ -195,6 +195,10 @@ def customer_detail(request, org_id):
     )
     if profile is None:
         raise Http404("Customer not found.")
+    ai_usage = None
+    if can_financial:
+        from apps.ai_safety.reporting import monthly_usage_summary
+        ai_usage = monthly_usage_summary(profile["organization"])
     ctx = _crm_context(
         request,
         active_key="crm_customers",
@@ -208,6 +212,7 @@ def customer_detail(request, org_id):
         notes=profile["notes"],
         activities=profile["activities"],
         audits=profile["audits"],
+        ai_usage=ai_usage,
         can_view_financial=can_financial,
         can_manage=can_manage_tickets(request.user),
         can_manage_financial=can_manage_financial_crm_data(request.user),

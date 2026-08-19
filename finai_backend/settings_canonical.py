@@ -720,6 +720,10 @@ OPENAI_TIMEOUT    = int(os.environ.get("OPENAI_TIMEOUT", "30"))
 # prices reviewed on 2026-08-19; deployment may override them without changing
 # historical AIUsageRecord.estimated_cost values already written.
 AI_USAGE_MODEL_PRICES_PER_MILLION = {
+    "gpt-5-nano": {
+        "prompt": os.environ.get("AI_USAGE_GPT5_NANO_INPUT_PER_MILLION", "0.05"),
+        "completion": os.environ.get("AI_USAGE_GPT5_NANO_OUTPUT_PER_MILLION", "0.40"),
+    },
     "gpt-4o": {
         "prompt": os.environ.get("AI_USAGE_GPT4O_INPUT_PER_MILLION", "2.50"),
         "completion": os.environ.get("AI_USAGE_GPT4O_OUTPUT_PER_MILLION", "10.00"),

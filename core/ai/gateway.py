@@ -9,6 +9,7 @@ all retained strings are bounded.
 from __future__ import annotations
 
 import logging
+import os
 import time
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
@@ -155,6 +156,11 @@ def chat_completion(*, organization, operation: str, messages: list[dict],
             client_factory = OpenAI
 
         client_kwargs = {"api_key": getattr(settings, "OPENAI_API_KEY", "")}
+        # The sandbox proxy supplies OPENAI_API_BASE; production normally leaves
+        # it unset and continues to use the provider SDK default endpoint.
+        base_url = os.environ.get("OPENAI_API_BASE", "").strip()
+        if base_url:
+            client_kwargs["base_url"] = base_url.rstrip("/")
         if timeout is not None:
             client_kwargs["timeout"] = timeout
         response = client_factory(**client_kwargs).chat.completions.create(

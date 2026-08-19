@@ -119,6 +119,7 @@ urlpatterns = [
     path("api/v1/notifications/", include("apps.notifications.urls")),
     path("api/v1/assistant/", include("apps.assistant.urls")),
     path("api/v1/webhooks/", include("apps.webhooks.urls")),
+    path("api/v1/access/", include("apps.api_access.urls")),
     # Public partner application submission (Phase 2B). Unauthenticated and
     # file-accepting — throttled per IP via the partner_application scope.
     path("api/v1/partners/", include(("apps.partners.urls", "partners"), namespace="partners")),

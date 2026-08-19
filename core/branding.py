@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from django.conf import settings
+from django.core.exceptions import ObjectDoesNotExist
+
+from apps.billing.services.features import FeatureUnavailable, require_feature
 
 
 def get_branding_context(language: str | None = None, *, organization=None) -> dict:
@@ -39,15 +42,14 @@ def get_branding_context(language: str | None = None, *, organization=None) -> d
     company_byline = f"من تطوير {company_name_ar}" if is_arabic else f"By {company_name}"
     if organization is not None:
         try:
-            from apps.billing.services.features import require_feature
             require_feature(organization, "white_label")
-            prefs = getattr(getattr(organization, "settings", None), "branding", {}) or {}
+            prefs = organization.settings.branding or {}
             product_name = prefs.get("display_name", product_name)
             company_name = prefs.get("display_name", company_name)
             company_name_ar = prefs.get("display_name", company_name_ar)
-        except Exception:
-            # Branding is presentation-only: entitlement or lazy-object failures
-            # must never break an authenticated page.
+        except (FeatureUnavailable, ObjectDoesNotExist):
+            # Branding is presentation-only; use the platform identity when the
+            # tenant lacks the entitlement or has not configured preferences.
             pass
 
     company_product_label = (

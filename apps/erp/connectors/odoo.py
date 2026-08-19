@@ -71,6 +71,7 @@ class OdooConnector(BaseERPConnector):
             return PushResult(success=True, provider_reference="mock-odoo-ack")
         try:
             self._call("account.move", "write", {"ids": [int(decision.external_id)], "values": {"x_tadgeeg_decision": decision.status}})
-        except Exception as exc:
+        except (requests.RequestException, ValueError) as exc:
+            logger.warning("Odoo decision push failed: %s", exc)
             return PushResult(success=False, message=str(exc)[:500])
         return PushResult(success=True, provider_reference=decision.external_id)

@@ -27,7 +27,13 @@ ok()   { printf '\033[1;32m  ✓ %s\033[0m\n' "$1"; }
 warn() { printf '\033[1;33m  ! %s\033[0m\n' "$1"; }
 die()  { printf '\033[1;31m  ✗ %s\033[0m\n' "$1" >&2; exit 1; }
 
-sql() { $C exec -T db_live sh -c "exec mysql -N -B -uroot -p\"\$MYSQL_ROOT_PASSWORD\" \"\$MYSQL_DATABASE\" -e \"$1\""; }
+# The query goes in on stdin, not through -e. Wrapping it in double quotes for
+# the shell meant a query containing its own double-quoted identifiers closed
+# that wrapper early: MySQL then read the table name as a bare column and
+# answered ERROR 1054, which stopped a production deploy at the pre-flight —
+# safely, but on the checker rather than on the thing being checked. stdin has
+# no quoting layer to get wrong.
+sql() { printf '%s\n' "$1" | $C exec -T db_live sh -c 'exec mysql -N -B -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"'; }
 
 # ── 0. البوابة: الخادم الصحيح ───────────────────────────────────────────────
 # ليست echo. الخوادم الثلاثة تحمل نفس docker-compose.yml وفيه web_live على

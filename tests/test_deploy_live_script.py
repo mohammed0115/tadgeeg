@@ -116,3 +116,84 @@ def test_no_secret_value_is_printed():
 
     assert 'ok "$key' in source, "the check must still report which key it verified"
     assert '[ -n "$value" ]' in source, "the presence check itself must remain"
+
+
+def _sql_helper() -> str:
+    """The real helper, lifted from the script."""
+    source = SCRIPT.read_text(encoding="utf-8")
+    line = next(l for l in source.splitlines() if l.startswith("sql() {"))
+    return line
+
+
+QUERY_WITH_QUOTES = (
+    'SELECT COUNT(*) FROM information_schema.columns '
+    'WHERE table_name="documents_documentcanonicaldata";'
+)
+
+
+def test_a_query_containing_double_quotes_survives_the_helper():
+    """It did not, and that stopped a production deploy at the pre-flight.
+
+    The helper passed the query to `mysql -e "$1"`. A query carrying its own
+    double-quoted identifiers closed that wrapper early, MySQL read the table
+    name as a bare column, and the run died on
+
+        ERROR 1054 (42S22) Unknown column 'documents_documentcanonicaldata'
+
+    Safely — nothing had been backed up, built or stopped yet — but on the
+    checker rather than on the thing it checks, which is the worst place for a
+    guard to fail: it looks like the database is wrong.
+
+    `$C` is stubbed by a function that swallows the compose arguments and
+    passes stdin through, which is what `compose exec -T` does to mysql.
+    """
+    harness = f"""
+passthrough() {{ cat; }}
+C=passthrough
+{_sql_helper()}
+sql '{QUERY_WITH_QUOTES}'
+"""
+    result = subprocess.run(["bash", "-c", harness], capture_output=True, text=True, timeout=30)
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == QUERY_WITH_QUOTES, (
+        f"the query was mangled on the way to mysql: {result.stdout!r}"
+    )
+
+
+def test_the_shipped_helper_mangled_it(tmp_path):
+    """Plant the form that shipped and let a stub mysql report what it received.
+
+    The mangling happens when the shell parses the command, not when the string
+    is built — so the string has to be executed to see it. A `mysql` on PATH
+    prints its arguments instead of connecting to anything.
+    """
+    stub = tmp_path / "mysql"
+    stub.write_text('#!/bin/sh\nprintf "ARG:%s\\n" "$@"\n', encoding="utf-8")
+    stub.chmod(0o755)
+
+    harness = f'''
+export PATH="{tmp_path}:$PATH"
+passthrough() {{ shift 3; "$@"; }}
+C=passthrough
+sql() {{ $C exec -T db_live sh -c "exec mysql -N -B -e \\"$1\\""; }}
+sql '{QUERY_WITH_QUOTES}'
+'''
+    result = subprocess.run(["bash", "-c", harness], capture_output=True, text=True, timeout=30)
+    received = [l[4:] for l in result.stdout.splitlines() if l.startswith("ARG:")]
+
+    assert received, f"the stub was never reached: {result.stdout!r} {result.stderr!r}"
+    assert QUERY_WITH_QUOTES not in received, (
+        "the old form delivered the query intact — it did not in production. "
+        f"mysql received: {received!r}"
+    )
+    assert any("documents_documentcanonicaldata" in a and '"' not in a for a in received), (
+        f"the identifier should arrive stripped of its quotes: {received!r}"
+    )
+
+
+def test_every_pre_flight_query_goes_through_the_helper():
+    """No query may reach mysql by a route the test above does not cover."""
+    for line in _executed_lines():
+        if "mysql" in line and not line.startswith("sql() {"):
+            assert "backup.sh" in line, f"a query bypasses the helper: {line.strip()}"

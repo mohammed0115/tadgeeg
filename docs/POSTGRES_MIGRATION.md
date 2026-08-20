@@ -152,6 +152,50 @@ invoice_unique_number_per_org   ON invoices (organization_id, invoice_number)
 
 ---
 
+## ٤ب. خطوة إلزامية: فهارس عدم حسّاسية الأحرف
+
+**تُنفَّذ في التحوّل، لا قبله.** على MySQL الترميز `utf8mb4_unicode_ci` **لا يميّز**
+حالة الأحرف، فقيود التفرّد النصّية محروسة اليوم. وPostgres يميّز ⇒ **تُرخى بصمت.**
+
+**والصمت هو الخطر:** عائق `invoice_unique_number_per_org` يوقف الاستيراد فيُجبرك
+على حسمه. أمّا هذا فالترحيل ينجح، والقاعدة تعمل، **ثم يُنشئ مستخدم حسابًا ثانيًا
+ببريده نفسه بحرف كبير بعد شهور.**
+
+**مقيس على بيانات الإنتاج:** 15 حقلًا فريدًا نصّيًّا · **صفر تصادم قائم** ⇒ الفهارس
+تُبنى نظيفة بلا تنظيف. و12 منها للمشروع (`auth` و`sessions` و`token_blacklist`
+أطراف ثالثة، لا تُلمس).
+
+```sql
+-- مُولَّدة من النماذج، لا مكتوبة بيد. كلّها بُنيت على نسخة الإنتاج: 12/12.
+CREATE UNIQUE INDEX ci_auth_users_email                     ON auth_users (LOWER(email)) WHERE email <> '';
+CREATE UNIQUE INDEX ci_payments_paymenttransaction_idempotency_key
+       ON payments_paymenttransaction (LOWER(idempotency_key)) WHERE idempotency_key <> '';
+CREATE UNIQUE INDEX ci_audit_cases_case_number              ON audit_cases (LOWER(case_number)) WHERE case_number <> '';
+CREATE UNIQUE INDEX ci_re_rule_definition_rule_code         ON re_rule_definition (LOWER(rule_code)) WHERE rule_code <> '';
+CREATE UNIQUE INDEX ci_organization_api_keys_key_hash       ON organization_api_keys (LOWER(key_hash)) WHERE key_hash <> '';
+CREATE UNIQUE INDEX ci_billing_plan_code                    ON billing_plan (LOWER(code)) WHERE code <> '';
+CREATE UNIQUE INDEX ci_billing_addon_code                   ON billing_addon (LOWER(code)) WHERE code <> '';
+CREATE UNIQUE INDEX ci_cms_platform_setting_key             ON cms_platform_setting (LOWER(key)) WHERE key <> '';
+CREATE UNIQUE INDEX ci_cms_seo_setting_page_key             ON cms_seo_setting (LOWER(page_key)) WHERE page_key <> '';
+CREATE UNIQUE INDEX ci_documents_canonicalfielddefinition_field_code
+       ON documents_canonicalfielddefinition (LOWER(field_code)) WHERE field_code <> '';
+CREATE UNIQUE INDEX ci_storage_management_storageprovider_name
+       ON storage_management_storageprovider (LOWER(name)) WHERE name <> '';
+CREATE UNIQUE INDEX ci_zatca_rejection_codes_code           ON zatca_rejection_codes (LOWER(code)) WHERE code <> '';
+```
+
+**وأُثبتت بزرع مخالف:** قبل بنائها قَبِل Postgres
+`casetest.probe@example.com` و`CASETEST.PROBE@EXAMPLE.COM` معًا. بعدها:
+
+```
+duplicate key value violates unique constraint "ci_auth_users_email"
+```
+
+⚠️ **ولا تُكتب هجرة Django بها الآن.** على MySQL هي زائدة، وتطبيقها اليوم يضيف
+12 فهرسًا للإنتاج بلا مكسب. موضعها هذه الخطوة، بين §5 و§6 من الإجراء.
+
+---
+
 ## ٥. تعديلات الشيفرة المطلوبة
 
 | | |

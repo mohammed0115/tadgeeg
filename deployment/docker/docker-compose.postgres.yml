@@ -1,0 +1,40 @@
+# تجاوز التحوّل إلى PostgreSQL — يُستعمل مع الملف الأصلي، ولا يحلّ محلّه:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d
+#
+# منفصل عمدًا: الإنتاج يعمل على MySQL اليوم، وتعديل الملف الأصلي يجعل التحوّل
+# يقع بأول `up -d` بدل أن يقع بقرار. الإجراء كاملًا في docs/POSTGRES_MIGRATION.md
+services:
+  db_live:
+    image: postgres:16
+    restart: unless-stopped
+    env_file:
+      - ./env/live.env
+    environment:
+      # postgres يقرأ أسماءً أخرى غير التي يقرؤها mysql من نفس الملف
+      POSTGRES_DB: "${DB_NAME:-finai_live}"
+      POSTGRES_USER: "${DB_USER:-finai_live_user}"
+      POSTGRES_PASSWORD: "${DB_PASSWORD}"
+    command:
+      # الترميز يُثبَّت عند التهيئة، وتغييره لاحقًا يعني إعادة بناء القاعدة
+      - postgres
+      - -c
+      - timezone=Asia/Riyadh
+    volumes:
+      - postgres_live_data:/var/lib/postgresql/data
+    healthcheck:
+      # pg_isready -U <user> -d <db> وليس pg_isready وحده:
+      #
+      # نظير هذا الفحص في mysql (`mysqladmin ping`) يردّ **أثناء** التهيئة، قبل
+      # أن تُنشأ كلمة مرور root — قِيس ذلك على هذا المستودع في 2026-08-19:
+      # ping نجح ثم رُفض الاتصال بـ Access denied. و web_live يعتمد
+      # condition: service_healthy، فالفحص المتساهل يعني إقلاعًا على قاعدة
+      # ليست جاهزة. تمرير المستخدم والقاعدة يجعله فحص اتصال حقيقي.
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\" -q"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+volumes:
+  postgres_live_data:

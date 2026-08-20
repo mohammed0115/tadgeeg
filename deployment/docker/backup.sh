@@ -129,18 +129,51 @@ compose ps --status running --services 2>/dev/null | grep -q "^${DB}$" \
 # --single-transaction keeps the dump consistent without locking writers out,
 # which matters on live. --routines/--triggers because a schema-only dump that
 # silently drops them restores into a subtly different database.
-compose exec -T "$DB" sh -c \
-  'exec mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" \
-     --single-transaction --quick --routines --triggers --events \
-     "$MYSQL_DATABASE"' \
-  | gzip > "$DEST/db.sql.gz" \
-  || die "mysqldump failed — backup NOT taken."
+# Which engine is in there is asked of the container, not read from a settings
+# file. A backup that dumps with the wrong tool fails loudly, but one that reads
+# a stale DB_BACKEND and happens to find the right binary anyway teaches you
+# nothing — and during a migration the two disagree by definition.
+if compose exec -T "$DB" sh -c 'command -v pg_dump >/dev/null 2>&1'; then
+  ENGINE=postgres
+  MARKER="PostgreSQL database dump complete"
+elif compose exec -T "$DB" sh -c 'command -v mysqldump >/dev/null 2>&1'; then
+  ENGINE=mysql
+  MARKER="Dump completed"
+else
+  die "$DB has neither pg_dump nor mysqldump — cannot back up."
+fi
+log "engine: $ENGINE"
 
-# Verify rather than assume. mysqldump writes a completion marker; without it
+if [ "$ENGINE" = "postgres" ]; then
+  # --no-owner/--no-privileges so the dump restores under whatever role the
+  # target uses; --clean --if-exists so a restore into a populated database is
+  # a replacement rather than a collision.
+  compose exec -T "$DB" sh -c \
+    'exec pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+       --no-owner --no-privileges --clean --if-exists' \
+    | gzip > "$DEST/db.sql.gz" \
+    || die "pg_dump failed — backup NOT taken."
+else
+  # --single-transaction keeps the dump consistent without locking writers out,
+  # which matters on live. --routines/--triggers because a schema-only dump that
+  # silently drops them restores into a subtly different database.
+  compose exec -T "$DB" sh -c \
+    'exec mysqldump -u root -p"$MYSQL_ROOT_PASSWORD" \
+       --single-transaction --quick --routines --triggers --events \
+       "$MYSQL_DATABASE"' \
+    | gzip > "$DEST/db.sql.gz" \
+    || die "mysqldump failed — backup NOT taken."
+fi
+
+# Verify rather than assume. Both tools write a completion marker; without it
 # the dump was truncated and would restore a partial database.
 gzip -t "$DEST/db.sql.gz" || die "Dump is not valid gzip."
-gunzip -c "$DEST/db.sql.gz" | tail -5 | grep -q "Dump completed" \
-  || die "Dump has no completion marker — it is truncated. NOT usable."
+# tail -12, not -5. pg_dump 16 writes its completion marker and then a
+# \unrestrict line, and a dump ending in a long FK statement can push the
+# marker further back than five lines. Measured against Postgres 16.15: the
+# marker sits at line 3 from the end, and mysqldump's at line 2.
+gunzip -c "$DEST/db.sql.gz" | tail -12 | grep -q "$MARKER" \
+  || die "Dump has no completion marker ($MARKER) — it is truncated. NOT usable."
 ok "Database: $(du -h "$DEST/db.sql.gz" | cut -f1)  (verified)"
 
 # 2. partner documents

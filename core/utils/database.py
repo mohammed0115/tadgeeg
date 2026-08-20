@@ -69,6 +69,8 @@ def _normalized_backend(value: str | None) -> str:
         return "mysql"
     if raw in {"sqlite", "sqlite3", "django.db.backends.sqlite3"}:
         return "sqlite"
+    if raw in {"postgres", "postgresql", "psql", "django.db.backends.postgresql"}:
+        return "postgres"
     return ""
 
 
@@ -86,6 +88,21 @@ def build_default_database(base_dir: Path, env: os._Environ | dict | None = None
     explicit_backend = _normalized_backend(env.get("DB_BACKEND"))
     legacy_backend = _normalized_backend(env.get("DB_ENGINE"))
     sqlite_path = _sqlite_path(base_dir, env)
+
+    # PostgreSQL is opt-in and explicit, and deliberately checked before the
+    # MySQL branch below: that branch also fires on a bare DB_NAME, so a
+    # postgres deployment setting DB_BACKEND *and* DB_NAME would otherwise be
+    # handed a MySQL engine and fail on connect with nothing pointing at why.
+    if explicit_backend == "postgres" or (not explicit_backend and legacy_backend == "postgres"):
+        return "postgres", {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": env.get("DB_NAME", "finai_live"),
+            "USER": env.get("DB_USER", "finai_live_user"),
+            "PASSWORD": env.get("DB_PASSWORD", ""),
+            "HOST": env.get("DB_HOST", "127.0.0.1"),
+            "PORT": env.get("DB_PORT", "5432"),
+            "CONN_MAX_AGE": int(env.get("DB_CONN_MAX_AGE", "60")),
+        }
 
     if explicit_backend == "mysql" or (not explicit_backend and legacy_backend == "mysql") or env.get("DB_NAME"):
         return "mysql", {
